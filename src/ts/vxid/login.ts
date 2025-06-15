@@ -32,7 +32,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
 
       if (whitelist && whitelist.length > 0) {
         localStorage.setItem("user", JSON.stringify(user));
-        window.location.href = "/main.html";
+        window.location.href = "../../../main.html";
       } else {
         alert("Ваш email не дозволено для входу.");
         await supabase.auth.signOut();

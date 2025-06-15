@@ -1,4 +1,4 @@
-var nl=(e,n)=>()=>(n||e((n={exports:{}}).exports,n),n.exports);import{s as Se,g as rl,a as il}from"./auth-DXOiXU5v.js";var fh=nl((mh,Cr)=>{function al(){var i;if(document.getElementById("custom-modal-sakaz_narad"))return;const n=document.createElement("div");n.id="custom-modal-sakaz_narad",n.className="modal-overlay-sakaz_narad hidden",n.innerHTML=`
+var nl=(e,n)=>()=>(n||e((n={exports:{}}).exports,n),n.exports);import{s as Se,g as rl,a as il}from"./auth-CcLUoNKc.js";var fh=nl((mh,Cr)=>{function al(){var i;if(document.getElementById("custom-modal-sakaz_narad"))return;const n=document.createElement("div");n.id="custom-modal-sakaz_narad",n.className="modal-overlay-sakaz_narad hidden",n.innerHTML=`
     <div class="modal-content-sakaz_narad">
       <button class="modal-close-sakaz_narad" id="close-modal-sakaz_narad">&times;</button>
       <h2>Модальне вікно</h2>

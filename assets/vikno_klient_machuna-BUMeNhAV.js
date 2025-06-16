@@ -1,4 +1,4 @@
-import{s as E}from"./supabaseClient-BwUcoQvm.js";/* empty css             */import{loadActsTable as Be}from"./tablucya-BA0BauLK.js";const U="save-prompt-modal";function Le(){const e=document.createElement("div");e.id=U,e.className="modal-overlay-save",e.style.display="none";const t=document.createElement("div");return t.className="modal-content-save",t.innerHTML=`
+import{s as E}from"./supabaseClient-BwUcoQvm.js";/* empty css             */import{loadActsTable as Be}from"./tablucya-BNWh1EqH.js";const U="save-prompt-modal";function Le(){const e=document.createElement("div");e.id=U,e.className="modal-overlay-save",e.style.display="none";const t=document.createElement("div");return t.className="modal-content-save",t.innerHTML=`
     <p>Зберегти зміни?</p>
     <div class="save-buttons">
       <button id="save-confirm" class="btn-save-confirm">Так</button>

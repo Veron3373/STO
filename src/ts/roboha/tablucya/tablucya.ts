@@ -324,9 +324,9 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
     console.error(
       "❌ Невірний формат діапазону. Очікується: DD.MM.YYYY - DD.MM.YYYY"
     );
-    alert(
+/*     alert(
       "Невірний формат дати. Використовуйте формат: DD.MM.YYYY - DD.MM.YYYY"
-    );
+    ); */
     return null;
   }
 
@@ -335,7 +335,7 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
   // Валідація формату дат
   if (!validateDateFormat(startStr) || !validateDateFormat(endStr)) {
     console.error("❌ Невірний формат дати. Використовуйте DD.MM.YYYY");
-    alert("Невірний формат дати. Використовуйте DD.MM.YYYY");
+/*     alert("Невірний формат дати. Використовуйте DD.MM.YYYY"); */
     return null;
   }
 
@@ -350,11 +350,11 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
     return { dateFrom, dateTo };
   } catch (error) {
     console.error("❌ Помилка конвертації дати:", error);
-    alert(
+/*     alert(
       `Невірна дата: ${
         error instanceof Error ? error.message : "Невідома помилка"
       }`
-    );
+    ); */
     return null;
   }
 }
@@ -379,7 +379,7 @@ async function loadActsFromDB(
 
   if (actsError) {
     console.error("❌ Помилка при отриманні актів:", actsError);
-    alert(`Помилка завантаження актів: ${actsError.message}`);
+/*     alert(`Помилка завантаження актів: ${actsError.message}`); */
     return null;
   }
 
@@ -413,7 +413,7 @@ async function loadCarsFromDB(): Promise<any[] | null> {
 
   if (carsError) {
     console.error("❌ Помилка при отриманні авто:", carsError);
-    alert(`Помилка завантаження авто: ${carsError.message}`);
+  /*   alert(`Помилка завантаження авто: ${carsError.message}`); */
     return null;
   }
 
@@ -555,11 +555,11 @@ export async function loadActsTable(): Promise<void> {
     }
   } catch (error) {
     console.error("💥 Критична помилка:", error);
-    alert(
+/*     alert(
       `Критична помилка: ${
         error instanceof Error ? error.message : "Невідома помилка"
       }`
-    );
+    ); */
   }
 }
 
@@ -617,5 +617,11 @@ export function initializeActsTable(): void {
   watchDateRangeChanges(); // Запустити відстеження змін дати
 }
 
-// Викликати ініціалізацію при завантаженні модулю
-initializeActsTable();
+// Стало:
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session) {
+    initializeActsTable();
+  } else {
+    console.warn("⛔ Користувач не авторизований. Таблиця не завантажена.");
+  }
+});

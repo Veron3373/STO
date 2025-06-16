@@ -567,6 +567,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const btnText = button.textContent?.trim() || "";
         if (btnText) {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session) {
+            alert("⛔ Ви не авторизовані");
+            return;
+          }
+
           await loadDatabaseData(btnText);
         }
       });

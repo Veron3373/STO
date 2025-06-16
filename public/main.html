@@ -4,15 +4,21 @@
 <head>
     <meta charset="UTF-8" />
     <title>Основний</title>
-    <link rel="stylesheet" href="../src/scss/main.scss" />
 
     <!-- Календар -->
-    <!-- jQuery (обов’язково) -->
+    <!-- jQuery (обов'язково першим) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- moment -->
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+
+    <!-- daterangepicker CSS + JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
     <!-- moment.js -->
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-    <!-- Date Range Picker -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
 
 </head>
 
@@ -45,12 +51,11 @@
 
 
 
-    
+
     <!-- Підключення зібраного TS -->
     <script type="module" src="/src/ts/main.ts"></script>
 
     <!-- Date Range Picker календар-->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script type="module" src="/src/ts/roboha/tablucya/kalendar.js"></script>
 
 

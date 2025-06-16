@@ -3,7 +3,7 @@ import {
   createSavePromptModal,
   savePromptModalId,
   showSavePromptModal,
-} from "./vekno_pidtverdchennay_nalachtuvannay";
+} from "./vikno_pidtverdchennay_nalachtuvannay";
 
 // Константи для налаштувань
 const SETTINGS_CONFIG = {
@@ -192,6 +192,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   settingsBtn?.addEventListener("click", async (e: Event) => {
     e.preventDefault();
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      alert("⛔ Ви не авторизовані");
+      return;
+    }
 
     if (!document.getElementById("modal-settings")) {
       await createSettingsModal();

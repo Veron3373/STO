@@ -5,12 +5,15 @@ import { supabase } from "./supabaseClient";
 export async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
+    options: {
+      redirectTo: "https://veron3373.github.io/STO/",
+    },
   });
 
   if (error) {
     console.error("Помилка входу:", error);
   } else {
-    console.log("Вхід через Google ініційовано");
+    console.log("✅ Вхід через Google ініційовано");
   }
 }
 
@@ -32,7 +35,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
 
       if (whitelist && whitelist.length > 0) {
         localStorage.setItem("user", JSON.stringify(user));
-        window.location.href = "../../../main.html";
+        window.location.href = "/STO/main.html"; // <-- ключовий момент
       } else {
         alert("Ваш email не дозволено для входу.");
         await supabase.auth.signOut();

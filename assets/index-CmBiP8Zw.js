@@ -1,4 +1,4 @@
-import"./supabaseClient-BwUcoQvm.js";/* empty css             */import{signInWithGoogle as Md}from"./login-BOfwqor1.js";var Wc={exports:{}},oe={};/**
+import"./supabaseClient-BwUcoQvm.js";/* empty css             */import{signInWithGoogle as Md}from"./login-C-44boOn.js";var Wc={exports:{}},oe={};/**
  * @license React
  * react-jsx-runtime.production.js
  *

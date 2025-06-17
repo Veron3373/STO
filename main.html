@@ -6,18 +6,23 @@
     <title>Основний</title>
     <link rel="stylesheet" href="../src/scss/main.scss" />
 
-    <!-- Календар -->
-    <!-- jQuery (обов’язково) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- moment.js -->
-    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-    <!-- Date Range Picker -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    
+    <!-- daterangepicker.css -->
 
-  <script type="module" crossorigin src="/STO/assets/main-bUfvYUR1.js"></script>
-  <link rel="modulepreload" crossorigin href="/STO/assets/supabaseClient-DFRZK_NH.js">
+<!-- jQuery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<!-- moment.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.1/moment.min.js"></script>
+
+<!-- daterangepicker.js -->
+<script src="/src/kalendar/daterangepicker-master/daterangepicker.js"></script>
+
+
+  <script type="module" crossorigin src="/STO/assets/main-YSmrkbBU.js"></script>
+  <link rel="modulepreload" crossorigin href="/STO/assets/supabaseClient-Y3v_xGJj.js">
   <link rel="stylesheet" crossorigin href="/STO/assets/supabaseClient-DHHmw1al.css">
+  <link rel="stylesheet" crossorigin href="/STO/assets/main-Dmzrpl_l.css">
 </head>
 
 
@@ -51,54 +56,32 @@
 
 
     <!-- Підключення зібраного TS -->
-
-    <!-- Date Range Picker календар-->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-    <script>
-        $(function () {
-            const $input = $('#dateRangePicker');
-
-            $input.daterangepicker({
-                locale: {
-                    format: 'DD.MM.YYYY',
-                    separator: ' - ',
-                    applyLabel: 'Прийняти',
-                    cancelLabel: 'Відмінити',
-                    fromLabel: 'Від',
-                    toLabel: 'До',
-                    customRangeLabel: 'Свій діапазон',
-                    weekLabel: 'Тиж',
-                    daysOfWeek: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-                    monthNames: [
-                        'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-                        'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
-                    ],
-                    firstDay: 1
-                },
-                opens: 'center',
-                alwaysShowCalendars: true,
-                autoUpdateInput: true,
-                startDate: moment().subtract(29, 'days'),
-                endDate: moment(),
-                ranges: {
-                    'Сьогодні': [moment(), moment()],
-                    'Вчора': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-                    'Останні 7 днів': [moment().subtract(6, 'days'), moment()],
-                    'Останні 30 днів': [moment().subtract(29, 'days'), moment()],
-                    'Поточний місяць': [moment().startOf('month'), moment().endOf('month')],
-                    'Минулий місяць': [
-                        moment().subtract(1, 'month').startOf('month'),
-                        moment().subtract(1, 'month').endOf('month')
-                    ]
-                }
-            });
-
-            // 👇 примусово відкриває календар при кліку
-            $input.on('click', function () {
-                $(this).data('daterangepicker').show();
-            });
-        });
-    </script>
+<script>
+  $(document).ready(function () {
+    $('#dateRangePicker').daterangepicker({
+      timePicker: true,
+      timePicker24Hour: true,
+      startDate: moment().subtract(6, 'days'),
+      endDate: moment(),
+      locale: {
+        format: 'DD/MM/YYYY HH:mm',
+        applyLabel: 'Застосувати',
+        cancelLabel: 'Скасувати',
+        fromLabel: 'З',
+        toLabel: 'По',
+        customRangeLabel: 'Власний діапазон',
+        daysOfWeek: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт','Сб'],
+        monthNames: ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+          'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'],
+        firstDay: 1
+      }
+    }, function (start, end, label) {
+      console.log('Вибраний діапазон: ' + start.format('YYYY-MM-DD HH:mm') + ' по ' + end.format('YYYY-MM-DD HH:mm'));
+      // за бажанням, запиши у інпут:
+      $('#dateRangePicker').val(start.format('DD/MM/YYYY HH:mm') + ' - ' + end.format('DD/MM/YYYY HH:mm'));
+    });
+  });
+</script>
 
 
 

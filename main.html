@@ -53,6 +53,27 @@
     <!-- Date Range Picker календар-->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
+<script>
+  $(function () {
+    $('#dateRangePicker').daterangepicker({
+      locale: {
+        format: 'DD.MM.YYYY',
+        applyLabel: 'Прийняти',
+        cancelLabel: 'Відмінити',
+        daysOfWeek: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+        monthNames: [
+          'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+          'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
+        ],
+        firstDay: 1
+      },
+      opens: 'center',
+      autoUpdateInput: true,
+      startDate: moment().subtract(7, 'days'),
+      endDate: moment(),
+    });
+  });
+</script>
 
 
 </body>

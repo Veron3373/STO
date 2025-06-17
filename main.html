@@ -13,6 +13,7 @@
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <!-- Date Range Picker -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
   <script type="module" crossorigin src="/STO/assets/main-bUfvYUR1.js"></script>
   <link rel="modulepreload" crossorigin href="/STO/assets/supabaseClient-DFRZK_NH.js">
@@ -54,10 +55,6 @@
     <!-- Date Range Picker календар-->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
-        import $ from "jquery";
-        import moment from "moment";
-        import "daterangepicker";
-
         $(function () {
             const $input = $('#dateRangePicker');
 
@@ -96,14 +93,13 @@
                 }
             });
 
-            // Примусово показувати календар при кліку
+            // 👇 примусово відкриває календар при кліку
             $input.on('click', function () {
                 $(this).data('daterangepicker').show();
             });
         });
-
-
     </script>
+
 
 
 </body>

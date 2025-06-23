@@ -1,4 +1,4 @@
-import{s as qn}from"./supabaseClient-XOcU_IRL.js";var $c={exports:{}},oe={};/**
+import{s as qn}from"./supabaseClient-kKqfmi7X.js";var $c={exports:{}},oe={};/**
  * @license React
  * react-jsx-runtime.production.js
  *

@@ -1,4 +1,4 @@
-import{s as _}from"./supabaseClient-BqfZIrjl.js";function Xe(){var n;if(document.getElementById("custom-modal-sakaz_narad"))return;const t=document.createElement("div");t.id="custom-modal-sakaz_narad",t.className="modal-overlay-sakaz_narad hidden",t.innerHTML=`
+import{s as _}from"./supabaseClient-CRjKOyyk.js";function Xe(){var n;if(document.getElementById("custom-modal-sakaz_narad"))return;const t=document.createElement("div");t.id="custom-modal-sakaz_narad",t.className="modal-overlay-sakaz_narad hidden",t.innerHTML=`
     <div class="modal-content-sakaz_narad">
       <button class="modal-close-sakaz_narad" id="close-modal-sakaz_narad">&times;</button>
       <h2>Модальне вікно</h2>

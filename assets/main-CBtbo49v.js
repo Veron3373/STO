@@ -137,12 +137,12 @@ import{s as E}from"./supabaseClient-BRYH59Du.js";function et(){var n;if(document
       <div class="car-field-inline">
         <div class="car-input-group">
           <label for="${F}">Автомобіль</label>
-          <input type="text" id="${F}" class="input-create-sakaz_narad" placeholder="Автомобіль" style="width: 100%;" />
+          <input type="text" id="${F}" class="input-create-sakaz_narad" placeholder="Автомобіль"  />
         </div>
 
         <div class="year-input-group">
           <label for="car-year-create-sakaz_narad">Рік</label>
-          <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" style="width: 100%;" />
+          <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" readonly />
         </div>
       </div>
       <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>

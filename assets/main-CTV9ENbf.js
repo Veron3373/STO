@@ -1,4 +1,4 @@
-import{s as _}from"./supabaseClient-C8R0DX8b.js";function Ke(){var n;if(document.getElementById("custom-modal-sakaz_narad"))return;const t=document.createElement("div");t.id="custom-modal-sakaz_narad",t.className="modal-overlay-sakaz_narad hidden",t.innerHTML=`
+import{s as _}from"./supabaseClient-COh8w6i-.js";function Ke(){var n;if(document.getElementById("custom-modal-sakaz_narad"))return;const t=document.createElement("div");t.id="custom-modal-sakaz_narad",t.className="modal-overlay-sakaz_narad hidden",t.innerHTML=`
     <div class="modal-content-sakaz_narad">
       <button class="modal-close-sakaz_narad" id="close-modal-sakaz_narad">&times;</button>
       
@@ -44,7 +44,7 @@ import{s as _}from"./supabaseClient-C8R0DX8b.js";function Ke(){var n;if(document
           <div class="detail-label">Vincode</div>
           <div class="detail-value">WVFD64DFHDFG4DFG</div>
         </div>
-        <div class="detail-row highlight">
+        <div class="detail-row highlight-engine">
           <div class="detail-label">Причина звернення:</div>
           <div class="detail-value">Заміна поршневої групи</div>
           <div class="detail-label">Двигун</div>
@@ -82,11 +82,11 @@ import{s as _}from"./supabaseClient-C8R0DX8b.js";function Ke(){var n;if(document
             <td>150,0</td>
           </tr>
           <tr class="total-row">
-            <td colspan="3">Всього за деталі</td>
+            <td class="total-label" colspan="3">Всього за деталі</td>
             <td>100,0</td>
           </tr>
           <tr class="total-row">
-            <td colspan="3">Всього за роботу</td>
+            <td class="total-label" colspan="3">Всього за роботу</td>
             <td>150,0</td>
           </tr>
         </tbody>
@@ -122,6 +122,11 @@ import{s as _}from"./supabaseClient-C8R0DX8b.js";function Ke(){var n;if(document
       <input type="text" id="${K}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" />
       <ul id="${Ue}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
+    <div class="field-create-sakaz_narad">
+      <label for="${V}">Номер телефону</label>
+      <input type="text" id="${V}" class="input-create-sakaz_narad" placeholder="Введіть номер телефону" autocomplete="off" />
+      <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>
+    </div>
     <div class="field-create-sakaz_narad car-field-wrapper">
         <label for="${F}">Автомобіль</label>
     <div class="car-field-inline">
@@ -131,11 +136,6 @@ import{s as _}from"./supabaseClient-C8R0DX8b.js";function Ke(){var n;if(document
     </div>
     </div>
        <ul id="${he}" class="suggestions-list-create-sakaz_narad"></ul>
-    </div>
-    <div class="field-create-sakaz_narad">
-      <label for="${V}">Номер телефону</label>
-      <input type="text" id="${V}" class="input-create-sakaz_narad" placeholder="Введіть номер телефону" autocomplete="off" />
-      <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
     <div class="field-row-create-sakaz_narad">
       <div class="field-create-sakaz_narad">

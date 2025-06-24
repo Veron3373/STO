@@ -127,24 +127,24 @@ import{s as E}from"./supabaseClient-B97N5S1Y.js";function et(){var n;if(document
       <input type="text" id="${V}" class="input-create-sakaz_narad" placeholder="Введіть номер телефону" autocomplete="off" />
       <ul id="${Ee}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
-<div class="field-create-sakaz_narad car-field-wrapper">
-  <div class="car-field-inline">
-    <div class="car-input-group">
-      <label for="${F}">Автомобіль</label>
-      <input type="text" id="${F}" class="input-create-sakaz_narad" placeholder="Автомобіль" />
-    </div>
+    <div class="field-create-sakaz_narad car-field-wrapper">
+      <div class="car-field-inline">
+        <div class="car-input-group">
+          <label for="${F}">Автомобіль</label>
+          <input type="text" id="${F}" class="input-create-sakaz_narad" placeholder="Автомобіль" />
+        </div>
 
- <div class="year-input-group">
-  <label for="car-year-create-sakaz_narad">Рік</label>
-  <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" readonly />
-</div>
+        <div class="year-input-group">
+          <label for="car-year-create-sakaz_narad">Рік</label>
+          <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" placeholder="Введіть рік" />
+        </div>
 
-    <div id="car-confirm-icons" class="car-confirm-icons">
-      <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
+        <div id="car-confirm-icons" class="car-confirm-icons">
+          <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
+        </div>
+      </div>
+      <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
-  </div>
-  <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>
-</div>
 
     <div class="field-row-create-sakaz_narad">
       <div class="field-create-sakaz_narad">

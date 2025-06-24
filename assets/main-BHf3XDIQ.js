@@ -122,14 +122,17 @@ import{s as E}from"./supabaseClient-BYu3H-Wf.js";function et(){var n;if(document
       <input type="text" id="${K}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" />
       <ul id="${Ge}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
-    <div class="field-create-sakaz_narad car-field-wrapper">
-      <label for="${V}">Номер телефону</label>
-      <input type="text" id="${V}" class="input-create-sakaz_narad" placeholder="Введіть номер телефону" autocomplete="off" />
-      <ul id="${Ee}" class="suggestions-list-create-sakaz_narad"></ul>
-          <div id="car-confirm-icons" class="car-confirm-icons" >
-          <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження" >✔️</button>
-        </div>
+<div class="field-create-sakaz_narad car-field-wrapper">
+  <label for="${V}">Номер телефону</label>
+  <div class="phone-field-inline">
+    <input type="text" id="${V}" class="input-create-sakaz_narad" placeholder="Введіть номер телефону" autocomplete="off" />
+    <div id="car-confirm-icons" class="car-confirm-icons">
+      <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
     </div>
+  </div>
+  <ul id="${Ee}" class="suggestions-list-create-sakaz_narad"></ul>
+</div>
+
     <div class="field-create-sakaz_narad">
       <div class="car-field-inline">
         <div class="car-input-group">

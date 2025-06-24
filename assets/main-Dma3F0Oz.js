@@ -121,6 +121,9 @@ import{s as _}from"./supabaseClient-COh8w6i-.js";function Ke(){var n;if(document
       <label for="${K}">ПІБ</label>
       <input type="text" id="${K}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" />
       <ul id="${Ue}" class="suggestions-list-create-sakaz_narad"></ul>
+      <div id="car-confirm-icons" class="car-confirm-icons" style="display: flex;">
+       <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
+    </div>
     </div>
     <div class="field-create-sakaz_narad">
       <label for="${V}">Номер телефону</label>
@@ -131,9 +134,6 @@ import{s as _}from"./supabaseClient-COh8w6i-.js";function Ke(){var n;if(document
         <label for="${F}">Автомобіль</label>
     <div class="car-field-inline">
     <input type="text" id="${F}" class="input-create-sakaz_narad" placeholder="Автомобіль" />
-    <div id="car-confirm-icons" class="car-confirm-icons" style="display: flex;">
-       <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
-    </div>
     </div>
        <ul id="${he}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>

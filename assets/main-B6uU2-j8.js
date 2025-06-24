@@ -126,6 +126,9 @@ import{s as E}from"./supabaseClient-BYu3H-Wf.js";function et(){var n;if(document
       <label for="${V}">Номер телефону</label>
       <input type="text" id="${V}" class="input-create-sakaz_narad" placeholder="Введіть номер телефону" autocomplete="off" />
       <ul id="${Ee}" class="suggestions-list-create-sakaz_narad"></ul>
+          <div id="car-confirm-icons" class="car-confirm-icons" >
+          <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження" >✔️</button>
+        </div>
     </div>
     <div class="field-create-sakaz_narad car-field-wrapper">
       <div class="car-field-inline">
@@ -137,10 +140,6 @@ import{s as E}from"./supabaseClient-BYu3H-Wf.js";function et(){var n;if(document
         <div class="year-input-group">
           <label for="car-year-create-sakaz_narad">Рік</label>
           <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" style="width: 100%;" />
-        </div>
-
-        <div id="car-confirm-icons" class="car-confirm-icons" >
-          <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження" >✔️</button>
         </div>
       </div>
       <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>

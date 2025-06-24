@@ -129,18 +129,18 @@ import{s as E}from"./supabaseClient-Dij7FAQa.js";function et(){var n;if(document
     </div>
     <div class="field-create-sakaz_narad car-field-wrapper">
       <div class="car-field-inline">
-        <div class="car-input-group" style="flex-grow: 1; min-width: 0;">
+        <div class="car-input-group">
           <label for="${F}">Автомобіль</label>
           <input type="text" id="${F}" class="input-create-sakaz_narad" placeholder="Автомобіль" style="width: 100%;" />
         </div>
 
-        <div class="year-input-group" style="flex: 0 0 80px; margin-left: 10px;">
+        <div class="year-input-group">
           <label for="car-year-create-sakaz_narad">Рік</label>
           <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" style="width: 100%;" />
         </div>
 
         <div id="car-confirm-icons" class="car-confirm-icons" >
-          <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження" style="margin-bottom: 8px;">✔️</button>
+          <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження" >✔️</button>
         </div>
       </div>
       <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>

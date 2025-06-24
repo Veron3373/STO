@@ -1,8 +1,54 @@
-import{s as _}from"./supabaseClient-CRjKOyyk.js";function Ke(){var n;if(document.getElementById("custom-modal-sakaz_narad"))return;const t=document.createElement("div");t.id="custom-modal-sakaz_narad",t.className="modal-overlay-sakaz_narad hidden",t.innerHTML=`
+import{s as _}from"./supabaseClient-DQp2uofH.js";function Ke(){var n;if(document.getElementById("custom-modal-sakaz_narad"))return;const t=document.createElement("div");t.id="custom-modal-sakaz_narad",t.className="modal-overlay-sakaz_narad hidden",t.innerHTML=`
     <div class="modal-content-sakaz_narad">
       <button class="modal-close-sakaz_narad" id="close-modal-sakaz_narad">&times;</button>
-      <h2>Модальне вікно</h2>
-      <p>Це динамічно створене модальне вікно 400x400px.</p>
+      <div class="header">
+        <h1>B.S.Motorservice</h1>
+        <p>Адрес: вул. Корольова, 6, Вінниця</p>
+        <p>068 931 24 38 тел</p>
+      </div>
+
+      <table>
+        <tr>
+          <td>Акт №</td><td>17</td>
+          <td>Закритий</td><td>Відкритий: 25.12.2023</td>
+        </tr>
+        <tr>
+          <td>Клієнт ПІБ</td><td colspan="3">Передерко Алім Юрійович</td>
+        </tr>
+        <tr>
+          <td>Телефон</td><td colspan="3">+38-968156395</td>
+        </tr>
+        <tr>
+          <td>Марка / рік</td><td>Volkswagen Touareg 2014</td>
+          <td>Vincode</td><td>WVFD64DFHDFG4DFG</td>
+        </tr>
+        <tr>
+          <td>Двигун</td><td>CVVA - 3.0 - дизель</td>
+          <td>Пробіг</td><td>8 564</td>
+        </tr>
+        <tr>
+          <td colspan="4">Причина звернення: Заміна поршневої групи</td>
+        </tr>
+      </table>
+
+      <table>
+        <tr class="section-title"><td colspan="4">Вид робіт</td></tr>
+        <tr>
+          <th>Назва</th><th>К-ть</th><th>Ціна за од</th><th>Сума</th>
+        </tr>
+        <tr>
+          <td>Шарова</td><td>2</td><td>50</td><td>100</td>
+        </tr>
+        <tr>
+          <td>Заміна шарової</td><td>1</td><td>150</td><td>150</td>
+        </tr>
+      </table>
+
+      <div class="summary">
+        Всього за деталі: 100 грн<br>
+        Всього за роботу: 150 грн<br>
+        <strong>Всього: згідно акту 250 грн</strong>
+      </div>
     </div>
   `,document.body.appendChild(t),(n=t.querySelector("#close-modal-sakaz_narad"))==null||n.addEventListener("click",()=>{t.classList.add("hidden")}),t.addEventListener("click",a=>{a.target===t&&t.classList.add("hidden")})}function pe(){const e=document.getElementById("custom-modal-sakaz_narad");e&&e.classList.remove("hidden")}const ie=["№ акту","Дата","Клієнт 🔽","Автомобіль","Сумма"];let R=[],ge=[],ye=[],ce=0;function he(e){if(typeof e=="string")try{return JSON.parse(e)}catch{return null}return e}function Ae(e){return`${e.getDate().toString().padStart(2,"0")}.${(e.getMonth()+1).toString().padStart(2,"0")}.${e.getFullYear()}`}function Qe(e){const t=e.replace(/\D/g,"");if(t.length===12&&t.startsWith("380")){const n=t.slice(2,5),a=t.slice(5,8),o=t.slice(8,10),s=t.slice(10,12);return`+38 (${n}) ${a}-${o}-${s}`}return e}function Oe(e){if(!/^\d{2}\.\d{2}\.\d{4}$/.test(e))return!1;const[n,a,o]=e.split("."),s=parseInt(n),r=parseInt(a),l=parseInt(o);return s>=1&&s<=31&&r>=1&&r<=12&&l>=2e3&&l<=2100}function Ze(e,t){const n=t==null?void 0:t.find(r=>r.client_id===e.client_id),a=he(n==null?void 0:n.data),o=(a==null?void 0:a.ПІБ)||"Невідомо",s=(a==null?void 0:a.Телефон)||"";return s?`${o} ${s}`:o}function et(e,t){const n=t==null?void 0:t.find(r=>r.cars_id===e.cars_id),a=he(n==null?void 0:n.data),o=(a==null?void 0:a["Номер авто"])||"",s=(a==null?void 0:a.Авто)||"";return`${o} ${s}`.trim()}function tt(e){const t=he(e.info||e.data||e.details),n=(t==null?void 0:t["Загальна сума"])||(t==null?void 0:t.total)||(t==null?void 0:t.amount)||e.total||e.amount;if(n===void 0)return"0 грн";const a=Number(n);return isNaN(a)?"0 грн":`${a.toLocaleString("uk-UA")} грн`}function nt(e){if(!e.date_on)return"-";const t=new Date(e.date_on),n=t.getDate().toString().padStart(2,"0"),a=(t.getMonth()+1).toString().padStart(2,"0"),o=t.getFullYear(),s=t.getHours().toString().padStart(2,"0"),r=t.getMinutes().toString().padStart(2,"0");return`<div class="phone-blue-italic">${s}:${r}</div><div>${n}.${a}.${o}</div>`}function ue(e){return e.date_off&&!isNaN(Date.parse(e.date_off))}function at(e){const t=document.createElement("td"),n=[...e.matchAll(/\+380\d{9}/g)].map(o=>o[0]);let a=e;return n.forEach(o=>{a=a.replace(o,"").trim()}),t.innerHTML=`<div>${a}</div>`,n.forEach(o=>{const s=Qe(o);t.innerHTML+=`<div class="phone-blue-italic">${s}</div>`}),t.addEventListener("click",()=>pe()),t}function ot(e){const t=document.createElement("td"),n=e.split(" "),a=n[0]||"",o=n.slice(1).join(" ")||"";return t.innerHTML=`<div>${a}</div>${o?`<div><span class="car-red-bold">${o}</span></div>`:""}`,t.addEventListener("dblclick",()=>pe()),t}function st(e){const t=document.createElement("td");return t.innerHTML=e,t.addEventListener("dblclick",()=>pe()),t}function Pe(e,t,n,a){a.innerHTML="",e.forEach(o=>{var d;const s=ue(o),l=[`${s?"🔒":"🗝️"} ${((d=o.act_id)==null?void 0:d.toString())||"N/A"}`,nt(o),Ze(o,t),et(o,n),tt(o)],u=document.createElement("tr");u.classList.add(s?"row-closed":"row-open"),l.forEach((f,c)=>{let m;ie[c].includes("Клієнт")?m=at(f):ie[c]==="Автомобіль"?m=ot(f):m=st(f),u.appendChild(m)}),a.appendChild(u)})}function rt(){ce===0?(R.sort((e,t)=>{const n=!ue(e),a=!ue(t);return n&&!a?-1:!n&&a?1:0}),ce=1):(R.sort((e,t)=>new Date(t.date_on).getTime()-new Date(e.date_on).getTime()),ce=0)}function lt(){const e=new Date,t=new Date(e.getFullYear(),e.getMonth()-1,e.getDate());return`${Ae(t)} - ${Ae(e)}`}function ct(){var s;const e=document.getElementById("dateRangePicker");((s=e==null?void 0:e.value)==null?void 0:s.trim())||(console.warn("⚠️ Діапазон дат порожній. Завантажуємо всі акти за останній місяць."),e.value=lt());const n=e.value.trim();if(!n.includes(" - "))return console.error("❌ Невірний формат діапазону. Очікується: DD.MM.YYYY - DD.MM.YYYY"),null;const[a,o]=n.split(" - ");if(!Oe(a)||!Oe(o))return console.error("❌ Невірний формат дати. Використовуйте DD.MM.YYYY"),null;try{const[r,l]=[a,o].map((u,d)=>{const[f,c,m]=u.split("."),y=`${m}-${c.padStart(2,"0")}-${f.padStart(2,"0")}`;return d===0?`${y} 00:00:00`:`${y} 23:59:59`});return{dateFrom:r,dateTo:l}}catch(r){return console.error("❌ Помилка конвертації дати:",r),null}}async function dt(e,t){const{data:n,error:a}=await _.from("acts").select("*").gte("date_on",e).lte("date_on",t).order("act_id",{ascending:!1});return a?(console.error("❌ Помилка при отриманні актів:",a),null):n||[]}async function it(){const{data:e,error:t}=await _.from("clients").select("client_id, data");return t?(console.error("❌ Помилка при отриманні клієнтів:",t),alert(`Помилка завантаження клієнтів: ${t.message}`),null):e||[]}async function ut(){const{data:e,error:t}=await _.from("cars").select("cars_id, data");return t?(console.error("❌ Помилка при отриманні авто:",t),null):e||[]}function mt(){const e=document.createElement("thead"),t=document.createElement("tr");return ie.forEach(n=>{const a=document.createElement("th");a.textContent=n,a.addEventListener("click",()=>{n==="Клієнт 🔽"&&(rt(),ft())}),t.appendChild(a)}),e.appendChild(t),e}function ft(){const e=document.querySelector("#table-container-modal-sakaz_narad table");if(!e)return;const t=document.createElement("tbody");Pe(R,ge,ye,t);const n=e.querySelector("tbody");n&&n.replaceWith(t)}function pt(){const e=document.createElement("table");e.style.width="100%",e.style.borderCollapse="collapse";const t=mt(),n=document.createElement("tbody");return Pe(R,ge,ye,n),e.appendChild(t),e.appendChild(n),e}function gt(e){const t=document.getElementById("table-container-modal-sakaz_narad");t&&(t.innerHTML=`<div style="text-align: center; padding: 20px; color: #666;">
       Немає актів у діапазоні дат: ${e}

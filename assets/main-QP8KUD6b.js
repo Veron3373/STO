@@ -118,26 +118,20 @@ import{s as _}from"./supabaseClient-COh8w6i-.js";function Ke(){var n;if(document
     </div>
   `,e.appendChild(t),e}function kt(){return`
 
-<div class="field-create-sakaz_narad">
-  <label for="${O}">ПІБ</label>
-  <div class="car-field-inline">
-    <input type="text" id="${O}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" />
-    <div id="car-confirm-icons" class="car-confirm-icons" style="display: flex;">
-      <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
+    <div class="field-create-sakaz_narad">
+     <label for="${O}">ПІБ</label>
+     <div class="car-field-inline">
+       <input type="text" id="${O}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" />
+        <div id="car-confirm-icons" class="car-confirm-icons" style="display: flex;">
+          <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
+        </div>
+     </div>
+     <ul id="${me}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
-  </div>
-  <ul id="${me}" class="suggestions-list-create-sakaz_narad"></ul>
-</div>
-
-
-
     <div class="field-create-sakaz_narad">
       <label for="${O}">ПІБ</label>
       <input type="text" id="${O}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" />
       <ul id="${me}" class="suggestions-list-create-sakaz_narad"></ul>
-      <div id="car-confirm-icons" class="car-confirm-icons" style="display: flex;">
-       <button id="confirm-toggle" class="confirm-button yes" title="Підтвердження">✔️</button>
-    </div>
     </div>
     <div class="field-create-sakaz_narad">
       <label for="${J}">Номер телефону</label>

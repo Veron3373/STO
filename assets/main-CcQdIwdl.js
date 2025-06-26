@@ -1,8 +1,8 @@
-import{s as E}from"./supabaseClient-dgv16tCI.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),tt()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
-    <div class="zakaz_narayd-modal-content">
-      <button class="zakaz_narayd-modal-close" id="zakaz_narayd-close-modal">&times;</button>
-      <div class="zakaz_narayd-modal-body">
-        <div class="zakaz_narayd-company-info">
+import{s as E}from"./supabaseClient-BUxRgjyf.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),tt()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
+<div class="zakaz_narayd-modal-overlay hidden" id="zakaz_narayd-modal">
+  <div class="zakaz_narayd-modal-content">
+    <button class="zakaz_narayd-modal-close" id="zakaz_narayd-close">&times;</button>
+    <div class="zakaz_narayd-modal-body">
           <h1>B.S.Motorservice</h1>
           <div class="zakaz_narayd-client">Клієнт ПІБ: Перелепко</div>
           <div class="zakaz_narayd-akt">Акт №: 17</div>

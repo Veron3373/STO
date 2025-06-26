@@ -3,7 +3,7 @@ import{s as E}from"./supabaseClient-Dyt-Wjda.js";document.addEventListener("DOMC
       <button class="zakaz_narayd-modal-close" id="zakaz_narayd-close-modal">&times;</button>
       <div class="zakaz_narayd-company-info">
         <h1>B.S.Motorservice</h1>
-        <div class="zakaz_narayd-client">Клієнт ПІБ: Перелепко</div>
+        <div class="zakaz_narayd-client">Клієнт ПІБ: Передерко</div>
         <div class="zakaz_narayd-akt">Акт №: 17</div>
         <div class="zakaz_narayd-date">Дата: 25.12.2023</div>
         <div class="zakaz_narayd-car">Авто: Touareg</div>

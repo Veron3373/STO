@@ -1,4 +1,4 @@
-import{s as E}from"./supabaseClient-CiJhHpBt.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),tt()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
+import{s as E}from"./supabaseClient-BlUInzU-.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),tt()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
 <div class="zakaz_narayd-modal-content">
   <button class="zakaz_narayd-modal-close" id="zakaz_narayd-close">&times;</button>
   <div class="zakaz_narayd-modal-body">
@@ -25,8 +25,8 @@ import{s as E}from"./supabaseClient-CiJhHpBt.js";document.addEventListener("DOMC
       </table>
 
       <table class="zakaz_narayd-table right">
-        <tr><td><strong>Закритий</strong></td><td><span class="green">25.12.2023</span></td></tr>  
-        <tr><td><strong>Відкритий</strong></td><td><span class="green">25.12.2023</span></td></tr>
+        <tr class="red-row"><td><strong>Закритий</strong></td><td>25.12.2023</td></tr>  
+        <tr class="green-row"><td><strong>Відкритий</strong></td><td>25.12.2023</td></tr>
         <tr><td><strong>Марка / рік</strong></td><td colspan="2">Volkswagen Touareg 2014</td></tr>
         <tr><td><strong>Vincode</strong></td><td colspan="2">WVFD64DFHDFG4DFG</td></tr>
         <tr><td><strong>Двигун</strong></td><td colspan="2">CVVA - 3,0 - дизель</td></tr>

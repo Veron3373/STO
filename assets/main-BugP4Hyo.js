@@ -20,14 +20,15 @@ import{s as E}from"./supabaseClient-B4EeRbvA.js";document.addEventListener("DOMC
         <tr><td><strong>Акт №</strong></td><td>17</td></tr>
         <tr><td><strong>Клієнт ПІБ</strong></td><td>Передерко Алім Юрійович</td></tr>
         <tr><td><strong>Телефон</strong></td><td>+38-968156395</td></tr>
-        <tr><td><strong>Причина звернення:</strong></td><td>м.Вінниця А.Ющенка.16</td></tr>
+        <tr><td><strong>Примітка:</strong></td><td>м.Вінниця А.Ющенка.16</td></tr>
         <tr><td><strong>Причина звернення:</strong></td><td><span style="color:red; font-weight:bold;">Заміна поршневої групи</span></td></tr>
         <tr><td><strong>Фото</strong></td><td>-</td></tr>
       </table>
 
       <!-- Права таблиця -->
       <table class="zakaz_narayd-table" style="flex: 1; min-width: 300px; border-collapse: collapse; font-family: sans-serif; font-size: 14px;">
-        <tr><td><strong>Статус</strong></td><td>Відкритий</td><td><strong style="color: #145214;">25.12.2023</strong></td></tr>
+        <tr><td><strong>Закритий</strong></td><td><strong style="color:rgb(167, 8, 8);">25.12.2023</strong></td></tr>  
+        <tr><td><strong>Відкритий</strong></td><td><strong style="color: #145214;">25.12.2023</strong></td></tr>
         <tr><td><strong>Марка / рік</strong></td><td colspan="2">Volkswagen Touareg 2014</td></tr>
         <tr><td><strong>Vincode</strong></td><td colspan="2">WVFD64DFHDFG4DFG</td></tr>
         <tr><td><strong>Двигун</strong></td><td colspan="2">CVVA - 3,0 - дизель</td></tr>

@@ -88,7 +88,7 @@ import{s as E}from"./supabaseClient-g_ed-Xy_.js";document.addEventListener("DOMC
         </div>
 
 
-      <div class="field-create-sakaz_narad car-code-input-grou">
+      <div class="field-create-sakaz_narad car-code-input-group">
         <label for="${U}">Номер авто</label>
         <input type="text" id="${U}" class="input-create-sakaz_narad" placeholder="Номер авто" autocomplete="off" />
         <ul id="${ke}" class="suggestions-list-create-sakaz_narad"></ul>
@@ -124,7 +124,7 @@ import{s as E}from"./supabaseClient-g_ed-Xy_.js";document.addEventListener("DOMC
       </div>
 
     </div>
-    
+
     <div class="field-row-create-sakaz_narad">
 
     <div class="field-create-sakaz_narad">

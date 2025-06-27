@@ -94,12 +94,11 @@ import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMC
         <ul id="${ke}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
 
-
-
         <div class="field-create-sakaz_narad year-input-group">
           <label for="car-year-create-sakaz_narad">Рік</label>
           <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" readonly />
         </div>
+
       </div>
       <ul id="${Ee}" class="suggestions-list-create-sakaz_narad"></ul>
       <ul id="${tt}" class="suggestions-list-create-sakaz_narad"></ul>
@@ -112,23 +111,27 @@ import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMC
           <input type="text" id="${ee}" class="input-create-sakaz_narad" placeholder="Код ДВЗ" readonly />
         </div>
 
-       <div class="field-create-sakaz_narad">
-        <label for="${T}">VIN-код</label>
-        <input type="text" id="${T}" class="input-create-sakaz_narad" readonly />
-        <ul id="${Ze}" class="suggestions-list-create-sakaz_narad"></ul>
+
+      <div class="field-create-sakaz_narad">
+        <label for="${D}">Пальне</label>
+        <input type="text" id="${D}" class="input-create-sakaz_narad" readonly />
       </div>
+
 
       <div class="field-create-sakaz_narad">
         <label for="${N}">Обʼєм</label>
         <input type="text" id="${N}" class="input-create-sakaz_narad" readonly />
         <ul id="${Qe}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
-      <div class="field-create-sakaz_narad">
-        <label for="${D}">Пальне</label>
-        <input type="text" id="${D}" class="input-create-sakaz_narad" readonly />
-      </div>
+
     </div>
     <div class="field-row-create-sakaz_narad">
+
+    <div class="field-create-sakaz_narad">
+        <label for="${T}">VIN-код</label>
+        <input type="text" id="${T}" class="input-create-sakaz_narad" readonly />
+        <ul id="${Ze}" class="suggestions-list-create-sakaz_narad"></ul>
+      </div>
 
       <div class="field-create-sakaz_narad">
         <label for="${B}">Джерело</label>

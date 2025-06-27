@@ -106,22 +106,21 @@ import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMC
 
     <div class="field-row-create-sakaz_narad">
 
+      <div class="field-create-sakaz_narad">
+        <label for="${N}">Обʼєм</label>
+        <input type="text" id="${N}" class="input-create-sakaz_narad" readonly />
+        <ul id="${Qe}" class="suggestions-list-create-sakaz_narad"></ul>
+      </div>
+
        <div class="field-create-sakaz_narad car-code-input-group">
           <label for="${ee}">Код ДВЗ</label>
-          <input type="text" id="${ee}" class="input-create-sakaz_narad" placeholder="Код ДВЗ" readonly />
+          <input type="text" id="${ee}" class="input-create-sakaz_narad" readonly />
         </div>
 
 
       <div class="field-create-sakaz_narad">
         <label for="${D}">Пальне</label>
         <input type="text" id="${D}" class="input-create-sakaz_narad" readonly />
-      </div>
-
-
-      <div class="field-create-sakaz_narad">
-        <label for="${N}">Обʼєм</label>
-        <input type="text" id="${N}" class="input-create-sakaz_narad" readonly />
-        <ul id="${Qe}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
 
     </div>

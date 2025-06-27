@@ -87,12 +87,16 @@ import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMC
           <input type="text" id="${V}" class="input-create-sakaz_narad" placeholder="Автомобіль"  />
         </div>
 
-        <div class="car-code-input-group">
-          <label for="${ee}">Код ДВЗ</label>
-          <input type="text" id="${ee}" class="input-create-sakaz_narad" placeholder="Код ДВЗ" readonly />
-        </div>
 
-        <div class="year-input-group">
+      <div class="field-create-sakaz_narad car-code-input-grou">
+        <label for="${U}">Номер авто</label>
+        <input type="text" id="${U}" class="input-create-sakaz_narad" placeholder="Номер авто" autocomplete="off" />
+        <ul id="${ke}" class="suggestions-list-create-sakaz_narad"></ul>
+      </div>
+
+
+
+        <div class="field-create-sakaz_narad year-input-group">
           <label for="car-year-create-sakaz_narad">Рік</label>
           <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" readonly />
         </div>
@@ -102,6 +106,11 @@ import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMC
     </div>
 
     <div class="field-row-create-sakaz_narad">
+
+       <div class="field-create-sakaz_narad car-code-input-group">
+          <label for="${ee}">Код ДВЗ</label>
+          <input type="text" id="${ee}" class="input-create-sakaz_narad" placeholder="Код ДВЗ" readonly />
+        </div>
 
        <div class="field-create-sakaz_narad">
         <label for="${T}">VIN-код</label>
@@ -120,12 +129,6 @@ import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMC
       </div>
     </div>
     <div class="field-row-create-sakaz_narad">
-
-      <div class="field-create-sakaz_narad">
-        <label for="${U}">Номер авто</label>
-        <input type="text" id="${U}" class="input-create-sakaz_narad" placeholder="Номер авто" autocomplete="off" />
-        <ul id="${ke}" class="suggestions-list-create-sakaz_narad"></ul>
-      </div>
 
       <div class="field-create-sakaz_narad">
         <label for="${B}">Джерело</label>

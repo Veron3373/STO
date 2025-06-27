@@ -1,4 +1,4 @@
-import{s as E}from"./supabaseClient-CkUGXe63.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),tt()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
+import{s as E}from"./supabaseClient-2T-4zjwk.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),tt()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
 <div class="zakaz_narayd-modal-content">
   <button class="zakaz_narayd-modal-close" id="zakaz_narayd-close">&times;</button>
   <div class="zakaz_narayd-modal-body">
@@ -94,7 +94,7 @@ import{s as E}from"./supabaseClient-CkUGXe63.js";document.addEventListener("DOMC
         <ul id="${Ie}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
 
-        <div class="year-input-group">
+        <div class="year-input-group small-year">
           <label for="car-year-create-sakaz_narad">Рік</label>
           <input type="text" id="car-year-create-sakaz_narad" class="input-create-sakaz_narad" readonly />
         </div>
@@ -103,22 +103,26 @@ import{s as E}from"./supabaseClient-CkUGXe63.js";document.addEventListener("DOMC
       <ul id="${_e}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
 
-    <div class="field-row-create-sakaz_narad">
 
-        <div class="year-input-cod">
-          <label for="car-year-create-sakaz_narad_cod">Код ДВЗ</label>
-          <input type="text" id="car-year-create-sakaz_narad_cod" class="input-create-sakaz_narad" readonly />
-        </div>
+<div class="field-row-create-sakaz_narad">
+  <div class="year-input-cod">
+    <label for="car-year-create-sakaz_narad_cod">Код ДВЗ</label>
+    <input type="text" id="car-year-create-sakaz_narad_cod" class="input-create-sakaz_narad" readonly />
+  </div>
 
-      <div class="field-create-sakaz_narad">
-        <label for="${N}">Обʼєм</label>
-        <input type="text" id="${N}" class="input-create-sakaz_narad" readonly />
-        <ul id="${Ke}" class="suggestions-list-create-sakaz_narad"></ul>
-      </div>
-      <div class="field-create-sakaz_narad">
-        <label for="${D}">Пальне</label>
-        <input type="text" id="${D}" class="input-create-sakaz_narad" readonly />
-      </div>
+  <div class="field-create-sakaz_narad">
+    <label for="${N}">Обʼєм</label>
+    <input type="text" id="${N}" class="input-create-sakaz_narad" readonly />
+    <ul id="${Ke}" class="suggestions-list-create-sakaz_narad"></ul>
+  </div>
+
+  <div class="field-create-sakaz_narad">
+    <label for="${D}">Пальне</label>
+    <input type="text" id="${D}" class="input-create-sakaz_narad" readonly />
+  </div>
+</div>
+
+
     </div>
     <div class="field-row-create-sakaz_narad">
       <div class="field-create-sakaz_narad">

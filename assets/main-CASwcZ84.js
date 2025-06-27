@@ -1,4 +1,4 @@
-import{s as E}from"./supabaseClient-DjR1Ct2j.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),et()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
+import{s as E}from"./supabaseClient-CClZuZV7.js";document.addEventListener("DOMContentLoaded",()=>{Ve(),et()});function Ve(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
 <div class="zakaz_narayd-modal-content">
   <button class="zakaz_narayd-modal-close" id="zakaz_narayd-close">&times;</button>
   <div class="zakaz_narayd-modal-body">

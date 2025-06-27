@@ -19,13 +19,20 @@ import{s as E}from"./supabaseClient-D3TOSsU7.js";document.addEventListener("DOMC
         <tr><td>Клієнт ПІБ</td><td>Передерко Алім Юрійович</td></tr>
         <tr><td>Телефон</td><td>+38-968156395</td></tr>
         <tr><td>Примітка:</td><td>м.Вінниця А.Ющенка.16</td></tr>
-        <tr><td>Причина звернення:</td><td><span class="highlight">Заміна поршневої групи</span></td></tr>
         <tr><td>Фото</td><td>-</td></tr>
       </table>
 
+     <tr><td>Причина звернення:</td><td><span class="highlight">Заміна поршневої групи</span></td></tr>
+
       <table class="zakaz_narayd-table right">
-        <tr class="red-row"><td>Закритий</td><td>25.12.2023</td></tr>  
-        <tr class="green-row"><td>Відкритий</td><td>25.12.2023</td></tr>
+         <tr>
+          <td><strong>Закритий</strong></td>
+         <td>
+           <span class="green">25.12.2023 13:25</span>
+            &nbsp;
+           <span class="red">30.12.2023 15:45</span>
+          </td>
+        </tr>
         <tr><td>Марка / рік</td><td colspan="2">Volkswagen Touareg 2014</td></tr>
         <tr><td>Vincode</td><td colspan="2">WVFD64DFHDFG4DFG</td></tr>
         <tr><td>Двигун</td><td colspan="2">CVVA - 3,0 - дизель</td></tr>

@@ -1,4 +1,4 @@
-import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMContentLoaded",()=>{Je(),at()});function Je(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
+import{s as E}from"./supabaseClient-BdjhXDTY.js";document.addEventListener("DOMContentLoaded",()=>{Je(),at()});function Je(){var t;if(document.getElementById("zakaz_narayd-custom-modal"))return;const e=document.createElement("div");e.id="zakaz_narayd-custom-modal",e.className="zakaz_narayd-modal-overlay hidden",e.innerHTML=`
 <div class="zakaz_narayd-modal-content">
   <button class="zakaz_narayd-modal-close" id="zakaz_narayd-close">&times;</button>
   <div class="zakaz_narayd-modal-body">
@@ -124,6 +124,7 @@ import{s as E}from"./supabaseClient-CSwuv7Su.js";document.addEventListener("DOMC
       </div>
 
     </div>
+    
     <div class="field-row-create-sakaz_narad">
 
     <div class="field-create-sakaz_narad">

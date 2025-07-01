@@ -1,7 +1,0 @@
-const r="save-prompt-modal-create";function v(){const t=document.createElement("div");t.id=r,t.className="modal-overlay-save",t.style.display="none";const n=document.createElement("div");return n.className="modal-content-save",n.innerHTML=`
-    <p>Зберегти зміни?</p>
-    <div class="save-buttons">
-      <button id="save-confirm" class="btn-save-confirm">Так</button>
-      <button id="save-cancel" class="btn-save-cancel">Ні</button>
-    </div>
-  `,t.appendChild(n),t}function p(){return new Promise(t=>{const n=document.getElementById(r);if(!n)return t(!1);n.style.display="flex";const o=document.getElementById("save-confirm"),s=document.getElementById("save-cancel"),a=()=>{n.style.display="none",o.removeEventListener("click",l),s.removeEventListener("click",d)},c=(i,m)=>{const e=document.createElement("div");e.textContent=i,e.style.position="fixed",e.style.bottom="50%",e.style.left="50%",e.style.transform="translateX(-50%)",e.style.backgroundColor=m,e.style.color="white",e.style.padding="12px 24px",e.style.borderRadius="8px",e.style.zIndex="10001",e.style.boxShadow="0 4px 12px rgba(0,0,0,0.2)",e.style.fontSize="16px",document.body.appendChild(e),setTimeout(()=>e.remove(),2500)},l=()=>{a(),c("✅ Дані успішно збережено","#4caf50"),t(!0)},d=()=>{a(),c("✖ Скасовано користувачем","#f44336"),t(!1)};o.addEventListener("click",l),s.addEventListener("click",d)})}export{v as createSavePromptModal,r as savePromptModalId,p as showSavePromptModal};

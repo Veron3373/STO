@@ -61,7 +61,7 @@ import{s as E}from"./supabaseClient-DNp1sFTV.js";document.addEventListener("DOMC
     <div class="buttons-create-sakaz_narad">
       <button id="${Ie}" class="btn-action-create-sakaz_narad btn-edit" title="Заблокувати інші поля">🔒</button>
       <button id="${ot}" class="btn-action-create-sakaz_narad btn-save" title="Зберегти">💾</button>
-      <button id="${et}" class="btn-action-create-sakaz_narad btn-create"title="Створити">📝</button> <!-- Додано ID -->
+      <button id="${et}" class="btn-action-create-sakaz_narad btn-create"title="Створити">пролд📝</button> 
     </div>
   `,e.appendChild(t),e}function Tt(){return`
     <div class="field-create-sakaz_narad">

@@ -1,4 +1,4 @@
-import{g as i,u as d}from"./main-Cxm92HXa.js";import"./supabaseClient-B08L58Py.js";const n="save-prompt-modal-create";function u(){const e=document.createElement("div");e.id=n,e.className="modal-create-overlay",e.style.display="none";const t=document.createElement("div");return t.className="modal-content-save",t.innerHTML=`
+import{g as i,u as d}from"./main-DQFqLpo_.js";import"./supabaseClient-COcdlTl_.js";const n="save-prompt-modal-create";function u(){const e=document.createElement("div");e.id=n,e.className="modal-create-overlay",e.style.display="none";const t=document.createElement("div");return t.className="modal-content-save",t.innerHTML=`
     <p>Створити новий запис?</p>
     <div class="save-buttons">
       <button id="save-confirm-create" class="btn-save-confirm">Тааааак</button>

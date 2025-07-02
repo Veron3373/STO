@@ -1,4 +1,4 @@
-import{g as i}from"./main-wAkoJH9k.js";import"./supabaseClient-COcdlTl_.js";const a="save-prompt-modal-create";function v(){const t=document.createElement("div");t.id=a,t.className="modal-create-overlay",t.style.display="none";const e=document.createElement("div");return e.className="modal-content-save",e.innerHTML=`
+import{g as i}from"./main-ryBglNE6.js";import"./supabaseClient-COcdlTl_.js";const a="save-prompt-modal-create";function v(){const t=document.createElement("div");t.id=a,t.className="modal-create-overlay",t.style.display="none";const e=document.createElement("div");return e.className="modal-content-save",e.innerHTML=`
     <p>Створити заказ наряд?</p>
     <div class="save-buttons">
       <button id="save-confirm-create" class="btn-save-confirm">Так</button>

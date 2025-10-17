@@ -1,5 +1,3 @@
-// src/scss/робоча/налаштування/_налаштування.scss
-
 .modal-settings {
   position: fixed;
   top: 0;
@@ -11,37 +9,98 @@
   align-items: center;
   justify-content: center;
   z-index: 900;
+  padding: 10px 0;
 
   &.hidden {
     display: none;
   }
 
   .modal-window {
-    background: #fff;
+    background: #fff; /* Фон завжди білий */
     padding: 2rem;
     border-radius: 10px;
-    width: 380px;
+    max-width: 700px;
+    max-height: 90vh;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
     position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   h2 {
     text-align: center;
     margin-bottom: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .role-toggle-button {
+    width: 100%;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+
+    &:hover {
+      box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+      transform: translateY(-2px);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+    }
+  }
+
+  #role-toggles-container,
+  #main-toggles-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+
+      &:hover {
+        background: #555;
+      }
+    }
+  }
+
+  #main-toggles-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
   }
 
   .toggle-switch {
     display: flex;
     align-items: center;
-    margin: 5px;
+    margin: 0;
     padding: 0.5rem 1rem;
     border-radius: 6px;
     transition: background-color 0.2s ease;
     cursor: pointer;
 
-    // hover-ефект
     &:hover {
-      background-color: #e6fafd; // ніжно-блакитний
+      background-color: #e6fafd;
     }
 
     input {
@@ -56,6 +115,7 @@
       margin-right: 10px;
       position: relative;
       transition: background-color 0.2s ease;
+      flex-shrink: 0;
 
       &::before {
         content: "";
@@ -71,11 +131,11 @@
     }
 
     .label-text {
-      font-size: 1rem;
+      font-size: 0.95rem;
       user-select: none;
+      line-height: 1.3;
     }
 
-    // повзунок при активності
     input:checked + .slider {
       background-color: #4caf50;
     }
@@ -84,17 +144,151 @@
       transform: translateX(20px);
     }
 
-    // Яскраво-зелений фон ВСЬОГО рядка (label), якщо активний
     &.active {
-      background-color: #d9fbe3; // 💡 зелений відтінок (мʼякий)
+      background-color: #d9fbe3;
     }
+  }
+
+  .percentage-control {
+    margin: 15px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+    border-radius: 12px;
+    border: 1px solid #d1d9e6;
+    flex-shrink: 0;
+  }
+
+  .percentage-label {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    cursor: default;
+  }
+
+  .percentage-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2c3e50;
+    text-align: center;
+  }
+
+  .percentage-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  #percentage-slider {
+    flex: 1;
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #3498db 0%, #2ecc71 100%);
+    border-radius: 10px;
+    outline: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    }
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border: 3px solid #3498db;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+      &:hover {
+        transform: scale(1.15);
+        border-color: #2ecc71;
+        box-shadow: 0 3px 10px rgba(52, 152, 219, 0.4);
+      }
+
+      &:active {
+        transform: scale(1.05);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    &::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      background: white;
+      border: 3px solid #3498db;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+      &:hover {
+        transform: scale(1.15);
+        border-color: #2ecc71;
+        box-shadow: 0 3px 10px rgba(52, 152, 219, 0.4);
+      }
+
+      &:active {
+        transform: scale(1.05);
+      }
+    }
+  }
+
+  .percentage-value-display {
+    min-width: 80px;
+    padding: 8px 12px;
+    background: white;
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: #2ecc71;
+      box-shadow: 0 3px 8px rgba(52, 152, 219, 0.2);
+    }
+  }
+
+  #percentage-input {
+    width: 45px;
+    border: none;
+    outline: none;
+    text-align: right;
+    font-weight: 700;
+    font-size: 18px;
+    color: #2c3e50;
+    background: transparent;
+    padding: 0;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  .percent-sign {
+    font-weight: 700;
+    font-size: 18px;
+    color: #2c3e50;
   }
 
   .modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
 
     #modal-ok-button,
     #modal-cancel-button {
@@ -109,19 +303,82 @@
     #modal-ok-button {
       background-color: #4caf50;
       color: #fff;
-    }
 
-    #modal-ok-button:hover {
-      background-color: #3da744;
+      &:hover {
+        background-color: #3da744;
+      }
     }
 
     #modal-cancel-button {
       background-color: #ddd;
       color: #333;
+
+      &:hover {
+        background-color: #dd0e0e;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .modal-window {
+      max-width: 95%;
+      padding: 1.5rem;
     }
 
-    #modal-cancel-button:hover {
-      background-color: #dd0e0e;
+    #role-toggles-container {
+      grid-template-columns: 1fr;
     }
+  }
+
+  @media (max-width: 480px) {
+    .modal-window {
+      padding: 1rem;
+    }
+
+    .percentage-control {
+      padding: 15px;
+      margin: 15px 0;
+    }
+
+    .percentage-input-wrapper {
+      gap: 10px;
+    }
+
+    .percentage-value-display {
+      min-width: 50px;
+      padding: 6px 12px;
+      font-size: 16px;
+    }
+
+    #percentage-slider {
+      &::-webkit-slider-thumb,
+      &::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .toggle-switch {
+      padding: 0.4rem 0.8rem;
+
+      .label-text {
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  // Додайте цей CSS в ваш modal-settings SCSS
+
+  .settings-divider {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      #d0d0d0 20%,
+      #d0d0d0 80%,
+      transparent
+    );
+    margin: 12px 0;
+    flex-shrink: 0;
   }
 }

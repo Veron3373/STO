@@ -1,0 +1,542 @@
+// src\ts\roboha\tablucya\users.ts (ОНОВЛЕНИЙ КОД)
+import { supabase } from "../../vxid/supabaseClient";
+
+// =============================================================================
+// ГЛОБАЛЬНІ ЗМІННІ ТА КОНСТАНТИ
+// =============================================================================
+
+export let isAuthenticated = false;
+export let userAccessLevel: string | null = null;
+export let userName: string | null = null;
+
+const USER_DATA_KEY = "userAuthData";
+
+interface UserData {
+    Name: string; 
+    Доступ: string; 
+    Пароль: string; 
+    timestamp: number;
+    version: string; 
+}
+
+// =============================================================================
+// LOCAL STORAGE ФУНКЦІЇ
+// =============================================================================
+
+function saveUserDataToLocalStorage(
+    name: string,
+    access: string,
+    password: string
+): void {
+    try {
+        const userData: UserData = {
+            Name: name,
+            Доступ: access,
+            Пароль: password,
+            timestamp: Date.now(),
+            version: "1.0",
+        };
+
+        localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+        console.log("✅ Дані користувача збережено в localStorage");
+    } catch (error) {
+        console.error("❌ Помилка при збереженні в localStorage:", error);
+    }
+}
+
+function getSavedUserDataFromLocalStorage(): {
+    name: string;
+    access: string;
+    password: string;
+} | null {
+    try {
+        const storedData = localStorage.getItem(USER_DATA_KEY);
+        if (!storedData) return null;
+
+        const userData: UserData = JSON.parse(storedData);
+        if (!userData.Name || !userData.Доступ || !userData.Пароль) {
+            clearSavedUserDataFromLocalStorage();
+            return null;
+        }
+
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+        if (Date.now() - userData.timestamp < thirtyDaysInMs) {
+            return {
+                name: userData.Name,
+                access: userData.Доступ,
+                password: userData.Пароль,
+            };
+        } else {
+            clearSavedUserDataFromLocalStorage();
+        }
+    } catch (error) {
+        console.error("❌ Помилка при читанні з localStorage:", error);
+        clearSavedUserDataFromLocalStorage();
+    }
+    return null;
+}
+
+function clearSavedUserDataFromLocalStorage(): void {
+    try {
+        localStorage.removeItem(USER_DATA_KEY);
+        console.log("🗑️ Дані користувача видалено з localStorage");
+    } catch (error) {
+        console.error("❌ Помилка при видаленні з localStorage:", error);
+    }
+}
+
+// Експорт необхідних функцій та типів
+export { 
+    saveUserDataToLocalStorage, 
+    getSavedUserDataFromLocalStorage, 
+    clearSavedUserDataFromLocalStorage, 
+    type UserData 
+};
+
+// =============================================================================
+// СИСТЕМА ПАРОЛІВ ТА АВТЕНТИФІКАЦІЇ
+// =============================================================================
+
+function safeParseJSON(data: any): any {
+    if (typeof data === "string") {
+        try {
+            return JSON.parse(data);
+        } catch {
+            return null;
+        }
+    }
+    return data;
+}
+
+async function checkPassword(inputPassword: string): Promise<{
+    isValid: boolean;
+    accessLevel: string | null;
+    userName: string | null;
+}> {
+    try {
+        const { data: slyusars, error } = await supabase
+            .from("slyusars")
+            .select("data");
+
+        if (error || !slyusars) {
+            console.error(
+                "❌ Помилка при отриманні даних для автентифікації:",
+                error
+            );
+            return { isValid: false, accessLevel: null, userName: null };
+        }
+
+        const foundUser = slyusars.find((slyusar) => {
+            const slyusarData = safeParseJSON(slyusar.data);
+            return slyusarData && String(slyusarData["Пароль"]) === inputPassword;
+        });
+
+        if (foundUser) {
+            const userData = safeParseJSON(foundUser.data);
+            const access = userData?.["Доступ"] || "Адміністратор";
+            const name = userData?.["Name"] || userData?.["Ім'я"] || "Користувач";
+            return { isValid: true, accessLevel: access, userName: name };
+        }
+
+        return { isValid: false, accessLevel: null, userName: null };
+    } catch (error) {
+        console.error("💥 Критична помилка при перевірці пароля:", error);
+        return { isValid: false, accessLevel: null, userName: null };
+    }
+}
+
+function showError(errorDiv: HTMLElement, message: string): void {
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
+}
+
+// =============================================================================
+// ДОСТУП ДО НАЛАШТУВАНЬ (GET SETTING VALUE)
+// =============================================================================
+
+async function getSettingValue(
+    settingId: number,
+    roleKey: string
+): Promise<boolean> {
+    try {
+        const { data, error } = await supabase
+            .from("settings")
+            .select(roleKey)
+            .eq("setting_id", settingId)
+            .single();
+
+        if (error) {
+            console.error(
+                `❌ Помилка при отриманні налаштування (ID:${settingId}, Key:${roleKey}):`,
+                error
+            );
+            return false;
+        }
+
+        const value = (data as { [key: string]: any })?.[roleKey];
+        return Boolean(value);
+
+    } catch (error) {
+        console.error("💥 Критична помилка запиту налаштувань:", error);
+        return false;
+    }
+}
+
+// =============================================================================
+// НОВІ ФУНКЦІЇ: ПЕРЕВІРКА ДОСТУПУ ДЛЯ ЗАПЧАСТИСТА ТА СКЛАДОВЩИКА
+// =============================================================================
+
+/**
+ * Перевірка чи може Запчастист бачити всі акти
+ * setting_id 12, колонка "Запчастист"
+ */
+export async function canZapchastystViewAllActs(): Promise<boolean> {
+    if (userAccessLevel !== "Запчастист") return true;
+    return await getSettingValue(12, "Запчастист");
+}
+
+/**
+ * Перевірка чи може Складовщик бачити всі акти
+ * setting_id 9, колонка "Складовщик"
+ */
+export async function canSkladovschykViewAllActs(): Promise<boolean> {
+    if (userAccessLevel !== "Складовщик") return true;
+    return await getSettingValue(9, "Складовщик");
+}
+
+/**
+ * Перевірка чи може Запчастист відкривати акти для перегляду
+ * setting_id 13, колонка "Запчастист"
+ */
+export async function canZapchastystOpenActs(): Promise<boolean> {
+    if (userAccessLevel !== "Запчастист") return true;
+    return await getSettingValue(13, "Запчастист");
+}
+
+/**
+ * Перевірка чи може Складовщик відкривати акти для перегляду
+ * setting_id 10, колонка "Складовщик"
+ */
+export async function canSkladovschykOpenActs(): Promise<boolean> {
+    if (userAccessLevel !== "Складовщик") return true;
+    return await getSettingValue(10, "Складовщик");
+}
+
+/**
+ * Універсальна перевірка чи може користувач бачити акти
+ */
+export async function canUserViewActs(): Promise<boolean> {
+    if (userAccessLevel === "Запчастист") {
+        return await canZapchastystViewAllActs();
+    }
+    if (userAccessLevel === "Складовщик") {
+        return await canSkladovschykViewAllActs();
+    }
+    return true; // Інші ролі мають доступ
+}
+
+/**
+ * Універсальна перевірка чи може користувач відкривати акти
+ */
+export async function canUserOpenActs(): Promise<boolean> {
+    if (userAccessLevel === "Запчастист") {
+        return await canZapchastystOpenActs();
+    }
+    if (userAccessLevel === "Складовщик") {
+        return await canSkladovschykOpenActs();
+    }
+    return true; // Інші ролі мають доступ
+}
+
+// =============================================================================
+// ОНОВЛЕННЯ ІНТЕРФЕЙСУ (ГОЛОВНА ЛОГІКА)
+// =============================================================================
+
+/**
+ * Динамічне оновлення інтерфейсу на основі рівня доступу та налаштувань БД
+ * Ця функція викликається ТІЛЬКИ ПІСЛЯ успішного входу з main.html
+ */
+export async function updateUIBasedOnAccess(accessLevel: string | null): Promise<void> {
+    const settingsMenuItem = document.querySelector(
+        '[data-action="openSettings"]'
+    )?.closest("li") as HTMLElement | null;
+    const addClientMenuItem = document.querySelector(
+        '[data-action="openClient"]'
+    )?.closest("li") as HTMLElement | null;
+    const homeMenuItem = document.querySelector('[data-action="openHome"]')
+        ?.closest("li") as HTMLElement | null;
+    const buhhalteriyaMenuItem = document.querySelector(
+        '[data-action="openBukhhalteriya"]'
+    )?.closest("li") as HTMLElement | null;
+
+    const setVisibility = (element: HTMLElement | null, isVisible: boolean) => {
+        if (element) {
+            element.style.display = isVisible ? "" : "none"; 
+        }
+    };
+
+    if (!accessLevel) {
+        setVisibility(settingsMenuItem, false);
+        setVisibility(addClientMenuItem, false);
+        setVisibility(homeMenuItem, false);
+        setVisibility(buhhalteriyaMenuItem, false);
+        return;
+    }
+
+    let shouldRenderSettings = true;
+    let shouldRenderAdd = true;
+    let shouldRenderHome = true;
+    let shouldRenderBuhhalteriya = true;
+
+    // --- Логіка приховування для Слюсар, Запчастист, Складовщик ---
+    if (
+        accessLevel === "Слюсар" ||
+        accessLevel === "Запчастист" ||
+        accessLevel === "Складовщик"
+    ) {
+        shouldRenderSettings = false;
+        shouldRenderHome = false;
+    }
+
+    // --- Перевірки для Приймальника ---
+    if (accessLevel === "Приймальник") {
+        shouldRenderSettings = await getSettingValue(1, "Приймальник");
+        shouldRenderAdd = await getSettingValue(2, "Приймальник");
+        shouldRenderBuhhalteriya = await getSettingValue(4, "Приймальник");
+    }
+
+    // --- Перевірки для Слюсаря ---
+    if (accessLevel === "Слюсар") {
+        shouldRenderAdd = false;
+        shouldRenderBuhhalteriya = false;
+    }
+
+    // --- Перевірки для Запчастиста ---
+    if (accessLevel === "Запчастист") {
+        shouldRenderAdd = await getSettingValue(1, "Запчастист");
+        shouldRenderBuhhalteriya = await getSettingValue(2, "Запчастист");
+    }
+
+    // --- Перевірки для Складовщика ---
+    if (accessLevel === "Складовщик") {
+        shouldRenderAdd = await getSettingValue(1, "Складовщик");
+    }
+
+    setVisibility(settingsMenuItem, shouldRenderSettings);
+    setVisibility(addClientMenuItem, shouldRenderAdd);
+    setVisibility(homeMenuItem, shouldRenderHome);
+    setVisibility(buhhalteriyaMenuItem, shouldRenderBuhhalteriya);
+
+    console.log(`✅ UI оновлено для рівня доступу: ${accessLevel}`, {
+        Налаштування: shouldRenderSettings,
+        Додати: shouldRenderAdd,
+        Наряд: shouldRenderHome,
+        Бухгалтерія: shouldRenderBuhhalteriya
+    });
+}
+
+// =============================================================================
+// ФУНКЦІЇ АВТОВХОДУ ТА ПОКАЗУ МОДАЛЬНОГО ВІКНА
+// =============================================================================
+
+export async function attemptAutoLogin(): Promise<{ accessLevel: string | null; userName: string | null }> {
+    const savedData = getSavedUserDataFromLocalStorage();
+    if (!savedData) {
+        return { accessLevel: null, userName: null };
+    }
+
+    try {
+        const {
+            isValid,
+            accessLevel,
+            userName: fetchedUserName,
+        } = await checkPassword(savedData.password);
+
+        if (isValid) {
+            isAuthenticated = true;
+            userAccessLevel = accessLevel;
+            userName = fetchedUserName || savedData.name;
+            console.log("✅ Автоматична автентифікація успішна");
+            return { accessLevel: userAccessLevel, userName: userName };
+        } else {
+            clearSavedUserDataFromLocalStorage();
+            return { accessLevel: null, userName: null };
+        }
+    } catch (error) {
+        console.error("💥 Помилка при автоматичному вході:", error);
+        return { accessLevel: null, userName: null };
+    }
+}
+
+export function createLoginModal(): Promise<string | null> {
+    return new Promise((resolve) => {
+        const modal = document.createElement("div");
+        modal.id = "login-modal_users";
+        modal.className = "login-modal";
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); display: flex; justify-content: center;
+            align-items: center; z-index: 10000;
+        `;
+
+        const modalContent = document.createElement("div");
+        modalContent.className = "login-modal-content";
+        modalContent.style.cssText = `
+            background: white; padding: 40px; border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); text-align: center;
+            min-width: 350px; max-width: 90vw;
+        `;
+        
+        const title = document.createElement("h3");
+        title.textContent = "🔐 Вхід в систему";
+        title.className = "login-modal-title";
+        title.style.cssText = `margin: 0 0 25px 0; color: #333; font-size: 24px;`;
+
+        const input = document.createElement("input");
+        input.type = "password";
+        input.id = "login-input_users";
+        input.placeholder = "Введіть пароль...";
+        input.className = "login-input";
+        input.style.cssText = `
+            width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;
+            margin: 15px 0; font-size: 16px; box-sizing: border-box; transition: border-color 0.3s ease;
+        `;
+
+        const errorDiv = document.createElement("div");
+        errorDiv.id = "login-error";
+        errorDiv.style.cssText = `color: #f44336; margin: 10px 0; display: none; font-size: 14px;`;
+
+        const button = document.createElement("button");
+        button.id = "login-button_users";
+        button.textContent = "Увійти";
+        button.className = "login-button";
+        button.style.cssText = `
+            background: #4CAF50; color: white; border: none; padding: 12px 30px;
+            border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 20px;
+            transition: background-color 0.3s ease; width: 100%;
+        `;
+
+        button.addEventListener("mouseenter", () => (button.style.background = "#45a049"));
+        button.addEventListener("mouseleave", () => (button.style.background = "#4CAF50"));
+        input.addEventListener("focus", () => (input.style.borderColor = "#4CAF50"));
+        input.addEventListener("blur", () => (input.style.borderColor = "#ddd"));
+
+        button.addEventListener("click", async () => {
+            const loginValue = input.value.trim();
+            if (!loginValue) {
+                showError(errorDiv, "❌ Введіть пароль");
+                return;
+            }
+
+            button.textContent = "Перевірка...";
+            button.setAttribute("disabled", "true");
+            button.style.background = "#ccc";
+            errorDiv.style.display = "none";
+
+            try {
+                const {
+                    isValid,
+                    accessLevel,
+                    userName: fetchedUserName,
+                } = await checkPassword(loginValue);
+
+                if (isValid) {
+                    isAuthenticated = true;
+                    userAccessLevel = accessLevel;
+                    userName = fetchedUserName;
+
+                    if (userName && accessLevel) {
+                        saveUserDataToLocalStorage(userName, accessLevel, loginValue);
+                    }
+
+                    modal.remove();
+                    resolve(userAccessLevel);
+
+                } else {
+                    showError(errorDiv, "❌ Невірний пароль");
+                    button.textContent = "Увійти";
+                    button.removeAttribute("disabled");
+                    button.style.background = "#4CAF50";
+                    input.focus();
+                    input.select();
+                }
+            } catch (error) {
+                console.error("💥 Помилка при перевірці пароля:", error);
+                showError(errorDiv, "❌ Помилка перевірки пароля");
+                button.textContent = "Увійти";
+                button.removeAttribute("disabled");
+                button.style.background = "#4CAF50";
+                resolve(null);
+            }
+        });
+        
+        input.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                button.click();
+            }
+        });
+
+        const preventEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+        document.addEventListener("keydown", preventEscape);
+
+        const originalRemove = modal.remove;
+        modal.remove = function () {
+            document.removeEventListener("keydown", preventEscape);
+            originalRemove.call(this);
+        };
+
+        modalContent.appendChild(title);
+        modalContent.appendChild(input);
+        modalContent.appendChild(errorDiv);
+        modalContent.appendChild(button);
+        modal.appendChild(modalContent);
+
+        setTimeout(() => input.focus(), 100);
+        document.body.appendChild(modal);
+    });
+}
+
+export async function showLoginModalBeforeTable(): Promise<string | null> {
+    const { accessLevel: autoAccessLevel } = await attemptAutoLogin();
+
+    if (autoAccessLevel) {
+        console.log("🎉 Автоматичний вхід успішний, accessLevel:", autoAccessLevel);
+        return autoAccessLevel;
+    }
+
+    const tableContainer = document.getElementById(
+        "table-container-modal-sakaz_narad"
+    );
+    if (tableContainer) {
+        tableContainer.innerHTML =
+            '<div class="table-placeholder">🔐 Для доступу до системи потрібна автентифікація</div>';
+    }
+
+    return await createLoginModal();
+}
+
+// =============================================================================
+// ІНШІ ЕКСПОРТОВАНІ ФУНКЦІЇ
+// =============================================================================
+
+export function isUserAuthenticated(): boolean {
+    return isAuthenticated;
+}
+
+export function logoutFromSystemAndRedirect(): void {
+    clearSavedUserDataFromLocalStorage();
+    isAuthenticated = false;
+    userAccessLevel = null;
+    userName = null;
+    console.log("🚪 Вихід з системи та перенаправлення...");
+    window.location.href = "/STO/";
+}
+
+export async function initializeAuthSystem(): Promise<void> {
+    console.log("ℹ️ initializeAuthSystem - функція більше не використовується для головної ініціалізації.");
+}

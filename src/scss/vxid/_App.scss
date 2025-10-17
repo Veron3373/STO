@@ -2,7 +2,7 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: sans-serif;
+ // font-family: sans-serif;
   height: 100vh;
   background-size: cover;
   background-position: center;
@@ -15,7 +15,7 @@ body.page-1 {
 
 
 .wrapper {
-  height: 100vh;
+  height: 90vh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -86,4 +86,12 @@ body.page-1 .button {
   background-color: #1e49f4;
 }
 
+
+.zakaz_narayd-buttons-container {
+  display: flex;
+  justify-content: space-between; /* 🔹 розсуває кнопки по сторонам */
+  align-items: center;            /* вирівнює по вертикалі */
+  padding: 10px 24px;             /* можна підкоригувати відступи */
+  gap: 10px;                      /* відстань між кнопками, якщо їх кілька з одного боку */
+}
 

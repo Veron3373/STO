@@ -93,8 +93,8 @@
           <button class="toggle-button-all_other_bases">Деталі</button>
           <button class="toggle-button-all_other_bases">Робота</button>
           <button class="toggle-button-all_other_bases">Магазини</button>
-          <button class="toggle-button-all_other_bases">Слюсар</button>
-          <button class="toggle-button-all_other_bases">Приймальник</button>
+          <button class="toggle-button-all_other_bases">Співробітники</button>
+          {/* <button class="toggle-button-all_other_bases">Приймальник</button> */}
           <button class="toggle-button-all_other_bases">Джерело</button>
         </div>
         <div class="modal-right-all_other_bases">

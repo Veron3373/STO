@@ -34,7 +34,6 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
       }
 
       if (whitelist && whitelist.length > 0) {
-        localStorage.setItem("user", JSON.stringify(user));
         window.location.href = "/STO/main.html"; // <-- ключовий момент
       } else {
         alert("Ваш email не дозволено для входу.");

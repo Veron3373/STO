@@ -1,20 +1,26 @@
+//src\ts\roboha\tablucya\tablucya.ts (ОНОВЛЕНИЙ КОД)
 import { supabase } from "../../vxid/supabaseClient";
+import { showModal } from "../zakaz_naraudy/modalMain";
 import {
-  createModal,
-  showModal,
-} from "../vikno_vidkruttay_zakaz_naraudy/zakaz_narayd";
+  showLoginModalBeforeTable,
+  isUserAuthenticated,
+  userAccessLevel,
+  logoutFromSystemAndRedirect,
+  canUserViewActs,
+  canUserOpenActs,
+} from "./users";
+
+document.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement | null;
+  if (target && target.closest("#logout-link")) {
+    e.preventDefault();
+    logoutFromSystemAndRedirect();
+  }
+});
 
 // =============================================================================
-// КОНСТАНТИ ТА ГЛОБАЛЬНІ ЗМІННІ
+// ГЛОБАЛЬНІ ЗМІННІ
 // =============================================================================
-
-const HEADERS: string[] = [
-  "№ акту",
-  "Дата",
-  "Клієнт 🔽",
-  "Автомобіль",
-  "Сумма",
-];
 
 let actsGlobal: any[] = [];
 let clientsGlobal: any[] = [];
@@ -25,9 +31,6 @@ let sortByDateStep = 0;
 // УТИЛІТИ ДЛЯ РОБОТИ З ДАНИМИ
 // =============================================================================
 
-/**
- * Безпечне парсування JSON
- */
 function safeParseJSON(data: any): any {
   if (typeof data === "string") {
     try {
@@ -39,35 +42,21 @@ function safeParseJSON(data: any): any {
   return data;
 }
 
-/**
- * Форматування дати у DD.MM.YYYY
- */
 function formatDate(date: Date): string {
   return `${date.getDate().toString().padStart(2, "0")}.${(date.getMonth() + 1)
     .toString()
     .padStart(2, "0")}.${date.getFullYear()}`;
 }
 
-/**
- * Форматування телефону
- */
-function formatPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-
-  if (digits.length === 12 && digits.startsWith("380")) {
-    const code = digits.slice(2, 5);
-    const part1 = digits.slice(5, 8);
-    const part2 = digits.slice(8, 10);
-    const part3 = digits.slice(10, 12);
-    return `+38 (${code}) ${part1}-${part2}-${part3}`;
-  }
-
-  return phone;
+function formatDateTime(date: Date): { date: string; time: string } {
+  const dateStr = formatDate(date);
+  const timeStr = `${date.getHours().toString().padStart(2, "0")}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+  return { date: dateStr, time: timeStr };
 }
 
-/**
- * Валідація формату дати DD.MM.YYYY
- */
 function validateDateFormat(dateStr: string): boolean {
   const dateRegex = /^\d{2}\.\d{2}\.\d{4}$/;
   if (!dateRegex.test(dateStr)) return false;
@@ -91,69 +80,48 @@ function validateDateFormat(dateStr: string): boolean {
 // ОБРОБКА ДАНИХ АКТІВ
 // =============================================================================
 
-/**
- * Отримання інформації про клієнта
- */
-function getClientInfo(act: any, clients: any[]): string {
+function getClientInfo(
+  act: any,
+  clients: any[]
+): { pib: string; phone: string } {
   const client = clients?.find((c) => c.client_id === act.client_id);
   const clientData = safeParseJSON(client?.data);
 
   const pib = clientData?.["ПІБ"] || "Невідомо";
-  const phone = clientData?.["Телефон"] || "";
+  let phone = clientData?.["Телефон"] || "";
 
-  return phone ? `${pib} ${phone}` : pib;
+  phone = phone.replace(/[\(\)\-\s]/g, "");
+
+  return { pib, phone };
 }
 
-/**
- * Отримання інформації про авто
- */
-function getCarInfo(act: any, cars: any[]): string {
+function getCarInfo(act: any, cars: any[]): { number: string; name: string } {
   const car = cars?.find((c) => c.cars_id === act.cars_id);
   const carData = safeParseJSON(car?.data);
 
-  const номерАвто = carData?.["Номер авто"] || "";
-  const назваАвто = carData?.["Авто"] || "";
+  const number = carData?.["Номер авто"] || "";
+  const name = carData?.["Авто"] || "";
 
-  return `${номерАвто} ${назваАвто}`.trim();
+  return { number, name };
 }
 
-/**
- * Отримання суми з акту
- */
-function getActAmount(act: any): string {
+function getActAmount(act: any): number {
   const actData = safeParseJSON(act.info || act.data || act.details);
-
   const rawAmount =
     actData?.["Загальна сума"] ||
     actData?.["total"] ||
     actData?.["amount"] ||
     act.total ||
     act.amount;
-
-  if (rawAmount === undefined) return "0 грн";
-
   const num = Number(rawAmount);
-  return isNaN(num) ? "0 грн" : `${num.toLocaleString("uk-UA")} грн`;
+  return isNaN(num) ? 0 : num;
 }
 
-/**
- * Отримання дати з акту
- */
-function getActDate(act: any): string {
-  if (!act.date_on) return "-";
-
-  const d = new Date(act.date_on);
-  const day = d.getDate().toString().padStart(2, "0");
-  const month = (d.getMonth() + 1).toString().padStart(2, "0");
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, "0");
-  const minutes = d.getMinutes().toString().padStart(2, "0");
-  return `${day}.${month}.${year} ${hours}:${minutes}`;
+function getActDateAsDate(act: any): Date | null {
+  if (!act.date_on) return null;
+  return new Date(act.date_on);
 }
 
-/**
- * Перевірка чи акт закритий
- */
 function isActClosed(act: any): boolean {
   return act.date_off && !isNaN(Date.parse(act.date_off));
 }
@@ -163,95 +131,183 @@ function isActClosed(act: any): boolean {
 // =============================================================================
 
 /**
- * Створення комірки з клієнтом
+ * ОНОВЛЕНА функція створення комірки клієнта з перевіркою доступу
  */
-function createClientCell(clientInfo: string): HTMLTableCellElement {
+function createClientCell(
+  clientInfo: { pib: string; phone: string },
+  actId: number
+): HTMLTableCellElement {
   const td = document.createElement("td");
-
-  const phones = [...clientInfo.matchAll(/\+380\d{9}/g)].map((m) => m[0]);
-  let pibOnly = clientInfo;
-  phones.forEach((p) => {
-    pibOnly = pibOnly.replace(p, "").trim();
-  });
-
+  const phones = clientInfo.phone ? [clientInfo.phone] : [];
+  let pibOnly = clientInfo.pib;
   td.innerHTML = `<div>${pibOnly}</div>`;
-
   phones.forEach((p) => {
-    const formatted = formatPhone(p);
-    td.innerHTML += `<div class="phone-blue-italic">${formatted}</div>`;
+    td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;
   });
-
-  td.addEventListener("click", () => showModal());
+  
+  // Додаємо обробник з перевіркою доступу
+  td.addEventListener("click", async () => {
+    const canOpen = await canUserOpenActs();
+    if (canOpen) {
+      showModal(actId);
+    } else {
+      console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до відкриття актів`);
+      showNoAccessNotification();
+    }
+  });
+  
   return td;
 }
 
 /**
- * Створення комірки з авто
+ * ОНОВЛЕНА функція створення комірки авто з перевіркою доступу
  */
-function createCarCell(carInfo: string): HTMLTableCellElement {
+function createCarCell(
+  carInfo: { number: string; name: string },
+  actId: number
+): HTMLTableCellElement {
   const td = document.createElement("td");
-
-  const parts = carInfo.split(" ");
-  const номер = parts[0] || "";
-  const назва = parts.slice(1).join(" ") || "";
-
-  td.innerHTML = `<div>${номер}</div>${
-    назва ? `<div><span class="car-red-bold">${назва}</span></div>` : ""
-  }`;
-
-  td.addEventListener("dblclick", () => showModal());
+  td.innerHTML = `<div style="word-wrap: break-word; word-break: break-word; white-space: normal;">${carInfo.name}</div>`;
+  if (carInfo.number) {
+    td.innerHTML += `<div style="color: #ff8800; font-size: 0.9em; word-wrap: break-word; word-break: break-word; white-space: normal;">${carInfo.number}</div>`;
+  }
+  
+  // Додаємо обробник з перевіркою доступу
+  td.addEventListener("dblclick", async () => {
+    const canOpen = await canUserOpenActs();
+    if (canOpen) {
+      showModal(actId);
+    } else {
+      console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до відкриття актів`);
+      showNoAccessNotification();
+    }
+  });
+  
   return td;
 }
 
 /**
- * Створення стандартної комірки
+ * ОНОВЛЕНА функція створення комірки дати з перевіркою доступу
  */
-function createStandardCell(content: string): HTMLTableCellElement {
+function createDateCell(act: any, actId: number): HTMLTableCellElement {
   const td = document.createElement("td");
-  td.textContent = content;
-  td.addEventListener("dblclick", () => showModal());
+  const actDate = getActDateAsDate(act);
+  if (actDate) {
+    const { date, time } = formatDateTime(actDate);
+    td.innerHTML = `<div>${date}</div><div style="color: #0400ffff; font-size: 0.85em;">${time}</div>`;
+  } else {
+    td.innerHTML = `<div>-</div>`;
+  }
+  
+  // Додаємо обробник з перевіркою доступу
+  td.addEventListener("dblclick", async () => {
+    const canOpen = await canUserOpenActs();
+    if (canOpen) {
+      showModal(actId);
+    } else {
+      console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до відкриття актів`);
+      showNoAccessNotification();
+    }
+  });
+  
   return td;
 }
 
 /**
- * Рендеринг рядків таблиці
+ * ОНОВЛЕНА функція створення стандартної комірки з перевіркою доступу
  */
+function createStandardCell(
+  content: string,
+  actId: number
+): HTMLTableCellElement {
+  const td = document.createElement("td");
+  td.innerHTML = content;
+  
+  // Додаємо обробник з перевіркою доступу
+  td.addEventListener("dblclick", async () => {
+    const canOpen = await canUserOpenActs();
+    if (canOpen) {
+      showModal(actId);
+    } else {
+      console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до відкриття актів`);
+      showNoAccessNotification();
+    }
+  });
+  
+  return td;
+}
+
+/**
+ * Повідомлення про відсутність доступу
+ */
+function showNoAccessNotification(): void {
+  const notification = document.createElement("div");
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ff5722;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10001;
+    font-size: 16px;
+    animation: slideIn 0.3s ease;
+  `;
+  notification.textContent = "🔒 У вас немає доступу до перегляду актів";
+  
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = "slideIn 0.3s ease reverse";
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
 function renderActsRows(
   acts: any[],
   clients: any[],
   cars: any[],
-  tbody: HTMLTableSectionElement
+  tbody: HTMLTableSectionElement,
+  accessLevel: string | null
 ): void {
   tbody.innerHTML = "";
 
   acts.forEach((act) => {
     const isClosed = isActClosed(act);
     const lockIcon = isClosed ? "🔒" : "🗝️";
-
-    const cellsData = [
-      `${lockIcon} ${act.act_id?.toString() || "N/A"}`,
-      getActDate(act),
-      getClientInfo(act, clients),
-      getCarInfo(act, cars),
-      getActAmount(act),
-    ];
-
+    const clientInfo = getClientInfo(act, clients);
+    const carInfo = getCarInfo(act, cars);
     const row = document.createElement("tr");
     row.classList.add(isClosed ? "row-closed" : "row-open");
 
-    cellsData.forEach((cellData, i) => {
-      let td: HTMLTableCellElement;
+    row.appendChild(
+      createStandardCell(
+        `${lockIcon} ${act.act_id?.toString() || "N/A"}`,
+        act.act_id
+      )
+    );
+    row.appendChild(createDateCell(act, act.act_id));
+    row.appendChild(createClientCell(clientInfo, act.act_id));
+    row.appendChild(createCarCell(carInfo, act.act_id));
 
-      if (HEADERS[i].includes("Клієнт")) {
-        td = createClientCell(cellData);
-      } else if (HEADERS[i] === "Автомобіль") {
-        td = createCarCell(cellData);
-      } else {
-        td = createStandardCell(cellData);
-      }
-
-      row.appendChild(td);
-    });
+    if (accessLevel !== "Слюсар") {
+      row.appendChild(
+        createStandardCell(
+          `${getActAmount(act).toLocaleString("uk-UA")} грн`,
+          act.act_id
+        )
+      );
+    }
 
     tbody.appendChild(row);
   });
@@ -261,12 +317,8 @@ function renderActsRows(
 // СОРТУВАННЯ
 // =============================================================================
 
-/**
- * Сортування актів
- */
 function sortActs(): void {
   if (sortByDateStep === 0) {
-    // Сортування за статусом (відкриті зверху)
     actsGlobal.sort((a, b) => {
       const aOpen = !isActClosed(a);
       const bOpen = !isActClosed(b);
@@ -276,9 +328,10 @@ function sortActs(): void {
     });
     sortByDateStep = 1;
   } else {
-    // Сортування за датою (новіші зверху)
     actsGlobal.sort(
-      (a, b) => new Date(b.date_on).getTime() - new Date(a.date_on).getTime()
+      (a, b) =>
+        (getActDateAsDate(b)?.getTime() || 0) -
+        (getActDateAsDate(a)?.getTime() || 0)
     );
     sortByDateStep = 0;
   }
@@ -288,9 +341,6 @@ function sortActs(): void {
 // РОБОТА З ДАТАМИ
 // =============================================================================
 
-/**
- * Отримання діапазону дат за замовчуванням (останній місяць)
- */
 function getDefaultDateRange(): string {
   const today = new Date();
   const lastMonth = new Date(
@@ -298,18 +348,13 @@ function getDefaultDateRange(): string {
     today.getMonth() - 1,
     today.getDate()
   );
-
   return `${formatDate(lastMonth)} - ${formatDate(today)}`;
 }
 
-/**
- * Валідація та отримання діапазону дат
- */
 function getDateRange(): { dateFrom: string; dateTo: string } | null {
   const input = document.getElementById("dateRangePicker") as HTMLInputElement;
   const dateRangeValue = input?.value?.trim();
 
-  // Встановлення значення за замовчуванням
   if (!dateRangeValue) {
     console.warn(
       "⚠️ Діапазон дат порожній. Завантажуємо всі акти за останній місяць."
@@ -318,105 +363,166 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
   }
 
   const currentValue = input.value.trim();
+  if (currentValue === "Відкриті" || currentValue === "Закриті") {
+    return null;
+  }
 
-  // Перевірка формату діапазону
   if (!currentValue.includes(" - ")) {
     console.error(
       "❌ Невірний формат діапазону. Очікується: DD.MM.YYYY - DD.MM.YYYY"
     );
-/*     alert(
-      "Невірний формат дати. Використовуйте формат: DD.MM.YYYY - DD.MM.YYYY"
-    ); */
     return null;
   }
 
   const [startStr, endStr] = currentValue.split(" - ");
-
-  // Валідація формату дат
   if (!validateDateFormat(startStr) || !validateDateFormat(endStr)) {
     console.error("❌ Невірний формат дати. Використовуйте DD.MM.YYYY");
-/*     alert("Невірний формат дати. Використовуйте DD.MM.YYYY"); */
     return null;
   }
 
-  // Конвертація у формат YYYY-MM-DD HH:mm:ss
   try {
     const [dateFrom, dateTo] = [startStr, endStr].map((str, i) => {
       const [d, m, y] = str.split(".");
       const full = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
       return i === 0 ? `${full} 00:00:00` : `${full} 23:59:59`;
     });
-
     return { dateFrom, dateTo };
   } catch (error) {
     console.error("❌ Помилка конвертації дати:", error);
-/*     alert(
-      `Невірна дата: ${
-        error instanceof Error ? error.message : "Невідома помилка"
-      }`
-    ); */
     return null;
   }
+}
+
+// =============================================================================
+// ФІЛЬТРАЦІЯ
+// =============================================================================
+
+function filterActs(
+  acts: any[],
+  searchTerm: string,
+  clients: any[],
+  cars: any[]
+): any[] {
+  if (!searchTerm) return acts;
+  const filters = parseSearchTerm(searchTerm);
+  return acts.filter((act) => {
+    const clientInfo = getClientInfo(act, clients);
+    const carInfo = getCarInfo(act, cars);
+    const actDate = getActDateAsDate(act);
+    const formattedDate = actDate ? formatDate(actDate) : "";
+    const amount = getActAmount(act);
+
+    return filters.every((filter) => {
+      switch (filter.key.toLowerCase()) {
+        case "акт":
+          return act.act_id?.toString().includes(filter.value);
+        case "сума":
+          return amount >= parseFloat(filter.value);
+        case "дата":
+          return formattedDate.includes(filter.value);
+        case "тел":
+        case "телефон":
+          return clientInfo.phone.includes(filter.value);
+        case "піб":
+          return clientInfo.pib
+            .toLowerCase()
+            .includes(filter.value.toLowerCase());
+        case "машина":
+          return carInfo.name
+            .toLowerCase()
+            .includes(filter.value.toLowerCase());
+        case "номер":
+          return carInfo.number.includes(filter.value);
+        default:
+          return (
+            clientInfo.pib.toLowerCase().includes(filter.value.toLowerCase()) ||
+            clientInfo.phone.includes(filter.value) ||
+            carInfo.number.includes(filter.value) ||
+            carInfo.name.toLowerCase().includes(filter.value.toLowerCase()) ||
+            act.act_id?.toString().includes(filter.value) ||
+            formattedDate.includes(filter.value) ||
+            amount.toString().includes(filter.value)
+          );
+      }
+    });
+  });
+}
+
+function parseSearchTerm(searchTerm: string): { key: string; value: string }[] {
+  const filters: { key: string; value: string }[] = [];
+  const parts = searchTerm.split(" ").filter((p) => p);
+  parts.forEach((part) => {
+    const [key, value] = part.split(":");
+    if (key && value) {
+      filters.push({ key, value });
+    } else {
+      filters.push({ key: "", value: part });
+    }
+  });
+  return filters;
 }
 
 // =============================================================================
 // ЗАВАНТАЖЕННЯ ДАНИХ
 // =============================================================================
 
-/**
- * Завантаження актів з бази даних
- */
 async function loadActsFromDB(
-  dateFrom: string,
-  dateTo: string
+  dateFrom: string | null,
+  dateTo: string | null,
+  filterType: "open" | "closed" | null = null
 ): Promise<any[] | null> {
-  const { data: acts, error: actsError } = await supabase
-    .from("acts")
-    .select("*")
-    .gte("date_on", dateFrom)
-    .lte("date_on", dateTo)
-    .order("act_id", { ascending: false });
-
-  if (actsError) {
-    console.error("❌ Помилка при отриманні актів:", actsError);
-/*     alert(`Помилка завантаження актів: ${actsError.message}`); */
-    return null;
+  let query = supabase.from("acts").select("*");
+  if (filterType === "open") {
+    query = query.is("date_off", null);
+  } else if (filterType === "closed") {
+    query = query.not("date_off", "is", null);
+  } else if (dateFrom && dateTo) {
+    query = query.gte("date_on", dateFrom).lte("date_on", dateTo);
+  } else {
+    console.warn(
+      "⚠️ loadActsFromDB викликано без фільтрів. Завантажуємо акти за останній місяць."
+    );
+    const fallbackDates = getDateRange();
+    if (fallbackDates) {
+      query = supabase
+        .from("acts")
+        .select("*")
+        .gte("date_on", fallbackDates.dateFrom)
+        .lte("date_on", fallbackDates.dateTo);
+    } else {
+      return [];
+    }
   }
 
+  query = query.order("act_id", { ascending: false });
+
+  const { data: acts, error: actsError } = await query;
+  if (actsError) {
+    console.error("❌ Помилка при отриманні актів:", actsError);
+    return null;
+  }
   return acts || [];
 }
 
-/**
- * Завантаження клієнтів з бази даних
- */
 async function loadClientsFromDB(): Promise<any[] | null> {
   const { data: clients, error: clientError } = await supabase
     .from("clients")
     .select("client_id, data");
-
   if (clientError) {
     console.error("❌ Помилка при отриманні клієнтів:", clientError);
-    alert(`Помилка завантаження клієнтів: ${clientError.message}`);
     return null;
   }
-
   return clients || [];
 }
 
-/**
- * Завантаження авто з бази даних
- */
 async function loadCarsFromDB(): Promise<any[] | null> {
   const { data: cars, error: carsError } = await supabase
     .from("cars")
     .select("cars_id, data");
-
   if (carsError) {
     console.error("❌ Помилка при отриманні авто:", carsError);
-  /*   alert(`Помилка завантаження авто: ${carsError.message}`); */
     return null;
   }
-
   return cars || [];
 }
 
@@ -424,159 +530,284 @@ async function loadCarsFromDB(): Promise<any[] | null> {
 // СТВОРЕННЯ ТАБЛИЦІ
 // =============================================================================
 
-/**
- * Створення заголовку таблиці
- */
-function createTableHeader(): HTMLTableSectionElement {
+function createTableHeader(
+  accessLevel: string | null
+): HTMLTableSectionElement {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
 
-  HEADERS.forEach((header) => {
+  const headers = ["№ акту", "Дата", "Клієнт 🔽", "Автомобіль"];
+  if (accessLevel !== "Слюсар") {
+    headers.push("Сумма");
+  }
+
+  headers.forEach((header) => {
     const th = document.createElement("th");
     th.textContent = header;
-
-    th.addEventListener("click", () => {
-      if (header === "Клієнт 🔽") {
+    if (header.includes("Клієнт")) {
+      th.addEventListener("click", () => {
         sortActs();
         updateTableBody();
-      }
-    });
-
+      });
+    }
     headerRow.appendChild(th);
   });
-
   thead.appendChild(headerRow);
   return thead;
 }
 
-/**
- * Оновлення тіла таблиці
- */
 function updateTableBody(): void {
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"
   );
   if (!table) return;
-
   const newTbody = document.createElement("tbody");
-  renderActsRows(actsGlobal, clientsGlobal, carsGlobal, newTbody);
-
+  renderActsRows(
+    actsGlobal,
+    clientsGlobal,
+    carsGlobal,
+    newTbody,
+    userAccessLevel
+  );
   const oldTbody = table.querySelector("tbody");
   if (oldTbody) oldTbody.replaceWith(newTbody);
+  applyVerticalScrollbarCompensation();
 }
 
-/**
- * Створення повної таблиці
- */
-function createTable(): HTMLTableElement {
+function createTable(accessLevel: string | null): HTMLTableElement {
   const table = document.createElement("table");
   table.style.width = "100%";
   table.style.borderCollapse = "collapse";
-
-  const thead = createTableHeader();
+  const thead = createTableHeader(accessLevel);
   const tbody = document.createElement("tbody");
-
-  renderActsRows(actsGlobal, clientsGlobal, carsGlobal, tbody);
-
+  renderActsRows(actsGlobal, clientsGlobal, carsGlobal, tbody, accessLevel);
   table.appendChild(thead);
   table.appendChild(tbody);
-
   return table;
 }
 
-/**
- * Відображення повідомлення про відсутність даних
- */
-function showNoDataMessage(dateRange: string): void {
+function showNoDataMessage(message: string): void {
   const container = document.getElementById(
     "table-container-modal-sakaz_narad"
   );
   if (container) {
-    container.innerHTML = `<div style="text-align: center; padding: 20px; color: #666;">
-      Немає актів у діапазоні дат: ${dateRange}
+    container.innerHTML = `<div style="text-align: center; padding: 20px; color: #666;">${message}</div>`;
+  }
+}
+
+function showAuthRequiredMessage(): void {
+  const container = document.getElementById(
+    "table-container-modal-sakaz_narad"
+  );
+  if (container) {
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #666;">
+      <div style="font-size: 48px; margin-bottom: 20px;">🔐</div>
+      <h3>Доступ обмежено</h3>
+      <p>Для перегляду таблиці актів потрібна автентифікація</p>
+      <button id="authRetryBtn" style="
+        background: #4CAF50; color: white; border: none; padding: 10px 20px;
+        border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 15px;
+      ">Увійти</button>
+    </div>`;
+    const retryBtn = document.getElementById("authRetryBtn");
+    if (retryBtn) {
+      retryBtn.addEventListener("click", () => {
+        initializeActsSystem();
+      });
+    }
+  }
+}
+
+/**
+ * НОВА функція: Повідомлення про відсутність прав на перегляд актів
+ */
+function showNoViewAccessMessage(): void {
+  const container = document.getElementById(
+    "table-container-modal-sakaz_narad"
+  );
+  if (container) {
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #666;">
+      <div style="font-size: 48px; margin-bottom: 20px;">🚫</div>
+      <h3>Доступ заборонено</h3>
+      <p>У вас немає прав на перегляд актів</p>
+      <p style="color: #999; font-size: 14px; margin-top: 10px;">Зверніться до адміністратора для отримання доступу</p>
     </div>`;
   }
 }
 
+function applyVerticalScrollbarCompensation(): void {
+  const container = document.getElementById(
+    "table-container-modal-sakaz_narad"
+  );
+  const tbody = container?.querySelector("tbody") as HTMLElement | null;
+  if (!container || !tbody) return;
+  const hasVScroll = tbody.scrollHeight > tbody.clientHeight;
+  container.classList.toggle("has-vscroll", hasVScroll);
+}
+
 // =============================================================================
-// ОСНОВНІ ФУНКЦІЇ
+// ОСНОВНІ ФУНКЦІОНАЛЬНІ
 // =============================================================================
 
 /**
- * Завантаження та відображення таблиці актів
+ * ОНОВЛЕНА функція: Завантаження та відображення таблиці актів з перевіркою прав доступу
  */
-export async function loadActsTable(): Promise<void> {
+export async function loadActsTable(
+  dateFrom: string | null = null,
+  dateTo: string | null = null,
+  filterType: "open" | "closed" | null = null,
+  searchTerm: string | null = null
+): Promise<void> {
+  if (!isUserAuthenticated()) {
+    const accessLevel = await showLoginModalBeforeTable();
+    if (!accessLevel) {
+      showAuthRequiredMessage();
+      return;
+    }
+  }
+
+  // НОВА ПЕРЕВІРКА: Чи може користувач бачити акти?
+  const canView = await canUserViewActs();
+  if (!canView) {
+    console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до перегляду актів (setting перевірка)`);
+    showNoViewAccessMessage();
+    return;
+  }
+
   try {
-    // 1. Отримання діапазону дат
-    const dateRange = getDateRange();
-    if (!dateRange) return;
+    let finalDateFrom: string | null = null;
+    let finalDateTo: string | null = null;
+    let finalFilterType: "open" | "closed" | null = filterType || null;
+    const dateRangePicker = document.getElementById(
+      "dateRangePicker"
+    ) as HTMLInputElement;
 
-    const { dateFrom, dateTo } = dateRange;
+    if (finalFilterType === "open" || finalFilterType === "closed") {
+      finalDateFrom = null;
+      finalDateTo = null;
+    } else {
+      if (dateFrom && dateTo) {
+        finalDateFrom = dateFrom;
+        finalDateTo = dateTo;
+      } else {
+        const fallback = getDateRange();
+        if (fallback) {
+          finalDateFrom = fallback.dateFrom;
+          finalDateTo = fallback.dateTo;
+        } else {
+          const currentValue = dateRangePicker?.value?.trim();
+          if (currentValue === "Відкриті") {
+            finalFilterType = "open";
+          } else if (currentValue === "Закриті") {
+            finalFilterType = "closed";
+          } else {
+            const defaultRange = getDefaultDateRange();
+            const [startStr, endStr] = defaultRange.split(" - ");
+            const [d1, m1, y1] = startStr.split(".");
+            const [d2, m2, y2] = endStr.split(".");
+            finalDateFrom = `${y1}-${m1.padStart(2, "0")}-${d1.padStart(
+              2,
+              "0"
+            )} 00:00:00`;
+            finalDateTo = `${y2}-${m2.padStart(2, "0")}-${d2.padStart(
+              2,
+              "0"
+            )} 23:59:59`;
+            if (dateRangePicker) {
+              dateRangePicker.value = defaultRange;
+            }
+          }
+        }
+      }
+    }
 
-    // 2. Завантаження даних з бази
     const [acts, clients, cars] = await Promise.all([
-      loadActsFromDB(dateFrom, dateTo),
+      loadActsFromDB(finalDateFrom, finalDateTo, finalFilterType),
       loadClientsFromDB(),
       loadCarsFromDB(),
     ]);
 
     if (acts === null || clients === null || cars === null) {
-      return; // Помилки вже оброблені у відповідних функціях
-    }
-
-    // 3. Збереження даних глобально
-    actsGlobal = acts;
-    clientsGlobal = clients;
-    carsGlobal = cars;
-
-    // 4. Перевірка наявності актів
-    if (actsGlobal.length === 0) {
-      console.warn("⚠️ Немає актів у вказаному діапазоні дат");
-      const input = document.getElementById(
-        "dateRangePicker"
-      ) as HTMLInputElement;
-      showNoDataMessage(input?.value || "невідомий");
       return;
     }
 
-    // 5. Створення та відображення таблиці
-    const table = createTable();
+    clientsGlobal = clients;
+    carsGlobal = cars;
+
+    let filteredActs = acts;
+    filteredActs = filterActs(acts, searchTerm ?? "", clients, cars);
+    actsGlobal = filteredActs;
+
+    if (actsGlobal.length === 0) {
+      console.warn(
+        "⚠️ Немає актів у вказаному діапазоні дат або за терміном пошуку."
+      );
+      let message = "Немає актів";
+      if (finalFilterType === "open") message += " (відкритих)";
+      else if (finalFilterType === "closed") message += " (закритих)";
+      else
+        message += ` у діапазоні дат: ${dateRangePicker?.value || "невідомий"}`;
+      if (searchTerm) message += ` за запитом "${searchTerm}"`;
+      showNoDataMessage(message);
+      return;
+    }
+
+    const table = createTable(userAccessLevel);
     const container = document.getElementById(
       "table-container-modal-sakaz_narad"
     );
-
-    if (container) {
-      container.innerHTML = "";
-      container.appendChild(table);
-    } else {
+    if (!container) {
       console.error(
         "❌ Контейнер table-container-modal-sakaz_narad не знайдено."
       );
+      return;
     }
+    container.innerHTML = "";
+    container.appendChild(table);
+    applyVerticalScrollbarCompensation();
   } catch (error) {
     console.error("💥 Критична помилка:", error);
-/*     alert(
-      `Критична помилка: ${
-        error instanceof Error ? error.message : "Невідома помилка"
-      }`
-    ); */
   }
 }
 
-/**
- * Примусове оновлення таблиці
- */
-export function refreshActsTable(): void {
-  loadActsTable();
+export async function refreshActsTable(): Promise<void> {
+  if (!isUserAuthenticated()) {
+    return;
+  }
+
+  const searchInput = document.getElementById(
+    "searchInput"
+  ) as HTMLInputElement;
+  const currentSearchTerm = searchInput?.value?.trim() || "";
+
+  const dateRangePicker = document.getElementById(
+    "dateRangePicker"
+  ) as HTMLInputElement;
+  const currentValue = dateRangePicker?.value?.trim() || "";
+
+  let currentFilterType: "open" | "closed" | null = null;
+  let currentDateFrom: string | null = null;
+  let currentDateTo: string | null = null;
+
+  if (currentValue === "Відкриті") {
+    currentFilterType = "open";
+  } else if (currentValue === "Закриті") {
+    currentFilterType = "closed";
+  } else {
+    const dates = getDateRange();
+    if (dates) {
+      currentDateFrom = dates.dateFrom;
+      currentDateTo = dates.dateTo;
+    }
+  }
+  loadActsTable(
+    currentDateFrom,
+    currentDateTo,
+    currentFilterType,
+    currentSearchTerm
+  );
 }
 
-// =============================================================================
-// ВІДСТЕЖЕННЯ ЗМІН
-// =============================================================================
-
-/**
- * Відстеження змін у dateRangePicker
- */
 function watchDateRangeChanges(): void {
   const dateRangePicker = document.getElementById(
     "dateRangePicker"
@@ -584,44 +815,63 @@ function watchDateRangeChanges(): void {
   if (!dateRangePicker) return;
 
   let lastValue = dateRangePicker.value;
-
-  const checkInterval = setInterval(() => {
+  const observer = new MutationObserver(() => {
     const currentValue = dateRangePicker.value;
-
     if (currentValue !== lastValue) {
       lastValue = currentValue;
-
-      setTimeout(() => {
-        if (dateRangePicker.value === currentValue) {
-          loadActsTable();
-        }
-      }, 300);
+      const searchInput = document.getElementById(
+        "searchInput"
+      ) as HTMLInputElement;
+      const currentSearchTerm = searchInput?.value?.trim() || "";
+      loadActsTable(undefined, undefined, undefined, currentSearchTerm);
     }
-  }, 500);
-
-  window.addEventListener("beforeunload", () => {
-    clearInterval(checkInterval);
   });
-}
 
-// =============================================================================
-// ІНІЦІАЛІЗАЦІЯ
-// =============================================================================
+  observer.observe(dateRangePicker, {
+    attributes: true,
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+
+  window.addEventListener("beforeunload", () => observer.disconnect());
+}
 
 /**
- * Ініціалізація модулю таблиці актів
+ * ОНОВЛЕНА функція ініціалізації системи з перевіркою прав доступу
  */
-export function initializeActsTable(): void {
-  createModal(); // Створити модальне вікно одразу
-  loadActsTable(); // Завантажити таблицю при ініціалізації
-  watchDateRangeChanges(); // Запустити відстеження змін дати
+export async function initializeActsSystem(): Promise<void> {
+  console.log("Ініціалізація системи актів з автентифікацією...");
+  try {
+    const accessLevel = await showLoginModalBeforeTable();
+
+    if (!accessLevel) {
+      console.log("❌ Автентифікацію скасовано користувачем");
+      showAuthRequiredMessage();
+      return;
+    }
+
+    // НОВА ПЕРЕВІРКА: Чи може користувач бачити акти?
+    const canView = await canUserViewActs();
+    if (!canView) {
+      console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до перегляду актів`);
+      showNoViewAccessMessage();
+      return;
+    }
+
+    console.log("✅ Автентифікація успішна, завантажуємо дані...");
+    await loadActsTable(null, null, "open");
+    watchDateRangeChanges();
+    window.addEventListener("resize", applyVerticalScrollbarCompensation);
+    console.log("✅ Система актів ініціалізована успішно");
+  } catch (error) {
+    console.error("💥 Помилка при ініціалізації системи актів:", error);
+    showNoDataMessage("❌ Помилка при ініціалізації системи");
+  }
 }
 
-// Стало:
-supabase.auth.getSession().then(({ data: { session } }) => {
-  if (session) {
-    initializeActsTable();
-  } else {
-    console.warn("⛔ Користувач не авторизований. Таблиця не завантажена.");
-  }
-});
+// =============================================================================
+// ЕКСПОРТ ДЛЯ ЗОВНІШНЬОГО ВИКОРИСТАННЯ
+// =============================================================================
+
+export { logoutFromSystemAndRedirect, isUserAuthenticated } from "./users";

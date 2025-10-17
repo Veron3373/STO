@@ -1,3 +1,4 @@
+//src\ts\vxid\auth.tsx
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "../../scss/main.scss";
@@ -15,7 +16,7 @@ if (user) {
   );
 } else {
   const button = document.createElement("button");
-  button.innerText = "Увійти через Google";
+ // button.innerText = "Увійти через Google";
   button.onclick = signInWithGoogle;
   document.body.appendChild(button);
 }

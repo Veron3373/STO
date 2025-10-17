@@ -1,42 +1,545 @@
-.modal-overlay-sakaz_narad {
+/* ===== Глобальне ===== */
+//src\scss\robocha\zakaz_narayd\_zakaz_narayd.scss
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* ===== Модалка замовлення-наряду ===== */
+.zakaz_narayd-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 9999;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
 
   &.hidden {
     display: none;
   }
+}
 
-  .modal-content-sakaz_narad {
-    width: 400px;
-    height: 400px;
-    background-color: white;
-    border-radius: 8px;
-    padding: 20px;
-    position: relative;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    overflow-y: auto;
+.zakaz_narayd-modal-content {
+  background: #fff;
+  border-radius: 16px;
+  width: 90vw;
+  max-width: 1000px;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: fadeInUp 0.4s ease forwards;
+  opacity: 0;
+}
 
-    h2 {
-      margin-top: 0;
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.zakaz_narayd-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 20px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: red;
+    font-weight: bold;
+  }
+}
+
+.zakaz_narayd-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 24px 10px 24px;
+  background-color: #004d26;
+  color: #fff;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+
+  &-logo img {
+    max-height: 80px;
+  }
+
+  &-info {
+    display: flex;
+    flex-direction: column;
+
+    h1 {
+      margin: 0;
+      font-weight: 700;
+      color: #fff;
     }
-
-    .modal-close-sakaz_narad {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 24px;
-      background: none;
-      border: none;
-      cursor: pointer;
+    p {
+      margin: 2px 0;
+      font-size: 14px;
+      color: #fff;
     }
   }
 }
 
+.zakaz_narayd-modal-body {
+  padding: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .zakaz_narayd-modal-body {
+    max-height: calc(93vh - 30px);
+  }
+}
+@media (max-width: 768px) {
+  .zakaz_narayd-modal-body {
+    max-height: calc(93vh - 10px);
+  }
+}
+
+/* Інфо-блоки */
+.zakaz_narayd-reason {
+  padding: 10px 24px 0 24px;
+
+  .zakaz_narayd-reason-line {
+    border-bottom: 1px solid #000;
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    padding-bottom: 6px;
+  }
+  .highlight {
+    outline: none;
+    min-width: 100px;
+  }
+}
+
+.zakaz_narayd-table-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 24px 0 24px;
+  font-size: 15px;
+}
+
+.zakaz_narayd-table {
+  border-collapse: collapse;
+
+  td {
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+
+    &:first-child {
+      font-weight: 700;
+      background-color: #f8f8f8;
+    }
+  }
+
+  &.left {
+    flex: 1 1 48%;
+    min-width: 300px;
+    order: 1;
+  }
+  &.right {
+    flex: 1 1 48%;
+    min-width: 300px;
+    order: 2;
+  }
+
+  .highlight {
+    color: red;
+    font-weight: 700;
+  }
+  .green {
+    color: #145214;
+    font-weight: 700;
+  }
+  .red {
+    color: #a30000;
+    font-weight: 700;
+  }
+}
+
+/* ===== Таблиця позицій ===== */
+.zakaz_narayd-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: clamp(
+    10px,
+    1.6vw,
+    14px
+  ); /* плавна адаптація, але не більше 14px */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  th,
+  td {
+    border: 1px solid #ccc;
+    padding: 2px 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  thead th {
+    background-color: #f0f0f0;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* № — не переносити, діапазон ширини */
+  th:first-child,
+  td:first-child {
+    white-space: nowrap;
+    min-width: 40px;
+    max-width: 80px;
+    text-align: center;
+  }
+
+  /* К-ть / Ціна / Сума — праворуч, фіксований мін/макс */
+  .text-right {
+    text-align: right;
+    white-space: nowrap;
+    min-width: 50px;
+    max-width: 150px;
+  }
+
+  /* ПІБ _ Магазин */
+  th[data-name="pib_magazin"],
+  td[data-name="pib_magazin"] {
+    white-space: nowrap;
+    max-width: 250px;
+    text-align: left;
+  }
+
+  /* Каталог */
+  th[data-name="catalog"],
+  td[data-name="catalog"] {
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Найменування */
+  th[data-name="name"],
+  td[data-name="name"] {
+    text-align: left;
+  }
+}
+
+/* Кнопки/екшени */
+.add-row-container {
+  text-align: left;
+  margin-top: 10px;
+}
+.add-row-button {
+  padding: 8px 15px;
+  cursor: pointer;
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+  font-weight: 700;
+  text-align: left;
+
+  &:hover {
+    background-color: #45a049;
+  }
+}
+.action-button {
+  max-width: 150px;
+  height: 35px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+}
+.close-act-button {
+  background-color: #d32f2f;
+  color: #fff;
+  &:hover {
+    background-color: #b71c1c;
+  }
+}
+
+.zakaz_narayd-sums-footer {
+  text-align: right;
+  padding: 10px 24px;
+}
+.zakaz_narayd-sums-footer p {
+  margin: 5px 0;
+}
+.zakaz_narayd-sums-footer-sum {
+  font-weight: 700;
+}
+.zakaz_narayd-sums-footer-total {
+  font-weight: 700;
+  color: #1a73e8;
+  font-size: 1.1em;
+}
+
+.zakaz_narayd-table-container-value {
+  padding: 0 24px;
+}
+.zakaz_narayd-table td {
+  border: 0;
+  padding: 2px 2px;
+}
+
+.reason-container {
+  padding: 0 24px;
+}
+.zakaz_narayd-reason-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Іконки/кнопки у шапці */
+.print-button,
+.sklad {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.4rem;
+  transition: transform 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    transform: scale(1.2);
+    color: #007bff;
+  }
+  &:active {
+    transform: scale(1.1);
+    color: #0056b3;
+  }
+}
+.zakaz_narayd-reason-line .print-button,
+.zakaz_narayd-reason-line .sklad {
+  vertical-align: middle;
+}
+
+/* Лок-статус */
+.status-lock-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease, color 0.2s ease;
+  color: #000;
+  padding: 0;
+  margin: 0 6px;
+
+  &:hover {
+    transform: scale(1.2);
+    color: #007bff;
+  }
+  &:active {
+    transform: scale(0.95);
+    color: #0056b3;
+  }
+}
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-width: 240px;
+  gap: 1rem;
+}
+.status-dates span {
+  white-space: nowrap;
+}
+
+/* ===== Попередження/бейджі для qty/price (підтримка з TS) ===== */
+.qty-cell,
+.price-cell {
+  position: relative;
+  overflow: hidden;
+}
+
+.qty-cell[data-warn="1"]::before,
+.price-cell[data-warnprice="1"]::before {
+  content: "!";
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #e40b0bff;
+  background: #ff9800;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  border-radius: 2px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ===== Popover (Каталог) ===== */
+.catalog-info-popover {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  font-size: 14px;
+  line-height: 1.2;
+  color: #222;
+  z-index: 100000;
+
+  .neg {
+    color: #e40b0b;
+    font-weight: 700;
+  }
+  .neutral {
+    color: #000;
+  }
+  .positive {
+    color: #2e7d32;
+    font-weight: 700;
+  }
+}
+
+/* ===== Autocomplete ===== */
+.autocomplete-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  z-index: 100000;
+  max-height: 320px;
+  overflow-y: auto;
+  max-width: 500px;
+}
+.autocomplete-item {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.autocomplete-item:focus,
+.autocomplete-item:hover {
+  background: #f1f5f9;
+  outline: none;
+}
+.autocomplete-item.negative {
+  color: #e40b0b;
+}
+.autocomplete-item.neutral {
+  color: #888;
+}
+.autocomplete-item.positive {
+  color: #2e7d32;
+}
+
+/* editable поле — підсвітка тільки коли список ЗАКРИТИЙ */
+.editable-autocomplete {
+  transition: box-shadow 120ms ease;
+}
+.editable-autocomplete:hover:not(.ac-open) {
+  box-shadow: 0 0 0 3px rgba(26, 7, 241, 0.25), 0 0 12px rgba(26, 7, 241, 0.25);
+}
+
+/* ===== Закритий акт (дрібний текст) ===== */
+.closed-act-info {
+  font-size: 8px;
+  line-height: 1.3;
+  padding: 0 24px 24px 24px;
+  margin: 20px 0 0;
+  text-align: justify;
+
+  p {
+    margin: 0 0 3px 0;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  strong {
+    font-size: inherit;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+
+    td {
+      padding: 2px 0;
+      border-bottom: none;
+      vertical-align: top;
+
+      &:nth-child(2) {
+        padding-left: 20px;
+      }
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #000;
+      margin: 20px 0 0;
+      width: 100%;
+    }
+  }
+}
+
+.agreement-text {
+  padding-top: 5px;
+}
+.signature-line {
+  border-top: 1px solid #000;
+  margin-top: 20px;
+  width: 100px;
+}
+h1 {
+  padding-top: 0vh;
+}
+
+.active-range {
+  margin-left: 0px;
+  justify-content: center;
+}
+
+.obmesheniy,
+.zakaz_narayd-buttons-containerobmesheniy {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 24px;
+  gap: 10px;
+}

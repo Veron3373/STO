@@ -1,9 +1,13 @@
 @use "./vxid/App";
 @use "./robocha/osnovnui";
 @use "./robocha/menu";
-@use "./robocha/tablucay";
+@use "./robocha/tablucya/tablucay";
 @use "./robocha/zakaz_narayd/zakaz_narayd";
-@use "./robocha/zakaz_narayd/redahyvatu_bazu_danux/zberehtu_PIB_avto";
-@use "./robocha/zakaz_narayd/redahyvatu_bazu_danux/redahyvatu_klient_avto";
-@use "./robocha/zakaz_narayd/inchi_bazu_danux/inchi_bazu_danux";
+@use "./robocha/zakaz_narayd/vikno_vvody_parolu";
+@use "./robocha/redahyvatu_bazu_danux/zberehtu_PIB_avto";
+@use "./robocha/redahyvatu_bazu_danux/redahyvatu_klient_avto";
+@use "./robocha/dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 @use "./robocha/nalachtuvannay/nalachtuvannay";
+@use "./robocha/tablucya/users";
+@use "./robocha/bukhhalteriya/bukhhalteriya";
+@use "./robocha/dodatu_inchi_bazu/downlExcel";

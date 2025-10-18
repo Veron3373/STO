@@ -1,0 +1,12 @@
+import "./roboha/tablucya/tablucya";
+import "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
+import "./roboha/dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
+import "./roboha/nalachtuvannay/nalachtuvannay";
+import "./roboha/bukhhalteriya/bukhhalteriya";
+import "./roboha/dodatu_inchi_bazu/vikno_pidtverdchennay_inchi_bazu";
+import "./roboha/dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
+import "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
+import "./roboha/redahyvatu_klient_machuna/pidtverdutu_sberihannya_zakaz_naryad";
+import "./roboha/redahyvatu_klient_machuna/pidtverdutu_sberihannya_PIB_avto";
+import "./roboha/zakaz_naraudy/inhi/vikno_vvody_parolu";
+import "./roboha/bukhhalteriya/rosraxunok";

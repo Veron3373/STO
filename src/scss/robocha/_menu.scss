@@ -1,0 +1,115 @@
+.main-menu {
+  list-style: none;
+  font-family: "Montserrat", sans-serif;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* Центруємо елементи по горизонталі */
+  margin: 7px 0 7px 0;
+  padding: 0;
+
+  > li {
+    display: inline-flex;
+
+    &:first-child {
+      margin-left: 0; /* Прибираємо лівий відступ для першого елемента */
+    }
+
+    & + li {
+      margin-left: 20px;
+    }
+
+    > a {
+      color: #000;
+      font-weight: 700;
+      letter-spacing: .2px;
+      font-size: 15px;
+      text-decoration: none;
+    }
+
+    > a:hover {
+      text-decoration: none;
+      color: #d70505;
+    }
+  }
+
+  li {
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  li.menu-children {
+    position: relative;
+    margin-right: 12px;
+  }
+
+  li.menu-children:hover > ul {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  ul {
+    padding: 10px 0;
+    margin: 0;
+    list-style: none;
+    background-color: #337ab7;
+    position: absolute;
+    z-index: 20;
+    min-width: 220px;
+    top: 100%;
+    left: -30px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(5px);
+    transition: all 200ms cubic-bezier(0.43, 0.59, 0.16, 1.25);
+  }
+
+  ul li {
+    display: block;
+    padding: 0 10px;
+    line-height: 1.1;
+  }
+
+  ul li:last-child {
+    margin-bottom: 0;
+  }
+
+  ul li a {
+    display: block;
+    color: #fff;
+    padding: 10px;
+    transition: all 0.3s;
+    text-decoration: none;
+  }
+
+  ul li a:hover {
+    color: #337ab7;
+    background: #fff;
+    text-decoration: none;
+  }
+
+  ul ul {
+    top: 0;
+    left: 100%;
+  }
+
+  // Календар
+  #dateRangePicker {
+    font-size: 16px;
+    color: #8000ff;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: none;
+    outline: none;
+    width: 190px;
+    padding: 6px;
+    border-radius: 25px;
+    cursor: pointer;
+  }
+
+  .daterangepicker {
+    background-color: #f7f7f7 !important;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  }
+}

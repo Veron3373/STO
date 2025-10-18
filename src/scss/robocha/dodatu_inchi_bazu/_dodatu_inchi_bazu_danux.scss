@@ -1,0 +1,220 @@
+/* ====== Overlay та каркас ====== */
+.modal-overlay-all_other_bases {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+}
+.hidden-all_other_bases {
+  display: none !important;
+}
+.modal-all_other_bases {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 800px; /* фіксована ширина модалки */
+  max-width: 95vw; /* щоб не вилітало за межі екрана на вузьких дисплеях */
+  min-height: 430px; /* ← висота модалки */
+  max-height: 92vh;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+} /* Для "Склад" дозволяємо авто-розширення */
+.modal-all_other_bases.auto-height {
+  height: auto;
+  max-height: 92vh;
+}
+.modal-close-all_other_bases {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 6px 10px; /* Збільшимо область для кращого натискання */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  color: #39424e;
+  font-size: 20px;
+  line-height: 1;
+  transition: color 0.15s ease; /* Плавна зміна кольору */
+  z-index: 9999999;
+}
+.modal-close-all_other_bases:hover {
+  color: #ff3333; /* Червоний колір при наведенні */
+  background: #f2f4f7; /* Залишаємо фонову подсвітку */
+} /* ====== Контент: ліва навігація + права частина ====== */
+.modal-content-all_other_bases {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 30px;
+  flex: 1;
+  padding: 20px 20px;
+  overflow: hidden;
+} /* ліва колонка */
+.modal-left-all_other_bases {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.toggle-button-all_other_bases {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  font-weight: bold;
+  background: #14b8c4;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.toggle-button-all_other_bases:hover {
+  filter: brightness(1.05);
+}
+.toggle-button-all_other_bases.active-all_other_bases {
+  background: #35c65b;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
+} /* права колонка */
+.modal-right-all_other_bases {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+} /* верхній рядок: заголовок + кнопка режиму */
+.right-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.label-all_other_bases {
+  margin: 0;
+  font-weight: 800;
+  font-size: 20px;
+  color: #2b3440;
+} /* кнопка режиму (100px, на одному рівні із заголовком) */
+.mode-toggle-btn {
+  width: 100px;
+  flex: 0 0 100px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  user-select: none;
+  cursor: pointer;
+  transition: filter 0.12s ease, background 0.12s ease, border-color 0.12s ease,
+    color 0.12s ease;
+}
+.mode-toggle-btn:hover {
+  filter: brightness(1.05);
+} /* стани кольорів для режимів */
+.mode--edit {
+  background: #fff1db;
+  color: #a36400;
+  border-color: #ffd9a5;
+}
+.mode--add {
+  background: #e9ffe9;
+  color: #137a13;
+  border-color: #b8f0b8;
+}
+.mode--delete {
+  background: #ffe9e9;
+  color: #a11212;
+  border-color: #f3b4b4;
+} /* область зі скролом (форма/пошук) */
+.right-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: auto;
+  padding-right: 6px;
+} /* глобальний пошук */
+.form-field {
+  position: relative;
+} /* ключ для позиціювання дропдауна */
+#global-search-wrap {
+  width: 100%;
+}
+.input-all_other_bases {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  background: #fff;
+  border: 1px solid #cfd7e2;
+  border-radius: 10px;
+  outline: 0;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+.input-all_other_bases:focus {
+  border-color: #7cb7ff;
+  box-shadow: 0 0 0 3px rgba(86, 156, 214, 0.25);
+} /* ====== Дропдауни (поточний блакитний стиль) ====== */
+.custom-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 240px;
+  overflow: auto;
+  z-index: 10000;
+  padding: 6px 0;
+  background: #e6f9ff;
+  border: 1px solid #a6dff0;
+  border-radius: 10px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+.custom-dropdown.hidden-all_other_bases {
+  display: none;
+}
+.custom-dropdown .custom-dropdown-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  font-family: "Segoe UI", sans-serif;
+}
+.custom-dropdown .custom-dropdown-item:hover {
+  background: #d2f0ff;
+} /* ====== Форма «Склад» ====== */
+.sclad-grid {
+  display: grid;
+  gap: 10px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.field-label {
+  text-align: left;
+  font-weight: 700;
+  font-size: 14px;
+  color: #465265;
+  line-height: 1.2;
+} /* ====== Футер з кнопкою "Ок" ====== */
+.yes-no-buttons-all_other_bases {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+.yes-no-buttons-all_other_bases .yes-button-all_other_bases {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  background: #0b5cff;
+  color: #fff;
+  transition: filter 0.15s ease;
+}
+.yes-no-buttons-all_other_bases .yes-button-all_other_bases:hover {
+  filter: brightness(1.06);
+}

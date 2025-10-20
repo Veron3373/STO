@@ -4,15 +4,13 @@ import {
   formatDate,
   formatNumber,
   byId,
-  updateTotalSum,
 } from "./bukhhalteriya";
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
-} from "../tablucya/users"; // Імпортуємо функції для роботи з користувачем
+} from "../tablucya/users";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
-// >>> ДОДАЙ ОЦЕ ТУТ (ПІСЛЯ ІМПОРТІВ) <<<
 const FULL_ACCESS_ALIASES = ["адміністратор", "full", "admin", "administrator"];
 
 function getCurrentAccessLevel(): string {
@@ -32,15 +30,10 @@ function getCurrentAccessLevel(): string {
 function hasFullAccess(): boolean {
   return FULL_ACCESS_ALIASES.includes(getCurrentAccessLevel());
 }
-// <<< КІНЕЦЬ ДОДАТКУ >>>
 
-// Тип для фільтра виплат
 type PaymentFilter = "paid" | "unpaid" | "all";
-
-// Тип для фільтра статусу актів
 type StatusFilter = "closed" | "open" | "all";
 
-// Інтерфейс для записів підлеглих з бази даних
 export interface PodlegleRecord {
   dateOpen: string;
   dateClose: string;
@@ -52,12 +45,13 @@ export interface PodlegleRecord {
   quantity: number;
   price: number;
   total: number;
+  salary: number;
+  margin: number;
   isClosed: boolean;
   isPaid: boolean;
-  paymentDate?: string; // Дата оплати
+  paymentDate?: string;
 }
 
-// Інтерфейс для даних з бази slyusars
 interface SlyusarData {
   Name: string;
   Історія: {
@@ -67,7 +61,8 @@ interface SlyusarData {
         Ціна: number;
         Робота: string;
         Кількість: number;
-        Розраховано?: string; // Дата розрахунку
+        Зарплата?: number;
+        Розраховано?: string;
       }>;
       Клієнт?: string;
       Автомобіль?: string;
@@ -77,19 +72,481 @@ interface SlyusarData {
   };
 }
 
-// Змінні для зберігання даних підлеглих
 export let podlegleData: PodlegleRecord[] = [];
 let slyusarsData: SlyusarData[] = [];
 let availableNames: string[] = [];
 let currentPaymentFilter: PaymentFilter = "all";
 let currentStatusFilter: StatusFilter = "all";
 
-// Змінні для відстеження стану пошуку
 let lastSearchDateOpen: string = "";
 let lastSearchDateClose: string = "";
 let hasDataForAllEmployees: boolean = false;
 
-// Функція для отримання поточної дати у форматі DD.MM.YYYY
+// НОВІ ЗМІННІ ДЛЯ АВТОФІЛЬТРАЦІЇ РОБІТ
+let allPodlegleData: PodlegleRecord[] = [];
+let hasPodlegleDataLoaded = false;
+let autoPodlegleSearchTimer: number | null = null;
+const AUTO_PODLEGLE_SEARCH_DELAY = 350;
+
+function debouncePodlegleAutoSearch(fn: () => void) {
+  if (autoPodlegleSearchTimer !== null) {
+    clearTimeout(autoPodlegleSearchTimer);
+  }
+  autoPodlegleSearchTimer = window.setTimeout(() => {
+    autoPodlegleSearchTimer = null;
+    fn();
+  }, AUTO_PODLEGLE_SEARCH_DELAY);
+}
+
+// ВИПАДАЮЧИЙ СПИСОК ДЛЯ РОБІТ
+interface WorkDropdownConfig {
+  inputId: string;
+  listId: string;
+  placeholder: string;
+  maxItems: number;
+}
+
+const workDropdownConfig: WorkDropdownConfig = {
+  inputId: "Bukhhalter-podlegle-work-input",
+  listId: "dl-podlegle-work",
+  placeholder: "Введіть або оберіть роботу",
+  maxItems: 150,
+};
+
+class WorkSmartDropdown {
+  private input: HTMLInputElement;
+  private dropdown: HTMLDivElement;
+  public readonly config: WorkDropdownConfig;
+  private items: string[] = [];
+  private filteredItems: string[] = [];
+  private selectedIndex = -1;
+  private isOpen = false;
+
+  constructor(config: WorkDropdownConfig) {
+    this.config = config;
+    const inputEl = document.getElementById(config.inputId) as HTMLInputElement;
+    if (!inputEl) {
+      throw new Error(`Input element with id ${config.inputId} not found`);
+    }
+    this.input = inputEl;
+    this.dropdown = document.createElement("div");
+
+    this.createDropdown();
+    this.bindEvents();
+  }
+
+  private createDropdown() {
+    if (!this.input.parentElement?.classList.contains("dropdown-wrapper")) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "dropdown-wrapper";
+      wrapper.style.cssText =
+        "position: relative; display: inline-block; width: 100%;";
+
+      this.input.placeholder = this.config.placeholder;
+
+      this.input.parentNode?.insertBefore(wrapper, this.input);
+      wrapper.appendChild(this.input);
+    }
+
+    this.dropdown.className = "smart-dropdown";
+    this.dropdown.style.cssText = `
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;
+      background: white; border: 2px solid #e0e0e0; border-top: none;
+      border-radius: 0 0 12px 12px; max-height: 240px; overflow-y: auto; overflow-x: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12); display: none;
+      backdrop-filter: blur(8px); background: rgba(255,255,255,0.95);
+    `;
+
+    this.input.parentElement?.appendChild(this.dropdown);
+  }
+
+  private bindEvents() {
+    this.input.addEventListener("focus", () => {
+      this.show();
+    });
+
+    this.input.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.filter(this.input.value);
+      this.show();
+    });
+
+    this.input.addEventListener("keydown", (e) => {
+      if (!this.isOpen) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          this.selectNext();
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          this.selectPrev();
+          break;
+        case "Enter":
+          e.preventDefault();
+          this.selectCurrent();
+          break;
+        case "Escape":
+          this.hide();
+          break;
+      }
+    });
+
+    this.input.addEventListener("input", () => {
+      this.filter(this.input.value);
+      if (!this.isOpen) this.show();
+
+      triggerPodlegleAutoFilter();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!this.input.parentElement?.contains(e.target as Node)) {
+        this.hide();
+      }
+    });
+  }
+
+  public updateItems(items: string[]) {
+    this.items = [...new Set(items)].sort();
+    this.filter(this.input.value);
+  }
+
+  private filter(query: string) {
+    const q = query.toLowerCase().trim();
+    this.filteredItems = q
+      ? this.items
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
+      : this.items.slice(0, this.config.maxItems);
+
+    this.selectedIndex = -1;
+    this.render();
+  }
+
+  private render() {
+    if (this.filteredItems.length === 0) {
+      this.dropdown.innerHTML =
+        '<div class="dropdown-empty">Немає варіантів</div>';
+      return;
+    }
+
+    if (this.filteredItems.length > 6) {
+      this.dropdown.style.maxHeight = "240px";
+      this.dropdown.style.overflowY = "auto";
+    } else {
+      this.dropdown.style.maxHeight = "none";
+      this.dropdown.style.overflowY = "visible";
+    }
+
+    this.dropdown.innerHTML = this.filteredItems
+      .map(
+        (item, index) => `
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
+             data-index="${index}">
+          ${this.highlightMatch(item, this.input.value)}
+        </div>
+      `
+      )
+      .join("");
+
+    this.dropdown.querySelectorAll(".dropdown-item").forEach((el, index) => {
+      el.addEventListener("click", () => {
+        this.selectItem(index);
+      });
+    });
+
+    this.adjustDropdownWidth();
+  }
+
+  private adjustDropdownWidth() {
+    const measurer = document.createElement("div");
+    measurer.style.cssText = `
+      position: absolute;
+      visibility: hidden;
+      white-space: nowrap;
+      font-size: 14px;
+      padding: 12px 16px;
+      font-family: inherit;
+    `;
+    document.body.appendChild(measurer);
+
+    let maxWidth = this.input.offsetWidth;
+    this.filteredItems.forEach((item) => {
+      measurer.textContent = item;
+      const itemWidth = measurer.offsetWidth;
+      if (itemWidth > maxWidth) {
+        maxWidth = itemWidth;
+      }
+    });
+
+    document.body.removeChild(measurer);
+
+    const inputWidth = this.input.offsetWidth;
+    const finalWidth = Math.min(maxWidth + 20, inputWidth * 1.5);
+
+    if (finalWidth > inputWidth) {
+      this.dropdown.style.width = `${finalWidth}px`;
+      this.dropdown.style.minWidth = `${inputWidth}px`;
+    } else {
+      this.dropdown.style.width = "100%";
+    }
+  }
+
+  private highlightMatch(text: string, query: string): string {
+    if (!query.trim()) return text;
+    const regex = new RegExp(
+      `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi"
+    );
+    return text.replace(regex, "<mark>$1</mark>");
+  }
+
+  private show() {
+    this.isOpen = true;
+    this.dropdown.style.display = "block";
+    this.input.style.borderRadius = "8px 8px 0 0";
+    this.input.style.borderColor = "#007bff";
+  }
+
+  private hide() {
+    this.isOpen = false;
+    this.dropdown.style.display = "none";
+    this.input.style.borderRadius = "8px";
+    this.input.style.borderColor = "#e0e0e0";
+    this.selectedIndex = -1;
+  }
+
+  private selectNext() {
+    this.selectedIndex = Math.min(
+      this.selectedIndex + 1,
+      this.filteredItems.length - 1
+    );
+    this.render();
+    this.scrollToSelected();
+  }
+
+  private selectPrev() {
+    this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
+    this.render();
+    this.scrollToSelected();
+  }
+
+  private selectCurrent() {
+    if (this.selectedIndex >= 0) {
+      this.selectItem(this.selectedIndex);
+    }
+  }
+
+  private selectItem(index: number) {
+    if (index >= 0 && index < this.filteredItems.length) {
+      const selectedValue = this.filteredItems[index];
+      this.input.value = selectedValue;
+      this.hide();
+
+      triggerPodlegleAutoFilter();
+    }
+  }
+
+  private scrollToSelected() {
+    const selected = this.dropdown.querySelector(".dropdown-item.selected");
+    if (selected) {
+      selected.scrollIntoView({ block: "nearest" });
+    }
+  }
+}
+
+let workSmartDropdown: WorkSmartDropdown | null = null;
+
+function addDropdownStyles() {
+  if (document.getElementById("smart-dropdown-styles")) return;
+
+  const style = document.createElement("style");
+  style.id = "smart-dropdown-styles";
+  style.textContent = `
+    .dropdown-wrapper {
+      position: relative !important;
+      display: inline-block !important;
+      width: 100% !important;
+    }
+    
+    .smart-dropdown {
+      border: 2px solid #007bff !important;
+      border-top: none !important;
+      border-radius: 0 0 12px 12px !important;
+      background: rgba(255,255,255,0.98) !important;
+      backdrop-filter: blur(8px) !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+      overflow-x: auto !important;
+    }
+    
+    .dropdown-item {
+      padding: 12px 16px !important;
+      cursor: pointer !important;
+      border-bottom: 1px solid #f0f0f0 !important;
+      transition: all 0.2s ease !important;
+      display: flex !important;
+      align-items: center !important;
+      font-size: 14px !important;
+      white-space: nowrap !important;
+    }
+    
+    .dropdown-item:last-child {
+      border-bottom: none !important;
+    }
+    
+    .dropdown-item:hover,
+    .dropdown-item.selected {
+      background: linear-gradient(135deg, #007bff, #0056b3) !important;
+      color: white !important;
+      transform: translateX(2px) !important;
+    }
+    
+    .dropdown-item mark {
+      background: #ffd700 !important;
+      color: #333 !important;
+      padding: 2px 4px !important;
+      border-radius: 3px !important;
+      font-weight: 600 !important;
+    }
+    
+    .dropdown-item.selected mark {
+      background: rgba(255,255,255,0.3) !important;
+      color: white !important;
+    }
+    
+    .dropdown-empty {
+      padding: 16px !important;
+      text-align: center !important;
+      color: #666 !important;
+      font-style: italic !important;
+    }
+    
+    .smart-dropdown {
+      animation: slideDown 0.2s ease-out !important;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function ensureWorkSmartDropdown(): void {
+  addDropdownStyles();
+
+  if (!workSmartDropdown) {
+    const inputEl = document.getElementById(workDropdownConfig.inputId);
+    if (inputEl) {
+      try {
+        workSmartDropdown = new WorkSmartDropdown(workDropdownConfig);
+      } catch (error) {
+        console.warn(
+          `Failed to create work dropdown for ${workDropdownConfig.inputId}:`,
+          error
+        );
+      }
+    }
+  }
+}
+
+function refreshWorkDropdownOptions(): void {
+  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  
+  let source = allPodlegleData;
+  if (selectedName) {
+    source = source.filter((r) => r.name === selectedName);
+  }
+
+  const works = new Set<string>();
+  source.forEach((r) => {
+    if (r.work?.trim()) works.add(r.work.trim());
+  });
+
+  if (workSmartDropdown) {
+    workSmartDropdown.updateItems(Array.from(works));
+  }
+}
+
+function triggerPodlegleAutoFilter(): void {
+  if (hasPodlegleDataLoaded) {
+    debouncePodlegleAutoSearch(() => {
+      autoFilterPodlegleFromInputs();
+    });
+  } else {
+    debouncePodlegleAutoSearch(() => {
+      void autoSearchPodlegleFromInputs();
+    });
+  }
+}
+
+function autoFilterPodlegleFromInputs(): void {
+  const dateOpen = byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
+  const dateClose = byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
+  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  const workInput = byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() || "";
+
+  let filtered = [...allPodlegleData];
+
+  const currentDate = new Date().toISOString().split("T")[0];
+
+  if (!dateOpen && !dateClose) {
+    // Всі дати
+  } else if (dateOpen && !dateClose) {
+    filtered = filtered.filter(
+      (r) => r.dateOpen >= dateOpen && r.dateOpen <= currentDate
+    );
+  } else if (!dateOpen && dateClose) {
+    filtered = filtered.filter((r) => r.dateOpen <= dateClose);
+  } else if (dateOpen && dateClose) {
+    filtered = filtered.filter(
+      (r) => r.dateOpen >= dateOpen && r.dateOpen <= dateClose
+    );
+  }
+
+  if (selectedName) {
+    filtered = filtered.filter((r) => r.name === selectedName);
+  }
+
+  if (workInput) {
+    filtered = filtered.filter((r) =>
+      (r.work || "").toLowerCase().includes(workInput.toLowerCase())
+    );
+  }
+
+  podlegleData = filtered;
+  updatepodlegleTable();
+}
+
+async function autoSearchPodlegleFromInputs(): Promise<void> {
+  const dateOpen = byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
+  const dateClose = byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
+  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  const workInput = byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() || "";
+
+  if (!dateOpen && !dateClose && !selectedName && !workInput) {
+    return;
+  }
+
+  searchDataInDatabase(dateOpen, dateClose, selectedName);
+  
+  allPodlegleData = [...podlegleData];
+  hasPodlegleDataLoaded = true;
+  ensureWorkSmartDropdown();
+  refreshWorkDropdownOptions();
+  autoFilterPodlegleFromInputs();
+}
+
 function getCurrentDate(): string {
   const now = new Date();
   const day = now.getDate().toString().padStart(2, "0");
@@ -98,13 +555,6 @@ function getCurrentDate(): string {
   return `${day}.${month}.${year}`;
 }
 
-// =============================================================================
-// МОДАЛЬНЕ ВІКНО ДЛЯ ПІДТВЕРДЖЕННЯ ПАРОЛЯ
-// =============================================================================
-
-/**
- * Створення модального вікна для підтвердження пароля
- */
 function createPasswordConfirmationModal(
   action: "pay" | "unpay"
 ): Promise<boolean> {
@@ -166,7 +616,6 @@ function createPasswordConfirmationModal(
             border-radius: 4px; cursor: pointer; transition: background-color 0.2s; flex: 1;
         `;
 
-    // Обробники подій
     confirmButton.addEventListener("click", async () => {
       const inputPassword = input.value.trim();
       if (!inputPassword) {
@@ -175,7 +624,6 @@ function createPasswordConfirmationModal(
         return;
       }
 
-      // Отримуємо збережені дані користувача
       const savedData = getSavedUserDataFromLocalStorage();
       if (!savedData) {
         errorDiv.textContent = "Помилка: не знайдено дані користувача";
@@ -183,7 +631,6 @@ function createPasswordConfirmationModal(
         return;
       }
 
-      // Перевіряємо пароль
       if (inputPassword === savedData.password) {
         modal.remove();
         resolve(true);
@@ -200,14 +647,12 @@ function createPasswordConfirmationModal(
       resolve(false);
     });
 
-    // Обробка Enter
     input.addEventListener("keypress", (event) => {
       if (event.key === "Enter") {
         confirmButton.click();
       }
     });
 
-    // Обробка Escape
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         modal.remove();
@@ -216,14 +661,12 @@ function createPasswordConfirmationModal(
     };
     document.addEventListener("keydown", handleEscape);
 
-    // Очищення слухача при видаленні модального вікна
     const originalRemove = modal.remove;
     modal.remove = function () {
       document.removeEventListener("keydown", handleEscape);
       originalRemove.call(this);
     };
 
-    // Додавання елементів до модального вікна
     buttonsContainer.appendChild(confirmButton);
     buttonsContainer.appendChild(cancelButton);
 
@@ -239,20 +682,14 @@ function createPasswordConfirmationModal(
   });
 }
 
-// Функція для завантаження даних з бази slyusars
 export async function loadSlyusarsData(): Promise<void> {
   try {
-    // //console.log('Завантаження даних slyusars з Supabase...');
-    //showNotification('🔄 Завантаження даних з бази...', 'info', 2000);
-
     const { data, error } = await supabase.from("slyusars").select("*");
 
     if (error) {
       console.error("Помилка Supabase:", error);
       throw new Error(`Помилка завантаження: ${error.message}`);
     }
-
-    //console.log('Сирі дані з Supabase:', data);
 
     if (data && Array.isArray(data)) {
       slyusarsData = data
@@ -279,7 +716,6 @@ export async function loadSlyusarsData(): Promise<void> {
               return null;
             }
 
-            //console.log(`✅ Завантажено слюсаря: ${parsedData.Name}`);
             return parsedData;
           } catch (parseError) {
             console.error(
@@ -292,17 +728,13 @@ export async function loadSlyusarsData(): Promise<void> {
         })
         .filter((item) => item !== null);
 
-      //console.log(`📊 Загальна кількість завантажених слюсарів: ${slyusarsData.length}`);
       updateNamesList();
-      //showNotification(`✅ Завантажено ${slyusarsData.length} слюсарів з бази`, 'success');
     } else {
       throw new Error(
         "Невірний формат даних з Supabase: дані не є масивом або порожні"
       );
     }
   } catch (error) {
-    // console.error('❌ Помилка завантаження даних з бази slyusars:', error);
-
     let errorMessage = "Невідома помилка";
     if (error instanceof Error) {
       errorMessage = error.message;
@@ -319,13 +751,10 @@ export async function loadSlyusarsData(): Promise<void> {
   }
 }
 
-// Функція для збереження оновлених даних в базі slyusars
 async function saveSlyusarsDataToDatabase(): Promise<void> {
   try {
-    //console.log('Збереження оновлених даних в базу slyusars...');
     showNotification("💾 Збереження змін в базу...", "info", 2000);
 
-    // 1) Беремо поточні записи, але без зайвого: тільки ключ + data
     const { data: existingData, error: fetchError } = await supabase
       .from("slyusars")
       .select("*");
@@ -335,7 +764,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       throw new Error(`Помилка отримання даних: ${fetchError.message}`);
     }
 
-    // Визначаємо назву ключа таблиці (id або slyusars_id)
     const primaryKeyCandidates = ["id", "slyusars_id", "uid", "pk"];
     const detectPrimaryKey = (row: any): string | null => {
       if (!row) return null;
@@ -346,7 +774,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
 
     for (const slyusar of slyusarsData) {
       try {
-        // Знаходимо відповідний запис у вибірці за ім'ям всередині JSON
         const target = existingData?.find((item) => {
           let js = item.data;
           if (typeof js === "string") {
@@ -364,12 +791,11 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
           continue;
         }
 
-        // 2) Оновлюємо: якщо знаємо ключ — по ключу; інакше — по JSON фільтру
         if (primaryKey) {
           const { data: upd, error: updErr } = await supabase
             .from("slyusars")
-            .update({ data: slyusar }) // jsonb оновлюємо відразу об'єктом
-            .eq(primaryKey, target[primaryKey]) // правильне поле ключа
+            .update({ data: slyusar })
+            .eq(primaryKey, target[primaryKey])
             .select();
 
           if (updErr) {
@@ -382,7 +808,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
             );
           }
         } else {
-          // fallback: оновлення за вмістом JSON (Name має бути унікальним у таблиці)
           const { data: upd, error: updErr } = await supabase
             .from("slyusars")
             .update({ data: slyusar })
@@ -408,7 +833,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       }
     }
 
-    //console.log('✅ Дані успішно збережено в базу slyusars');
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
     console.error("❌ Помилка збереження в базу slyusars:", error);
@@ -426,23 +850,19 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
   }
 }
 
-// Оновлення списку доступних імен з реальної бази даних
 function updateNamesList(): void {
   const namesSet = new Set<string>();
   slyusarsData.forEach((item) => {
     if (item.Name) namesSet.add(item.Name);
   });
   availableNames = Array.from(namesSet).sort();
-  //console.log('Доступні імена з бази:', availableNames);
   createNameSelect();
 }
 
-// Створення випадаючого списку для імен з автоматичним фільтруванням
 export function createNameSelect(): void {
   try {
     const select = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select");
 
-    // Очищаємо старі опції
     select.innerHTML = "";
 
     const emptyOption = document.createElement("option");
@@ -450,7 +870,6 @@ export function createNameSelect(): void {
     emptyOption.textContent = "Оберіть ПІБ (або залиште порожнім для всіх)";
     select.appendChild(emptyOption);
 
-    // Додаємо опції з реальними іменами з бази даних
     availableNames.forEach((name) => {
       const option = document.createElement("option");
       option.value = name;
@@ -458,12 +877,9 @@ export function createNameSelect(): void {
       select.appendChild(option);
     });
 
-    // Додаємо обробник зміни вибору співробітника
     select.addEventListener("change", (event) => {
       const selectedName = (event.target as HTMLSelectElement).value;
 
-      // Якщо раніше були завантажені дані для всіх співробітників,
-      // то при зміні імені автоматично фільтруємо
       if (hasDataForAllEmployees) {
         console.log(
           `🔄 Автоматичне фільтрування по співробітнику: ${
@@ -471,31 +887,27 @@ export function createNameSelect(): void {
           }`
         );
 
-        // Використовуємо збережені параметри пошуку
         searchDataInDatabase(
           lastSearchDateOpen,
           lastSearchDateClose,
           selectedName
         );
       }
-    });
 
-    //console.log('Створено випадаючий список з', availableNames.length, 'іменами з бази даних');
+      refreshWorkDropdownOptions();
+    });
   } catch (error) {}
 }
 
-// Функція для фільтрації даних підлеглих
 export function getFilteredpodlegleData(): PodlegleRecord[] {
   let filteredData = podlegleData;
 
-  // Фільтр по статусу виплат
   if (currentPaymentFilter === "paid") {
     filteredData = filteredData.filter((item) => item.isPaid);
   } else if (currentPaymentFilter === "unpaid") {
     filteredData = filteredData.filter((item) => !item.isPaid);
   }
 
-  // Фільтр по статусу актів
   if (currentStatusFilter === "closed") {
     filteredData = filteredData.filter((item) => item.isClosed);
   } else if (currentStatusFilter === "open") {
@@ -505,7 +917,48 @@ export function getFilteredpodlegleData(): PodlegleRecord[] {
   return filteredData;
 }
 
-// Оновлення таблиці підлеглих з кольоровим кодуванням та фільтрацією
+// Функція для розрахунку суми зарплат
+export function calculatePodlegleSalaryTotal(): number {
+  const filteredData = getFilteredpodlegleData();
+  return filteredData.reduce((sum, item) => sum + (item.salary || 0), 0);
+}
+
+// Функція для розрахунку маржі
+export function calculatePodlegleMarginTotal(): number {
+  const filteredData = getFilteredpodlegleData();
+  return filteredData.reduce((sum, item) => sum + (item.margin || 0), 0);
+}
+
+// Функція для оновлення відображення суми для співробітників
+export function updatePodlegleDisplayedSums(): void {
+  const totalSumElement = byId<HTMLElement>("total-sum");
+  
+  if (!totalSumElement) {
+    console.warn("Елемент total-sum не знайдено");
+    return;
+  }
+
+  const filteredData = getFilteredpodlegleData();
+
+  let totalRevenue = 0;
+  let totalSalary = 0;
+  let totalMargin = 0;
+
+  if (filteredData.length > 0) {
+    totalRevenue = filteredData.reduce((sum, item) => sum + (item.total || 0), 0);
+    totalSalary = calculatePodlegleSalaryTotal();
+    totalMargin = calculatePodlegleMarginTotal();
+  }
+
+  const marginSign = totalMargin >= 0 ? "+" : "";
+
+  totalSumElement.innerHTML = `
+    <div style="color: white; font-size: 1.1em; font-weight: 600; white-space: nowrap;">
+      Сумма 💰 ${formatNumber(totalRevenue)} грн - 💶 ${formatNumber(totalSalary)} грн = 📈 ${marginSign}${formatNumber(totalMargin)} грн
+    </div>
+  `;
+}
+
 export function updatepodlegleTable(): void {
   const tbody = byId<HTMLTableSectionElement>("podlegle-tbody");
   const filteredData = getFilteredpodlegleData();
@@ -513,6 +966,7 @@ export function updatepodlegleTable(): void {
   if (filteredData.length === 0) {
     tbody.innerHTML =
       '<tr><td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
+    updatePodlegleDisplayedSums();
     return;
   }
 
@@ -522,10 +976,18 @@ export function updatepodlegleTable(): void {
       const rowClass = item.isClosed ? "closed-row" : "open-row";
       const paidClass = item.isPaid ? "paid-row" : "unpaid-row";
 
-      // Формуємо текст для кнопки оплати
       const paymentButtonText = item.isPaid
         ? `💰 ${item.paymentDate || "Розраховано"}`
         : "💲 Не розраховано";
+
+      const marginColor = item.margin >= 0 ? "#28a745" : "#dc3545";
+      const marginSign = item.margin >= 0 ? "+" : "";
+
+      const totalHtml = `
+        <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(item.total)}</div>
+        <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(item.salary)}</div>
+        <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(item.margin)}</div>
+      `;
 
       return `
                 <tr class="${rowClass} ${paidClass}" onclick="handleRowClick(${index})">
@@ -560,16 +1022,18 @@ export function updatepodlegleTable(): void {
                     <td>${item.work || "-"}</td>
                     <td>${item.quantity || "-"}</td>
                     <td>${item.price ? formatNumber(item.price) : "-"}</td>
-                    <td>${item.total ? formatNumber(item.total) : "-"}</td>
+                    <td style="padding: 8px;">
+                      ${totalHtml}
+                    </td>
                     <td><button class="Bukhhalter-delete-btn" onclick="event.stopPropagation(); deleteRecord('podlegle', ${originalIndex})">🗑️</button></td>
                 </tr>
             `;
     })
     .join("");
+
+  updatePodlegleDisplayedSums();
 }
 
-// Пошук даних в базі slyusars та заповнення таблиці РЕАЛЬНИМИ даними
-// Пошук даних в базі slyusars та заповнення таблиці РЕАЛЬНИМИ даними
 export function searchDataInDatabase(
   dateOpen: string,
   dateClose: string,
@@ -583,21 +1047,17 @@ export function searchDataInDatabase(
       "warning"
     );
     updatepodlegleTable();
-    updateTotalSum();
     return;
   }
 
-  // Зберігаємо параметри пошуку для подальшого використання
   lastSearchDateOpen = dateOpen;
   lastSearchDateClose = dateClose;
 
-  // Визначаємо, чи це пошук за всіма співробітниками
   const isSearchForAllEmployees = !selectedName;
   if (isSearchForAllEmployees) {
     hasDataForAllEmployees = true;
   }
 
-  // Отримуємо поточну дату для порівняння
   const getCurrentDateForComparison = (): string => {
     const now = new Date();
     const day = now.getDate().toString().padStart(2, "0");
@@ -615,43 +1075,34 @@ export function searchDataInDatabase(
   console.log(`  - Поточна дата: ${currentDate}`);
 
   slyusarsData.forEach((slyusar) => {
-    // Фільтр по імені якщо вказано
     if (selectedName && slyusar.Name !== selectedName) {
       return;
     }
 
-    // Перебираємо всю історію слюсаря
     Object.keys(slyusar.Історія).forEach((date) => {
       let shouldInclude = false;
 
-      // Логіка фільтрації дат:
       if (!dateOpen && !dateClose) {
-        // Якщо немає початкової і кінцевої дати - виводимо все
         shouldInclude = true;
       } else if (dateOpen && !dateClose) {
-        // Якщо є лише початкова - шукаємо від початкової до теперішньої
         shouldInclude = date >= dateOpen && date <= currentDate;
       } else if (!dateOpen && dateClose) {
-        // Якщо є лише кінцева - шукаємо все що до кінцевої включно
         shouldInclude = date <= dateClose;
       } else if (dateOpen && dateClose) {
-        // Якщо є обидві дати - стандартний діапазон
         shouldInclude = date >= dateOpen && date <= dateClose;
       }
 
       if (shouldInclude) {
-        // Перебираємо всі записи за цю дату
         slyusar.Історія[date].forEach((record) => {
-          // Перебираємо всі роботи в записі
           record.Записи.forEach((entry) => {
-            // Пропускаємо записи з нульовою кількістю
             if (entry.Кількість === 0) return;
 
-            // Перевіряємо чи є ключ "Розраховано"
             const isPaid = !!entry.Розраховано;
             const paymentDate = entry.Розраховано || "";
+            const totalPrice = entry.Ціна * entry.Кількість;
+            const salary = entry.Зарплата || 0;
+            const margin = totalPrice - salary;
 
-            // Створюємо запис для таблиці підлеглих з РЕАЛЬНИМИ даними
             const podlegleRecord: PodlegleRecord = {
               dateOpen: date,
               dateClose: record.ДатаЗакриття || "",
@@ -662,7 +1113,9 @@ export function searchDataInDatabase(
               work: entry.Робота,
               quantity: entry.Кількість,
               price: entry.Ціна,
-              total: entry.Ціна * entry.Кількість,
+              total: totalPrice,
+              salary: salary,
+              margin: margin,
               isClosed: record.ДатаЗакриття !== null,
               isPaid: isPaid,
               paymentDate: paymentDate,
@@ -676,13 +1129,9 @@ export function searchDataInDatabase(
 
   console.log(`📊 Знайдено ${podlegleData.length} записів в базі slyusars`);
 
-  // Сортуємо дані по датах відкриття актів: нові зверху, старі знизу
   podlegleData.sort((a, b) => {
-    // Перетворюємо дати в об'єкти Date для порівняння
     const dateA = new Date(a.dateOpen);
     const dateB = new Date(b.dateOpen);
-
-    // Сортування за спаданням (нові дати зверху)
     return dateB.getTime() - dateA.getTime();
   });
 
@@ -691,7 +1140,6 @@ export function searchDataInDatabase(
   const recordsCount = podlegleData.length;
   const filterMessage = selectedName ? ` для ${selectedName}` : "";
 
-  // Формуємо повідомлення про застосовані фільтри дат
   let dateFilterMessage = "";
   if (!dateOpen && !dateClose) {
     dateFilterMessage = " (всі дати)";
@@ -710,22 +1158,22 @@ export function searchDataInDatabase(
     recordsCount > 0 ? "success" : "info"
   );
 
+  allPodlegleData = [...podlegleData];
+  hasPodlegleDataLoaded = true;
+  ensureWorkSmartDropdown();
+  refreshWorkDropdownOptions();
+
   updatepodlegleTable();
-  updateTotalSum();
 }
 
-// Виправлені функції для перемикачів фільтрів
-
-// Створення перемикача для фільтра статусу актів
 export function createStatusToggle(): void {
-  const toggle = byId<HTMLInputElement>("status-filter-toggle");
+  const toggle = byId<HTMLInputElement>("details-status-filter-toggle");
 
   if (!toggle) {
     console.error("❌ Елемент status-filter-toggle не знайдено в HTML");
     return;
   }
 
-  // Додаємо детальне логування
   toggle.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
@@ -735,30 +1183,20 @@ export function createStatusToggle(): void {
     switch (value) {
       case "0":
         currentStatusFilter = "closed";
-        // console.log('📋 Встановлено фільтр: тільки закриті акти');
         break;
       case "1":
         currentStatusFilter = "open";
-        // console.log('📋 Встановлено фільтр: тільки відкриті акти');
         break;
       case "2":
       default:
         currentStatusFilter = "all";
-        //  console.log('📋 Встановлено фільтр: всі акти');
         break;
     }
 
-    // Оновлюємо таблицю та суму
     updatepodlegleTable();
-    updateTotalSum();
-
-    //  console.log(`✅ Фільтр застосовано. Поточний статус: ${currentStatusFilter}`);
   });
-
-  //  console.log('✅ Обробник статусу актів додано');
 }
 
-// Створення перемикача для фільтра виплат
 export function createPaymentToggle(): void {
   const toggle = byId<HTMLInputElement>("payment-filter-toggle");
 
@@ -767,42 +1205,31 @@ export function createPaymentToggle(): void {
     return;
   }
 
-  // Додаємо детальне логування
   toggle.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
 
-    //  console.log('💰 Зміна фільтра розрахунків:', value);
-
     switch (value) {
       case "0":
         currentPaymentFilter = "paid";
-        //   console.log('💰 Встановлено фільтр: тільки розраховані');
         break;
       case "1":
         currentPaymentFilter = "unpaid";
-        //    console.log('💰 Встановлено фільтр: тільки не розраховані');
         break;
       case "2":
       default:
         currentPaymentFilter = "all";
-        //   console.log('💰 Встановлено фільтр: всі записи');
         break;
     }
 
-    // Оновлюємо таблицю та суму
     updatepodlegleTable();
-    updateTotalSum();
 
     console.log(
       `✅ Фільтр застосовано. Поточний розрахунок: ${currentPaymentFilter}`
     );
   });
-
-  //console.log('✅ Обробник розрахунків додано');
 }
 
-// Функція для обробки додавання запису підлеглих
 export function handlepodlegleAddRecord(): void {
   const dateOpen = byId<HTMLInputElement>(
     "Bukhhalter-podlegle-date-open"
@@ -813,10 +1240,8 @@ export function handlepodlegleAddRecord(): void {
   const nameSelect = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select");
   const selectedName = nameSelect ? nameSelect.value : "";
 
-  // Запускаємо пошук з будь-якими параметрами
   searchDataInDatabase(dateOpen, dateClose, selectedName);
 
-  // Показуємо інформативне повідомлення про те, що саме шукаємо
   let searchInfo = "";
   if (!dateOpen && !dateClose) {
     searchInfo = "🔍 Завантажуємо всі записи";
@@ -834,20 +1259,13 @@ export function handlepodlegleAddRecord(): void {
 
   console.log(searchInfo);
 }
-// Функція для видалення запису підлеглого
+
 export function deletepodlegleRecord(index: number): void {
   podlegleData.splice(index, 1);
   updatepodlegleTable();
   showNotification("🗑️ Запис видалено", "info");
 }
 
-// =============================================================================
-// ОНОВЛЕНА ФУНКЦІЯ ДЛЯ ПЕРЕМИКАННЯ ОПЛАТИ З ПІДТВЕРДЖЕННЯМ ПАРОЛЯ
-// =============================================================================
-
-/**
- * Функція для перемикання статусу виплати з підтвердженням пароля
- */
 export async function togglepodleglePaymentWithConfirmation(
   index: number
 ): Promise<void> {
@@ -859,29 +1277,23 @@ export async function togglepodleglePaymentWithConfirmation(
 
   const record = podlegleData[index];
 
-  // Перевіряємо рівень доступу користувача за допомогою hasFullAccess
   if (!hasFullAccess()) {
     showNotification("⚠️ У вас немає прав для зміни статусу оплати", "warning");
     return;
   }
 
-  // Визначаємо дію для модального вікна
   const action = record.isPaid ? "unpay" : "pay";
 
-  // Показуємо модальне вікно підтвердження
   const confirmed = await createPasswordConfirmationModal(action);
 
   if (!confirmed) {
-    //console.log('Користувач скасував операцію');
     showNotification("🚫 Операцію скасовано", "info");
     return;
   }
 
-  // Якщо підтверджено, виконуємо зміну статусу оплати
   togglepodleglePayment(index);
 }
 
-// Оригінальна функція для перемикання статусу виплати підлеглому з збереженням в базу
 export function togglepodleglePayment(index: number): void {
   if (!podlegleData[index]) {
     console.error(`Запис з індексом ${index} не знайдено`);
@@ -890,16 +1302,12 @@ export function togglepodleglePayment(index: number): void {
   }
 
   const record = podlegleData[index];
-  //console.log(`🔄 Перемикання оплати для запису:`, record);
 
-  // Якщо запис ще не оплачений, встановлюємо оплату з поточною датою
   if (!record.isPaid) {
     const currentDate = getCurrentDate();
     record.isPaid = true;
     record.paymentDate = currentDate;
-    //console.log(`💰 Встановлюємо оплату: ${currentDate}`);
 
-    // Знаходимо відповідний запис в slyusarsData та оновлюємо його
     const slyusar = slyusarsData.find((s) => s.Name === record.name);
     if (!slyusar) {
       console.error(`❌ Слюсаря ${record.name} не знайдено в slyusarsData`);
@@ -953,14 +1361,10 @@ export function togglepodleglePayment(index: number): void {
     }
 
     workEntry.Розраховано = currentDate;
-    //console.log(`✅ Встановлено розрахунок для ${record.name}, акт ${record.act}, робота "${record.work}": ${currentDate}`);
   } else {
-    // Якщо запис оплачений, скасовуємо оплату
     record.isPaid = false;
     record.paymentDate = "";
-    //console.log(`❌ Скасовуємо оплату`);
 
-    // Видаляємо ключ "Розраховано" з slyusarsData
     const slyusar = slyusarsData.find((s) => s.Name === record.name);
     if (slyusar && slyusar.Історія[record.dateOpen]) {
       const actRecord = slyusar.Історія[record.dateOpen].find(
@@ -975,17 +1379,13 @@ export function togglepodleglePayment(index: number): void {
         );
         if (workEntry) {
           delete workEntry.Розраховано;
-          //console.log(`✅ Скасовано розрахунок для ${record.name}, акт ${record.act}, робота "${record.work}"`);
         }
       }
     }
   }
 
-  // Зберігаємо зміни в базу даних
-  //console.log(`💾 Зберігаємо зміни в базу даних...`);
   saveSlyusarsDataToDatabase()
     .then(() => {
-      //console.log(`✅ Зміни успішно збережено`);
       updatepodlegleTable();
       showNotification(
         record.isPaid
@@ -997,21 +1397,13 @@ export function togglepodleglePayment(index: number): void {
     .catch((error) => {
       console.error(`❌ Помилка збереження:`, error);
       showNotification("❌ Помилка збереження змін в базу даних", "error");
-      // Відкатуємо зміни в інтерфейсі
       record.isPaid = !record.isPaid;
       record.paymentDate = record.isPaid ? getCurrentDate() : "";
       updatepodlegleTable();
     });
 }
 
-// =============================================================================
-// ФУНКЦІЯ ДЛЯ КНОПКИ 💰 РОЗРАХУНОК
-// =============================================================================
-
-// Масовий розрахунок всіх актів
-// Масовий розрахунок тільки відфільтрованих актів
 export async function runMassPaymentCalculation(): Promise<void> {
-  // Перевірка доступу
   if (!hasFullAccess()) {
     showNotification(
       "⚠️ У вас немає прав для виконання масового розрахунку",
@@ -1020,14 +1412,12 @@ export async function runMassPaymentCalculation(): Promise<void> {
     return;
   }
 
-  // Модалка для підтвердження пароля
   const confirmed = await createPasswordConfirmationModal("pay");
   if (!confirmed) {
     showNotification("🚫 Операцію скасовано", "info");
     return;
   }
 
-  // Отримуємо тільки відфільтровані дані, які зараз відображаються в таблиці
   const filteredData = getFilteredpodlegleData();
 
   if (filteredData.length === 0) {
@@ -1038,14 +1428,11 @@ export async function runMassPaymentCalculation(): Promise<void> {
     return;
   }
 
-  // Дата для розрахунку
   const currentDate = getCurrentDate();
   let updatedCount = 0;
 
-  // Перебираємо тільки відфільтровані дані
   filteredData.forEach((record) => {
     if (!record.isPaid) {
-      // Знаходимо індекс цього запису в оригінальному масиві podlegleData
       const originalIndex = podlegleData.findIndex(
         (item) =>
           item.dateOpen === record.dateOpen &&
@@ -1057,12 +1444,10 @@ export async function runMassPaymentCalculation(): Promise<void> {
       );
 
       if (originalIndex !== -1) {
-        // Оновлюємо запис в оригінальному масиві
         podlegleData[originalIndex].isPaid = true;
         podlegleData[originalIndex].paymentDate = currentDate;
         updatedCount++;
 
-        // Оновлюємо також slyusarsData
         const slyusar = slyusarsData.find((s) => s.Name === record.name);
         if (slyusar && slyusar.Історія[record.dateOpen]) {
           const actRecord = slyusar.Історія[record.dateOpen].find(
@@ -1092,7 +1477,6 @@ export async function runMassPaymentCalculation(): Promise<void> {
     return;
   }
 
-  // Збереження в базу
   try {
     await saveSlyusarsDataToDatabase();
     updatepodlegleTable();
@@ -1106,13 +1490,14 @@ export async function runMassPaymentCalculation(): Promise<void> {
   }
 }
 
-// Додаємо у глобальний контекст для HTML-кнопки
 (window as any).runMassPaymentCalculation = runMassPaymentCalculation;
-
-// =============================================================================
-// ЕКСПОРТОВАНІ ФУНКЦІЇ ДЛЯ ГЛОБАЛЬНОГО ВИКОРИСТАННЯ
-// =============================================================================
-
-// Додаємо функції в глобальний контекст для використання в HTML onclick
 (window as any).togglepodleglePaymentWithConfirmation =
   togglepodleglePaymentWithConfirmation;
+(window as any).updatePodlegleDisplayedSums = updatePodlegleDisplayedSums;
+
+// Ініціалізація випадаючого списку робіт при завантаженні
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => {
+    ensureWorkSmartDropdown();
+  }, 100);
+});

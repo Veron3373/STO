@@ -202,6 +202,12 @@
       <div id="details-table-container" style="display: none;">
         <table class="Bukhhalter-data-table" id="details-table">
           <tr>
+            <th>
+              <div class="table-header-cell">
+                <span class="table-header-emoji">💰</span>
+                <span class="table-header-text">Розраховано</span>
+              </div>
+            </th>
             <th class="poAktam-dataOn">
               <div class="table-header-cell">
                 <span class="table-header-emoji">📅</span>
@@ -306,6 +312,11 @@
             <select class="Bukhhalter-field-input" id="Bukhhalter-podlegle-name-select">
               <option value="">Оберіть ПІБ (або залиште порожнім для всіх)</option>
             </select>
+          </div>
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">🛠️ Робота</label>
+            <input type="text" class="Bukhhalter-field-input" id="Bukhhalter-podlegle-work-input"
+              placeholder="Введіть або оберіть роботу">
           </div>
           <div class="Bukhhalter-toggle-container">
             <label class="Bukhhalter-field-label">📋 Статус актів</label>
@@ -426,6 +437,27 @@
               <label class="Bukhhalter-field-label">📚 Каталог</label>
               <input type="text" class="Bukhhalter-field-input" id="Bukhhalter-details-catalog"
                 placeholder="Введіть або оберіть каталожний номер">
+            </div>
+          </div>
+          <div class="Bukhhalter-toggle-container">
+            <label class="Bukhhalter-field-label">📋 Статус актів</label>
+            <div class="Bukhhalter-toggle-wrapper">
+              <input type="range" min="0" max="2" value="2" class="Bukhhalter-status-toggle"
+                id="poAktam-status-filter-toggle">
+              <div class="Bukhhalter-toggle-labels">
+                <span>Закриті</span>
+                <span>Відкриті</span>
+                <span>Всі</span>
+              </div>
+            </div>
+          </div>
+          <div class="Bukhhalter-toggle-container">
+            <label class="Bukhhalter-field-label">💰 Розрахунок</label>
+            <div class="Bukhhalter-toggle-wrapper">
+              <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
+                id="poAktam-payment-filter-toggle">
+              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не рохраховано</span><span>Всі</span>
+              </div>
             </div>
           </div>
         </div>

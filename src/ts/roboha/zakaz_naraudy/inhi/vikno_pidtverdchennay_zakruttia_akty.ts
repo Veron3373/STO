@@ -8,7 +8,6 @@ import { userAccessLevel } from "../../tablucya/users";
 export const viknoPidtverdchennayZakruttiaAktyId =
   "vikno_pidtverdchennay_zakruttia_akty-modal";
 
-/** Створення DOM елемента модалки */
 export function createViknoPidtverdchennayZakruttiaAkty(): HTMLDivElement {
   const overlay = document.createElement("div");
   overlay.id = viknoPidtverdchennayZakruttiaAktyId;
@@ -28,7 +27,6 @@ export function createViknoPidtverdchennayZakruttiaAkty(): HTMLDivElement {
   return overlay;
 }
 
-/** Гарантовано підвісити модалку в DOM (якщо її ще нема) */
 function ensureModalMounted(): HTMLElement {
   let el = document.getElementById(viknoPidtverdchennayZakruttiaAktyId);
   if (!el) {
@@ -39,7 +37,7 @@ function ensureModalMounted(): HTMLElement {
 }
 
 /**
- * Перевірка наявності попереджень (трикутників) у таблиці акту
+ * Перевірка наявності попереджень у таблиці акту
  * Повертає true якщо помилок немає, false якщо є попередження
  */
 function checkForWarnings(): boolean {
@@ -56,12 +54,20 @@ function checkForWarnings(): boolean {
     '.price-cell[data-warnprice="1"]'
   );
 
+  // Перевіряємо наявність трикутників попередження про зарплату
+  const slyusarSumWarnings = container.querySelectorAll(
+    '.slyusar-sum-cell[data-warnzp="1"]'
+  );
+
   // Якщо є будь-які попередження - повертаємо false
-  const pomulka = qtyWarnings.length === 0 && priceWarnings.length === 0;
+  const pomulka = 
+    qtyWarnings.length === 0 && 
+    priceWarnings.length === 0 && 
+    slyusarSumWarnings.length === 0;
   
   if (!pomulka) {
     console.warn(
-      `Знайдено попередження: кількість=${qtyWarnings.length}, ціна=${priceWarnings.length}`
+      `Знайдено попередження: кількість=${qtyWarnings.length}, ціна=${priceWarnings.length}, зарплата=${slyusarSumWarnings.length}`
     );
   }
 
@@ -69,10 +75,7 @@ function checkForWarnings(): boolean {
 }
 
 /**
- * Показ модалки та безпосереднє ЗАКРИТТЯ АКТУ:
- * - виставляє acts.date_off = now,
- * - у slyusars.data.Історія для відповідного дня та Акту ставить "ДатаЗакриття" = сьогодні.
- * Повертає true, якщо закрито; false — якщо скасовано або помилка.
+ * Показ модалки та безпосереднє ЗАКРИТТЯ АКТУ
  */
 export function showViknoPidtverdchennayZakruttiaAkty(
   actId: number
@@ -87,7 +90,7 @@ export function showViknoPidtverdchennayZakruttiaAkty(
     // Якщо є помилки і користувач не адміністратор - блокуємо закриття
     if (!pomulka && !isAdmin) {
       showNotification(
-        `Неможливо закрити акт: є попередження про перевищення кількості або низьку ціну. Виправте помилки або зверніться до адміністратора. (Ваш доступ: ${userAccessLevel})`,
+        `Неможливо закрити акт: є попередження про перевищення кількості, низьку ціну або зарплату більшу ніж сума. Виправте помилки або зверніться до адміністратора. (Ваш доступ: ${userAccessLevel})`,
         "error",
         5000
       );
@@ -103,7 +106,7 @@ export function showViknoPidtverdchennayZakruttiaAkty(
       if (!pomulka && isAdmin) {
         messageEl.innerHTML = `
           <strong style="color: #ff9800;">⚠️ Увага!</strong><br>
-          Виявлено попередження про перевищення кількості або низьку ціну.<br>
+          Виявлено попередження про перевищення кількості, низьку ціну або зарплату більшу ніж сума.<br>
           Ви впевнені, що хочете закрити акт?
         `;
       } else {
@@ -165,7 +168,6 @@ export function showViknoPidtverdchennayZakruttiaAkty(
           2500
         );
         confirmBtn.disabled = false;
-        // не закриваємо модалку, щоб можна було повторити
       }
     };
 

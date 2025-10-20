@@ -1,4 +1,3 @@
-// src/ts/roboha/zakaz_naraudy/inhi/save_work.ts
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { globalCache, ACT_ITEMS_TABLE_CONTAINER_ID } from "../globalCache";
@@ -15,7 +14,7 @@ function toISODateOnly(dt: string | Date | null | undefined): string | null {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`; // YYYY-MM-DD
+  return `${y}-${m}-${dd}`;
 }
 
 async function fetchActDates(
@@ -33,15 +32,11 @@ async function fetchActDates(
   return { date_on: data?.date_on ?? null, date_off: data?.date_off ?? null };
 }
 
-/**
- * Отримання даних клієнта та автомобіля з акту
- */
 async function fetchActClientAndCarData(actId: number): Promise<{
   clientInfo: string;
   carInfo: string;
 }> {
   try {
-    // Отримуємо дані акту
     const { data: act, error: actError } = await supabase
       .from("acts")
       .select("client_id, cars_id")
@@ -53,7 +48,6 @@ async function fetchActClientAndCarData(actId: number): Promise<{
       return { clientInfo: "—", carInfo: "—" };
     }
 
-    // Отримуємо дані клієнта
     let clientInfo = "—";
     if (act.client_id) {
       const { data: client } = await supabase
@@ -68,7 +62,6 @@ async function fetchActClientAndCarData(actId: number): Promise<{
       }
     }
 
-    // Отримуємо дані автомобіля
     let carInfo = "—";
     if (act.cars_id) {
       const { data: car } = await supabase
@@ -135,18 +128,19 @@ const parseNum = (s?: string | null) => {
   return isFinite(n) ? n : 0;
 };
 
-/** Попередні роботи (snapshot до збереження) з кешу рендера модалки */
 function collectPrevWorkRowsFromCache(): Array<{
   slyusarName: string;
   Найменування: string;
   Кількість: number;
   Ціна: number;
+  Зарплата?: number;
 }> {
   const out: Array<{
     slyusarName: string;
     Найменування: string;
     Кількість: number;
     Ціна: number;
+    Зарплата?: number;
   }> = [];
 
   for (const it of globalCache.initialActItems || []) {
@@ -154,32 +148,52 @@ function collectPrevWorkRowsFromCache(): Array<{
     const slyusarName = (it.person_or_store || "").trim();
     if (!slyusarName) continue;
 
+    const tableRows = document.querySelectorAll(
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+    );
+    let slyusarSum = 0;
+
+    tableRows.forEach((row) => {
+      const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+      const pibCell = row.querySelector(
+        '[data-name="pib_magazin"]'
+      ) as HTMLElement;
+      const slyusarSumCell = row.querySelector(
+        '[data-name="slyusar_sum"]'
+      ) as HTMLElement;
+
+      if (
+        nameCell?.textContent?.trim() === it.name &&
+        pibCell?.textContent?.trim() === slyusarName
+      ) {
+        slyusarSum = parseNum(slyusarSumCell?.textContent);
+      }
+    });
+
     out.push({
       slyusarName,
       Найменування: it.name || "",
       Кількість: Number(it.quantity ?? 0),
       Ціна: Number(it.price ?? 0),
+      Зарплата: slyusarSum,
     });
   }
   return out;
 }
 
-/** Зчитати ПІБ слюсарів із DOM (коли закриваємо/відкриваємо акт) */
 function collectCurrentWorkSlyusarsFromTable(): string[] {
   const names = new Set<string>();
   const rows = document.querySelectorAll(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
   );
   rows.forEach((row) => {
-    const nameCell = row.querySelector(
-      '[data-name="name"]'
-    ) as HTMLElement | null;
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
     if (!nameCell) return;
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") return;
     const pibCell = row.querySelector(
       '[data-name="pib_magazin"]'
-    ) as HTMLElement | null;
+    ) as HTMLElement;
     const slyusarName = cleanText(pibCell?.textContent);
     if (slyusarName) names.add(slyusarName);
   });
@@ -188,24 +202,26 @@ function collectCurrentWorkSlyusarsFromTable(): string[] {
 
 /* ============================= ОСНОВНА СИНХРОНІЗАЦІЯ ============================= */
 
-/**
- * Синхронізація slyusars.data.Історія:
- * - повністю замінює "Записи" у поточних слюсарів (на дату + акт);
- * - виставляє СуммаРоботи та ДатаЗакриття (з acts.date_off);
- * - додає інформацію про Клієнта та Автомобіль;
- * - чистить старих слюсарів (прибирає запис "Акт": N у день, якщо його більше немає).
- */
+export interface WorkRow {
+  slyusarName: string;
+  Найменування: string;
+  Кількість: number;
+  Ціна: number;
+  Зарплата: number;
+}
+
 async function syncSlyusarsHistoryForAct(params: {
   actId: number;
-  dateKey: string; // YYYY-MM-DD з acts.date_on
-  dateClose: string | null; // YYYY-MM-DD з acts.date_off або null
-  clientInfo: string; // інформація про клієнта
-  carInfo: string; // інформація про автомобіль
+  dateKey: string;
+  dateClose: string | null;
+  clientInfo: string;
+  carInfo: string;
   currentRows: Array<{
     slyusarName: string;
-    Найменування: string; // назва роботи
+    Найменування: string;
     Кількість: number;
     Ціна: number;
+    Зарплата: number;
   }>;
   prevRows: Array<{
     slyusarName: string;
@@ -237,14 +253,24 @@ async function syncSlyusarsHistoryForAct(params: {
       continue;
     }
 
-    const zapis: Array<{ Ціна: number; Кількість: number; Робота: string }> =
-      [];
+    const zapis: Array<{
+      Ціна: number;
+      Кількість: number;
+      Робота: string;
+      Зарплата: number;
+    }> = [];
     let summaRob = 0;
 
     for (const r of rows) {
       const qty = Number(r.Кількість) || 0;
       const price = Number(r.Ціна) || 0;
-      zapis.push({ Ціна: price, Кількість: qty, Робота: r.Найменування || "" });
+      const zp = Number(r.Зарплата) || 0;
+      zapis.push({
+        Ціна: price,
+        Кількість: qty,
+        Робота: r.Найменування || "",
+        Зарплата: zp,
+      });
       summaRob += price * qty;
     }
 
@@ -272,7 +298,7 @@ async function syncSlyusarsHistoryForAct(params: {
       0,
       Math.round((summaRob + Number.EPSILON) * 100) / 100
     );
-    actEntry["ДатаЗакриття"] = params.dateClose; // YYYY-MM-DD або null
+    actEntry["ДатаЗакриття"] = params.dateClose;
     actEntry["Клієнт"] = params.clientInfo;
     actEntry["Автомобіль"] = params.carInfo;
 
@@ -295,21 +321,26 @@ async function syncSlyusarsHistoryForAct(params: {
     );
     if (idx === -1) continue;
 
+    const actEntry = dayBucket[idx];
+    if (actEntry?.["Записи"] && Array.isArray(actEntry["Записи"])) {
+      actEntry["Записи"].forEach((zap: any) => {
+        zap["Зарплата"] = 0;
+      });
+    }
+
     dayBucket.splice(idx, 1);
     await updateSlyusarJson(slyRow);
   }
 }
 
-/**
- * ПУБЛІЧНА: синхронізація ПІБ (слюсарів) при збереженні акту.
- */
 export async function syncSlyusarsOnActSave(
   actId: number,
   workRowsForSlyusars: Array<{
-    slyusarName: string; // ПІБ слюсаря
-    Найменування: string; // назва роботи
+    slyusarName: string;
+    Найменування: string;
     Кількість: number;
     Ціна: number;
+    Зарплата: number;
   }>
 ): Promise<void> {
   try {
@@ -326,9 +357,7 @@ export async function syncSlyusarsOnActSave(
       return;
     }
 
-    // Отримуємо дані клієнта та автомобіля
     const { clientInfo, carInfo } = await fetchActClientAndCarData(actId);
-
     const prevWorkRows = collectPrevWorkRowsFromCache();
 
     await syncSlyusarsHistoryForAct({
@@ -352,14 +381,12 @@ export async function syncSlyusarsOnActSave(
 
 /* ========================== ЗАКРИТТЯ / ВІДКРИТТЯ АКТУ ========================== */
 
-/** Закрити акт: acts.date_off = зараз; у слюсарів Історія[date_on][Акт==N].ДатаЗакриття = сьогодні */
 export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
   try {
     const now = new Date();
     const nowISO = now.toISOString();
     const nowDateOnly = toISODateOnly(now)!;
 
-    // 1) оновити acts.date_off
     const { error: upErr } = await supabase
       .from("acts")
       .update({ date_off: nowISO })
@@ -369,15 +396,12 @@ export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
         "Не вдалося оновити дату закриття акту: " + upErr.message
       );
 
-    // 2) bucket дня
     const { date_on } = await fetchActDates(actId);
     const dateKey = toISODateOnly(date_on);
     if (!dateKey) return;
 
-    // Отримуємо дані клієнта та автомобіля для оновлення при закритті
     const { clientInfo, carInfo } = await fetchActClientAndCarData(actId);
 
-    // 3) знайти всіх поточних слюсарів з таблиці та проставити ДатаЗакриття + оновити дані клієнта/авто
     const slyusarNames = collectCurrentWorkSlyusarsFromTable();
     for (const name of slyusarNames) {
       const row = await fetchSlyusarByName(name);
@@ -391,6 +415,15 @@ export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
         actEntry["ДатаЗакриття"] = nowDateOnly;
         actEntry["Клієнт"] = clientInfo;
         actEntry["Автомобіль"] = carInfo;
+
+        if (actEntry["Записи"] && Array.isArray(actEntry["Записи"])) {
+          actEntry["Записи"].forEach((zap: any) => {
+            if (!("Зарплата" in zap)) {
+              zap["Зарплата"] = 0;
+            }
+          });
+        }
+
         await updateSlyusarJson(row);
       }
     }
@@ -410,7 +443,6 @@ export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
   }
 }
 
-/** Відкрити акт: acts.date_off = null; у слюсарів Історія[date_on][Акт==N].ДатаЗакриття = null */
 export async function reopenActAndClearSlyusars(actId: number): Promise<void> {
   try {
     const { error: upErr } = await supabase
@@ -424,7 +456,6 @@ export async function reopenActAndClearSlyusars(actId: number): Promise<void> {
     const dateKey = toISODateOnly(date_on);
     if (!dateKey) return;
 
-    // Отримуємо актуальні дані клієнта та автомобіля при відкритті
     const { clientInfo, carInfo } = await fetchActClientAndCarData(actId);
 
     const slyusarNames = collectCurrentWorkSlyusarsFromTable();
@@ -440,6 +471,15 @@ export async function reopenActAndClearSlyusars(actId: number): Promise<void> {
         actEntry["ДатаЗакриття"] = null;
         actEntry["Клієнт"] = clientInfo;
         actEntry["Автомобіль"] = carInfo;
+
+        if (actEntry["Записи"] && Array.isArray(actEntry["Записи"])) {
+          actEntry["Записи"].forEach((zap: any) => {
+            if (!("Зарплата" in zap)) {
+              zap["Зарплата"] = 0;
+            }
+          });
+        }
+
         await updateSlyusarJson(row);
       }
     }
@@ -461,27 +501,26 @@ export async function reopenActAndClearSlyusars(actId: number): Promise<void> {
 
 /* =========================== ДОДАТКОВО: ЗБІР З DOM =========================== */
 
-/** Опціонально: побудувати масив для syncSlyusarsOnActSave() з DOM-таблиці */
 export function buildWorkRowsForSlyusarsFromDOM(): Array<{
   slyusarName: string;
   Найменування: string;
   Кількість: number;
   Ціна: number;
+  Зарплата: number;
 }> {
   const out: Array<{
     slyusarName: string;
     Найменування: string;
     Кількість: number;
     Ціна: number;
+    Зарплата: number;
   }> = [];
   const rows = document.querySelectorAll(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
   );
 
   rows.forEach((row) => {
-    const nameCell = row.querySelector(
-      '[data-name="name"]'
-    ) as HTMLElement | null;
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
     if (!nameCell) return;
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") return;
@@ -491,17 +530,21 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
 
     const qtyCell = row.querySelector(
       '[data-name="id_count"]'
-    ) as HTMLElement | null;
+    ) as HTMLElement;
     const priceCell = row.querySelector(
       '[data-name="price"]'
-    ) as HTMLElement | null;
+    ) as HTMLElement;
     const pibCell = row.querySelector(
       '[data-name="pib_magazin"]'
-    ) as HTMLElement | null;
+    ) as HTMLElement;
+    const slyusarSumCell = row.querySelector(
+      '[data-name="slyusar_sum"]'
+    ) as HTMLElement;
 
     const qty = parseNum(qtyCell?.textContent);
     const price = parseNum(priceCell?.textContent);
     const slyusarName = cleanText(pibCell?.textContent);
+    const zp = parseNum(slyusarSumCell?.textContent);
 
     if (!slyusarName) return;
     out.push({
@@ -509,6 +552,7 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
       Найменування: workName,
       Кількість: qty,
       Ціна: price,
+      Зарплата: zp,
     });
   });
 

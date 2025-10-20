@@ -1,4 +1,3 @@
-// src/ts/roboha/zakaz_naraudy/inhi/zberechennya_zmin_y_danux_aktu.ts
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import {
@@ -32,6 +31,7 @@ interface WorkRow {
   Найменування: string;
   Кількість: number;
   Ціна: number;
+  Зарплата: number;
 }
 
 interface ParsedItem {
@@ -44,6 +44,7 @@ interface ParsedItem {
   catalog: string;
   sclad_id: number | null;
   slyusar_id: number | null;
+  slyusarSum?: number;
 }
 
 /* =============================== УТИЛІТИ =============================== */
@@ -123,12 +124,16 @@ function parseTableRows(): ParsedItem[] {
     const catalogCell = globalCache.settings.showCatalog
       ? (row.querySelector('[data-name="catalog"]') as HTMLElement)
       : null;
+    const slyusarSumCell = row.querySelector(
+      '[data-name="slyusar_sum"]'
+    ) as HTMLElement;
 
     const quantity = parseNum(quantityCell?.textContent);
     const price = parseNum(priceCell?.textContent);
     const sum = parseNum(sumCell?.textContent);
     const pibMagazin = getCellText(pibMagazinCell);
     const catalog = getCellText(catalogCell);
+    const slyusarSum = parseNum(slyusarSumCell?.textContent);
 
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
     const sclad_id = scladIdAttr ? Number(scladIdAttr) : null;
@@ -152,6 +157,7 @@ function parseTableRows(): ParsedItem[] {
       catalog,
       sclad_id,
       slyusar_id,
+      slyusarSum,
     });
   });
 
@@ -177,12 +183,10 @@ async function updateScladActNumbers(
     (id) => !newScladIds.has(id)
   );
 
-  // Оновлення записів з новим akt
   if (scladIdsToSetAct.length > 0) {
     await updateScladAkt(scladIdsToSetAct, actId);
   }
 
-  // Очищення записів (встановлення akt = null)
   if (scladIdsToClearAct.length > 0) {
     await updateScladAkt(scladIdsToClearAct, null);
   }
@@ -194,7 +198,6 @@ async function updateScladAkt(
 ): Promise<void> {
   if (scladIds.length === 0) return;
 
-  // Перевірка існування записів
   const { data: rows, error: selErr } = await supabase
     .from("sclad")
     .select("sclad_id")
@@ -212,7 +215,6 @@ async function updateScladAkt(
     console.warn(`Записи sclad_id не знайдено:`, missingIds);
   }
 
-  // Оновлення існуючих записів
   const existingIds = scladIds.filter((id) => foundIds.has(id));
   if (existingIds.length > 0) {
     const { error: updateErr } = await supabase
@@ -258,7 +260,6 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
     })
     .filter((update): update is NonNullable<typeof update> => update !== null);
 
-  // Батчеве оновлення
   if (updates.length > 0) {
     for (const update of updates) {
       const { error: upErr } = await supabase
@@ -317,6 +318,7 @@ function processItems(items: ParsedItem[]) {
       catalog,
       sclad_id,
       slyusar_id,
+      slyusarSum,
     } = item;
     const itemBase = { Кількість: quantity, Ціна: price, Сума: sum };
 
@@ -336,6 +338,7 @@ function processItems(items: ParsedItem[]) {
           Найменування: name,
           Кількість: quantity,
           Ціна: price,
+          Зарплата: slyusarSum || 0,
         });
       }
     } else {
@@ -417,7 +420,6 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     throw new Error("Неможливо редагувати закритий акт");
   }
 
-  // Отримання даних з форми
   const newProbig = cleanText(
     document.getElementById(EDITABLE_PROBIG_ID)?.textContent
   ).replace(/\s/g, "");
@@ -426,7 +428,6 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     document.getElementById(EDITABLE_RECOMMENDATIONS_ID)
   );
 
-  // Парсинг даних з таблиці
   const items = parseTableRows();
   const {
     details,
@@ -439,7 +440,6 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     grandTotalSum,
   } = processItems(items);
 
-  // Підготовка оновлених даних акту
   const updatedActData = {
     ...(originalActData || {}),
     Пробіг: newProbig,
@@ -452,13 +452,10 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "Загальна сума": grandTotalSum,
   };
 
-  // Розрахунок дельт для skladу
   const deltas = calculateDeltas();
 
-  // Збереження в базу даних (послідовно)
   showNotification("Збереження змін...", "info");
 
-  // 1. Оновити акт
   const { error: updateError } = await supabase
     .from("acts")
     .update({ data: updatedActData })
@@ -467,23 +464,14 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     throw new Error(`Не вдалося оновити акт: ${updateError.message}`);
   }
 
-  // 2. Оновити sclad.akt (прив'язки)
   await updateScladActNumbers(actId, newScladIds);
-
-  // 3. Застосувати дельти до sclad.kilkist_off
   await applyScladDeltas(deltas);
-
-  // 4. Синхронізація shops.data.Історія
   await syncShopsOnActSave(actId, detailRowsForShops);
-
-  // 5. Синхронізація slyusars.data.Історія
   await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
 
-  // 6. Оновлення кешу
   globalCache.oldNumbers = readTableNewNumbers();
   updateInitialActItems(details, works);
 
-  // 7. Оновлення UI
   await Promise.all([
     loadGlobalData(),
     refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID),
@@ -502,7 +490,6 @@ export function addSaveHandler(actId: number, originalActData: any): void {
   ) as HTMLButtonElement | null;
   if (!saveButton) return;
 
-  // Видалення попередніх слухачів через клонування
   const newSaveButton = saveButton.cloneNode(true) as HTMLButtonElement;
   saveButton.parentNode?.replaceChild(newSaveButton, saveButton);
 

@@ -1,4 +1,4 @@
-// src\ts\roboha\zakaz_naraudy\modalUI.ts
+//src\ts\roboha\zakaz_naraudy\modalUI.ts
 import {
   globalCache,
   ZAKAZ_NARAYD_MODAL_ID,
@@ -8,10 +8,71 @@ import {
   formatNumberWithSpaces,
 } from "./globalCache";
 import { setupAutocompleteForEditableCells } from "./inhi/kastomna_tabluca";
-import { userAccessLevel } from "../tablucya/users"; // Імпорт рівня доступу користувача
+import { userAccessLevel } from "../tablucya/users";
 
 function parseNumber(text: string | null): number {
   return parseFloat(text?.replace(/\s/g, "") || "0") || 0;
+}
+
+export function updateAllSlyusarSumsFromHistory(): void {
+  const tableBody = document.querySelector<HTMLTableSectionElement>(
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
+  );
+  if (!tableBody) return;
+
+  const rows = Array.from(tableBody.querySelectorAll<HTMLTableRowElement>("tr"));
+
+  for (const row of rows) {
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+    const typeFromCell = nameCell?.getAttribute("data-type");
+    
+    // Тільки для робіт
+    if (typeFromCell !== "works") continue;
+
+    const workName = nameCell?.textContent?.trim();
+    const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
+    const slyusarName = pibCell?.textContent?.trim();
+    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+
+    if (!workName || !slyusarName || !slyusarSumCell) continue;
+
+    const slyusar = globalCache.slyusars.find(s => s.Name === slyusarName);
+
+    if (!slyusar) continue;
+
+    const history = slyusar["Історія"];
+
+    if (!history) continue;
+
+    // Шукаємо в історії цю роботу
+    let foundZarplata: number | null = null;
+
+    for (const dateKey in history) {
+      const dayBucket = history[dateKey] as any[];
+      if (!Array.isArray(dayBucket)) continue;
+
+      for (const actEntry of dayBucket) {
+        const zapisi = actEntry?.["Записи"];
+        if (!Array.isArray(zapisi)) continue;
+
+        const workRecord = zapisi.find(
+          (z: any) => z.Робота?.toLowerCase() === workName.toLowerCase()
+        );
+
+        if (workRecord?.Зарплата) {
+          foundZarplata = Number(workRecord.Зарплата);
+          break;
+        }
+      }
+
+      if (foundZarplata !== null) break;
+    }
+
+    // Якщо знайшли історичну Зарплату - записуємо її
+    if (foundZarplata !== null) {
+      slyusarSumCell.textContent = formatNumberWithSpaces(foundZarplata);
+    }
+  }
 }
 
 export function createModal(): void {
@@ -37,6 +98,25 @@ export function createModal(): void {
   });
 }
 
+export function getSlyusarWorkPercent(slyusarName: string): number {
+  if (!slyusarName) return 0;
+  
+  const slyusar = globalCache.slyusars.find(
+    s => s.Name?.toLowerCase() === slyusarName.toLowerCase()
+  );
+  
+  if (slyusar && typeof slyusar.ПроцентРоботи === 'number') {
+    return slyusar.ПроцентРоботи;
+  }
+  
+  return 0;
+}
+
+export function calculateSlyusarSum(totalSum: number, percent: number): number {
+  if (percent <= 0 || totalSum <= 0) return 0;
+  return Math.round(totalSum * (percent / 100));
+}
+
 export function calculateRowSum(row: HTMLTableRowElement): void {
   const price = parseNumber(
     (row.querySelector('[data-name="price"]') as HTMLElement)?.textContent
@@ -46,13 +126,33 @@ export function calculateRowSum(row: HTMLTableRowElement): void {
   );
   const sum = price * quantity;
 
-  const sumCell = row.querySelector(
-    '[data-name="sum"]'
-  ) as HTMLTableCellElement;
+  const sumCell = row.querySelector('[data-name="sum"]') as HTMLTableCellElement;
   if (sumCell) {
     sumCell.textContent = formatNumberWithSpaces(Math.round(sum));
-    updateCalculatedSumsInFooter();
   }
+
+  const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+  const pibMagCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
+  const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+  
+  if (nameCell && pibMagCell && slyusarSumCell) {
+    const dataType = nameCell.getAttribute('data-type');
+    
+    if (dataType === 'works') {
+      const slyusarName = pibMagCell.textContent?.trim() || '';
+      if (slyusarName) {
+        const percent = getSlyusarWorkPercent(slyusarName);
+        const slyusarSum = calculateSlyusarSum(Math.round(sum), percent);
+        slyusarSumCell.textContent = formatNumberWithSpaces(slyusarSum);
+      } else {
+        slyusarSumCell.textContent = '';
+      }
+    } else {
+      slyusarSumCell.textContent = '';
+    }
+  }
+
+  updateCalculatedSumsInFooter();
 }
 
 function createRowHtml(
@@ -68,6 +168,8 @@ function createRowHtml(
   const dataTypeForName =
     item?.type === "detail" ? "details" : item?.type === "work" ? "works" : "";
   const pibMagazinType = item?.type === "detail" ? "shops" : "slyusars";
+
+  let slyusarSumValue = "";
 
   const catalogCellHTML = showCatalog
     ? `<td contenteditable="${isEditable}" class="editable-autocomplete catalog-cell" data-name="catalog" ${
@@ -104,6 +206,11 @@ function createRowHtml(
           : `<td class="text-right" data-name="sum">${
               item ? formatNumberWithSpaces(Math.round(item.sum)) : ""
             }</td>`
+      }
+      ${
+        isRestricted
+          ? ""
+          : `<td contenteditable="${isEditable}" class="text-right editable-number slyusar-sum-cell" data-name="slyusar_sum">${slyusarSumValue}</td>`
       }
       ${pibMagazinCellHTML}
     </tr>`;
@@ -164,6 +271,7 @@ export function generateTableHTML(
             <th class="text-right">К-ть</th>
             ${isRestricted ? "" : '<th class="text-right">Ціна</th>'}
             ${isRestricted ? "" : '<th class="text-right">Сума</th>'}
+            ${isRestricted ? "" : '<th class="text-right">Зар-та</th>'}
             ${pibMagazinColumnHeader}
           </tr>
         </thead>
@@ -194,7 +302,7 @@ export function addNewRow(containerId: string): void {
 }
 
 export function updateCalculatedSumsInFooter(): void {
-  if (userAccessLevel === "Слюсар") return; // Skip footer updates for restricted users
+  if (userAccessLevel === "Слюсар") return;
 
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
@@ -248,7 +356,6 @@ export function updateCalculatedSumsInFooter(): void {
   set("total-overall-sum", totalOverallSum);
 }
 
-// ✅ ПОВЕРНУВ ЕКСПОРТ
 export function createTableRow(
   label: string,
   value: string,

@@ -10,7 +10,7 @@ import { initOdometerInput } from "./inhi/odometr";
 import {
   setupAutocompleteForEditableCells,
   refreshQtyWarningsIn,
-   initializeActWarnings, 
+  initializeActWarnings,
 } from "./inhi/kastomna_tabluca";
 import {
   createViknoPidtverdchennayZakruttiaAkty,
@@ -39,29 +39,25 @@ import {
   generateTableHTML,
   createTableRow,
   updateCalculatedSumsInFooter,
+  updateAllSlyusarSumsFromHistory,
+  getSlyusarWorkPercent,
+  calculateSlyusarSum,
 } from "./modalUI";
 import { showModalAllOtherBases } from "../dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 import { formatDate } from "./inhi/formatuvannya_datu";
 import { addSaveHandler } from "./inhi/zberechennya_zmin_y_danux_aktu";
-import { userAccessLevel } from "../tablucya/users"; // Імпорт рівня доступу користувача
-
-
+import { userAccessLevel } from "../tablucya/users";
 import { canUserOpenActs } from "../tablucya/users";
 
-/**
- * ОНОВЛЕНА функція showModal з перевіркою доступу
- */
 export async function showModal(actId: number): Promise<void> {
-  // НОВА ПЕРЕВІРКА: Чи може користувач відкривати акти?
   const canOpen = await canUserOpenActs();
-  
+
   if (!canOpen) {
     console.warn(`⚠️ Користувач не має доступу до відкриття акту ${actId}`);
     showNoAccessNotification();
     return;
   }
 
-  // Решта коду залишається без змін...
   createModal();
   const modal = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -99,10 +95,12 @@ export async function showModal(actId: number): Promise<void> {
       if (id) globalCache.oldNumbers.set(id, qty);
     }
     renderModalContent(act, actDetails, clientData, carData);
+    updateAllSlyusarSumsFromHistory();
+    fillMissingSlyusarSums();
+    checkSlyusarSumWarningsOnLoad();
     await addModalHandlers(actId, actDetails, clientData?.phone);
     await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
     await refreshPhotoData(actId);
-
     applyAccessRestrictions();
 
     showNotification("Дані успішно завантажено", "success", 1500);
@@ -115,9 +113,76 @@ export async function showModal(actId: number): Promise<void> {
   }
 }
 
-/**
- * НОВА функція: Повідомлення про відсутність доступу до відкриття акту
- */
+function fillMissingSlyusarSums(): void {
+  const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
+  if (!container) return;
+
+  const rows = Array.from(container.querySelectorAll<HTMLTableRowElement>("tbody tr"));
+
+  for (const row of rows) {
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+    const typeFromCell = nameCell?.getAttribute("data-type");
+    
+    if (typeFromCell !== "works") continue;
+
+    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+
+    if (slyusarSumCell.textContent?.trim()) continue; // already set by history
+
+    const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
+    const slyusarName = pibCell?.textContent?.trim() || '';
+
+    if (!slyusarName) continue;
+
+    const percent = getSlyusarWorkPercent(slyusarName);
+
+    const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
+    const sum = parseFloat(sumCell?.textContent?.replace(/\s/g, "") || "0") || 0;
+
+    if (sum <= 0) continue;
+
+    const slyusarSum = calculateSlyusarSum(sum, percent);
+    slyusarSumCell.textContent = formatNumberWithSpaces(slyusarSum);
+  }
+}
+
+function checkSlyusarSumWarningsOnLoad(): void {
+  const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
+  if (!container) return;
+
+  const rows = Array.from(container.querySelectorAll<HTMLTableRowElement>("tbody tr"));
+  let hasWarnings = false;
+
+  for (const row of rows) {
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+    const typeFromCell = nameCell?.getAttribute("data-type");
+    
+    if (typeFromCell !== "works") continue;
+
+    const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
+    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+
+    if (!sumCell || !slyusarSumCell) continue;
+
+    const sum = parseFloat(sumCell.textContent?.replace(/\s/g, "") || "0") || 0;
+    const slyusarSum = parseFloat(slyusarSumCell.textContent?.replace(/\s/g, "") || "0") || 0;
+
+    if (slyusarSum > sum) {
+      hasWarnings = true;
+      slyusarSumCell.setAttribute("data-warnzp", "1");
+      slyusarSumCell.classList.add("slyusar-sum-cell");
+    }
+  }
+
+  if (hasWarnings) {
+    showNotification(
+      "⚠️ Увага: Знайдено помилки. Зарплата більша ніж сума роботи у деяких рядках",
+      "warning",
+      3000
+    );
+  }
+}
+
 function showNoAccessNotification(): void {
   const notification = document.createElement("div");
   notification.style.cssText = `
@@ -139,7 +204,7 @@ function showNoAccessNotification(): void {
       <span>У вас немає доступу до перегляду актів</span>
     </div>
   `;
-  
+
   const style = document.createElement("style");
   style.textContent = `
     @keyframes slideInOut {
@@ -149,44 +214,41 @@ function showNoAccessNotification(): void {
       100% { transform: translateX(100%); opacity: 0; }
     }
   `;
-  
+
   if (!document.getElementById("no-access-notification-style")) {
     style.id = "no-access-notification-style";
     document.head.appendChild(style);
   }
-  
+
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     notification.remove();
   }, 3000);
 }
 
-/**
- * Застосування обмежень доступу до нових рядків таблиці
- */
 function applyAccessRestrictionsToNewRow(): void {
   const table = document.querySelector(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} table`
   );
   if (!table) return;
 
-  // Приховуємо комірки ціни та суми в останньому доданому рядку
   const lastRow = table.querySelector("tbody tr:last-child");
   if (lastRow) {
     const cells = lastRow.querySelectorAll("td");
     cells.forEach((cell) => {
       const dataName = cell.getAttribute("data-name");
-      if (dataName === "price" || dataName === "sum") {
+      if (
+        dataName === "price" ||
+        dataName === "sum" ||
+        dataName === "slyusar_sum"
+      ) {
         cell.classList.add("hidden");
       }
     });
   }
 }
 
-/**
- * Застосування обмежень доступу для користувачів з обмеженим доступом
- */
 function applyAccessRestrictions(): void {
   if (userAccessLevel === "Слюсар") {
     const statusLockBtn = document.getElementById("status-lock-btn");
@@ -200,9 +262,6 @@ function applyAccessRestrictions(): void {
   }
 }
 
-/**
- * Обмеження доступу до функціональності фото для обмежених користувачів
- */
 function restrictPhotoAccess(): void {
   const photoCell = document.querySelector(
     "table.zakaz_narayd-table.left tr:nth-child(5) td:nth-child(2)"
@@ -210,13 +269,11 @@ function restrictPhotoAccess(): void {
 
   if (!photoCell) return;
 
-  // Видаляємо існуючі обробники подій
   const existingHandler = (photoCell as any).__gd_click__;
   if (existingHandler) {
     photoCell.removeEventListener("click", existingHandler);
   }
 
-  // Додаємо новий обробник з обмеженнями
   const restrictedClickHandler = async (e: MouseEvent) => {
     e.preventDefault();
 
@@ -226,7 +283,6 @@ function restrictPhotoAccess(): void {
     const actId = Number(actIdStr);
 
     try {
-      // Отримуємо актуальні дані з БД
       const { data: act, error } = await supabase
         .from("acts")
         .select("data, date_off")
@@ -244,13 +300,11 @@ function restrictPhotoAccess(): void {
         : [];
       const hasLink = links.length > 0 && links[0];
 
-      // Якщо є посилання - відкриваємо його
       if (hasLink) {
         window.open(links[0], "_blank");
         return;
       }
 
-      // Якщо немає посилання - забороняємо створення для обмежених користувачів
       showNotification(
         "Створення папки заборонено для вашого рівня доступу",
         "warning"
@@ -261,7 +315,6 @@ function restrictPhotoAccess(): void {
     }
   };
 
-  // Зберігаємо новий обробник
   (photoCell as any).__gd_click__ = restrictedClickHandler;
   photoCell.addEventListener("click", restrictedClickHandler);
 }
@@ -361,7 +414,6 @@ function renderModalContent(
       slyusar_id: item["slyusar_id"] || null,
     })),
   ];
-  // Збереження початкового стану рядків у globalCache
   globalCache.initialActItems = allItems;
   console.log("Initial act items saved:", globalCache.initialActItems);
   body.innerHTML = `
@@ -490,7 +542,6 @@ async function addModalHandlers(
   if (!body) return;
   if (!isRestricted) {
     import("./inhi/knopka_zamok").then(({ initStatusLockDelegation }) => {
-      // ініціалізуємо ОДИН раз — всередині є захист від повторного кріплення
       initStatusLockDelegation();
     });
   }
@@ -517,11 +568,10 @@ async function addModalHandlers(
       ACT_ITEMS_TABLE_CONTAINER_ID,
       globalCache
     );
-     initializeActWarnings(ACT_ITEMS_TABLE_CONTAINER_ID, actId);
+    initializeActWarnings(ACT_ITEMS_TABLE_CONTAINER_ID, actId);
     const addRowButton = document.getElementById("add-row-button");
     addRowButton?.addEventListener("click", () => {
       addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
-      // Застосовуємо обмеження до нового рядка
       if (userAccessLevel === "Слюсар") {
         applyAccessRestrictionsToNewRow();
       }
@@ -566,15 +616,37 @@ function handleInputChange(event: Event): void {
       if (row) calculateRowSum(row);
       break;
     }
+    case "slyusar_sum": {
+      // Обробка редагування поля "Слюсарю" - дозволяємо тільки цифри
+      const cleanedValue = target.textContent?.replace(/[^0-9]/g, "") || "";
+      const formattedValue = formatNumberWithSpaces(cleanedValue, 0, 0);
+      if (target.textContent !== formattedValue) {
+        const selection = window.getSelection();
+        const originalCaretPosition = selection?.focusOffset || 0;
+        target.textContent = formattedValue;
+        if (selection && target.firstChild) {
+          const formattedLength = formattedValue.length;
+          const originalLength = cleanedValue.length;
+          const diff = formattedLength - originalLength;
+          const newCaretPosition = Math.min(
+            originalCaretPosition + diff,
+            formattedLength
+          );
+          const range = document.createRange();
+          range.setStart(target.firstChild, Math.max(0, newCaretPosition));
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+      break;
+    }
     case "name": {
       const name = target.textContent?.trim() || "";
       const isDetail = globalCache.details.includes(name);
       const type = isDetail ? "details" : "works";
       target.setAttribute("data-type", type);
 
-      // Автозаповнення ПІБ/Магазин:
-      // - для "works" залишаємо як було (підставляємо ім'я користувача)
-      // - для "details" (введено вручну, НЕ з каталогу) — НІЧОГО НЕ ПІДСТАВЛЯЄМО
       if (name) {
         const row = target.closest("tr") as HTMLTableRowElement;
         const pibMagCell = row?.querySelector(
@@ -582,16 +654,16 @@ function handleInputChange(event: Event): void {
         ) as HTMLElement | null;
         if (pibMagCell && !pibMagCell.textContent?.trim()) {
           if (type === "works") {
-            // для робіт — як було: підставляємо ім'я користувача
             const userName = getUserNameFromLocalStorage();
             if (userName) {
               pibMagCell.textContent = userName;
               pibMagCell.setAttribute("data-type", "slyusars");
+
+              // Автоматичний розрахунок суми для слюсаря
+              const row = target.closest("tr") as HTMLTableRowElement;
+              if (row) calculateRowSum(row);
             }
           } else {
-            // type === "details": не чіпаємо поле, не підставляємо із localStorage
-            // (autocomplete тип можна виставити або лишити порожнім — на твій вибір)
-            // Якщо хочеш підсвітити тип для автокомпліта магазинів без підстановки тексту:
             pibMagCell.setAttribute("data-type", "shops");
           }
         }
@@ -600,7 +672,12 @@ function handleInputChange(event: Event): void {
       updateCalculatedSumsInFooter();
       break;
     }
-
+    case "pib_magazin": {
+      // При зміні ПІБ/Магазин перераховуємо суму слюсаря
+      const row = target.closest("tr") as HTMLTableRowElement;
+      if (row) calculateRowSum(row);
+      break;
+    }
     default:
       if (target.id === EDITABLE_PROBIG_ID) {
         const cleanedValue = target.textContent?.replace(/[^0-9]/g, "") || "";
@@ -613,9 +690,6 @@ function handleInputChange(event: Event): void {
   }
 }
 
-/**
- * Отримання імені користувача з localStorage
- */
 function getUserNameFromLocalStorage(): string | null {
   try {
     const USER_DATA_KEY = "userAuthData";
@@ -633,7 +707,6 @@ function getUserNameFromLocalStorage(): string | null {
   }
 }
 
-// подія «інші бази оновлені»
 if (!(window as any).__otherBasesHandlerBound__) {
   document.addEventListener("other-base-data-updated", async () => {
     await loadGlobalData();

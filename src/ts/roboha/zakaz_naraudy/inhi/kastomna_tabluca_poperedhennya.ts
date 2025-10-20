@@ -1,3 +1,4 @@
+//src\ts\roboha\zakaz_naraudy\inhi\kastomna_tabluca_poperedhennya.ts
 import { globalCache, ensureSkladLoaded } from "../globalCache";
 import { loadPercentFromSettings } from "./kastomna_tabluca";
 import { supabase } from "../../../vxid/supabaseClient";
@@ -12,8 +13,11 @@ function ensureWarningStyles() {
   const css = `
     .qty-cell { position: relative; }
     .price-cell { position: relative; }
+    .slyusar-sum-cell { position: relative; }
+    
     .qty-cell[data-warn="1"]::before,
-    .price-cell[data-warnprice="1"]::before {
+    .price-cell[data-warnprice="1"]::before,
+    .slyusar-sum-cell[data-warnzp="1"]::before {
       content: "!";
       position: absolute;
       top: 50%;
@@ -26,8 +30,10 @@ function ensureWarningStyles() {
       border-radius: 2px; pointer-events: none; user-select: none;
       z-index: 10;
     }
+    
     .qty-cell[data-warn="1"],
-    .price-cell[data-warnprice="1"] {
+    .price-cell[data-warnprice="1"],
+    .slyusar-sum-cell[data-warnzp="1"] {
       background-color: #fff3e0 !important;
       border: 1px solid #ff9800 !important;
     }
@@ -37,13 +43,15 @@ function ensureWarningStyles() {
   tag.textContent = css;
   document.head.appendChild(tag);
 }
-function ensureCellClass(cell: HTMLElement, cls: "qty-cell" | "price-cell") {
+
+function ensureCellClass(cell: HTMLElement, cls: "qty-cell" | "price-cell" | "slyusar-sum-cell") {
   if (!cell.classList.contains(cls)) cell.classList.add(cls);
 }
+
 export function setWarningFlag(cell: HTMLElement | null, on: boolean) {
   if (!cell) return;
   ensureWarningStyles();
-  ensureCellClass(cell, "qty-cell");           // ⬅️ додаємо клас
+  ensureCellClass(cell, "qty-cell");
   if (on) cell.setAttribute("data-warn", "1");
   else cell.removeAttribute("data-warn");
 }
@@ -51,17 +59,23 @@ export function setWarningFlag(cell: HTMLElement | null, on: boolean) {
 export function setPriceWarningFlag(cell: HTMLElement | null, on: boolean) {
   if (!cell) return;
   ensureWarningStyles();
-  ensureCellClass(cell, "price-cell");         // ⬅️ додаємо клас
+  ensureCellClass(cell, "price-cell");
   if (on) cell.setAttribute("data-warnprice", "1");
   else cell.removeAttribute("data-warnprice");
 }
 
+export function setSlyusarSumWarningFlag(cell: HTMLElement | null, on: boolean) {
+  if (!cell) return;
+  ensureWarningStyles();
+  ensureCellClass(cell, "slyusar-sum-cell");
+  if (on) cell.setAttribute("data-warnzp", "1");
+  else cell.removeAttribute("data-warnzp");
+}
 
 function formatUA(n: number) {
   return new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 3 }).format(n);
 }
 
-/** Парсер числа з вузла (input/contenteditable/td) */
 function parseNumFromNode(node: HTMLElement | null): number {
   if (!node) return 0;
   let raw = "";
@@ -101,20 +115,16 @@ async function loadCurrentActData(): Promise<any> {
   }
 }
 
-/** Скинути кеш даних акту (викликати при зміні акту) */
 export function resetActDataCache(): void {
   currentActDataCache = null;
 }
 
-/** Оновити кеш після збереження акту */
 export async function refreshActDataCache(): Promise<void> {
   currentActDataCache = null;
   await loadCurrentActData();
 }
 
-/** Отримати збережену кількість деталі з acts.data.Деталі[].Кількість */
 async function getCurrentActDetailQty(sclad_id: number): Promise<number> {
-  // Тягнемо свіжі дані (щоб після збереження не було "старого" значення)
   await loadCurrentActData();
   if (!currentActDataCache || !currentActDataCache.Деталі) return 0;
 
@@ -132,13 +142,6 @@ async function getCurrentActDetailQty(sclad_id: number): Promise<number> {
 }
 
 /* ===================== CORE CHECK (QTY) ===================== */
-/**
- * Формула:
- *  delta_1 = inputNumber - actsOsnova
- *  delta_2 = scladOsnova + delta_1
- *  alarmOsnova = scladOn - delta_2
- * Попередження, якщо alarmOsnova < 0
- */
 export async function updateCatalogWarningForRow(row: HTMLElement) {
   if (globalCache.isActClosed) {
     const qtyCellClosed = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
@@ -151,7 +154,6 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
 
   await ensureSkladLoaded();
 
-  // Кількість може бути td/div/input — беремо найближчу клітинку
   const qtyCellCandidate = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
   const qtyCell =
     (qtyCellCandidate?.closest('[data-name="id_count"]') as HTMLElement | null) ||
@@ -177,28 +179,14 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
     return;
   }
 
-  // 1) inputNumber - щойно введена кількість
   const inputNumber = parseNumFromNode(qtyCell);
-
-  // 2) actsOsnova - збережена кількість у поточному акті
   const actsOsnova = await getCurrentActDetailQty(sclad_id);
-
-  // 3) delta_1 = inputNumber - actsOsnova  (ВАЖЛИВО: саме так)
   const delta_1 = inputNumber - actsOsnova;
-
-  // 4) scladOsnova - kilkist_off
   const scladOsnova = Number(picked.kilkist_off ?? 0);
-
-  // 5) delta_2 = scladOsnova + delta_1
   const delta_2 = scladOsnova + delta_1;
-
-  // 6) scladOn - kilkist_on
   const scladOn = Number(picked.kilkist_on ?? 0);
-
-  // 7) alarmOsnova = scladOn - delta_2
   const alarmOsnova = scladOn - delta_2;
 
-  // 8) Попередження якщо залишок < 0
   const warn = alarmOsnova < 0;
 
   setWarningFlag(qtyCell, warn);
@@ -255,13 +243,50 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
   else priceCell.removeAttribute("title");
 }
 
+/* ===================== SLYUSAR SUM CHECK ===================== */
+export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
+  if (globalCache.isActClosed) {
+    const sumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
+    if (sumCell) {
+      setSlyusarSumWarningFlag(sumCell, false);
+      sumCell.removeAttribute("title");
+    }
+    return;
+  }
+
+  const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+  const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement | null;
+  const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
+
+  if (!slyusarSumCell || !sumCell) return;
+
+  const typeFromCell = nameCell?.getAttribute("data-type");
+  if (typeFromCell !== "works") {
+    setSlyusarSumWarningFlag(slyusarSumCell, false);
+    slyusarSumCell.removeAttribute("title");
+    return;
+  }
+
+  const sum = parseNumFromNode(sumCell);
+  const slyusarSum = parseNumFromNode(slyusarSumCell);
+
+  const warn = slyusarSum > sum;
+
+  setSlyusarSumWarningFlag(slyusarSumCell, warn);
+  if (warn) {
+    slyusarSumCell.title = `Зарплата (${formatUA(slyusarSum)}) не може бути більша за суму (${formatUA(sum)})`;
+  } else {
+    slyusarSumCell.removeAttribute("title");
+  }
+}
+
 /* ===================== MASS REFRESH ===================== */
 export async function refreshQtyWarningsIn(containerId: string) {
   ensureWarningStyles();
   if (globalCache.isActClosed) return;
 
   await ensureSkladLoaded();
-  await refreshActDataCache(); // підтягнути свіжий acts.data перед масовим перерахунком
+  await refreshActDataCache();
 
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -271,6 +296,7 @@ export async function refreshQtyWarningsIn(containerId: string) {
     const row = tr as unknown as HTMLElement;
     await updateCatalogWarningForRow(row);
     await updatePriceWarningForRow(row);
+    await updateSlyusarSumWarningForRow(row);
   }
 }
 
@@ -297,7 +323,24 @@ export function setupQtyWarningListeners(containerId: string) {
     if (row) await updateCatalogWarningForRow(row);
   };
 
-  // ⬇️ НОВЕ: перед зміною фокуса мишкою — перерахуємо активну клітинку
+  const onInputPrice = async (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const cell = target.closest('[data-name="price"]') as HTMLElement | null;
+    if (!cell) return;
+    const row = cell.closest("tr") as HTMLElement | null;
+    if (row) await updatePriceWarningForRow(row);
+  };
+
+  const onInputSlyusarSum = async (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const cell = target.closest('[data-name="slyusar_sum"]') as HTMLElement | null;
+    if (!cell) return;
+    const row = cell.closest("tr") as HTMLElement | null;
+    if (row) await updateSlyusarSumWarningForRow(row);
+  };
+
   const onPointerDownPreCommit = async (e: Event) => {
     const active = (document.activeElement as HTMLElement | null)?.closest(
       '[data-name="id_count"]'
@@ -306,14 +349,12 @@ export function setupQtyWarningListeners(containerId: string) {
     if (!active) return;
 
     const clickTarget = e.target as Node;
-    // якщо клікаємо поза активною клітинкою кількості — перерахувати негайно
     if (!active.contains(clickTarget)) {
       const row = active.closest("tr") as HTMLElement | null;
       if (row) await updateCatalogWarningForRow(row);
     }
   };
 
-  // ⬇️ НОВЕ: клавіші, які переміщують фокус/рядок — перерахуємо до переходу
   const onKeyDownPreCommit = async (e: KeyboardEvent) => {
     const keys = ["Enter", "Tab", "ArrowDown", "ArrowUp"];
     if (!keys.includes(e.key)) return;
@@ -326,20 +367,17 @@ export function setupQtyWarningListeners(containerId: string) {
       const row = active.closest("tr") as HTMLElement | null;
       if (row) {
         await updateCatalogWarningForRow(row);
-        // не блокуємо дефолт — просто встигаємо порахувати до переходу
       }
     }
   };
 
-  // ВАЖЛИВО: input — у capture, щоб ловити вкладені <input>
   container.addEventListener("input", onInput, { capture: true });
+  container.addEventListener("input", onInputPrice, { capture: true });
+  container.addEventListener("input", onInputSlyusarSum, { capture: true });
   container.addEventListener("blur", onBlur, true);
-
-  // ⬇️ ДОДАЙ
   container.addEventListener("pointerdown", onPointerDownPreCommit, { capture: true });
   container.addEventListener("keydown", onKeyDownPreCommit, { capture: true });
 }
-
 
 /* ===================== INIT / SAVE HOOK / AUTO REFRESH ===================== */
 export function initializeActWarnings(containerId: string, actId: number, enableAutoRefresh = false) {
@@ -349,20 +387,19 @@ export function initializeActWarnings(containerId: string, actId: number, enable
   if (enableAutoRefresh) startAutoRefresh(containerId);
 }
 
-/** Викликати одразу після УСПІШНОГО збереження акту */
 export async function onActSaved(containerId: string) {
   resetActDataCache();
   await loadCurrentActData();
   await refreshQtyWarningsIn(containerId);
 }
 
-/** Автооновлення (опціонально) */
 export function startAutoRefresh(containerId: string) {
   stopAutoRefresh();
   autoRefreshInterval = setInterval(async () => {
     await refreshQtyWarningsIn(containerId);
   }, 2000);
 }
+
 export function stopAutoRefresh() {
   if (autoRefreshInterval) {
     clearInterval(autoRefreshInterval);

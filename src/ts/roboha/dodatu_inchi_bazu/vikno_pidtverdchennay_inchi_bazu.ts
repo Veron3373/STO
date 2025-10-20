@@ -202,8 +202,10 @@ async function handleEdit(
     if (tableName === "slyusars") {
       // Отримуємо додаткові дані для слюсаря
       const additionalData = getSlusarAdditionalData();
+      
+      console.log("Редагування слюсаря - додаткові дані:", additionalData);
 
-      // Оновлюємо Name, Пароль та Доступ, зберігаємо решту структури
+      // Оновлюємо Name, Пароль, Доступ та ПроцентРоботи, зберігаємо решту структури
       let currentData: any;
       try {
         currentData =
@@ -224,13 +226,12 @@ async function handleEdit(
           currentData?.Історія && typeof currentData.Історія === "object"
             ? currentData.Історія
             : {},
-        ПроцентРоботи:
-          typeof currentData?.ПроцентРоботи === "number"
-            ? currentData.ПроцентРоботи
-            : 50,
+        ПроцентРоботи: additionalData.percent,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
+      
+      console.log("Дані для оновлення слюсаря:", updateData.data);
     } else if (
       tableName === "incomes" ||
       tableName === "receivers" ||
@@ -262,6 +263,7 @@ async function handleEdit(
     return false;
   }
 }
+
 
 async function handleDelete(tableName: string, data: any): Promise<boolean> {
   try {
@@ -345,11 +347,9 @@ async function handleAdd(
       console.log("Деталь уже існує (fallback). Пропускаємо створення.");
       return true;
     }
-    // НОВА ПЕРЕВІРКА для слюсарів
     if (tableName === "slyusars" && (await slusarExistsByName(newValue))) {
       console.log("Слюсар з таким іменем уже існує. Пропускаємо створення.");
 
-      // Показуємо користувачеві повідомлення
       const toast = (message: string, color: string) => {
         const note = document.createElement("div");
         note.textContent = message;
@@ -368,33 +368,34 @@ async function handleAdd(
       };
 
       toast(`⚠️ Слюсар "${newValue}" вже присутній в базі даних`, "#ff9800");
-      return true; // Повертаємо true щоб не показувати помилку
+      return true;
     }
 
     const next = await getNextId(tableName, idField);
     if (next == null) return false;
 
-    // Готуємо payload
     let insertData: any = { [idField]: next };
 
     if (tableName === "slyusars") {
       // Отримуємо додаткові дані для слюсаря
       const additionalData = getSlusarAdditionalData();
+      
+      console.log("Додавання нового слюсаря - додаткові дані:", additionalData);
 
       // Створюємо повну структуру для слюсаря
       insertData.data = {
         Name: (newValue || "").trim(),
         Опис: {},
         Історія: {},
-        ПроцентРоботи: 50,
+        ПроцентРоботи: additionalData.percent,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
+      
+      console.log("Дані для вставки нового слюсаря:", insertData.data);
     } else if (["incomes", "receivers", "shops"].includes(tableName)) {
-      // ці таблиці тримають data як JSON-об'єкт із Name
       insertData.data = { Name: newValue };
     } else if (["works", "details"].includes(tableName)) {
-      // ці — як plain text
       insertData.data = newValue;
     } else {
       console.error("Невідома таблиця для додавання:", tableName);

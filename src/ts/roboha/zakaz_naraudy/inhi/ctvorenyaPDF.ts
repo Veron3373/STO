@@ -52,6 +52,7 @@ function collectColumnCellsToHideByHeaderText(
  * Під час генерації приховує кнопки/керуючі елементи, а також колонки:
  *  - "ПІБ _ Магазин"
  *  - "Каталог"
+ *  - "Зарплата"
  * А також розширює скорочені найменування до повних.
  * Після — усе повертає як було.
  */
@@ -87,14 +88,15 @@ export async function printModalToPdf(): Promise<void> {
   ) as HTMLTableElement | null;
 
   if (table) {
+    // Приховуємо колонки "ПІБ _ Магазин", "Каталог" і "Зарплата"
     collectColumnCellsToHideByHeaderText(
       table,
-      [(t) => t.includes("піб"), (t) => t.includes("магазин")],
-      elementsToHide
-    );
-    collectColumnCellsToHideByHeaderText(
-      table,
-      [(t) => t.includes("каталог")],
+      [
+        (t) => t.includes("піб"),
+        (t) => t.includes("магазин"),
+        (t) => t.includes("каталог"),
+        (t) => t.includes("зарплата"),
+      ],
       elementsToHide
     );
   }
@@ -106,8 +108,12 @@ export async function printModalToPdf(): Promise<void> {
   const warnedPriceCells = Array.from(
     document.querySelectorAll<HTMLElement>('.price-cell[data-warnprice="1"]')
   );
+  const warnedSlyusarSumCells = Array.from(
+    document.querySelectorAll<HTMLElement>('.slyusar-sum-cell[data-warnzp="1"]')
+  );
   warnedQtyCells.forEach((el) => el.removeAttribute("data-warn"));
   warnedPriceCells.forEach((el) => el.removeAttribute("data-warnprice"));
+  warnedSlyusarSumCells.forEach((el) => el.removeAttribute("data-warnzp"));
 
   // 🔶 2) РОЗШИРИТИ ВСІ СКОРОЧЕНІ НАЙМЕНУВАННЯ ДО ПОВНИХ
   const originalNames = expandAllNamesInTable();
@@ -135,7 +141,7 @@ export async function printModalToPdf(): Promise<void> {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // Відступи: зверху 1см (10мм), по бокам 1см (10мм), знизу 1см (10мм)
+    // Відступи: зверху 1см (10мм), по бокам 1см (10мм), знизу 2см (20мм)
     const marginTop = 10; // 1 см
     const marginLeft = 10; // 1 см
     const marginRight = 10; // 1 см
@@ -217,6 +223,7 @@ export async function printModalToPdf(): Promise<void> {
     // 🔄 4) ПОВЕРНУТИ ТРИКУТНИКИ НАЗАД
     warnedQtyCells.forEach((el) => el.setAttribute("data-warn", "1"));
     warnedPriceCells.forEach((el) => el.setAttribute("data-warnprice", "1"));
+    warnedSlyusarSumCells.forEach((el) => el.setAttribute("data-warnzp", "1"));
 
     // Повернути відображення елементів та стилі
     originalDisplays.forEach((disp, el) => {

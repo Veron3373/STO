@@ -2,6 +2,7 @@
 // Усі повідомлення через showNotification. Без confirm у масовому розрахунку магазину.
 import { runMassPaymentCalculation as runMassPaymentCalculationForPodlegle } from "./pidlehli";
 import { runMassPaymentCalculationForMagazine } from "./shopsBuxha";
+import { runMassPaymentCalculationForDetails } from "./poAktam";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 import { showModal } from "../zakaz_naraudy/modalMain";
@@ -38,42 +39,6 @@ import {
   toggleDetailsPayment,
   clearDetailsForm,
 } from "./poAktam";
-
-function isVisible(el: HTMLElement | null): boolean {
-  if (!el) return false;
-  const cs = window.getComputedStyle(el);
-  return cs.display !== "none" && cs.visibility !== "hidden";
-}
-
-async function runMassPaymentCalculationDelegated(): Promise<void> {
-  const podlegleTable = document.getElementById(
-    "podlegle-table-container"
-  ) as HTMLElement | null;
-  const magazineTable = document.getElementById(
-    "magazine-table-container"
-  ) as HTMLElement | null;
-
-  const onPodlegle = isVisible(podlegleTable);
-  const onMagazine = isVisible(magazineTable);
-
-  try {
-    if (onPodlegle) {
-      // масовий розрахунок підлеглих (використовує твої активні фільтри)
-      await runMassPaymentCalculationForPodlegle();
-    } else if (onMagazine) {
-      // масовий розрахунок магазину (для відфільтрованих рядків)
-      await runMassPaymentCalculationForMagazine();
-    } else {
-      showNotification(
-        "Спочатку оберіть вкладку 👥 Співробітники або 🏪 Магазин",
-        "info"
-      );
-    }
-  } catch (e) {
-    console.error(e);
-    showNotification("❌ Помилка виконання масового розрахунку", "error");
-  }
-}
 
 type TabName = "podlegle" | "magazine" | "details";
 
@@ -122,6 +87,15 @@ function calculateTotalSum(): number {
 export function updateTotalSum(): void {
   const totalSumElement = byId("total-sum");
   
+  // Для співробітників показуємо спеціальний формат
+  if (currentTab === "podlegle") {
+    // Викликаємо функцію з pidlehli.ts яка розраховує та відображає три суми
+    if (typeof (window as any).updatePodlegleDisplayedSums === "function") {
+      (window as any).updatePodlegleDisplayedSums();
+    }
+    return;
+  }
+  
   // Для деталей по актам показуємо спеціальний формат
   if (currentTab === "details") {
     // Викликаємо функцію з poAktam.ts яка розраховує та відображає три суми
@@ -131,7 +105,7 @@ export function updateTotalSum(): void {
     return;
   }
 
-  // Для інших вкладок — звичайний формат
+  // Для магазину — звичайний формат
   const total = calculateTotalSum();
   totalSumElement.textContent = `Загальна сума: ${formatNumber(total)} грн`;
 }
@@ -156,7 +130,7 @@ export function switchTab(e: Event, tabName: TabName) {
 
   currentTab = tabName;
   updateTableDisplay();
-   updateTotalSum();
+  updateTotalSum();
 }
 
 function updateTableDisplay(): void {
@@ -224,14 +198,12 @@ export async function addRecord(): Promise<void> {
   }
 
   if (currentTab === "magazine") {
-    // searchMagazineData може бути async — якщо так, додай await
     await Promise.resolve(searchMagazineData());
     return;
   }
 
   if (currentTab === "details") {
-    await addDetailsRecord(); // <- головне виправлення
-    // НЕ перевіряємо success, бо addDetailsRecord() повертає Promise<void>
+    await addDetailsRecord();
     return;
   }
 }
@@ -240,7 +212,7 @@ export function deleteRecord(type: TabName, index: number): void {
   if (type === "podlegle") {
     deletepodlegleRecord(index);
   } else if (type === "magazine") {
-    deleteMagazineRecord(index); // без confirm — реалізовано у shopsBuxha.ts
+    deleteMagazineRecord(index);
   } else if (type === "details") {
     deleteDetailsRecord(index);
   }
@@ -356,8 +328,6 @@ function downloadpodlegleToExcel(): void {
   );
 }
 
-// Замініть функцію downloadMagazineToExcel() у файлі bukhhalteriya.ts на це:
-
 function downloadMagazineToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
     showNotification(
@@ -370,7 +340,6 @@ function downloadMagazineToExcel(): void {
 
   const XLSX = (window as any).XLSX;
 
-  // Витягуємо дані з таблиці магазину правильно
   const tbody = document.querySelector(
     "#magazine-table-container .Bukhhalter-data-table tbody"
   ) as HTMLTableSectionElement | null;
@@ -394,7 +363,6 @@ function downloadMagazineToExcel(): void {
       const cell = cells[index];
       if (!cell) return "";
 
-      // Для клітинок з кнопками отримуємо текст без кнопки
       if (cell.querySelector("button")) {
         const text = cell.textContent || "";
         return text.replace(/🗑️|📋|💾/g, "").trim();
@@ -403,12 +371,6 @@ function downloadMagazineToExcel(): void {
       return cell.textContent?.trim() || "";
     };
 
-    // Структура таблиці магазину (відповідно до шапки на екрані):
-    // 0: Розраховано, 1: Прихід, 2: Магазин, 3: Рахунок
-    // 4: Акт №, 5: Найменування, 6: Каталог, 7: Кількість
-    // 8: Ціна, 9: Сума, 10: Запас Повернення, 11: Дій (видалити)
-
-    // Витягуємо суму зі "Сума" колонки (може мати +/- префікс)
     let totalText = getTextContent(9);
     totalText = totalText.replace(/\s+/g, "").trim();
 
@@ -432,19 +394,18 @@ function downloadMagazineToExcel(): void {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Дані магазину");
 
-  // Встановлюємо ширину колонок (повинна збігатися з кількістю колонок)
   worksheet["!cols"] = [
-    { wch: 15 }, // Розраховано
-    { wch: 12 }, // Прихід
-    { wch: 20 }, // Магазин
-    { wch: 12 }, // Рахунок
-    { wch: 10 }, // Акт №
-    { wch: 30 }, // Найменування
-    { wch: 15 }, // Каталог
-    { wch: 10 }, // Кількість
-    { wch: 12 }, // Ціна
-    { wch: 12 }, // Сума
-    { wch: 15 }, // Запас Повернення
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 15 },
   ];
 
   const fileName = `Дані_магазину_${getCurrentDateForFileName()}.xlsx`;
@@ -454,8 +415,6 @@ function downloadMagazineToExcel(): void {
     "success"
   );
 }
-
-// Замініть функцію downloadDetailsToExcel() у файлі bukhhalteriya.ts на цю:
 
 function downloadDetailsToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
@@ -477,20 +436,13 @@ function downloadDetailsToExcel(): void {
     return;
   }
 
-  // Витягуємо дані правильно з усіх доступних клітинок
   const excelData = Array.from(rows).map((row) => {
     const cells = row.querySelectorAll("td");
-    
-    // Читаємо з клітинок у правильному порядку
-    // 0: Дата відкриття, 1: Дата закриття, 2: Акт №, 3: Автомобіль
-    // 4: Магазин, 5: Найменування, 6: Каталог, 7: Кількість
-    // 8: Ціна (з підціною), 9: Сума, 10: Кнопка видалення
     
     const getTextContent = (index: number): string => {
       const cell = cells[index];
       if (!cell) return "";
       
-      // Для клітинок з кнопками отримуємо текст без кнопки
       if (cell.querySelector("button")) {
         const text = cell.textContent || "";
         return text.replace(/🗑️|📋/g, "").trim();
@@ -499,14 +451,12 @@ function downloadDetailsToExcel(): void {
       return cell.textContent?.trim() || "";
     };
 
-    // Витягуємо ціну правильно (у клітинці 8 може бути дві ціни)
     const priceCell = cells[8];
     let salePrice = "-";
     let purchasePrice = "-";
     
     if (priceCell) {
       const priceTexts = priceCell.textContent?.trim().split("\n") || [];
-      // Перша (верхня) ціна — закупівельна, друга — продажна
       if (priceTexts.length >= 2) {
         purchasePrice = priceTexts[0].trim();
         salePrice = priceTexts[1].trim();
@@ -534,19 +484,18 @@ function downloadDetailsToExcel(): void {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Деталі по актам");
 
-  // Встановлюємо ширину колонок
   worksheet["!cols"] = [
-    { wch: 12 },  // Дата відкриття
-    { wch: 12 },  // Дата закриття
-    { wch: 10 },  // Акт №
-    { wch: 20 },  // Автомобіль
-    { wch: 20 },  // Магазин
-    { wch: 30 },  // Найменування
-    { wch: 15 },  // Каталог
-    { wch: 10 },  // Кількість
-    { wch: 15 },  // Закупівельна ціна
-    { wch: 12 },  // Продажна ціна
-    { wch: 12 },  // Сума
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 12 },
   ];
 
   const fileName = `Деталі_по_актам_${getCurrentDateForFileName()}.xlsx`;
@@ -583,28 +532,38 @@ export function downloadToExcel(): void {
   }
 }
 
-export function runMassPaymentCalculation(): void {
-  if (currentTab === "podlegle") {
-    showNotification(
-      "Функція масового розрахунку для підлеглих поки що недоступна",
-      "info"
-    );
-    return;
-  }
+export async function runMassPaymentCalculation(): Promise<void> {
+  // Визначаємо активну вкладку по видимості контейнерів таблиць
+  const podlegleTable = document.getElementById("podlegle-table-container") as HTMLElement | null;
+  const magazineTable = document.getElementById("magazine-table-container") as HTMLElement | null;
+  const detailsTable = document.getElementById("details-table-container") as HTMLElement | null;
 
-  if (currentTab === "magazine") {
-    // без confirm — просто повідомлення після умовного виконання
-    // (тут постав свою реальну логіку, якщо потрібно)
-    showNotification("Масовий розрахунок магазину виконано!", "success");
-    return;
-  }
+  const isPodlegleVisible = podlegleTable && podlegleTable.style.display !== "none";
+  const isMagazineVisible = magazineTable && magazineTable.style.display !== "none";
+  const isDetailsVisible = detailsTable && detailsTable.style.display !== "none";
 
-  if (currentTab === "details") {
-    showNotification(
-      "Функція масового розрахунку для деталей по актам поки що недоступна",
-      "info"
-    );
-    return;
+  try {
+    if (isPodlegleVisible) {
+      // Викликаємо масовий розрахунок для підлеглих
+      console.log("🔄 Викликаємо масовий розрахунок для підлеглих");
+      await runMassPaymentCalculationForPodlegle();
+    } else if (isMagazineVisible) {
+      // Викликаємо масовий розрахунок для магазину
+      console.log("🔄 Викликаємо масовий розрахунок для магазину");
+      await runMassPaymentCalculationForMagazine();
+    } else if (isDetailsVisible) {
+      // Викликаємо масовий розрахунок для деталей по актам
+      console.log("🔄 Викликаємо масовий розрахунок для деталей");
+      await runMassPaymentCalculationForDetails();
+    } else {
+      showNotification(
+        "Спочатку оберіть вкладку 👥 Співробітники, 🏪 Магазин або 📊 По Актам",
+        "info"
+      );
+    }
+  } catch (error) {
+    console.error("❌ Помилка виконання масового розрахунку:", error);
+    showNotification("❌ Помилка виконання масового розрахунку", "error");
   }
 }
 
@@ -631,31 +590,21 @@ window.addEventListener("load", async function () {
   console.log("Початок ініціалізації бухгалтерії...");
 
   try {
-    // Співробітники та акти як було (якщо хочеш — теж можеш відключити)
     await loadSlyusarsData();
     initializeDetailsData();
 
-    // Тогли/селекти
     createStatusToggle();
     createPaymentToggle();
     createNameSelect();
 
     createMagazinePaymentToggle();
     createMagazineAvailabilityToggle();
-    createShopsSelect(); // створює select без автопошуку
-
-    // ВАЖЛИВО: магазин НЕ ініціалізуємо тут (ніяких запитів)
-    // await initializeMagazineData();  // ← не викликаємо
+    createShopsSelect();
 
     updateTableDisplay();
     initializeDateInputs();
-
-    // Ніяких "Ініціалізація завершена. Дані завантажено."
-    // showNotification(...) ← прибрано
   } catch (error) {
     console.error("Помилка ініціалізації:", error);
-    // Тут теж прибираємо загальну помилку про ініціалізацію магазину
-    // showNotification("Помилка при ініціалізації системи бухгалтерії", "error", 5000);
   }
 });
 
@@ -690,5 +639,3 @@ window.handleRowClick = handleRowClick;
 window.togglePayment = togglePayment;
 // @ts-ignore
 window.runMassPaymentCalculation = runMassPaymentCalculation;
-// зробимо глобально доступним для HTML-кнопки
-(window as any).runMassPaymentCalculation = runMassPaymentCalculationDelegated;

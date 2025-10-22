@@ -1,5 +1,3 @@
-// stvorenyaPDF.ts - Функціональність для створення PDF з модального вікна
-
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { showNotification } from "./vspluvauhe_povidomlenna";
@@ -53,6 +51,7 @@ function collectColumnCellsToHideByHeaderText(
  *  - "ПІБ _ Магазин"
  *  - "Каталог"
  *  - "Зарплата"
+ *  - "За-та"
  * А також розширює скорочені найменування до повних.
  * Після — усе повертає як було.
  */
@@ -88,14 +87,13 @@ export async function printModalToPdf(): Promise<void> {
   ) as HTMLTableElement | null;
 
   if (table) {
-    // Приховуємо колонки "ПІБ _ Магазин", "Каталог" і "Зарплата"
+    // Приховуємо колонки "ПІБ _ Магазин", "Каталог", "Зарплата" і "За-та"
     collectColumnCellsToHideByHeaderText(
       table,
       [
-        (t) => t.includes("піб"),
-        (t) => t.includes("магазин"),
+        (t) => t.includes("піб") || t.includes("магазин"),
         (t) => t.includes("каталог"),
-        (t) => t.includes("зарплата"),
+        (t) => t.includes("зарплата") || t.includes("зар-та"),
       ],
       elementsToHide
     );

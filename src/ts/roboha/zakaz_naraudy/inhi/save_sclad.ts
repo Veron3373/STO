@@ -1,6 +1,6 @@
 //src\ts\roboha\zakaz_naraudy\inhi\save_shops.ts
 import { supabase } from "../../../vxid/supabaseClient";
-import { showNotification } from "./vspluvauhe_povіdomlenna";
+import { showNotification } from "./vspluvauhe_povidomlenna";
 import { globalCache } from "../globalCache";
 import { safeParseJSON } from "./ctvorennia_papku_googleDrive.";
 
@@ -367,3 +367,4 @@ export async function syncShopsOnActSave(
     );
   }
 }
+

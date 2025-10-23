@@ -222,7 +222,6 @@ async function loadRoleSettings(
   if (!settings || !column) return;
 
   try {
-    // Фільтруємо тільки реальні налаштування (без divider)
     const settingIds = settings
       .filter((s: any) => !s.divider && s.id)
       .map((s: any) => s.id);
@@ -271,11 +270,12 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
     const roleButton = modal.querySelector(
       "#role-toggle-button"
     ) as HTMLButtonElement;
-    const role = roleButton?.textContent || "Адміністратор";
+    const role = roleButton?.textContent?.trim() || "Адміністратор";
     const column = ROLE_TO_COLUMN[role as keyof typeof ROLE_TO_COLUMN];
 
+    // Завантажуємо налаштування перед збереженням для поточної ролі
     if (role === "Адміністратор") {
-      // Зберегти основні чекбокси для Адміністратора - КОЖЕН У СВОЮ КОМІРКУ
+      await loadSettings(modal); // Перезавантажуємо налаштування для "Адміністратора"
       const checkbox1 = modal.querySelector("#toggle-shop") as HTMLInputElement;
       const { error: error1 } = await supabase
         .from("settings")
@@ -292,7 +292,6 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         .eq("setting_id", 2);
       if (error2) throw error2;
 
-      // Зберегти відсоток для Адміністратора - У СВОЮ КОМІРКУ
       const input = modal.querySelector(
         "#percentage-input"
       ) as HTMLInputElement;
@@ -308,10 +307,9 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         .eq("setting_id", 4);
       if (error4) throw error4;
     } else {
-      // Зберегти налаштування для інших ролей - КОЖЕН TOGGLE У СВОЮ КОМІРКУ
+      await loadRoleSettings(modal, role); // Перезавантажуємо налаштування для інших ролей
       const settings = ROLE_SETTINGS[role as keyof typeof ROLE_SETTINGS];
       if (settings) {
-        // Фільтруємо тільки реальні налаштування (без divider)
         const realSettings = settings.filter((s: any) => !s.divider && s.id);
 
         const updates = await Promise.all(
@@ -346,7 +344,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
     showNotification("Налаштування збережено!", "success", 1500);
     return true;
   } catch (err) {
-    console.error("Save error details:", err);
+    console.error("Помилка збереження:", err);
     showNotification("Помилка збереження", "error", 1500);
     return false;
   }
@@ -504,9 +502,7 @@ export async function createSettingsModal(): Promise<void> {
   modal
     .querySelector("#modal-ok-button")
     ?.addEventListener("click", async () => {
-      if (await saveSettings(modal)) {
-        // modal.classList.add("hidden");
-      }
+      await saveSettings(modal); // Зберігаємо налаштування без закриття модалки
     });
 
   modal.querySelector("#modal-cancel-button")?.addEventListener("click", () => {
@@ -525,7 +521,7 @@ export async function openSettingsModal(): Promise<void> {
       "#role-toggle-button"
     ) as HTMLButtonElement;
     const role = roleButton?.textContent?.trim() || ROLES[0];
-    updateRoleTogglesVisibility(modal, role);
+    await updateRoleTogglesVisibility(modal, role); // Завантажуємо налаштування для поточної ролі
     modal.classList.remove("hidden");
   }
 }

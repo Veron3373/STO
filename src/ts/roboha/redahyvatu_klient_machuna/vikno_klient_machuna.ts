@@ -1,3 +1,4 @@
+//src\ts\roboha\redahyvatu_klient_machuna\vikno_klient_machuna.ts
 import { supabase } from "../../vxid/supabaseClient";
 import "../../../scss/main.scss";
 import { loadActsTable } from "../tablucya/tablucya";
@@ -20,16 +21,26 @@ function formatPhoneNumber(value: string): string {
     if (number.length <= 5)
       return `+380(${number.slice(0, 2)})${number.slice(2)}`;
     if (number.length <= 7)
-      return `+380(${number.slice(0, 2)})${number.slice(2, 5)}-${number.slice(5)}`;
-    return `+380(${number.slice(0, 2)})${number.slice(2, 5)}-${number.slice(5, 7)}-${number.slice(7, 9)}`;
+      return `+380(${number.slice(0, 2)})${number.slice(2, 5)}-${number.slice(
+        5
+      )}`;
+    return `+380(${number.slice(0, 2)})${number.slice(2, 5)}-${number.slice(
+      5,
+      7
+    )}-${number.slice(7, 9)}`;
   }
   if (digits.length === 0) return "+380";
   if (digits.length <= 2) return `+380(${digits}`;
   if (digits.length <= 5)
     return `+380(${digits.slice(0, 2)})${digits.slice(2)}`;
   if (digits.length <= 7)
-    return `+380(${digits.slice(0, 2)})${digits.slice(2, 5)}-${digits.slice(5)}`;
-  return `+380(${digits.slice(0, 2)})${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 9)}`;
+    return `+380(${digits.slice(0, 2)})${digits.slice(2, 5)}-${digits.slice(
+      5
+    )}`;
+  return `+380(${digits.slice(0, 2)})${digits.slice(2, 5)}-${digits.slice(
+    5,
+    7
+  )}-${digits.slice(7, 9)}`;
 }
 
 export function getModalFormValues() {
@@ -220,7 +231,10 @@ function setupPhoneFormatting(phoneInput: HTMLInputElement) {
   phoneInput.addEventListener("focus", () => {
     if (phoneInput.value === "+380") {
       setTimeout(() => {
-        phoneInput.setSelectionRange(phoneInput.value.length, phoneInput.value.length);
+        phoneInput.setSelectionRange(
+          phoneInput.value.length,
+          phoneInput.value.length
+        );
       }, 0);
     }
   });
@@ -325,13 +339,20 @@ function setupSimpleAutocomplete(
 }
 
 function fillCarFields(car: any) {
-  (document.getElementById(carEngineInputId) as HTMLInputElement).value = car["Обʼєм"] || "";
-  (document.getElementById(carFuelInputId) as HTMLInputElement).value = car["Пальне"] || "";
-  (document.getElementById(carVinInputId) as HTMLInputElement).value = car["Vincode"] || "";
-  (document.getElementById(carNumberInputId) as HTMLInputElement).value = car["Номер авто"] || "";
-  (document.getElementById(carModelInputId) as HTMLInputElement).value = car["Авто"] || "";
-  (document.getElementById(carYearInputId) as HTMLInputElement).value = car["Рік"] || "";
-  (document.getElementById(carCodeInputId) as HTMLInputElement).value = car["КодДВЗ"] || car["Код ДВЗ"] || "";
+  (document.getElementById(carEngineInputId) as HTMLInputElement).value =
+    car["Обʼєм"] || "";
+  (document.getElementById(carFuelInputId) as HTMLInputElement).value =
+    car["Пальне"] || "";
+  (document.getElementById(carVinInputId) as HTMLInputElement).value =
+    car["Vincode"] || "";
+  (document.getElementById(carNumberInputId) as HTMLInputElement).value =
+    car["Номер авто"] || "";
+  (document.getElementById(carModelInputId) as HTMLInputElement).value =
+    car["Авто"] || "";
+  (document.getElementById(carYearInputId) as HTMLInputElement).value =
+    car["Рік"] || "";
+  (document.getElementById(carCodeInputId) as HTMLInputElement).value =
+    car["КодДВЗ"] || car["Код ДВЗ"] || "";
 }
 
 async function fetchClientData(clientId: string) {
@@ -346,14 +367,19 @@ async function fetchClientData(clientId: string) {
 async function fillClientInfo(clientId: string) {
   const clientData = await fetchClientData(clientId);
   if (clientData) {
-    (document.getElementById(clientInputId) as HTMLInputElement).value = clientData["ПІБ"] || "";
-    const phoneInput = document.getElementById(phoneInputId) as HTMLInputElement;
+    (document.getElementById(clientInputId) as HTMLInputElement).value =
+      clientData["ПІБ"] || "";
+    const phoneInput = document.getElementById(
+      phoneInputId
+    ) as HTMLInputElement;
     const phoneData = clientData["Телефон"] || "";
     if (phoneData) {
       phoneInput.value = formatPhoneNumber(phoneData);
     }
-    (document.getElementById(extraInputId) as HTMLInputElement).value = clientData["Додаткові"] || "";
-    (document.getElementById(carIncomeInputId) as HTMLInputElement).value = clientData["Джерело"] || "Не вказано";
+    (document.getElementById(extraInputId) as HTMLInputElement).value =
+      clientData["Додаткові"] || "";
+    (document.getElementById(carIncomeInputId) as HTMLInputElement).value =
+      clientData["Джерело"] || "Не вказано";
     return clientData;
   }
   return null;
@@ -414,7 +440,9 @@ async function loadUniqueData() {
       ...new Set(
         allClients
           .map((client) => client.data?.["Телефон"])
-          .filter((phone): phone is string => typeof phone === "string" && !!phone)
+          .filter(
+            (phone): phone is string => typeof phone === "string" && !!phone
+          )
           .flatMap((phone: string) =>
             phone
               .split(/[,;]/)
@@ -435,17 +463,35 @@ function formatDisplayText(text: string): string {
 }
 
 function setupEditingAutocompletes() {
-  const carModelInput = document.getElementById(carModelInputId) as HTMLInputElement;
-  const carModelList = document.getElementById(carModelListId) as HTMLUListElement;
-  const carCodeInput = document.getElementById(carCodeInputId) as HTMLInputElement;
-  const carCodeList = document.getElementById(carCodeListId) as HTMLUListElement;
+  const carModelInput = document.getElementById(
+    carModelInputId
+  ) as HTMLInputElement;
+  const carModelList = document.getElementById(
+    carModelListId
+  ) as HTMLUListElement;
+  const carCodeInput = document.getElementById(
+    carCodeInputId
+  ) as HTMLInputElement;
+  const carCodeList = document.getElementById(
+    carCodeListId
+  ) as HTMLUListElement;
   const phoneInput = document.getElementById(phoneInputId) as HTMLInputElement;
   const phoneList = document.getElementById(phoneListId) as HTMLUListElement;
-  const carNumberInput = document.getElementById(carNumberInputId) as HTMLInputElement;
-  const carNumberList = document.getElementById(carNumberListId) as HTMLUListElement;
-  const carEngineInput = document.getElementById(carEngineInputId) as HTMLInputElement;
-  const carEngineList = document.getElementById(carEngineListId) as HTMLUListElement;
-  const carVinInput = document.getElementById(carVinInputId) as HTMLInputElement;
+  const carNumberInput = document.getElementById(
+    carNumberInputId
+  ) as HTMLInputElement;
+  const carNumberList = document.getElementById(
+    carNumberListId
+  ) as HTMLUListElement;
+  const carEngineInput = document.getElementById(
+    carEngineInputId
+  ) as HTMLInputElement;
+  const carEngineList = document.getElementById(
+    carEngineListId
+  ) as HTMLUListElement;
+  const carVinInput = document.getElementById(
+    carVinInputId
+  ) as HTMLInputElement;
   const carVinList = document.getElementById(carVinListId) as HTMLUListElement;
 
   // Підготовка даних з auto.json
@@ -471,11 +517,41 @@ function setupEditingAutocompletes() {
     2 // Показувати після введення 2 символів
   );
 
-  setupSimpleAutocomplete(carCodeInput, carCodeList, allUniqueData.carCodes, undefined, "carCodeEdit");
-  setupSimpleAutocomplete(phoneInput, phoneList, allUniqueData.phones, undefined, "phoneEdit");
-  setupSimpleAutocomplete(carNumberInput, carNumberList, allUniqueData.carNumbers, undefined, "carNumberEdit");
-  setupSimpleAutocomplete(carEngineInput, carEngineList, allUniqueData.engines, undefined, "carEngineEdit");
-  setupSimpleAutocomplete(carVinInput, carVinList, allUniqueData.vins, undefined, "carVinEdit");
+  setupSimpleAutocomplete(
+    carCodeInput,
+    carCodeList,
+    allUniqueData.carCodes,
+    undefined,
+    "carCodeEdit"
+  );
+  setupSimpleAutocomplete(
+    phoneInput,
+    phoneList,
+    allUniqueData.phones,
+    undefined,
+    "phoneEdit"
+  );
+  setupSimpleAutocomplete(
+    carNumberInput,
+    carNumberList,
+    allUniqueData.carNumbers,
+    undefined,
+    "carNumberEdit"
+  );
+  setupSimpleAutocomplete(
+    carEngineInput,
+    carEngineList,
+    allUniqueData.engines,
+    undefined,
+    "carEngineEdit"
+  );
+  setupSimpleAutocomplete(
+    carVinInput,
+    carVinList,
+    allUniqueData.vins,
+    undefined,
+    "carVinEdit"
+  );
 
   document.getElementById("car-confirm-icons")!.style.display = "flex";
 }
@@ -488,7 +564,9 @@ async function showModalCreateSakazNarad() {
   const modal = createModalElement();
   document.body.appendChild(modal);
   userConfirmation = "yes";
-  const confirmToggle = document.getElementById("confirm-toggle") as HTMLButtonElement;
+  const confirmToggle = document.getElementById(
+    "confirm-toggle"
+  ) as HTMLButtonElement;
   document.getElementById("car-confirm-icons")!.style.display = "none";
   userConfirmation = null;
   if (confirmToggle) {
@@ -520,18 +598,35 @@ async function showModalCreateSakazNarad() {
   const modalElement = document.getElementById(modalOverlayId)!;
   const closeBtn = document.getElementById(modalCloseBtnId)!;
   const btnEdit = document.getElementById(btnEditId)!;
-  const clientInput = document.getElementById(clientInputId) as HTMLInputElement;
+  const clientInput = document.getElementById(
+    clientInputId
+  ) as HTMLInputElement;
   const clientList = document.getElementById(clientListId) as HTMLUListElement;
-  const carNumberInput = document.getElementById(carNumberInputId) as HTMLInputElement;
-  const carNumberList = document.getElementById(carNumberListId) as HTMLUListElement;
-  const carModelInput = document.getElementById(carModelInputId) as HTMLInputElement;
-  const carModelList = document.getElementById(carModelListId) as HTMLUListElement;
-  const carIncomeInput = document.getElementById(carIncomeInputId) as HTMLInputElement;
+  const carNumberInput = document.getElementById(
+    carNumberInputId
+  ) as HTMLInputElement;
+  const carNumberList = document.getElementById(
+    carNumberListId
+  ) as HTMLUListElement;
+  const carModelInput = document.getElementById(
+    carModelInputId
+  ) as HTMLInputElement;
+  const carModelList = document.getElementById(
+    carModelListId
+  ) as HTMLUListElement;
+  const carIncomeInput = document.getElementById(
+    carIncomeInputId
+  ) as HTMLInputElement;
   const phoneInput = document.getElementById(phoneInputId) as HTMLInputElement;
   const phoneList = document.getElementById(phoneListId) as HTMLUListElement;
   const extraInput = document.getElementById(extraInputId) as HTMLInputElement;
   setupPhoneFormatting(phoneInput);
-  const editableFieldsInitially = [clientInput, carModelInput, carNumberInput, phoneInput];
+  const editableFieldsInitially = [
+    clientInput,
+    carModelInput,
+    carNumberInput,
+    phoneInput,
+  ];
   editableFieldsInitially.forEach((el) => el.removeAttribute("readonly"));
   btnEdit.addEventListener("click", async () => {
     const isUnlocked = btnEdit.dataset.unlocked === "true";
@@ -547,11 +642,14 @@ async function showModalCreateSakazNarad() {
       document.getElementById(carYearInputId)?.removeAttribute("readonly");
       document.getElementById(carCodeInputId)?.removeAttribute("readonly");
       setupEditingAutocompletes();
-      const fuelContainer = document.getElementById(carFuelInputId)?.parentElement;
+      const fuelContainer =
+        document.getElementById(carFuelInputId)?.parentElement;
       const fuelInput = document.getElementById(carFuelInputId);
-      const incomeContainer = document.getElementById(carIncomeInputId)?.parentElement;
+      const incomeContainer =
+        document.getElementById(carIncomeInputId)?.parentElement;
       const incomeInput = document.getElementById(carIncomeInputId);
-      if (!fuelContainer || !fuelInput || !incomeContainer || !incomeInput) return;
+      if (!fuelContainer || !fuelInput || !incomeContainer || !incomeInput)
+        return;
       if (!(fuelInput instanceof HTMLSelectElement)) {
         const currentFuel = (fuelInput as HTMLInputElement).value;
         const fuelOptions = ["Бензин", "Дизель", "Газ", "Гібрид", "Електро"];
@@ -583,7 +681,9 @@ async function showModalCreateSakazNarad() {
             ...new Set(
               incomeRows
                 .map((row: any) => row?.data?.Name)
-                .filter((name: any) => typeof name === "string" && name.trim() !== "")
+                .filter(
+                  (name: any) => typeof name === "string" && name.trim() !== ""
+                )
             ),
           ];
           const incomeSelect = document.createElement("select");
@@ -611,7 +711,9 @@ async function showModalCreateSakazNarad() {
     } else {
       const confirmIcons = document.getElementById("car-confirm-icons");
       if (confirmIcons) confirmIcons.style.display = "none";
-      document.getElementById(carEngineInputId)?.setAttribute("readonly", "true");
+      document
+        .getElementById(carEngineInputId)
+        ?.setAttribute("readonly", "true");
       document.getElementById(carVinInputId)?.setAttribute("readonly", "true");
       document.getElementById(extraInputId)?.setAttribute("readonly", "true");
       document.getElementById(carYearInputId)?.setAttribute("readonly", "true");
@@ -635,11 +737,17 @@ async function showModalCreateSakazNarad() {
           } else if (key.includes("carNumber")) {
             inputEl = carNumberInput;
           } else if (key.includes("carEngine")) {
-            inputEl = document.getElementById(carEngineInputId) as HTMLInputElement;
+            inputEl = document.getElementById(
+              carEngineInputId
+            ) as HTMLInputElement;
           } else if (key.includes("carVin")) {
-            inputEl = document.getElementById(carVinInputId) as HTMLInputElement;
+            inputEl = document.getElementById(
+              carVinInputId
+            ) as HTMLInputElement;
           } else if (key.includes("carCode")) {
-            inputEl = document.getElementById(carCodeInputId) as HTMLInputElement;
+            inputEl = document.getElementById(
+              carCodeInputId
+            ) as HTMLInputElement;
           }
           if (inputEl && data) {
             inputEl.removeEventListener("input", data.inputHandler);
@@ -649,9 +757,11 @@ async function showModalCreateSakazNarad() {
         }
       });
       currentAutocompletes = {};
-      const fuelContainer = document.getElementById(carFuelInputId)?.parentElement;
+      const fuelContainer =
+        document.getElementById(carFuelInputId)?.parentElement;
       const fuelInput = document.getElementById(carFuelInputId);
-      const incomeContainer = document.getElementById(carIncomeInputId)?.parentElement;
+      const incomeContainer =
+        document.getElementById(carIncomeInputId)?.parentElement;
       const incomeInput = document.getElementById(carIncomeInputId);
       if (fuelContainer && fuelInput instanceof HTMLSelectElement) {
         const selectedValue = fuelInput.value;
@@ -680,7 +790,9 @@ async function showModalCreateSakazNarad() {
     }
   });
   closeBtn.addEventListener("click", () => modalElement.remove());
-  const { data: allClients } = await supabase.from("clients").select("client_id, data");
+  const { data: allClients } = await supabase
+    .from("clients")
+    .select("client_id, data");
   const clientOptions =
     allClients
       ?.map((c) => ({
@@ -691,7 +803,9 @@ async function showModalCreateSakazNarad() {
       }))
       .filter((c) => c.fullName)
       .sort((a, b) => a.fullName.localeCompare(b.fullName)) || [];
-  const { data: allCars } = await supabase.from("cars").select("cars_id, client_id, data");
+  const { data: allCars } = await supabase
+    .from("cars")
+    .select("cars_id, client_id, data");
   const allCarItems =
     allCars
       ?.map((c) => ({
@@ -700,7 +814,9 @@ async function showModalCreateSakazNarad() {
         client_id: c.client_id,
       }))
       .filter((c) => c["Номер авто"] || c["Авто"])
-      .sort((a, b) => (a["Авто"] || "").toString().localeCompare((b["Авто"] || "").toString())) || [];
+      .sort((a, b) =>
+        (a["Авто"] || "").toString().localeCompare((b["Авто"] || "").toString())
+      ) || [];
   const getCarsForClient = (clientId: string) => {
     return allCarItems.filter((cars) => cars.client_id === clientId);
   };
@@ -734,7 +850,10 @@ async function showModalCreateSakazNarad() {
   btnSave.addEventListener("click", async () => {
     const isEditUnlocked = btnEdit.dataset.unlocked === "true";
     if (!isEditUnlocked) {
-      showLockToggleMessage(false, "🔓 Спочатку розблокуйте форму для редагування");
+      showLockToggleMessage(
+        false,
+        "🔓 Спочатку розблокуйте форму для редагування"
+      );
       return;
     }
     if (!validateRequiredFields()) {
@@ -751,7 +870,8 @@ async function showModalCreateSakazNarad() {
   if (btnCreate) {
     btnCreate.addEventListener("click", async () => {
       const module = await import("./pidtverdutu_sberihannya_zakaz_naryad");
-      const { saveModalIdCreate, createSaveModalCreate, showSaveModalCreate } = module;
+      const { saveModalIdCreate, createSaveModalCreate, showSaveModalCreate } =
+        module;
       if (!document.getElementById(saveModalIdCreate)) {
         document.body.appendChild(createSaveModalCreate());
       }
@@ -890,7 +1010,10 @@ function clearCarAndContactFields() {
     carCodeInputId,
   ];
   idsToClear.forEach((id) => {
-    const input = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    const input = document.getElementById(id) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | null;
     if (input instanceof HTMLInputElement) {
       input.value = "";
     } else if (input instanceof HTMLSelectElement) {
@@ -909,9 +1032,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-export function showLockToggleMessage(isUnlocked: boolean, customText?: string) {
+export function showLockToggleMessage(
+  isUnlocked: boolean,
+  customText?: string
+) {
   const note = document.createElement("div");
-  note.textContent = customText || (isUnlocked ? "🔓 Розблоковано для редагування" : "🔒 Заблоковано редагування");
+  note.textContent =
+    customText ||
+    (isUnlocked
+      ? "🔓 Розблоковано для редагування"
+      : "🔒 Заблоковано редагування");
   note.style.position = "fixed";
   note.style.left = "50%";
   note.style.bottom = "50%";

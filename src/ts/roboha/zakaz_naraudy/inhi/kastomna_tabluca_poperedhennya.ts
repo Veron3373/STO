@@ -1,20 +1,21 @@
-//src\ts\roboha\zakaz_naraudy\inhi\kastomna_tabluca_poperedhennya.ts
 import { globalCache, ensureSkladLoaded } from "../globalCache";
 import { loadPercentFromSettings } from "./kastomna_tabluca";
 import { supabase } from "../../../vxid/supabaseClient";
 import { updateCalculatedSumsInFooter } from "../modalUI";
 
-// Кеш для даних поточного акту
+// Cache for current act data
 let currentActDataCache: any = null;
 let autoRefreshInterval: any = null;
+
+// Cache for name cell lengths and clearing state
+const nameLengthCache = new WeakMap<HTMLElement, number>();
+const nameClearedOnce = new WeakMap<HTMLElement, boolean>();
 
 /* ===================== UI STYLES ===================== */
 function ensureWarningStyles() {
   if (document.getElementById("warn-badge-styles")) return;
   const css = `
-    .qty-cell { position: relative; }
-    .price-cell { position: relative; }
-    .slyusar-sum-cell { position: relative; }
+    .qty-cell, .price-cell, .slyusar-sum-cell { position: relative; }
     
     .qty-cell[data-warn="1"]::before,
     .price-cell[data-warnprice="1"]::before,
@@ -49,6 +50,7 @@ function ensureCellClass(cell: HTMLElement, cls: "qty-cell" | "price-cell" | "sl
   if (!cell.classList.contains(cls)) cell.classList.add(cls);
 }
 
+/* ===================== WARNING FLAG SETTERS ===================== */
 export function setWarningFlag(cell: HTMLElement | null, on: boolean) {
   if (!cell) return;
   ensureWarningStyles();
@@ -73,20 +75,20 @@ export function setSlyusarSumWarningFlag(cell: HTMLElement | null, on: boolean) 
   else cell.removeAttribute("data-warnzp");
 }
 
-function formatUA(n: number) {
+/* ===================== UTILITY FUNCTIONS ===================== */
+function formatUA(n: number): string {
   return new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 3 }).format(n);
 }
 
 function parseNumFromNode(node: HTMLElement | null): number {
   if (!node) return 0;
-  let raw = "";
-  if ((node as HTMLInputElement).value !== undefined) {
-    raw = (node as HTMLInputElement).value ?? "";
-  } else {
-    raw = node.textContent ?? "";
-  }
+  const raw = (node as HTMLInputElement).value ?? node.textContent ?? "";
   const val = parseFloat(raw.replace(/\s/g, "").replace(",", "."));
   return Number.isFinite(val) ? val : 0;
+}
+
+function getNodeTextLen(el: HTMLElement): number {
+  return (el.textContent ?? "").replace(/\u00A0/g, " ").replace(/\u200B/g, "").length;
 }
 
 /* ===================== ACT DATA CACHE ===================== */
@@ -134,36 +136,28 @@ async function getCurrentActDetailQty(sclad_id: number): Promise<number> {
   );
 
   const qtyRaw = detail ? detail.Кількість : 0;
-  const qty =
-    typeof qtyRaw === "number"
-      ? qtyRaw
-      : parseFloat(String(qtyRaw).replace(/\s/g, "").replace(",", ".")) || 0;
-
-  return qty;
+  return typeof qtyRaw === "number"
+    ? qtyRaw
+    : parseFloat(String(qtyRaw).replace(/\s/g, "").replace(",", ".")) || 0;
 }
 
-/* ===================== CORE CHECK (QTY) ===================== */
+/* ===================== CORE CHECKS ===================== */
 export async function updateCatalogWarningForRow(row: HTMLElement) {
   if (globalCache.isActClosed) {
-    const qtyCellClosed = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
-    if (qtyCellClosed) {
-      setWarningFlag(qtyCellClosed, false);
-      qtyCellClosed.removeAttribute("title");
+    const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
+    if (qtyCell) {
+      setWarningFlag(qtyCell, false);
+      qtyCell.removeAttribute("title");
     }
     return;
   }
 
   await ensureSkladLoaded();
-
-  const qtyCellCandidate = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
-  const qtyCell =
-    (qtyCellCandidate?.closest('[data-name="id_count"]') as HTMLElement | null) ||
-    qtyCellCandidate;
+  const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
   if (!qtyCell) return;
 
   const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
-  const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
-  const sclad_id = scladIdAttr ? Number(scladIdAttr) : null;
+  const sclad_id = catalogCell?.getAttribute("data-sclad-id") ? Number(catalogCell.getAttribute("data-sclad-id")) : null;
 
   if (!sclad_id) {
     setWarningFlag(qtyCell, false);
@@ -171,9 +165,7 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
     return;
   }
 
-  const picked = globalCache.skladParts.find(
-    (p) => Number(p.sclad_id) === Number(sclad_id)
-  );
+  const picked = globalCache.skladParts.find((p) => Number(p.sclad_id) === sclad_id);
   if (!picked) {
     setWarningFlag(qtyCell, false);
     qtyCell.removeAttribute("title");
@@ -187,26 +179,23 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
   const delta_2 = scladOsnova + delta_1;
   const scladOn = Number(picked.kilkist_on ?? 0);
   const alarmOsnova = scladOn - delta_2;
-
   const warn = alarmOsnova < 0;
 
   setWarningFlag(qtyCell, warn);
-  const unit = (picked as any).unit ?? "";
   if (warn) {
     const needMore = Math.abs(alarmOsnova);
-    qtyCell.title = `Не вистачає ${formatUA(needMore)} ${unit}`.trim();
+    qtyCell.title = `Не вистачає ${formatUA(needMore)} ${picked.unit ?? ""}`.trim();
   } else {
     qtyCell.removeAttribute("title");
   }
 }
 
-/* ===================== PRICE CHECK ===================== */
 export async function updatePriceWarningForRow(row: HTMLElement) {
   if (globalCache.isActClosed) {
-    const priceCellClosed = row.querySelector('[data-name="price"]') as HTMLElement | null;
-    if (priceCellClosed) {
-      setPriceWarningFlag(priceCellClosed, false);
-      priceCellClosed.removeAttribute("title");
+    const priceCell = row.querySelector('[data-name="price"]') as HTMLElement | null;
+    if (priceCell) {
+      setPriceWarningFlag(priceCell, false);
+      priceCell.removeAttribute("title");
     }
     return;
   }
@@ -215,18 +204,14 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
   const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
   if (!priceCell) return;
 
-  const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
-  const sclad_id = scladIdAttr ? Number(scladIdAttr) : null;
-
+  const sclad_id = catalogCell?.getAttribute("data-sclad-id") ? Number(catalogCell.getAttribute("data-sclad-id")) : null;
   if (!sclad_id) {
     setPriceWarningFlag(priceCell, false);
     priceCell.removeAttribute("title");
     return;
   }
 
-  const picked = globalCache.skladParts.find(
-    (p) => Number(p.sclad_id) === Number(sclad_id)
-  );
+  const picked = globalCache.skladParts.find((p) => Number(p.sclad_id) === sclad_id);
   if (!picked) {
     setPriceWarningFlag(priceCell, false);
     priceCell.removeAttribute("title");
@@ -244,7 +229,6 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
   else priceCell.removeAttribute("title");
 }
 
-/* ===================== SLYUSAR SUM CHECK ===================== */
 export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
   if (globalCache.isActClosed) {
     const sumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
@@ -270,7 +254,6 @@ export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
 
   const sum = parseNumFromNode(sumCell);
   const slyusarSum = parseNumFromNode(slyusarSumCell);
-
   const warn = slyusarSum > sum;
 
   setSlyusarSumWarningFlag(slyusarSumCell, warn);
@@ -281,22 +264,9 @@ export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
   }
 }
 
-function getNodeTextLen(el: HTMLElement): number {
-  // нормалізує NBSP/zero-width → коректно рахує довжину
-  const t = (el.textContent ?? "")
-    .replace(/\u00A0/g, " ")   // NBSP → space
-    .replace(/\u200B/g, "");   // zero-width space
-  return t.length;
-}
-
-
 /* ===================== CLEAR CELLS ON NAME CHANGE ===================== */
-async function clearCellsOnNameChange(
-  row: HTMLElement,
-  prevNameLength: number,
-  currentNameLength: number
-) {
-  if (currentNameLength >= prevNameLength) return; // чистимо лише при зменшенні довжини
+async function clearCellsOnNameChange(row: HTMLElement, prevNameLength: number, currentNameLength: number) {
+  if (currentNameLength >= prevNameLength) return;
 
   const cellsToClear = [
     '[data-name="catalog"]',
@@ -325,8 +295,6 @@ async function clearCellsOnNameChange(
   await updateSlyusarSumWarningForRow(row);
 }
 
-
-
 /* ===================== MASS REFRESH ===================== */
 export async function refreshQtyWarningsIn(containerId: string) {
   ensureWarningStyles();
@@ -340,11 +308,14 @@ export async function refreshQtyWarningsIn(containerId: string) {
 
   const rows = Array.from(container.querySelectorAll<HTMLTableRowElement>("tbody tr"));
   for (const tr of rows) {
-    const row = tr as unknown as HTMLElement;
-    await updateCatalogWarningForRow(row);
-    await updatePriceWarningForRow(row);
-    await updateSlyusarSumWarningForRow(row);
+    const row = tr as HTMLElement;
+    await Promise.all([
+      updateCatalogWarningForRow(row),
+      updatePriceWarningForRow(row),
+      updateSlyusarSumWarningForRow(row)
+    ]);
   }
+  updateCalculatedSumsInFooter();
 }
 
 /* ===================== LISTENERS ===================== */
@@ -352,50 +323,37 @@ export function setupQtyWarningListeners(containerId: string) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const nameLengthCache = new WeakMap<HTMLElement, number>();
-  const nameClearedOnce = new WeakMap<HTMLElement, boolean>(); // щоб не чистити двічі під час одного видалення
-
-  // Ініціалізація кешу для вже наявних рядків
+  // Initialize cache for name cells
   container.querySelectorAll<HTMLElement>('tbody tr [data-name="name"]').forEach((cell) => {
     nameLengthCache.set(cell, getNodeTextLen(cell));
     nameClearedOnce.set(cell, false);
   });
 
-  // ✅ Чистимо негайно по першому Backspace/Delete
   const onKeyDownName = (e: KeyboardEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const cell = target.closest('[data-name="name"]') as HTMLElement | null;
-    if (!cell) return;
-
-    if (e.key !== "Backspace" && e.key !== "Delete") return;
+    const cell = (e.target as HTMLElement)?.closest('[data-name="name"]') as HTMLElement | null;
+    if (!cell || (e.key !== "Backspace" && e.key !== "Delete")) return;
 
     const prev = nameLengthCache.get(cell) ?? 0;
-    // дочекаємось, поки контент реально зміниться
     setTimeout(async () => {
       const cur = getNodeTextLen(cell);
       if (cur < prev && !nameClearedOnce.get(cell)) {
         const row = cell.closest("tr") as HTMLElement | null;
         if (row) {
           await clearCellsOnNameChange(row, prev, cur);
-          nameClearedOnce.set(cell, true); // позначаємо, що вже чистили на цей цикл видалення
+          nameClearedOnce.set(cell, true);
         }
       }
       nameLengthCache.set(cell, cur);
-      // якщо користувач знову почав набирати (довжина зросла) — дозволимо наступне очищення при видаленні
       if (cur > prev) nameClearedOnce.set(cell, false);
     }, 0);
   };
 
   const onInputName = async (e: Event) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const cell = target.closest('[data-name="name"]') as HTMLElement | null;
+    const cell = (e.target as HTMLElement)?.closest('[data-name="name"]') as HTMLElement | null;
     if (!cell) return;
     const row = cell.closest("tr") as HTMLElement | null;
     if (!row) return;
 
-    // fallback-перевірка (на випадок вставок/drag-drop тощо)
     const prev = nameLengthCache.get(cell) ?? 0;
     const cur = getNodeTextLen(cell);
     if (cur < prev && !nameClearedOnce.get(cell)) {
@@ -406,19 +364,57 @@ export function setupQtyWarningListeners(containerId: string) {
     nameLengthCache.set(cell, cur);
   };
 
-  // ... нижче — решта твоїх слухачів БЕЗ змін ...
+  const onInput = async (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const row = target.closest("tr") as HTMLElement | null;
+    if (!row) return;
+
+    const cell = target.closest('[data-name="id_count"]') as HTMLElement | null;
+    if (cell) await updateCatalogWarningForRow(row);
+
+    const priceCell = target.closest('[data-name="price"]') as HTMLElement | null;
+    if (priceCell) await updatePriceWarningForRow(row);
+
+    const slyusarSumCell = target.closest('[data-name="slyusar_sum"]') as HTMLElement | null;
+    if (slyusarSumCell) await updateSlyusarSumWarningForRow(row);
+
+    if (cell || priceCell || slyusarSumCell) updateCalculatedSumsInFooter();
+  };
+
+  const onBlur = async (e: Event) => {
+    const cell = (e.target as HTMLElement)?.closest('[data-name="id_count"]') as HTMLElement | null;
+    if (!cell) return;
+    const row = cell.closest("tr") as HTMLElement | null;
+    if (row) await updateCatalogWarningForRow(row);
+  };
+
+  const onPointerDownPreCommit = async (e: Event) => {
+    const active = (document.activeElement as HTMLElement | null)?.closest('[data-name="id_count"]') as HTMLElement | null;
+    if (!active) return;
+    const clickTarget = e.target as Node;
+    if (!active.contains(clickTarget)) {
+      const row = active.closest("tr") as HTMLElement | null;
+      if (row) await updateCatalogWarningForRow(row);
+    }
+  };
+
+  const onKeyDownPreCommit = async (e: KeyboardEvent) => {
+    if (!["Enter", "Tab", "ArrowDown", "ArrowUp"].includes(e.key)) return;
+    const active = (document.activeElement as HTMLElement | null)?.closest('[data-name="id_count"]') as HTMLElement | null;
+    if (active) {
+      const row = active.closest("tr") as HTMLElement | null;
+      if (row) await updateCatalogWarningForRow(row);
+    }
+  };
+
   container.addEventListener("keydown", onKeyDownName, { capture: true });
   container.addEventListener("input", onInputName, { capture: true });
-
-  // існуючі:
-  // container.addEventListener("input", onInput, { capture: true });
-  // container.addEventListener("input", onInputPrice, { capture: true });
-  // container.addEventListener("input", onInputSlyusarSum, { capture: true });
-  // container.addEventListener("blur", onBlur, true);
-  // container.addEventListener("pointerdown", onPointerDownPreCommit, { capture: true });
-  // container.addEventListener("keydown", onKeyDownPreCommit, { capture: true });
+  container.addEventListener("input", onInput, { capture: true });
+  container.addEventListener("blur", onBlur, true);
+  container.addEventListener("pointerdown", onPointerDownPreCommit, { capture: true });
+  container.addEventListener("keydown", onKeyDownPreCommit, { capture: true });
 }
-
 
 /* ===================== INIT / SAVE HOOK / AUTO REFRESH ===================== */
 export function initializeActWarnings(containerId: string, actId: number, enableAutoRefresh = false) {

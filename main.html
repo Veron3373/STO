@@ -24,7 +24,7 @@
                 <input type="text" id="searchInput" class="search-input" placeholder="Пошук..." />
             </li>
         </div>
-        <li class="alim">1.2.1 / Алім 2025</li>
+        <li class="alim">1.2.0 / Алім 2025</li>
     </ul>
 
     <a href="#" id="open-modal-sakaz_narad"></a>
@@ -41,10 +41,10 @@
     <script type="module">
         import { setupSearchWithTableFilter } from "/src/ts/roboha/tablucya/pochuk.ts";
         import { loadActsTable, initializeActsSystem } from "/src/ts/roboha/tablucya/tablucya.ts";
-        import { 
-            showLoginModalBeforeTable, 
+        import {
+            showLoginModalBeforeTable,
             updateUIBasedOnAccess, // Імпортуємо функцію оновлення UI
-            logoutFromSystemAndRedirect 
+            logoutFromSystemAndRedirect
         } from "/src/ts/roboha/tablucya/users.ts";
 
         // Робимо logoutFromSystemAndRedirect глобальною
@@ -80,68 +80,68 @@
                 {
                     // ... (Ваші налаштування daterangepicker) ...
                     locale: {
-                        format: 'DD.MM.YYYY',
-                        separator: ' - ',
-                        applyLabel: 'Прийняти',
-                        cancelLabel: 'Відмінити',
-                        fromLabel: 'Від',
-                        toLabel: 'До',
-                        weekLabel: 'Тиж',
-                        daysOfWeek: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-                        monthNames: [
-                            'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-                            'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
-                        ],
-                        firstDay: 1
-                    },
-                    opens: 'center',
-                    alwaysShowCalendars: true,
-                    autoUpdateInput: false,
-                    startDate: moment().startOf('year'),
-                    endDate: moment(),
-                    ranges: {
-                        'Відкриті': [moment().startOf('year'), moment()],
-                        'Закриті': [moment('02.01.2025', 'DD.MM.YYYY'), moment()],
-                        'Від початку': [moment('03.01.2025', 'DD.MM.YYYY'), moment()],
-                        'Сьогодні': [moment(), moment()],
-                        'Останні 7 днів': [moment().subtract(6, 'days'), moment()],
-                        'Поточний місяць': [moment().startOf('month'), moment().endOf('month')],
-                        'Минулий місяць': [
-                            moment().subtract(1, 'month').startOf('month'),
-                            moment().subtract(1, 'month').endOf('month')
-                        ]
-                    },
-                    showCustomRangeLabel: false
-                },
-                function (start, end, label) {
-                    if (label === 'Відкриті') {
-                        $('#dateRangePicker').val('Відкриті');
-                        $('#dateRangePicker').data('daterangepicker').element.removeClass('active-range');
-                        currentFilterType = 'open';
-                        currentDateFrom = null;
-                        currentDateTo = null;
-                        loadActsTable(null, null, 'open');
-                        this.setStartDate(moment().startOf('year'));
-                        this.setEndDate(moment());
-                    } else if (label === 'Закриті') {
-                        $('#dateRangePicker').val('Закриті');
-                        $('#dateRangePicker').data('daterangepicker').element.removeClass('active-range');
-                        currentFilterType = 'closed';
-                        currentDateFrom = null;
-                        currentDateTo = null;
-                        loadActsTable(null, null, 'closed');
-                        this.setStartDate(moment('02.01.2025', 'DD.MM.YYYY'));
-                        this.setEndDate(moment());
-                    } else {
-                        const formatted = `${start.format('DD.MM.YYYY')} - ${end.format('DD.MM.YYYY')}`;
-                        $('#dateRangePicker').val(formatted);
-                        $('#dateRangePicker').data('daterangepicker').element.addClass('active-range');
-                        currentFilterType = 'date_range';
-                        currentDateFrom = start.format("YYYY-MM-DD 00:00:00");
-                        currentDateTo = end.format("YYYY-MM-DD 23:59:59");
-                        loadActsTable(currentDateFrom, currentDateTo, null);
-                    }
-                }
+                        format: 'DD.MM.YYYY',
+                        separator: ' - ',
+                        applyLabel: 'Прийняти',
+                        cancelLabel: 'Відмінити',
+                        fromLabel: 'Від',
+                        toLabel: 'До',
+                        weekLabel: 'Тиж',
+                        daysOfWeek: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+                        monthNames: [
+                            'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+                            'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
+                        ],
+                        firstDay: 1
+                    },
+                    opens: 'center',
+                    alwaysShowCalendars: true,
+                    autoUpdateInput: false,
+                    startDate: moment().startOf('year'),
+                    endDate: moment(),
+                    ranges: {
+                        'Відкриті': [moment().startOf('year'), moment()],
+                        'Закриті': [moment('02.01.2025', 'DD.MM.YYYY'), moment()],
+                        'Від початку': [moment('03.01.2025', 'DD.MM.YYYY'), moment()],
+                        'Сьогодні': [moment(), moment()],
+                        'Останні 7 днів': [moment().subtract(6, 'days'), moment()],
+                        'Поточний місяць': [moment().startOf('month'), moment().endOf('month')],
+                        'Минулий місяць': [
+                            moment().subtract(1, 'month').startOf('month'),
+                            moment().subtract(1, 'month').endOf('month')
+                        ]
+                    },
+                    showCustomRangeLabel: false
+                },
+                function (start, end, label) {
+                    if (label === 'Відкриті') {
+                        $('#dateRangePicker').val('Відкриті');
+                        $('#dateRangePicker').data('daterangepicker').element.removeClass('active-range');
+                        currentFilterType = 'open';
+                        currentDateFrom = null;
+                        currentDateTo = null;
+                        loadActsTable(null, null, 'open');
+                        this.setStartDate(moment().startOf('year'));
+                        this.setEndDate(moment());
+                    } else if (label === 'Закриті') {
+                        $('#dateRangePicker').val('Закриті');
+                        $('#dateRangePicker').data('daterangepicker').element.removeClass('active-range');
+                        currentFilterType = 'closed';
+                        currentDateFrom = null;
+                        currentDateTo = null;
+                        loadActsTable(null, null, 'closed');
+                        this.setStartDate(moment('02.01.2025', 'DD.MM.YYYY'));
+                        this.setEndDate(moment());
+                    } else {
+                        const formatted = `${start.format('DD.MM.YYYY')} - ${end.format('DD.MM.YYYY')}`;
+                        $('#dateRangePicker').val(formatted);
+                        $('#dateRangePicker').data('daterangepicker').element.addClass('active-range');
+                        currentFilterType = 'date_range';
+                        currentDateFrom = start.format("YYYY-MM-DD 00:00:00");
+                        currentDateTo = end.format("YYYY-MM-DD 23:59:59");
+                        loadActsTable(currentDateFrom, currentDateTo, null);
+                    }
+                }
             );
 
             // Ініціалізуємо з "Відкриті" після входу
@@ -163,7 +163,7 @@
             window.searchHandler = searchHandler;
 
             // Ініціалізація системи (завантаження таблиці)
-            initializeActsSystem(); 
+            initializeActsSystem();
             updateMenuVisibility(true); // Показуємо меню після ініціалізації
         }
 
@@ -177,11 +177,11 @@
             // Приховуємо меню, поки не підтверджено доступ (забезпечено style="display: none;" у HTML)
             // Чекаємо, доки користувач увійде (автоматично або вручну)
             const accessLevel = await showLoginModalBeforeTable();
-            
+
             // Якщо доступ отримано
             if (accessLevel) {
                 // 1. Оновлюємо інтерфейс відповідно до доступу
-                await updateUIBasedOnAccess(accessLevel); 
+                await updateUIBasedOnAccess(accessLevel);
 
                 // 2. Ініціалізуємо систему (яка викличе initializeActsSystem та updateMenuVisibility(true))
                 initializeSystem();

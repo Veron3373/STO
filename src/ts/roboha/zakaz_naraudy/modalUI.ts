@@ -9,9 +9,31 @@ import {
 } from "./globalCache";
 import { setupAutocompleteForEditableCells } from "./inhi/kastomna_tabluca";
 import { userAccessLevel } from "../tablucya/users";
+import { supabase } from "../../vxid/supabaseClient";
 
-function parseNumber(text: string | null): number {
+// Тимчасова заглушка для showNotification
+function showNotification(message: string, type: string): void {
+  console.log(`[${type}] ${message}`);
+  // Розкоментуйте, коли модуль vspluvauhe_povidomlenna буде доступний
+  // import { showNotification } from "./vspluvauhe_povidomlenna";
+  // showNotification(message, type, 3000);
+}
+
+function parseNumber(text: string | null | undefined): number {
   return parseFloat(text?.replace(/\s/g, "") || "0") || 0;
+}
+
+async function getScladPrice(scladId: number): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("sclad")
+    .select("price")
+    .eq("sclad_id", scladId)
+    .single();
+  if (error || !data) {
+    console.error(`Помилка отримання ціни для sclad_id ${scladId}:`, error);
+    return null;
+  }
+  return parseFloat(data.price) || 0;
 }
 
 export function updateAllSlyusarSumsFromHistory(): void {
@@ -25,8 +47,7 @@ export function updateAllSlyusarSumsFromHistory(): void {
   for (const row of rows) {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
     const typeFromCell = nameCell?.getAttribute("data-type");
-    
-    // Тільки для робіт
+
     if (typeFromCell !== "works") continue;
 
     const workName = nameCell?.textContent?.trim();
@@ -44,7 +65,6 @@ export function updateAllSlyusarSumsFromHistory(): void {
 
     if (!history) continue;
 
-    // Шукаємо в історії цю роботу
     let foundZarplata: number | null = null;
 
     for (const dateKey in history) {
@@ -68,7 +88,6 @@ export function updateAllSlyusarSumsFromHistory(): void {
       if (foundZarplata !== null) break;
     }
 
-    // Якщо знайшли історичну Зарплату - записуємо її
     if (foundZarplata !== null) {
       slyusarSumCell.textContent = formatNumberWithSpaces(foundZarplata);
     }
@@ -100,15 +119,15 @@ export function createModal(): void {
 
 export function getSlyusarWorkPercent(slyusarName: string): number {
   if (!slyusarName) return 0;
-  
+
   const slyusar = globalCache.slyusars.find(
     s => s.Name?.toLowerCase() === slyusarName.toLowerCase()
   );
-  
+
   if (slyusar && typeof slyusar.ПроцентРоботи === 'number') {
     return slyusar.ПроцентРоботи;
   }
-  
+
   return 0;
 }
 
@@ -134,10 +153,10 @@ export function calculateRowSum(row: HTMLTableRowElement): void {
   const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
   const pibMagCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
   const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
-  
+
   if (nameCell && pibMagCell && slyusarSumCell) {
     const dataType = nameCell.getAttribute('data-type');
-    
+
     if (dataType === 'works') {
       const slyusarName = pibMagCell.textContent?.trim() || '';
       if (slyusarName) {
@@ -153,6 +172,105 @@ export function calculateRowSum(row: HTMLTableRowElement): void {
   }
 
   updateCalculatedSumsInFooter();
+}
+
+export async function saveActData(): Promise<void> {
+  const tableBody = document.querySelector<HTMLTableSectionElement>(
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
+  );
+  if (!tableBody || !globalCache.currentActId) return;
+
+  const rows = Array.from(tableBody.querySelectorAll<HTMLTableRowElement>("tr"));
+  let totalDetailsProfit = 0;
+  let totalWorksProfit = 0;
+  const details = [];
+  const works = [];
+
+  for (const row of rows) {
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+    const type = nameCell?.getAttribute("data-type");
+    const price = parseNumber(row.querySelector('[data-name="price"]')?.textContent);
+    const quantity = parseNumber(row.querySelector('[data-name="id_count"]')?.textContent);
+    const sum = price * quantity;
+    const slyusarSum = parseNumber(row.querySelector('[data-name="slyusar_sum"]')?.textContent);
+    const catalog = row.querySelector('[data-name="catalog"]')?.textContent?.trim() || "";
+    const shop = row.querySelector('[data-name="pib_magazin"]')?.textContent?.trim() || "";
+    const name = nameCell?.textContent?.trim() || "";
+
+    if (type === "details") {
+      const scladId = parseInt(row.querySelector('[data-name="catalog"]')?.getAttribute("data-sclad-id") || "0");
+      let profit = 0;
+      if (scladId) {
+        const scladPrice = await getScladPrice(scladId);
+        if (scladPrice !== null) {
+          const scladSum = scladPrice * quantity;
+          profit = sum - scladSum;
+          totalDetailsProfit += profit;
+        }
+      }
+
+      details.push({
+        sclad_id: scladId || null,
+        Сума: sum,
+        Ціна: price,
+        Деталь: name,
+        Каталог: catalog,
+        Магазин: shop,
+        Кількість: quantity,
+      });
+    } else if (type === "works") {
+      const profit = sum >= slyusarSum ? sum - slyusarSum : 0;
+      if (sum < slyusarSum) {
+        console.warn(`Від'ємний прибуток за роботу (${sum} - ${slyusarSum} = ${sum - slyusarSum}) для "${name}". Встановлено 0.`);
+        showNotification(`Попередження: Сума (${sum}) менша за зарплату (${slyusarSum}) для роботи "${name}". Прибуток встановлено в 0.`, "warning");
+      }
+      totalWorksProfit += profit;
+
+      works.push({
+        Сума: sum,
+        Ціна: price,
+        Робота: name,
+        Зарплата: slyusarSum,
+        Слюсар: shop,
+        Кількість: quantity,
+        Прибуток: profit,
+      });
+    }
+  }
+
+  const { data: actData, error: fetchError } = await supabase
+    .from("acts")
+    .select("data")
+    .eq("act_id", globalCache.currentActId)
+    .single();
+
+  if (fetchError || !actData) {
+    console.error(`Помилка отримання акта ${globalCache.currentActId}:`, fetchError);
+    showNotification("Помилка отримання акту", "error");
+    return;
+  }
+
+  let actJsonData = actData.data || {};
+  actJsonData["Деталі"] = details;
+  actJsonData["Роботи"] = works;
+  actJsonData["За деталі"] = details.reduce((sum, d) => sum + (d.Сума || 0), 0);
+  actJsonData["За роботу"] = works.reduce((sum, w) => sum + (w.Сума || 0), 0);
+  actJsonData["Прибуток за деталі"] = totalDetailsProfit;
+  actJsonData["Прибуток за роботу"] = totalWorksProfit;
+  actJsonData["Загальна сума"] = actJsonData["За деталі"] + actJsonData["За роботу"];
+
+  const { error: updateError } = await supabase
+    .from("acts")
+    .update({ data: actJsonData })
+    .eq("act_id", globalCache.currentActId);
+
+  if (updateError) {
+    console.error(`Помилка оновлення акта ${globalCache.currentActId}:`, updateError);
+    showNotification("Помилка збереження акту", "error");
+  } else {
+    showNotification("Акт успішно збережено", "success");
+    updateCalculatedSumsInFooter();
+  }
 }
 
 function createRowHtml(
@@ -245,6 +363,12 @@ export function generateTableHTML(
       <p><strong>За деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-sum">${formatNumberWithSpaces(
         0
       )}</span> грн</p>
+      <p><strong>Прибуток за деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-profit">${formatNumberWithSpaces(
+        0
+      )}</span> грн</p>
+      <p><strong>Прибуток за роботу:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-works-profit">${formatNumberWithSpaces(
+        0
+      )}</span> грн</p>
       <p><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
         0
       )}</span> грн</p>
@@ -260,7 +384,7 @@ export function generateTableHTML(
       <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
     </div>`;
 
-  return `
+  const tableHTML = `
     <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
       <table class="zakaz_narayd-items-table">
         <thead>
@@ -280,6 +404,17 @@ export function generateTableHTML(
       ${sumsFooter}
       ${buttons}
     </div>`;
+
+  setTimeout(() => {
+    const saveBtn = document.querySelector<HTMLButtonElement>("#save-act-data");
+    if (saveBtn) {
+      saveBtn.onclick = async () => {
+        await saveActData();
+      };
+    }
+  }, 0);
+
+  return tableHTML;
 }
 
 export function addNewRow(containerId: string): void {
@@ -309,18 +444,20 @@ export function updateCalculatedSumsInFooter(): void {
   );
   if (!tableBody) return;
 
-  const { totalWorksSum, totalDetailsSum } = Array.from(
+  const { totalWorksSum, totalDetailsSum, totalDetailsProfit, totalWorksProfit } = Array.from(
     tableBody.querySelectorAll("tr")
   ).reduce(
     (sums, row, index) => {
       const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
       const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
+      const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
       const iconCell = row.querySelector("td:first-child");
 
       if (!nameCell || !sumCell || !iconCell) return sums;
 
       const name = nameCell.textContent?.trim() || "";
       const sum = parseNumber(sumCell.textContent);
+      const slyusarSum = parseNumber(slyusarSumCell?.textContent);
       let type = nameCell.getAttribute("data-type");
 
       const works = new Set(globalCache.works);
@@ -335,14 +472,20 @@ export function updateCalculatedSumsInFooter(): void {
 
       if (type === "works") {
         sums.totalWorksSum += sum;
+        const workProfit = sum >= slyusarSum ? sum - slyusarSum : 0;
+        sums.totalWorksProfit += workProfit;
+        if (sum < slyusarSum) {
+          console.warn(`Від'ємний прибуток за роботу (${sum} - ${slyusarSum} = ${sum - slyusarSum}) для "${name}". Встановлено 0.`);
+        }
         iconCell.textContent = `🛠️ ${index + 1}`;
       } else {
         sums.totalDetailsSum += sum;
         iconCell.textContent = `⚙️ ${index + 1}`;
       }
+
       return sums;
     },
-    { totalWorksSum: 0, totalDetailsSum: 0 }
+    { totalWorksSum: 0, totalDetailsSum: 0, totalDetailsProfit: 0, totalWorksProfit: 0 }
   );
 
   const totalOverallSum = totalWorksSum + totalDetailsSum;
@@ -353,6 +496,8 @@ export function updateCalculatedSumsInFooter(): void {
   };
   set("total-works-sum", totalWorksSum);
   set("total-details-sum", totalDetailsSum);
+  set("total-details-profit", totalDetailsProfit);
+  set("total-works-profit", totalWorksProfit);
   set("total-overall-sum", totalOverallSum);
 }
 

@@ -86,7 +86,7 @@ function calculateTotalSum(): number {
 
 export function updateTotalSum(): void {
   const totalSumElement = byId("total-sum");
-  
+
   // Для співробітників показуємо спеціальний формат
   if (currentTab === "podlegle") {
     // Викликаємо функцію з pidlehli.ts яка розраховує та відображає три суми
@@ -95,7 +95,7 @@ export function updateTotalSum(): void {
     }
     return;
   }
-  
+
   // Для деталей по актам показуємо спеціальний формат
   if (currentTab === "details") {
     // Викликаємо функцію з poAktam.ts яка розраховує та відображає три суми
@@ -135,24 +135,24 @@ export function switchTab(e: Event, tabName: TabName) {
 
 function updateTableDisplay(): void {
   const tableTitle = byId<HTMLDivElement>("table-title");
-  const podlegleContainer = byId<HTMLDivElement>("podlegle-table-container");
   const magazineContainer = byId<HTMLDivElement>("magazine-table-container");
+  const podlegleContainer = byId<HTMLDivElement>("podlegle-table-container");
   const detailsContainer = byId<HTMLDivElement>("details-table-container");
 
   podlegleContainer.style.display = "none";
   magazineContainer.style.display = "none";
   detailsContainer.style.display = "none";
 
-  if (currentTab === "podlegle") {
-    tableTitle.innerHTML = "👥 Дані підлеглих";
-    podlegleContainer.style.display = "block";
-    updatepodlegleTable();
-  } else if (currentTab === "magazine") {
-    tableTitle.innerHTML = "🏪 Дані магазину";
+  if (currentTab === "magazine") {
+    tableTitle.innerHTML = "🏪 Дані по складу";
     magazineContainer.style.display = "block";
     updateMagazineTable();
+  } else if (currentTab === "podlegle") {
+    tableTitle.innerHTML = "👥 Дані по зарплаті";
+    podlegleContainer.style.display = "block";
+    updatepodlegleTable();
   } else if (currentTab === "details") {
-    tableTitle.innerHTML = "📊 По актам";
+    tableTitle.innerHTML = "📊 Деталі по актам";
     detailsContainer.style.display = "block";
     updateDetailsTable();
   }
@@ -375,18 +375,18 @@ function downloadMagazineToExcel(): void {
     totalText = totalText.replace(/\s+/g, "").trim();
 
     return {
-      "Розраховано": getTextContent(0),
-      "Прихід": getTextContent(1),
-      "Магазин": getTextContent(2),
-      "Рахунок": getTextContent(3),
+      Розраховано: getTextContent(0),
+      Прихід: getTextContent(1),
+      Магазин: getTextContent(2),
+      Рахунок: getTextContent(3),
       "Акт №": getTextContent(4),
-      "Найменування": getTextContent(5),
-      "Каталог": getTextContent(6),
-      "Кількість": getTextContent(7),
-      "Ціна": getTextContent(8),
-      "Сума": totalText,
-      "Залишок" : getTextContent(10),
-      "Повернення": getTextContent(11)
+      Найменування: getTextContent(5),
+      Каталог: getTextContent(6),
+      Кількість: getTextContent(7),
+      Ціна: getTextContent(8),
+      Сума: totalText,
+      Залишок: getTextContent(10),
+      Повернення: getTextContent(11),
     };
   });
 
@@ -438,23 +438,23 @@ function downloadDetailsToExcel(): void {
 
   const excelData = Array.from(rows).map((row) => {
     const cells = row.querySelectorAll("td");
-    
+
     const getTextContent = (index: number): string => {
       const cell = cells[index];
       if (!cell) return "";
-      
+
       if (cell.querySelector("button")) {
         const text = cell.textContent || "";
         return text.replace(/🗑️|📋/g, "").trim();
       }
-      
+
       return cell.textContent?.trim() || "";
     };
 
     const priceCell = cells[8];
     let salePrice = "-";
     let purchasePrice = "-";
-    
+
     if (priceCell) {
       const priceTexts = priceCell.textContent?.trim().split("\n") || [];
       if (priceTexts.length >= 2) {
@@ -469,14 +469,14 @@ function downloadDetailsToExcel(): void {
       "Дата відкриття": getTextContent(0),
       "Дата закриття": getTextContent(1),
       "Акт №": getTextContent(2),
-      "Автомобіль": getTextContent(3),
-      "Магазин": getTextContent(4),
-      "Найменування": getTextContent(5),
-      "Каталог": getTextContent(6),
-      "Кількість": getTextContent(7),
+      Автомобіль: getTextContent(3),
+      Магазин: getTextContent(4),
+      Найменування: getTextContent(5),
+      Каталог: getTextContent(6),
+      Кількість: getTextContent(7),
       "Закупівельна ціна": purchasePrice,
       "Продажна ціна": salePrice,
-      "Сума": getTextContent(9),
+      Сума: getTextContent(9),
     };
   });
 
@@ -534,13 +534,22 @@ export function downloadToExcel(): void {
 
 export async function runMassPaymentCalculation(): Promise<void> {
   // Визначаємо активну вкладку по видимості контейнерів таблиць
-  const podlegleTable = document.getElementById("podlegle-table-container") as HTMLElement | null;
-  const magazineTable = document.getElementById("magazine-table-container") as HTMLElement | null;
-  const detailsTable = document.getElementById("details-table-container") as HTMLElement | null;
+  const podlegleTable = document.getElementById(
+    "podlegle-table-container"
+  ) as HTMLElement | null;
+  const magazineTable = document.getElementById(
+    "magazine-table-container"
+  ) as HTMLElement | null;
+  const detailsTable = document.getElementById(
+    "details-table-container"
+  ) as HTMLElement | null;
 
-  const isPodlegleVisible = podlegleTable && podlegleTable.style.display !== "none";
-  const isMagazineVisible = magazineTable && magazineTable.style.display !== "none";
-  const isDetailsVisible = detailsTable && detailsTable.style.display !== "none";
+  const isPodlegleVisible =
+    podlegleTable && podlegleTable.style.display !== "none";
+  const isMagazineVisible =
+    magazineTable && magazineTable.style.display !== "none";
+  const isDetailsVisible =
+    detailsTable && detailsTable.style.display !== "none";
 
   try {
     if (isPodlegleVisible) {

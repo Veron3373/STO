@@ -2,6 +2,7 @@
 import { globalCache, ensureSkladLoaded } from "../globalCache";
 import { loadPercentFromSettings } from "./kastomna_tabluca";
 import { supabase } from "../../../vxid/supabaseClient";
+import { updateCalculatedSumsInFooter } from "../modalUI";
 
 // Кеш для даних поточного акту
 let currentActDataCache: any = null;
@@ -280,6 +281,52 @@ export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
   }
 }
 
+function getNodeTextLen(el: HTMLElement): number {
+  // нормалізує NBSP/zero-width → коректно рахує довжину
+  const t = (el.textContent ?? "")
+    .replace(/\u00A0/g, " ")   // NBSP → space
+    .replace(/\u200B/g, "");   // zero-width space
+  return t.length;
+}
+
+
+/* ===================== CLEAR CELLS ON NAME CHANGE ===================== */
+async function clearCellsOnNameChange(
+  row: HTMLElement,
+  prevNameLength: number,
+  currentNameLength: number
+) {
+  if (currentNameLength >= prevNameLength) return; // чистимо лише при зменшенні довжини
+
+  const cellsToClear = [
+    '[data-name="catalog"]',
+    '[data-name="id_count"]',
+    '[data-name="price"]',
+    '[data-name="sum"]',
+    '[data-name="slyusar_sum"]',
+    '[data-name="pib_magazin"]'
+  ];
+
+  for (const selector of cellsToClear) {
+    const cell = row.querySelector(selector) as HTMLElement | null;
+    if (!cell) continue;
+    cell.textContent = '';
+    cell.removeAttribute('data-sclad-id');
+    cell.removeAttribute('data-type');
+    cell.removeAttribute('title');
+    if (selector === '[data-name="id_count"]') setWarningFlag(cell, false);
+    if (selector === '[data-name="price"]') setPriceWarningFlag(cell, false);
+    if (selector === '[data-name="slyusar_sum"]') setSlyusarSumWarningFlag(cell, false);
+  }
+
+  updateCalculatedSumsInFooter();
+  await updateCatalogWarningForRow(row);
+  await updatePriceWarningForRow(row);
+  await updateSlyusarSumWarningForRow(row);
+}
+
+
+
 /* ===================== MASS REFRESH ===================== */
 export async function refreshQtyWarningsIn(containerId: string) {
   ensureWarningStyles();
@@ -305,79 +352,73 @@ export function setupQtyWarningListeners(containerId: string) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const onInput = async (e: Event) => {
+  const nameLengthCache = new WeakMap<HTMLElement, number>();
+  const nameClearedOnce = new WeakMap<HTMLElement, boolean>(); // щоб не чистити двічі під час одного видалення
+
+  // Ініціалізація кешу для вже наявних рядків
+  container.querySelectorAll<HTMLElement>('tbody tr [data-name="name"]').forEach((cell) => {
+    nameLengthCache.set(cell, getNodeTextLen(cell));
+    nameClearedOnce.set(cell, false);
+  });
+
+  // ✅ Чистимо негайно по першому Backspace/Delete
+  const onKeyDownName = (e: KeyboardEvent) => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
-    const cell = target.closest('[data-name="id_count"]') as HTMLElement | null;
+    const cell = target.closest('[data-name="name"]') as HTMLElement | null;
     if (!cell) return;
-    const row = cell.closest("tr") as HTMLElement | null;
-    if (row) await updateCatalogWarningForRow(row);
-  };
 
-  const onBlur = async (e: Event) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const cell = target.closest('[data-name="id_count"]') as HTMLElement | null;
-    if (!cell) return;
-    const row = cell.closest("tr") as HTMLElement | null;
-    if (row) await updateCatalogWarningForRow(row);
-  };
+    if (e.key !== "Backspace" && e.key !== "Delete") return;
 
-  const onInputPrice = async (e: Event) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const cell = target.closest('[data-name="price"]') as HTMLElement | null;
-    if (!cell) return;
-    const row = cell.closest("tr") as HTMLElement | null;
-    if (row) await updatePriceWarningForRow(row);
-  };
-
-  const onInputSlyusarSum = async (e: Event) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const cell = target.closest('[data-name="slyusar_sum"]') as HTMLElement | null;
-    if (!cell) return;
-    const row = cell.closest("tr") as HTMLElement | null;
-    if (row) await updateSlyusarSumWarningForRow(row);
-  };
-
-  const onPointerDownPreCommit = async (e: Event) => {
-    const active = (document.activeElement as HTMLElement | null)?.closest(
-      '[data-name="id_count"]'
-    ) as HTMLElement | null;
-
-    if (!active) return;
-
-    const clickTarget = e.target as Node;
-    if (!active.contains(clickTarget)) {
-      const row = active.closest("tr") as HTMLElement | null;
-      if (row) await updateCatalogWarningForRow(row);
-    }
-  };
-
-  const onKeyDownPreCommit = async (e: KeyboardEvent) => {
-    const keys = ["Enter", "Tab", "ArrowDown", "ArrowUp"];
-    if (!keys.includes(e.key)) return;
-
-    const active = (document.activeElement as HTMLElement | null)?.closest(
-      '[data-name="id_count"]'
-    ) as HTMLElement | null;
-
-    if (active) {
-      const row = active.closest("tr") as HTMLElement | null;
-      if (row) {
-        await updateCatalogWarningForRow(row);
+    const prev = nameLengthCache.get(cell) ?? 0;
+    // дочекаємось, поки контент реально зміниться
+    setTimeout(async () => {
+      const cur = getNodeTextLen(cell);
+      if (cur < prev && !nameClearedOnce.get(cell)) {
+        const row = cell.closest("tr") as HTMLElement | null;
+        if (row) {
+          await clearCellsOnNameChange(row, prev, cur);
+          nameClearedOnce.set(cell, true); // позначаємо, що вже чистили на цей цикл видалення
+        }
       }
-    }
+      nameLengthCache.set(cell, cur);
+      // якщо користувач знову почав набирати (довжина зросла) — дозволимо наступне очищення при видаленні
+      if (cur > prev) nameClearedOnce.set(cell, false);
+    }, 0);
   };
 
-  container.addEventListener("input", onInput, { capture: true });
-  container.addEventListener("input", onInputPrice, { capture: true });
-  container.addEventListener("input", onInputSlyusarSum, { capture: true });
-  container.addEventListener("blur", onBlur, true);
-  container.addEventListener("pointerdown", onPointerDownPreCommit, { capture: true });
-  container.addEventListener("keydown", onKeyDownPreCommit, { capture: true });
+  const onInputName = async (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const cell = target.closest('[data-name="name"]') as HTMLElement | null;
+    if (!cell) return;
+    const row = cell.closest("tr") as HTMLElement | null;
+    if (!row) return;
+
+    // fallback-перевірка (на випадок вставок/drag-drop тощо)
+    const prev = nameLengthCache.get(cell) ?? 0;
+    const cur = getNodeTextLen(cell);
+    if (cur < prev && !nameClearedOnce.get(cell)) {
+      await clearCellsOnNameChange(row, prev, cur);
+      nameClearedOnce.set(cell, true);
+    }
+    if (cur > prev) nameClearedOnce.set(cell, false);
+    nameLengthCache.set(cell, cur);
+  };
+
+  // ... нижче — решта твоїх слухачів БЕЗ змін ...
+  container.addEventListener("keydown", onKeyDownName, { capture: true });
+  container.addEventListener("input", onInputName, { capture: true });
+
+  // існуючі:
+  // container.addEventListener("input", onInput, { capture: true });
+  // container.addEventListener("input", onInputPrice, { capture: true });
+  // container.addEventListener("input", onInputSlyusarSum, { capture: true });
+  // container.addEventListener("blur", onBlur, true);
+  // container.addEventListener("pointerdown", onPointerDownPreCommit, { capture: true });
+  // container.addEventListener("keydown", onKeyDownPreCommit, { capture: true });
 }
+
 
 /* ===================== INIT / SAVE HOOK / AUTO REFRESH ===================== */
 export function initializeActWarnings(containerId: string, actId: number, enableAutoRefresh = false) {

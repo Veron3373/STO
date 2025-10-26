@@ -192,7 +192,7 @@
           </thead>
           <tbody id="magazine-tbody">
             <tr>
-              <td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td>
+              <td colspan="13" class="Bukhhalter-no-data">Немає даних для відображення</td>
             </tr>
           </tbody>
         </table>
@@ -201,84 +201,148 @@
       <!-- Таблиця деталей по актам -->
       <div id="details-table-container" style="display: none;">
         <table class="Bukhhalter-data-table" id="details-table">
-          <tr>
-            <th>
-              <div class="table-header-cell">
-                <span class="table-header-emoji">💰</span>
-                <span class="table-header-text">Розраховано</span>
-              </div>
-            </th>
-            <th class="poAktam-dataOn">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">📅</span>
-                <span class="table-header-text">Відкриття</span>
-              </div>
-            </th>
-            <th class="poAktam-dataOff">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">📅</span>
-                <span class="table-header-text">Закриття</span>
-              </div>
-            </th>
-            <th class="poAktam-akt">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">📋</span>
-                <span class="table-header-text">Акт_№</span>
-              </div>
-            </th>
-            <th>
-              <div class="table-header-cell">
-                <span class="table-header-emoji">🚗</span>
-                <span class="table-header-text">Автомобіль</span>
-              </div>
-            </th>
-            <th>
-              <div class="table-header-cell">
-                <span class="table-header-emoji">🏪</span>
-                <span class="table-header-text">Магазин</span>
-              </div>
-            </th>
-            <th class="poAktam-enuvannya">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">📦</span>
-                <span class="table-header-text">Найменування</span>
-              </div>
-            </th>
-            <th class="poAktam-katalog">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">📚</span>
-                <span class="table-header-text">Каталог</span>
-              </div>
-            </th>
-            <th class="poAktam-kilkist">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">🔢</span>
-                <span class="table-header-text">Кількість</span>
-              </div>
-            </th>
-            <th class="poAktam-money">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">💶</span>
-                <span class="table-header-text">Ціна</span>
-              </div>
-            </th>
-            <th class="poAktam-money">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">💵</span>
-                <span class="table-header-text">Сума</span>
-              </div>
-            </th>
-            <th class="poAktam-diya">
-              <div class="table-header-cell">
-                <span class="table-header-emoji">⚡</span>
-                <span class="table-header-text">Дії</span>
-              </div>
-            </th>
-          </tr>
+          <thead>
+            <tr>
+              <th>
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">💰</span>
+                  <span class="table-header-text">Розраховано</span>
+                </div>
+              </th>
+              <th class="poAktam-dataOn">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📅</span>
+                  <span class="table-header-text">Відкриття</span>
+                </div>
+              </th>
+              <th class="poAktam-dataOff">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📅</span>
+                  <span class="table-header-text">Закриття</span>
+                </div>
+              </th>
+              <th class="poAktam-akt">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📋</span>
+                  <span class="table-header-text">Акт_№</span>
+                </div>
+              </th>
+              <th>
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">🚗</span>
+                  <span class="table-header-text">Автомобіль</span>
+                </div>
+              </th>
+              <th>
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">🏪</span>
+                  <span class="table-header-text">Магазин</span>
+                </div>
+              </th>
+              <th class="poAktam-enuvannya">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📦</span>
+                  <span class="table-header-text">Найменування</span>
+                </div>
+              </th>
+              <th class="poAktam-katalog">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📚</span>
+                  <span class="table-header-text">Каталог</span>
+                </div>
+              </th>
+              <th class="poAktam-kilkist">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">🔢</span>
+                  <span class="table-header-text">Кількість</span>
+                </div>
+              </th>
+              <th class="poAktam-money">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">💶</span>
+                  <span class="table-header-text">Ціна</span>
+                </div>
+              </th>
+              <th class="poAktam-money">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">💵</span>
+                  <span class="table-header-text">Сума</span>
+                </div>
+              </th>
+              <th class="poAktam-diya">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">⚡</span>
+                  <span class="table-header-text">Дії</span>
+                </div>
+              </th>
+            </tr>
           </thead>
           <tbody id="details-tbody">
             <tr>
-              <td colspan="11" class="Bukhhalter-no-data">Немає даних для відображення</td>
+              <td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Таблиця витрат -->
+      <div id="expenses-table-container" style="display: none;">
+        <table class="Bukhhalter-data-table" id="expenses-table">
+          <thead>
+            <tr>
+              <th>
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">💰</span>
+                  <span class="table-header-text">Розраховано</span>
+                </div>
+              </th>
+              <th class="expenses-data">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📅</span>
+                  <span class="table-header-text">Дата</span>
+                </div>
+              </th>
+              <th>
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📂</span>
+                  <span class="table-header-text">Категорія</span>
+                </div>
+              </th>
+              <th class="expenses-opis">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📝</span>
+                  <span class="table-header-text">Опис</span>
+                </div>
+              </th>
+              <th class="expenses-money">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">💵</span>
+                  <span class="table-header-text">Сума</span>
+                </div>
+              </th>
+              <th>
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">💳</span>
+                  <span class="table-header-text">Спосіб оплати</span>
+                </div>
+              </th>
+              <th class="expenses-prumitku">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📋</span>
+                  <span class="table-header-text">Примітки</span>
+                </div>
+              </th>
+              <th class="expenses-diya">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">⚡</span>
+                  <span class="table-header-text">Дії</span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="expenses-tbody">
+            <tr>
+              <td colspan="8" class="Bukhhalter-no-data">Немає витрат для відображення</td>
             </tr>
           </tbody>
         </table>
@@ -288,9 +352,9 @@
     <div class="Bukhhalter-control-section">
       <div class="Bukhhalter-tab-container">
         <button class="Bukhhalter-tab-button" onclick="switchTab(event, 'magazine')">🏪 Склад</button>
-        <button class="Bukhhalter-tab-button Bukhhalter-active" onclick="switchTab(event, 'podlegle')">👥
-          Зарплата</button>
+        <button class="Bukhhalter-tab-button Bukhhalter-active" onclick="switchTab(event, 'podlegle')">👥 Зарплата</button>
         <button class="Bukhhalter-tab-button" onclick="switchTab(event, 'details')">⚙️ Деталі</button>
+        <button class="Bukhhalter-tab-button" onclick="switchTab(event, 'expenses')">💰 Витрати</button>
       </div>
 
       <div class="Bukhhalter-form-container">
@@ -335,8 +399,7 @@
             <div class="Bukhhalter-toggle-wrapper">
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
                 id="payment-filter-toggle">
-              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не рохраховано</span><span>Всі</span>
-              </div>
+              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не розраховано</span><span>Всі</span></div>
             </div>
           </div>
         </div>
@@ -354,8 +417,6 @@
               <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-magazine-date-close">
             </div>
           </div>
-
-          <!-- ПРАВИЛЬНИЙ РЯД: Магазин + Рахунок -->
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">🏪 Магазин</label>
@@ -368,8 +429,6 @@
                 placeholder="Номер рахунку">
             </div>
           </div>
-
-          <!-- Другий ряд: Найменування + Каталог -->
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📦 Найменування</label>
@@ -382,8 +441,6 @@
                 placeholder="Номер каталогу">
             </div>
           </div>
-
-          <!-- ПЕРЕМИКАЧ РОЗРАХУНКУ (3 позиції) -->
           <div class="Bukhhalter-toggle-container">
             <label class="Bukhhalter-field-label">💰 Розрахунок</label>
             <div class="Bukhhalter-toggle-wrapper">
@@ -396,8 +453,6 @@
               </div>
             </div>
           </div>
-
-          <!-- ПЕРЕМИКАЧ НАЯВНОСТІ (5 позицій) -->
           <div class="Bukhhalter-toggle-container">
             <label class="Bukhhalter-field-label">📦 Статус наявності на складі</label>
             <div class="Bukhhalter-toggle-wrapper">
@@ -456,23 +511,68 @@
             <div class="Bukhhalter-toggle-wrapper">
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
                 id="poAktam-payment-filter-toggle">
-              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не рохраховано</span><span>Всі</span>
-              </div>
+              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не розраховано</span><span>Всі</span></div>
             </div>
           </div>
         </div>
 
-        <!--         Кнопки -->
+        <!-- Форма витрат -->
+        <div id="Bukhhalter-expenses-section" class="Bukhhalter-form-section">
+          <h2 class="Bukhhalter-section-title">💰 Облік витрат</h2>
+          <div class="Bukhhalter-form-row">
+            <div class="Bukhhalter-field-group">
+              <label class="Bukhhalter-field-label">📅 Дата від</label>
+              <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-expenses-date-from">
+            </div>
+            <div class="Bukhhalter-field-group">
+              <label class="Bukhhalter-field-label">📅 Дата до</label>
+              <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-expenses-date-to">
+            </div>
+          </div>
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">📂 Категорія</label>
+            <select class="Bukhhalter-field-input" id="Bukhhalter-expenses-category">
+              <option value="">Оберіть категорію</option>
+            </select>
+          </div>
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">📝 Опис витрати</label>
+            <input type="text" class="Bukhhalter-field-input" id="Bukhhalter-expenses-description"
+              placeholder="Введіть опис витрати">
+          </div>
+          <div class="Bukhhalter-form-row">
+            <div class="Bukhhalter-field-group">
+              <label class="Bukhhalter-field-label">💵 Сума</label>
+              <input type="number" class="Bukhhalter-field-input" id="Bukhhalter-expenses-amount"
+                placeholder="0" min="0" step="0.01">
+            </div>
+            <div class="Bukhhalter-field-group">
+              <label class="Bukhhalter-field-label">💳 Спосіб оплати</label>
+              <select class="Bukhhalter-field-input" id="Bukhhalter-expenses-payment-method">
+                <option value="">Оберіть спосіб оплати</option>
+              </select>
+            </div>
+          </div>
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">📋 Примітки</label>
+            <input type="text" class="Bukhhalter-field-input" id="Bukhhalter-expenses-notes"
+              placeholder="Додаткова інформація (необов'язково)">
+          </div>
+          <div class="Bukhhalter-toggle-container">
+            <label class="Bukhhalter-field-label">💰 Розрахунок</label>
+            <div class="Bukhhalter-toggle-wrapper">
+              <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
+                id="expenses-payment-filter-toggle">
+              <div class="Bukhhalter-toggle-labels"><span>Оплачено</span><span>Не оплачено</span><span>Всі</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Кнопки -->
         <div class="Bukhhalter-button-container">
           <div class="Bukhhalter-button-row">
-            <button class="Bukhhalter-action-button Bukhhalter-add-button" onclick="addRecord()">🔍 Пошук</button>
-            <button class="Bukhhalter-action-button Bukhhalter-clear-button" onclick="clearForm()">🗑️ Очистити</button>
-          </div>
-          <div class="Bukhhalter-button-row">
-            <button class="Bukhhalter-action-button Bukhhalter-excel-button" onclick="downloadToExcel()">📥
-              Excel</button>
-            <button class="Bukhhalter-action-button Bukhhalter-save-btn" onclick="runMassPaymentCalculation()">💰
-              Розрахунок</button>
+            <button class="Bukhhalter-action-button Bukhhalter-excel-button" onclick="downloadToExcel()">📥 Excel</button>
+            <button class="Bukhhalter-action-button Bukhhalter-save-btn" onclick="runMassPaymentCalculation()">💰 Розрахунок</button>
           </div>
         </div>
       </div>
@@ -483,4 +583,3 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 
-</html>

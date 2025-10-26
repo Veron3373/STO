@@ -3,6 +3,17 @@
 import { runMassPaymentCalculation as runMassPaymentCalculationForPodlegle } from "./pidlehli";
 import { runMassPaymentCalculationForMagazine } from "./shopsBuxha";
 import { runMassPaymentCalculationForDetails } from "./poAktam";
+import {
+  initializeExpensesData,
+  updateExpensesTable,
+  addExpenseRecord,
+  deleteExpenseRecord,
+  toggleExpensePayment,
+  clearExpensesForm,
+  calculateExpensesTotalSum,
+  runMassPaymentCalculationForExpenses,
+  getFilteredExpensesData,
+} from "./vutratu";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 import { showModal } from "../zakaz_naraudy/modalMain";
@@ -40,7 +51,7 @@ import {
   clearDetailsForm,
 } from "./poAktam";
 
-type TabName = "podlegle" | "magazine" | "details";
+type TabName = "podlegle" | "magazine" | "details" | "expenses";
 
 let currentTab: TabName = "podlegle";
 let selectedRowIndex: number | null = null;
@@ -79,6 +90,9 @@ function calculateTotalSum(): number {
     case "details":
       total = calculateDetailsTotalSum();
       break;
+    case "expenses":
+      total = calculateExpensesTotalSum();
+      break;
   }
 
   return total;
@@ -101,6 +115,15 @@ export function updateTotalSum(): void {
     // Викликаємо функцію з poAktam.ts яка розраховує та відображає три суми
     if (typeof (window as any).updateDetailsDisplayedSums === "function") {
       (window as any).updateDetailsDisplayedSums();
+    }
+    return;
+  }
+
+  // Для витрат показуємо спеціальний формат
+  if (currentTab === "expenses") {
+    // Викликаємо функцію з vutratu.ts яка розраховує та відображає три суми
+    if (typeof (window as any).updateExpensesDisplayedSums === "function") {
+      (window as any).updateExpensesDisplayedSums();
     }
     return;
   }
@@ -138,10 +161,12 @@ function updateTableDisplay(): void {
   const magazineContainer = byId<HTMLDivElement>("magazine-table-container");
   const podlegleContainer = byId<HTMLDivElement>("podlegle-table-container");
   const detailsContainer = byId<HTMLDivElement>("details-table-container");
+  const expensesContainer = byId<HTMLDivElement>("expenses-table-container");
 
   podlegleContainer.style.display = "none";
   magazineContainer.style.display = "none";
   detailsContainer.style.display = "none";
+  expensesContainer.style.display = "none";
 
   if (currentTab === "magazine") {
     tableTitle.innerHTML = "🏪 Дані по складу";
@@ -155,6 +180,10 @@ function updateTableDisplay(): void {
     tableTitle.innerHTML = "📊 Деталі по актам";
     detailsContainer.style.display = "block";
     updateDetailsTable();
+  } else if (currentTab === "expenses") {
+    tableTitle.innerHTML = "💰 Дані по витратам";
+    expensesContainer.style.display = "block";
+    updateExpensesTable();
   }
 
   updateTotalSum();
@@ -186,6 +215,8 @@ function togglePayment(index: number, type: TabName): void {
     toggleMagazinePayment(index);
   } else if (type === "details") {
     toggleDetailsPayment(index);
+  } else if (type === "expenses") {
+    toggleExpensePayment(index);
   }
   updateTotalSum();
 }
@@ -206,6 +237,11 @@ export async function addRecord(): Promise<void> {
     await addDetailsRecord();
     return;
   }
+
+  if (currentTab === "expenses") {
+    await addExpenseRecord();
+    return;
+  }
 }
 
 export function deleteRecord(type: TabName, index: number): void {
@@ -215,6 +251,8 @@ export function deleteRecord(type: TabName, index: number): void {
     deleteMagazineRecord(index);
   } else if (type === "details") {
     deleteDetailsRecord(index);
+  } else if (type === "expenses") {
+    deleteExpenseRecord(index);
   }
   updateTotalSum();
 }
@@ -232,6 +270,11 @@ export function clearForm(): void {
 
   if (currentTab === "details") {
     clearDetailsForm();
+    return;
+  }
+
+  if (currentTab === "expenses") {
+    clearExpensesForm();
     return;
   }
 
@@ -506,6 +549,56 @@ function downloadDetailsToExcel(): void {
   );
 }
 
+function downloadExpensesToExcel(): void {
+  if (typeof (window as any).XLSX === "undefined") {
+    showNotification(
+      "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+      "error",
+      5000
+    );
+    return;
+  }
+
+  const XLSX = (window as any).XLSX;
+  const filteredData = getFilteredExpensesData();
+
+  if (filteredData.length === 0) {
+    showNotification("Немає витрат для експорту", "warning");
+    return;
+  }
+
+  const excelData = filteredData.map((item) => ({
+    Розраховано: item.isPaid ? item.paymentDate || "Так" : "Ні",
+    Дата: formatDate(item.date),
+    Категорія: item.category,
+    Опис: item.description,
+    Сума: item.amount,
+    "Спосіб оплати": item.paymentMethod,
+    Примітки: item.notes || "",
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Витрати");
+
+  worksheet["!cols"] = [
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 30 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 30 },
+  ];
+
+  const fileName = `Витрати_${getCurrentDateForFileName()}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+  showNotification(
+    `Експортовано ${excelData.length} записів витрат`,
+    "success"
+  );
+}
+
 export function downloadToExcel(): void {
   try {
     const activeTab = document.querySelector(
@@ -517,12 +610,14 @@ export function downloadToExcel(): void {
     }
 
     const tabText = activeTab.textContent?.trim() || "";
-    if (tabText.includes("Співробітники")) {
+    if (tabText.includes("Співробітники") || tabText.includes("Зарплата")) {
       downloadpodlegleToExcel();
-    } else if (tabText.includes("Магазин")) {
+    } else if (tabText.includes("Магазин") || tabText.includes("Склад")) {
       downloadMagazineToExcel();
-    } else if (tabText.includes("По Актам")) {
+    } else if (tabText.includes("По Актам") || tabText.includes("Деталі")) {
       downloadDetailsToExcel();
+    } else if (tabText.includes("Витрати")) {
+      downloadExpensesToExcel();
     } else {
       showNotification("Невідома вкладка для експорту", "warning");
     }
@@ -543,6 +638,9 @@ export async function runMassPaymentCalculation(): Promise<void> {
   const detailsTable = document.getElementById(
     "details-table-container"
   ) as HTMLElement | null;
+  const expensesTable = document.getElementById(
+    "expenses-table-container"
+  ) as HTMLElement | null;
 
   const isPodlegleVisible =
     podlegleTable && podlegleTable.style.display !== "none";
@@ -550,6 +648,8 @@ export async function runMassPaymentCalculation(): Promise<void> {
     magazineTable && magazineTable.style.display !== "none";
   const isDetailsVisible =
     detailsTable && detailsTable.style.display !== "none";
+  const isExpensesVisible =
+    expensesTable && expensesTable.style.display !== "none";
 
   try {
     if (isPodlegleVisible) {
@@ -564,9 +664,13 @@ export async function runMassPaymentCalculation(): Promise<void> {
       // Викликаємо масовий розрахунок для деталей по актам
       console.log("🔄 Викликаємо масовий розрахунок для деталей");
       await runMassPaymentCalculationForDetails();
+    } else if (isExpensesVisible) {
+      // Викликаємо масовий розрахунок для витрат
+      console.log("🔄 Викликаємо масовий розрахунок для витрат");
+      await runMassPaymentCalculationForExpenses();
     } else {
       showNotification(
-        "Спочатку оберіть вкладку 👥 Співробітники, 🏪 Магазин або 📊 По Актам",
+        "Спочатку оберіть вкладку 👥 Співробітники, 🏪 Магазин, 📊 По Актам або 💰 Витрати",
         "info"
       );
     }
@@ -601,6 +705,7 @@ window.addEventListener("load", async function () {
   try {
     await loadSlyusarsData();
     initializeDetailsData();
+    initializeExpensesData();
 
     createStatusToggle();
     createPaymentToggle();

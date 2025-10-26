@@ -194,11 +194,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
-  font-size: clamp(
-    10px,
-    1.6vw,
-    14px
-  ); /* плавна адаптація, але не більше 14px */
+  font-size: clamp(10px, 1.6vw, 14px);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 
@@ -216,7 +212,6 @@ body {
     white-space: nowrap;
   }
 
-  /* № — не переносити, діапазон ширини */
   th:first-child,
   td:first-child {
     white-space: nowrap;
@@ -225,7 +220,6 @@ body {
     text-align: center;
   }
 
-  /* К-ть / Ціна / Сума — праворуч, фіксований мін/макс */
   .text-right {
     text-align: right;
     white-space: nowrap;
@@ -233,7 +227,6 @@ body {
     max-width: 150px;
   }
 
-  /* ПІБ _ Магазин */
   th[data-name="pib_magazin"],
   td[data-name="pib_magazin"] {
     white-space: nowrap;
@@ -241,14 +234,12 @@ body {
     text-align: left;
   }
 
-  /* Каталог */
   th[data-name="catalog"],
   td[data-name="catalog"] {
     text-align: center;
     white-space: nowrap;
   }
 
-  /* Найменування */
   th[data-name="name"],
   td[data-name="name"] {
     text-align: left;
@@ -472,9 +463,6 @@ body {
 .editable-autocomplete {
   transition: box-shadow 120ms ease;
 }
-/* .editable-autocomplete:hover:not(.ac-open) {
-  box-shadow: 0 0 0 3px rgba(26, 7, 241, 0.25), 0 0 12px rgba(26, 7, 241, 0.25);
-} */
 
 /* ===== Закритий акт (дрібний текст) ===== */
 .closed-act-info {
@@ -544,16 +532,28 @@ h1 {
   gap: 10px;
 }
 
+/* ===== Стилі для кнопки видалення в стовпці "Найменування" ===== */
+.delete-row-btn {
+  visibility: hidden;
+  opacity: 0.6;
+  transition: opacity 0.2s, background-color 0.2s, visibility 0.2s;
+}
 
 .delete-row-btn:hover {
   opacity: 1 !important;
   transform: translateY(-50%) scale(1.1);
+  background-color: rgba(255, 0, 0, 0.15) !important;
+  border-radius: 4px;
+  padding: 2px 4px !important;
 }
 
-td[style*="position: relative"] .delete-row-btn {
-  visibility: hidden;
-}
-
-tr:hover td[style*="position: relative"] .delete-row-btn {
+/* Показуємо кнопку видалення при ховері на рядок */
+tr:hover .delete-row-btn {
   visibility: visible;
+}
+
+/* Підсвічування ПІБ при фокусі (додається через JS) */
+[data-name="pib_magazin"]:focus {
+  outline: 2px solid #000 !important;
+  outline-offset: -2px;
 }

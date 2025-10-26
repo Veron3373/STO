@@ -296,20 +296,20 @@ function createRowHtml(
     : "";
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td style="position: relative; padding-right: 30px;">
-        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="pib_magazin" data-type="${
+    ? `<td contenteditable="${isEditable}" class="editable-autocomplete" data-name="pib_magazin" data-type="${
         item ? pibMagazinType : ""
-      }" style="display: inline-block; width: 100%; outline: none;">${item?.person_or_store || ""}</div>
-        ${!isActClosed ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>` : ''}
-      </td>`
+      }" style="display: inline-block; width: 100%; outline: none;">${item?.person_or_store || ""}</td>`
     : "";
 
   return `
     <tr>
       <td class="row-index">${index + 1}</td>
-      <td contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}">${
+      <td style="position: relative; padding-right: 30px;">
+        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none;">${
     item?.name || ""
-  }</td>
+  }</div>
+        ${!isActClosed ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s, background-color 0.2s;" title="Видалити рядок">🗑️</button>` : ''}
+      </td>
       ${catalogCellHTML}
       <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
     item ? formatNumberWithSpaces(item.quantity) : ""
@@ -345,7 +345,7 @@ export function generateTableHTML(
   const isRestricted = userAccessLevel === "Слюсар";
 
   const catalogColumnHeader = showCatalog ? "<th>Каталог</th>" : "";
-  const pibMagazinColumnHeader = showPibMagazin ? "<th>Найменування</th>" : "";
+  const pibMagazinColumnHeader = showPibMagazin ? "<th>ПІБ _ Магазин</th>" : "";
 
   const actItemsHtml =
     allItems.length > 0
@@ -513,3 +513,28 @@ export function createTableRow(
     className ? ` class="${className}"` : ""
   }>${value}</td></tr>`;
 }
+
+// Додаємо глобальний обробник для підсвічування при кліку на ПІБ
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const pibCell = target.closest('[data-name="pib_magazin"]');
+    
+    if (pibCell && pibCell.hasAttribute('contenteditable')) {
+      // Видаляємо попереднє виділення
+      document.querySelectorAll('[data-name="pib_magazin"]').forEach(cell => {
+        (cell as HTMLElement).style.outline = '';
+      });
+      
+      // Додаємо чорне виділення
+      (pibCell as HTMLElement).style.outline = '2px solid #000';
+      
+      // Видаляємо виділення при втраті фокусу
+      const removeFocus = () => {
+        (pibCell as HTMLElement).style.outline = '';
+        pibCell.removeEventListener('blur', removeFocus);
+      };
+      pibCell.addEventListener('blur', removeFocus);
+    }
+  });
+});

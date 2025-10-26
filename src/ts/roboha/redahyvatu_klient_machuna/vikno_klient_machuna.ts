@@ -3,7 +3,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import "../../../scss/main.scss";
 import { loadActsTable } from "../tablucya/tablucya";
 import { saveClientAndCarToDatabase } from "./pidtverdutu_sberihannya_PIB_avto";
-import autoData from "../zakaz_naraudy/auto.json";
+import autoData from "./auto.json";
 
 import {
   createSavePromptModal,
@@ -256,7 +256,8 @@ function setupAutocomplete(
   onSelect: (i: any) => void,
   showOnFocus: boolean = false,
   key?: string,
-  minLength: number = 0
+  minLength: number = 0,
+  customFilter?: (item: any, searchValue: string) => boolean // Новий параметр
 ) {
   if (key && currentAutocompletes[key]) {
     const oldData = currentAutocompletes[key];
@@ -287,9 +288,12 @@ function setupAutocomplete(
     list.innerHTML = "";
     const val = input.value.toLowerCase();
     if (val.length < minLength && !showOnFocus) return;
-    const filtered = items.filter((i) =>
-      labelFn(i).toLowerCase().includes(val)
-    );
+    
+    // Використовуємо кастомну функцію фільтрації, якщо вона передана
+    const filtered = customFilter
+      ? items.filter((i) => customFilter(i, val))
+      : items.filter((i) => labelFn(i).toLowerCase().includes(val));
+    
     filtered.forEach((i) => {
       const li = document.createElement("li");
       li.textContent = labelFn(i);
@@ -494,16 +498,36 @@ function setupEditingAutocompletes() {
   ) as HTMLInputElement;
   const carVinList = document.getElementById(carVinListId) as HTMLUListElement;
 
-  // Підготовка даних з auto.json
+  // Підготовка даних з auto.json з додатковими полями для пошуку
   const carSuggestions = autoData.data.flatMap((mark) =>
     mark.models.map((model) => ({
       mark_id: formatDisplayText(mark.id),
+      mark_cyrillic: mark.cyrillic_name || "",
       name: formatDisplayText(model.name),
+      model_cyrillic: model.cyrillic_name || "",
       display: `${formatDisplayText(mark.id)} ${formatDisplayText(model.name)}`,
     }))
   );
 
-  // Налаштування автозаповнення для поля моделі авто з auto.json при розблокованому замку
+  // Функція для перевірки відповідності пошукового запиту
+  const matchesSearch = (item: any, searchValue: string): boolean => {
+    const search = searchValue.toLowerCase();
+    
+    // Перевірка англійських назв (mark_id та name)
+    const englishMatch = 
+      item.mark_id.toLowerCase().includes(search) ||
+      item.name.toLowerCase().includes(search) ||
+      item.display.toLowerCase().includes(search);
+    
+    // Перевірка кириличних назв
+    const cyrillicMatch = 
+      item.mark_cyrillic.toLowerCase().includes(search) ||
+      item.model_cyrillic.toLowerCase().includes(search);
+    
+    return englishMatch || cyrillicMatch;
+  };
+
+  // Налаштування автозаповнення для поля моделі авто з покращеним пошуком
   setupAutocomplete(
     carModelInput,
     carModelList,
@@ -514,7 +538,8 @@ function setupEditingAutocompletes() {
     },
     false,
     "carModelEdit",
-    2 // Показувати після введення 2 символів
+    2, // Показувати після введення 2 символів
+    matchesSearch // Передаємо кастомну функцію фільтрації
   );
 
   setupSimpleAutocomplete(
@@ -708,7 +733,10 @@ async function showModalCreateSakazNarad() {
           console.error("💥 Виняток при завантаженні джерел:", e);
         }
       }
-    } else {
+   } else {
+      // Закриваємо замок - повертаємо оригінальний колір
+      btnEdit.style.backgroundColor = "";
+      btnEdit.style.color = "";
       const confirmIcons = document.getElementById("car-confirm-icons");
       if (confirmIcons) confirmIcons.style.display = "none";
       document

@@ -472,9 +472,9 @@ body {
 .editable-autocomplete {
   transition: box-shadow 120ms ease;
 }
-.editable-autocomplete:hover:not(.ac-open) {
+/* .editable-autocomplete:hover:not(.ac-open) {
   box-shadow: 0 0 0 3px rgba(26, 7, 241, 0.25), 0 0 12px rgba(26, 7, 241, 0.25);
-}
+} */
 
 /* ===== Закритий акт (дрібний текст) ===== */
 .closed-act-info {
@@ -542,4 +542,18 @@ h1 {
   align-items: center;
   padding: 10px 24px;
   gap: 10px;
+}
+
+
+.delete-row-btn:hover {
+  opacity: 1 !important;
+  transform: translateY(-50%) scale(1.1);
+}
+
+td[style*="position: relative"] .delete-row-btn {
+  visibility: hidden;
+}
+
+tr:hover td[style*="position: relative"] .delete-row-btn {
+  visibility: visible;
 }

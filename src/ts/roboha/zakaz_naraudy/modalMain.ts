@@ -49,6 +49,47 @@ import { addSaveHandler } from "./inhi/zberechennya_zmin_y_danux_aktu";
 import { userAccessLevel } from "../tablucya/users";
 import { canUserOpenActs } from "../tablucya/users";
 
+function initDeleteRowHandler(): void {
+  const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
+  if (!body) return;
+
+  body.addEventListener("click", (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    
+    if (target.classList.contains("delete-row-btn") || target.textContent === "🗑️") {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (globalCache.isActClosed) {
+        showNotification("Неможливо видалити рядок у закритому акті", "warning", 1000);
+        return;
+      }
+      
+      const row = target.closest("tr");
+      if (row) {
+        row.remove();
+        
+        const tableBody = document.querySelector(`#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`);
+        if (tableBody) {
+          const rows = Array.from(tableBody.querySelectorAll("tr"));
+          rows.forEach((r, idx) => {
+            const indexCell = r.querySelector(".row-index");
+            if (indexCell) {
+              const nameCell = r.querySelector('[data-name="name"]') as HTMLElement;
+              const type = nameCell?.getAttribute("data-type");
+              const icon = type === "works" ? "🛠️" : "⚙️";
+              indexCell.textContent = `${icon} ${idx + 1}`;
+            }
+          });
+        }
+        
+        updateCalculatedSumsInFooter();
+        showNotification("Рядок видалено", "success", 1000);
+      }
+    }
+  });
+}
+
 export async function showModal(actId: number): Promise<void> {
   const canOpen = await canUserOpenActs();
 
@@ -540,6 +581,7 @@ async function addModalHandlers(
   const isRestricted = userAccessLevel === "Слюсар";
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
+  
   if (!isRestricted) {
     import("./inhi/knopka_zamok").then(({ initStatusLockDelegation }) => {
       initStatusLockDelegation();
@@ -549,6 +591,10 @@ async function addModalHandlers(
   initPhoneClickHandler(body, clientPhone);
   addSaveHandler(actId, actDetails);
   initOdometerInput(EDITABLE_PROBIG_ID);
+  
+  // Додайте цей виклик
+  initDeleteRowHandler();
+  
   if (!isRestricted) {
     const printButton = document.getElementById("print-act-button");
     printButton?.addEventListener("click", () => {
@@ -563,6 +609,7 @@ async function addModalHandlers(
     const skladButton = document.getElementById("sklad");
     skladButton?.addEventListener("click", () => showModalAllOtherBases());
   }
+  
   if (!isClosed) {
     setupAutocompleteForEditableCells(
       ACT_ITEMS_TABLE_CONTAINER_ID,
@@ -577,6 +624,7 @@ async function addModalHandlers(
       }
     });
   }
+  
   body.addEventListener("input", handleInputChange);
   updateCalculatedSumsInFooter();
 }

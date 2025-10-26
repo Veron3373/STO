@@ -296,9 +296,12 @@ function createRowHtml(
     : "";
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td contenteditable="${isEditable}" class="editable-autocomplete" data-name="pib_magazin" data-type="${
+    ? `<td style="position: relative; padding-right: 30px;">
+        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="pib_magazin" data-type="${
         item ? pibMagazinType : ""
-      }">${item?.person_or_store || ""}</td>`
+      }" style="display: inline-block; width: 100%; outline: none;">${item?.person_or_store || ""}</div>
+        ${!isActClosed ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>` : ''}
+      </td>`
     : "";
 
   return `
@@ -342,7 +345,7 @@ export function generateTableHTML(
   const isRestricted = userAccessLevel === "Слюсар";
 
   const catalogColumnHeader = showCatalog ? "<th>Каталог</th>" : "";
-  const pibMagazinColumnHeader = showPibMagazin ? "<th>ПІБ _ Магазин</th>" : "";
+  const pibMagazinColumnHeader = showPibMagazin ? "<th>Найменування</th>" : "";
 
   const actItemsHtml =
     allItems.length > 0

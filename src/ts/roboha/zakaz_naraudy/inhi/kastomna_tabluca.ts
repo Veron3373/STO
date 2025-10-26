@@ -148,9 +148,6 @@ function ensureAutocompleteStyles() {
     .autocomplete-item.neutral { color: #888; }
     .autocomplete-item.positive { color: #2e7d32; }
     .editable-autocomplete { transition: box-shadow 120ms ease; }
-    .editable-autocomplete:hover:not(.ac-open) {
-      box-shadow: 0 0 0 3px rgba(26,7,241,.25), 0 0 12px rgba(26,7,241,.25);
-    }
   `;
   const tag = document.createElement("style");
   tag.id = "autocomplete-styles";

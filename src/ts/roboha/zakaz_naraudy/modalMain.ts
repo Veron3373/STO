@@ -6,7 +6,6 @@ import {
   safeParseJSON,
 } from "./inhi/ctvorennia_papku_googleDrive.";
 import { initPhoneClickHandler } from "./inhi/telefonna_pidskazka";
-import { initOdometerInput } from "./inhi/odometr";
 import {
   setupAutocompleteForEditableCells,
   refreshQtyWarningsIn,
@@ -55,34 +54,45 @@ function initDeleteRowHandler(): void {
 
   body.addEventListener("click", (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    
-    if (target.classList.contains("delete-row-btn") || target.textContent === "🗑️") {
+
+    if (
+      target.classList.contains("delete-row-btn") ||
+      target.textContent === "🗑️"
+    ) {
       e.preventDefault();
       e.stopPropagation();
-      
+
       if (globalCache.isActClosed) {
-        showNotification("Неможливо видалити рядок у закритому акті", "warning", 1000);
+        showNotification(
+          "Неможливо видалити рядок у закритому акті",
+          "warning",
+          1000
+        );
         return;
       }
-      
+
       const row = target.closest("tr");
       if (row) {
         row.remove();
-        
-        const tableBody = document.querySelector(`#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`);
+
+        const tableBody = document.querySelector(
+          `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
+        );
         if (tableBody) {
           const rows = Array.from(tableBody.querySelectorAll("tr"));
           rows.forEach((r, idx) => {
             const indexCell = r.querySelector(".row-index");
             if (indexCell) {
-              const nameCell = r.querySelector('[data-name="name"]') as HTMLElement;
+              const nameCell = r.querySelector(
+                '[data-name="name"]'
+              ) as HTMLElement;
               const type = nameCell?.getAttribute("data-type");
               const icon = type === "works" ? "🛠️" : "⚙️";
               indexCell.textContent = `${icon} ${idx + 1}`;
             }
           });
         }
-        
+
         updateCalculatedSumsInFooter();
         showNotification("Рядок видалено", "success", 1000);
       }
@@ -158,27 +168,34 @@ function fillMissingSlyusarSums(): void {
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return;
 
-  const rows = Array.from(container.querySelectorAll<HTMLTableRowElement>("tbody tr"));
+  const rows = Array.from(
+    container.querySelectorAll<HTMLTableRowElement>("tbody tr")
+  );
 
   for (const row of rows) {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
     const typeFromCell = nameCell?.getAttribute("data-type");
-    
+
     if (typeFromCell !== "works") continue;
 
-    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+    const slyusarSumCell = row.querySelector(
+      '[data-name="slyusar_sum"]'
+    ) as HTMLElement;
 
     if (slyusarSumCell.textContent?.trim()) continue; // already set by history
 
-    const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
-    const slyusarName = pibCell?.textContent?.trim() || '';
+    const pibCell = row.querySelector(
+      '[data-name="pib_magazin"]'
+    ) as HTMLElement;
+    const slyusarName = pibCell?.textContent?.trim() || "";
 
     if (!slyusarName) continue;
 
     const percent = getSlyusarWorkPercent(slyusarName);
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
-    const sum = parseFloat(sumCell?.textContent?.replace(/\s/g, "") || "0") || 0;
+    const sum =
+      parseFloat(sumCell?.textContent?.replace(/\s/g, "") || "0") || 0;
 
     if (sum <= 0) continue;
 
@@ -191,22 +208,27 @@ function checkSlyusarSumWarningsOnLoad(): void {
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return;
 
-  const rows = Array.from(container.querySelectorAll<HTMLTableRowElement>("tbody tr"));
+  const rows = Array.from(
+    container.querySelectorAll<HTMLTableRowElement>("tbody tr")
+  );
   let hasWarnings = false;
 
   for (const row of rows) {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
     const typeFromCell = nameCell?.getAttribute("data-type");
-    
+
     if (typeFromCell !== "works") continue;
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
-    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+    const slyusarSumCell = row.querySelector(
+      '[data-name="slyusar_sum"]'
+    ) as HTMLElement;
 
     if (!sumCell || !slyusarSumCell) continue;
 
     const sum = parseFloat(sumCell.textContent?.replace(/\s/g, "") || "0") || 0;
-    const slyusarSum = parseFloat(slyusarSumCell.textContent?.replace(/\s/g, "") || "0") || 0;
+    const slyusarSum =
+      parseFloat(slyusarSumCell.textContent?.replace(/\s/g, "") || "0") || 0;
 
     if (slyusarSum > sum) {
       hasWarnings = true;
@@ -581,7 +603,7 @@ async function addModalHandlers(
   const isRestricted = userAccessLevel === "Слюсар";
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
-  
+
   if (!isRestricted) {
     import("./inhi/knopka_zamok").then(({ initStatusLockDelegation }) => {
       initStatusLockDelegation();
@@ -590,11 +612,10 @@ async function addModalHandlers(
 
   initPhoneClickHandler(body, clientPhone);
   addSaveHandler(actId, actDetails);
-  initOdometerInput(EDITABLE_PROBIG_ID);
-  
+
   // Додайте цей виклик
   initDeleteRowHandler();
-  
+
   if (!isRestricted) {
     const printButton = document.getElementById("print-act-button");
     printButton?.addEventListener("click", () => {
@@ -609,7 +630,7 @@ async function addModalHandlers(
     const skladButton = document.getElementById("sklad");
     skladButton?.addEventListener("click", () => showModalAllOtherBases());
   }
-  
+
   if (!isClosed) {
     setupAutocompleteForEditableCells(
       ACT_ITEMS_TABLE_CONTAINER_ID,
@@ -624,7 +645,7 @@ async function addModalHandlers(
       }
     });
   }
-  
+
   body.addEventListener("input", handleInputChange);
   updateCalculatedSumsInFooter();
 }
@@ -731,7 +752,25 @@ function handleInputChange(event: Event): void {
         const cleanedValue = target.textContent?.replace(/[^0-9]/g, "") || "";
         const formattedValue = formatNumberWithSpaces(cleanedValue, 0, 0);
         if (target.textContent !== formattedValue) {
+          const selection = window.getSelection();
+          const originalCaretPosition = selection?.focusOffset || 0;
           target.textContent = formattedValue;
+
+          // Відновлюємо позицію курсора
+          if (selection && target.firstChild) {
+            const formattedLength = formattedValue.length;
+            const originalLength = cleanedValue.length;
+            const diff = formattedLength - originalLength;
+            const newCaretPosition = Math.min(
+              originalCaretPosition + diff,
+              formattedLength
+            );
+            const range = document.createRange();
+            range.setStart(target.firstChild, Math.max(0, newCaretPosition));
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
         }
       }
       break;

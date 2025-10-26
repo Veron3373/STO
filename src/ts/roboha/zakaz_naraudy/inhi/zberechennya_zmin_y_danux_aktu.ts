@@ -420,9 +420,15 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     throw new Error("Неможливо редагувати закритий акт");
   }
 
-  const newProbig = cleanText(
+  // Отримуємо значення пробігу та перетворюємо на число
+  const probigText = cleanText(
     document.getElementById(EDITABLE_PROBIG_ID)?.textContent
-  ).replace(/\s/g, "");
+  );
+  const probigCleaned = probigText.replace(/\s/g, ""); // Видаляємо всі пробіли
+  const newProbig = probigCleaned && /^\d+$/.test(probigCleaned) 
+    ? Number(probigCleaned) 
+    : (probigCleaned || 0);
+  
   const newReason = getCellText(document.getElementById(EDITABLE_REASON_ID));
   const newRecommendations = getCellText(
     document.getElementById(EDITABLE_RECOMMENDATIONS_ID)

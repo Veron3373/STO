@@ -168,7 +168,7 @@ function fillMissingSlyusarSums(): void {
 
     const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
 
-    if (slyusarSumCell.textContent?.trim()) continue;
+    if (slyusarSumCell.textContent?.trim()) continue; // already set by history
 
     const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
     const slyusarName = pibCell?.textContent?.trim() || '';
@@ -592,7 +592,7 @@ async function addModalHandlers(
   addSaveHandler(actId, actDetails);
   initOdometerInput(EDITABLE_PROBIG_ID);
   
-  // Ініціалізуємо обробник видалення рядків
+  // Додайте цей виклик
   initDeleteRowHandler();
   
   if (!isRestricted) {
@@ -665,6 +665,7 @@ function handleInputChange(event: Event): void {
       break;
     }
     case "slyusar_sum": {
+      // Обробка редагування поля "Слюсарю" - дозволяємо тільки цифри
       const cleanedValue = target.textContent?.replace(/[^0-9]/g, "") || "";
       const formattedValue = formatNumberWithSpaces(cleanedValue, 0, 0);
       if (target.textContent !== formattedValue) {
@@ -706,6 +707,7 @@ function handleInputChange(event: Event): void {
               pibMagCell.textContent = userName;
               pibMagCell.setAttribute("data-type", "slyusars");
 
+              // Автоматичний розрахунок суми для слюсаря
               const row = target.closest("tr") as HTMLTableRowElement;
               if (row) calculateRowSum(row);
             }
@@ -719,6 +721,7 @@ function handleInputChange(event: Event): void {
       break;
     }
     case "pib_magazin": {
+      // При зміні ПІБ/Магазин перераховуємо суму слюсаря
       const row = target.closest("tr") as HTMLTableRowElement;
       if (row) calculateRowSum(row);
       break;

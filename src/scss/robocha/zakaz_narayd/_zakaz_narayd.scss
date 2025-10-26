@@ -244,6 +244,28 @@ body {
   td[data-name="name"] {
     text-align: left;
   }
+  
+  /* Комірка з найменуванням має бути з відносним позиціонуванням для кнопки */
+  td.name-cell {
+    position: relative;
+    padding-right: 30px !important;
+    
+    /* Прибираємо зайві обгортки та забезпечуємо повну ширину */
+    > div {
+      display: block;
+      width: 100%;
+      min-height: 20px;
+    }
+  }
+  
+  /* Комірка ПІБ без зайвих обгорток */
+  td.pib-magazin-cell {
+    white-space: nowrap;
+    max-width: 250px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 /* Кнопки/екшени */
@@ -557,3 +579,4 @@ tr:hover .delete-row-btn {
   outline: 2px solid #000 !important;
   outline-offset: -2px;
 }
+

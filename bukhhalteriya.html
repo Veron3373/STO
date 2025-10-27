@@ -16,7 +16,7 @@
         <a href="main.html" class="Bukhhalter-nav-link">🛠️← СТО</a>
       </div>
 
-      <div class="Bukhhalter-total-sum" id="total-sum">Загальна сума: 0 грн</div>
+      <div class="Bukhhalter-total-sum" id="total-sum"></div>
 
       <!-- Таблиця підлеглих -->
       <div id="podlegle-table-container">
@@ -192,7 +192,7 @@
           </thead>
           <tbody id="magazine-tbody">
             <tr>
-              <td colspan="13" class="Bukhhalter-no-data">Немає даних для відображення</td>
+              <td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td>
             </tr>
           </tbody>
         </table>
@@ -279,7 +279,7 @@
           </thead>
           <tbody id="details-tbody">
             <tr>
-              <td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td>
+              <td colspan="11" class="Bukhhalter-no-data">Немає даних для відображення</td>
             </tr>
           </tbody>
         </table>
@@ -296,16 +296,28 @@
                   <span class="table-header-text">Розраховано</span>
                 </div>
               </th>
-              <th class="expenses-data">
+              <th class="expenses-dataOn">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">📅</span>
-                  <span class="table-header-text">Дата</span>
+                  <span class="table-header-text">Відкриття</span>
+                </div>
+              </th>
+              <th class="expenses-dataOff">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📅</span>
+                  <span class="table-header-text">Закриття</span>
                 </div>
               </th>
               <th>
                 <div class="table-header-cell">
                   <span class="table-header-emoji">📂</span>
                   <span class="table-header-text">Категорія</span>
+                </div>
+              </th>
+              <th class="vutratu-akt">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">📋</span>
+                  <span class="table-header-text">Акт_№</span>
                 </div>
               </th>
               <th class="expenses-opis">
@@ -349,17 +361,19 @@
       </div>
     </div>
 
+    <!-- Контрольна секція -->
     <div class="Bukhhalter-control-section">
-      <div class="Bukhhalter-tab-container">
-        <button class="Bukhhalter-tab-button" onclick="switchTab(event, 'magazine')">🏪 Склад</button>
-        <button class="Bukhhalter-tab-button Bukhhalter-active" onclick="switchTab(event, 'podlegle')">👥 Зарплата</button>
-        <button class="Bukhhalter-tab-button" onclick="switchTab(event, 'details')">⚙️ Деталі</button>
-        <button class="Bukhhalter-tab-button" onclick="switchTab(event, 'expenses')">💰 Витрати</button>
+      <!-- Кнопки вкладок -->
+      <div class="Bukhhalter-tabs">
+        <button class="Bukhhalter-tab-btn Bukhhalter-active" onclick="switchTab(event, 'magazine')">🏪 Склад</button>
+        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'podlegle')">👨‍🔧 Зар-та</button>
+        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'details')">⚙️ Деталі</button>
+        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'expenses')">💰 Витрати</button>
       </div>
 
       <div class="Bukhhalter-form-container">
         <!-- Форма Співробітників -->
-        <div id="Bukhhalter-podlegle-section" class="Bukhhalter-form-section Bukhhalter-active">
+        <div id="Bukhhalter-podlegle-section" class="Bukhhalter-form-section">
           <h2 class="Bukhhalter-section-title">👥 Облік роботи підлеглих</h2>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
@@ -399,13 +413,14 @@
             <div class="Bukhhalter-toggle-wrapper">
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
                 id="payment-filter-toggle">
-              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не розраховано</span><span>Всі</span></div>
+              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не рохраховано</span><span>Всі</span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Форма магазину -->
-        <div id="Bukhhalter-magazine-section" class="Bukhhalter-form-section">
+        <div id="Bukhhalter-magazine-section" class="Bukhhalter-form-section Bukhhalter-active">
           <h2 class="Bukhhalter-section-title">🏪 Облік товарів магазину</h2>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
@@ -417,6 +432,7 @@
               <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-magazine-date-close">
             </div>
           </div>
+
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">🏪 Магазин</label>
@@ -429,6 +445,7 @@
                 placeholder="Номер рахунку">
             </div>
           </div>
+
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📦 Найменування</label>
@@ -441,6 +458,7 @@
                 placeholder="Номер каталогу">
             </div>
           </div>
+
           <div class="Bukhhalter-toggle-container">
             <label class="Bukhhalter-field-label">💰 Розрахунок</label>
             <div class="Bukhhalter-toggle-wrapper">
@@ -453,6 +471,7 @@
               </div>
             </div>
           </div>
+
           <div class="Bukhhalter-toggle-container">
             <label class="Bukhhalter-field-label">📦 Статус наявності на складі</label>
             <div class="Bukhhalter-toggle-wrapper">
@@ -511,7 +530,8 @@
             <div class="Bukhhalter-toggle-wrapper">
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
                 id="poAktam-payment-filter-toggle">
-              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не розраховано</span><span>Всі</span></div>
+              <div class="Bukhhalter-toggle-labels"><span>Розраховано</span><span>Не рохраховано</span><span>Всі</span>
+              </div>
             </div>
           </div>
         </div>
@@ -535,17 +555,7 @@
               <option value="">Оберіть категорію</option>
             </select>
           </div>
-          <div class="Bukhhalter-field-group">
-            <label class="Bukhhalter-field-label">📝 Опис витрати</label>
-            <input type="text" class="Bukhhalter-field-input" id="Bukhhalter-expenses-description"
-              placeholder="Введіть опис витрати">
-          </div>
           <div class="Bukhhalter-form-row">
-            <div class="Bukhhalter-field-group">
-              <label class="Bukhhalter-field-label">💵 Сума</label>
-              <input type="number" class="Bukhhalter-field-input" id="Bukhhalter-expenses-amount"
-                placeholder="0" min="0" step="0.01">
-            </div>
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">💳 Спосіб оплати</label>
               <select class="Bukhhalter-field-input" id="Bukhhalter-expenses-payment-method">
@@ -553,27 +563,106 @@
               </select>
             </div>
           </div>
-          <div class="Bukhhalter-field-group">
-            <label class="Bukhhalter-field-label">📋 Примітки</label>
-            <input type="text" class="Bukhhalter-field-input" id="Bukhhalter-expenses-notes"
-              placeholder="Додаткова інформація (необов'язково)">
+
+          <div class="Bukhhalter-toggle-container">
+            <label class="Bukhhalter-field-label">💰 Тип операції</label>
+            <div class="Bukhhalter-toggle-wrapper">
+              <input type="range" min="0" max="2" value="2" class="Bukhhalter-expense-type-toggle"
+                id="expenses-type-filter-toggle">
+              <div class="Bukhhalter-toggle-labels-2">
+                <span>Прибуток</span>
+                <span>Витрати</span>
+                <span>Всі</span>
+              </div>
+            </div>
           </div>
+
           <div class="Bukhhalter-toggle-container">
             <label class="Bukhhalter-field-label">💰 Розрахунок</label>
             <div class="Bukhhalter-toggle-wrapper">
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
                 id="expenses-payment-filter-toggle">
-              <div class="Bukhhalter-toggle-labels"><span>Оплачено</span><span>Не оплачено</span><span>Всі</span></div>
+              <div class="Bukhhalter-toggle-labels">
+                <span>Оплачено</span>
+                <span>Не оплачено</span>
+                <span>Всі</span>
+              </div>
             </div>
           </div>
+
+          <div class="Bukhhalter-field-group">
+            <button class="Bukhhalter-action-button Bukhhalter-purple-button" onclick="openExpenseModal()">
+              💰 Додати витрату
+            </button>
+          </div>
+
         </div>
 
-        <!-- Кнопки -->
+        <!-- Кнопки (загальні для всіх вкладок) -->
         <div class="Bukhhalter-button-container">
           <div class="Bukhhalter-button-row">
-            <button class="Bukhhalter-action-button Bukhhalter-excel-button" onclick="downloadToExcel()">📥 Excel</button>
-            <button class="Bukhhalter-action-button Bukhhalter-save-btn" onclick="runMassPaymentCalculation()">💰 Розрахунок</button>
+            <button class="Bukhhalter-action-button Bukhhalter-add-button" onclick="addRecord()">🔍 Пошук</button>
+            <button class="Bukhhalter-action-button Bukhhalter-clear-button" onclick="clearForm()">🗑️
+              Очистити</button>
           </div>
+          <div class="Bukhhalter-button-row">
+            <button class="Bukhhalter-action-button Bukhhalter-excel-button" onclick="downloadToExcel()">📥
+              Excel</button>
+            <button class="Bukhhalter-action-button Bukhhalter-save-btn" onclick="runMassPaymentCalculation()">💰
+              Розрахунок</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="expense-modal" class="expense-modal" style="display: none;">
+    <div class="expense-modal-content">
+      <div class="expense-modal-header">
+        <h2 id="expense-modal-title">Додати витрату</h2>
+        <button class="expense-mode-switcher mode-add" onclick="cycleExpenseMode()"
+          id="expense-mode-btn">Додати</button>
+        <button class="expense-modal-close" onclick="closeExpenseModal()">X</button>
+      </div>
+      <div class="expense-modal-body">
+        <div class="Bukhhalter-form-row">
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">Дата</label>
+            <input type="date" class="Bukhhalter-field-input" id="expense-modal-date">
+          </div>
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">Категорія</label>
+            <select class="Bukhhalter-field-input" id="expense-modal-category">
+              <option value="">Оберіть категорію</option>
+            </select>
+          </div>
+        </div>
+        <div class="Bukhhalter-form-row">
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">Спосіб оплати</label>
+            <select class="Bukhhalter-field-input" id="expense-modal-payment-method">
+              <option value="">Оберіть спосіб оплати</option>
+            </select>
+          </div>
+          <div class="Bukhhalter-field-group">
+            <label class="Bukhhalter-field-label">Сума</label>
+            <input type="text" class="Bukhhalter-field-input" id="expense-modal-amount" placeholder="0"
+              oninput="formatAmountWithSpaces(this)">
+          </div>
+        </div>
+        <div class="Bukhhalter-field-group">
+          <label class="Bukhhalter-field-label">Опис витрати</label>
+          <textarea class="Bukhhalter-field-input Bukhhalter-field-textarea" id="expense-modal-description"
+            placeholder="Введіть опис" rows="3" oninput="autoResizeTextarea(this)"></textarea>
+        </div>
+        <div class="Bukhhalter-field-group">
+          <label class="Bukhhalter-field-label">Примітки</label>
+          <textarea class="Bukhhalter-field-input Bukhhalter-field-textarea" id="expense-modal-notes"
+            placeholder="Додаткова інформація" rows="3" oninput="autoResizeTextarea(this)"></textarea>
+        </div>
+        <div class="expense-modal-footer">
+          <button class="Bukhhalter-action-button Bukhhalter-save-btn"
+            onclick="saveExpenseFromModal()">Записати</button>
         </div>
       </div>
     </div>
@@ -583,3 +672,4 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 
+</html>

@@ -1,12 +1,7 @@
 // src/ts/roboha/bukhhalteriya/shopsBuxha.ts
 
 import { supabase } from "../../vxid/supabaseClient";
-import {
-  formatDate,
-  formatNumber,
-  byId,
-  updateTotalSum,
-} from "./bukhhalteriya";
+import { formatDate, formatNumber, byId } from "./bukhhalteriya";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import {
   getSavedUserDataFromLocalStorage,
@@ -331,7 +326,6 @@ async function fetchShopData(): Promise<ShopData[]> {
     return [];
   }
 }
-
 
 function openActModal(actNumber: number): void {
   let foundRec: HistoryRecord | null = null;
@@ -750,6 +744,7 @@ class SmartDropdown {
       this.dropdown.style.width = "100%";
     }
   }
+
   private highlightMatch(text: string, query: string): string {
     if (!query.trim()) return text;
     const regex = new RegExp(
@@ -1015,7 +1010,7 @@ function autoFilterFromInputs(): void {
   magazineData = filtered;
   applyLocalFilters();
   updateMagazineTable();
-  updateTotalSum();
+  updateMagazineTotalSum();
 }
 
 function getElValue<T extends HTMLInputElement | HTMLSelectElement>(
@@ -1057,10 +1052,8 @@ function detectPK(row: any): { name: string; value: any } | null {
   return null;
 }
 
-// ✅ НОВИЙ
 function mapRowToMagazineRecord(row: any): MagazineRecord {
   const pk = detectPK(row);
-  // беремо тільки з sclad.akt (число або null)
   const aktVal =
     typeof row?.akt === "number"
       ? row.akt
@@ -1088,7 +1081,6 @@ function mapRowToMagazineRecord(row: any): MagazineRecord {
     xto_povernyv: row?.xto_povernyv ?? null,
   };
 }
-
 
 // ==== Автопошук з БД ====
 async function autoSearchFromInputs(): Promise<void> {
@@ -1161,7 +1153,7 @@ async function autoSearchFromInputs(): Promise<void> {
 
   applyLocalFilters();
   updateMagazineTable();
-  updateTotalSum();
+  updateMagazineTotalSum();
 }
 
 async function loadScladData(
@@ -1247,7 +1239,7 @@ export async function initializeMagazineData(): Promise<void> {
   hasLoadedData = false;
   shopsLoaded = false;
   updateMagazineTable();
-  updateTotalSum();
+  updateMagazineTotalSum();
   initMagazineAutoBehaviors();
 }
 
@@ -1315,7 +1307,7 @@ export async function searchMagazineData(): Promise<void> {
 
   applyLocalFilters();
   updateMagazineTable();
-  updateTotalSum();
+  updateMagazineTotalSum();
 
   if (magazineData.length === 0) {
     showNotification("За вказаними критеріями дані не знайдено", "info", 3500);
@@ -1332,34 +1324,30 @@ export async function searchMagazineData(): Promise<void> {
 function applyLocalFilters(): void {
   let filtered = [...allMagazineData];
 
-  // Фільтр по статусу розрахунку
-  // 0: розраховано, 1: не розраховано, 2: всі
   if (currentFilters.paymentStatus !== 2) {
     filtered = filtered.filter((item) => {
       if (currentFilters.paymentStatus === 0) {
-        return item.isPaid; // Розраховані
+        return item.isPaid;
       } else {
-        return !item.isPaid; // Не розраховані
+        return !item.isPaid;
       }
     });
   }
 
-  // Фільтр по наявності на складі
-  // 0: >0 (присутні), 1: =0 (нульові), 2: <0 (Відємні), 3: повернення, 4: всі
   if (currentFilters.availabilityStatus !== 4) {
     filtered = filtered.filter((item) => {
       const remainder = (item.kilkist_on || 0) - (item.kilkist_off || 0);
       switch (currentFilters.availabilityStatus) {
         case 0:
-          return remainder > 0; // Присутні
+          return remainder > 0;
         case 1:
-          return remainder === 0; // Нульові
+          return remainder === 0;
         case 2:
-          return remainder < 0; // Відємні
+          return remainder < 0;
         case 3:
-          return !!item.povernennya; // Повернення
+          return !!item.povernennya;
         default:
-          return true; // Всі
+          return true;
       }
     });
   }
@@ -1376,6 +1364,37 @@ export function calculateMagazineTotalSum(): number {
     (sum, item) => sum + item.kilkist_on * item.price,
     0
   );
+}
+
+export function calculateMagazineRemainingSum(): number {
+  return magazineData.reduce((sum, item) => {
+    const remainder = (item.kilkist_on || 0) - (item.kilkist_off || 0);
+    if (remainder > 0) {
+      return sum + remainder * item.price;
+    }
+    return sum;
+  }, 0);
+}
+
+export function updateMagazineTotalSum(): void {
+  const totalSumElement = byId<HTMLElement>("total-sum");
+
+  if (!totalSumElement) return;
+
+  const totalSum = calculateMagazineTotalSum();
+  const remainingSum = calculateMagazineRemainingSum();
+
+  totalSumElement.innerHTML = `
+  <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
+    <span style="color: #ffffff;">Загальна сума: <strong style="color: #333;">💰 ${formatNumber(
+      totalSum
+    )}</strong> грн</span>
+    <span style="color: #666;">|</span>
+    <span style="color: #ffffff;">На складі: <strong style="color: #8B0000;">💶 ${formatNumber(
+      remainingSum
+    )}</strong> грн</span>
+  </div>
+`;
 }
 
 export function getMagazineExportData(): any[] {
@@ -1458,12 +1477,12 @@ export function updateMagazineTable(): void {
       let returnDateHtml = "";
       if (item.isReturned && item.povernennya != null) {
         const { dateISO, timeHM } = splitDateTimeSafe(item.povernennya);
-        const userName = item.xto_povernyv || "Невідомий"; // Підтягуємо прізвище
+        const userName = item.xto_povernyv || "Невідомий";
         returnDateHtml = `
     <div class="return-date">
       <div>${formatDate(dateISO)}</div>
       <div>${timeHM || "—"}</div>
-      <div class="return-user">${userName}</div>  <!-- Додаємо рядок з прізвищем -->
+      <div class="return-user">${userName}</div>
     </div>
   `;
       }
@@ -1543,7 +1562,7 @@ export async function toggleMagazinePayment(index: number): Promise<void> {
   try {
     await updatePaymentInDatabase(item);
     updateMagazineTable();
-    updateTotalSum();
+    updateMagazineTotalSum();
 
     if (item.isPaid) {
       showNotification(
@@ -1559,7 +1578,7 @@ export async function toggleMagazinePayment(index: number): Promise<void> {
     console.error(e);
     showNotification("❌ Помилка оновлення статусу оплати", "error", 4000);
     updateMagazineTable();
-    updateTotalSum();
+    updateMagazineTotalSum();
   }
 }
 
@@ -1569,12 +1588,10 @@ export async function toggleReturn(index: number): Promise<void> {
 
   const action: "return" | "unreturn" = item.isReturned ? "unreturn" : "return";
 
-  // Перевірка тільки для скасування повернення (unreturn) – для масового розрахунку
   if (action === "unreturn" && item.povernennya) {
     const { dateISO } = splitDateTimeSafe(item.povernennya);
-    const todayISO = new Date().toISOString().split("T")[0]; // YYYY-MM-DD для сьогодні
+    const todayISO = new Date().toISOString().split("T")[0];
     if (dateISO !== todayISO && !hasFullAccess()) {
-      // Блокуємо не-адмінів, якщо дата не сьогодні
       showNotification(
         "❌ Скасувати повернення неможливо: доступно тільки для сьогоднішніх повернень",
         "error",
@@ -1582,7 +1599,6 @@ export async function toggleReturn(index: number): Promise<void> {
       );
       return;
     }
-    // Адмін може скасовувати будь-коли – попередження для логів
     if (dateISO !== todayISO && hasFullAccess()) {
       showNotification(
         "⚠️ Скасування повернення не сьогоднішнього терміну (як адміністратор)",
@@ -1602,30 +1618,31 @@ export async function toggleReturn(index: number): Promise<void> {
   const prevDate = item.povernennya;
   const prevKilkistOff = item.kilkist_off;
 
-  // Оновлюємо статус повернення
   item.isReturned = !prevIsReturned;
   item.povernennya = item.isReturned ? todayDateTime() : null;
   const userData = getSavedUserDataFromLocalStorage();
   const userName = userData?.name || "Невідомий";
-  
+
   if (item.isReturned) {
-    // Повернення: kilkist_off += kilkist_on
     item.kilkist_off = item.kilkist_off + item.kilkist_on;
     item.xto_povernyv = userName;
     console.log("Локально встановлено xto_povernyv:", userName);
-    console.log(`Повернення: kilkist_off = ${prevKilkistOff} + ${item.kilkist_on} = ${item.kilkist_off}`);
+    console.log(
+      `Повернення: kilkist_off = ${prevKilkistOff} + ${item.kilkist_on} = ${item.kilkist_off}`
+    );
   } else {
-    // Скасування повернення: kilkist_off -= kilkist_on
     item.kilkist_off = item.kilkist_off - item.kilkist_on;
     item.xto_povernyv = null;
     console.log("Локально очищено xto_povernyv");
-    console.log(`Скасування повернення: kilkist_off = ${prevKilkistOff} - ${item.kilkist_on} = ${item.kilkist_off}`);
+    console.log(
+      `Скасування повернення: kilkist_off = ${prevKilkistOff} - ${item.kilkist_on} = ${item.kilkist_off}`
+    );
   }
 
   try {
     await updateReturnInDatabase(item);
     updateMagazineTable();
-    updateTotalSum();
+    updateMagazineTotalSum();
 
     if (item.isReturned && item.povernennya != null) {
       const { dateISO, timeHM } = splitDateTimeSafe(item.povernennya);
@@ -1637,14 +1654,13 @@ export async function toggleReturn(index: number): Promise<void> {
       showNotification("🔄 Повернення скасовано", "success");
     }
   } catch (e) {
-    // Відкат змін у разі помилки
     item.isReturned = prevIsReturned;
     item.povernennya = prevDate;
     item.kilkist_off = prevKilkistOff;
     console.error(e);
     showNotification("❌ Помилка оновлення статусу повернення", "error", 4000);
     updateMagazineTable();
-    updateTotalSum();
+    updateMagazineTotalSum();
   }
 }
 
@@ -1685,7 +1701,6 @@ function initMagazineAutoBehaviors(): void {
     "magazine-payment-filter-toggle"
   );
   if (paymentToggle) {
-    // Встановлюємо початкові значення
     paymentToggle.min = "0";
     paymentToggle.max = "2";
     if (!paymentToggle.value) {
@@ -1698,14 +1713,13 @@ function initMagazineAutoBehaviors(): void {
         | 2;
     }
 
-    // Додаємо обробник події
     paymentToggle.addEventListener("input", function () {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2;
-      console.log("Payment filter changed to:", newValue); // Для дебагу
+      console.log("Payment filter changed to:", newValue);
       currentFilters.paymentStatus = newValue;
       applyLocalFilters();
       updateMagazineTable();
-      updateTotalSum();
+      updateMagazineTotalSum();
     });
   }
 
@@ -1714,7 +1728,6 @@ function initMagazineAutoBehaviors(): void {
     "magazine-availability-filter-toggle"
   );
   if (availabilityToggle) {
-    // Встановлюємо початкові значення
     availabilityToggle.min = "0";
     availabilityToggle.max = "4";
     if (!availabilityToggle.value) {
@@ -1727,14 +1740,13 @@ function initMagazineAutoBehaviors(): void {
       ) as 0 | 1 | 2 | 3 | 4;
     }
 
-    // Додаємо обробник події
     availabilityToggle.addEventListener("input", function () {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2 | 3 | 4;
-      console.log("Availability filter changed to:", newValue); // Для дебагу
+      console.log("Availability filter changed to:", newValue);
       currentFilters.availabilityStatus = newValue;
       applyLocalFilters();
       updateMagazineTable();
-      updateTotalSum();
+      updateMagazineTotalSum();
     });
   }
 }
@@ -1762,11 +1774,11 @@ async function updateReturnInDatabase(item: MagazineRecord): Promise<void> {
     throw new Error("PK запису не визначено");
   }
 
-  const updateData: any = { 
+  const updateData: any = {
     povernennya: item.povernennya,
-    kilkist_off: item.kilkist_off
+    kilkist_off: item.kilkist_off,
   };
-  
+
   if (item.isReturned) {
     updateData.xto_povernyv = item.xto_povernyv;
   } else {
@@ -1797,7 +1809,7 @@ export function deleteMagazineRecord(index: number): void {
   }
 
   updateMagazineTable();
-  updateTotalSum();
+  updateMagazineTotalSum();
   showNotification("Видалено з таблиці", "info", 1600);
 }
 
@@ -1812,16 +1824,14 @@ export function clearMagazineForm(): void {
   );
   selects.forEach((s) => (s.value = ""));
 
-  // Скидаємо фільтри до значень за замовчуванням
   currentFilters = {
     dateOpen: "",
     dateClose: "",
     shop: "",
-    paymentStatus: 2, // Всі
-    availabilityStatus: 4, // Всі
+    paymentStatus: 2,
+    availabilityStatus: 4,
   };
 
-  // Скидаємо перемикачі до початкових значень
   const paymentToggle = byId<HTMLInputElement>(
     "magazine-payment-filter-toggle"
   );
@@ -1831,7 +1841,6 @@ export function clearMagazineForm(): void {
   if (paymentToggle) paymentToggle.value = "2";
   if (availabilityToggle) availabilityToggle.value = "4";
 
-  // Очищуємо всі дані
   magazineData = [];
   allMagazineData = [];
   availableShops = [];
@@ -1840,7 +1849,7 @@ export function clearMagazineForm(): void {
   shopsLoaded = false;
 
   updateMagazineTable();
-  updateTotalSum();
+  updateMagazineTotalSum();
   showNotification("Фільтри магазину очищено", "info", 1500);
 }
 
@@ -1848,7 +1857,6 @@ export function clearMagazineForm(): void {
 export function createMagazinePaymentToggle(): void {
   const existing = byId("magazine-payment-filter-toggle");
   if (existing) {
-    // Якщо вже існує, просто ініціалізуємо його
     initMagazineAutoBehaviors();
     return;
   }
@@ -1873,16 +1881,15 @@ export function createMagazinePaymentToggle(): void {
   `;
   section?.insertBefore(wrap, btnContainer || null);
 
-  // Ініціалізуємо обробник після створення
   const toggle = byId<HTMLInputElement>("magazine-payment-filter-toggle");
   if (toggle) {
-    currentFilters.paymentStatus = 2; // Всі
+    currentFilters.paymentStatus = 2;
     toggle.addEventListener("input", function () {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2;
       currentFilters.paymentStatus = newValue;
       applyLocalFilters();
       updateMagazineTable();
-      updateTotalSum();
+      updateMagazineTotalSum();
     });
   }
 }
@@ -1890,7 +1897,6 @@ export function createMagazinePaymentToggle(): void {
 export function createMagazineAvailabilityToggle(): void {
   const existing = byId("magazine-availability-filter-toggle");
   if (existing) {
-    // Якщо вже існує, просто ініціалізуємо його
     initMagazineAutoBehaviors();
     return;
   }
@@ -1917,16 +1923,15 @@ export function createMagazineAvailabilityToggle(): void {
   `;
   section?.insertBefore(wrap, btnContainer || null);
 
-  // Ініціалізуємо обробник після створення
   const toggle = byId<HTMLInputElement>("magazine-availability-filter-toggle");
   if (toggle) {
-    currentFilters.availabilityStatus = 4; // Всі
+    currentFilters.availabilityStatus = 4;
     toggle.addEventListener("input", function () {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2 | 3 | 4;
       currentFilters.availabilityStatus = newValue;
       applyLocalFilters();
       updateMagazineTable();
-      updateTotalSum();
+      updateMagazineTotalSum();
     });
   }
 }
@@ -2052,7 +2057,7 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
   });
 
   updateMagazineTable();
-  updateTotalSum();
+  updateMagazineTotalSum();
 
   if (ok && !fail) {
     showNotification(
@@ -2071,7 +2076,9 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
 }
 
 // Глобалізація функцій
+// Глобалізація функцій
 (window as any).toggleMagazinePayment = toggleMagazinePayment;
 (window as any).toggleReturn = toggleReturn;
 (window as any).deleteMagazineRecord = deleteMagazineRecord;
 (window as any).openActModal = openActModal;
+(window as any).updateMagazineTotalSum = updateMagazineTotalSum;

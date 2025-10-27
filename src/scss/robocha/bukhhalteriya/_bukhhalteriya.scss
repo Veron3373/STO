@@ -1,5 +1,7 @@
-/* Базові стилі */
-* {
+/* ==================== БАЗОВІ СТИЛІ ==================== */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -10,8 +12,9 @@ body {
   color: #333;
 }
 
-/* CSS змінні для кольорів та розмірів */
+/* ==================== CSS ЗМІННІ ==================== */
 :root {
+  /* Кольори */
   --primary-color: #4caf50;
   --primary-hover: #45a049;
   --secondary-color: #2196f3;
@@ -23,44 +26,62 @@ body {
   --success-color: #28a745;
   --light-gray: #f9f9f9;
   --border-color: #ddd;
+  --gray: #9e9e9e;
+  --orange1: #ff9800;
+  --orange2: #ff9800;
+  --vutratu-color: #7b1fa2;
+  --vutratu-color-hover: #9c27b0;
+
+  /* Розміри */
   --shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   --border-radius: 15px;
   --small-radius: 8px;
   --transition: all 0.3s ease;
+
+  /* Ширини колонок */
+  --col-money: 60px;
+  --col-robota: 180px;
+  --col-avto: 130px;
+  --col-kilkist: 57px;
+  --col-diya: 40px;
+  --col-date: 61px;
+  --col-raxunok: 80px;
+  --col-opis: 200px;
+  --col-prumitku: 150px;
 }
 
-/* Контейнери */
+/* ==================== КОНТЕЙНЕРИ ==================== */
 .Bukhhalter-container {
-  max-width: 1600px;
-  margin: 20px auto;
-  padding: 0 20px;
+ /*  max-width: 1600px; */
+  margin: 5px ;
+  padding: 5px;
   display: flex;
-  gap: 10px;
-  height: calc(100vh - 40px);
-  min-height: 600px; /* Мінімальна висота для адаптивності */
+  gap: 5px;
+  height: calc(100vh - 10px);
+  min-height: 600px;
 }
 
 .Bukhhalter-table-section {
   flex: 0 0 75%;
   background: white;
   border-radius: var(--border-radius);
-  padding: 0 15px 15px 15px;
+  padding: 0 15px 15px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  height: 100%; /* Займає всю доступну висоту */
-  min-width: 0; /* Запобігає перевищенню ширини */
+  height: 100%;
+  min-width: 0;
 }
 
 .Bukhhalter-control-section {
   flex: 0 0 25%;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  min-width: 0; /* Запобігає перевищенню ширини */
+  gap: 5px;
+  min-width: 0;
 }
 
-/* Заголовки та навігація */
+/* ==================== ЗАГОЛОВКИ ==================== */
 .Bukhhalter-section-header {
   display: flex;
   align-items: center;
@@ -68,7 +89,7 @@ body {
   position: relative;
   flex-shrink: 0;
   padding: 10px 0;
-  min-height: 60px; /* Фіксована висота заголовка */
+  min-height: 60px;
 }
 
 .Bukhhalter-table-title,
@@ -95,17 +116,16 @@ body {
   border: 2px solid white;
   border-radius: 20px;
   transition: var(--transition);
-  display: inline-block;
   margin-top: 33px;
   position: absolute;
   right: 0;
   transform: translateY(-50%);
   font-weight: bold;
+}
 
-  &:hover {
-    background: white;
-    color: gold;
-  }
+.Bukhhalter-nav-link:hover {
+  background: white;
+  color: gold;
 }
 
 .Bukhhalter-total-sum {
@@ -124,79 +144,66 @@ body {
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Таблиці */
+/* ==================== ТАБЛИЦІ ==================== */
 .Bukhhalter-data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
-  table-layout: fixed; /* Фіксована ширина таблиці */
-
-  th {
-    background: var(--primary-color);
-    color: white;
-    padding: 0;
-    text-align: center;
-    font-weight: bold;
-    border: 1px solid var(--primary-hover);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-
-  td {
-    padding: 10px 8px;
-    border: 1px solid var(--border-color);
-    word-wrap: break-word;
-    overflow: hidden; /* Запобігаємо перевищенню вмісту */
-    text-overflow: ellipsis; /* Додаємо обтинання тексту */
-  }
-
-  tbody tr {
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-
-    &:nth-child(even) {
-      background-color: var(--light-gray);
-    }
-
-    /* ОНОВЛЕНІ ХОВЕР ЕФЕКТИ */
-    &:hover {
-      background-color: var(--border-color) !important;
-
-      td {
-        background-color: var(--border-color) !important;
-      }
-    }
-  }
+  table-layout: fixed;
 }
 
-/* Спеціальний ховер для таблиці магазину - чорний текст у колонці "Залишок" */
+.Bukhhalter-data-table th {
+  background: var(--primary-color);
+  color: white;
+  padding: 0;
+  text-align: center;
+  font-weight: bold;
+  border: 1px solid var(--primary-hover);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.Bukhhalter-data-table td {
+  padding: 10px 8px;
+  border: 1px solid var(--border-color);
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.Bukhhalter-data-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.Bukhhalter-data-table tbody tr:nth-child(even) {
+  background-color: var(--light-gray);
+}
+
+.Bukhhalter-data-table tbody tr:hover {
+  background-color: var(--border-color) !important;
+}
+
+.Bukhhalter-data-table tbody tr:hover td {
+  background-color: var(--border-color) !important;
+}
+
 #magazine-table tbody tr:hover td:nth-child(10) {
   color: black !important;
 }
 
-/* Стилі для комірки "Залишок" з нульовою ціною */
-.zero-stock {
-  background-color: var(--light-gray) !important;
-  color: black !important;
-  font-weight: normal !important;
-  text-align: center !important;
-}
-
-/* Контейнери таблиць з скролом */
+/* Контейнери таблиць */
 #podlegle-table-container,
 #magazine-table-container,
 #details-table-container {
   flex: 1;
   overflow: auto;
   border-radius: var(--small-radius);
-  margin-top: 0;
-  padding-top: 0;
-  max-height: calc(100% - 80px); /* Віднімаємо висоту заголовка та відступів */
-  min-height: 200px; /* Мінімальна висота для видимості */
-  width: 100%; /* Забезпечуємо 100% ширини */
-  max-width: 100%; /* Обмежуємо максимальну ширину */
-  box-sizing: border-box; /* Враховуємо padding у розмірах */
+  max-height: calc(100% - 80px);
+  min-height: 200px;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Заголовки таблиць */
@@ -223,7 +230,15 @@ body {
   white-space: nowrap;
 }
 
-/* Стилі рядків таблиці */
+.Bukhhalter-no-data {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+  font-size: 16px;
+}
+
+/* ==================== СТИЛІ РЯДКІВ ==================== */
 .closed-row {
   background-color: #d4edda !important;
 }
@@ -234,63 +249,142 @@ body {
 
 .paid-row {
   border-left: 4px solid var(--success-color) !important;
-
-  &:hover {
-    background-color: var(--border-color) !important;
-  }
 }
 
 .unpaid-row {
   border-left: 4px solid var(--danger-color) !important;
-
-  &:hover {
-    background-color: var(--border-color) !important;
-  }
 }
 
 .selected-row {
   background-color: #e9ecef !important;
 }
 
-.Bukhhalter-no-data {
-  text-align: center;
-  padding: 40px;
-  color: #666;
-  font-style: italic;
-  font-size: 16px;
+.returned-row {
+  background-color: var(--secondary-color) !important;
+  color: white !important;
 }
 
-/* Вкладки */
-.Bukhhalter-tab-container {
+.returned-row:hover {
+  background-color: var(--secondary-hover) !important;
+}
+
+.returned-row .zero-stock,
+.returned-row .available-stock,
+.returned-row .unavailable-stock {
+  background-color: var(--secondary-color) !important;
+  color: white !important;
+}
+
+/* ==================== СТИЛІ ЗАЛИШКІВ ==================== */
+.available-stock {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+.zero-stock {
+  background-color: var(--light-gray) !important;
+  color: black !important;
+  font-weight: normal !important;
+  text-align: center !important;
+}
+
+.unavailable-stock {
+  background-color: var(--danger-color) !important;
+  color: white !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+.zero-stock-row {
+  background-color: var(--light-gray) !important;
+}
+
+.zero-stock-row:hover td {
+  background-color: var(--light-gray) !important;
+}
+
+.zero-stock-row:hover td:nth-child(10) {
+  color: black !important;
+}
+
+.available-row {
+  border-left: 4px solid var(--primary-color) !important;
+}
+
+.unavailable-row {
+  border-left: 4px solid var(--border-color) !important;
+}
+
+/* Комбіновані стилі */
+.paid-row.available-row,
+.unpaid-row.available-row {
+  background-color: rgba(76, 175, 80, 0.05);
+}
+
+.paid-row.unavailable-row,
+.unpaid-row.unavailable-row {
+  background-color: rgba(244, 67, 54, 0.05);
+}
+
+.stock-available-row {
+  background-color: rgba(76, 175, 80, 0.1) !important;
+}
+
+.stock-unavailable-row {
+  background-color: rgba(244, 67, 54, 0.1) !important;
+}
+
+.available-stock-text {
+  color: var(--primary-color) !important;
+  font-weight: bold !important;
+}
+
+.unavailable-stock-text {
+  color: var(--danger-color) !important;
+  font-weight: bold !important;
+}
+
+/* ==================== ВКЛАДКИ ==================== */
+.Bukhhalter-tabs {
   display: flex;
-  justify-content: center;
   gap: 5px;
-  margin-bottom: 10px;
+  background: white;
+  border-radius: var(--border-radius);
+  /*  padding: 5px; */
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
 }
 
-.Bukhhalter-tab-button {
+.Bukhhalter-tab-btn {
   background: #e0e0e0;
   border: none;
-  padding: 12px 15px;
+  padding: 8px 5px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: bold;
   transition: var(--transition);
   border-radius: 20px;
   flex: 1;
-  min-width: 0; /* Запобігаємо розтягуванню */
-
-  &.Bukhhalter-active {
-    background: var(--primary-color);
-    color: white;
-  }
-
-  &:not(.Bukhhalter-active):hover {
-    background: #ccc;
-  }
+  min-width: 0;
+  text-align: center;
+  color: #333;
 }
 
-/* Форми */
+.Bukhhalter-tab-btn.Bukhhalter-active {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.Bukhhalter-tab-btn:not(.Bukhhalter-active):hover {
+  background: #ccc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ==================== ФОРМИ ==================== */
 .Bukhhalter-form-container {
   background: white;
   border-radius: var(--border-radius);
@@ -298,24 +392,42 @@ body {
   box-shadow: var(--shadow);
   flex: 1;
   overflow-y: auto;
-  min-width: 0; /* Запобігаємо перевищенню ширини */
+  min-width: 0;
+}
+
+.Bukhhalter-form-container .Bukhhalter-form-section {
+  display: none;
+}
+
+.Bukhhalter-form-container .Bukhhalter-form-section.Bukhhalter-active {
+  display: block;
+}
+/* ==================== ФОРМИ ==================== */
+.Bukhhalter-form-container {
+  background: white;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
 }
 
 .Bukhhalter-form-section {
   display: none;
+}
 
-  &.Bukhhalter-active {
-    display: block;
-  }
+.Bukhhalter-form-section.Bukhhalter-active {
+  display: block;
 }
 
 .Bukhhalter-form-row {
   display: flex;
   gap: 10px;
+}
 
-  .Bukhhalter-field-group {
-    flex: 1;
-  }
+.Bukhhalter-form-row .Bukhhalter-field-group {
+  flex: 1;
 }
 
 .Bukhhalter-field-group {
@@ -338,20 +450,19 @@ body {
   font-size: 14px;
   transition: border-color 0.3s ease;
   cursor: pointer;
-  width: 100%; /* Забезпечуємо 100% ширини */
-  box-sizing: border-box; /* Враховуємо padding */
-
-  &:focus {
-    border-color: var(--primary-color);
-    outline: none;
-  }
-
-  &::placeholder {
-    color: #999;
-  }
+  width: 100%;
 }
 
-/* Кнопки */
+.Bukhhalter-field-input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.Bukhhalter-field-input::placeholder {
+  color: #999;
+}
+
+/* ==================== КНОПКИ ==================== */
 .Bukhhalter-button-container {
   text-align: center;
   margin-top: 20px;
@@ -378,38 +489,37 @@ body {
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
   margin: 5px;
   flex: 1;
-  min-width: 0; /* Запобігаємо перевищенню */
-
-  &:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  }
+  min-width: 0;
 }
 
-/* Варіанти кнопок */
+.Bukhhalter-action-button:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
 .Bukhhalter-cancel-button {
   background: var(--danger-color);
+}
 
-  &:hover {
-    background: var(--danger-hover);
-  }
+.Bukhhalter-cancel-button:hover {
+  background: var(--danger-hover);
 }
 
 .Bukhhalter-add-button {
   background: var(--secondary-color);
+}
 
-  &:hover {
-    background: var(--secondary-hover);
-  }
+.Bukhhalter-add-button:hover {
+  background: var(--secondary-hover);
 }
 
 .Bukhhalter-clear-button {
   background: var(--warning-color);
+}
 
-  &:hover {
-    background: var(--warning-hover);
-  }
+.Bukhhalter-clear-button:hover {
+  background: var(--warning-hover);
 }
 
 .Bukhhalter-excel-button {
@@ -425,10 +535,24 @@ body {
   border-radius: 50px;
   cursor: pointer;
   font-size: 12px;
+}
 
-  &:hover {
-    background: var(--danger-hover);
-  }
+.Bukhhalter-save-btn:hover {
+  background: var(--danger-hover);
+}
+
+.Bukhhalter-act-btn {
+  cursor: pointer;
+}
+
+.Bukhhalter-purple-button {
+  background-color: var(--vutratu-color);
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.Bukhhalter-purple-button:hover {
+  background-color: var(--vutratu-color-hover);
 }
 
 /* Кнопки розрахунку */
@@ -442,291 +566,221 @@ body {
   width: 100%;
   text-align: center;
   transition: all 0.2s ease;
-
-  &.paid {
-    background-color: #d4edda;
-    border-color: var(--success-color);
-    color: #155724;
-  }
-
-  &.unpaid {
-    background-color: #f8d7da;
-    border-color: var(--danger-color);
-    color: #721c24;
-  }
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background-color: #ccc !important;
-    color: #666 !important;
-    border-color: #ccc !important;
-    transform: none;
-    box-shadow: none;
-  }
 }
 
-/* Перемикачі */
+.Bukhhalter-payment-btn.paid {
+  background-color: #d4edda;
+  border-color: var(--success-color);
+  color: #155724;
+}
+
+.Bukhhalter-payment-btn.unpaid {
+  background-color: #f8d7da;
+  border-color: var(--danger-color);
+  color: #721c24;
+}
+
+.Bukhhalter-payment-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.Bukhhalter-payment-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #ccc !important;
+  color: #666 !important;
+  border-color: #ccc !important;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ==================== ПЕРЕМИКАЧІ ==================== */
 .Bukhhalter-toggle-container {
   margin-bottom: 15px;
 }
 
+/* Базовий стиль для всіх перемикачів */
 .Bukhhalter-payment-toggle,
-.Bukhhalter-status-toggle {
+.Bukhhalter-status-toggle,
+.Bukhhalter-availability-toggle,
+.Bukhhalter-expense-type-toggle {
   width: 100%;
   height: 20px;
-  background: linear-gradient(
-    to right,
-    var(--success-color) 0%,
-    var(--success-color) 33%,
-    var(--danger-color) 33%,
-    var(--danger-color) 66%,
-    #ffc107 66%,
-    #ffc107 100%
-  );
   outline: none;
   border-radius: 15px;
   appearance: none;
   cursor: pointer;
   border: 2px solid var(--border-color);
-
-  &::-webkit-slider-thumb {
-    appearance: none;
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  &::-moz-range-thumb {
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    background: var(--border-color);
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
 }
 
-.Bukhhalter-toggle-labels {
+/* Градієнти для перемикачів */
+.Bukhhalter-payment-toggle,
+.Bukhhalter-status-toggle,
+.Bukhhalter-expense-type-toggle {
+  background: linear-gradient(
+    to right,
+    var(--success-color) 0%,
+    var(--success-color) 33.33%,
+    var(--danger-color) 33.33%,
+    var(--danger-color) 66.66%,
+    var(--orange1) 66.66%,
+    var(--orange2) 100%
+  );
+}
+
+.Bukhhalter-availability-toggle {
+  background: linear-gradient(
+    to right,
+    #4caf50 0%,
+    #4caf50 20%,
+    #9e9e9e 20%,
+    #9e9e9e 40%,
+    #f44336 40%,
+    #f44336 60%,
+    #2196f3 60%,
+    #2196f3 80%,
+    #ff9800 80%,
+    #ff9800 100%
+  );
+}
+
+/* Повзунки */
+.Bukhhalter-payment-toggle::-webkit-slider-thumb,
+.Bukhhalter-status-toggle::-webkit-slider-thumb,
+.Bukhhalter-availability-toggle::-webkit-slider-thumb,
+.Bukhhalter-expense-type-toggle::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--success-color);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.Bukhhalter-payment-toggle::-moz-range-thumb,
+.Bukhhalter-status-toggle::-moz-range-thumb,
+.Bukhhalter-availability-toggle::-moz-range-thumb,
+.Bukhhalter-expense-type-toggle::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--success-color);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Лейбли перемикачів */
+.Bukhhalter-toggle-labels,
+.Bukhhalter-toggle-labels-2,
+.Bukhhalter-toggle-labels-5 {
   display: flex;
   justify-content: space-between;
   margin-top: 5px;
-  font-size: 12px;
   color: #666;
   font-weight: bold;
-
-  span {
-    text-align: center;
-    flex: 1;
-  }
 }
 
-/* Розміри колонок */
+.Bukhhalter-toggle-labels,
+.Bukhhalter-toggle-labels-2 {
+  font-size: 12px;
+}
+
+.Bukhhalter-toggle-labels-5 {
+  font-size: 10px;
+}
+
+.Bukhhalter-toggle-labels span,
+.Bukhhalter-toggle-labels-2 span,
+.Bukhhalter-toggle-labels-5 span {
+  text-align: center;
+  flex: 1;
+}
+
+.Bukhhalter-toggle-labels-5 span {
+  padding: 0 1px;
+}
+
+/* ==================== РОЗМІРИ КОЛОНОК ==================== */
 .pidlehli-money,
 .magazine-money,
-.poAktam-money {
-  min-width: 60px;
-  width: 60px; /* Додаємо фіксовану ширину для кращого контролю */
+.poAktam-money,
+.expenses-data,
+.expenses-money,
+.expenses-diya {
+  min-width: var(--col-money);
+  width: var(--col-money);
 }
 
 .pidlehli-robota,
 .poAktam-enuvannya {
-  min-width: 180px;
-  width: 180px; /* Додаємо фіксовану ширину */
+  min-width: var(--col-robota);
+  width: var(--col-robota);
 }
 
 .pidlehli-avto,
 .poAktam-katalog {
-  min-width: 130px;
-  width: 130px; /* Додаємо фіксовану ширину */
+  min-width: var(--col-avto);
+  width: var(--col-avto);
 }
 
 .pidlehli-kilkist,
 .magazine-kilkist,
 .poAktam-kilkist,
 .magazine-zalushok {
-  min-width: 57px;
-  width: 57px; /* Додаємо фіксовану ширину */
+  min-width: var(--col-kilkist);
+  width: var(--col-kilkist);
 }
 
 .pidlehli-diya,
 .magazine-diya,
 .poAktam-diya {
-  min-width: 40px;
-  width: 40px; /* Додаємо фіксовану ширину */
+  min-width: var(--col-diya);
+  width: var(--col-diya);
 }
 
+.expenses-dataOn,
+.expenses-dataOff,
 .pidlehli-dataOn,
 .pidlehli-dataOff,
 .pidlehli-akt,
 .magazine-dataOn,
 .magazine-akt,
 .poAktam-akt,
-.magazine-akt,
+.vutratu-akt,
 .poAktam-dataOn,
 .poAktam-dataOff {
-  min-width: 61px;
-  width: 61px; /* Додаємо фіксовану ширину */
+  min-width: var(--col-date);
+  width: var(--col-date);
 }
 
-.magazine-raxunok {
-  min-width: 80px;
-  width: 80px; /* Додаємо фіксовану ширину */
-}
-
+.magazine-raxunok,
 .magazine-povernennya {
-  min-width: 80px;
-  width: 80px;
+  min-width: var(--col-raxunok);
+  width: var(--col-raxunok);
 }
 
-.Bukhhalter-act-btn {
-  cursor: pointer;
+.expenses-opis {
+  min-width: var(--col-opis);
+  width: var(--col-opis);
 }
 
-/* Додаткові стилі для кольорового кодування залишків на складі */
-
-/* Стилі для комірки залишку з позитивним значенням (більше 0) */
-.available-stock {
-  background-color: var(--primary-color) !important;
-  color: white !important;
-  font-weight: bold !important;
-  text-align: center !important;
+.expenses-prumitku {
+  min-width: var(--col-prumitku);
+  width: var(--col-prumitku);
 }
 
-/* Стилі для комірки залишку з нульовим значенням */
-.zero-stock {
-  background-color: var(--light-gray) !important;
-  color: black !important;
-  font-weight: normal !important;
-  text-align: center !important;
-}
-
-/* Стилі для комірки залишку з від'ємним значенням */
-.unavailable-stock {
-  background-color: var(--danger-color) !important;
-  color: white !important;
-  font-weight: bold !important;
-  text-align: center !important;
-}
-
-/* Стилі для ВСЬОГО РЯДКА з нульовим залишком */
-.zero-stock-row {
-  background-color: var(--light-gray) !important;
-
-  &:hover {
-    background-color: var(--border-color) !important;
-
-    td {
-      background-color: var(--light-gray) !important;
-    }
-
-    /* Чорний текст у колонці "Залишок" при ховері */
-    td:nth-child(10) {
-      color: black !important;
-    }
-  }
-}
-
-/* Додаткові стилі для всього рядка в залежності від наявності */
-.available-row {
-  border-left: 4px solid var(--primary-color) !important;
-
-  &:hover {
-    background-color: var(--border-color) !important;
-  }
-}
-
-.unavailable-row {
-  border-left: 4px solid var(--border-color) !important;
-
-  &:hover {
-    background-color: var(--border-color) !important;
-  }
-}
-
-/* Комбіновані стилі для рядків з оплатою та наявністю */
-.paid-row.available-row {
-  border-left: 4px solid var(--success-color) !important;
-  background-color: rgba(76, 175, 80, 0.05);
-}
-
-.paid-row.unavailable-row {
-  border-left: 4px solid var(--success-color) !important;
-  background-color: rgba(244, 67, 54, 0.05);
-}
-
-.unpaid-row.available-row {
-  border-left: 4px solid var(--danger-color) !important;
-  background-color: rgba(76, 175, 80, 0.05);
-}
-
-.unpaid-row.unavailable-row {
-  border-left: 4px solid var(--danger-color) !important;
-  background-color: rgba(244, 67, 54, 0.05);
-}
-
-/* Альтернативний варіант: зафарбовування всього рядка */
-.stock-available-row {
-  background-color: rgba(76, 175, 80, 0.1) !important;
-
-  &:hover {
-    background-color: var(--border-color) !important;
-  }
-}
-
-.stock-unavailable-row {
-  background-color: rgba(244, 67, 54, 0.1) !important;
-
-  &:hover {
-    background-color: var(--light-gray) !important;
-  }
-}
-
-/* Стилі для тексту залишку */
-.available-stock-text {
-  color: var(--primary-color) !important;
-  font-weight: bold !important;
-}
-
-.unavailable-stock-text {
-  color: var(--danger-color) !important;
-  font-weight: bold !important;
-}
-
-/* Стилі для рядка повернення */
-.returned-row {
-  background-color: var(--secondary-color) !important;
-  color: white !important;
-
-  &:hover {
-    background-color: var(--secondary-hover) !important;
-  }
-
-  .zero-stock,
-  .available-stock,
-  .unavailable-stock {
-    background-color: var(--secondary-color) !important;
-    color: white !important;
-  }
-}
-
-/* Стилі для комірки повернення */
-.magazine-povernennya {
+/* ==================== ПОВЕРНЕННЯ ==================== */
+.magazine-povernennya,
+.return-cell {
   text-align: center;
 }
 
 .return-cell {
-  text-align: center;
   vertical-align: middle;
 }
 
@@ -746,15 +800,15 @@ body {
   padding: 2px;
   border-radius: 50%;
   transition: background-color 0.2s ease;
+}
 
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
+.Bukhhalter-return-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+.Bukhhalter-return-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .return-date {
@@ -770,7 +824,83 @@ body {
   margin: 0;
 }
 
-/* Адаптивність */
+/* ==================== МОДАЛЬНЕ ВІКНО ==================== */
+.expense-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expense-modal-content {
+  background: white;
+  border-radius: 10px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.expense-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.expense-modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.expense-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.expense-modal-close:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.expense-modal-body {
+  padding: 20px 20px 0 20px;
+}
+
+.expense-modal-footer {
+  padding: 20px;
+  border-top: 2px solid #e0e0e0;
+  text-align: center;
+}
+
+.expense-modal-footer button {
+  width: 100%;
+  max-width: 300px;
+  padding: 15px;
+  font-size: 18px;
+}
+
+/* ==================== АДАПТИВНІСТЬ ==================== */
 @media (max-width: 1200px) {
   .Bukhhalter-container {
     flex-direction: column;
@@ -791,14 +921,14 @@ body {
   #podlegle-table-container,
   #magazine-table-container,
   #details-table-container {
-    max-height: 350px; /* Фіксована висота для мобільних пристроїв */
+    max-height: 350px;
   }
 }
 
 @media (max-width: 768px) {
   .Bukhhalter-container {
-    padding: 0 10px;
-    gap: 10px;
+    padding: 2px 2px;
+    gap: 5px;
   }
 
   .Bukhhalter-table-section,
@@ -808,15 +938,11 @@ body {
 
   .Bukhhalter-data-table {
     font-size: 12px;
+  }
 
-    th,
-    td {
-      padding: 10px 8px;
-      border: 1px solid var(--border-color);
-      word-wrap: break-word;
-      overflow: hidden; /* Обрізаємо вміст, який не вміщається */
-      text-overflow: ellipsis; /* Додаємо обтинання тексту */
-    }
+  .Bukhhalter-data-table th,
+  .Bukhhalter-data-table td {
+    padding: 10px 8px;
   }
 
   .Bukhhalter-form-row {
@@ -858,7 +984,7 @@ body {
   #podlegle-table-container,
   #magazine-table-container,
   #details-table-container {
-    max-height: 300px; /* Фіксована висота для дуже малих екранів */
+    max-height: 300px;
   }
 
   .return-date {
@@ -868,78 +994,233 @@ body {
   .return-date > div {
     font-size: 8px;
   }
-}
 
-/* Оновлений стиль для 5-позиційного перемикача наявності */
-.Bukhhalter-availability-toggle {
-  width: 100%;
-  height: 20px;
-  /* Градієнт для 5 позицій: Зелений (0-20%), Сірий (20-40%), Червоний (40-60%), Синій (60-80%), Помаранчевий (80-100%) */
-  background: linear-gradient(
-    to right,
-    #4caf50 0%,
-    /* 🟢 Присутні - зелений */ #4caf50 20%,
-    #9e9e9e 20%,
-    /* 🔘 Нульові - сірий */ #9e9e9e 40%,
-    #f44336 40%,
-    /* 🔴 Відємні - червоний */ #f44336 60%,
-    #2196f3 60%,
-    /* 🔵 Повернення - синій */ #2196f3 80%,
-    #ff9800 80%,
-    /* 🟠 Всі деталі - помаранчевий */ #ff9800 100%
-  );
-  outline: none;
-  border-radius: 15px;
-  appearance: none;
-  cursor: pointer;
-  border: 2px solid var(--border-color);
-
-  &::-webkit-slider-thumb {
-    appearance: none;
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  &::-moz-range-thumb {
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-}
-
-/* Спеціальні лейбли для 5-позиційного перемикача */
-.Bukhhalter-toggle-labels-5 {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 5px;
-  font-size: 10px; /* Менший шрифт для 5 позицій */
-  color: #666;
-  font-weight: bold;
-
-  span {
-    text-align: center;
-    flex: 1;
-    padding: 0 1px; /* Невеликий відступ */
-  }
-}
-
-/* Додатковий стиль для кращої видимості на мобільних пристроях */
-@media (max-width: 768px) {
   .Bukhhalter-toggle-labels-5 {
     font-size: 9px;
+  }
 
-    span {
-      padding: 0 1px;
-      line-height: 1.2;
+  .Bukhhalter-toggle-labels-5 span {
+    padding: 0 1px;
+    line-height: 1.2;
+  }
+}
+
+/* ==================== МОДАЛЬНЕ ВІКНО ВИТРАТ - КНОПКА ПЕРЕМИКАЧ ==================== */
+
+// Кнопка-перемикач режимів
+.expense-mode-switcher {
+  display: inline-block;
+  padding: 8px 20px;
+  border: 2px solid transparent;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  user-select: none;
+  white-space: nowrap;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  // Режим "Додати" (зелений)
+  &.mode-add {
+    background: linear-gradient(135deg, #4caf50, #45a049);
+    color: white;
+    border-color: #4caf50;
+  }
+
+  // Режим "Редагувати" (жовто-помаранчевий)
+  &.mode-edit {
+    background: linear-gradient(135deg, #ffc107, #ff9800);
+    color: #333;
+    border-color: #ffc107;
+
+    &:hover {
+      color: white;
     }
+  }
+
+  // Режим "Видалити" (червоний)
+  &.mode-delete {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+    border-color: #f44336;
+  }
+}
+
+/* ==================== МОДАЛЬНЕ ВІКНО ВИТРАТ - ОНОВЛЕНИЙ ЗАГОЛОВОК ==================== */
+
+// Заголовок модального вікна
+.expense-modal-header {
+  display: grid;
+  grid-template-columns: 1fr auto 40px;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+// Заголовок (ліворуч)
+#expense-modal-title {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+  text-align: left;
+  font-weight: bold;
+  grid-column: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Кнопка-перемикач (по центру)
+.expense-mode-switcher {
+  grid-column: 2;
+  display: inline-block;
+  padding: 8px 20px;
+  border: 2px solid transparent;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  user-select: none;
+  white-space: nowrap;
+  min-width: 150px;
+  text-align: center;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  // Режим "Додати" (зелений)
+  &.mode-add {
+    background: linear-gradient(135deg, #4caf50, #45a049);
+    color: white;
+    border-color: #4caf50;
+  }
+
+  // Режим "Редагувати" (жовто-помаранчевий)
+  &.mode-edit {
+    background: linear-gradient(135deg, #ffc107, #ff9800);
+    color: #333;
+    border-color: #ffc107;
+
+    &:hover {
+      color: white;
+    }
+  }
+
+  // Режим "Видалити" (червоний)
+  &.mode-delete {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+    border-color: #f44336;
+  }
+}
+
+// Кнопка закриття (праворуч)
+.expense-modal-close {
+  grid-column: 3;
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+
+  &:hover {
+    background-color: #f0f0f0;
+    color: #333;
+    transform: rotate(90deg);
+  }
+}
+
+// Стилі для textarea
+.Bukhhalter-field-textarea {
+  resize: none;
+  min-height: 50px;
+  height: auto;
+  max-height: 150px;
+  font-family: Arial, sans-serif;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  width: 100%;
+
+  &::placeholder {
+    color: #999;
+  }
+}
+
+// Адаптивність для модального вікна
+@media (max-width: 768px) {
+  .expense-modal-header {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px;
+    padding: 15px;
+  }
+
+  #expense-modal-title {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 20px;
+    text-align: center;
+  }
+
+  .expense-mode-switcher {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+    padding: 10px 15px;
+  }
+
+  .expense-modal-close {
+    grid-column: 1;
+    grid-row: 1;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .expense-modal-header {
+    padding: 12px;
+  }
+
+  #expense-modal-title {
+    font-size: 18px;
+    padding-right: 40px;
+  }
+
+  .expense-mode-switcher {
+    font-size: 13px;
+    padding: 8px 12px;
+    min-width: 130px;
   }
 }

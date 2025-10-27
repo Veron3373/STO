@@ -1013,8 +1013,12 @@ function updateDetailsTotalSumDisplay(purchaseTotal: number, saleTotal: number, 
     const marginSign = marginTotal >= 0 ? '+' : '';
     
     totalSumElement.innerHTML = `
-      <div style="color: white; font-size: 1.1em; font-weight: 600; white-space: nowrap;">
-        Сумма 💰 ${formatNumber(saleTotal)} грн - 💶 ${formatNumber(purchaseTotal)} грн = 📈 ${marginSign}${formatNumber(marginTotal)} грн
+      <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
+        <span>Сумма <strong style="color: #333;">💰 ${formatNumber(saleTotal)}</strong> грн</span>
+        <span style="color: #666;">-</span>
+        <span><strong style="color: #8B0000;">💶 ${formatNumber(purchaseTotal)}</strong> грн</span>
+        <span style="color: #666;">=</span>
+        <span><strong style="color: ${marginTotal >= 0 ? '#006400 ' : '#8B0000'};">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
       </div>
     `;
   }

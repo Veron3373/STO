@@ -6,7 +6,6 @@ import { runMassPaymentCalculationForDetails } from "./poAktam";
 import {
   initializeExpensesData,
   updateExpensesTable,
-  addExpenseRecord,
   deleteExpenseRecord,
   toggleExpensePayment,
   clearExpensesForm,
@@ -53,7 +52,7 @@ import {
 
 type TabName = "podlegle" | "magazine" | "details" | "expenses";
 
-let currentTab: TabName = "podlegle";
+let currentTab: TabName = "magazine"; 
 let selectedRowIndex: number | null = null;
 
 export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -110,6 +109,15 @@ export function updateTotalSum(): void {
     return;
   }
 
+  // Для магазину показуємо спеціальний формат
+  if (currentTab === "magazine") {
+    // Викликаємо функцію з shopsBuxha.ts яка розраховує та відображає дві суми
+    if (typeof (window as any).updateMagazineTotalSum === "function") {
+      (window as any).updateMagazineTotalSum();
+    }
+    return;
+  }
+
   // Для деталей по актам показуємо спеціальний формат
   if (currentTab === "details") {
     // Викликаємо функцію з poAktam.ts яка розраховує та відображає три суми
@@ -128,34 +136,36 @@ export function updateTotalSum(): void {
     return;
   }
 
-  // Для магазину — звичайний формат
+  // Fallback для невідомих вкладок
   const total = calculateTotalSum();
-  totalSumElement.textContent = `Загальна сума: ${formatNumber(total)} грн`;
+  totalSumElement.textContent = `${formatNumber(total)} грн`;
 }
 
 export function switchTab(e: Event, tabName: TabName) {
-  const sections = document.querySelectorAll<HTMLElement>(
-    ".Bukhhalter-form-section"
-  );
-  sections.forEach((section) => section.classList.remove("Bukhhalter-active"));
-
-  const buttons = document.querySelectorAll<HTMLButtonElement>(
-    ".Bukhhalter-tab-button"
-  );
+  // Видаляємо активний клас з всіх кнопок вкладок
+  const buttons = document.querySelectorAll<HTMLElement>(".Bukhhalter-tab-btn");
   buttons.forEach((button) => button.classList.remove("Bukhhalter-active"));
 
-  byId<HTMLElement>("Bukhhalter-" + tabName + "-section").classList.add(
-    "Bukhhalter-active"
-  );
+  // Додаємо активний клас до натиснутої кнопки
+  const target = e.currentTarget as HTMLElement | null;
+  if (target) {
+    target.classList.add("Bukhhalter-active");
+  }
 
-  const target = e.currentTarget as HTMLButtonElement | null;
-  if (target) target.classList.add("Bukhhalter-active");
+  // Видаляємо активний клас з всіх форм
+  const sections = document.querySelectorAll<HTMLElement>(".Bukhhalter-form-section");
+  sections.forEach((section) => section.classList.remove("Bukhhalter-active"));
+
+  // Додаємо активний клас до обраної форми
+  const formSection = byId<HTMLElement>("Bukhhalter-" + tabName + "-section");
+  if (formSection) {
+    formSection.classList.add("Bukhhalter-active");
+  }
 
   currentTab = tabName;
   updateTableDisplay();
   updateTotalSum();
 }
-
 function updateTableDisplay(): void {
   const tableTitle = byId<HTMLDivElement>("table-title");
   const magazineContainer = byId<HTMLDivElement>("magazine-table-container");
@@ -239,7 +249,10 @@ export async function addRecord(): Promise<void> {
   }
 
   if (currentTab === "expenses") {
-    await addExpenseRecord();
+    // Відкриваємо модальне вікно замість додавання через форму
+    if (typeof (window as any).openExpenseModal === "function") {
+      (window as any).openExpenseModal();
+    }
     return;
   }
 }
@@ -715,8 +728,14 @@ window.addEventListener("load", async function () {
     createMagazineAvailabilityToggle();
     createShopsSelect();
 
+    // Явно встановлюємо вкладку "Склад" як активну
+    currentTab = "magazine";
+    
+    // Оновлюємо відображення таблиці для вкладки "Склад"
     updateTableDisplay();
     initializeDateInputs();
+    
+    console.log("✅ Ініціалізація завершена. Активна вкладка: Склад");
   } catch (error) {
     console.error("Помилка ініціалізації:", error);
   }

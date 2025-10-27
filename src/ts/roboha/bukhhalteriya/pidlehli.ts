@@ -929,6 +929,7 @@ export function calculatePodlegleMarginTotal(): number {
   return filteredData.reduce((sum, item) => sum + (item.margin || 0), 0);
 }
 
+
 // Функція для оновлення відображення суми для співробітників
 export function updatePodlegleDisplayedSums(): void {
   const totalSumElement = byId<HTMLElement>("total-sum");
@@ -953,8 +954,12 @@ export function updatePodlegleDisplayedSums(): void {
   const marginSign = totalMargin >= 0 ? "+" : "";
 
   totalSumElement.innerHTML = `
-    <div style="color: white; font-size: 1.1em; font-weight: 600; white-space: nowrap;">
-      Сумма 💰 ${formatNumber(totalRevenue)} грн - 💶 ${formatNumber(totalSalary)} грн = 📈 ${marginSign}${formatNumber(totalMargin)} грн
+    <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
+      <span>Сумма <strong style="color: #333;">💰 ${formatNumber(totalRevenue)}</strong> грн</span>
+      <span style="color: #666;">-</span>
+      <span><strong style="color: #8B0000;">💶 ${formatNumber(totalSalary)}</strong> грн</span>
+      <span style="color: #666;">=</span>
+      <span><strong style="color: ${totalMargin >= 0 ? '#006400 ' : '#8B0000'};">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
     </div>
   `;
 }

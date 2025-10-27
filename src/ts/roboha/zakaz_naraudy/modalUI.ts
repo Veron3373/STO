@@ -365,12 +365,7 @@ export function generateTableHTML(
       )}</span> грн</p>
       <p><strong>За деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-sum">${formatNumberWithSpaces(
         0
-      )}</span> грн</p>
-      <p><strong>Прибуток за деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-profit">${formatNumberWithSpaces(
-        0
-      )}</span> грн</p>
-      <p><strong>Прибуток за роботу:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-works-profit">${formatNumberWithSpaces(
-        0
+      )}
       )}</span> грн</p>
       <p><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
         0

@@ -591,15 +591,92 @@ export async function saveExpenseFromModal(): Promise<void> {
       await handleAddExpense(date, category, description, amount, paymentMethod, notes);
       break;
     case 'edit':
-      showNotification("ℹ️ Функція редагування в розробці", "info");
-      // TODO: Реалізувати логіку редагування
+      await handleEditExpense(date, category, description, amount, paymentMethod, notes);
       break;
     case 'delete':
-      showNotification("ℹ️ Функція видалення в розробці", "info");
-      // TODO: Реалізувати логіку видалення
+      await handleDeleteExpense();
       break;
   }
 }
+
+
+// Редагування існуючої витрати
+async function handleEditExpense(
+  date: string,
+  category: string,
+  description: string,
+  amount: number,
+  paymentMethod: string,
+  notes: string
+): Promise<void> {
+  const selectedIndex = filteredExpensesData.findIndex(expense => expense.id === selectedExpenseId);
+  if (selectedIndex === -1) {
+    showNotification("⚠️ Витрата для редагування не вибрана", "warning");
+    return;
+  }
+
+  const updatedExpense: ExpenseRecord = {
+    ...filteredExpensesData[selectedIndex],
+    date,
+    category,
+    description,
+    amount,
+    paymentMethod,
+    notes: notes || undefined,
+  };
+
+  try {
+    const response = await fetch(`/api/vutratu/${updatedExpense.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedExpense),
+    });
+    if (!response.ok) throw new Error('Failed to update expense');
+
+    expensesData[expensesData.findIndex(e => e.id === updatedExpense.id)] = updatedExpense;
+    saveExpensesToStorage();
+    filterExpensesData();
+
+    showNotification("✅ Витрату оновлено", "success");
+    closeExpenseModal();
+  } catch (error) {
+    console.error("Помилка редагування витрати:", error);
+    showNotification("❌ Помилка редагування витрати", "error");
+  }
+}
+
+// Видалення витрати
+async function handleDeleteExpense(): Promise<void> {
+  const selectedIndex = filteredExpensesData.findIndex(expense => expense.id === selectedExpenseId);
+  if (selectedIndex === -1) {
+    showNotification("⚠️ Витрата для видалення не вибрана", "warning");
+    return;
+  }
+
+  const expenseToDelete = filteredExpensesData[selectedIndex];
+  if (!confirm(`Видалити витрату "${expenseToDelete.description}"?`)) return;
+
+  try {
+    const response = await fetch(`/api/vutratu/${expenseToDelete.id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete expense');
+
+    expensesData.splice(expensesData.findIndex(e => e.id === expenseToDelete.id), 1);
+    saveExpensesToStorage();
+    filterExpensesData();
+
+    showNotification("🗑️ Витрату видалено", "info");
+    closeExpenseModal();
+  } catch (error) {
+    console.error("Помилка видалення витрати:", error);
+    showNotification("❌ Помилка видалення витрати", "error");
+  }
+}
+
+// Глобальна змінна для зберігання ID вибраної витрати
+let selectedExpenseId: string | null = null;
+
 
 // ==================== ЕКСПОРТ ====================
 

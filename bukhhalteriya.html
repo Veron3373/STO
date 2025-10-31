@@ -286,8 +286,8 @@
       </div>
 
       <!-- Таблиця витрат -->
-      <div id="expenses-table-container" style="display: none;">
-        <table class="Bukhhalter-data-table" id="expenses-table">
+      <div id="vutratu-table-container" style="display: none;">
+        <table class="Bukhhalter-data-table" id="vutratu-table">
           <thead>
             <tr>
               <th>
@@ -296,13 +296,13 @@
                   <span class="table-header-text">Розраховано</span>
                 </div>
               </th>
-              <th class="expenses-dataOn">
+              <th class="vutratu-dataOn">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">📅</span>
                   <span class="table-header-text">Відкриття</span>
                 </div>
               </th>
-              <th class="expenses-dataOff">
+              <th class="vutratu-dataOff">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">📅</span>
                   <span class="table-header-text">Закриття</span>
@@ -320,13 +320,13 @@
                   <span class="table-header-text">Акт_№</span>
                 </div>
               </th>
-              <th class="expenses-opis">
+              <th class="vutratu-opis">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">📝</span>
                   <span class="table-header-text">Опис</span>
                 </div>
               </th>
-              <th class="expenses-money">
+              <th class="vutratu-money">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">💵</span>
                   <span class="table-header-text">Сума</span>
@@ -338,13 +338,13 @@
                   <span class="table-header-text">Спосіб оплати</span>
                 </div>
               </th>
-              <th class="expenses-prumitku">
+              <th class="vutratu-prumitku">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">📋</span>
                   <span class="table-header-text">Примітки</span>
                 </div>
               </th>
-              <th class="expenses-diya">
+              <th class="vutratu-diya">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">⚡</span>
                   <span class="table-header-text">Дії</span>
@@ -352,7 +352,7 @@
               </th>
             </tr>
           </thead>
-          <tbody id="expenses-tbody">
+          <tbody id="vutratu-tbody">
             <tr>
               <td colspan="8" class="Bukhhalter-no-data">Немає витрат для відображення</td>
             </tr>
@@ -366,9 +366,9 @@
       <!-- Кнопки вкладок -->
       <div class="Bukhhalter-tabs">
         <button class="Bukhhalter-tab-btn Bukhhalter-active" onclick="switchTab(event, 'magazine')">🏪 Склад</button>
-        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'podlegle')">👨‍🔧 Зар-та</button>
+        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'podlegle')">👨‍🔧 Зарплата</button>
         <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'details')">⚙️ Деталі</button>
-        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'expenses')">💰 Витрати</button>
+        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'vutratu')">💰 Прибуток</button>
       </div>
 
       <div class="Bukhhalter-form-container">
@@ -536,39 +536,39 @@
           </div>
         </div>
 
-        <!-- Форма витрат -->
-        <div id="Bukhhalter-expenses-section" class="Bukhhalter-form-section">
-          <h2 class="Bukhhalter-section-title">💰 Облік витрат</h2>
+        <!-- Форма прибутку -->
+        <div id="Bukhhalter-vutratu-section" class="Bukhhalter-form-section">
+          <h2 class="Bukhhalter-section-title">💰 Облік прибутку та витрат</h2>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📅 Дата від</label>
-              <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-expenses-date-from">
+              <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-vutratu-date-from">
             </div>
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📅 Дата до</label>
-              <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-expenses-date-to">
+              <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-vutratu-date-to">
             </div>
           </div>
           <div class="Bukhhalter-field-group">
             <label class="Bukhhalter-field-label">📂 Категорія</label>
-            <select class="Bukhhalter-field-input" id="Bukhhalter-expenses-category">
+            <select class="Bukhhalter-field-input" id="Bukhhalter-vutratu-category">
               <option value="">Оберіть категорію</option>
             </select>
           </div>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">💳 Спосіб оплати</label>
-              <select class="Bukhhalter-field-input" id="Bukhhalter-expenses-payment-method">
+              <select class="Bukhhalter-field-input" id="Bukhhalter-vutratu-payment-method">
                 <option value="">Оберіть спосіб оплати</option>
               </select>
             </div>
           </div>
 
           <div class="Bukhhalter-toggle-container">
-            <label class="Bukhhalter-field-label">💰 Тип операції</label>
+            <label class="Bukhhalter-field-label">💲 Тип операції</label>
             <div class="Bukhhalter-toggle-wrapper">
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-expense-type-toggle"
-                id="expenses-type-filter-toggle">
+                id="vutratu-type-filter-toggle">
               <div class="Bukhhalter-toggle-labels-2">
                 <span>Прибуток</span>
                 <span>Витрати</span>
@@ -578,10 +578,23 @@
           </div>
 
           <div class="Bukhhalter-toggle-container">
+            <label class="Bukhhalter-field-label">📋 Статус актів</label>
+            <div>
+              <input type="range" min="0" max="2" value="2" class="Bukhhalter-status-toggle"
+                id="details-status-filter-toggle">
+              <div class="Bukhhalter-toggle-labels">
+                <span>Закриті</span>
+                <span>Відкриті</span>
+                <span>Всі</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="Bukhhalter-toggle-container">
             <label class="Bukhhalter-field-label">💰 Розрахунок</label>
             <div class="Bukhhalter-toggle-wrapper">
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
-                id="expenses-payment-filter-toggle">
+                id="vutratu-payment-filter-toggle">
               <div class="Bukhhalter-toggle-labels">
                 <span>Оплачено</span>
                 <span>Не оплачено</span>
@@ -651,7 +664,7 @@
           </div>
         </div>
         <div class="Bukhhalter-field-group">
-          <label class="Bukhhalter-field-label">Опис витрати</label>
+          <label class="Bukhhalter-field-label">Опис витрат</label>
           <textarea class="Bukhhalter-field-input Bukhhalter-field-textarea" id="expense-modal-description"
             placeholder="Введіть опис" rows="3" oninput="autoResizeTextarea(this)"></textarea>
         </div>

@@ -4,15 +4,15 @@ import { runMassPaymentCalculation as runMassPaymentCalculationForPodlegle } fro
 import { runMassPaymentCalculationForMagazine } from "./shopsBuxha";
 import { runMassPaymentCalculationForDetails } from "./poAktam";
 import {
-  initializeExpensesData,
-  updateExpensesTable,
+  initializevutratuData,
+  updatevutratuTable,
   deleteExpenseRecord,
-  toggleExpensePayment,
-  clearExpensesForm,
-  calculateExpensesTotalSum,
-  runMassPaymentCalculationForExpenses,
-  getFilteredExpensesData,
-} from "./vutratu";
+  clearvutratuForm,
+  calculatevutratuTotalSum,
+  runMassPaymentCalculationForvutratu,
+  getFilteredvutratuData,
+} from "./prubutok";
+
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 import { showModal } from "../zakaz_naraudy/modalMain";
@@ -50,9 +50,9 @@ import {
   clearDetailsForm,
 } from "./poAktam";
 
-type TabName = "podlegle" | "magazine" | "details" | "expenses";
+type TabName = "podlegle" | "magazine" | "details" | "vutratu";
 
-let currentTab: TabName = "magazine"; 
+let currentTab: TabName = "magazine";
 let selectedRowIndex: number | null = null;
 
 export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -89,8 +89,8 @@ function calculateTotalSum(): number {
     case "details":
       total = calculateDetailsTotalSum();
       break;
-    case "expenses":
-      total = calculateExpensesTotalSum();
+    case "vutratu":
+      total = calculatevutratuTotalSum();
       break;
   }
 
@@ -128,10 +128,10 @@ export function updateTotalSum(): void {
   }
 
   // Для витрат показуємо спеціальний формат
-  if (currentTab === "expenses") {
+  if (currentTab === "vutratu") {
     // Викликаємо функцію з vutratu.ts яка розраховує та відображає три суми
-    if (typeof (window as any).updateExpensesDisplayedSums === "function") {
-      (window as any).updateExpensesDisplayedSums();
+    if (typeof (window as any).updatevutratuDisplayedSums === "function") {
+      (window as any).updatevutratuDisplayedSums();
     }
     return;
   }
@@ -153,7 +153,9 @@ export function switchTab(e: Event, tabName: TabName) {
   }
 
   // Видаляємо активний клас з всіх форм
-  const sections = document.querySelectorAll<HTMLElement>(".Bukhhalter-form-section");
+  const sections = document.querySelectorAll<HTMLElement>(
+    ".Bukhhalter-form-section"
+  );
   sections.forEach((section) => section.classList.remove("Bukhhalter-active"));
 
   // Додаємо активний клас до обраної форми
@@ -171,29 +173,29 @@ function updateTableDisplay(): void {
   const magazineContainer = byId<HTMLDivElement>("magazine-table-container");
   const podlegleContainer = byId<HTMLDivElement>("podlegle-table-container");
   const detailsContainer = byId<HTMLDivElement>("details-table-container");
-  const expensesContainer = byId<HTMLDivElement>("expenses-table-container");
+  const vutratuContainer = byId<HTMLDivElement>("vutratu-table-container");
 
   podlegleContainer.style.display = "none";
   magazineContainer.style.display = "none";
   detailsContainer.style.display = "none";
-  expensesContainer.style.display = "none";
+  vutratuContainer.style.display = "none";
 
   if (currentTab === "magazine") {
     tableTitle.innerHTML = "🏪 Дані по складу";
     magazineContainer.style.display = "block";
     updateMagazineTable();
   } else if (currentTab === "podlegle") {
-    tableTitle.innerHTML = "👥 Дані по зарплаті";
+    tableTitle.innerHTML = "👨‍🔧 Дані по зарплаті";
     podlegleContainer.style.display = "block";
     updatepodlegleTable();
   } else if (currentTab === "details") {
     tableTitle.innerHTML = "📊 Деталі по актам";
     detailsContainer.style.display = "block";
     updateDetailsTable();
-  } else if (currentTab === "expenses") {
+  } else if (currentTab === "vutratu") {
     tableTitle.innerHTML = "💰 Дані по витратам";
-    expensesContainer.style.display = "block";
-    updateExpensesTable();
+    vutratuContainer.style.display = "block";
+    updatevutratuTable();
   }
 
   updateTotalSum();
@@ -225,9 +227,7 @@ function togglePayment(index: number, type: TabName): void {
     toggleMagazinePayment(index);
   } else if (type === "details") {
     toggleDetailsPayment(index);
-  } else if (type === "expenses") {
-    toggleExpensePayment(index);
-  }
+  } 
   updateTotalSum();
 }
 
@@ -248,11 +248,9 @@ export async function addRecord(): Promise<void> {
     return;
   }
 
-  if (currentTab === "expenses") {
-    // Відкриваємо модальне вікно замість додавання через форму
-    if (typeof (window as any).openExpenseModal === "function") {
-      (window as any).openExpenseModal();
-    }
+  if (currentTab === "vutratu") {
+    // Замість відкриття модалу, завантажуємо дані з бази даних з урахуванням фільтрів
+    await (window as any).searchvutratuFromDatabase();
     return;
   }
 }
@@ -264,7 +262,7 @@ export function deleteRecord(type: TabName, index: number): void {
     deleteMagazineRecord(index);
   } else if (type === "details") {
     deleteDetailsRecord(index);
-  } else if (type === "expenses") {
+  } else if (type === "vutratu") {
     deleteExpenseRecord(index);
   }
   updateTotalSum();
@@ -286,8 +284,8 @@ export function clearForm(): void {
     return;
   }
 
-  if (currentTab === "expenses") {
-    clearExpensesForm();
+  if (currentTab === "vutratu") {
+    clearvutratuForm();
     return;
   }
 
@@ -562,7 +560,7 @@ function downloadDetailsToExcel(): void {
   );
 }
 
-function downloadExpensesToExcel(): void {
+function downloadvutratuToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
     showNotification(
       "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
@@ -573,7 +571,7 @@ function downloadExpensesToExcel(): void {
   }
 
   const XLSX = (window as any).XLSX;
-  const filteredData = getFilteredExpensesData();
+  const filteredData = getFilteredvutratuData();
 
   if (filteredData.length === 0) {
     showNotification("Немає витрат для експорту", "warning");
@@ -630,7 +628,7 @@ export function downloadToExcel(): void {
     } else if (tabText.includes("По Актам") || tabText.includes("Деталі")) {
       downloadDetailsToExcel();
     } else if (tabText.includes("Витрати")) {
-      downloadExpensesToExcel();
+      downloadvutratuToExcel();
     } else {
       showNotification("Невідома вкладка для експорту", "warning");
     }
@@ -651,8 +649,8 @@ export async function runMassPaymentCalculation(): Promise<void> {
   const detailsTable = document.getElementById(
     "details-table-container"
   ) as HTMLElement | null;
-  const expensesTable = document.getElementById(
-    "expenses-table-container"
+  const vutratuTable = document.getElementById(
+    "vutratu-table-container"
   ) as HTMLElement | null;
 
   const isPodlegleVisible =
@@ -661,8 +659,8 @@ export async function runMassPaymentCalculation(): Promise<void> {
     magazineTable && magazineTable.style.display !== "none";
   const isDetailsVisible =
     detailsTable && detailsTable.style.display !== "none";
-  const isExpensesVisible =
-    expensesTable && expensesTable.style.display !== "none";
+  const isvutratuVisible =
+    vutratuTable && vutratuTable.style.display !== "none";
 
   try {
     if (isPodlegleVisible) {
@@ -677,13 +675,13 @@ export async function runMassPaymentCalculation(): Promise<void> {
       // Викликаємо масовий розрахунок для деталей по актам
       console.log("🔄 Викликаємо масовий розрахунок для деталей");
       await runMassPaymentCalculationForDetails();
-    } else if (isExpensesVisible) {
+    } else if (isvutratuVisible) {
       // Викликаємо масовий розрахунок для витрат
       console.log("🔄 Викликаємо масовий розрахунок для витрат");
-      await runMassPaymentCalculationForExpenses();
+      await runMassPaymentCalculationForvutratu();
     } else {
       showNotification(
-        "Спочатку оберіть вкладку 👥 Співробітники, 🏪 Магазин, 📊 По Актам або 💰 Витрати",
+        "Спочатку оберіть вкладку 👥 Співробітники, 🏪 Магазин, 📊 По Актам або 💰 Прибуток",
         "info"
       );
     }
@@ -718,7 +716,7 @@ window.addEventListener("load", async function () {
   try {
     await loadSlyusarsData();
     initializeDetailsData();
-    initializeExpensesData();
+    initializevutratuData();
 
     createStatusToggle();
     createPaymentToggle();
@@ -730,11 +728,11 @@ window.addEventListener("load", async function () {
 
     // Явно встановлюємо вкладку "Склад" як активну
     currentTab = "magazine";
-    
+
     // Оновлюємо відображення таблиці для вкладки "Склад"
     updateTableDisplay();
     initializeDateInputs();
-    
+
     console.log("✅ Ініціалізація завершена. Активна вкладка: Склад");
   } catch (error) {
     console.error("Помилка ініціалізації:", error);

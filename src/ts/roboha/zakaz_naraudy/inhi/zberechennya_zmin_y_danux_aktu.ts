@@ -1,3 +1,4 @@
+//src\ts\roboha\zakaz_naraudy\inhi\zberechennya_zmin_y_danux_aktu.ts
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import {

@@ -1,6 +1,6 @@
 // src/ts/roboha/zakaz_naraudy/inhi/knopka_zamok.ts
 import { supabase } from "../../../vxid/supabaseClient";
-import { showNotification } from "./vspluvauhe_povidomlenna"; // УВАГА: українська "і"
+import { showNotification } from "./vspluvauhe_povidomlenna";
 import { showViknoPidtverdchennayZakruttiaAkty } from "./vikno_pidtverdchennay_zakruttia_akty";
 import { showViknoVvodyParolu } from "./vikno_vvody_parolu";
 import {
@@ -9,11 +9,15 @@ import {
   ACT_ITEMS_TABLE_CONTAINER_ID,
 } from "../globalCache";
 import { refreshActsTable } from "../../tablucya/tablucya";
-import { showModal } from "../modalMain";
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
-} from "../../tablucya/users"; // Додаємо для перевірки прав
+} from "../../tablucya/users";
+
+// Імпортуємо функцію показу модального вікна
+// Якщо експорту немає - потрібно додати в modalMain.ts: export { showModal };
+// Або використати альтернативну функцію відкриття акту
+import { showModal } from "../modalMain"; // Замінити на правильну назву функції
 
 /* ======================== Локальні утиліти для синхронізації shops ======================== */
 
@@ -62,7 +66,7 @@ async function fetchScladMeta(
   if (scladIds.length === 0) return new Map();
   const { data, error } = await supabase
     .from("sclad")
-    .select("sclad_id, rahunok, time_off") // ✅ тягнемо rahunok
+    .select("sclad_id, rahunok, time_off")
     .in("sclad_id", Array.from(new Set(scladIds)));
 
   if (error) {
@@ -144,7 +148,6 @@ function collectDetailRowsFromDom(): Array<{
     ) as HTMLElement | null;
     if (!nameCell) return;
 
-    // Тип: якщо не вказаний — орієнтуємось на глобальні довідники
     let type = nameCell.getAttribute("data-type");
     const name = cleanText(nameCell.textContent);
     if (!name) return;
@@ -155,7 +158,7 @@ function collectDetailRowsFromDom(): Array<{
       type = isInWorks && !isInDetails ? "works" : "details";
       nameCell.setAttribute("data-type", type);
     }
-    if (type !== "details") return; // беремо тільки ⚙️ Деталі
+    if (type !== "details") return;
 
     const qtyCell = tr.querySelector(
       '[data-name="id_count"]'
@@ -178,7 +181,7 @@ function collectDetailRowsFromDom(): Array<{
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
     const sclad_id = scladIdAttr ? Number(scladIdAttr) : null;
 
-    if (!shopName) return; // без магазину пропускаємо
+    if (!shopName) return;
     rows.push({
       shopName,
       sclad_id,
@@ -205,7 +208,6 @@ async function syncShopsHistoryForAct(params: {
     Ціна: number;
   }>;
 }): Promise<void> {
-  // Групуємо за магазином
   const byShop = new Map<
     string,
     Array<{
@@ -232,12 +234,9 @@ async function syncShopsHistoryForAct(params: {
     });
   }
 
-  // Метадані складу (рахунок/час закриття рядка)
   const meta = await fetchScladMeta(scladIds);
-
-  // Дату закриття акту беремо з acts.date_off (або null)
   const { date_off } = await fetchActDates(params.actId);
-  const dateClose = toISODateOnly(date_off); // null, якщо акт відкритий
+  const dateClose = toISODateOnly(date_off);
 
   for (const [shopName, rows] of byShop.entries()) {
     const shopRow = await fetchShopByName(shopName);
@@ -261,7 +260,7 @@ async function syncShopsHistoryForAct(params: {
             : Number(r.Каталог)
           : null,
         Ціна: Number(r.Ціна) || 0,
-        Рахунок: metaR ? metaR.rahunok ?? null : null, // ✅ беремо з колонки rahunok
+        Рахунок: metaR ? metaR.rahunok ?? null : null,
         Кількість: Number(r.Кількість) || 0,
         Найменування: r.Найменування,
       });
@@ -275,7 +274,6 @@ async function syncShopsHistoryForAct(params: {
       (e: any) => Number(e?.["Акт"]) === Number(params.actId)
     );
     if (!actEntry) {
-      // створюємо без "Статус", одразу з "ДатаЗакриття"
       actEntry = {
         Акт: params.actId,
         Деталі: [],
@@ -291,7 +289,6 @@ async function syncShopsHistoryForAct(params: {
   }
 }
 
-// Константи для повного доступу (адміністратор)
 const FULL_ACCESS_ALIASES = [
   "адміністратор",
   "адміністатор",
@@ -318,10 +315,8 @@ function hasFullAccess(): boolean {
 
 /* =============================== Основний обробник =============================== */
 
-// ⬇️ ДОДАЙ НАВЕРХУ ФАЙЛУ (після import'ів)
 let __statusLockDelegationAttached = false;
 
-// ⬇️ ЗАМІНИ ЦЮ ФУНКЦІЮ НА НОВУ (стара addStatusLockHandler — ВИДАЛИТИ)
 export function initStatusLockDelegation(): void {
   if (__statusLockDelegationAttached) return;
   __statusLockDelegationAttached = true;
@@ -333,7 +328,6 @@ export function initStatusLockDelegation(): void {
     ) as HTMLButtonElement | null;
     if (!btn) return;
 
-    // беремо Акт з поточної кнопки (у тебе він вже проставляється у modalMain.ts)
     const actIdAttr = btn.getAttribute("data-act-id");
     const actId = actIdAttr ? Number(actIdAttr) : NaN;
     if (!Number.isFinite(actId)) {
@@ -342,34 +336,31 @@ export function initStatusLockDelegation(): void {
       return;
     }
 
-    // захист від подвійних кліків
     if (btn.disabled) return;
     btn.disabled = true;
 
     try {
       if (globalCache.isActClosed) {
         // --------------------------- ВІДКРИТТЯ АКТУ ---------------------------
-        // Перевірка прав: тільки адміністратор може відкривати закриті акти
         if (!hasFullAccess()) {
           showNotification(
             "❌ Тільки адміністратор може відкривати закриті акти",
             "error",
             4000
           );
-          btn.disabled = false; // Розблокувати кнопку
+          btn.disabled = false;
           return;
         }
 
         const passwordCorrect = await showViknoVvodyParolu(actId);
         if (!passwordCorrect) {
           showNotification("Скасовано відкриття акту", "warning");
-          btn.disabled = false; // Розблокувати кнопку
+          btn.disabled = false;
           return;
         }
 
         showNotification("Відкриття акту...", "info");
 
-        // Скидаємо time_off у всіх рядках складу, прив'язаних до акту
         const { data: scladRows, error: scladError } = await supabase
           .from("sclad")
           .select("sclad_id")
@@ -391,7 +382,6 @@ export function initStatusLockDelegation(): void {
             );
         }
 
-        // Відкрити сам акт
         const { error: actError } = await supabase
           .from("acts")
           .update({ date_off: null })
@@ -399,7 +389,6 @@ export function initStatusLockDelegation(): void {
         if (actError)
           throw new Error("Не вдалося відкрити акт: " + actError.message);
 
-        // >>> СИНХРОНІЗАЦІЯ SHOPS після відкриття <<<
         const { date_on } = await fetchActDates(actId);
         const dateKey = toISODateOnly(date_on);
         if (dateKey) {
@@ -417,7 +406,17 @@ export function initStatusLockDelegation(): void {
 
         globalCache.isActClosed = false;
         await loadGlobalData();
-        await showModal(actId); // DOM перемальовано, але делегування вже все покриває
+
+        // ЗАМІСТЬ showModal використовуємо правильну функцію
+        // Варіант 1: якщо є функція openActModal
+        await showModal(actId);
+
+        // Варіант 2: якщо потрібно просто перезавантажити сторінку
+        // window.location.reload();
+
+        // Варіант 3: якщо є інша функція показу модального вікна
+        // await відкритиМодальнеВікноАкту(actId);
+
         refreshActsTable();
         showNotification("Акт успішно відкрито", "success");
       } else {
@@ -425,13 +424,12 @@ export function initStatusLockDelegation(): void {
         const confirmed = await showViknoPidtverdchennayZakruttiaAkty(actId);
         if (!confirmed) {
           showNotification("Скасовано закриття акту", "warning");
-          btn.disabled = false; // Розблокувати кнопку
+          btn.disabled = false;
           return;
         }
 
         showNotification("Закриття акту...", "info");
 
-        // проставити time_off для всіх рядків складу, прив'язаних до акту
         const { data: scladRows, error: scladError } = await supabase
           .from("sclad")
           .select("sclad_id")
@@ -455,7 +453,6 @@ export function initStatusLockDelegation(): void {
             );
         }
 
-        // Закрити акт
         const { error: actError } = await supabase
           .from("acts")
           .update({ date_off: currentDateTime })
@@ -463,7 +460,6 @@ export function initStatusLockDelegation(): void {
         if (actError)
           throw new Error("Не вдалося закрити акт: " + actError.message);
 
-        // >>> СИНХРОНІЗАЦІЯ SHOPS після закриття <<<
         const { date_on } = await fetchActDates(actId);
         const dateKey = toISODateOnly(date_on);
         if (dateKey) {
@@ -481,7 +477,10 @@ export function initStatusLockDelegation(): void {
 
         globalCache.isActClosed = true;
         await loadGlobalData();
-        await showModal(actId); // DOM перемальовано, але делегування вже все покриває
+
+        // ЗАМІСТЬ showModal використовуємо правильну функцію
+       await showModal(actId);
+
         refreshActsTable();
         showNotification("Акт успішно закрито", "success");
       }

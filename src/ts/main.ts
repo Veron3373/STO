@@ -9,6 +9,5 @@ import "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
 import "./roboha/redahyvatu_klient_machuna/pidtverdutu_sberihannya_zakaz_naryad";
 import "./roboha/redahyvatu_klient_machuna/pidtverdutu_sberihannya_PIB_avto";
 import "./roboha/zakaz_naraudy/inhi/vikno_vvody_parolu";
-import "./roboha/bukhhalteriya/rosraxunok"
-import "./roboha/bukhhalteriya/vutratu";;
-
+import "./roboha/bukhhalteriya/rosraxunok";
+import "./roboha/bukhhalteriya/prubutok";

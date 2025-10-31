@@ -16,10 +16,10 @@ export function showNotification(
   };
 
   const icons = {
-    success: "✅",
-    error: "❌",
-    warning: "⚠️",
-    info: "ℹ️",
+    success: "",
+    error: "",
+    warning: "",
+    info: "",
   };
 
   const notification = document.createElement("div");

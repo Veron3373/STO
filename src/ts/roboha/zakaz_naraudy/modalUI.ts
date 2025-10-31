@@ -149,9 +149,7 @@ function updateSlyusarSalaryInRow(row: HTMLTableRowElement): void {
   }
 
   const workName = nameCell?.textContent?.trim();
-  const pibCell = row.querySelector(
-    '[data-name="pib_magazin"]'
-  ) as HTMLElement;
+  const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
   const slyusarName = pibCell?.textContent?.trim();
   const slyusarSumCell = row.querySelector(
     '[data-name="slyusar_sum"]'
@@ -170,7 +168,11 @@ function updateSlyusarSalaryInRow(row: HTMLTableRowElement): void {
 
   // 1. Спробуємо отримати з історії для конкретного акту
   const actId = globalCache.currentActId;
-  const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId);
+  const historySalary = getSlyusarSalaryFromHistory(
+    slyusarName,
+    workName,
+    actId
+  );
 
   if (historySalary !== null) {
     // Знайшли в історії для цього акту - використовуємо це значення
@@ -199,7 +201,9 @@ export function updateAllSlyusarSumsFromHistory(): void {
   );
 
   for (const row of rows) {
-    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+    const nameCell = row.querySelector(
+      '[data-name="name"]'
+    ) as HTMLElement | null;
     if (!nameCell) continue;
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") continue;
@@ -208,7 +212,6 @@ export function updateAllSlyusarSumsFromHistory(): void {
     updateSlyusarSalaryInRow(row);
   }
 }
-
 
 /**
  * Перераховує суму в рядку і оновлює зарплату слюсаря
@@ -222,7 +225,9 @@ export function calculateRowSum(row: HTMLTableRowElement): void {
   );
   const sum = price * quantity;
 
-  const sumCell = row.querySelector('[data-name="sum"]') as HTMLTableCellElement;
+  const sumCell = row.querySelector(
+    '[data-name="sum"]'
+  ) as HTMLTableCellElement;
   if (sumCell) {
     sumCell.textContent = formatNumberWithSpaces(Math.round(sum));
   }
@@ -279,7 +284,11 @@ export function initializeSlyusarSalaries(): void {
     if (totalSum <= 0) continue;
 
     // 1. Шукаємо в історії для конкретного акту
-    const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId);
+    const historySalary = getSlyusarSalaryFromHistory(
+      slyusarName,
+      workName,
+      actId
+    );
 
     if (historySalary !== null) {
       slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
@@ -369,8 +378,7 @@ export async function saveActData(): Promise<void> {
     const catalog =
       row.querySelector('[data-name="catalog"]')?.textContent?.trim() || "";
     const shop =
-      row.querySelector('[data-name="pib_magazin"]')?.textContent?.trim() ||
-      "";
+      row.querySelector('[data-name="pib_magazin"]')?.textContent?.trim() || "";
     const name = nameCell?.textContent?.trim() || "";
 
     if (type === "details") {
@@ -581,6 +589,44 @@ export function generateTableHTML(
     </div>`;
 
   const tableHTML = `
+  <style>
+  @media print {
+  .zakaz_narayd-items-table {
+    page-break-after: always; /* Забезпечує, щоб вся таблиця могла розриватися після себе, якщо потрібно */
+  }
+
+  .zakaz_narayd-items-table thead {
+    display: table-header-group; /* Повторює заголовки на кожній сторінці */
+    page-break-before: avoid; /* Уникає розриву перед заголовком */
+  }
+
+  .zakaz_narayd-items-table tbody tr {
+    page-break-inside: avoid; /* Основне правило: запобігає розділенню рядка на сторінках */
+    page-break-after: auto; /* Дозволяє природні розриви після рядків */
+    page-break-before: auto;
+  }
+
+  .zakaz_narayd-items-table tfoot {
+    display: table-footer-group; /* Правильно обробляє футери */
+    page-break-after: avoid;
+  }
+
+  /* Опціонально: Налаштуйте маржини або orphans/widows для кращого контролю */
+  @page {
+    margin: 1cm; /* Налаштуйте маржини сторінок, якщо потрібно */
+  }
+
+  .zakaz_narayd-items-table tbody tr td {
+    orphans: 3; /* Мінімальна кількість рядків перед розривом */
+    widows: 3; /* Мінімальна кількість рядків після розриву */
+  }
+
+  /* Приховайте елементи, які не для друку (наприклад, кнопки) */
+  .delete-row-btn, .zakaz_narayd-buttons-container {
+    display: none;
+  }
+}
+  </style>
     <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
       <table class="zakaz_narayd-items-table">
         <thead>

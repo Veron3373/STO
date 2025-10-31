@@ -591,41 +591,63 @@ export function generateTableHTML(
   const tableHTML = `
   <style>
   @media print {
-  .zakaz_narayd-items-table {
-    page-break-after: always; /* Забезпечує, щоб вся таблиця могла розриватися після себе, якщо потрібно */
-  }
+    .zakaz_narayd-items-table {
+      table-layout: fixed; /* Фіксує layout для кращого контролю розривів */
+      width: 100%; /* Забезпечує повну ширину */
+      break-after: always; /* Альтернатива page-break-after */
+      page-break-after: always;
+    }
 
-  .zakaz_narayd-items-table thead {
-    display: table-header-group; /* Повторює заголовки на кожній сторінці */
-    page-break-before: avoid; /* Уникає розриву перед заголовком */
-  }
+    .zakaz_narayd-items-table thead {
+      display: table-header-group; /* Повторює заголовки */
+      break-before: avoid; /* Альтернатива page-break-before */
+      page-break-before: avoid;
+    }
 
-  .zakaz_narayd-items-table tbody tr {
-    page-break-inside: avoid; /* Основне правило: запобігає розділенню рядка на сторінках */
-    page-break-after: auto; /* Дозволяє природні розриви після рядків */
-    page-break-before: auto;
-  }
+    .zakaz_narayd-items-table tbody tr {
+      break-inside: avoid; /* Сучасний стандарт */
+      page-break-inside: avoid; /* Старий для сумісності */
+      -webkit-region-break-inside: avoid; /* Для Chrome/WebKit */
+      break-after: auto;
+      page-break-after: auto;
+      break-before: auto;
+      page-break-before: auto;
+    }
 
-  .zakaz_narayd-items-table tfoot {
-    display: table-footer-group; /* Правильно обробляє футери */
-    page-break-after: avoid;
-  }
+    .zakaz_narayd-items-table tbody tr td {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      -webkit-region-break-inside: avoid;
+      orphans: 3;
+      widows: 3;
+      vertical-align: top; /* Вирівнює текст зверху, щоб уникнути розривів */
+    }
 
-  /* Опціонально: Налаштуйте маржини або orphans/widows для кращого контролю */
-  @page {
-    margin: 1cm; /* Налаштуйте маржини сторінок, якщо потрібно */
-  }
+    .name-cell {
+      position: static !important; /* Вимикає relative, яке може заважати */
+    }
 
-  .zakaz_narayd-items-table tbody tr td {
-    orphans: 3; /* Мінімальна кількість рядків перед розривом */
-    widows: 3; /* Мінімальна кількість рядків після розриву */
-  }
+    .name-cell div {
+      break-inside: avoid; /* Запобігає розриву тексту в div */
+      page-break-inside: avoid;
+      -webkit-region-break-inside: avoid;
+    }
 
-  /* Приховайте елементи, які не для друку (наприклад, кнопки) */
-  .delete-row-btn, .zakaz_narayd-buttons-container {
-    display: none;
+    .zakaz_narayd-items-table tfoot {
+      display: table-footer-group;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    @page {
+      margin: 1cm;
+    }
+
+    /* Приховати непотрібне */
+    .delete-row-btn, .zakaz_narayd-buttons-container {
+      display: none;
+    }
   }
-}
   </style>
     <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
       <table class="zakaz_narayd-items-table">

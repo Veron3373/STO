@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Основний</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+  <script type="module" crossorigin src="/STO/assets/main-9d5dTI64.js"></script>
+  <link rel="modulepreload" crossorigin href="/STO/assets/supabase-DjCBILTv.js">
+  <link rel="modulepreload" crossorigin href="/STO/assets/supabaseClient-CaENmPBY.js">
+  <link rel="modulepreload" crossorigin href="/STO/assets/pdf-yBvge-Eo.js">
+  <link rel="modulepreload" crossorigin href="/STO/assets/main-DcNxIomJ.js">
+  <link rel="stylesheet" crossorigin href="/STO/assets/supabaseClient-CSo0yxo0.css">
+</head>
+
+<body class="page-2">
+    <ul class="main-menu">
+        <div class="menu-items" id="menu-items-to-hide" style="display: none;">
+            <li><a href="" id="logout-link" class="menu-link">Вихід</a></li>
+            <li><a href="#" class="menu-link" data-action="openSettings">Налаштування</a></li>
+            <li><a href="#" class="menu-link all_other_bases" data-action="openClient">Додати</a></li>
+            <li><a href="bukhhalteriya.html" class="menu-link all_other_bases_Bukhh"
+                    data-action="openBukhhalteriya">Бухгалтерія</a></li>
+            <li class="active"><a href="#" class="menu-link" data-action="openHome">Наряд</a></li>
+            <li><input type="text" id="dateRangePicker" readonly /></li>
+            <li class="search-container">
+                <span id="searchIcon" class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="Пошук..." />
+            </li>
+        </div>
+        <li class="alim">1.2.0 / © 2025 Алім</li>
+    </ul>
+
+    <a href="#" id="open-modal-sakaz_narad"></a>
+    <a href="#" id="open-modal-create-sakaz_narad"></a>
+    <a href="#" id="open-modal-all_other_bases"></a>
+    <a href="#" id="open-modal-settings"></a>
+    <a href="#" id="open-modal-Bukhh"></a>
+
+    <div id="table-container-modal-sakaz_narad"></div>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+</body>
+
+</html>

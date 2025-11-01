@@ -103,20 +103,57 @@ function getSlyusarSalaryFromHistory(
 }
 
 /**
- * Отримує відсоток роботи слюсаря
+ * Отримує відсоток роботи слюсаря з бази даних або кешу
  */
-export function getSlyusarWorkPercent(slyusarName: string): number {
+export async function getSlyusarWorkPercent(slyusarName: string): Promise<number> {
   if (!slyusarName) return 0;
 
-  const slyusar = globalCache.slyusars.find(
+  // Спочатку шукаємо в кеші
+  const cached = globalCache.slyusars.find(
     (s) => s.Name?.toLowerCase() === slyusarName.toLowerCase()
   );
 
-  if (slyusar && typeof slyusar.ПроцентРоботи === "number") {
-    return slyusar.ПроцентРоботи;
+  if (cached && typeof cached.ПроцентРоботи === "number") {
+    return cached.ПроцентРоботи;
   }
 
-  return 0;
+  // Якщо в кеші немає - йдемо в базу даних
+  try {
+    const { data, error } = await supabase
+      .from("slyusars")
+      .select("data")
+      .eq("data->>Name", slyusarName)
+      .maybeSingle();
+
+    if (error) {
+      console.error(`Помилка отримання даних слюсаря ${slyusarName}:`, error);
+      return 0;
+    }
+
+    if (!data?.data) return 0;
+
+    const slyusarData = typeof data.data === "string" 
+      ? JSON.parse(data.data) 
+      : data.data;
+
+    const percent = Number(slyusarData.ПроцентРоботи) || 0;
+
+    // Оновлюємо кеш
+    const existingIndex = globalCache.slyusars.findIndex(
+      (s) => s.Name?.toLowerCase() === slyusarName.toLowerCase()
+    );
+    
+    if (existingIndex !== -1) {
+      globalCache.slyusars[existingIndex].ПроцентРоботи = percent;
+    } else {
+      globalCache.slyusars.push({ ...slyusarData, ПроцентРоботи: percent });
+    }
+
+    return percent;
+  } catch (err) {
+    console.error(`Помилка парсингу даних слюсаря ${slyusarName}:`, err);
+    return 0;
+  }
 }
 
 /**
@@ -128,17 +165,13 @@ export function calculateSlyusarSum(totalSum: number, percent: number): number {
 }
 
 /**
- * Оновлює зарплату слюсаря в рядку
- * Пріоритет:
- * 1. Якщо є історія для цієї роботи в цьому акті - беремо звідти
- * 2. Якщо історії немає - рахуємо від відсотка
+ * Оновлює зарплату слюсаря в рядку (async версія)
  */
-function updateSlyusarSalaryInRow(row: HTMLTableRowElement): void {
+async function updateSlyusarSalaryInRow(row: HTMLTableRowElement): Promise<void> {
   const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
   const typeFromCell = nameCell?.getAttribute("data-type");
 
   if (typeFromCell !== "works") {
-    // Це не робота - очищаємо зарплату
     const slyusarSumCell = row.querySelector(
       '[data-name="slyusar_sum"]'
     ) as HTMLElement;
@@ -149,7 +182,9 @@ function updateSlyusarSalaryInRow(row: HTMLTableRowElement): void {
   }
 
   const workName = nameCell?.textContent?.trim();
-  const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
+  const pibCell = row.querySelector(
+    '[data-name="pib_magazin"]'
+  ) as HTMLElement;
   const slyusarName = pibCell?.textContent?.trim();
   const slyusarSumCell = row.querySelector(
     '[data-name="slyusar_sum"]'
@@ -157,7 +192,6 @@ function updateSlyusarSalaryInRow(row: HTMLTableRowElement): void {
 
   if (!workName || !slyusarName || !slyusarSumCell) return;
 
-  // Отримуємо суму роботи
   const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
   const totalSum = parseNumber(sumCell?.textContent);
 
@@ -168,20 +202,15 @@ function updateSlyusarSalaryInRow(row: HTMLTableRowElement): void {
 
   // 1. Спробуємо отримати з історії для конкретного акту
   const actId = globalCache.currentActId;
-  const historySalary = getSlyusarSalaryFromHistory(
-    slyusarName,
-    workName,
-    actId
-  );
+  const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId);
 
   if (historySalary !== null) {
-    // Знайшли в історії для цього акту - використовуємо це значення
     slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
     return;
   }
 
-  // 2. Історії немає - рахуємо від відсотка
-  const percent = getSlyusarWorkPercent(slyusarName);
+  // 2. Історії немає - рахуємо від відсотка (ASYNC)
+  const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 }
@@ -201,9 +230,7 @@ export function updateAllSlyusarSumsFromHistory(): void {
   );
 
   for (const row of rows) {
-    const nameCell = row.querySelector(
-      '[data-name="name"]'
-    ) as HTMLElement | null;
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
     if (!nameCell) continue;
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") continue;
@@ -213,10 +240,14 @@ export function updateAllSlyusarSumsFromHistory(): void {
   }
 }
 
+
 /**
- * Перераховує суму в рядку і оновлює зарплату слюсаря
+ * Перераховує суму в рядку і оновлює зарплату слюсаря (async)
  */
-export function calculateRowSum(row: HTMLTableRowElement): void {
+/**
+ * Перераховує суму в рядку і оновлює зарплату слюсаря (async)
+ */
+export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
   const price = parseNumber(
     (row.querySelector('[data-name="price"]') as HTMLElement)?.textContent
   );
@@ -225,23 +256,22 @@ export function calculateRowSum(row: HTMLTableRowElement): void {
   );
   const sum = price * quantity;
 
-  const sumCell = row.querySelector(
-    '[data-name="sum"]'
-  ) as HTMLTableCellElement;
+  const sumCell = row.querySelector('[data-name="sum"]') as HTMLTableCellElement;
   if (sumCell) {
     sumCell.textContent = formatNumberWithSpaces(Math.round(sum));
   }
 
-  // Оновлюємо зарплату слюсаря
-  updateSlyusarSalaryInRow(row);
+  // Async оновлення зарплати
+  await updateSlyusarSalaryInRow(row);
   updateCalculatedSumsInFooter();
 }
 
+
+
 /**
- * Ініціалізує зарплати слюсарів при завантаженні акту
- * Викликається ОДИН РАЗ після завантаження всіх даних
+ * Ініціалізує зарплати слюсарів при завантаженні акту (async)
  */
-export function initializeSlyusarSalaries(): void {
+export async function initializeSlyusarSalaries(): Promise<void> {
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
   );
@@ -270,33 +300,25 @@ export function initializeSlyusarSalaries(): void {
 
     if (!workName || !slyusarName || !slyusarSumCell) continue;
 
-    // Перевіряємо, чи вже є значення (завантажене з акту)
     const existingValue = slyusarSumCell.textContent?.trim();
     if (existingValue) {
-      // Якщо значення вже є - залишаємо його
       continue;
     }
 
-    // Значення немає - намагаємось заповнити
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const totalSum = parseNumber(sumCell?.textContent);
 
     if (totalSum <= 0) continue;
 
-    // 1. Шукаємо в історії для конкретного акту
-    const historySalary = getSlyusarSalaryFromHistory(
-      slyusarName,
-      workName,
-      actId
-    );
+    const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId);
 
     if (historySalary !== null) {
       slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
       continue;
     }
 
-    // 2. Рахуємо від відсотка
-    const percent = getSlyusarWorkPercent(slyusarName);
+    // ASYNC отримання відсотка
+    const percent = await getSlyusarWorkPercent(slyusarName);
     const calculatedSalary = calculateSlyusarSum(totalSum, percent);
     slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
   }
@@ -378,7 +400,8 @@ export async function saveActData(): Promise<void> {
     const catalog =
       row.querySelector('[data-name="catalog"]')?.textContent?.trim() || "";
     const shop =
-      row.querySelector('[data-name="pib_magazin"]')?.textContent?.trim() || "";
+      row.querySelector('[data-name="pib_magazin"]')?.textContent?.trim() ||
+      "";
     const name = nameCell?.textContent?.trim() || "";
 
     if (type === "details") {
@@ -589,66 +612,6 @@ export function generateTableHTML(
     </div>`;
 
   const tableHTML = `
-  <style>
-  @media print {
-    .zakaz_narayd-items-table {
-      table-layout: fixed; /* Фіксує layout для кращого контролю розривів */
-      width: 100%; /* Забезпечує повну ширину */
-      break-after: always; /* Альтернатива page-break-after */
-      page-break-after: always;
-    }
-
-    .zakaz_narayd-items-table thead {
-      display: table-header-group; /* Повторює заголовки */
-      break-before: avoid; /* Альтернатива page-break-before */
-      page-break-before: avoid;
-    }
-
-    .zakaz_narayd-items-table tbody tr {
-      break-inside: avoid; /* Сучасний стандарт */
-      page-break-inside: avoid; /* Старий для сумісності */
-      -webkit-region-break-inside: avoid; /* Для Chrome/WebKit */
-      break-after: auto;
-      page-break-after: auto;
-      break-before: auto;
-      page-break-before: auto;
-    }
-
-    .zakaz_narayd-items-table tbody tr td {
-      break-inside: avoid;
-      page-break-inside: avoid;
-      -webkit-region-break-inside: avoid;
-      orphans: 3;
-      widows: 3;
-      vertical-align: top; /* Вирівнює текст зверху, щоб уникнути розривів */
-    }
-
-    .name-cell {
-      position: static !important; /* Вимикає relative, яке може заважати */
-    }
-
-    .name-cell div {
-      break-inside: avoid; /* Запобігає розриву тексту в div */
-      page-break-inside: avoid;
-      -webkit-region-break-inside: avoid;
-    }
-
-    .zakaz_narayd-items-table tfoot {
-      display: table-footer-group;
-      break-after: avoid;
-      page-break-after: avoid;
-    }
-
-    @page {
-      margin: 1cm;
-    }
-
-    /* Приховати непотрібне */
-    .delete-row-btn, .zakaz_narayd-buttons-container {
-      display: none;
-    }
-  }
-  </style>
     <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
       <table class="zakaz_narayd-items-table">
         <thead>

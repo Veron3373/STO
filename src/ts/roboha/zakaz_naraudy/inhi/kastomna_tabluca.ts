@@ -7,13 +7,15 @@ import {
   ACT_ITEMS_TABLE_CONTAINER_ID,
 } from "../globalCache";
 import { supabase } from "../../../vxid/supabaseClient";
-import {  updateCatalogWarningForRow, updatePriceWarningForRow } from "./kastomna_tabluca_poperedhennya";
-export { 
-  refreshQtyWarningsIn, 
-  initializeActWarnings, 
-  resetActDataCache 
+import {
+  updateCatalogWarningForRow,
+  updatePriceWarningForRow,
 } from "./kastomna_tabluca_poperedhennya";
-
+export {
+  refreshQtyWarningsIn,
+  initializeActWarnings,
+  resetActDataCache,
+} from "./kastomna_tabluca_poperedhennya";
 
 /* ====================== настройки ====================== */
 const CATALOG_SUGGEST_MIN = 3;
@@ -709,18 +711,20 @@ export function setupAutocompleteForEditableCells(
       const deleted = currTextRaw.length < prevText.length;
 
       if (deleted) {
-        // 1) Скидаємо прив’язку каталогу
+        // 1) Скидаємо прив'язку каталогу
         target.removeAttribute("data-sclad-id");
 
-        // 2) Очищаємо пов’язані поля рядка
-        const row = target.closest("tr") as HTMLElement;
-        const nameCell = row?.querySelector(
+        // 2) Очищаємо пов'язані поля рядка
+        const row = target.closest("tr") as HTMLTableRowElement; // ← Змінили тип
+        if (!row) return; // ← Додали перевірку
+
+        const nameCell = row.querySelector(
           '[data-name="name"]'
         ) as HTMLElement | null;
-        const qtyCell = row?.querySelector(
+        const qtyCell = row.querySelector(
           '[data-name="id_count"]'
         ) as HTMLElement | null;
-        const priceCell = row?.querySelector(
+        const priceCell = row.querySelector(
           '[data-name="price"]'
         ) as HTMLElement | null;
 
@@ -730,9 +734,26 @@ export function setupAutocompleteForEditableCells(
         if (priceCell) setCellText(priceCell, "");
 
         // 3) Перерахунок суми та індикаторів
-        if (row) recalcRowSum(row);
+        const typeFromCell = nameCell?.getAttribute("data-type");
 
-        // 4) Підказки по каталогу (як і раніше)
+        if (typeFromCell === "works") {
+          // Для робіт викликаємо async calculateRowSum
+          import("../modalUI")
+            .then(async ({ calculateRowSum }) => {
+              await calculateRowSum(row); // ← Тепер row має правильний тип
+            })
+            .catch((err) => {
+              console.error(
+                "Помилка при розрахунку суми після видалення каталогу:",
+                err
+              );
+            });
+        } else {
+          // Для деталей звичайний recalc
+          recalcRowSum(row);
+        }
+
+        // 4) Підказки по каталогу
         const allItems = globalCache.skladParts;
         suggestions =
           query.length === 0
@@ -949,7 +970,8 @@ async function applyCatalogSelectionById(
   const picked = globalCache.skladParts.find((p) => p.sclad_id === sclad_id);
   if (!picked) return;
 
-  const row = target.closest("tr") as HTMLElement;
+  const row = target.closest("tr") as HTMLTableRowElement; // ← Змінили тип
+  if (!row) return; // ← Додали перевірку
 
   const nameCell = row.querySelector(
     '[data-name="name"]'
@@ -982,7 +1004,25 @@ async function applyCatalogSelectionById(
     setCellText(pibMagCell, picked.shop || "");
   }
 
-  recalcRowSum(row);
+  // Визначаємо тип ДО асинхронного виклику
+  const typeFromCell = nameCell?.getAttribute("data-type");
+
+  if (typeFromCell === "works") {
+    // Для робіт викликаємо async calculateRowSum
+    import("../modalUI")
+      .then(async ({ calculateRowSum }) => {
+        await calculateRowSum(row); // ← Тепер row має правильний тип
+      })
+      .catch((err) => {
+        console.error(
+          "Помилка при розрахунку суми після вибору каталогу:",
+          err
+        );
+      });
+  } else {
+    // Для деталей звичайний recalc
+    recalcRowSum(row);
+  }
 }
 
 /** ПІБ/Магазин: тип */

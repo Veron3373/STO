@@ -13,6 +13,52 @@ import {
 } from "./kastomna_tabluca";
 
 /**
+ * Підготовка таблиці до друку - запобігання розриву рядків
+ */
+function prepareTableForPrint(): void {
+  const table = document.querySelector(".zakaz_narayd-items-table tbody");
+  if (!table) return;
+
+  const rows = Array.from(table.querySelectorAll("tr"));
+  rows.forEach((row) => {
+    (row as HTMLElement).style.pageBreakInside = "avoid";
+    (row as HTMLElement).style.breakInside = "avoid";
+  });
+}
+
+/**
+ * Повертає межі всіх рядків tbody у DOM-пікселях відносно контейнера modalBody.
+ * Це треба, щоб не різати зображення всередині рядка, а лише по його нижній межі.
+ */
+function getRowBoundsPx(
+  modalBody: HTMLElement
+): Array<{ top: number; bottom: number }> {
+  const tbody = modalBody.querySelector(
+    ".zakaz_narayd-items-table tbody"
+  ) as HTMLElement | null;
+  if (!tbody) return [];
+  const bodyRect = modalBody.getBoundingClientRect();
+
+  return Array.from(tbody.querySelectorAll("tr")).map((tr) => {
+    const r = (tr as HTMLElement).getBoundingClientRect();
+    // Переводимо координати у систему відліку modalBody + враховуємо прокрутку всередині нього
+    const top = r.top - bodyRect.top + modalBody.scrollTop;
+    const bottom = r.bottom - bodyRect.top + modalBody.scrollTop;
+    return { top, bottom };
+  });
+}
+
+function getElementBoundsPx(modalBody: HTMLElement, selector: string) {
+  const el = modalBody.querySelector(selector) as HTMLElement | null;
+  if (!el) return null;
+  const bodyRect = modalBody.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const top = r.top - bodyRect.top + modalBody.scrollTop;
+  const bottom = r.bottom - bodyRect.top + modalBody.scrollTop;
+  return { top, bottom, height: bottom - top };
+}
+
+/**
  * Сховати колонку за текстом заголовка (враховує індекси TH)
  */
 function collectColumnCellsToHideByHeaderText(
@@ -31,15 +77,18 @@ function collectColumnCellsToHideByHeaderText(
   headerCells.forEach((th, i) => {
     const text = (th.textContent || "").trim().toLowerCase();
     if (headerMatchers.some((fn) => fn(text))) {
-      targetColIndexes.push(i + 1); // nth-child — 1-based
+      // nth-child — 1-based
+      targetColIndexes.push(i + 1);
     }
   });
 
   if (targetColIndexes.length === 0) return;
 
-  // Зібрати всі клітинки для кожного знайденого індексу колонки
+  // ✅ ВАЖЛИВО: селектор має бути у бектиках
   targetColIndexes.forEach((colIdx) => {
-    const selector = `thead tr > *:nth-child(${colIdx}), tbody tr > *:nth-child(${colIdx}), tfoot tr > *:nth-child(${colIdx})`;
+    const selector = `thead tr > *:nth-child(${colIdx}),
+                      tbody tr > *:nth-child(${colIdx}),
+                      tfoot tr > *:nth-child(${colIdx})`;
     const columnCells = table.querySelectorAll<HTMLElement>(selector);
     columnCells.forEach((cell) => bucket.push(cell));
   });
@@ -68,10 +117,12 @@ export async function printModalToPdf(): Promise<void> {
     ".zakaz_narayd-modal-content"
   ) as HTMLElement | null;
 
+  // збереження стилів
   const originalBodyStyle = modalBody.style.cssText;
   const originalModalWidth = modalContent?.style.width || "";
   const originalModalMaxWidth = modalContent?.style.maxWidth || "";
 
+  // елементи, які ховаємо
   const elementsToHide: HTMLElement[] = [
     document.getElementById("print-act-button") as HTMLElement,
     document.getElementById("add-row-button") as HTMLElement,
@@ -82,12 +133,13 @@ export async function printModalToPdf(): Promise<void> {
     document.querySelector(".modal-footer") as HTMLElement,
   ].filter(Boolean) as HTMLElement[];
 
+  // таблиця для приховування колонок
   const table = document.querySelector(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} table.zakaz_narayd-items-table`
   ) as HTMLTableElement | null;
 
   if (table) {
-    // Приховуємо колонки "ПІБ _ Магазин", "Каталог", "Зарплата" і "За-та"
+    // Приховуємо "ПІБ _ Магазин", "Каталог", "Зарплата"/"Зар-та"
     collectColumnCellsToHideByHeaderText(
       table,
       [
@@ -99,7 +151,7 @@ export async function printModalToPdf(): Promise<void> {
     );
   }
 
-  // 🔶 1) ТИМЧАСОВО СХОВАТИ ВСІ ТРИКУТНИКИ (зняти прапорці)
+  // 🔶 тимчасово зняти прапорці-попередження
   const warnedQtyCells = Array.from(
     document.querySelectorAll<HTMLElement>('.qty-cell[data-warn="1"]')
   );
@@ -113,98 +165,147 @@ export async function printModalToPdf(): Promise<void> {
   warnedPriceCells.forEach((el) => el.removeAttribute("data-warnprice"));
   warnedSlyusarSumCells.forEach((el) => el.removeAttribute("data-warnzp"));
 
-  // 🔶 2) РОЗШИРИТИ ВСІ СКОРОЧЕНІ НАЙМЕНУВАННЯ ДО ПОВНИХ
+  // 🔶 розгорнути скорочені найменування
   const originalNames = expandAllNamesInTable();
 
-  // Також сховаємо керуючі елементи
+  // 🔶 підготувати таблицю до друку (стилі-анти-розрив)
+  prepareTableForPrint();
+
+  // сховати керуючі елементи
   const originalDisplays = new Map<HTMLElement, string>();
   elementsToHide.forEach((el) => {
     originalDisplays.set(el, el.style.display);
     el.style.display = "none";
   });
 
+  // розширити модалку для якісного скріншота
   if (modalContent) {
     modalContent.style.width = "1000px";
     modalContent.style.maxWidth = "1000px";
   }
-
   modalBody.style.overflow = "visible";
   modalBody.style.height = "auto";
   modalBody.style.maxHeight = "none";
 
   try {
+    // робимо знімок
     const canvas = await html2canvas(modalBody, { scale: 2, useCORS: true });
     const imgData = canvas.toDataURL("image/jpeg", 0.9);
+
+    // створюємо PDF
     const pdf = new jsPDF("p", "mm", "a4");
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // Відступи: зверху 1см (10мм), по бокам 1см (10мм), знизу 2см (20мм)
-    const marginTop = 10; // 1 см
-    const marginLeft = 10; // 1 см
-    const marginRight = 10; // 1 см
-    const marginBottom = 20; // 2 см
+    // поля
+    const marginTop = 10; // мм
+    const marginLeft = 10; // мм
+    const marginRight = 10; // мм
+    const marginBottom = 20; // мм
 
-    const contentWidth = pageWidth - marginLeft - marginRight;
-    const contentHeight = pageHeight - marginTop - marginBottom;
+    const contentWidthMm = pageWidth - marginLeft - marginRight;
+    const contentHeightMm = pageHeight - marginTop - marginBottom;
 
-    // Зберігаємо оригінальні розміри без масштабування
-    const imgWidth = contentWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    // реальна висота зображення у мм, якщо масштабувати по ширині контенту
+    const imgHeightMm = (canvas.height * contentWidthMm) / canvas.width;
 
-    // Якщо контент поміщається на одну сторінку
-    if (imgHeight <= contentHeight) {
-      pdf.addImage(imgData, "JPEG", marginLeft, marginTop, imgWidth, imgHeight);
+    // ——— відповідності одиниць виміру ———
+    const domHeightPx = modalBody.scrollHeight; // реальна висота DOM-контенту
+    const canvasPxPerDomPx = canvas.height / domHeightPx; // скільки пікселів canvas на 1 DOM-піксель
+    const mmPerCanvasPx = imgHeightMm / canvas.height; // мм на 1 canvas-піксель
+    const mmPerDomPx = imgHeightMm / domHeightPx; // мм на 1 DOM-піксель
+
+    // межі всіх рядків у DOM-пікселях
+    const rowBounds = getRowBoundsPx(modalBody);
+    // межі блоку підсумків (може бути відсутній у режимі "Слюсар")
+    const footerBounds = getElementBoundsPx(
+      modalBody,
+      ".zakaz_narayd-sums-footer"
+    );
+
+    // Якщо все влазить — одним зображенням
+    if (imgHeightMm <= contentHeightMm) {
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        marginLeft,
+        marginTop,
+        contentWidthMm,
+        imgHeightMm
+      );
     } else {
-      // Розбиваємо на сторінки
-      let currentY = 0;
-      let pageNumber = 0;
+      let currentDomY = 0; // позиція старту зрізу (DOM px)
+      let pageIndex = 0;
 
-      while (currentY < imgHeight) {
-        if (pageNumber > 0) {
-          pdf.addPage();
+      while (currentDomY < domHeightPx - 1) {
+        if (pageIndex > 0) pdf.addPage();
+
+        // максимальна висота контенту в DOM-пікселях, що влазить у сторінку
+        const pageMaxDomY = currentDomY + contentHeightMm / mmPerDomPx;
+
+        // 1) шукаємо останній повний рядок, що влазить у сторінку
+        let safeCutDomY = currentDomY;
+        for (let i = 0; i < rowBounds.length; i++) {
+          if (rowBounds[i].bottom <= pageMaxDomY)
+            safeCutDomY = rowBounds[i].bottom;
+          else break;
         }
 
-        // Висота частини для поточної сторінки
-        const remainingHeight = imgHeight - currentY;
-        const pageImgHeight = Math.min(contentHeight, remainingHeight);
+        // захист від дуже високого рядка
+        if (safeCutDomY <= currentDomY) {
+          safeCutDomY = Math.min(pageMaxDomY, domHeightPx);
+        }
 
-        // Розраховуємо яку частину оригінального canvas потрібно взяти
-        const sourceHeight = (pageImgHeight * canvas.height) / imgHeight;
-        const sourceY = (currentY * canvas.height) / imgHeight;
+        // 2) якщо підсумки починаються у межах цієї сторінки і ПОВНІСТЮ вміщаються — додаємо їх у поточний зріз
+        if (footerBounds) {
+          const footerStartsOnThisPage =
+            footerBounds.top >= currentDomY && footerBounds.top <= pageMaxDomY;
+          if (footerStartsOnThisPage) {
+            const remainingDomSpace = pageMaxDomY - safeCutDomY; // залишок після останнього рядка
+            const footerFitsHere = footerBounds.height <= remainingDomSpace;
+            if (footerFitsHere) {
+              // тягнемо зріз до низу підсумків — підсумки не підуть на наступну сторінку
+              safeCutDomY = footerBounds.bottom;
+            }
+          }
+        }
 
-        // Створюємо canvas для частини контенту
+        // 3) ріжемо canvas по обрахованих межах
+        const sourceYCanvas = Math.round(currentDomY * canvasPxPerDomPx);
+        const sourceHCanvas = Math.round(
+          (safeCutDomY - currentDomY) * canvasPxPerDomPx
+        );
+
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = canvas.width;
-        tempCanvas.height = sourceHeight;
-        const tempCtx = tempCanvas.getContext("2d");
+        tempCanvas.height = Math.max(1, sourceHCanvas);
+        const tctx = tempCanvas.getContext("2d")!;
+        tctx.drawImage(
+          canvas,
+          0,
+          sourceYCanvas,
+          canvas.width,
+          sourceHCanvas,
+          0,
+          0,
+          canvas.width,
+          sourceHCanvas
+        );
 
-        if (tempCtx) {
-          tempCtx.drawImage(
-            canvas,
-            0,
-            sourceY, // Джерело x, y
-            canvas.width,
-            sourceHeight, // Джерело width, height
-            0,
-            0, // Призначення x, y
-            canvas.width,
-            sourceHeight // Призначення width, height
-          );
+        const sliceImg = tempCanvas.toDataURL("image/jpeg", 0.9);
+        const sliceHeightMm = sourceHCanvas * mmPerCanvasPx;
 
-          const pageImgData = tempCanvas.toDataURL("image/jpeg", 0.9);
-          pdf.addImage(
-            pageImgData,
-            "JPEG",
-            marginLeft,
-            marginTop,
-            imgWidth,
-            pageImgHeight
-          );
-        }
+        pdf.addImage(
+          sliceImg,
+          "JPEG",
+          marginLeft,
+          marginTop,
+          contentWidthMm,
+          sliceHeightMm
+        );
 
-        currentY += pageImgHeight;
-        pageNumber++;
+        currentDomY = safeCutDomY;
+        pageIndex++;
       }
     }
 
@@ -215,18 +316,16 @@ export async function printModalToPdf(): Promise<void> {
     console.error("💥 Помилка при генерації PDF:", error);
     showNotification("Помилка генерації PDF", "error");
   } finally {
-    // 🔄 3) ПОВЕРНУТИ ВСІ НАЙМЕНУВАННЯ ДО СКОРОЧЕНОГО ВИГЛЯДУ
+    // повернути скорочення назв
     restoreOriginalNames(originalNames);
 
-    // 🔄 4) ПОВЕРНУТИ ТРИКУТНИКИ НАЗАД
+    // повернути попереджувальні індикатори
     warnedQtyCells.forEach((el) => el.setAttribute("data-warn", "1"));
     warnedPriceCells.forEach((el) => el.setAttribute("data-warnprice", "1"));
     warnedSlyusarSumCells.forEach((el) => el.setAttribute("data-warnzp", "1"));
 
-    // Повернути відображення елементів та стилі
-    originalDisplays.forEach((disp, el) => {
-      el.style.display = disp;
-    });
+    // повернути відображення елементів та стилі
+    originalDisplays.forEach((disp, el) => (el.style.display = disp));
     modalBody.style.cssText = originalBodyStyle;
     if (modalContent) {
       modalContent.style.width = originalModalWidth;

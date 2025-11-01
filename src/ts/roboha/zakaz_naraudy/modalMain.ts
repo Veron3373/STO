@@ -147,7 +147,7 @@ export async function showModal(actId: number): Promise<void> {
     }
     renderModalContent(act, actDetails, clientData, carData);
     updateAllSlyusarSumsFromHistory();
-    fillMissingSlyusarSums();
+    await fillMissingSlyusarSums(); // Додаємо await
     checkSlyusarSumWarningsOnLoad();
     await addModalHandlers(actId, actDetails, clientData?.phone);
     await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
@@ -164,7 +164,10 @@ export async function showModal(actId: number): Promise<void> {
   }
 }
 
-function fillMissingSlyusarSums(): void {
+/**
+ * Заповнює відсутні зарплати слюсарів (async)
+ */
+async function fillMissingSlyusarSums(): Promise<void> {
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return;
 
@@ -182,7 +185,7 @@ function fillMissingSlyusarSums(): void {
       '[data-name="slyusar_sum"]'
     ) as HTMLElement;
 
-    if (slyusarSumCell.textContent?.trim()) continue; // already set by history
+    if (slyusarSumCell.textContent?.trim()) continue;
 
     const pibCell = row.querySelector(
       '[data-name="pib_magazin"]'
@@ -191,7 +194,8 @@ function fillMissingSlyusarSums(): void {
 
     if (!slyusarName) continue;
 
-    const percent = getSlyusarWorkPercent(slyusarName);
+    // ASYNC отримання відсотка
+    const percent = await getSlyusarWorkPercent(slyusarName);
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const sum =
@@ -682,7 +686,12 @@ function handleInputChange(event: Event): void {
         }
       }
       const row = target.closest("tr") as HTMLTableRowElement;
-      if (row) calculateRowSum(row);
+      if (row) {
+        // ASYNC виклик
+        calculateRowSum(row).catch((err) => {
+          console.error("Помилка при розрахунку суми:", err);
+        });
+      }
       break;
     }
     case "slyusar_sum": {
@@ -742,9 +751,13 @@ function handleInputChange(event: Event): void {
       break;
     }
     case "pib_magazin": {
-      // При зміні ПІБ/Магазин перераховуємо суму слюсаря
+      // При зміні ПІБ/Магазин перераховуємо суму слюсаря (ASYNC)
       const row = target.closest("tr") as HTMLTableRowElement;
-      if (row) calculateRowSum(row);
+      if (row) {
+        calculateRowSum(row).catch((err) => {
+          console.error("Помилка при розрахунку суми:", err);
+        });
+      }
       break;
     }
     default:

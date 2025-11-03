@@ -1169,9 +1169,9 @@ body {
 /* ==================== ПЕРЕМИКАЧ ФІЛЬТРАЦІЇ ДАТ ==================== */
 .Bukhhalter-date-filter-toggle {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 10px;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding: 2px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -1179,9 +1179,9 @@ body {
 
 .date-filter-btn {
   flex: 1;
-  padding: 10px 15px;
+  padding: 5px 5px;
   background: white;
-  border: 2px solid #e0e0e0;
+  border: 5px solid #e0e0e0;
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
@@ -1221,6 +1221,6 @@ body {
   .date-filter-btn {
     width: 100%;
     font-size: 12px;
-    padding: 8px 12px;
+    padding: 8px 5px;
   }
 }

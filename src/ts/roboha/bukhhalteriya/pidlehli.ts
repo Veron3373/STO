@@ -544,7 +544,9 @@ async function autoSearchPodlegleFromInputs(): Promise<void> {
   hasPodlegleDataLoaded = true;
   ensureWorkSmartDropdown();
   refreshWorkDropdownOptions();
-  autoFilterPodlegleFromInputs();
+
+  updatepodlegleTable();
+  
 }
 
 function getCurrentDate(): string {
@@ -1039,6 +1041,7 @@ export function updatepodlegleTable(): void {
   updatePodlegleDisplayedSums();
 }
 
+// ЗАМІНИТИ ПОВНІСТЮ функцію searchDataInDatabase:
 export function searchDataInDatabase(
   dateOpen: string,
   dateClose: string,
@@ -1077,7 +1080,7 @@ export function searchDataInDatabase(
   console.log(`  - Початкова дата: ${dateOpen || "не вказана"}`);
   console.log(`  - Кінцева дата: ${dateClose || "не вказана"}`);
   console.log(`  - ПІБ: ${selectedName || "всі"}`);
-  console.log(`  - Поточна дата: ${currentDate}`);
+  console.log(`  - Режим фільтрації: ${podlegleDateFilterMode}`);
 
   slyusarsData.forEach((slyusar) => {
     if (selectedName && slyusar.Name !== selectedName) {
@@ -1085,20 +1088,41 @@ export function searchDataInDatabase(
     }
 
     Object.keys(slyusar.Історія).forEach((date) => {
-      let shouldInclude = false;
+      slyusar.Історія[date].forEach((record) => {
+        // Визначаємо цільову дату залежно від режиму
+        let targetDate = '';
+        
+        switch (podlegleDateFilterMode) {
+          case 'open':
+            targetDate = date; // Дата відкриття
+            break;
+          case 'close':
+            targetDate = record.ДатаЗакриття || ''; // Дата закриття
+            break;
+          case 'paid':
+            // Для розрахунку беремо будь-який запис з Розраховано
+            const anyPaidEntry = record.Записи.find(e => e.Розраховано);
+            targetDate = anyPaidEntry?.Розраховано || '';
+            break;
+        }
+        
+        // Якщо немає потрібної дати - пропускаємо
+        if (!targetDate) return;
 
-      if (!dateOpen && !dateClose) {
-        shouldInclude = true;
-      } else if (dateOpen && !dateClose) {
-        shouldInclude = date >= dateOpen && date <= currentDate;
-      } else if (!dateOpen && dateClose) {
-        shouldInclude = date <= dateClose;
-      } else if (dateOpen && dateClose) {
-        shouldInclude = date >= dateOpen && date <= dateClose;
-      }
+        // Перевіряємо чи дата входить в діапазон
+        let shouldInclude = false;
 
-      if (shouldInclude) {
-        slyusar.Історія[date].forEach((record) => {
+        if (!dateOpen && !dateClose) {
+          shouldInclude = true;
+        } else if (dateOpen && !dateClose) {
+          shouldInclude = targetDate >= dateOpen && targetDate <= currentDate;
+        } else if (!dateOpen && dateClose) {
+          shouldInclude = targetDate <= dateClose;
+        } else if (dateOpen && dateClose) {
+          shouldInclude = targetDate >= dateOpen && targetDate <= dateClose;
+        }
+
+        if (shouldInclude) {
           record.Записи.forEach((entry) => {
             if (entry.Кількість === 0) return;
 
@@ -1127,8 +1151,8 @@ export function searchDataInDatabase(
             };
             podlegleData.push(podlegleRecord);
           });
-        });
-      }
+        }
+      });
     });
   });
 
@@ -1140,20 +1164,24 @@ export function searchDataInDatabase(
     return dateB.getTime() - dateA.getTime();
   });
 
-  console.log(`🔄 Дані відсортовані по датах відкриття (нові зверху)`);
-
   const recordsCount = podlegleData.length;
   const filterMessage = selectedName ? ` для ${selectedName}` : "";
 
   let dateFilterMessage = "";
+  const modeLabels = {
+    open: "відкриття",
+    close: "закриття",
+    paid: "розрахунку"
+  };
+  
   if (!dateOpen && !dateClose) {
-    dateFilterMessage = " (всі дати)";
+    dateFilterMessage = ` (всі дати ${modeLabels[podlegleDateFilterMode]})`;
   } else if (dateOpen && !dateClose) {
-    dateFilterMessage = ` (з ${dateOpen} до сьогодні)`;
+    dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dateOpen} до сьогодні)`;
   } else if (!dateOpen && dateClose) {
-    dateFilterMessage = ` (до ${dateClose} включно)`;
+    dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: до ${dateClose} включно)`;
   } else if (dateOpen && dateClose) {
-    dateFilterMessage = ` (з ${dateOpen} до ${dateClose})`;
+    dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dateOpen} до ${dateClose})`;
   }
 
   showNotification(
@@ -1169,6 +1197,39 @@ export function searchDataInDatabase(
   refreshWorkDropdownOptions();
 
   updatepodlegleTable();
+}
+
+// Глобальна змінна для зберігання поточного фільтра дат
+let podlegleDateFilterMode: 'open' | 'close' | 'paid' = 'open';
+
+// Функція для ініціалізації перемикача фільтрації дат для підлеглих
+function initPodlegleDateFilterToggle(): void {
+  const toggleContainer = document.querySelector('#Bukhhalter-podlegle-section .Bukhhalter-date-filter-toggle');
+  if (!toggleContainer) return;
+
+  const buttons = toggleContainer.querySelectorAll<HTMLButtonElement>('.date-filter-btn');
+  
+  buttons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      // Знімаємо active з усіх кнопок
+      buttons.forEach(b => b.classList.remove('active'));
+      // Додаємо active до натиснутої
+      this.classList.add('active');
+      
+      // Зберігаємо режим фільтрації
+      podlegleDateFilterMode = this.dataset.filter as 'open' | 'close' | 'paid';
+      
+      console.log(`🔄 Підлеглі: змінено режим фільтрації дат на "${podlegleDateFilterMode}"`);
+      
+      // Перезапускаємо пошук
+      if (hasPodlegleDataLoaded) {
+        const dateOpen = byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
+        const dateClose = byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
+        const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+        searchDataInDatabase(dateOpen, dateClose, selectedName);
+      }
+    });
+  });
 }
 
 export function createStatusToggle(): void {
@@ -1506,3 +1567,5 @@ document.addEventListener("DOMContentLoaded", () => {
     ensureWorkSmartDropdown();
   }, 100);
 });
+
+export { initPodlegleDateFilterToggle, podlegleDateFilterMode };

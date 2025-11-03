@@ -1,3 +1,4 @@
+//src\ts\roboha\redahyvatu_klient_machuna\pidtverdutu_sberihannya_zakaz_naryad.ts
 export const saveModalIdCreate = "save-prompt-modal-create";
 
 import { getModalFormValues } from "./vikno_klient_machuna";
@@ -77,14 +78,16 @@ async function createActInDatabase(
       Рекомендації: "",
       "Загальна сума": 0,
       "Причина звернення": "",
+      "Прибуток за деталі": 0,
+      "Прибуток за роботу": 0,
     };
-
     const { error } = await supabase.from("acts").insert([
       {
         date_on: dateOn,
         client_id: clientId,
         cars_id: carsId,
         data: actData,
+        avans: 0,
       },
     ]);
 

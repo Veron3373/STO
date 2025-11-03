@@ -482,7 +482,7 @@ function renderModalContent(
     })),
   ];
   globalCache.initialActItems = allItems;
-  console.log("Initial act items saved:", globalCache.initialActItems);
+  //console.log("Initial act items saved:", globalCache.initialActItems);
   body.innerHTML = `
     <div class="zakaz_narayd-header">
       <div class="zakaz_narayd-header-info">
@@ -581,6 +581,29 @@ function renderModalContent(
     ${generateTableHTML(allItems, globalCache.settings.showPibMagazin)}
     ${isClosed ? createClosedActClaimText() : ""}
   `;
+
+  // Ініціалізуємо поле авансу після рендерингу
+  setTimeout(() => {
+    const avansInput = document.getElementById(
+      "editable-avans"
+    ) as HTMLInputElement;
+    if (avansInput) {
+      const avansValue = act?.avans || actDetails?.["Аванс"] || 0;
+      avansInput.value = String(avansValue);
+
+      // Форматуємо при введенні
+      avansInput.addEventListener("input", (e) => {
+        const target = e.target as HTMLInputElement;
+        const cleaned = target.value.replace(/[^0-9]/g, "");
+        target.value = cleaned;
+      });
+
+      // Оновлюємо підсумки при зміні авансу
+      avansInput.addEventListener("input", () => {
+        updateCalculatedSumsInFooter();
+      });
+    }
+  }, 100);
 }
 
 function createClosedActClaimText(): string {
@@ -647,6 +670,16 @@ async function addModalHandlers(
       if (userAccessLevel === "Слюсар") {
         applyAccessRestrictionsToNewRow();
       }
+    });
+  }
+
+  // Додаємо обробник для поля авансу
+  const avansInput = document.getElementById(
+    "editable-avans"
+  ) as HTMLInputElement;
+  if (avansInput) {
+    avansInput.addEventListener("input", () => {
+      updateCalculatedSumsInFooter();
     });
   }
 
@@ -805,20 +838,4 @@ function getUserNameFromLocalStorage(): string | null {
     );
     return null;
   }
-}
-
-if (!(window as any).__otherBasesHandlerBound__) {
-  document.addEventListener("other-base-data-updated", async () => {
-    await loadGlobalData();
-    const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
-    if (container) {
-      setupAutocompleteForEditableCells(
-        ACT_ITEMS_TABLE_CONTAINER_ID,
-        globalCache
-      );
-      await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
-      updateCalculatedSumsInFooter();
-    }
-  });
-  (window as any).__otherBasesHandlerBound__ = true;
 }

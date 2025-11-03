@@ -375,6 +375,18 @@
         <!-- Форма Співробітників -->
         <div id="Bukhhalter-podlegle-section" class="Bukhhalter-form-section">
           <h2 class="Bukhhalter-section-title">👥 Облік роботи підлеглих</h2>
+          <div class="Bukhhalter-date-filter-toggle">
+            <button type="button" class="date-filter-btn active" data-filter="open"
+              title="Фільтрувати по даті відкриття">
+              📅 Відкриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="close" title="Фільтрувати по даті закриття">
+              📅 Закриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="paid" title="Фільтрувати по даті розрахунку">
+              💰 Розраховано
+            </button>
+          </div>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📅 Дата відкриття акту</label>
@@ -422,6 +434,18 @@
         <!-- Форма магазину -->
         <div id="Bukhhalter-magazine-section" class="Bukhhalter-form-section Bukhhalter-active">
           <h2 class="Bukhhalter-section-title">🏪 Облік товарів магазину</h2>
+          <div class="Bukhhalter-date-filter-toggle">
+            <button type="button" class="date-filter-btn active" data-filter="open"
+              title="Фільтрувати по даті відкриття">
+              📅 Відкриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="close" title="Фільтрувати по даті закриття">
+              📅 Закриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="paid" title="Фільтрувати по даті розрахунку">
+              💰 Розраховано
+            </button>
+          </div>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📅 Дата відкриття акту</label>
@@ -491,6 +515,18 @@
         <!-- Форма деталей по актам -->
         <div id="Bukhhalter-details-section" class="Bukhhalter-form-section">
           <h2 class="Bukhhalter-section-title">📊 Деталі по Актам</h2>
+          <div class="Bukhhalter-date-filter-toggle">
+            <button type="button" class="date-filter-btn active" data-filter="open"
+              title="Фільтрувати по даті відкриття">
+              📅 Відкриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="close" title="Фільтрувати по даті закриття">
+              📅 Закриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="paid" title="Фільтрувати по даті розрахунку">
+              💰 Розраховано
+            </button>
+          </div>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📅 Дата відкриття акту</label>
@@ -539,6 +575,18 @@
         <!-- Форма прибутку -->
         <div id="Bukhhalter-vutratu-section" class="Bukhhalter-form-section">
           <h2 class="Bukhhalter-section-title">💰 Облік прибутку та витрат</h2>
+          <div class="Bukhhalter-date-filter-toggle">
+            <button type="button" class="date-filter-btn active" data-filter="open"
+              title="Фільтрувати по даті відкриття">
+              📅 Відкриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="close" title="Фільтрувати по даті закриття">
+              📅 Закриття
+            </button>
+            <button type="button" class="date-filter-btn" data-filter="paid" title="Фільтрувати по даті розрахунку">
+              💰 Розраховано
+            </button>
+          </div>
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📅 Дата від</label>
@@ -581,7 +629,7 @@
             <label class="Bukhhalter-field-label">📋 Статус актів</label>
             <div>
               <input type="range" min="0" max="2" value="2" class="Bukhhalter-status-toggle"
-                id="details-status-filter-toggle">
+                id="vutratu-status-filter-toggle">
               <div class="Bukhhalter-toggle-labels">
                 <span>Закриті</span>
                 <span>Відкриті</span>
@@ -614,15 +662,18 @@
         <!-- Кнопки (загальні для всіх вкладок) -->
         <div class="Bukhhalter-button-container">
           <div class="Bukhhalter-button-row">
-            <button class="Bukhhalter-action-button Bukhhalter-add-button" onclick="addRecord()">🔍 Пошук</button>
+            <button id="Bukhhalter-search-button" class="Bukhhalter-action-button Bukhhalter-add-button"
+              onclick="addRecord(event)">🔍 Пошук</button>
             <button class="Bukhhalter-action-button Bukhhalter-clear-button" onclick="clearForm()">🗑️
               Очистити</button>
           </div>
           <div class="Bukhhalter-button-row">
             <button class="Bukhhalter-action-button Bukhhalter-excel-button" onclick="downloadToExcel()">📥
               Excel</button>
-            <button class="Bukhhalter-action-button Bukhhalter-save-btn" onclick="runMassPaymentCalculation()">💰
-              Розрахунок</button>
+            <button id="Bukhhalter-calc-button" type="button" class="Bukhhalter-action-button Bukhhalter-save-btn"
+              onclick="runMassPaymentCalculation(event)">
+              💰 Розрахунок
+            </button>
           </div>
         </div>
       </div>

@@ -966,13 +966,9 @@ function refreshDropdownOptions(): void {
 
 // ==== Фільтрація без повторного завантаження з БД ====
 function autoFilterFromInputs(): void {
-  const dateOpen =
-    getEl<HTMLInputElement>("Bukhhalter-magazine-date-open")?.value || "";
-  const dateClose =
-    getEl<HTMLInputElement>("Bukhhalter-magazine-date-close")?.value || "";
-  const shopEl = getEl<HTMLInputElement | HTMLSelectElement>(
-    "Bukhhalter-magazine-shop"
-  );
+  const dateFrom = getEl<HTMLInputElement>("Bukhhalter-magazine-date-open")?.value || "";
+  const dateTo = getEl<HTMLInputElement>("Bukhhalter-magazine-date-close")?.value || "";
+  const shopEl = getEl<HTMLInputElement | HTMLSelectElement>("Bukhhalter-magazine-shop");
   const shop = (shopEl?.value || "").trim();
   const bill = getElValue<HTMLInputElement>("Bukhhalter-magazine-bill");
   const item = getElValue<HTMLInputElement>("Bukhhalter-magazine-item");
@@ -980,12 +976,38 @@ function autoFilterFromInputs(): void {
 
   let filtered = [...allMagazineData];
 
-  if (dateOpen) {
-    filtered = filtered.filter((r) => r.date_open && r.date_open >= dateOpen);
+  // ФІЛЬТРАЦІЯ ПО ДАТАХ залежно від режиму
+  if (dateFrom || dateTo) {
+    filtered = filtered.filter((r) => {
+      let targetDate = '';
+      
+      switch (magazineDateFilterMode) {
+        case 'open':
+          // Фільтр по даті відкриття (date_open)
+          targetDate = r.date_open || '';
+          break;
+        case 'close':
+          // Фільтр по даті закриття (date_close)
+          targetDate = r.date_close || '';
+          break;
+        case 'paid':
+          // Фільтр по даті розрахунку (rosraxovano)
+          targetDate = r.rosraxovano || '';
+          break;
+      }
+      
+      // Якщо дати немає - пропускаємо запис
+      if (!targetDate) return false;
+      
+      // Перевіряємо діапазон
+      const meetsFrom = !dateFrom || targetDate >= dateFrom;
+      const meetsTo = !dateTo || targetDate <= dateTo;
+      
+      return meetsFrom && meetsTo;
+    });
   }
-  if (dateClose) {
-    filtered = filtered.filter((r) => r.date_open && r.date_open <= dateClose);
-  }
+
+  // Інші фільтри залишаються без змін
   if (shop) {
     filtered = filtered.filter(
       (r) => (r.shops || "").trim().toLowerCase() === shop.toLowerCase()
@@ -1012,6 +1034,35 @@ function autoFilterFromInputs(): void {
   updateMagazineTable();
   updateMagazineTotalSum();
 }
+
+// Глобальна змінна для зберігання поточного фільтра дат
+let magazineDateFilterMode: 'open' | 'close' | 'paid' = 'open';
+
+// Функція для ініціалізації перемикача фільтрації дат для магазину
+function initMagazineDateFilterToggle(): void {
+  const toggleContainer = document.querySelector('#Bukhhalter-magazine-section .Bukhhalter-date-filter-toggle');
+  if (!toggleContainer) return;
+
+  const buttons = toggleContainer.querySelectorAll<HTMLButtonElement>('.date-filter-btn');
+  
+  buttons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      // Знімаємо active з усіх кнопок
+      buttons.forEach(b => b.classList.remove('active'));
+      // Додаємо active до натиснутої
+      this.classList.add('active');
+      
+      // Зберігаємо режим фільтрації
+      magazineDateFilterMode = this.dataset.filter as 'open' | 'close' | 'paid';
+      
+      console.log(`🔄 Магазин: змінено режим фільтрації дат на "${magazineDateFilterMode}"`);
+      
+      // Перезапускаємо фільтрацію
+      triggerAutoFilter();
+    });
+  });
+}
+
 
 function getElValue<T extends HTMLInputElement | HTMLSelectElement>(
   id: string
@@ -1084,13 +1135,9 @@ function mapRowToMagazineRecord(row: any): MagazineRecord {
 
 // ==== Автопошук з БД ====
 async function autoSearchFromInputs(): Promise<void> {
-  const dateOpen =
-    getEl<HTMLInputElement>("Bukhhalter-magazine-date-open")?.value || "";
-  const dateClose =
-    getEl<HTMLInputElement>("Bukhhalter-magazine-date-close")?.value || "";
-  const shopEl = getEl<HTMLInputElement | HTMLSelectElement>(
-    "Bukhhalter-magazine-shop"
-  );
+  const dateOpen = getEl<HTMLInputElement>("Bukhhalter-magazine-date-open")?.value || "";
+  const dateClose = getEl<HTMLInputElement>("Bukhhalter-magazine-date-close")?.value || "";
+  const shopEl = getEl<HTMLInputElement | HTMLSelectElement>("Bukhhalter-magazine-shop");
   const shop = (shopEl?.value || "").trim();
   const bill = getElValue<HTMLInputElement>("Bukhhalter-magazine-bill");
   const item = getElValue<HTMLInputElement>("Bukhhalter-magazine-item");
@@ -1102,8 +1149,20 @@ async function autoSearchFromInputs(): Promise<void> {
 
   const filters: any = {};
 
-  if (dateOpen) filters.date_open = dateOpen;
-  if (dateClose) filters.date_close = dateClose;
+  // Вибираємо поля для фільтрації в БД залежно від режиму
+  if (magazineDateFilterMode === 'open') {
+    if (dateOpen) filters.date_open = dateOpen;
+    if (dateClose) filters.date_close = dateClose;
+  } else if (magazineDateFilterMode === 'close') {
+    // Для закриття використовуємо date_close
+    if (dateOpen) filters.date_close_from = dateOpen;
+    if (dateClose) filters.date_close_to = dateClose;
+  } else if (magazineDateFilterMode === 'paid') {
+    // Для розрахунку використовуємо rosraxovano
+    if (dateOpen) filters.rosraxovano_from = dateOpen;
+    if (dateClose) filters.rosraxovano_to = dateClose;
+  }
+
   if (shop) filters.shops = shop;
 
   if (bill) {
@@ -1160,6 +1219,10 @@ async function loadScladData(
   filters: {
     date_open?: string;
     date_close?: string;
+    date_close_from?: string;
+    date_close_to?: string;
+    rosraxovano_from?: string;
+    rosraxovano_to?: string;
     shops?: string;
     rahunok?: string;
     rahunok_exact?: string;
@@ -1176,6 +1239,7 @@ async function loadScladData(
 
     let q = supabase.from(SCLAD_TABLE).select("*");
 
+    // Фільтрація по датах відкриття (якщо режим 'open')
     if (filters.date_open && filters.date_close) {
       q = q
         .gte("time_on", filters.date_open)
@@ -1184,6 +1248,28 @@ async function loadScladData(
       q = q.gte("time_on", filters.date_open);
     } else if (filters.date_close) {
       q = q.lte("time_on", filters.date_close);
+    }
+
+    // Фільтрація по датах закриття (якщо режим 'close')
+    if (filters.date_close_from && filters.date_close_to) {
+      q = q
+        .gte("date_close", filters.date_close_from)
+        .lte("date_close", filters.date_close_to);
+    } else if (filters.date_close_from) {
+      q = q.gte("date_close", filters.date_close_from);
+    } else if (filters.date_close_to) {
+      q = q.lte("date_close", filters.date_close_to);
+    }
+
+    // Фільтрація по датах розрахунку (якщо режим 'paid')
+    if (filters.rosraxovano_from && filters.rosraxovano_to) {
+      q = q
+        .gte("rosraxovano", filters.rosraxovano_from)
+        .lte("rosraxovano", filters.rosraxovano_to);
+    } else if (filters.rosraxovano_from) {
+      q = q.gte("rosraxovano", filters.rosraxovano_from);
+    } else if (filters.rosraxovano_to) {
+      q = q.lte("rosraxovano", filters.rosraxovano_to);
     }
 
     if (filters.shops) q = q.eq("shops", filters.shops);
@@ -1293,6 +1379,7 @@ export async function searchMagazineData(): Promise<void> {
     }
   }
 
+  // ВИПРАВЛЕННЯ: Додаємо await перед Promise.all
   const [loadedData] = await Promise.all([
     loadScladData(filters),
     loadAvailableShops(),
@@ -1664,6 +1751,9 @@ export async function toggleReturn(index: number): Promise<void> {
   }
 }
 
+
+
+
 // ==== Ініціалізація автоповедінки з правильними обробниками ====
 function initMagazineAutoBehaviors(): void {
   ensureSmartDropdowns();
@@ -1749,6 +1839,7 @@ function initMagazineAutoBehaviors(): void {
       updateMagazineTotalSum();
     });
   }
+   initMagazineDateFilterToggle();
 }
 
 async function updatePaymentInDatabase(item: MagazineRecord): Promise<void> {

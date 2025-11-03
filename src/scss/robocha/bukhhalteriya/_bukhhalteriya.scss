@@ -1165,3 +1165,62 @@ body {
     min-width: 130px;
   }
 }
+
+/* ==================== ПЕРЕМИКАЧ ФІЛЬТРАЦІЇ ДАТ ==================== */
+.Bukhhalter-date-filter-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.date-filter-btn {
+  flex: 1;
+  padding: 10px 15px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
+}
+
+.date-filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #b0b0b0;
+}
+
+.date-filter-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+}
+
+.date-filter-btn.active:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+/* Адаптивність для малих екранів */
+@media (max-width: 768px) {
+  .Bukhhalter-date-filter-toggle {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .date-filter-btn {
+    width: 100%;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}

@@ -227,31 +227,75 @@ function togglePayment(index: number, type: TabName): void {
     toggleMagazinePayment(index);
   } else if (type === "details") {
     toggleDetailsPayment(index);
-  } 
+  }
   updateTotalSum();
 }
 
-export async function addRecord(): Promise<void> {
-  if (currentTab === "podlegle") {
-    handlepodlegleAddRecord();
-    updateTotalSum();
-    return;
+// Функція для керування станом кнопки пошуку
+// Було: setSearchButtonLoading(isLoading: boolean)
+// Стало:
+function setSearchButtonLoadingEl(
+  btn: HTMLButtonElement | null,
+  isLoading: boolean
+): void {
+  if (!btn) return;
+  if (isLoading) {
+    btn.disabled = true;
+    (btn as any)._origText = btn.textContent || "";
+    btn.textContent = "⏳ Завантаження...";
+    btn.style.opacity = "0.6";
+    btn.style.cursor = "not-allowed";
+    btn.setAttribute("aria-busy", "true");
+  } else {
+    btn.disabled = false;
+    btn.textContent = (btn as any)._origText || "🔍 Пошук";
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+    btn.removeAttribute("aria-busy");
+    delete (btn as any)._origText;
   }
+}
 
-  if (currentTab === "magazine") {
-    await Promise.resolve(searchMagazineData());
-    return;
-  }
+// Додай на початок addRecord:
+export async function addRecord(e?: Event): Promise<void> {
+  e?.preventDefault?.();
 
-  if (currentTab === "details") {
-    await addDetailsRecord();
-    return;
-  }
+  // Надійний пошук кнопки:
+  const maybeFromEvent = e?.currentTarget as HTMLButtonElement | null;
+  const maybeActiveEl =
+    document.activeElement instanceof HTMLButtonElement
+      ? document.activeElement
+      : null;
+  const btn =
+    maybeFromEvent ||
+    maybeActiveEl ||
+    document.querySelector<HTMLButtonElement>("#Bukhhalter-search-button") ||
+    null;
 
-  if (currentTab === "vutratu") {
-    // Замість відкриття модалу, завантажуємо дані з бази даних з урахуванням фільтрів
-    await (window as any).searchvutratuFromDatabase();
-    return;
+  setSearchButtonLoadingEl(btn, true);
+  try {
+    if (currentTab === "podlegle") {
+      handlepodlegleAddRecord();
+      updateTotalSum();
+      return;
+    }
+    if (currentTab === "magazine") {
+      await searchMagazineData();
+      return;
+    }
+    if (currentTab === "details") {
+      await addDetailsRecord();
+      return;
+    }
+    if (currentTab === "vutratu") {
+      await (window as any).searchvutratuFromDatabase();
+      return;
+    }
+  } catch (error) {
+    console.error("Помилка при додаванні запису:", error);
+    showNotification("Помилка при завантаженні даних", "error");
+  } finally {
+    setSearchButtonLoadingEl(btn, false);
   }
 }
 
@@ -266,6 +310,32 @@ export function deleteRecord(type: TabName, index: number): void {
     deleteExpenseRecord(index);
   }
   updateTotalSum();
+}
+
+// Універсальний хелпер (підтримує і textContent, і innerHTML з емодзі)
+function setButtonLoadingEl(
+  btn: HTMLButtonElement | null,
+  isLoading: boolean,
+  loadingLabel: string,
+  fallbackLabel?: string
+): void {
+  if (!btn) return;
+  if (isLoading) {
+    btn.disabled = true;
+    // збережемо вихідну розмітку (емодзі, пробіли)
+    (btn as any)._origHTML = btn.innerHTML;
+    btn.innerHTML = loadingLabel;
+    btn.style.opacity = "0.6";
+    btn.style.cursor = "not-allowed";
+    btn.setAttribute("aria-busy", "true");
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = (btn as any)._origHTML || fallbackLabel || btn.innerHTML;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+    btn.removeAttribute("aria-busy");
+    delete (btn as any)._origHTML;
+  }
 }
 
 export function clearForm(): void {
@@ -612,8 +682,9 @@ function downloadvutratuToExcel(): void {
 
 export function downloadToExcel(): void {
   try {
+    // ВИПРАВЛЕНО: правильний клас кнопки
     const activeTab = document.querySelector(
-      ".Bukhhalter-tab-button.Bukhhalter-active"
+      ".Bukhhalter-tab-btn.Bukhhalter-active"
     );
     if (!activeTab) {
       showNotification("Не вдалося визначити активну вкладку", "error");
@@ -627,7 +698,8 @@ export function downloadToExcel(): void {
       downloadMagazineToExcel();
     } else if (tabText.includes("По Актам") || tabText.includes("Деталі")) {
       downloadDetailsToExcel();
-    } else if (tabText.includes("Витрати")) {
+    } else if (tabText.includes("Витрати") || tabText.includes("Прибуток")) {
+      // ВИПРАВЛЕНО: додано "Прибуток"
       downloadvutratuToExcel();
     } else {
       showNotification("Невідома вкладка для експорту", "warning");
@@ -638,8 +710,24 @@ export function downloadToExcel(): void {
   }
 }
 
-export async function runMassPaymentCalculation(): Promise<void> {
-  // Визначаємо активну вкладку по видимості контейнерів таблиць
+export async function runMassPaymentCalculation(e?: Event): Promise<void> {
+  e?.preventDefault?.();
+
+  const maybeFromEvent = e?.currentTarget as HTMLButtonElement | null;
+  const maybeActiveEl =
+    document.activeElement instanceof HTMLButtonElement
+      ? document.activeElement
+      : null;
+  const btn =
+    maybeFromEvent ||
+    maybeActiveEl ||
+    document.querySelector<HTMLButtonElement>("#Bukhhalter-calc-button") ||
+    document.querySelector<HTMLButtonElement>(".Bukhhalter-save-btn") ||
+    null;
+
+  setButtonLoadingEl(btn, true, "⏳ Розрахунок...", "💰 Розрахунок");
+
+  // Визначаємо активну вкладку по видимості контейнерів
   const podlegleTable = document.getElementById(
     "podlegle-table-container"
   ) as HTMLElement | null;
@@ -664,20 +752,16 @@ export async function runMassPaymentCalculation(): Promise<void> {
 
   try {
     if (isPodlegleVisible) {
-      // Викликаємо масовий розрахунок для підлеглих
-      console.log("🔄 Викликаємо масовий розрахунок для підлеглих");
+      console.log("🔄 Масовий розрахунок: підлеглі");
       await runMassPaymentCalculationForPodlegle();
     } else if (isMagazineVisible) {
-      // Викликаємо масовий розрахунок для магазину
-      console.log("🔄 Викликаємо масовий розрахунок для магазину");
+      console.log("🔄 Масовий розрахунок: магазин");
       await runMassPaymentCalculationForMagazine();
     } else if (isDetailsVisible) {
-      // Викликаємо масовий розрахунок для деталей по актам
-      console.log("🔄 Викликаємо масовий розрахунок для деталей");
+      console.log("🔄 Масовий розрахунок: деталі");
       await runMassPaymentCalculationForDetails();
     } else if (isvutratuVisible) {
-      // Викликаємо масовий розрахунок для витрат
-      console.log("🔄 Викликаємо масовий розрахунок для витрат");
+      console.log("🔄 Масовий розрахунок: витрати");
       await runMassPaymentCalculationForvutratu();
     } else {
       showNotification(
@@ -688,6 +772,8 @@ export async function runMassPaymentCalculation(): Promise<void> {
   } catch (error) {
     console.error("❌ Помилка виконання масового розрахунку:", error);
     showNotification("❌ Помилка виконання масового розрахунку", "error");
+  } finally {
+    setButtonLoadingEl(btn, false, "", "💰 Розрахунок");
   }
 }
 
@@ -733,12 +819,38 @@ window.addEventListener("load", async function () {
     updateTableDisplay();
     initializeDateInputs();
 
+    // ДОДАТИ: Ініціалізація всіх перемикачів фільтрації дат
+    console.log("🔧 Ініціалізація перемикачів фільтрації дат...");
+
+    // Затримка для гарантії що DOM повністю готовий
+    setTimeout(() => {
+      // Ініціалізуємо перемикачі для всіх вкладок
+      if (typeof (window as any).initMagazineDateFilterToggle === "function") {
+        (window as any).initMagazineDateFilterToggle();
+        console.log("✅ Перемикач магазину ініціалізовано");
+      }
+
+      if (typeof (window as any).initPodlegleDateFilterToggle === "function") {
+        (window as any).initPodlegleDateFilterToggle();
+        console.log("✅ Перемикач підлеглих ініціалізовано");
+      }
+
+      if (typeof (window as any).initDetailsDateFilterToggle === "function") {
+        (window as any).initDetailsDateFilterToggle();
+        console.log("✅ Перемикач деталей ініціалізовано");
+      }
+
+      if (typeof (window as any).initvutratuDateFilterToggle === "function") {
+        (window as any).initvutratuDateFilterToggle();
+        console.log("✅ Перемикач витрат ініціалізовано");
+      }
+    }, 200);
+
     console.log("✅ Ініціалізація завершена. Активна вкладка: Склад");
   } catch (error) {
     console.error("Помилка ініціалізації:", error);
   }
 });
-
 function openActModal(act: string | number) {
   const id = parseInt(String(act), 10);
   if (!Number.isFinite(id) || id <= 0) {

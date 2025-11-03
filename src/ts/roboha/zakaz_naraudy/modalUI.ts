@@ -2,22 +2,22 @@
 
 import {
   globalCache,
+  loadGlobalData,
   ZAKAZ_NARAYD_MODAL_ID,
   ZAKAZ_NARAYD_BODY_ID,
   ZAKAZ_NARAYD_CLOSE_BTN_ID,
   ACT_ITEMS_TABLE_CONTAINER_ID,
   formatNumberWithSpaces,
 } from "./globalCache";
-import { setupAutocompleteForEditableCells } from "./inhi/kastomna_tabluca";
+import {
+  setupAutocompleteForEditableCells,
+  refreshQtyWarningsIn,
+} from "./inhi/kastomna_tabluca";
 import { userAccessLevel } from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
 
 function showNotification(message: string, type: string): void {
   console.log(`[${type}] ${message}`);
-}
-
-function parseNumber(text: string | null | undefined): number {
-  return parseFloat(text?.replace(/\s/g, "") || "0") || 0;
 }
 
 async function getScladPrice(scladId: number): Promise<number | null> {
@@ -105,7 +105,9 @@ function getSlyusarSalaryFromHistory(
 /**
  * Отримує відсоток роботи слюсаря з бази даних або кешу
  */
-export async function getSlyusarWorkPercent(slyusarName: string): Promise<number> {
+export async function getSlyusarWorkPercent(
+  slyusarName: string
+): Promise<number> {
   if (!slyusarName) return 0;
 
   // Спочатку шукаємо в кеші
@@ -132,9 +134,8 @@ export async function getSlyusarWorkPercent(slyusarName: string): Promise<number
 
     if (!data?.data) return 0;
 
-    const slyusarData = typeof data.data === "string" 
-      ? JSON.parse(data.data) 
-      : data.data;
+    const slyusarData =
+      typeof data.data === "string" ? JSON.parse(data.data) : data.data;
 
     const percent = Number(slyusarData.ПроцентРоботи) || 0;
 
@@ -142,7 +143,7 @@ export async function getSlyusarWorkPercent(slyusarName: string): Promise<number
     const existingIndex = globalCache.slyusars.findIndex(
       (s) => s.Name?.toLowerCase() === slyusarName.toLowerCase()
     );
-    
+
     if (existingIndex !== -1) {
       globalCache.slyusars[existingIndex].ПроцентРоботи = percent;
     } else {
@@ -167,7 +168,9 @@ export function calculateSlyusarSum(totalSum: number, percent: number): number {
 /**
  * Оновлює зарплату слюсаря в рядку (async версія)
  */
-async function updateSlyusarSalaryInRow(row: HTMLTableRowElement): Promise<void> {
+async function updateSlyusarSalaryInRow(
+  row: HTMLTableRowElement
+): Promise<void> {
   const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
   const typeFromCell = nameCell?.getAttribute("data-type");
 
@@ -182,9 +185,7 @@ async function updateSlyusarSalaryInRow(row: HTMLTableRowElement): Promise<void>
   }
 
   const workName = nameCell?.textContent?.trim();
-  const pibCell = row.querySelector(
-    '[data-name="pib_magazin"]'
-  ) as HTMLElement;
+  const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
   const slyusarName = pibCell?.textContent?.trim();
   const slyusarSumCell = row.querySelector(
     '[data-name="slyusar_sum"]'
@@ -202,7 +203,11 @@ async function updateSlyusarSalaryInRow(row: HTMLTableRowElement): Promise<void>
 
   // 1. Спробуємо отримати з історії для конкретного акту
   const actId = globalCache.currentActId;
-  const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId);
+  const historySalary = getSlyusarSalaryFromHistory(
+    slyusarName,
+    workName,
+    actId
+  );
 
   if (historySalary !== null) {
     slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
@@ -230,7 +235,9 @@ export function updateAllSlyusarSumsFromHistory(): void {
   );
 
   for (const row of rows) {
-    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+    const nameCell = row.querySelector(
+      '[data-name="name"]'
+    ) as HTMLElement | null;
     if (!nameCell) continue;
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") continue;
@@ -239,7 +246,6 @@ export function updateAllSlyusarSumsFromHistory(): void {
     updateSlyusarSalaryInRow(row);
   }
 }
-
 
 /**
  * Перераховує суму в рядку і оновлює зарплату слюсаря (async)
@@ -256,7 +262,9 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
   );
   const sum = price * quantity;
 
-  const sumCell = row.querySelector('[data-name="sum"]') as HTMLTableCellElement;
+  const sumCell = row.querySelector(
+    '[data-name="sum"]'
+  ) as HTMLTableCellElement;
   if (sumCell) {
     sumCell.textContent = formatNumberWithSpaces(Math.round(sum));
   }
@@ -265,8 +273,6 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
   await updateSlyusarSalaryInRow(row);
   updateCalculatedSumsInFooter();
 }
-
-
 
 /**
  * Ініціалізує зарплати слюсарів при завантаженні акту (async)
@@ -310,7 +316,11 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
     if (totalSum <= 0) continue;
 
-    const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId);
+    const historySalary = getSlyusarSalaryFromHistory(
+      slyusarName,
+      workName,
+      actId
+    );
 
     if (historySalary !== null) {
       slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
@@ -400,8 +410,7 @@ export async function saveActData(): Promise<void> {
     const catalog =
       row.querySelector('[data-name="catalog"]')?.textContent?.trim() || "";
     const shop =
-      row.querySelector('[data-name="pib_magazin"]')?.textContent?.trim() ||
-      "";
+      row.querySelector('[data-name="pib_magazin"]')?.textContent?.trim() || "";
     const name = nameCell?.textContent?.trim() || "";
 
     if (type === "details") {
@@ -589,16 +598,27 @@ export function generateTableHTML(
   const sumsFooter = isRestricted
     ? ""
     : `
-    <div class="zakaz_narayd-sums-footer">
+  <div class="zakaz_narayd-sums-footer">
+    <p class="sum-row">
+      <span class="sum-label">Аванс:</span>
+      <input 
+        type="text"
+        id="editable-avans"
+        class="editable-avans-input sum-value"
+        value="0"
+        placeholder="0"
+      />
+      <span class="sum-currency">грн</span>
+    </p>
       <p><strong>За роботу:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-works-sum">${formatNumberWithSpaces(
         0
       )}</span> грн</p>
       <p><strong>За деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-sum">${formatNumberWithSpaces(
         0
       )}</span> грн</p>
-      <p><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
+      <p id="overall-sum-line"><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
         0
-      )}</span> грн</p>
+      )}</span> грн<span id="avans-subtract-display" class="avans-subtract-display" style="display: none;"></span><span id="final-sum-display" class="final-sum-display" style="display: none;"></span></p>
     </div>`;
 
   const buttons = globalCache.isActClosed
@@ -633,12 +653,86 @@ export function generateTableHTML(
     </div>`;
 
   setTimeout(() => {
-    const saveBtn = document.querySelector<HTMLButtonElement>("#save-act-data");
-    if (saveBtn) {
-      saveBtn.onclick = async () => {
-        await saveActData();
-      };
-    }
+    const avans = document.getElementById(
+      "editable-avans"
+    ) as HTMLInputElement | null;
+    if (!avans) return;
+
+    // утиліти
+    const unformat = (s: string) => s.replace(/\s+/g, ""); // забрати пробіли
+    const format = (numStr: string) => {
+      // прибираємо все, крім цифр; без лідируючих нулів
+      const clean = numStr.replace(/\D+/g, "");
+      if (!clean) return "";
+      // групування по 3 з кінця
+      return clean.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    };
+
+    // автопідгін ширини (як ми робили раніше)
+    const autoFit = () => {
+      // беремо фактичну видиму довжину (з пробілами)
+      const visibleLen = (avans.value || avans.placeholder || "0").length;
+      const ch = Math.min(Math.max(visibleLen, 3), 16); // 4..16ch
+      avans.style.width = ch + "ch";
+    };
+
+    // всередині onInput / onBlur після форматування:
+    avans.value = format(avans.value);
+    autoFit();
+    updateFinalSumWithAvans();
+
+    // м’яке форматування під час вводу
+    const onInput = () => {
+      const selEndBefore = avans.selectionEnd ?? avans.value.length;
+      const digitsBefore = unformat(avans.value.slice(0, selEndBefore)).length;
+
+      avans.value = format(avans.value);
+      autoFit();
+
+      // відновлюємо позицію курсора приблизно на тій самій кількості цифр
+      let idx = 0,
+        digitsSeen = 0;
+      while (idx < avans.value.length && digitsSeen < digitsBefore) {
+        if (/\d/.test(avans.value[idx])) digitsSeen++;
+        idx++;
+      }
+      avans.setSelectionRange(idx, idx);
+
+      // оновити формулу (загальна - аванс = фінальна)
+      updateFinalSumWithAvans();
+    };
+
+    // жорстке форматування на blur (щоб прибрати випадкові символи)
+    const onBlur = () => {
+      avans.value = format(avans.value);
+      autoFit();
+      updateFinalSumWithAvans();
+    };
+
+    // дозволимо тільки цифри, Backspace, Delete, стрілки, Home/End
+    const onKeyDown = (e: KeyboardEvent) => {
+      const allowed =
+        /\d/.test(e.key) ||
+        [
+          "Backspace",
+          "Delete",
+          "ArrowLeft",
+          "ArrowRight",
+          "Home",
+          "End",
+          "Tab",
+        ].includes(e.key);
+      if (!allowed) {
+        e.preventDefault();
+      }
+    };
+
+    avans.addEventListener("keydown", onKeyDown);
+    avans.addEventListener("input", onInput);
+    avans.addEventListener("blur", onBlur);
+
+    // початковий формат + ширина
+    onBlur();
   }, 0);
 
   return tableHTML;
@@ -717,6 +811,56 @@ export function updateCalculatedSumsInFooter(): void {
   set("total-works-sum", totalWorksSum);
   set("total-details-sum", totalDetailsSum);
   set("total-overall-sum", totalOverallSum);
+
+  // Оновлюємо відображення з урахуванням авансу
+  updateFinalSumWithAvans();
+}
+
+function parseNumber(text: string | null | undefined): number {
+  return parseFloat(text?.replace(/\s/g, "") || "0") || 0;
+}
+
+function updateFinalSumWithAvans(): void {
+  const avansInput = document.getElementById(
+    "editable-avans"
+  ) as HTMLInputElement;
+  const overallSumSpan = document.getElementById("total-overall-sum");
+  const avansSubtractDisplay = document.getElementById(
+    "avans-subtract-display"
+  );
+  const finalSumDisplay = document.getElementById("final-sum-display");
+
+  if (
+    !avansInput ||
+    !overallSumSpan ||
+    !avansSubtractDisplay ||
+    !finalSumDisplay
+  )
+    return;
+
+  const avans = parseNumber(avansInput.value);
+  const overallSum = parseNumber(overallSumSpan.textContent);
+
+  if (avans > 0) {
+    const finalSum = overallSum - avans;
+
+    // Показуємо формулу: загальна сума - аванс = фінальна сума
+    avansSubtractDisplay.textContent = ` - ${formatNumberWithSpaces(
+      Math.round(avans)
+    )} грн`;
+    avansSubtractDisplay.style.color = "#2e7d32";
+    avansSubtractDisplay.style.display = "inline";
+
+    finalSumDisplay.textContent = ` = ${formatNumberWithSpaces(
+      Math.round(finalSum)
+    )} грн`;
+    finalSumDisplay.style.color = "#1a73e8";
+    finalSumDisplay.style.display = "inline";
+  } else {
+    // Якщо аванс = 0, ховаємо формулу
+    avansSubtractDisplay.style.display = "none";
+    finalSumDisplay.style.display = "none";
+  }
 }
 
 export function createTableRow(
@@ -750,4 +894,20 @@ export function createModal(): void {
     newModalOverlay.classList.add("hidden");
     globalCache.currentActId = null;
   });
+}
+
+if (!(window as any).__otherBasesHandlerBound__) {
+  document.addEventListener("other-base-data-updated", async () => {
+    await loadGlobalData();
+    const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
+    if (container) {
+      setupAutocompleteForEditableCells(
+        ACT_ITEMS_TABLE_CONTAINER_ID,
+        globalCache
+      );
+      await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
+      updateCalculatedSumsInFooter();
+    }
+  });
+  (window as any).__otherBasesHandlerBound__ = true;
 }

@@ -1095,19 +1095,41 @@ export async function searchDetailsData(): Promise<void> {
   const shops = await fetchShopData();
   detailsData = [];
 
-  const inRange = (d: string) => {
-    const geStart = !dateOpen || d >= dateOpen;
-    const leEnd = !dateClose || d <= dateClose;
-    return geStart && leEnd;
-  };
+  console.log(`🔍 Пошук деталей:`);
+  console.log(`  - Початкова дата: ${dateOpen || "не вказана"}`);
+  console.log(`  - Кінцева дата: ${dateClose || "не вказана"}`);
+  console.log(`  - Режим фільтрації: ${detailsDateFilterMode}`);
 
   for (const shop of shops) {
     const history = shop.Історія || {};
     for (const openDate of Object.keys(history)) {
-      if (!inRange(openDate)) continue;
-
       const dayRecords = history[openDate] || [];
+      
       for (const rec of dayRecords) {
+        // Визначаємо цільову дату залежно від режиму
+        let targetDate = '';
+        
+        switch (detailsDateFilterMode) {
+          case 'open':
+            targetDate = openDate; // Дата відкриття
+            break;
+          case 'close':
+            targetDate = rec.ДатаЗакриття || ''; // Дата закриття
+            break;
+          case 'paid':
+            targetDate = rec.Розрахунок || ''; // Дата розрахунку
+            break;
+        }
+        
+        // Якщо немає потрібної дати - пропускаємо
+        if (!targetDate) continue;
+        
+        // Перевіряємо чи дата входить в діапазон
+        const meetsFrom = !dateOpen || targetDate >= dateOpen;
+        const meetsTo = !dateClose || targetDate <= dateClose;
+        
+        if (!meetsFrom || !meetsTo) continue;
+
         const act = rec.Акт;
         const automobile = rec.Автомобіль || "";
         const closeDate = rec.ДатаЗакриття || null;
@@ -1157,10 +1179,16 @@ export async function searchDetailsData(): Promise<void> {
 
   updateDetailsTable();
 
+  const modeLabels = {
+    open: "відкриття",
+    close: "закриття",
+    paid: "розрахунку"
+  };
+
   if (detailsData.length === 0) {
-    showNotification("Записів не знайдено за заданими критеріями", "info");
+    showNotification(`Записів не знайдено за заданими критеріями (фільтр по даті ${modeLabels[detailsDateFilterMode]})`, "info");
   } else {
-    showNotification(`Знайдено ${detailsData.length} записів`, "success");
+    showNotification(`Знайдено ${detailsData.length} записів (фільтр по даті ${modeLabels[detailsDateFilterMode]})`, "success");
   }
 }
 
@@ -1195,6 +1223,7 @@ function initDetailsAutoBehaviors(): void {
   });
 
   ensureDetailsSmartDropdowns();
+  initDetailsDateFilterToggle();
 }
 
 export function createDetailsStatusToggle(): void {
@@ -1302,6 +1331,38 @@ export function initializeDetailsData(): void {
   createDetailsStatusToggle();
   createDetailsPaymentToggle();
   console.log("✅ initializeDetailsData() виконана");
+}
+
+// Глобальна змінна для зберігання поточного фільтра дат
+let detailsDateFilterMode: 'open' | 'close' | 'paid' = 'open';
+
+// Функція для ініціалізації перемикача фільтрації дат для деталей
+function initDetailsDateFilterToggle(): void {
+  const toggleContainer = document.querySelector('#Bukhhalter-details-section .Bukhhalter-date-filter-toggle');
+  if (!toggleContainer) return;
+
+  const buttons = toggleContainer.querySelectorAll<HTMLButtonElement>('.date-filter-btn');
+  
+  buttons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      // Знімаємо active з усіх кнопок
+      buttons.forEach(b => b.classList.remove('active'));
+      // Додаємо active до натиснутої
+      this.classList.add('active');
+      
+      // Зберігаємо режим фільтрації
+      detailsDateFilterMode = this.dataset.filter as 'open' | 'close' | 'paid';
+      
+      console.log(`🔄 Деталі: змінено режим фільтрації дат на "${detailsDateFilterMode}"`);
+      
+      // Перезапускаємо пошук
+      const dateOpen = byId<HTMLInputElement>("Bukhhalter-details-date-open")?.value || "";
+      const dateClose = byId<HTMLInputElement>("Bukhhalter-details-date-close")?.value || "";
+      if (dateOpen || dateClose) {
+        void searchDetailsData();
+      }
+    });
+  });
 }
 
 // Функція для кнопки "Пошук"

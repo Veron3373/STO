@@ -426,10 +426,11 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     document.getElementById(EDITABLE_PROBIG_ID)?.textContent
   );
   const probigCleaned = probigText.replace(/\s/g, ""); // Видаляємо всі пробіли
-  const newProbig = probigCleaned && /^\d+$/.test(probigCleaned) 
-    ? Number(probigCleaned) 
-    : (probigCleaned || 0);
-  
+  const newProbig =
+    probigCleaned && /^\d+$/.test(probigCleaned)
+      ? Number(probigCleaned)
+      : probigCleaned || 0;
+
   const newReason = getCellText(document.getElementById(EDITABLE_REASON_ID));
   const newRecommendations = getCellText(
     document.getElementById(EDITABLE_RECOMMENDATIONS_ID)
@@ -447,6 +448,14 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     grandTotalSum,
   } = processItems(items);
 
+  // Отримуємо значення авансу
+  const avansInput = document.getElementById(
+    "editable-avans"
+  ) as HTMLInputElement;
+  const avansValue = avansInput
+    ? parseFloat(avansInput.value.replace(/\s/g, "") || "0")
+    : 0;
+
   const updatedActData = {
     ...(originalActData || {}),
     Пробіг: newProbig,
@@ -457,6 +466,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "За деталі": totalDetailsSum,
     "За роботу": totalWorksSum,
     "Загальна сума": grandTotalSum,
+    Аванс: avansValue,
   };
 
   const deltas = calculateDeltas();
@@ -465,7 +475,10 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
 
   const { error: updateError } = await supabase
     .from("acts")
-    .update({ data: updatedActData })
+    .update({
+      data: updatedActData,
+      avans: avansValue,
+    })
     .eq("act_id", actId);
   if (updateError) {
     throw new Error(`Не вдалося оновити акт: ${updateError.message}`);

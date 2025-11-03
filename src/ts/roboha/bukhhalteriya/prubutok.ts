@@ -89,6 +89,31 @@ const PAYMENT_METHODS = [
   "📱 Електронний гаманець",
 ];
 
+// ВСТАВИТИ ЦЕЙ КОД:
+// Функції для перетворення між форматами з емодзі та без
+function removeEmoji(text: string): string {
+  return text
+    .replace(
+      /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu,
+      ""
+    )
+    .trim();
+}
+
+function addEmojiToCategory(categoryName: string): string {
+  const found = EXPENSE_CATEGORIES.find(
+    (cat) => removeEmoji(cat) === categoryName
+  );
+  return found || categoryName;
+}
+
+function addEmojiToPaymentMethod(methodName: string): string {
+  const found = PAYMENT_METHODS.find(
+    (method) => removeEmoji(method) === methodName
+  );
+  return found || methodName;
+}
+
 // ==================== ФУНКЦІЇ РЕЖИМІВ ====================
 
 export function cycleExpenseMode(): void {
@@ -330,6 +355,29 @@ function createPasswordConfirmationModal(
   });
 }
 
+// Функції для керування станом кнопки збереження
+function setSaveButtonLoading(isLoading: boolean): void {
+  const saveBtn = document.querySelector(
+    ".expense-modal-footer button"
+  ) as HTMLButtonElement;
+
+  if (!saveBtn) return;
+
+  if (isLoading) {
+    saveBtn.disabled = true;
+    saveBtn.dataset.originalText = saveBtn.textContent || "";
+    saveBtn.textContent = "⏳ Зачекайте...";
+    saveBtn.style.opacity = "0.6";
+    saveBtn.style.cursor = "not-allowed";
+  } else {
+    saveBtn.disabled = false;
+    saveBtn.textContent = saveBtn.dataset.originalText || "💾 Зберегти";
+    saveBtn.style.opacity = "1";
+    saveBtn.style.cursor = "pointer";
+    delete saveBtn.dataset.originalText;
+  }
+}
+
 // ==================== РОБОТА З БАЗОЮ ДАНИХ ====================
 
 interface ActData {
@@ -360,10 +408,23 @@ async function getClientData(clientId: number): Promise<string> {
       clientData = data.data;
     }
 
-    const name = clientData["ПІБ"] || "-";
+    const pib = clientData["ПІБ"] || "-";
     const phone = clientData["Телефон"] || "-";
+    const dzherelo = clientData["Джерело"] || "";
+    const dodatkovi = clientData["Додаткові"] || "";
 
-    return `${name}\n${phone}`;
+    // Формуємо рядок з усіма даними
+    let result = `👤 ${pib}\n📱 ${phone}`;
+
+    if (dzherelo && dzherelo !== "Невказано") {
+      result += `\n📍 ${dzherelo}`;
+    }
+
+    if (dodatkovi) {
+      result += `\n📝 ${dodatkovi}`;
+    }
+
+    return result;
   } catch (error) {
     console.error(`❌ Помилка завантаження клієнта ${clientId}:`, error);
     return "-";
@@ -391,18 +452,63 @@ async function getCarData(carId: number): Promise<string> {
     }
 
     const car = carData["Авто"] || "-";
-    const year = carData["Рік"] || "-";
-    const vincode = carData["Vincode"] || "-";
-    const volume = carData["Обʼєм"] || "-";
-    const engine = carData["КодДВЗ"] || "-";
-    const fuel = carData["Пальне"] || "-";
+    const volume = carData["Обʼєм"] || "";
+    const engine = carData["КодДВЗ"] || "";
+    const fuel = carData["Пальне"] || "";
     const plate = carData["Номер авто"] || "-";
 
-    return `${car} ${year}\nVIN: ${vincode}\nОб'єм: ${volume}, ДВЗ: ${engine}\nПальне: ${fuel}\nНомер: ${plate}`;
+    // Формуємо компактний рядок
+    let engineInfo = "";
+    if (volume || engine) {
+      engineInfo = `\n🔧 ${[volume, engine].filter(Boolean).join(" ")}`;
+    }
+
+    let fuelInfo = fuel ? `\n⛽ ${fuel}` : "";
+
+    return `🚗 ${car}\n🔢 ${plate}${engineInfo}${fuelInfo}`;
   } catch (error) {
     console.error(`❌ Помилка завантаження авто ${carId}:`, error);
     return "-";
   }
+}
+
+// Глобальна змінна для зберігання поточного фільтра дат
+let vutratuDateFilterMode: "open" | "close" | "paid" = "open";
+
+// Функція для ініціалізації перемикача фільтрації дат для витрат
+function initvutratuDateFilterToggle(): void {
+  const toggleContainer = document.querySelector(
+    "#Bukhhalter-vutratu-section .Bukhhalter-date-filter-toggle"
+  );
+  if (!toggleContainer) return;
+
+  const buttons =
+    toggleContainer.querySelectorAll<HTMLButtonElement>(".date-filter-btn");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      // Знімаємо active з усіх кнопок
+      buttons.forEach((b) => b.classList.remove("active"));
+      // Додаємо active до натиснутої
+      this.classList.add("active");
+
+      // Зберігаємо режим фільтрації
+      vutratuDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
+
+      console.log(
+        `🔄 Витрати: змінено режим фільтрації дат на "${vutratuDateFilterMode}"`
+      );
+
+      // Перезапускаємо завантаження
+      const dateFrom =
+        byId<HTMLInputElement>("Bukhhalter-vutratu-date-from")?.value || "";
+      const dateTo =
+        byId<HTMLInputElement>("Bukhhalter-vutratu-date-to")?.value || "";
+      if (dateFrom || dateTo) {
+        void loadvutratuFromDatabase();
+      }
+    });
+  });
 }
 
 async function loadvutratuFromDatabase(): Promise<void> {
@@ -418,7 +524,13 @@ async function loadvutratuFromDatabase(): Promise<void> {
     const paymentMethod =
       byId<HTMLSelectElement>("Bukhhalter-vutratu-payment-method")?.value || "";
 
-    console.log("📋 Фільтри:", { dateFrom, dateTo, category, paymentMethod });
+    console.log("📋 Фільтри:", {
+      dateFrom,
+      dateTo,
+      category,
+      paymentMethod,
+      mode: vutratuDateFilterMode,
+    });
 
     // Завантажуємо дані з vutratu
     let queryVutratu = supabase
@@ -428,8 +540,21 @@ async function loadvutratuFromDatabase(): Promise<void> {
       )
       .lt("suma", 0);
 
-    if (dateFrom) queryVutratu = queryVutratu.gte("dataOnn", dateFrom);
-    if (dateTo) queryVutratu = queryVutratu.lte("dataOnn", dateTo);
+    // Застосовуємо фільтр по датах залежно від режиму
+    if (vutratuDateFilterMode === "open") {
+      // Фільтр по даті відкриття (dataOnn)
+      if (dateFrom) queryVutratu = queryVutratu.gte("dataOnn", dateFrom);
+      if (dateTo) queryVutratu = queryVutratu.lte("dataOnn", dateTo);
+    } else if (vutratuDateFilterMode === "close") {
+      // Фільтр по даті закриття (dataOff)
+      if (dateFrom) queryVutratu = queryVutratu.gte("dataOff", dateFrom);
+      if (dateTo) queryVutratu = queryVutratu.lte("dataOff", dateTo);
+    } else if (vutratuDateFilterMode === "paid") {
+      // Фільтр по даті закриття (для витрат це теж dataOff)
+      if (dateFrom) queryVutratu = queryVutratu.gte("dataOff", dateFrom);
+      if (dateTo) queryVutratu = queryVutratu.lte("dataOff", dateTo);
+    }
+
     if (category) queryVutratu = queryVutratu.eq("kategoria", category);
     if (paymentMethod)
       queryVutratu = queryVutratu.eq("sposob_oplaty", paymentMethod);
@@ -446,10 +571,24 @@ async function loadvutratuFromDatabase(): Promise<void> {
     // Завантажуємо дані з acts
     let queryActs = supabase
       .from("acts")
-      .select("act_id,date_on,date_off,rosraxovano,data,xto_rozraxuvav");
+      .select(
+        "act_id,date_on,date_off,rosraxovano,data,xto_rozraxuvav,client_id,cars_id,avans"
+      );
 
-    if (dateFrom) queryActs = queryActs.gte("date_on", dateFrom);
-    if (dateTo) queryActs = queryActs.lte("date_on", dateTo);
+    // Застосовуємо фільтр по датах залежно від режиму
+    if (vutratuDateFilterMode === "open") {
+      // Фільтр по даті відкриття (date_on)
+      if (dateFrom) queryActs = queryActs.gte("date_on", dateFrom);
+      if (dateTo) queryActs = queryActs.lte("date_on", dateTo);
+    } else if (vutratuDateFilterMode === "close") {
+      // Фільтр по даті закриття (date_off)
+      if (dateFrom) queryActs = queryActs.gte("date_off", dateFrom);
+      if (dateTo) queryActs = queryActs.lte("date_off", dateTo);
+    } else if (vutratuDateFilterMode === "paid") {
+      // Фільтр по даті розрахунку (rosraxovano)
+      if (dateFrom) queryActs = queryActs.gte("rosraxovano", dateFrom);
+      if (dateTo) queryActs = queryActs.lte("rosraxovano", dateTo);
+    }
 
     queryActs = queryActs.order("date_on", { ascending: false });
 
@@ -466,20 +605,21 @@ async function loadvutratuFromDatabase(): Promise<void> {
     if (vutratuDataRaw && Array.isArray(vutratuDataRaw)) {
       vutratuData = vutratuDataRaw.map((item) => ({
         id: item.vutratu_id,
-        date: getKyivDate(item.dataOnn) || item.dataOnn.split("T")[0], // YYYY-MM-DD за Київським часом
-        paymentDate: getKyivDate(item.dataOff) || null, // YYYY-MM-DD для закриття
-        rosraxovanoDate: item.dataOnn, // Залишаємо повний UTC ISO для подальшого форматування
-        category: item.kategoria,
+        date: getKyivDate(item.dataOnn) || item.dataOnn.split("T")[0],
+        paymentDate: null,
+        rosraxovanoDate: item.dataOnn,
+        category: addEmojiToCategory(item.kategoria),
         actNumber: item.act ?? undefined,
         description: item.opys_vytraty,
         amount: Number(item.suma || 0),
-        paymentMethod: item.sposob_oplaty,
+        paymentMethod: addEmojiToPaymentMethod(item.sposob_oplaty),
         notes: item.prymitky || undefined,
         isPaid: !!item.dataOff,
         createdBy: item.xto_zapusav || undefined,
         xto_rozraxuvav: item.xto_zapusav || undefined,
       }));
     }
+
     // Додаємо дані з acts
     if (actsDataRaw && Array.isArray(actsDataRaw)) {
       for (const actItem of actsDataRaw) {
@@ -501,23 +641,22 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const workAmount = Number(actData["Прибуток за роботу"] || 0);
         const totalAmount = detailsAmount + workAmount;
 
-        const clientId = actData.client_id;
-        const carId = actData.cars_id;
+        const clientId = actItem.client_id;
+        const carId = actItem.cars_id;
 
-        // Завантажуємо дані клієнта та авто
         const clientInfo = clientId ? await getClientData(clientId) : "-";
         const carInfo = carId ? await getCarData(carId) : "-";
 
         vutratuData.push({
           id: actItem.act_id * -1,
-          date: getKyivDate(actItem.date_on) || actItem.date_on, // YYYY-MM-DD за Київським часом
+          date: getKyivDate(actItem.date_on) || actItem.date_on,
           paymentDate: getKyivDate(actItem.date_off) || null,
-          rosraxovanoDate: actItem.rosraxovano || null, // UTC ISO
+          rosraxovanoDate: actItem.rosraxovano || null,
           category: "💰 Прибуток",
           actNumber: actItem.act_id,
           description: clientInfo,
           amount: totalAmount,
-          paymentMethod: "-",
+          paymentMethod: actItem.avans || 0,
           notes: carInfo,
           isPaid: !!actItem.rosraxovano,
           createdBy: "Система",
@@ -529,13 +668,20 @@ async function loadvutratuFromDatabase(): Promise<void> {
         });
       }
     }
+
     vutratuData.sort((a, b) => b.date.localeCompare(a.date));
 
+    const modeLabels = {
+      open: "відкриття",
+      close: "закриття",
+      paid: "розрахунку",
+    };
+
     console.log(
-      `✅ Завантажено ${vutratuData.length} записів (витрати + акти)`
+      `✅ Завантажено ${vutratuData.length} записів (фільтр по даті ${modeLabels[vutratuDateFilterMode]})`
     );
     showNotification(
-      `📊 Знайдено ${vutratuData.length} записів`,
+      `📊 Знайдено ${vutratuData.length} записів (${modeLabels[vutratuDateFilterMode]})`,
       "success",
       2000
     );
@@ -564,16 +710,14 @@ async function saveExpenseToDatabase(
 
     const dbRecord = {
       dataOnn: getCurrentUkrainianTime(),
-      dataOff: expense.paymentDate || null,
-      kategoria: expense.category,
+      kategoria: removeEmoji(expense.category),
       act: expense.actNumber ?? null,
       opys_vytraty: expense.description,
       suma: -Math.abs(Number(expense.amount || 0)),
-      sposob_oplaty: expense.paymentMethod,
+      sposob_oplaty: removeEmoji(expense.paymentMethod),
       prymitky: expense.notes || null,
       xto_zapusav: currentUser,
     };
-
     console.log("📤 Відправка даних до бази:", dbRecord);
 
     if (isNew) {
@@ -624,9 +768,40 @@ export async function initializevutratuData(): Promise<void> {
   createPaymentMethodSelect();
   createExpensePaymentToggle();
   createExpenseTypeToggle();
+  createExpenseStatusToggle(); // Додати цю функцію
+
+  // Додати слухачі для всіх фільтрів
+  const categorySelect = byId<HTMLSelectElement>("Bukhhalter-vutratu-category");
+  const paymentMethodSelect = byId<HTMLSelectElement>(
+    "Bukhhalter-vutratu-payment-method"
+  );
+
+  if (categorySelect) {
+    categorySelect.addEventListener("change", () => {
+      filtervutratuData();
+    });
+  }
+
+  if (paymentMethodSelect) {
+    paymentMethodSelect.addEventListener("change", () => {
+      filtervutratuData();
+    });
+  }
+
+  // ДОДАТИ В КІНЕЦЬ ФУНКЦІЇ:
+  initvutratuDateFilterToggle();
+
   console.log("✅ Дані витрат ініціалізовано");
 }
 
+function createExpenseTypeToggle(): void {
+  const toggle = byId<HTMLInputElement>("vutratu-type-filter-toggle");
+  if (!toggle) return;
+
+  toggle.addEventListener("input", () => {
+    filtervutratuData();
+  });
+}
 // ==================== СТВОРЕННЯ СЕЛЕКТІВ ====================
 
 function createExpenseCategorySelect(): void {
@@ -664,8 +839,8 @@ export function createExpensePaymentToggle(): void {
   });
 }
 
-function createExpenseTypeToggle(): void {
-  const toggle = byId<HTMLInputElement>("vutratu-type-filter-toggle");
+function createExpenseStatusToggle(): void {
+  const toggle = byId<HTMLInputElement>("vutratu-status-filter-toggle");
   if (!toggle) return;
 
   toggle.addEventListener("input", () => {
@@ -686,15 +861,39 @@ export function filtervutratuData(): void {
     byId<HTMLSelectElement>("Bukhhalter-vutratu-payment-method")?.value || "";
   const paymentToggle =
     byId<HTMLInputElement>("vutratu-payment-filter-toggle")?.value || "2";
+  const typeToggle =
+    byId<HTMLInputElement>("vutratu-type-filter-toggle")?.value || "2";
+  const statusToggle =
+    byId<HTMLInputElement>("vutratu-status-filter-toggle")?.value || "2";
 
   filteredvutratuData = vutratuData.filter((expense) => {
+    // Фільтр по датах
     if (dateFrom && expense.date < dateFrom) return false;
     if (dateTo && expense.date > dateTo) return false;
+
+    // Фільтр по категорії
     if (category && expense.category !== category) return false;
+
+    // Фільтр по способу оплати
     if (paymentMethod && expense.paymentMethod !== paymentMethod) return false;
 
+    // Фільтр по розрахунку (0-оплачено, 1-не оплачено, 2-всі)
     if (paymentToggle === "0" && !expense.isPaid) return false;
     if (paymentToggle === "1" && expense.isPaid) return false;
+
+    // Фільтр по типу операції (0-прибуток, 1-витрати, 2-всі)
+    if (typeToggle !== "2") {
+      const isIncome = expense.amount >= 0;
+      if (typeToggle === "0" && !isIncome) return false;
+      if (typeToggle === "1" && isIncome) return false;
+    }
+
+    // Фільтр по статусу акту (0-закриті, 1-відкриті, 2-всі)
+    if (statusToggle !== "2") {
+      const isClosed = !!expense.paymentDate;
+      if (statusToggle === "0" && !isClosed) return false;
+      if (statusToggle === "1" && isClosed) return false;
+    }
 
     return true;
   });
@@ -794,10 +993,14 @@ export function updatevutratuTable(): void {
 
     // 📅 Закриття
     const dateCloseCell = row.insertCell();
-    dateCloseCell.textContent = expense.paymentDate
-      ? formatDate(expense.paymentDate)
-      : "-";
-
+    // Для витрат не показуємо дату закриття, тільки для актів
+    if (isFromAct) {
+      dateCloseCell.textContent = expense.paymentDate
+        ? formatDate(expense.paymentDate)
+        : "-";
+    } else {
+      dateCloseCell.textContent = "-";
+    }
     // 📂 Категорія
     const categoryCell = row.insertCell();
     categoryCell.textContent = expense.category;
@@ -872,7 +1075,25 @@ export function updatevutratuTable(): void {
 
     // 💳 Спосіб оплати
     const methodCell = row.insertCell();
-    methodCell.textContent = expense.paymentMethod;
+
+    if (
+      isFromAct &&
+      expense.paymentMethod &&
+      Number(expense.paymentMethod) > 0
+    ) {
+      // Для актів з авансом - відображаємо зеленим
+      methodCell.innerHTML = `
+        <span style="color: #28a745; font-weight: 600; font-size: 0.95em;">
+          💰 ${formatNumber(Number(expense.paymentMethod))} грн
+        </span>
+      `;
+    } else if (isFromAct) {
+      // Для актів без авансу
+      methodCell.textContent = "-";
+    } else {
+      // Для витрат - показуємо спосіб оплати
+      methodCell.textContent = String(expense.paymentMethod);
+    }
 
     // 📋 Примітки
     const notesCell = row.insertCell();
@@ -950,24 +1171,30 @@ async function handleAddExpense(
   paymentMethod: string,
   notes: string
 ): Promise<void> {
-  const newExpense: ExpenseRecordLocal = {
-    id: 0,
-    date,
-    category,
-    description,
-    amount,
-    paymentMethod,
-    isPaid: false,
-    notes: notes || undefined,
-    actNumber: undefined,
-  };
+  setSaveButtonLoading(true);
 
-  const success = await saveExpenseToDatabase(newExpense, true);
-  if (success) {
-    await loadvutratuFromDatabase();
-    filtervutratuData();
-    showNotification("✅ Витрату додано", "success");
-    closeExpenseModal();
+  try {
+    const newExpense: ExpenseRecordLocal = {
+      id: 0,
+      date,
+      category,
+      description,
+      amount,
+      paymentMethod,
+      isPaid: false,
+      notes: notes || undefined,
+      actNumber: undefined,
+    };
+
+    const success = await saveExpenseToDatabase(newExpense, true);
+    if (success) {
+      await loadvutratuFromDatabase();
+      filtervutratuData();
+      showNotification("✅ Витрату додано", "success");
+      closeExpenseModal();
+    }
+  } finally {
+    setSaveButtonLoading(false);
   }
 }
 
@@ -990,20 +1217,26 @@ async function handleEditExpense(
     return;
   }
 
-  expense.date = date;
-  expense.category = category;
-  expense.description = description;
-  expense.amount = amount;
-  expense.paymentMethod = paymentMethod;
-  expense.notes = notes || undefined;
+  setSaveButtonLoading(true);
 
-  const success = await saveExpenseToDatabase(expense, false);
-  if (success) {
-    await loadvutratuFromDatabase();
-    filtervutratuData();
-    showNotification("✅ Витрату оновлено", "success");
-    closeExpenseModal();
-    selectedExpenseId = null;
+  try {
+    expense.date = date;
+    expense.category = category;
+    expense.description = description;
+    expense.amount = amount;
+    expense.paymentMethod = paymentMethod;
+    expense.notes = notes || undefined;
+
+    const success = await saveExpenseToDatabase(expense, false);
+    if (success) {
+      await loadvutratuFromDatabase();
+      filtervutratuData();
+      showNotification("✅ Витрату оновлено", "success");
+      closeExpenseModal();
+      selectedExpenseId = null;
+    }
+  } finally {
+    setSaveButtonLoading(false);
   }
 }
 
@@ -1020,6 +1253,8 @@ async function handleDeleteExpense(): Promise<void> {
   }
 
   const expense = vutratuData[expenseIndex];
+
+  setSaveButtonLoading(true);
 
   try {
     const { error } = await supabase
@@ -1042,6 +1277,8 @@ async function handleDeleteExpense(): Promise<void> {
   } catch (error) {
     console.error("❌ Критична помилка видалення:", error);
     showNotification("❌ Не вдалося видалити витрату", "error");
+  } finally {
+    setSaveButtonLoading(false);
   }
 }
 
@@ -1083,6 +1320,11 @@ function selectExpenseRow(index: number, event?: MouseEvent): void {
 
   selectedExpenseId = expense.id;
   setExpenseMode("edit");
+
+  // 1) Спочатку відкрити модалку → populate* створять <option>
+  openExpenseModal();
+
+  // 2) Тепер безпечно ставити значення – опції вже існують
   byId<HTMLInputElement>("expense-modal-date").value = expense.date;
   byId<HTMLSelectElement>("expense-modal-category").value = expense.category;
   byId<HTMLSelectElement>("expense-modal-payment-method").value =
@@ -1094,11 +1336,9 @@ function selectExpenseRow(index: number, event?: MouseEvent): void {
     expense.description;
   byId<HTMLTextAreaElement>("expense-modal-notes").value = expense.notes || "";
 
+  // 3) Формат суми
   const amountInput = byId<HTMLInputElement>("expense-modal-amount");
   if (amountInput) formatAmountWithSpaces(amountInput);
-
-  openExpenseModal();
-  console.log("Вибрано витрату для редагування:", expense);
 }
 
 // ==================== ФОРМА ====================
@@ -1150,14 +1390,8 @@ export async function runMassPaymentCalculationForvutratu(): Promise<void> {
         successCount++;
       }
     } else {
-      // Для витрат оновлюємо dataOff
-      const originalExpense = vutratuData.find((e) => e.id === expense.id);
-      if (originalExpense) {
-        originalExpense.isPaid = true;
-        originalExpense.paymentDate = now;
-        const success = await saveExpenseToDatabase(originalExpense, false);
-        if (success) successCount++;
-      }
+      // Для витрат просто позначаємо як оплачені без dataOff
+      successCount++;
     }
   }
 
@@ -1175,6 +1409,11 @@ export function openExpenseModal(): void {
   const modal = byId<HTMLDivElement>("expense-modal");
   if (!modal) return;
 
+  // 1) Спочатку опції (щоб <select> мав варіанти до будь-яких .value)
+  populateModalCategorySelect();
+  populateModalPaymentMethodSelect();
+
+  // 2) Очищення тільки для "add"
   if (currentExpenseMode === "add") {
     selectedExpenseId = null;
     const today = new Date().toISOString().split("T")[0];
@@ -1185,9 +1424,6 @@ export function openExpenseModal(): void {
     byId<HTMLTextAreaElement>("expense-modal-description").value = "";
     byId<HTMLTextAreaElement>("expense-modal-notes").value = "";
   }
-
-  populateModalCategorySelect();
-  populateModalPaymentMethodSelect();
 
   modal.style.display = "flex";
 }

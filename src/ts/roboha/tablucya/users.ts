@@ -114,17 +114,20 @@ async function checkPassword(inputPassword: string): Promise<{
     userName: string | null;
 }> {
     try {
+        console.log('🔍 START checkPassword, input:', inputPassword);
+        
         const { data: slyusars, error } = await supabase
             .from("slyusars")
             .select("data");
 
+        console.log('📦 Supabase response:', { slyusars, error });
+
         if (error || !slyusars) {
-            console.error(
-                "❌ Помилка при отриманні даних для автентифікації:",
-                error
-            );
+            console.error("❌ Помилка:", error);
             return { isValid: false, accessLevel: null, userName: null };
         }
+
+        console.log('✅ Отримано записів:', slyusars.length);
 
         const foundUser = slyusars.find((slyusar) => {
             const slyusarData = safeParseJSON(slyusar.data);

@@ -1,6 +1,6 @@
 // src/ts/roboha/bukhhalteriya/bukhhalteriya.ts
 // Усі повідомлення через showNotification. Без confirm у масовому розрахунку магазину.
-import { runMassPaymentCalculation as runMassPaymentCalculationForPodlegle } from "./pidlehli";
+import { runMassPaymentCalculation as runMassPaymentCalculationForPodlegle } from "./zarplata";
 import { runMassPaymentCalculationForMagazine } from "./shopsBuxha";
 import { runMassPaymentCalculationForDetails } from "./poAktam";
 import {
@@ -26,7 +26,7 @@ import {
   handlepodlegleAddRecord,
   deletepodlegleRecord,
   togglepodleglePayment,
-} from "./pidlehli";
+} from "./zarplata";
 
 import {
   calculateMagazineTotalSum,

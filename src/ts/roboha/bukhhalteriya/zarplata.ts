@@ -1,10 +1,6 @@
-// src\ts\roboha\bukhhalteriya\pidlehli.ts
+// src\ts\roboha\bukhhalteriya\zarplata.ts
 import { supabase } from "../../vxid/supabaseClient";
-import {
-  formatDate,
-  formatNumber,
-  byId,
-} from "./bukhhalteriya";
+import { formatDate, formatNumber, byId } from "./bukhhalteriya";
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
@@ -196,7 +192,6 @@ class WorkSmartDropdown {
     this.input.addEventListener("input", () => {
       this.filter(this.input.value);
       if (!this.isOpen) this.show();
-
       triggerPodlegleAutoFilter();
     });
 
@@ -461,8 +456,9 @@ function ensureWorkSmartDropdown(): void {
 }
 
 function refreshWorkDropdownOptions(): void {
-  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
-  
+  const selectedName =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+
   let source = allPodlegleData;
   if (selectedName) {
     source = source.filter((r) => r.name === selectedName);
@@ -480,73 +476,41 @@ function refreshWorkDropdownOptions(): void {
 
 function triggerPodlegleAutoFilter(): void {
   if (hasPodlegleDataLoaded) {
+    // коли дані вже є — фільтруємо локально без звернення в базу
     debouncePodlegleAutoSearch(() => {
-      autoFilterPodlegleFromInputs();
+      filterPodlegleData();
     });
   } else {
+    // коли даних ще немає — ініціюємо первинне завантаження
     debouncePodlegleAutoSearch(() => {
       void autoSearchPodlegleFromInputs();
     });
   }
 }
 
-function autoFilterPodlegleFromInputs(): void {
-  const dateOpen = byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
-  const dateClose = byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
-  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
-  const workInput = byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() || "";
-
-  let filtered = [...allPodlegleData];
-
-  const currentDate = new Date().toISOString().split("T")[0];
-
-  if (!dateOpen && !dateClose) {
-    // Всі дати
-  } else if (dateOpen && !dateClose) {
-    filtered = filtered.filter(
-      (r) => r.dateOpen >= dateOpen && r.dateOpen <= currentDate
-    );
-  } else if (!dateOpen && dateClose) {
-    filtered = filtered.filter((r) => r.dateOpen <= dateClose);
-  } else if (dateOpen && dateClose) {
-    filtered = filtered.filter(
-      (r) => r.dateOpen >= dateOpen && r.dateOpen <= dateClose
-    );
-  }
-
-  if (selectedName) {
-    filtered = filtered.filter((r) => r.name === selectedName);
-  }
-
-  if (workInput) {
-    filtered = filtered.filter((r) =>
-      (r.work || "").toLowerCase().includes(workInput.toLowerCase())
-    );
-  }
-
-  podlegleData = filtered;
-  updatepodlegleTable();
-}
-
 async function autoSearchPodlegleFromInputs(): Promise<void> {
-  const dateOpen = byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
-  const dateClose = byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
-  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
-  const workInput = byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() || "";
+  const dateOpen =
+    byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
+  const dateClose =
+    byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
+  const selectedName =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  const workInput =
+    byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() ||
+    "";
 
   if (!dateOpen && !dateClose && !selectedName && !workInput) {
     return;
   }
 
   searchDataInDatabase(dateOpen, dateClose, selectedName);
-  
+
   allPodlegleData = [...podlegleData];
   hasPodlegleDataLoaded = true;
   ensureWorkSmartDropdown();
   refreshWorkDropdownOptions();
 
   updatepodlegleTable();
-  
 }
 
 function getCurrentDate(): string {
@@ -931,11 +895,10 @@ export function calculatePodlegleMarginTotal(): number {
   return filteredData.reduce((sum, item) => sum + (item.margin || 0), 0);
 }
 
-
 // Функція для оновлення відображення суми для співробітників
 export function updatePodlegleDisplayedSums(): void {
   const totalSumElement = byId<HTMLElement>("total-sum");
-  
+
   if (!totalSumElement) {
     console.warn("Елемент total-sum не знайдено");
     return;
@@ -948,7 +911,10 @@ export function updatePodlegleDisplayedSums(): void {
   let totalMargin = 0;
 
   if (filteredData.length > 0) {
-    totalRevenue = filteredData.reduce((sum, item) => sum + (item.total || 0), 0);
+    totalRevenue = filteredData.reduce(
+      (sum, item) => sum + (item.total || 0),
+      0
+    );
     totalSalary = calculatePodlegleSalaryTotal();
     totalMargin = calculatePodlegleMarginTotal();
   }
@@ -957,11 +923,17 @@ export function updatePodlegleDisplayedSums(): void {
 
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
-      <span>Сумма <strong style="color: #333;">💰 ${formatNumber(totalRevenue)}</strong> грн</span>
+      <span>Сумма <strong style="color: #333;">💰 ${formatNumber(
+        totalRevenue
+      )}</strong> грн</span>
       <span style="color: #666;">-</span>
-      <span><strong style="color: #8B0000;">💶 ${formatNumber(totalSalary)}</strong> грн</span>
+      <span><strong style="color: #8B0000;">💶 ${formatNumber(
+        totalSalary
+      )}</strong> грн</span>
       <span style="color: #666;">=</span>
-      <span><strong style="color: ${totalMargin >= 0 ? '#006400 ' : '#8B0000'};">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
+      <span><strong style="color: ${
+        totalMargin >= 0 ? "#006400 " : "#8B0000"
+      };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
     </div>
   `;
 }
@@ -991,9 +963,15 @@ export function updatepodlegleTable(): void {
       const marginSign = item.margin >= 0 ? "+" : "";
 
       const totalHtml = `
-        <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(item.total)}</div>
-        <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(item.salary)}</div>
-        <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(item.margin)}</div>
+        <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(
+          item.total
+        )}</div>
+        <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(
+          item.salary
+        )}</div>
+        <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
+        item.margin
+      )}</div>
       `;
 
       return `
@@ -1041,6 +1019,59 @@ export function updatepodlegleTable(): void {
   updatePodlegleDisplayedSums();
 }
 
+// ==== DATE HELPERS (додай один раз у файлі) ====
+
+function toIsoDate(input: string | null | undefined): string {
+  if (!input) return "";
+  // 1) нормалізуємо і викидаємо все зайве (емодзі, текст, тощо)
+  const s = String(input)
+    .normalize("NFKC")
+    .trim()
+    .replace(/[^\d.\-\/]/g, ""); // лишаємо тільки цифри і роздільники . - /
+
+  if (!s) return "";
+
+  // 2) Підтримка YMD: YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD
+  let m = s.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);
+  if (m) {
+    const yyyy = m[1];
+    const mm = m[2].padStart(2, "0");
+    const dd = m[3].padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // 3) Підтримка DMY: DD.MM.YYYY / DD-MM-YYYY / DD/MM/YY
+  m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
+  if (m) {
+    const dd = m[1].padStart(2, "0");
+    const mm = m[2].padStart(2, "0");
+    let yyyy = m[3];
+    if (yyyy.length === 2) {
+      // евристика: 70–99 -> 19xx, інакше -> 20xx
+      yyyy = (+yyyy >= 70 ? "19" : "20") + yyyy;
+    }
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return "";
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function inRangeByIso(
+  targetDmy: string,
+  fromDmy?: string,
+  toDmy?: string
+): boolean {
+  const t = toIsoDate(targetDmy);
+  if (!t) return false; // якщо дата в полі була "💰 31.10.2025" або інший шум — тепер парситься
+  const f = fromDmy ? toIsoDate(fromDmy) : ""; // приймає і "28.10.2025", і "2025-10-28"
+  const to = toDmy ? toIsoDate(toDmy) : todayIso();
+  return (!f || t >= f) && (!to || t <= to);
+}
+
 // ЗАМІНИТИ ПОВНІСТЮ функцію searchDataInDatabase:
 export function searchDataInDatabase(
   dateOpen: string,
@@ -1048,7 +1079,11 @@ export function searchDataInDatabase(
   selectedName: string
 ): void {
   podlegleData = [];
-
+  // ✅ ДОДАНО: Якщо немає дат - встановлюємо 01.01.2025 як початкову
+  if (!dateOpen && !dateClose) {
+    dateOpen = "01.01.2025";
+    console.log("📅 Використано дату за замовчуванням: 01.01.2025");
+  }
   if (slyusarsData.length === 0) {
     showNotification(
       "⚠️ Немає даних з бази slyusars. Спробуйте перезавантажити сторінку.",
@@ -1062,78 +1097,32 @@ export function searchDataInDatabase(
   lastSearchDateClose = dateClose;
 
   const isSearchForAllEmployees = !selectedName;
-  if (isSearchForAllEmployees) {
-    hasDataForAllEmployees = true;
-  }
+  if (isSearchForAllEmployees) hasDataForAllEmployees = true;
 
-  const getCurrentDateForComparison = (): string => {
-    const now = new Date();
-    const day = now.getDate().toString().padStart(2, "0");
-    const month = (now.getMonth() + 1).toString().padStart(2, "0");
-    const year = now.getFullYear();
-    return `${day}.${month}.${year}`;
-  };
-
-  const currentDate = getCurrentDateForComparison();
+  const toIsoClose = dateClose || todayIso();
 
   console.log(`🔍 Пошук в базі slyusars:`);
   console.log(`  - Початкова дата: ${dateOpen || "не вказана"}`);
-  console.log(`  - Кінцева дата: ${dateClose || "не вказана"}`);
+  console.log(`  - Кінцева дата: ${dateClose || "сьогодні"}`);
   console.log(`  - ПІБ: ${selectedName || "всі"}`);
   console.log(`  - Режим фільтрації: ${podlegleDateFilterMode}`);
 
   slyusarsData.forEach((slyusar) => {
-    if (selectedName && slyusar.Name !== selectedName) {
-      return;
-    }
+    if (selectedName && slyusar.Name !== selectedName) return;
 
-    Object.keys(slyusar.Історія).forEach((date) => {
-      slyusar.Історія[date].forEach((record) => {
-        // Визначаємо цільову дату залежно від режиму
-        let targetDate = '';
-        
-        switch (podlegleDateFilterMode) {
-          case 'open':
-            targetDate = date; // Дата відкриття
-            break;
-          case 'close':
-            targetDate = record.ДатаЗакриття || ''; // Дата закриття
-            break;
-          case 'paid':
-            // Для розрахунку беремо будь-який запис з Розраховано
-            const anyPaidEntry = record.Записи.find(e => e.Розраховано);
-            targetDate = anyPaidEntry?.Розраховано || '';
-            break;
-        }
-        
-        // Якщо немає потрібної дати - пропускаємо
-        if (!targetDate) return;
-
-        // Перевіряємо чи дата входить в діапазон
-        let shouldInclude = false;
-
-        if (!dateOpen && !dateClose) {
-          shouldInclude = true;
-        } else if (dateOpen && !dateClose) {
-          shouldInclude = targetDate >= dateOpen && targetDate <= currentDate;
-        } else if (!dateOpen && dateClose) {
-          shouldInclude = targetDate <= dateClose;
-        } else if (dateOpen && dateClose) {
-          shouldInclude = targetDate >= dateOpen && targetDate <= dateClose;
-        }
-
-        if (shouldInclude) {
+    Object.keys(slyusar.Історія).forEach((openDmy) => {
+      slyusar.Історія[openDmy].forEach((record) => {
+        if (podlegleDateFilterMode === "paid") {
           record.Записи.forEach((entry) => {
             if (entry.Кількість === 0) return;
+            const payDmy = entry.Розраховано || "";
+            if (!payDmy) return;
+            if (!inRangeByIso(payDmy, dateOpen, toIsoClose)) return;
 
-            const isPaid = !!entry.Розраховано;
-            const paymentDate = entry.Розраховано || "";
             const totalPrice = entry.Ціна * entry.Кількість;
             const salary = entry.Зарплата || 0;
-            const margin = totalPrice - salary;
-
-            const podlegleRecord: PodlegleRecord = {
-              dateOpen: date,
+            podlegleData.push({
+              dateOpen: openDmy,
               dateClose: record.ДатаЗакриття || "",
               name: slyusar.Name,
               act: record.Акт,
@@ -1143,13 +1132,42 @@ export function searchDataInDatabase(
               quantity: entry.Кількість,
               price: entry.Ціна,
               total: totalPrice,
-              salary: salary,
-              margin: margin,
+              salary,
+              margin: totalPrice - salary,
               isClosed: record.ДатаЗакриття !== null,
-              isPaid: isPaid,
-              paymentDate: paymentDate,
-            };
-            podlegleData.push(podlegleRecord);
+              isPaid: true,
+              paymentDate: payDmy,
+            });
+          });
+        } else {
+          const targetDmy =
+            podlegleDateFilterMode === "close"
+              ? record.ДатаЗакриття || ""
+              : openDmy;
+          if (!targetDmy) return;
+          if (!inRangeByIso(targetDmy, dateOpen, toIsoClose)) return;
+
+          record.Записи.forEach((entry) => {
+            if (entry.Кількість === 0) return;
+            const totalPrice = entry.Ціна * entry.Кількість;
+            const salary = entry.Зарплата || 0;
+            podlegleData.push({
+              dateOpen: openDmy,
+              dateClose: record.ДатаЗакриття || "",
+              name: slyusar.Name,
+              act: record.Акт,
+              client: record.Клієнт || "",
+              automobile: record.Автомобіль || "",
+              work: entry.Робота,
+              quantity: entry.Кількість,
+              price: entry.Ціна,
+              total: totalPrice,
+              salary,
+              margin: totalPrice - salary,
+              isClosed: record.ДатаЗакриття !== null,
+              isPaid: !!entry.Розраховано,
+              paymentDate: entry.Розраховано || "",
+            });
           });
         }
       });
@@ -1158,30 +1176,62 @@ export function searchDataInDatabase(
 
   console.log(`📊 Знайдено ${podlegleData.length} записів в базі slyusars`);
 
+  // ✅ ДОДАЄМО ФІЛЬТР ПО РОБОТІ
+  const workInput =
+    byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() ||
+    "";
+  if (workInput) {
+    const beforeFilter = podlegleData.length;
+    podlegleData = podlegleData.filter((record) =>
+      (record.work || "").toLowerCase().includes(workInput.toLowerCase())
+    );
+    console.log(
+      `🔍 Фільтр по роботі "${workInput}": ${beforeFilter} → ${podlegleData.length} записів`
+    );
+  }
+
   podlegleData.sort((a, b) => {
-    const dateA = new Date(a.dateOpen);
-    const dateB = new Date(b.dateOpen);
-    return dateB.getTime() - dateA.getTime();
+    // Спочатку сортуємо за номером акту (більший номер - вище)
+    const actA = parseInt(a.act) || 0;
+    const actB = parseInt(b.act) || 0;
+
+    if (actA !== actB) {
+      return actB - actA; // Зворотний порядок: 300 > 299 > 298
+    }
+
+    // Якщо акти однакові, сортуємо за датою
+    const ka =
+      podlegleDateFilterMode === "paid"
+        ? toIsoDate(a.paymentDate || a.dateOpen)
+        : toIsoDate(a.dateOpen);
+    const kb =
+      podlegleDateFilterMode === "paid"
+        ? toIsoDate(b.paymentDate || b.dateOpen)
+        : toIsoDate(b.dateOpen);
+    return kb.localeCompare(ka);
   });
 
   const recordsCount = podlegleData.length;
   const filterMessage = selectedName ? ` для ${selectedName}` : "";
-
-  let dateFilterMessage = "";
   const modeLabels = {
     open: "відкриття",
     close: "закриття",
-    paid: "розрахунку"
+    paid: "розрахунку" as const,
   };
-  
+
+  let dateFilterMessage = "";
   if (!dateOpen && !dateClose) {
     dateFilterMessage = ` (всі дати ${modeLabels[podlegleDateFilterMode]})`;
   } else if (dateOpen && !dateClose) {
     dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dateOpen} до сьогодні)`;
   } else if (!dateOpen && dateClose) {
     dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: до ${dateClose} включно)`;
-  } else if (dateOpen && dateClose) {
+  } else {
     dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dateOpen} до ${dateClose})`;
+  }
+
+  if (workInput) {
+    dateFilterMessage += ` | робота: "${workInput}"`;
   }
 
   showNotification(
@@ -1195,38 +1245,159 @@ export function searchDataInDatabase(
   hasPodlegleDataLoaded = true;
   ensureWorkSmartDropdown();
   refreshWorkDropdownOptions();
+  updatepodlegleTable();
+}
+
+// Функція для локальної фільтрації завантажених даних
+export function filterPodlegleData(): void {
+  if (!hasPodlegleDataLoaded || allPodlegleData.length === 0) {
+    podlegleData = [];
+    updatepodlegleTable();
+    showNotification(
+      "ℹ️ Записів не знайдено за поточним фільтром",
+      "info",
+      2000
+    );
+    return;
+  }
+
+  const dateOpen =
+    byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
+  const dateClose =
+    byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
+  const selectedName =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  const workInput =
+    byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() ||
+    "";
+
+  let filtered = [...allPodlegleData];
+
+  if (selectedName) {
+    filtered = filtered.filter((r) => r.name === selectedName);
+  }
+
+  if (podlegleDateFilterMode === "close") {
+    filtered = filtered.filter((r) => r.dateClose);
+  } else if (podlegleDateFilterMode === "paid") {
+    filtered = filtered.filter((r) => r.paymentDate);
+  }
+
+  if (dateOpen || dateClose) {
+    const toIsoClose = dateClose || todayIso();
+    filtered = filtered.filter((r) => {
+      let targetDate = "";
+      switch (podlegleDateFilterMode) {
+        case "close":
+          targetDate = r.dateClose || "";
+          break;
+        case "paid":
+          targetDate = r.paymentDate || "";
+          break;
+        case "open":
+        default:
+          targetDate = r.dateOpen;
+          break;
+      }
+      if (!targetDate) return false;
+      return inRangeByIso(targetDate, dateOpen, toIsoClose);
+    });
+  }
+
+  if (workInput) {
+    const before = filtered.length;
+    filtered = filtered.filter((record) =>
+      (record.work || "").toLowerCase().includes(workInput.toLowerCase())
+    );
+    console.log(
+      `🔍 Фільтр по роботі "${workInput}": ${before} → ${filtered.length}`
+    );
+  }
+
+  filtered.sort((a, b) => {
+    // Спочатку сортуємо за номером акту (більший номер - вище)
+    const actA = parseInt(a.act) || 0;
+    const actB = parseInt(b.act) || 0;
+
+    if (actA !== actB) {
+      return actB - actA; // Зворотний порядок: 300 > 299 > 298
+    }
+
+    // Якщо акти однакові, сортуємо за датою
+    const ka =
+      podlegleDateFilterMode === "paid"
+        ? toIsoDate(a.paymentDate || a.dateOpen)
+        : toIsoDate(a.dateOpen);
+    const kb =
+      podlegleDateFilterMode === "paid"
+        ? toIsoDate(b.paymentDate || b.dateOpen)
+        : toIsoDate(b.dateOpen);
+    return kb.localeCompare(ka);
+  });
+
+  podlegleData = filtered;
+
+  // ✅ якщо після фільтрації немає результатів — чиста таблиця + повідомлення
+  if (filtered.length === 0) {
+    updatepodlegleTable(); // це намалює "Немає даних для відображення"
+    const modeLabel =
+      podlegleDateFilterMode === "paid"
+        ? "розрахунку"
+        : podlegleDateFilterMode === "close"
+        ? "закриття"
+        : "відкриття";
+    const datePart =
+      !dateOpen && !dateClose
+        ? ""
+        : dateOpen && !dateClose
+        ? ` (з ${dateOpen} до сьогодні)`
+        : !dateOpen && dateClose
+        ? ` (до ${dateClose} включно)`
+        : ` (з ${dateOpen} до ${dateClose})`;
+
+    const workPart = workInput ? ` | робота: "${workInput}"` : "";
+    const namePart = selectedName ? ` для ${selectedName}` : "";
+
+    showNotification(
+      `ℹ️ Записів не знайдено${namePart} (${modeLabel})${datePart}${workPart}`,
+      "info",
+      2500
+    );
+    return;
+  }
 
   updatepodlegleTable();
 }
 
 // Глобальна змінна для зберігання поточного фільтра дат
-let podlegleDateFilterMode: 'open' | 'close' | 'paid' = 'open';
+let podlegleDateFilterMode: "open" | "close" | "paid" = "open";
 
 // Функція для ініціалізації перемикача фільтрації дат для підлеглих
 function initPodlegleDateFilterToggle(): void {
-  const toggleContainer = document.querySelector('#Bukhhalter-podlegle-section .Bukhhalter-date-filter-toggle');
+  const toggleContainer = document.querySelector(
+    "#Bukhhalter-podlegle-section .Bukhhalter-date-filter-toggle"
+  );
   if (!toggleContainer) return;
 
-  const buttons = toggleContainer.querySelectorAll<HTMLButtonElement>('.date-filter-btn');
-  
-  buttons.forEach(btn => {
-    btn.addEventListener('click', function() {
-      // Знімаємо active з усіх кнопок
-      buttons.forEach(b => b.classList.remove('active'));
-      // Додаємо active до натиснутої
-      this.classList.add('active');
-      
-      // Зберігаємо режим фільтрації
-      podlegleDateFilterMode = this.dataset.filter as 'open' | 'close' | 'paid';
-      
-      console.log(`🔄 Підлеглі: змінено режим фільтрації дат на "${podlegleDateFilterMode}"`);
-      
-      // Перезапускаємо пошук
+  const buttons =
+    toggleContainer.querySelectorAll<HTMLButtonElement>(".date-filter-btn");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      buttons.forEach((b) => b.classList.remove("active"));
+      this.classList.add("active");
+
+      podlegleDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
+
+      console.log(
+        `🔄 Підлеглі: змінено режим фільтрації дат на "${podlegleDateFilterMode}"`
+      );
+
+      // ✅ ВИПРАВЛЕНО: Завжди використовуємо локальну фільтрацію
       if (hasPodlegleDataLoaded) {
-        const dateOpen = byId<HTMLInputElement>("Bukhhalter-podlegle-date-open")?.value || "";
-        const dateClose = byId<HTMLInputElement>("Bukhhalter-podlegle-date-close")?.value || "";
-        const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
-        searchDataInDatabase(dateOpen, dateClose, selectedName);
+        filterPodlegleData();
+      } else {
+        console.warn("⚠️ Дані ще не завантажені, натисніть 🔍 Пошук");
       }
     });
   });
@@ -1240,6 +1411,34 @@ export function createStatusToggle(): void {
     return;
   }
 
+  // ✅ ДОДАНО: Обробник change
+  toggle.addEventListener("change", (e) => {
+    const target = e.target as HTMLInputElement;
+    const value = target.value;
+
+    console.log("🔄 Зміна фільтра статусу актів:", value);
+
+    switch (value) {
+      case "0":
+        currentStatusFilter = "closed";
+        break;
+      case "1":
+        currentStatusFilter = "open";
+        break;
+      case "2":
+      default:
+        currentStatusFilter = "all";
+        break;
+    }
+
+    if (hasPodlegleDataLoaded) {
+      filterPodlegleData();
+    } else {
+      updatepodlegleTable();
+    }
+  });
+
+  // ✅ ЗАЛИШАЄМО: Обробник input (для сумісності)
   toggle.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
@@ -1259,7 +1458,11 @@ export function createStatusToggle(): void {
         break;
     }
 
-    updatepodlegleTable();
+    if (hasPodlegleDataLoaded) {
+      filterPodlegleData();
+    } else {
+      updatepodlegleTable();
+    }
   });
 }
 
@@ -1271,6 +1474,36 @@ export function createPaymentToggle(): void {
     return;
   }
 
+  // ✅ ДОДАНО: Обробник change
+  toggle.addEventListener("change", (e) => {
+    const target = e.target as HTMLInputElement;
+    const value = target.value;
+
+    switch (value) {
+      case "0":
+        currentPaymentFilter = "paid";
+        break;
+      case "1":
+        currentPaymentFilter = "unpaid";
+        break;
+      case "2":
+      default:
+        currentPaymentFilter = "all";
+        break;
+    }
+
+    if (hasPodlegleDataLoaded) {
+      filterPodlegleData();
+    } else {
+      updatepodlegleTable();
+    }
+
+    console.log(
+      `✅ Фільтр застосовано. Поточний розрахунок: ${currentPaymentFilter}`
+    );
+  });
+
+  // ✅ ЗАЛИШАЄМО: Обробник input (для сумісності)
   toggle.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
@@ -1288,7 +1521,11 @@ export function createPaymentToggle(): void {
         break;
     }
 
-    updatepodlegleTable();
+    if (hasPodlegleDataLoaded) {
+      filterPodlegleData();
+    } else {
+      updatepodlegleTable();
+    }
 
     console.log(
       `✅ Фільтр застосовано. Поточний розрахунок: ${currentPaymentFilter}`
@@ -1303,14 +1540,20 @@ export function handlepodlegleAddRecord(): void {
   const dateClose = byId<HTMLInputElement>(
     "Bukhhalter-podlegle-date-close"
   ).value;
-  const nameSelect = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select");
-  const selectedName = nameSelect ? nameSelect.value : "";
+  const selectedName =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
 
+  // ✅ ЗМІНЕНО: Завжди завантажуємо дані з бази при натисканні "Пошук"
   searchDataInDatabase(dateOpen, dateClose, selectedName);
+
+  allPodlegleData = [...podlegleData];
+  hasPodlegleDataLoaded = true;
+  ensureWorkSmartDropdown();
+  refreshWorkDropdownOptions();
 
   let searchInfo = "";
   if (!dateOpen && !dateClose) {
-    searchInfo = "🔍 Завантажуємо всі записи";
+    searchInfo = "🔍 Завантажуємо всі записи з 01.01.2025";
   } else if (dateOpen && !dateClose) {
     searchInfo = `🔍 Пошук з ${dateOpen} до сьогодні`;
   } else if (!dateOpen && dateClose) {
@@ -1324,6 +1567,72 @@ export function handlepodlegleAddRecord(): void {
   }
 
   console.log(searchInfo);
+}
+
+function initPodlegleDateAutoFilter(): void {
+  const openEl = byId<HTMLInputElement>("Bukhhalter-podlegle-date-open");
+  const closeEl = byId<HTMLInputElement>("Bukhhalter-podlegle-date-close");
+  if (!openEl || !closeEl) return;
+
+  const handler = () => {
+    const newFromIso = toIsoDate(openEl.value); // новий "від"
+    const newToIso = toIsoDate(closeEl.value); // новий "до"
+
+    // що було завантажено востаннє
+    const loadedFromIso = toIsoDate(lastSearchDateOpen) || "";
+    const loadedToIso = toIsoDate(lastSearchDateClose) || todayIso(); // якщо не вказували "до", брали "сьогодні"
+
+    // чи є дані вже в пам'яті
+    if (!hasPodlegleDataLoaded) {
+      // ще не завантажували — тягнемо з бази
+      debouncePodlegleAutoSearch(() => {
+        void autoSearchPodlegleFromInputs();
+      });
+      return;
+    }
+
+    // Визначаємо напрямок зміни:
+    // звужуємо зліва: новий from >= завантаженого from
+    const narrowsLeft =
+      !!newFromIso && (!!loadedFromIso ? newFromIso >= loadedFromIso : true);
+    // звужуємо справа: новий to <= завантаженого to
+    const narrowsRight = !!newToIso && newToIso <= loadedToIso;
+
+    // розширюємо зліва: новий from < завантаженого from
+    const expandsLeft =
+      !!newFromIso && (!!loadedFromIso ? newFromIso < loadedFromIso : false);
+    // розширюємо справа: новий to > завантаженого to
+    const expandsRight = !!newToIso && newToIso > loadedToIso;
+
+    // якщо користувач звузив (від більша, або до менша) — фільтруємо локально
+    if (narrowsLeft || narrowsRight) {
+      debouncePodlegleAutoSearch(() => {
+        filterPodlegleData();
+      });
+      return;
+    }
+
+    // якщо користувач розширив діапазон — дозавантажуємо з бази
+    if (
+      expandsLeft ||
+      expandsRight ||
+      (!newFromIso && loadedFromIso) ||
+      (!newToIso && lastSearchDateClose)
+    ) {
+      debouncePodlegleAutoSearch(() => {
+        void autoSearchPodlegleFromInputs();
+      });
+      return;
+    }
+
+    // якщо діапазон по суті не змінився — нічого не робимо
+  };
+
+  // слухаємо і 'input', і 'change' (щоб спрацювало і при ручному вводі, і при виборі з календаря)
+  openEl.addEventListener("input", handler);
+  closeEl.addEventListener("input", handler);
+  openEl.addEventListener("change", handler);
+  closeEl.addEventListener("change", handler);
 }
 
 export function deletepodlegleRecord(index: number): void {
@@ -1556,15 +1865,88 @@ export async function runMassPaymentCalculation(): Promise<void> {
   }
 }
 
+export function clearpodlegleForm(): void {
+  const podlegleSection = byId<HTMLElement>("Bukhhalter-podlegle-section");
+  if (!podlegleSection) return;
+
+  // ✅ 1. Очищаємо всі інпути
+  const inputs = podlegleSection.querySelectorAll<HTMLInputElement>(
+    "input:not([readonly])"
+  );
+  inputs.forEach((input) => {
+    input.value = "";
+  });
+
+  // ✅ 2. Очищаємо селект ПІБ
+  const nameSelect = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select");
+  if (nameSelect) {
+    nameSelect.value = "";
+  }
+
+  // ✅ 3. Очищаємо поле "Робота"
+  const workInput = byId<HTMLInputElement>("Bukhhalter-podlegle-work-input");
+  if (workInput) {
+    workInput.value = "";
+  }
+
+  // ✅ 4. Скидаємо перемикач статусу актів на "Всі" (значення "2")
+  const statusToggle = byId<HTMLInputElement>("details-status-filter-toggle");
+  if (statusToggle) {
+    statusToggle.value = "2";
+    currentStatusFilter = "all";
+    // Тригеримо подію change для оновлення UI
+    statusToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // ✅ 5. Скидаємо перемикач розрахунків на "Всі" (значення "2")
+  const paymentToggle = byId<HTMLInputElement>("payment-filter-toggle");
+  if (paymentToggle) {
+    paymentToggle.value = "2";
+    currentPaymentFilter = "all";
+    // Тригеримо подію change для оновлення UI
+    paymentToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // ✅ 6. Скидаємо режим фільтрації дат на "Відкриття"
+  podlegleDateFilterMode = "open";
+  const dateFilterButtons = document.querySelectorAll(
+    "#Bukhhalter-podlegle-section .date-filter-btn"
+  );
+  dateFilterButtons.forEach((btn) => {
+    if ((btn as HTMLButtonElement).dataset.filter === "open") {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
+  // ✅ 7. Очищаємо дані
+  podlegleData = [];
+  allPodlegleData = [];
+  hasPodlegleDataLoaded = false;
+  hasDataForAllEmployees = false;
+  lastSearchDateOpen = "";
+  lastSearchDateClose = "";
+
+  // ✅ 8. Оновлюємо таблицю
+  updatepodlegleTable();
+
+  console.log("✅ Форма повністю очищена, всі фільтри скинуті");
+  showNotification("🗑️ Фільтри та дані очищено", "info", 1500);
+}
+
 (window as any).runMassPaymentCalculation = runMassPaymentCalculation;
 (window as any).togglepodleglePaymentWithConfirmation =
   togglepodleglePaymentWithConfirmation;
 (window as any).updatePodlegleDisplayedSums = updatePodlegleDisplayedSums;
+(window as any).clearpodlegleForm = clearpodlegleForm;
 
-// Ініціалізація випадаючого списку робіт при завантаженні
+// Ініціалізація випадаючого списку робіт та перемикача дат при завантаженні
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
     ensureWorkSmartDropdown();
+    initPodlegleDateFilterToggle();
+    initPodlegleDateAutoFilter(); // 👈 нове
   }, 100);
 });
 

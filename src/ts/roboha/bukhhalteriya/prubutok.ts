@@ -499,14 +499,8 @@ function initvutratuDateFilterToggle(): void {
         `🔄 Витрати: змінено режим фільтрації дат на "${vutratuDateFilterMode}"`
       );
 
-      // Перезапускаємо завантаження
-      const dateFrom =
-        byId<HTMLInputElement>("Bukhhalter-vutratu-date-from")?.value || "";
-      const dateTo =
-        byId<HTMLInputElement>("Bukhhalter-vutratu-date-to")?.value || "";
-      if (dateFrom || dateTo) {
-        void loadvutratuFromDatabase();
-      }
+      // ЗМІНЕНО: Просто фільтруємо вже завантажені дані, НЕ перезавантажуємо з бази
+      filtervutratuData();
     });
   });
 }
@@ -515,14 +509,24 @@ async function loadvutratuFromDatabase(): Promise<void> {
   try {
     console.log("🔄 Завантаження витрат з бази даних...");
 
-    const dateFrom =
+    // Якщо дата не вказана - використовуємо 01.01.2025 як дефолт (не показуємо користувачу)
+    const dateFromInput =
       byId<HTMLInputElement>("Bukhhalter-vutratu-date-from")?.value || "";
-    const dateTo =
+    const dateToInput =
       byId<HTMLInputElement>("Bukhhalter-vutratu-date-to")?.value || "";
+
+    const dateFrom = dateFromInput || "2025-01-01";
+    const dateTo = dateToInput || "";
     const category =
       byId<HTMLSelectElement>("Bukhhalter-vutratu-category")?.value || "";
     const paymentMethod =
       byId<HTMLSelectElement>("Bukhhalter-vutratu-payment-method")?.value || "";
+
+    // Отримуємо стани чекбоксів для підтягування даних
+    const includeClientInDescription =
+      byId<HTMLInputElement>("include-client-description")?.checked || false;
+    const includeCarInNotes =
+      byId<HTMLInputElement>("include-car-notes")?.checked || false;
 
     console.log("📋 Фільтри:", {
       dateFrom,
@@ -530,6 +534,8 @@ async function loadvutratuFromDatabase(): Promise<void> {
       category,
       paymentMethod,
       mode: vutratuDateFilterMode,
+      includeClientInDescription,
+      includeCarInNotes,
     });
 
     // Завантажуємо дані з vutratu
@@ -550,9 +556,9 @@ async function loadvutratuFromDatabase(): Promise<void> {
       if (dateFrom) queryVutratu = queryVutratu.gte("dataOff", dateFrom);
       if (dateTo) queryVutratu = queryVutratu.lte("dataOff", dateTo);
     } else if (vutratuDateFilterMode === "paid") {
-      // Фільтр по даті закриття (для витрат це теж dataOff)
-      if (dateFrom) queryVutratu = queryVutratu.gte("dataOff", dateFrom);
-      if (dateTo) queryVutratu = queryVutratu.lte("dataOff", dateTo);
+      // Фільтр по даті розрахунку (для витрат це dataOnn, бо витрати не мають dataOff)
+      if (dateFrom) queryVutratu = queryVutratu.gte("dataOnn", dateFrom);
+      if (dateTo) queryVutratu = queryVutratu.lte("dataOnn", dateTo);
     }
 
     if (category) queryVutratu = queryVutratu.eq("kategoria", category);
@@ -576,17 +582,18 @@ async function loadvutratuFromDatabase(): Promise<void> {
       );
 
     // Застосовуємо фільтр по датах залежно від режиму
+    // Завжди використовуємо dateFrom (дефолт: 2025-01-01)
     if (vutratuDateFilterMode === "open") {
       // Фільтр по даті відкриття (date_on)
-      if (dateFrom) queryActs = queryActs.gte("date_on", dateFrom);
+      queryActs = queryActs.gte("date_on", dateFrom);
       if (dateTo) queryActs = queryActs.lte("date_on", dateTo);
     } else if (vutratuDateFilterMode === "close") {
       // Фільтр по даті закриття (date_off)
-      if (dateFrom) queryActs = queryActs.gte("date_off", dateFrom);
+      queryActs = queryActs.gte("date_off", dateFrom);
       if (dateTo) queryActs = queryActs.lte("date_off", dateTo);
     } else if (vutratuDateFilterMode === "paid") {
       // Фільтр по даті розрахунку (rosraxovano)
-      if (dateFrom) queryActs = queryActs.gte("rosraxovano", dateFrom);
+      queryActs = queryActs.gte("rosraxovano", dateFrom);
       if (dateTo) queryActs = queryActs.lte("rosraxovano", dateTo);
     }
 
@@ -644,8 +651,13 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const clientId = actItem.client_id;
         const carId = actItem.cars_id;
 
-        const clientInfo = clientId ? await getClientData(clientId) : "-";
-        const carInfo = carId ? await getCarData(carId) : "-";
+        // Підтягуємо дані тільки якщо чекбокси чекнуті
+        const clientInfo =
+          includeClientInDescription && clientId
+            ? await getClientData(clientId)
+            : "-";
+        const carInfo =
+          includeCarInNotes && carId ? await getCarData(carId) : "-";
 
         vutratuData.push({
           id: actItem.act_id * -1,
@@ -867,9 +879,26 @@ export function filtervutratuData(): void {
     byId<HTMLInputElement>("vutratu-status-filter-toggle")?.value || "2";
 
   filteredvutratuData = vutratuData.filter((expense) => {
-    // Фільтр по датах
-    if (dateFrom && expense.date < dateFrom) return false;
-    if (dateTo && expense.date > dateTo) return false;
+    // НОВИЙ ФІЛЬТР: Фільтр по режиму дати (відкриття/закриття/розрахунку)
+    if (vutratuDateFilterMode === "open") {
+      // Фільтруємо по даті відкриття (expense.date)
+      if (dateFrom && expense.date < dateFrom) return false;
+      if (dateTo && expense.date > dateTo) return false;
+    } else if (vutratuDateFilterMode === "close") {
+      // Фільтруємо по даті закриття (paymentDate)
+      // Якщо немає дати закриття - виключаємо
+      if (!expense.paymentDate) return false;
+      if (dateFrom && expense.paymentDate < dateFrom) return false;
+      if (dateTo && expense.paymentDate > dateTo) return false;
+    } else if (vutratuDateFilterMode === "paid") {
+      // Фільтруємо по даті розрахунку (rosraxovanoDate)
+      // Якщо немає дати розрахунку - виключаємо
+      if (!expense.rosraxovanoDate) return false;
+      const rosraxovanoDateOnly = getKyivDate(expense.rosraxovanoDate);
+      if (!rosraxovanoDateOnly) return false;
+      if (dateFrom && rosraxovanoDateOnly < dateFrom) return false;
+      if (dateTo && rosraxovanoDateOnly > dateTo) return false;
+    }
 
     // Фільтр по категорії
     if (category && expense.category !== category) return false;

@@ -322,7 +322,9 @@
               </th>
               <th class="vutratu-opis">
                 <div class="table-header-cell">
-                  <span class="table-header-emoji">📝</span>
+                  <span class="table-header-emoji">📝 <input type="checkbox" id="include-client-description"
+                      style="width: 18px; height: 18px; cursor: pointer; accent-color: #f5576c;">
+                  </span>
                   <span class="table-header-text">Опис</span>
                 </div>
               </th>
@@ -340,7 +342,9 @@
               </th>
               <th class="vutratu-prumitku">
                 <div class="table-header-cell">
-                  <span class="table-header-emoji">📋</span>
+                  <span class="table-header-emoji">📋 <input type="checkbox" id="include-car-notes"
+                      style="width: 18px; height: 18px; cursor: pointer; accent-color: #f5576c;">
+                  </span>
                   <span class="table-header-text">Примітки</span>
                 </div>
               </th>
@@ -584,6 +588,25 @@
               💰 Розраховано
             </button>
           </div>
+
+          <!-- ДОДАЙ ЦЕ -->
+          <!--           <div class="Bukhhalter-form-row" style="margin-top: 15px; margin-bottom: 10px;">
+            <div class="Bukhhalter-field-group">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="include-client-description"
+                  style="width: 18px; height: 18px; cursor: pointer; accent-color: #667eea;">
+                <span style="font-weight: 600; color: #333;">📝 Підтягувати дані клієнта в Опис</span>
+              </label>
+            </div>
+            <div class="Bukhhalter-field-group">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="include-car-notes"
+                  style="width: 18px; height: 18px; cursor: pointer; accent-color: #f5576c;">
+                <span style="font-weight: 600; color: #333;">📋 Підтягувати дані авто в Примітки</span>
+              </label>
+            </div>
+          </div> -->
+
           <div class="Bukhhalter-form-row">
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">📅 Дата від</label>
@@ -599,6 +622,9 @@
             <select class="Bukhhalter-field-input" id="Bukhhalter-vutratu-category">
               <option value="">Оберіть категорію</option>
             </select>
+          </div>
+          <div class="Bukhhalter-form-row">
+            <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">💳 Спосіб оплати</label>
               <select class="Bukhhalter-field-input" id="Bukhhalter-vutratu-payment-method">
                 <option value="">Оберіть спосіб оплати</option>

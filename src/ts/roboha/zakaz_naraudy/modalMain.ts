@@ -168,6 +168,9 @@ export async function showModal(actId: number): Promise<void> {
  * Заповнює відсутні зарплати слюсарів (async)
  */
 async function fillMissingSlyusarSums(): Promise<void> {
+  if (!globalCache.settings.showZarplata || userAccessLevel === "Слюсар")
+    return;
+  if (!globalCache.settings.showPibMagazin) return;
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return;
 
@@ -209,6 +212,7 @@ async function fillMissingSlyusarSums(): Promise<void> {
 }
 
 function checkSlyusarSumWarningsOnLoad(): void {
+  if (!globalCache.settings.showZarplata) return;
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return;
 
@@ -439,6 +443,11 @@ function renderModalContent(
   if (!body) return;
   const isClosed = globalCache.isActClosed;
   const isRestricted = userAccessLevel === "Слюсар";
+
+  // ← ДОДАНО: отримуємо налаштування видимості
+  const showCatalog = globalCache.settings.showCatalog;
+  const showPibMagazin = globalCache.settings.showPibMagazin;
+
   const clientInfo = {
     fio: clientData?.["ПІБ"] || clientData?.fio || "—",
     phone: clientData?.["Телефон"] || clientData?.phone || "—",
@@ -457,30 +466,33 @@ function renderModalContent(
   const editableAttr = `contenteditable="${!isClosed}"`;
   const editableClass = isClosed ? "cursor-not-allowed" : "";
   const photoCellHtml = `<div id="photo-section-slot"></div>`;
+
+  // ← ОНОВЛЕНО: безпечна обробка даних з перевіркою налаштувань
   const allItems = [
     ...(actDetails?.["Деталі"] || []).map((item: any) => ({
       type: "detail",
-      name: item["Деталь"],
-      quantity: item["Кількість"],
-      price: item["Ціна"],
-      sum: item["Сума"],
-      person_or_store: item["Магазин"],
-      catalog: item["Каталог"] || "",
-      sclad_id: item["sclad_id"] || null,
+      name: item["Деталь"] || "",
+      quantity: item["Кількість"] || 0,
+      price: item["Ціна"] || 0,
+      sum: item["Сума"] || 0,
+      person_or_store: showPibMagazin ? item["Магазин"] || "" : "", // ← ПЕРЕВІРКА
+      catalog: showCatalog ? item["Каталог"] || "" : "", // ← ПЕРЕВІРКА
+      sclad_id: showCatalog ? item["sclad_id"] || null : null, // ← ПЕРЕВІРКА
       slyusar_id: null,
     })),
     ...(actDetails?.["Роботи"] || []).map((item: any) => ({
       type: "work",
-      name: item["Робота"],
-      quantity: item["Кількість"],
-      price: item["Ціна"],
-      sum: item["Сума"],
-      person_or_store: item["Слюсар"],
-      catalog: item["Каталог"] || "",
-      sclad_id: null,
+      name: item["Робота"] || "",
+      quantity: item["Кількість"] || 0,
+      price: item["Ціна"] || 0,
+      sum: item["Сума"] || 0,
+      person_or_store: showPibMagazin ? item["Слюсар"] || "" : "", // ← ПЕРЕВІРКА
+      catalog: showCatalog ? item["Каталог"] || "" : "", // ← ПЕРЕВІРКА
+      sclad_id: showCatalog ? null : null,
       slyusar_id: item["slyusar_id"] || null,
     })),
   ];
+
   globalCache.initialActItems = allItems;
   //console.log("Initial act items saved:", globalCache.initialActItems);
   body.innerHTML = `
@@ -581,29 +593,19 @@ function renderModalContent(
     ${generateTableHTML(allItems, globalCache.settings.showPibMagazin)}
     ${isClosed ? createClosedActClaimText() : ""}
   `;
-
-  // Ініціалізуємо поле авансу після рендерингу
+  // Встановлюємо початкове значення авансу (форматування відбувається в modalUI.ts)
   setTimeout(() => {
     const avansInput = document.getElementById(
       "editable-avans"
-    ) as HTMLInputElement;
-    if (avansInput) {
-      const avansValue = act?.avans || actDetails?.["Аванс"] || 0;
-      avansInput.value = String(avansValue);
+    ) as HTMLInputElement | null;
+    if (!avansInput) return;
 
-      // Форматуємо при введенні
-      avansInput.addEventListener("input", (e) => {
-        const target = e.target as HTMLInputElement;
-        const cleaned = target.value.replace(/[^0-9]/g, "");
-        target.value = cleaned;
-      });
+    const avansValue = Number(act?.avans ?? actDetails?.["Аванс"] ?? 0);
+    avansInput.value = String(avansValue);
 
-      // Оновлюємо підсумки при зміні авансу
-      avansInput.addEventListener("input", () => {
-        updateCalculatedSumsInFooter();
-      });
-    }
-  }, 100);
+    // Форсуємо те ж форматування і авто-підгін ширини, що й при ручному вводі
+    avansInput.dispatchEvent(new Event("input")); // або: avansInput.dispatchEvent(new Event("blur"));
+  }, 60);
 }
 
 function createClosedActClaimText(): string {
@@ -663,7 +665,9 @@ async function addModalHandlers(
       ACT_ITEMS_TABLE_CONTAINER_ID,
       globalCache
     );
+
     initializeActWarnings(ACT_ITEMS_TABLE_CONTAINER_ID, actId);
+
     const addRowButton = document.getElementById("add-row-button");
     addRowButton?.addEventListener("click", () => {
       addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
@@ -754,11 +758,16 @@ function handleInputChange(event: Event): void {
     }
     case "name": {
       const name = target.textContent?.trim() || "";
-      const isDetail = globalCache.details.includes(name);
-      const type = isDetail ? "details" : "works";
+
+      const isInWorks = globalCache.works.includes(name);
+      const isInDetails = globalCache.details.includes(name);
+
+      // якщо назва точна й є лише в одному списку – беремо його
+      // якщо немає або є в обох – вважаємо "details" (безпечніше для складу/цін)
+      const type = isInWorks && !isInDetails ? "works" : "details";
       target.setAttribute("data-type", type);
 
-      if (name) {
+      if (name && globalCache.settings.showPibMagazin) {
         const row = target.closest("tr") as HTMLTableRowElement;
         const pibMagCell = row?.querySelector(
           '[data-name="pib_magazin"]'
@@ -769,10 +778,7 @@ function handleInputChange(event: Event): void {
             if (userName) {
               pibMagCell.textContent = userName;
               pibMagCell.setAttribute("data-type", "slyusars");
-
-              // Автоматичний розрахунок суми для слюсаря
-              const row = target.closest("tr") as HTMLTableRowElement;
-              if (row) calculateRowSum(row);
+              if (row) calculateRowSum(row); // async всередині
             }
           } else {
             pibMagCell.setAttribute("data-type", "shops");
@@ -783,6 +789,7 @@ function handleInputChange(event: Event): void {
       updateCalculatedSumsInFooter();
       break;
     }
+
     case "pib_magazin": {
       // При зміні ПІБ/Магазин перераховуємо суму слюсаря (ASYNC)
       const row = target.closest("tr") as HTMLTableRowElement;

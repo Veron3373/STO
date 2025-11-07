@@ -5,7 +5,9 @@ import { resetPercentCache } from "../zakaz_naraudy/inhi/kastomna_tabluca";
 const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
   2: { id: "toggle-receiver", label: "Каталог", class: "_receiver" },
+  3: { id: "toggle-zarplata", label: "Зарплата", class: "_zarplata" },
   4: { id: "percentage-value", label: "Відсоток", class: "_percentage" },
+  5: { id: "toggle-sms", label: "SMS Viber", class: "_sms" },
 };
 
 const ROLES = [
@@ -169,7 +171,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, data, procent")
-      .in("setting_id", [1, 2, 4])
+      .in("setting_id", [1, 2, 3, 4, 5])
       .order("setting_id");
 
     if (error) throw error;
@@ -268,7 +270,9 @@ async function loadRoleSettings(
 
 async function saveSettings(modal: HTMLElement): Promise<boolean> {
   try {
-    const roleButton = modal.querySelector("#role-toggle-button") as HTMLButtonElement;
+    const roleButton = modal.querySelector(
+      "#role-toggle-button"
+    ) as HTMLButtonElement;
 
     // ✅ гарантуємо чисту назву ролі
     let role = (roleButton?.textContent || "Адміністратор").trim();
@@ -299,6 +303,15 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         .eq("setting_id", 2);
       if (error2) throw error2;
 
+      const checkbox3 = modal.querySelector(
+        "#toggle-zarplata"
+      ) as HTMLInputElement;
+      const { error: error3 } = await supabase
+        .from("settings")
+        .update({ [column]: checkbox3?.checked ?? false })
+        .eq("setting_id", 3);
+      if (error3) throw error3;
+
       // Зберегти відсоток для Адміністратора - У СВОЮ КОМІРКУ
       const input = modal.querySelector(
         "#percentage-input"
@@ -314,6 +327,13 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         .update({ procent: value })
         .eq("setting_id", 4);
       if (error4) throw error4;
+
+      const checkbox5 = modal.querySelector("#toggle-sms") as HTMLInputElement;
+      const { error: error5 } = await supabase
+        .from("settings")
+        .update({ [column]: checkbox5?.checked ?? false })
+        .eq("setting_id", 5);
+      if (error5) throw error5;
     } else {
       // Зберегти налаштування для інших ролей - КОЖЕН TOGGLE У СВОЮ КОМІРКУ
       const settings = ROLE_SETTINGS[role as keyof typeof ROLE_SETTINGS];
@@ -461,7 +481,9 @@ export async function createSettingsModal(): Promise<void> {
   updateRoleTogglesVisibility(modal, initialRole);
   await loadSettings(modal); // для Адміністратора тягне data/procent
 
-  const roleButton = modal.querySelector("#role-toggle-button") as HTMLButtonElement;
+  const roleButton = modal.querySelector(
+    "#role-toggle-button"
+  ) as HTMLButtonElement;
   let currentRoleIndex = 0;
 
   if (roleButton) {

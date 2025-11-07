@@ -307,6 +307,7 @@ function processItems(items: ParsedItem[]) {
 
   let totalDetailsSum = 0;
   let totalWorksSum = 0;
+  let totalWorksProfit = 0; // <<< нове
 
   items.forEach((item) => {
     const {
@@ -321,17 +322,25 @@ function processItems(items: ParsedItem[]) {
       slyusar_id,
       slyusarSum,
     } = item;
+
     const itemBase = { Кількість: quantity, Ціна: price, Сума: sum };
 
     if (type === "work") {
+      const salary = Number(slyusarSum || 0);
+      const profit = Math.max(0, Number((sum - salary).toFixed(2)));
+
       works.push({
         ...itemBase,
         Робота: name,
         Слюсар: pibMagazin,
         Каталог: catalog,
         slyusar_id,
+        Зарплата: salary, // <<< нове
+        Прибуток: profit, // <<< нове
       });
+
       totalWorksSum += sum;
+      totalWorksProfit += profit; // <<< нове
 
       if (pibMagazin) {
         workRowsForSlyusars.push({
@@ -339,7 +348,7 @@ function processItems(items: ParsedItem[]) {
           Найменування: name,
           Кількість: quantity,
           Ціна: price,
-          Зарплата: slyusarSum || 0,
+          Зарплата: salary,
         });
       }
     } else {
@@ -375,6 +384,7 @@ function processItems(items: ParsedItem[]) {
     totalDetailsSum,
     totalWorksSum,
     grandTotalSum: totalDetailsSum + totalWorksSum,
+    totalWorksProfit, // <<< нове
   };
 }
 
@@ -446,6 +456,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     totalDetailsSum,
     totalWorksSum,
     grandTotalSum,
+    totalWorksProfit, // <<< додано
   } = processItems(items);
 
   // Отримуємо значення авансу
@@ -456,18 +467,24 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     ? parseFloat(avansInput.value.replace(/\s/g, "") || "0")
     : 0;
 
-  const updatedActData = {
-    ...(originalActData || {}),
-    Пробіг: newProbig,
-    "Причина звернення": newReason,
-    Рекомендації: newRecommendations,
-    Деталі: details,
-    Роботи: works,
-    "За деталі": totalDetailsSum,
-    "За роботу": totalWorksSum,
-    "Загальна сума": grandTotalSum,
-    Аванс: avansValue,
-  };
+const updatedActData = {
+  ...(originalActData || {}),
+  Пробіг: newProbig,
+  "Причина звернення": newReason,
+  Рекомендації: newRecommendations,
+  Деталі: details,
+  Роботи: works,
+  "За деталі": totalDetailsSum,
+  "За роботу": totalWorksSum,
+  "Загальна сума": grandTotalSum,
+  Аванс: avansValue,
+  // підсумки прибутку:
+  "Прибуток за деталі": (originalActData && typeof originalActData["Прибуток за деталі"] === "number")
+    ? originalActData["Прибуток за деталі"]
+    : 0,
+  "Прибуток за роботу": Number((totalWorksProfit || 0).toFixed(2)),
+};
+
 
   const deltas = calculateDeltas();
 

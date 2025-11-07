@@ -641,29 +641,14 @@ function getDetailsInputValue(id: string): string {
   return (el?.value || "").trim();
 }
 
-// Функція для фільтрації даних деталей
-export function getFilteredDetailsData(): DetailsRecord[] {
-  let filteredData = detailsData;
-
-  // Фільтр по статусу актів
-  if (currentStatusFilter === "closed") {
-    filteredData = filteredData.filter((item) => item.isClosed);
-  } else if (currentStatusFilter === "open") {
-    filteredData = filteredData.filter((item) => !item.isClosed);
+// Функція для фільтрації завантажених даних
+export function filterDetailsData(): void {
+  if (!hasDetailsDataLoaded || allDetailsData.length === 0) {
+    detailsData = [];
+    updateDetailsTable();
+    return;
   }
 
-  // Фільтр по розрахункам
-  if (currentPaymentFilterDetails === "paid") {
-    filteredData = filteredData.filter((item) => item.isPaid);
-  } else if (currentPaymentFilterDetails === "unpaid") {
-    filteredData = filteredData.filter((item) => !item.isPaid);
-  }
-
-  return filteredData;
-}
-
-// Автофільтрація з урахуванням статусу актів
-function autoFilterDetailsFromInputs(): void {
   const dateOpen = getDetailsInputValue("Bukhhalter-details-date-open");
   const dateClose = getDetailsInputValue("Bukhhalter-details-date-close");
   const item = getDetailsInputValue("Bukhhalter-details-item");
@@ -671,36 +656,85 @@ function autoFilterDetailsFromInputs(): void {
 
   let filtered = [...allDetailsData];
 
-  const currentDate = new Date().toISOString().split("T")[0];
+  // Функція для отримання цільової дати залежно від режиму
+  const getTargetDate = (r: DetailsRecord): string => {
+    switch (detailsDateFilterMode) {
+      case "close":
+        return r.dateClose || "";
+      case "paid":
+        return r.paymentDate || "";
+      case "open":
+      default:
+        return r.dateOpen;
+    }
+  };
 
-  if (!dateOpen && !dateClose) {
-    // Всі дати - нічого не робимо
-  } else if (dateOpen && !dateClose) {
+  // КРИТИЧНО: Якщо режим "close" або "paid", показуємо ТІЛЬКИ записи з відповідною датою
+  if (detailsDateFilterMode === "close") {
     filtered = filtered.filter(
-      (r) => r.dateOpen >= dateOpen && r.dateOpen <= currentDate
+      (r) => r.dateClose !== null && r.dateClose !== ""
     );
-  } else if (!dateOpen && dateClose) {
-    filtered = filtered.filter((r) => r.dateOpen <= dateClose);
-  } else if (dateOpen && dateClose) {
+  } else if (detailsDateFilterMode === "paid") {
     filtered = filtered.filter(
-      (r) => r.dateOpen >= dateOpen && r.dateOpen <= dateClose
+      (r) => r.paymentDate !== undefined && r.paymentDate !== ""
     );
   }
 
+  // Фільтр по датах з урахуванням режиму
+  if (dateOpen || dateClose) {
+    const toIsoClose = dateClose || todayIso();
+    filtered = filtered.filter((r) => {
+      const targetDate = getTargetDate(r);
+      // Якщо цільової дати немає - виключаємо
+      if (!targetDate) {
+        return false;
+      }
+      return inRangeByIso(targetDate, dateOpen, toIsoClose);
+    });
+  }
+
+  // Фільтр по найменуванню
   if (item) {
     filtered = filtered.filter((r) =>
       (r.item || "").toLowerCase().includes(item.toLowerCase())
     );
   }
 
+  // Фільтр по каталогу
   if (catalog) {
     filtered = filtered.filter((r) =>
       (r.catalog || "").toLowerCase().includes(catalog.toLowerCase())
     );
   }
 
+  // Фільтр по статусу актів
+  if (currentStatusFilter === "closed") {
+    filtered = filtered.filter((item) => item.isClosed);
+  } else if (currentStatusFilter === "open") {
+    filtered = filtered.filter((item) => !item.isClosed);
+  }
+
+  // Фільтр по розрахункам
+  if (currentPaymentFilterDetails === "paid") {
+    filtered = filtered.filter((item) => item.isPaid);
+  } else if (currentPaymentFilterDetails === "unpaid") {
+    filtered = filtered.filter((item) => !item.isPaid);
+  }
+
+  // Сортування за цільовою датою
+  filtered.sort((a, b) => {
+    const ka = toIsoDate(getTargetDate(a));
+    const kb = toIsoDate(getTargetDate(b));
+    return kb.localeCompare(ka);
+  });
+
   detailsData = filtered;
   updateDetailsTable();
+}
+
+// Автофільтрація з урахуванням статусу актів + надійні дати
+function autoFilterDetailsFromInputs(): void {
+  filterDetailsData();
 }
 
 async function autoSearchDetailsFromInputs(): Promise<void> {
@@ -760,7 +794,9 @@ async function loadAllDetailsData(): Promise<void> {
     }
   }
 
-  allDetailsData.sort((a, b) => b.dateOpen.localeCompare(a.dateOpen));
+  allDetailsData.sort((a, b) =>
+    toIsoDate(b.dateOpen).localeCompare(toIsoDate(a.dateOpen))
+  );
 }
 
 // Функція для завантаження даних із бази даних shops
@@ -906,34 +942,29 @@ async function saveShopsDataToDatabase(): Promise<void> {
 
 // Обчислення загальної суми деталей
 export function calculateDetailsTotalSum(): number {
-  const filteredData = getFilteredDetailsData();
-  return filteredData.reduce((sum, item) => sum + (item.total || 0), 0);
+  return detailsData.reduce((sum, item) => sum + (item.total || 0), 0);
 }
 
-// Функція для розрахунку закупівельної суми:
 function calculateDetailsPurchaseTotal(): number {
-  const filteredData = getFilteredDetailsData();
-  return filteredData.reduce((sum, item) => {
+  return detailsData.reduce((sum, item) => {
     const purchaseTotal = (item.purchasePrice || 0) * (item.quantity || 0);
     return sum + purchaseTotal;
   }, 0);
 }
 
-// Функція для розрахунку наценки:
 function calculateDetailsMarginTotal(): number {
-  const filteredData = getFilteredDetailsData();
-  return filteredData.reduce((sum, item) => sum + (item.margin || 0), 0);
+  return detailsData.reduce((sum, item) => sum + (item.margin || 0), 0);
 }
 
 // Оновлення таблиці з кольоровим кодуванням та фільтрацією
 export function updateDetailsTable(): void {
   const tbody = byId<HTMLTableSectionElement>("details-tbody");
-  const filteredData = getFilteredDetailsData();
+  const filteredData = detailsData;
 
   if (filteredData.length === 0) {
     tbody.innerHTML =
       '<tr><td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
-    
+
     updateDetailsTotalSumDisplay(0, 0, 0);
     return;
   }
@@ -950,22 +981,38 @@ export function updateDetailsTable(): void {
         : "💲 Не розраховано";
 
       // Форматування цін
-      const purchasePriceHtml = item.purchasePrice !== undefined
-        ? `<div style="font-size: 0.85em; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">${formatNumber(item.purchasePrice)}</div>`
-        : '<div style="font-size: 0.85em; color: #999; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">-</div>';
-      
-      const salePriceHtml = `<div style="font-size: 0.95em; font-weight: 500;">${formatNumber(item.price)}</div>`;
-      
-      const marginHtml = item.margin !== undefined
-        ? `<div style="font-size: 0.85em; color: ${item.margin >= 0 ? '#28a745' : '#dc3545'}; font-weight: 500; margin-top: 2px;">+${formatNumber(item.margin)}</div>`
-        : '';
+      const purchasePriceHtml =
+        item.purchasePrice !== undefined
+          ? `<div style="font-size: 0.85em; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">${formatNumber(
+              item.purchasePrice
+            )}</div>`
+          : '<div style="font-size: 0.85em; color: #999; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">-</div>';
+
+      const salePriceHtml = `<div style="font-size: 0.95em; font-weight: 500;">${formatNumber(
+        item.price
+      )}</div>`;
+
+      const marginHtml =
+        item.margin !== undefined
+          ? `<div style="font-size: 0.85em; color: ${
+              item.margin >= 0 ? "#28a745" : "#dc3545"
+            }; font-weight: 500; margin-top: 2px;">+${formatNumber(
+              item.margin
+            )}</div>`
+          : "";
 
       return `
         <tr class="${rowClass} ${paidClass}" onclick="handleRowClick(${index})">
           <td>
-            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"}" 
+            <button class="Bukhhalter-payment-btn ${
+              item.isPaid ? "paid" : "unpaid"
+            }" 
                     onclick="event.stopPropagation(); toggleDetailsPaymentWithConfirmation(${originalIndex})" 
-                    title="${item.isPaid ? `Розраховано ${item.paymentDate || ""}` : "Не розраховано"}">
+                    title="${
+                      item.isPaid
+                        ? `Розраховано ${item.paymentDate || ""}`
+                        : "Не розраховано"
+                    }">
               ${paymentButtonText}
             </button>
           </td>
@@ -973,7 +1020,9 @@ export function updateDetailsTable(): void {
           <td>${formatDate(item.dateClose || "")}</td>
           <td>
             <button class="Bukhhalter-act-btn"
-                    onclick="event.stopPropagation(); openActModal(${Number(item.act) || 0})"
+                    onclick="event.stopPropagation(); openActModal(${
+                      Number(item.act) || 0
+                    })"
                     title="Відкрити акт №${item.act}">
               📋 ${item.act || "-"}
             </button>
@@ -1001,27 +1050,88 @@ export function updateDetailsTable(): void {
   const purchaseTotal = calculateDetailsPurchaseTotal();
   const saleTotal = calculateDetailsTotalSum();
   const marginTotal = calculateDetailsMarginTotal();
-  
+
   updateDetailsTotalSumDisplay(purchaseTotal, saleTotal, marginTotal);
 }
 
 // Функція для оновлення відображення трьох сум:
-function updateDetailsTotalSumDisplay(purchaseTotal: number, saleTotal: number, marginTotal: number): void {
+function updateDetailsTotalSumDisplay(
+  purchaseTotal: number,
+  saleTotal: number,
+  marginTotal: number
+): void {
   const totalSumElement = byId<HTMLElement>("total-sum");
-  
+
   if (totalSumElement) {
-    const marginSign = marginTotal >= 0 ? '+' : '';
-    
+    const marginSign = marginTotal >= 0 ? "+" : "";
+
     totalSumElement.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
-        <span>Сумма <strong style="color: #333;">💰 ${formatNumber(saleTotal)}</strong> грн</span>
+        <span>Сумма <strong style="color: #333;">💰 ${formatNumber(
+          saleTotal
+        )}</strong> грн</span>
         <span style="color: #666;">-</span>
-        <span><strong style="color: #8B0000;">💶 ${formatNumber(purchaseTotal)}</strong> грн</span>
+        <span><strong style="color: #8B0000;">💶 ${formatNumber(
+          purchaseTotal
+        )}</strong> грн</span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${marginTotal >= 0 ? '#006400 ' : '#8B0000'};">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
+        <span><strong style="color: ${
+          marginTotal >= 0 ? "#006400 " : "#8B0000"
+        };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
       </div>
     `;
   }
+}
+
+// ==== DATE HELPERS (оновлено, додати один раз у файлі) ====
+function toIsoDate(input: string | null | undefined): string {
+  if (!input) return "";
+  // чистимо емодзі/текст і лишаємо цифри та роздільники
+  const s = String(input)
+    .normalize("NFKC")
+    .trim()
+    .replace(/[^\d.\-\/]/g, "");
+
+  if (!s) return "";
+
+  // YMD: YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD
+  let m = s.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);
+  if (m) {
+    const yyyy = m[1];
+    const mm = m[2].padStart(2, "0");
+    const dd = m[3].padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // DMY: DD.MM.YYYY / DD-MM-YYYY / DD/MM/YY
+  m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
+  if (m) {
+    const dd = m[1].padStart(2, "0");
+    const mm = m[2].padStart(2, "0");
+    let yyyy = m[3];
+    if (yyyy.length === 2) {
+      yyyy = (+yyyy >= 70 ? "19" : "20") + yyyy; // 70–99 -> 19xx, інакше 20xx
+    }
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return "";
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function inRangeByIso(
+  targetDmy: string,
+  fromDmy?: string,
+  toDmy?: string
+): boolean {
+  const t = toIsoDate(targetDmy);
+  if (!t) return false;
+  const f = fromDmy ? toIsoDate(fromDmy) : "";
+  const to = toDmy ? toIsoDate(toDmy) : todayIso();
+  return (!f || t >= f) && (!to || t <= to);
 }
 
 interface ScladItem {
@@ -1087,54 +1197,33 @@ function getPurchasePriceBySсladId(scladId: number): number | undefined {
 
 // Функція пошуку з визначенням статусу акту
 export async function searchDetailsData(): Promise<void> {
-  const dateOpen = byId<HTMLInputElement>("Bukhhalter-details-date-open").value;
-  const dateClose = byId<HTMLInputElement>("Bukhhalter-details-date-close").value;
+  let dateOpen = byId<HTMLInputElement>("Bukhhalter-details-date-open").value;
+  const dateClose = byId<HTMLInputElement>(
+    "Bukhhalter-details-date-close"
+  ).value;
+
+  // Якщо не вказано жодної дати - встановлюємо дату за замовчуванням БЕЗ відображення користувачу
+  if (!dateOpen && !dateClose) {
+    dateOpen = "01.01.2025"; // Встановлюємо внутрішню дату за замовчуванням
+    console.log("📅 Використано дату за замовчуванням: 01.01.2025");
+  }
 
   await fetchScladData();
-  
-  const shops = await fetchShopData();
-  detailsData = [];
 
-  console.log(`🔍 Пошук деталей:`);
-  console.log(`  - Початкова дата: ${dateOpen || "не вказана"}`);
-  console.log(`  - Кінцева дата: ${dateClose || "не вказана"}`);
-  console.log(`  - Режим фільтрації: ${detailsDateFilterMode}`);
+  const shops = await fetchShopData();
+  const rawData: DetailsRecord[] = [];
+
+  console.log(`🔍 Завантаження всіх деталей з бази...`);
 
   for (const shop of shops) {
     const history = shop.Історія || {};
     for (const openDate of Object.keys(history)) {
       const dayRecords = history[openDate] || [];
-      
-      for (const rec of dayRecords) {
-        // Визначаємо цільову дату залежно від режиму
-        let targetDate = '';
-        
-        switch (detailsDateFilterMode) {
-          case 'open':
-            targetDate = openDate; // Дата відкриття
-            break;
-          case 'close':
-            targetDate = rec.ДатаЗакриття || ''; // Дата закриття
-            break;
-          case 'paid':
-            targetDate = rec.Розрахунок || ''; // Дата розрахунку
-            break;
-        }
-        
-        // Якщо немає потрібної дати - пропускаємо
-        if (!targetDate) continue;
-        
-        // Перевіряємо чи дата входить в діапазон
-        const meetsFrom = !dateOpen || targetDate >= dateOpen;
-        const meetsTo = !dateClose || targetDate <= dateClose;
-        
-        if (!meetsFrom || !meetsTo) continue;
 
+      for (const rec of dayRecords) {
         const act = rec.Акт;
         const automobile = rec.Автомобіль || "";
         const closeDate = rec.ДатаЗакриття || null;
-        
-        // Отримуємо статус розрахунку з акту
         const isPaid = Boolean(rec.Розрахунок);
         const paymentDate = rec.Розрахунок || undefined;
 
@@ -1143,11 +1232,15 @@ export async function searchDetailsData(): Promise<void> {
           const price = Number(det.Ціна) || 0;
           const total = qty * price;
           const scladId = det.sclad_id;
-          
-          const purchasePrice = scladId ? getPurchasePriceBySсladId(scladId) : undefined;
-          const margin = purchasePrice ? (price - purchasePrice) * qty : undefined;
 
-          detailsData.push({
+          const purchasePrice = scladId
+            ? getPurchasePriceBySсladId(scladId)
+            : undefined;
+          const margin = purchasePrice
+            ? (price - purchasePrice) * qty
+            : undefined;
+
+          rawData.push({
             dateOpen: openDate,
             dateClose: closeDate,
             act: String(act),
@@ -1156,12 +1249,12 @@ export async function searchDetailsData(): Promise<void> {
             item: det.Найменування || "",
             catalog: (det.Каталог ?? "").toString(),
             quantity: qty,
-            price: price,
-            purchasePrice: purchasePrice,
-            total: total,
-            margin: margin,
-            isPaid: isPaid,
-            paymentDate: paymentDate,
+            price,
+            purchasePrice,
+            total,
+            margin,
+            isPaid,
+            paymentDate,
             sclad_id: scladId,
             isClosed: closeDate !== null,
           });
@@ -1170,26 +1263,20 @@ export async function searchDetailsData(): Promise<void> {
     }
   }
 
-  detailsData.sort((a, b) => b.dateOpen.localeCompare(a.dateOpen));
-
-  allDetailsData = detailsData.slice();
+  // Зберігаємо ВСІ дані без фільтрації по датах
+  allDetailsData = rawData;
   hasDetailsDataLoaded = true;
+
   ensureDetailsSmartDropdowns();
   refreshDetailsDropdownOptions();
 
-  updateDetailsTable();
+  // Тепер застосовуємо фільтрацію через нову функцію
+  filterDetailsData();
 
-  const modeLabels = {
-    open: "відкриття",
-    close: "закриття",
-    paid: "розрахунку"
-  };
-
-  if (detailsData.length === 0) {
-    showNotification(`Записів не знайдено за заданими критеріями (фільтр по даті ${modeLabels[detailsDateFilterMode]})`, "info");
-  } else {
-    showNotification(`Знайдено ${detailsData.length} записів (фільтр по даті ${modeLabels[detailsDateFilterMode]})`, "success");
-  }
+  showNotification(
+    `✅ Завантажено ${allDetailsData.length} записів. Застосовано фільтри.`,
+    "success"
+  );
 }
 
 function initDetailsAutoBehaviors(): void {
@@ -1231,39 +1318,33 @@ export function createDetailsStatusToggle(): void {
 
   if (!toggle) {
     console.error("❌ Елемент poAktam-status-filter-toggle не знайдено в HTML");
-    console.error("🔍 Перевір наявність елемента з ID: poAktam-status-filter-toggle");
     return;
   }
-
-  console.log("✅ Знайдено toggle елемент для Po Aktam:", toggle);
 
   toggle.addEventListener("change", (e) => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
 
-    console.log("🔄 Зміна фільтра статусу актів на значення:", value);
-
     switch (value) {
       case "0":
         currentStatusFilter = "closed";
-        console.log("📋 Фільтр: тільки закриті акти");
         break;
       case "1":
         currentStatusFilter = "open";
-        console.log("📋 Фільтр: тільки відкриті акти");
         break;
       case "2":
       default:
         currentStatusFilter = "all";
-        console.log("📋 Фільтр: всі акти");
         break;
     }
 
-    console.log("🔄 Оновлюємо таблицю...");
-    updateDetailsTable();
+    // ЗМІНЕНО: використовуємо filterDetailsData замість updateDetailsTable
+    if (hasDetailsDataLoaded) {
+      filterDetailsData();
+    } else {
+      updateDetailsTable();
+    }
     updateTotalSum();
-
-    console.log(`✅ Фільтр застосовано: ${currentStatusFilter}`);
   });
 
   toggle.addEventListener("input", (e) => {
@@ -1283,10 +1364,13 @@ export function createDetailsStatusToggle(): void {
         break;
     }
 
-    updateDetailsTable();
+    // ЗМІНЕНО: використовуємо filterDetailsData
+    if (hasDetailsDataLoaded) {
+      filterDetailsData();
+    } else {
+      updateDetailsTable();
+    }
   });
-
-  console.log("✅ Обробник статусу актів для Po Aktam активований");
 }
 
 // Створення перемикача для фільтра розрахунків деталей
@@ -1315,13 +1399,15 @@ export function createDetailsPaymentToggle(): void {
         break;
     }
 
-    updateDetailsTable();
+    // ЗМІНЕНО: використовуємо filterDetailsData
+    if (hasDetailsDataLoaded) {
+      filterDetailsData();
+    } else {
+      updateDetailsTable();
+    }
     updateTotalSum();
   });
-
-  console.log("✅ Обробник розрахунків для деталей активовано");
 }
-
 export function initializeDetailsData(): void {
   detailsData = [];
   allDetailsData = [];
@@ -1334,32 +1420,32 @@ export function initializeDetailsData(): void {
 }
 
 // Глобальна змінна для зберігання поточного фільтра дат
-let detailsDateFilterMode: 'open' | 'close' | 'paid' = 'open';
+let detailsDateFilterMode: "open" | "close" | "paid" = "open";
 
 // Функція для ініціалізації перемикача фільтрації дат для деталей
 function initDetailsDateFilterToggle(): void {
-  const toggleContainer = document.querySelector('#Bukhhalter-details-section .Bukhhalter-date-filter-toggle');
+  const toggleContainer = document.querySelector(
+    "#Bukhhalter-details-section .Bukhhalter-date-filter-toggle"
+  );
   if (!toggleContainer) return;
 
-  const buttons = toggleContainer.querySelectorAll<HTMLButtonElement>('.date-filter-btn');
-  
-  buttons.forEach(btn => {
-    btn.addEventListener('click', function() {
-      // Знімаємо active з усіх кнопок
-      buttons.forEach(b => b.classList.remove('active'));
-      // Додаємо active до натиснутої
-      this.classList.add('active');
-      
-      // Зберігаємо режим фільтрації
-      detailsDateFilterMode = this.dataset.filter as 'open' | 'close' | 'paid';
-      
-      console.log(`🔄 Деталі: змінено режим фільтрації дат на "${detailsDateFilterMode}"`);
-      
-      // Перезапускаємо пошук
-      const dateOpen = byId<HTMLInputElement>("Bukhhalter-details-date-open")?.value || "";
-      const dateClose = byId<HTMLInputElement>("Bukhhalter-details-date-close")?.value || "";
-      if (dateOpen || dateClose) {
-        void searchDetailsData();
+  const buttons =
+    toggleContainer.querySelectorAll<HTMLButtonElement>(".date-filter-btn");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      buttons.forEach((b) => b.classList.remove("active"));
+      this.classList.add("active");
+
+      detailsDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
+
+      console.log(
+        `🔄 Деталі: змінено режим фільтрації дат на "${detailsDateFilterMode}"`
+      );
+
+      // ЗМІНЕНО: просто застосовуємо фільтр до вже завантажених даних
+      if (hasDetailsDataLoaded) {
+        filterDetailsData();
       }
     });
   });
@@ -1381,7 +1467,9 @@ export function deleteDetailsRecord(index: number): void {
 }
 
 // Функція для зміни статусу оплати з підтвердженням
-export async function toggleDetailsPaymentWithConfirmation(index: number): Promise<void> {
+export async function toggleDetailsPaymentWithConfirmation(
+  index: number
+): Promise<void> {
   if (!detailsData[index]) {
     console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
@@ -1391,7 +1479,10 @@ export async function toggleDetailsPaymentWithConfirmation(index: number): Promi
   const record = detailsData[index];
 
   if (!hasFullAccess()) {
-    showNotification("⚠️ У вас немає прав для зміни статусу розрахунку", "warning");
+    showNotification(
+      "⚠️ У вас немає прав для зміни статусу розрахунку",
+      "warning"
+    );
     return;
   }
 
@@ -1450,7 +1541,6 @@ export function toggleDetailsPayment(index: number): void {
 
     // Встановлюємо Розрахунок на рівні акту
     actRecord.Розрахунок = currentDate;
-
   } else {
     record.isPaid = false;
     record.paymentDate = "";
@@ -1501,10 +1591,13 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
     return;
   }
 
-  const filteredData = getFilteredDetailsData();
+  const filteredData = detailsData; // detailsData вже відфільтровані через filterDetailsData()
 
   if (filteredData.length === 0) {
-    showNotification("ℹ️ Немає записів для обробки в поточному фільтрі", "info");
+    showNotification(
+      "ℹ️ Немає записів для обробки в поточному фільтрі",
+      "info"
+    );
     return;
   }
 
@@ -1515,7 +1608,7 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
   filteredData.forEach((record) => {
     if (!record.isPaid) {
       const actKey = `${record.shop}-${record.dateOpen}-${record.act}`;
-      
+
       if (!processedActs.has(actKey)) {
         // Оновлюємо всі деталі цього акту в detailsData
         detailsData.forEach((item, index) => {
@@ -1547,7 +1640,10 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
   });
 
   if (updatedCount === 0) {
-    showNotification("ℹ️ Усі записи в поточному фільтрі вже розраховані", "info");
+    showNotification(
+      "ℹ️ Усі записи в поточному фільтрі вже розраховані",
+      "info"
+    );
     return;
   }
 
@@ -1569,6 +1665,7 @@ export function clearDetailsForm(): void {
   const detailsSection = byId<HTMLElement>("Bukhhalter-details-section");
   if (!detailsSection) return;
 
+  // Очищаємо всі інпути
   const inputs = detailsSection.querySelectorAll<HTMLInputElement>(
     "input:not([readonly])"
   );
@@ -1576,48 +1673,97 @@ export function clearDetailsForm(): void {
     input.value = "";
   });
 
+  // Очищаємо всі селекти
   const selects = detailsSection.querySelectorAll<HTMLSelectElement>("select");
   selects.forEach((select) => {
     select.value = "";
   });
 
-  showNotification("Фільтри очищено", "info", 1500);
-}
+  // Скидаємо перемикачі статусу актів на "Всі" (значення "2")
+  const statusToggle = byId<HTMLInputElement>("poAktam-status-filter-toggle");
+  if (statusToggle) {
+    statusToggle.value = "2";
+    currentStatusFilter = "all";
+  }
 
+  // Скидаємо перемикачі розрахунків на "Всі" (значення "2")
+  const paymentToggle = byId<HTMLInputElement>("poAktam-payment-filter-toggle");
+  if (paymentToggle) {
+    paymentToggle.value = "2";
+    currentPaymentFilterDetails = "all";
+  }
+
+  // Скидаємо режим фільтрації дат на "Відкриття"
+  detailsDateFilterMode = "open";
+  const dateFilterButtons = document.querySelectorAll(
+    "#Bukhhalter-details-section .date-filter-btn"
+  );
+  dateFilterButtons.forEach((btn) => {
+    if ((btn as HTMLButtonElement).dataset.filter === "open") {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
+  // Очищаємо дані
+  detailsData = [];
+  allDetailsData = [];
+  hasDetailsDataLoaded = false;
+
+  // Оновлюємо таблицю
+  updateDetailsTable();
+
+  showNotification("🗑️ Фільтри та дані очищено", "info", 1500);
+}
 // Оновлення відображених сум
 export function updateDetailsDisplayedSums(): void {
   const purchaseTotal = calculateDetailsPurchaseTotal();
   const saleTotal = calculateDetailsTotalSum();
   const marginTotal = calculateDetailsMarginTotal();
-  
+
   updateDetailsTotalSumDisplay(purchaseTotal, saleTotal, marginTotal);
 }
 
 // Глобалізація функцій
-(window as any).runMassPaymentCalculationForDetails = runMassPaymentCalculationForDetails;
+(window as any).runMassPaymentCalculationForDetails =
+  runMassPaymentCalculationForDetails;
 (window as any).updateDetailsDisplayedSums = updateDetailsDisplayedSums;
 (window as any).createDetailsStatusToggle = createDetailsStatusToggle;
-(window as any).toggleDetailsPaymentWithConfirmation = toggleDetailsPaymentWithConfirmation;
+(window as any).toggleDetailsPaymentWithConfirmation =
+  toggleDetailsPaymentWithConfirmation;
 (window as any).createDetailsPaymentToggle = createDetailsPaymentToggle;
 
 // Затримуємо ініціалізацію перемикачів при завантаженні сторінки
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
-    const statusToggle = document.getElementById("poAktam-status-filter-toggle") as HTMLInputElement;
-    const paymentToggle = document.getElementById("poAktam-payment-filter-toggle") as HTMLInputElement;
-    
+    const statusToggle = document.getElementById(
+      "poAktam-status-filter-toggle"
+    ) as HTMLInputElement;
+    const paymentToggle = document.getElementById(
+      "poAktam-payment-filter-toggle"
+    ) as HTMLInputElement;
+
     if (statusToggle) {
-      console.log("✅ DOMContentLoaded: Перемикач статусу Po Aktam знайдено, ініціалізуємо...");
+      console.log(
+        "✅ DOMContentLoaded: Перемикач статусу Po Aktam знайдено, ініціалізуємо..."
+      );
       createDetailsStatusToggle();
     } else {
-      console.warn("⚠️ DOMContentLoaded: Перемикач poAktam-status-filter-toggle не знайдено");
+      console.warn(
+        "⚠️ DOMContentLoaded: Перемикач poAktam-status-filter-toggle не знайдено"
+      );
     }
-    
+
     if (paymentToggle) {
-      console.log("✅ DOMContentLoaded: Перемикач розрахунків Po Aktam знайдено, ініціалізуємо...");
+      console.log(
+        "✅ DOMContentLoaded: Перемикач розрахунків Po Aktam знайдено, ініціалізуємо..."
+      );
       createDetailsPaymentToggle();
     } else {
-      console.warn("⚠️ DOMContentLoaded: Перемикач poAktam-payment-filter-toggle не знайдено");
+      console.warn(
+        "⚠️ DOMContentLoaded: Перемикач poAktam-payment-filter-toggle не знайдено"
+      );
     }
   }, 100);
 });

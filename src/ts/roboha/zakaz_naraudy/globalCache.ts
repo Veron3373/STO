@@ -91,7 +91,12 @@ export interface GlobalDataCache {
   details: string[];
   slyusars: Array<{ Name: string; [k: string]: any }>;
   shops: Array<{ Name: string; [k: string]: any }>;
-  settings: { showPibMagazin: boolean; showCatalog: boolean };
+  settings: { 
+    showPibMagazin: boolean; 
+    showCatalog: boolean;
+    showZarplata: boolean;  // ← ДОДАНО
+    showSMS: boolean;        // ← ДОДАНО
+  };
   isActClosed: boolean;
   currentActId: number | null;
   skladParts: Array<{
@@ -101,7 +106,7 @@ export interface GlobalDataCache {
     price: number;
     kilkist_on: number;
     kilkist_off: number;
-    quantity: number; // kilkist_on - kilkist_off
+    quantity: number;
     unit?: string | null;
     shop?: string | null;
   }>;
@@ -115,7 +120,12 @@ export const globalCache: GlobalDataCache = {
   details: [],
   slyusars: [],
   shops: [],
-  settings: { showPibMagazin: true, showCatalog: true },
+  settings: { 
+    showPibMagazin: true, 
+    showCatalog: true,
+    showZarplata: true,  // ← ДОДАНО
+    showSMS: false       // ← ДОДАНО
+  },
   isActClosed: false,
   currentActId: null,
   skladParts: [],
@@ -195,6 +205,8 @@ export async function loadGlobalData(): Promise<void> {
       .select("setting_id, data");
     const settingShop = settingsRows?.find((s: any) => s.setting_id === 1);
     const settingCatalog = settingsRows?.find((s: any) => s.setting_id === 2);
+    const settingZarplata = settingsRows?.find((s: any) => s.setting_id === 3);
+    const settingSMS = settingsRows?.find((s: any) => s.setting_id === 5);
 
     if (skladErr)
       console.warn("⚠️ Не вдалося отримати sclad:", skladErr.message);
@@ -244,7 +256,11 @@ export async function loadGlobalData(): Promise<void> {
     globalCache.settings = {
       showPibMagazin: !!settingShop?.data,
       showCatalog: !!settingCatalog?.data,
+      showZarplata: !!settingZarplata?.data,
+      showSMS: !!settingSMS?.data,
     };
+
+
 
     // склад: також нормалізуємо поле shop (shops)
     const mapped =

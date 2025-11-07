@@ -1,9 +1,12 @@
 // src/ts/roboha/zakaz_naraudy/inhi/vikno_pidtverdchennay_zakruttia_akty.ts
+
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { closeActAndMarkSlyusars } from "./save_work";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import { ACT_ITEMS_TABLE_CONTAINER_ID } from "../globalCache";
 import { userAccessLevel } from "../../tablucya/users";
+import { sendActClosedSMS } from "../../sms/sendActSMS";
+import { supabase } from "../../../vxid/supabaseClient";
 
 export const viknoPidtverdchennayZakruttiaAktyId =
   "vikno_pidtverdchennay_zakruttia_akty-modal";
@@ -44,22 +47,10 @@ function checkForWarnings(): boolean {
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return true;
 
-  // Перевіряємо наявність трикутників попередження про кількість
-  const qtyWarnings = container.querySelectorAll(
-    '.qty-cell[data-warn="1"]'
-  );
-  
-  // Перевіряємо наявність трикутників попередження про ціну
-  const priceWarnings = container.querySelectorAll(
-    '.price-cell[data-warnprice="1"]'
-  );
+  const qtyWarnings = container.querySelectorAll('.qty-cell[data-warn="1"]');
+  const priceWarnings = container.querySelectorAll('.price-cell[data-warnprice="1"]');
+  const slyusarSumWarnings = container.querySelectorAll('.slyusar-sum-cell[data-warnzp="1"]');
 
-  // Перевіряємо наявність трикутників попередження про зарплату
-  const slyusarSumWarnings = container.querySelectorAll(
-    '.slyusar-sum-cell[data-warnzp="1"]'
-  );
-
-  // Якщо є будь-які попередження - повертаємо false
   const pomulka = 
     qtyWarnings.length === 0 && 
     priceWarnings.length === 0 && 
@@ -75,7 +66,7 @@ function checkForWarnings(): boolean {
 }
 
 /**
- * Показ модалки та безпосереднє ЗАКРИТТЯ АКТУ
+ * Показ модалки та безпосереднє ЗАКРИТТЯ АКТУ з відправкою SMS
  */
 export function showViknoPidtverdchennayZakruttiaAkty(
   actId: number
@@ -83,11 +74,9 @@ export function showViknoPidtverdchennayZakruttiaAkty(
   return new Promise((resolve) => {
     const modal = ensureModalMounted();
     
-    // Перевіряємо наявність попереджень
     const pomulka = checkForWarnings();
     const isAdmin = userAccessLevel === "Адміністратор";
 
-    // Якщо є помилки і користувач не адміністратор - блокуємо закриття
     if (!pomulka && !isAdmin) {
       showNotification(
         `Неможливо закрити акт: є попередження про перевищення кількості, низьку ціну або зарплату більшу ніж сума. Виправте помилки або зверніться до адміністратора. (Ваш доступ: ${userAccessLevel})`,
@@ -97,7 +86,6 @@ export function showViknoPidtverdchennayZakruttiaAkty(
       return resolve(false);
     }
 
-    // Змінюємо текст повідомлення залежно від наявності попереджень
     const messageEl = modal.querySelector(
       "#vikno_pidtverdchennay_zakruttia_akty-message"
     ) as HTMLParagraphElement | null;
@@ -145,16 +133,48 @@ export function showViknoPidtverdchennayZakruttiaAkty(
       try {
         showNotification("Закриваємо акт...", "info", 1200);
         await closeActAndMarkSlyusars(actId);
+        
+        // Отримання даних для SMS
+        const { data: act, error: actError } = await supabase
+          .from("acts")
+          .select("client_id, data")
+          .eq("act_id", actId)
+          .single();
+
+        if (!actError && act) {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("data")
+            .eq("client_id", act.client_id)
+            .single();
+
+          const clientData = typeof client?.data === "string" 
+            ? JSON.parse(client.data) 
+            : client?.data;
+
+          const actData = typeof act.data === "string"
+            ? JSON.parse(act.data)
+            : act.data;
+
+          const clientPhone = clientData?.["Телефон"] || clientData?.phone || "";
+          const clientName = clientData?.["ПІБ"] || clientData?.fio || "Клієнт";
+          const totalSum = actData?.["Загальна сума"] || 0;
+
+          if (clientPhone) {
+            // Відправка SMS (не чекаємо на результат, щоб не блокувати UI)
+            sendActClosedSMS(actId, clientPhone, clientName, totalSum).catch(err => {
+              console.error("Помилка відправки SMS:", err);
+            });
+          } else {
+            console.warn("⚠️ Номер телефону клієнта не знайдено");
+          }
+        }
+
         await refreshActsTable();
         cleanup();
         
-        // Додаткове повідомлення якщо акт закрито з попередженнями
         if (!pomulka && isAdmin) {
-          showNotification(
-            "Акт закрито (з попередженнями)",
-            "warning",
-            2500
-          );
+          showNotification("Акт закрито (з попередженнями)", "warning", 2500);
         } else {
           showNotification("Акт успішно закрито", "success", 2000);
         }

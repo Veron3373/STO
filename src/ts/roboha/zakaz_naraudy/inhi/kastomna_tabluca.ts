@@ -232,8 +232,11 @@ function setCellText(cell: HTMLElement | null, text: string) {
   cell.dispatchEvent(new Event("input", { bubbles: true }));
 }
 function parseNum(text: string | null | undefined) {
-  return parseFloat((text || "0").replace(/\s/g, "").replace(",", ".")) || 0;
+  return parseFloat(
+    (text || "0").replace(/\s/g, "").replace(",", ".")
+  ) || 0;
 }
+
 function getRowSum(row: HTMLElement) {
   const priceEl = row.querySelector(
     '[data-name="price"]'
@@ -250,10 +253,9 @@ function recalcRowSum(row: HTMLElement) {
   const sum = getRowSum(row);
   if (sumEl) sumEl.textContent = formatUA(sum);
 
-  // Не перевіряти попередження для закритих актів
   if (!globalCache.isActClosed) {
     updatePriceWarningForRow(row);
-    if (LIVE_WARNINGS) {
+    if (LIVE_WARNINGS && globalCache.settings.showCatalog) {
       updateCatalogWarningForRow(row);
     }
   }
@@ -587,6 +589,10 @@ export function setupAutocompleteForEditableCells(
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  // ← ДОДАНО: отримуємо налаштування
+  const showCatalog = globalCache.settings.showCatalog;
+  const showPibMagazin = globalCache.settings.showPibMagazin;
+
   container.addEventListener("focusin", async (e) => {
     const target = e.target as HTMLElement;
     if (
@@ -597,7 +603,10 @@ export function setupAutocompleteForEditableCells(
 
     const dataName = target.getAttribute("data-name") || "";
 
+    // ← ДОДАНО: перевірка для каталогу
     if (dataName === "catalog") {
+      if (!showCatalog) return; // ← ІГНОРУЄМО якщо прихований
+
       const initial = (target.textContent || "").trim();
       (target as any)._initialPn = initial;
       (target as any)._prevCatalogText = initial;
@@ -636,6 +645,8 @@ export function setupAutocompleteForEditableCells(
         fullName: x,
       }));
     } else if (dataName === "pib_magazin") {
+      if (!showPibMagazin) return; // ← ІГНОРУЄМО якщо прихований
+
       const query = target.textContent?.trim().toLowerCase() || "";
       const t = updatePibMagazinDataType(target);
       if (t === "shops") {
@@ -854,7 +865,11 @@ export function setupAutocompleteForEditableCells(
 
     if (dataName === "price") {
       await updatePriceWarningForRow(row);
-    } else if (dataName === "id_count" && LIVE_WARNINGS) {
+    } else if (
+      dataName === "id_count" &&
+      LIVE_WARNINGS &&
+      globalCache.settings.showCatalog
+    ) {
       updateCatalogWarningForRow(row);
     }
   });

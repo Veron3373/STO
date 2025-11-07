@@ -509,13 +509,6 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
         return autoAccessLevel;
     }
 
-    const tableContainer = document.getElementById(
-        "table-container-modal-sakaz_narad"
-    );
-    if (tableContainer) {
-        tableContainer.innerHTML =
-            '<div class="table-placeholder">🔐 Для доступу до системи потрібна автентифікація</div>';
-    }
 
     return await createLoginModal();
 }

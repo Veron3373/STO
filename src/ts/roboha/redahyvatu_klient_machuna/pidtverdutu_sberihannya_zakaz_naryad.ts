@@ -107,38 +107,28 @@ async function createActInDatabase(
 // Основна логіка створення заказ-наряду
 export function showSaveModalCreate(): Promise<boolean> {
   return new Promise((resolve) => {
-    const modal = document.getElementById(saveModalIdCreate);
-    document.body.appendChild(createSaveModalCreate());
+    let modal = document.getElementById(saveModalIdCreate) as HTMLDivElement | null;
     if (!modal) {
-      console.warn("❌ Модальне вікно не знайдено:", saveModalIdCreate);
-      return resolve(false);
+      modal = createSaveModalCreate();
+      document.body.appendChild(modal);
     }
 
     modal.classList.add("active");
     modal.style.display = "flex";
 
-    const confirmBtn = modal.querySelector(
-      "#save-confirm-create"
-    ) as HTMLButtonElement;
-    const cancelBtn = modal.querySelector(
-      "#save-cancel-create"
-    ) as HTMLButtonElement;
+    const confirmBtn = modal.querySelector("#save-confirm-create") as HTMLButtonElement;
+    const cancelBtn  = modal.querySelector("#save-cancel-create")  as HTMLButtonElement;
 
     const cleanup = () => {
-      modal.classList.remove("active");
-      modal.style.display = "none";
-      confirmBtn.removeEventListener("click", onConfirm);
-      cancelBtn.removeEventListener("click", onCancel);
-      modal.remove(); // ← видаляє повністю з DOM
+      modal!.classList.remove("active");
+      modal!.style.display = "none";
+      modal!.remove(); // створюємо свіжий екземпляр кожного разу
     };
 
     const onConfirm = async () => {
       try {
         const values = getModalFormValues();
-        console.log("🆕 Дані нового запису:", JSON.stringify(values, null, 2));
-
         if (!values.client_id || !values.cars_id) {
-          console.error("❌ Відсутні обов'язкові дані: client_id або cars_id");
           showMessage("❌ Не вистачає ID клієнта або авто", "#f44336");
           cleanup();
           return resolve(false);
@@ -156,7 +146,7 @@ export function showSaveModalCreate(): Promise<boolean> {
           showMessage("✅ Заказ наряд успішно створено", "#4caf50");
           cleanup();
           resolve(true);
-          await loadActsTable(); // оновити таблицю
+          await loadActsTable();
           document.getElementById(modalOverlayId)?.remove();
         } else {
           showMessage("❌ Помилка при створенні заказ наряду", "#f44336");
@@ -165,7 +155,7 @@ export function showSaveModalCreate(): Promise<boolean> {
           resolve(false);
         }
       } catch (err: any) {
-        console.error("🚨 Внутрішня помилка у onConfirm:", err.message);
+        console.error("🚨 Внутрішня помилка у onConfirm:", err?.message || err);
         showMessage("❌ Помилка при створенні заказ наряду", "#f44336");
         confirmBtn.disabled = false;
         confirmBtn.textContent = "Так";
@@ -179,7 +169,8 @@ export function showSaveModalCreate(): Promise<boolean> {
       resolve(false);
     };
 
-    confirmBtn.addEventListener("click", onConfirm);
-    cancelBtn.addEventListener("click", onCancel);
+    // одноразові слухачі, щоб не плодити дублікати
+    confirmBtn.addEventListener("click", onConfirm, { once: true });
+    cancelBtn .addEventListener("click", onCancel , { once: true });
   });
 }

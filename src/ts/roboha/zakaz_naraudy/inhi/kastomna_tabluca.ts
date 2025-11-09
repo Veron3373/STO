@@ -20,9 +20,19 @@ export {
 /* ====================== настройки ====================== */
 const CATALOG_SUGGEST_MIN = 3;
 const LIVE_WARNINGS = false;
+const NAME_AUTOCOMPLETE_MIN_CHARS = 3;  // мінімум символів для пошуку
+const NAME_AUTOCOMPLETE_MAX_RESULTS = 50; // максимум результатів
 
 // Кеш для відсотку
 let cachedPercent: number | null = null;
+
+/* ====================== кеш для автодоповнення назв ====================== */
+let nameAutocompleteCache: {
+  query: string;           // запит, за яким завантажили
+  works: string[];         // роботи з бази
+  details: string[];       // деталі з бази
+  timestamp: number;       // час завантаження
+} | null = null;
 
 /** Завантажити відсоток з бази даних settings */
 export async function loadPercentFromSettings(): Promise<number> {
@@ -42,13 +52,110 @@ export async function loadPercentFromSettings(): Promise<number> {
     return percent;
   } catch (err) {
     console.error("Помилка завантаження відсотку:", err);
-    return 0; // За замовчуванням 0% якщо помилка
+    return 0;
   }
 }
 
 /** Скинути кеш відсотку (викликати після збереження налаштувань) */
 export function resetPercentCache(): void {
   cachedPercent = null;
+}
+
+/**
+ * Завантажує дані з бази для автодоповнення назв
+ */
+async function loadNameAutocompleteData(query: string): Promise<void> {
+  if (query.length < NAME_AUTOCOMPLETE_MIN_CHARS) {
+    nameAutocompleteCache = null;
+    return;
+  }
+
+  console.log(`🔍 Завантаження даних для "${query}" з бази...`);
+
+  try {
+    const searchPattern = `%${query}%`;
+    
+    const [worksResult, detailsResult] = await Promise.all([
+      supabase
+        .from("works")
+        .select("data")
+        .ilike("data", searchPattern)
+        .limit(1000),
+      supabase
+        .from("details")
+        .select("data")
+        .ilike("data", searchPattern)
+        .limit(1000),
+    ]);
+
+    const works = (worksResult.data || [])
+      .map((r: any) => r.data || "")
+      .filter(Boolean);
+    
+    const details = (detailsResult.data || [])
+      .map((r: any) => r.data || "")
+      .filter(Boolean);
+
+    nameAutocompleteCache = {
+      query: query.toLowerCase(),
+      works,
+      details,
+      timestamp: Date.now(),
+    };
+
+    console.log(`✅ Завантажено: ${works.length} робіт, ${details.length} деталей`);
+  } catch (error) {
+    console.error("❌ Помилка завантаження даних для автодоповнення:", error);
+    nameAutocompleteCache = null;
+  }
+}
+
+/**
+ * Отримує підказки для назви (фільтрує з кешу або завантажує з бази)
+ */
+async function getNameSuggestions(query: string): Promise<Suggest[]> {
+  const q = query.trim().toLowerCase();
+  
+  if (q.length < NAME_AUTOCOMPLETE_MIN_CHARS) {
+    return [];
+  }
+
+  // Перевіряємо чи потрібно завантажувати з бази
+  const needsReload = 
+    !nameAutocompleteCache ||                           // кеш порожній
+    !q.startsWith(nameAutocompleteCache.query);         // користувач видалив символи
+
+  if (needsReload) {
+    await loadNameAutocompleteData(q);
+  }
+
+  if (!nameAutocompleteCache) {
+    return [];
+  }
+
+  // Фільтруємо з кешу
+  console.log(`🔎 Фільтрація з кешу для "${q}"`);
+  
+  const filteredWorks = nameAutocompleteCache.works.filter((name) =>
+    name.toLowerCase().includes(q)
+  );
+  
+  const filteredDetails = nameAutocompleteCache.details.filter((name) =>
+    name.toLowerCase().includes(q)
+  );
+
+  const allFiltered = [...filteredDetails, ...filteredWorks];
+  
+  // Обмежуємо до 50 результатів
+  const limited = allFiltered.slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS);
+  
+  console.log(`📋 Знайдено ${allFiltered.length}, показуємо ${limited.length}`);
+
+  return limited.map((x) => ({
+    label: x,
+    value: shortenName(x),
+    fullName: x,
+  }));
 }
 
 /* ====================== helpers ====================== */
@@ -75,7 +182,6 @@ function startAutoFollow(
   list: HTMLElement,
   positionFn: () => void
 ) {
-  // знімаємо попередні лісенери, якщо були
   _repositionCleanup?.();
 
   const parents = getScrollableAncestors(target);
@@ -409,7 +515,6 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
   document.body.appendChild(list);
 
-  // Перше позиціонування
   const tr = target.getBoundingClientRect();
   const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
   const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -589,7 +694,6 @@ export function setupAutocompleteForEditableCells(
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // ← ДОДАНО: отримуємо налаштування
   const showCatalog = globalCache.settings.showCatalog;
   const showPibMagazin = globalCache.settings.showPibMagazin;
 
@@ -603,9 +707,8 @@ export function setupAutocompleteForEditableCells(
 
     const dataName = target.getAttribute("data-name") || "";
 
-    // ← ДОДАНО: перевірка для каталогу
     if (dataName === "catalog") {
-      if (!showCatalog) return; // ← ІГНОРУЄМО якщо прихований
+      if (!showCatalog) return;
 
       const initial = (target.textContent || "").trim();
       (target as any)._initialPn = initial;
@@ -634,18 +737,11 @@ export function setupAutocompleteForEditableCells(
     let suggestions: Suggest[] = [];
 
     if (dataName === "name") {
-      const query = target.textContent?.trim().toLowerCase() || "";
-      const all = [...globalCache.details, ...globalCache.works];
-      const filtered = query
-        ? all.filter((t) => t.toLowerCase().includes(query))
-        : all;
-      suggestions = filtered.map((x) => ({
-        label: x,
-        value: shortenName(x),
-        fullName: x,
-      }));
+      // ← НОВИЙ КОД: використовуємо нову функцію з кешуванням
+      const query = target.textContent?.trim() || "";
+      suggestions = await getNameSuggestions(query);
     } else if (dataName === "pib_magazin") {
-      if (!showPibMagazin) return; // ← ІГНОРУЄМО якщо прихований
+      if (!showPibMagazin) return;
 
       const query = target.textContent?.trim().toLowerCase() || "";
       const t = updatePibMagazinDataType(target);
@@ -722,12 +818,10 @@ export function setupAutocompleteForEditableCells(
       const deleted = currTextRaw.length < prevText.length;
 
       if (deleted) {
-        // 1) Скидаємо прив'язку каталогу
         target.removeAttribute("data-sclad-id");
 
-        // 2) Очищаємо пов'язані поля рядка
-        const row = target.closest("tr") as HTMLTableRowElement; // ← Змінили тип
-        if (!row) return; // ← Додали перевірку
+        const row = target.closest("tr") as HTMLTableRowElement;
+        if (!row) return;
 
         const nameCell = row.querySelector(
           '[data-name="name"]'
@@ -739,19 +833,16 @@ export function setupAutocompleteForEditableCells(
           '[data-name="price"]'
         ) as HTMLElement | null;
 
-        // Використовуємо helper, щоб згенерувати події input
         if (nameCell) setCellText(nameCell, "");
         if (qtyCell) setCellText(qtyCell, "");
         if (priceCell) setCellText(priceCell, "");
 
-        // 3) Перерахунок суми та індикаторів
         const typeFromCell = nameCell?.getAttribute("data-type");
 
         if (typeFromCell === "works") {
-          // Для робіт викликаємо async calculateRowSum
           import("../modalUI")
             .then(async ({ calculateRowSum }) => {
-              await calculateRowSum(row); // ← Тепер row має правильний тип
+              await calculateRowSum(row);
             })
             .catch((err) => {
               console.error(
@@ -760,11 +851,9 @@ export function setupAutocompleteForEditableCells(
               );
             });
         } else {
-          // Для деталей звичайний recalc
           recalcRowSum(row);
         }
 
-        // 4) Підказки по каталогу
         const allItems = globalCache.skladParts;
         suggestions =
           query.length === 0
@@ -784,18 +873,8 @@ export function setupAutocompleteForEditableCells(
 
       removeCatalogInfo();
     } else if (dataName === "name") {
-      const d = globalCache.details.filter((t) =>
-        t.toLowerCase().includes(query)
-      );
-      const w = globalCache.works.filter((t) =>
-        t.toLowerCase().includes(query)
-      );
-      const all = [...d, ...w];
-      suggestions = all.map((x) => ({
-        label: x,
-        value: shortenName(x),
-        fullName: x,
-      }));
+      // ← НОВИЙ КОД: використовуємо нову функцію з кешуванням
+      suggestions = await getNameSuggestions(currTextRaw);
 
       const row = target.closest("tr");
       const pibMagCell = row?.querySelector(
@@ -941,7 +1020,6 @@ export function setupAutocompleteForEditableCells(
     }, 100);
   });
 
-  // hover-підказка складу тільки коли список закритий
   container.addEventListener(
     "mouseenter",
     async (e) => {
@@ -985,8 +1063,8 @@ async function applyCatalogSelectionById(
   const picked = globalCache.skladParts.find((p) => p.sclad_id === sclad_id);
   if (!picked) return;
 
-  const row = target.closest("tr") as HTMLTableRowElement; // ← Змінили тип
-  if (!row) return; // ← Додали перевірку
+  const row = target.closest("tr") as HTMLTableRowElement;
+  if (!row) return;
 
   const nameCell = row.querySelector(
     '[data-name="name"]'
@@ -1001,7 +1079,6 @@ async function applyCatalogSelectionById(
     '[data-name="catalog"]'
   ) as HTMLElement | null;
 
-  // Завантажити відсоток з БД
   const percent = await loadPercentFromSettings();
 
   const basePrice = Math.round(picked.price || 0);
@@ -1019,14 +1096,12 @@ async function applyCatalogSelectionById(
     setCellText(pibMagCell, picked.shop || "");
   }
 
-  // Визначаємо тип ДО асинхронного виклику
   const typeFromCell = nameCell?.getAttribute("data-type");
 
   if (typeFromCell === "works") {
-    // Для робіт викликаємо async calculateRowSum
     import("../modalUI")
       .then(async ({ calculateRowSum }) => {
-        await calculateRowSum(row); // ← Тепер row має правильний тип
+        await calculateRowSum(row);
       })
       .catch((err) => {
         console.error(
@@ -1035,7 +1110,6 @@ async function applyCatalogSelectionById(
         );
       });
   } else {
-    // Для деталей звичайний recalc
     recalcRowSum(row);
   }
 }

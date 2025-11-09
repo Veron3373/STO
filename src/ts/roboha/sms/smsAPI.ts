@@ -1,120 +1,80 @@
 // src/ts/roboha/sms/smsAPI.ts
 
-import { getSMSConfig, formatPhoneForAPI } from "./smsConfig";
+import { formatPhoneForAPI } from "./smsConfig";
+import { supabase } from "../../vxid/supabaseClient";
 
-/**
- * Відповідь від SMS Club API
- */
-interface SMSClubResponse {
-  success_request?: {
-    info: string;
-    id_sms: string[];
-  };
-  error_request?: {
-    code: string;
-    info: string;
-  };
-}
-
-/**
- * Результат відправки SMS
- */
 export interface SMSSendResult {
   success: boolean;
   messageId?: string;
   error?: string;
 }
 
-/**
- * Відправка SMS через SMS Club API
- */
-export async function sendSMS(phone: string, message: string): Promise<SMSSendResult> {
+export async function sendSMS(
+  phone: string,
+  message: string
+): Promise<SMSSendResult> {
   try {
-    const config = await getSMSConfig();
-    
-    if (!config.token) {
-      throw new Error("SMS токен не налаштовано");
-    }
-
     const formattedPhone = formatPhoneForAPI(phone);
-    
-    // Валідація номера
+
     if (!/^380\d{9}$/.test(formattedPhone)) {
       throw new Error(`Невірний формат номера: ${phone}`);
     }
 
-    // Формуємо запит до API
-    const requestBody = {
-      phone: [formattedPhone],
-      message: message,
-      src_addr: config.alphaName
-    };
-
-    console.log("📤 Відправка SMS:", { phone: formattedPhone, message });
-
-    const response = await fetch("https://my.smsclub.mobi/sms/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.token}`
-      },
-      body: JSON.stringify(requestBody)
+    console.log("📤 Відправка SMS через Edge Function:", {
+      phone: formattedPhone,
+      message,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP помилка: ${response.status}`);
-    }
+    const { data, error } = await supabase.functions.invoke("smsclub-send", {
+      body: { phone: formattedPhone, message },
+    });
 
-    const result: SMSClubResponse = await response.json();
+    // ← ДОДАНО: Детальне логування
+    console.log("📥 Відповідь від Edge Function:", { data, error });
 
-    if (result.success_request) {
-      console.log("✅ SMS успішно відправлено:", result.success_request);
-      return {
-        success: true,
-        messageId: result.success_request.id_sms[0]
-      };
-    }
-
-    if (result.error_request) {
-      console.error("❌ Помилка SMS API:", result.error_request);
+    if (error) {
+      console.error("❌ Помилка виклику Edge Function:", error);
+      // ← ДОДАНО: Показуємо повну помилку
       return {
         success: false,
-        error: `${result.error_request.code}: ${result.error_request.info}`
+        error: `Edge Function error: ${JSON.stringify(error)}`,
       };
     }
 
-    throw new Error("Невідома відповідь від API");
+    if (data?.success === false) {
+      console.error("❌ Edge Function повернула помилку:", data.error);
+      return {
+        success: false,
+        error: data.error || "Невідома помилка Edge Function",
+      };
+    }
 
+    if (data?.result?.success_request) {
+      console.log("✅ SMS успішно відправлено:", data.result.success_request);
+      return {
+        success: true,
+        messageId: data.result.success_request.id_sms?.[0],
+      };
+    }
+
+    if (data?.result?.error_request) {
+      console.error("❌ Помилка SMS API:", data.result.error_request);
+      return {
+        success: false,
+        error: `SMS API: ${data.result.error_request.code} - ${data.result.error_request.info}`,
+      };
+    }
+
+    console.error("⚠️ Неочікувана відповідь від API:", data);
+    return {
+      success: false,
+      error: `Неочікувана відповідь: ${JSON.stringify(data)}`,
+    };
   } catch (error: any) {
     console.error("💥 Критична помилка відправки SMS:", error);
     return {
       success: false,
-      error: error.message || "Невідома помилка"
+      error: error.message || "Невідома помилка",
     };
-  }
-}
-
-/**
- * Перевірка статусу SMS (опціонально)
- */
-export async function checkSMSStatus(messageId: string): Promise<string> {
-  try {
-    const config = await getSMSConfig();
-    
-    const response = await fetch(`https://my.smsclub.mobi/sms/status/${messageId}`, {
-      headers: {
-        "Authorization": `Bearer ${config.token}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP помилка: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.status || "unknown";
-  } catch (error: any) {
-    console.error("❌ Помилка перевірки статусу SMS:", error);
-    return "error";
   }
 }

@@ -14,7 +14,7 @@ export interface SMSConfig {
 export async function getSMSConfig(): Promise<SMSConfig> {
   try {
     const { supabase } = await import("../../vxid/supabaseClient");
-    
+
     const { data, error } = await supabase
       .from("sms")
       .select("data")
@@ -30,8 +30,8 @@ export async function getSMSConfig(): Promise<SMSConfig> {
       throw new Error("Налаштування SMS не знайдено в базі даних");
     }
 
-    const smsSettings = typeof data.data === "string" 
-      ? JSON.parse(data.data) 
+    const smsSettings = typeof data.data === "string"
+      ? JSON.parse(data.data)
       : data.data;
 
     if (!smsSettings?.token) {
@@ -48,29 +48,109 @@ export async function getSMSConfig(): Promise<SMSConfig> {
   }
 }
 
+/* ===================== ІМ'Я У КЛИЧНОМУ ===================== */
+
 /**
- * Генерація тексту SMS повідомлення
+ * Дістає друге слово (ім’я) з ПІБ; якщо другого нема — перше.
+ * Прибирає зайві пробіли та розділові.
  */
-export function generateSMSText(actId: number, clientName: string, totalSum: number): string {
-  return `Шановний(а) ${clientName}! Акт №${actId} закрито. Загальна сума: ${totalSum} грн. Дякуємо за довіру! B.S.Motorservice`;
+function extractFirstName(fullName: string): string {
+  const cleaned = String(fullName || "")
+    .replace(/[.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return "";
+  const parts = cleaned.split(" ");
+  const candidate = parts[1] ?? parts[0]; // 2-ге слово як ім'я, інакше 1-ше
+
+  // зняти можливі лапки/дужки/дефіси на краях
+  return candidate.replace(/^[("'–—\-]+|[)"'–—\-]+$/g, "");
 }
+
+/**
+ * Дуже проста морфологія кличного для українських імен.
+ * Покриває найтиповіші закінчення + словничок винятків.
+ */
+function toUAVocative(name: string): string {
+  const n = String(name || "").trim();
+  if (!n) return "";
+  const low = n.toLowerCase();
+
+  const dict: Record<string, string> = {
+    "микола": "Миколо",
+    "михайло": "Михайле",
+    "ілья": "Ілле",
+    "ілля": "Ілле",
+    "любов": "Любове",
+    "олег": "Олеже",
+    "олеґ": "Олеже",
+    "юрій": "Юрію",
+    "андрій": "Андрію",
+    "олексій": "Олексію",
+    "сергій": "Сергію",
+    "григорій": "Григорію",
+    "олександр": "Олександре",
+    "петро": "Петре",
+    "дмитро": "Дмитре",
+    "владислав": "Владиславе",
+    "віктор": "Вікторе",
+    "ігор": "Ігоре",
+    "іван": "Іване",
+    "алім": "Аліме",
+    "марія": "Маріє",
+    "наталія": "Наталіє",
+    "ольга": "Ольго",
+    "олена": "Олено",
+  };
+  if (dict[low]) return dict[low];
+
+  // базові правила
+  if (/[я]$/.test(low)) return n.slice(0, -1) + "є";   // Марія -> Маріє
+  if (/[а]$/.test(low)) return n.slice(0, -1) + "о";   // Олена -> Олено
+  if (/[й]$/.test(low)) return n.slice(0, -1) + "ю";   // Юрій -> Юрію
+  if (/[о]$/.test(low)) return n.slice(0, -1) + "е";   // Петро -> Петре
+  if (/[бвгґджзклмнпрстфхцчшщр]$/.test(low)) return n + "е"; // Віктор -> Вікторе
+
+  return n; // як є
+}
+
+/* ===================== ГЕНЕРАЦІЯ ТЕКСТУ ===================== */
+
+/**
+ * Форматує суму: 600 -> "600", 600.5 -> "600.50" (без зайвих .00)
+ */
+function formatSum(sum: number): string {
+  const n = Number(sum);
+  if (!Number.isFinite(n)) return String(sum);
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.00$/, "");
+}
+
+/**
+ * Генерація тексту SMS: тільки ім’я у кличному.
+ * Приклад: "Аліме Ваше замовлення виконане. Сума: 600 грн. ..."
+ */
+export function generateSMSText(clientName: string, totalSum: number): string {
+  const name = extractFirstName(clientName);
+  const nameVoc = toUAVocative(name) || "Клієнте";
+  return `${nameVoc} Ваше замовлення виконане. Сума: ${formatSum(totalSum)} грн. Дякуємо за довіру! Чекаємо на Вас в B.S.Motorservice!`;
+}
+
+
+/* ===================== ТЕЛЕФОН ===================== */
 
 /**
  * Форматування номера телефону для API (має бути у форматі 380XXXXXXXXX)
  */
 export function formatPhoneForAPI(phone: string): string {
   // Видаляємо всі символи крім цифр
-  let cleaned = phone.replace(/\D/g, "");
-  
+  let cleaned = String(phone || "").replace(/\D/g, "");
+
   // Якщо починається з 0 - замінюємо на 380
-  if (cleaned.startsWith("0")) {
-    cleaned = "380" + cleaned.substring(1);
-  }
-  
+  if (cleaned.startsWith("0")) cleaned = "380" + cleaned.substring(1);
+
   // Якщо не починається з 380 - додаємо
-  if (!cleaned.startsWith("380")) {
-    cleaned = "380" + cleaned;
-  }
-  
+  if (!cleaned.startsWith("380")) cleaned = "380" + cleaned;
+
   return cleaned;
 }

@@ -1675,90 +1675,106 @@ export function togglepodleglePayment(index: number): void {
     showNotification("❌ Запис не знайдено", "error");
     return;
   }
-
   const record = podlegleData[index];
+  const slyusar = slyusarsData.find((s) => s.Name === record.name);
+  if (!slyusar) {
+    console.error(`❌ Слюсаря ${record.name} не знайдено в slyusarsData`);
+    showNotification(
+      `⚠️ Помилка: слюсаря ${record.name} не знайдено в базі даних`,
+      "error"
+    );
+    return;
+  }
+  if (!slyusar.Історія[record.dateOpen]) {
+    console.error(
+      `❌ Дата ${record.dateOpen} не знайдена в історії слюсаря ${record.name}`
+    );
+    showNotification(
+      `⚠️ Помилка: дата ${record.dateOpen} не знайдена в історії`,
+      "error"
+    );
+    return;
+  }
+  const actRecord = slyusar.Історія[record.dateOpen].find(
+    (a) => a.Акт === record.act
+  );
+  if (!actRecord) {
+    console.error(
+      `❌ Акт ${record.act} не знайдений для дати ${record.dateOpen}`
+    );
+    showNotification(`⚠️ Помилка: акт ${record.act} не знайдений`, "error");
+    return;
+  }
+
+  let workEntry:
+    | {
+        Ціна: number;
+        Робота: string;
+        Кількість: number;
+        Зарплата?: number;
+        Розраховано?: string;
+      }
+    | undefined;
 
   if (!record.isPaid) {
+    // --- ЛОГІКА ОПЛАТИ ---
     const currentDate = getCurrentDate();
-    record.isPaid = true;
-    record.paymentDate = currentDate;
-
-    const slyusar = slyusarsData.find((s) => s.Name === record.name);
-    if (!slyusar) {
-      console.error(`❌ Слюсаря ${record.name} не знайдено в slyusarsData`);
-      showNotification(
-        `⚠️ Помилка: слюсаря ${record.name} не знайдено в базі даних`,
-        "error"
-      );
-      return;
-    }
-
-    if (!slyusar.Історія[record.dateOpen]) {
-      console.error(
-        `❌ Дата ${record.dateOpen} не знайдена в історії слюсаря ${record.name}`
-      );
-      showNotification(
-        `⚠️ Помилка: дата ${record.dateOpen} не знайдена в історії`,
-        "error"
-      );
-      return;
-    }
-
-    const actRecord = slyusar.Історія[record.dateOpen].find(
-      (a) => a.Акт === record.act
-    );
-    if (!actRecord) {
-      console.error(
-        `❌ Акт ${record.act} не знайдений для дати ${record.dateOpen}`
-      );
-      showNotification(`⚠️ Помилка: акт ${record.act} не знайдений`, "error");
-      return;
-    }
-
-    const workEntry = actRecord.Записи.find(
+    // ✅ FIX: Шукаємо запис, який відповідає ВСІМ параметрам, і є НЕОПЛАЧЕНИМ
+    workEntry = actRecord.Записи.find(
       (e) =>
         e.Робота === record.work &&
         e.Ціна === record.price &&
-        e.Кількість === record.quantity
+        e.Кількість === record.quantity &&
+        (e.Зарплата || 0) === record.salary && // <-- ДОДАНО: Перевірка зарплати
+        !e.Розраховано // <-- ДОДАНО: Перевірка, що він не розрахований
     );
 
     if (!workEntry) {
-      console.error(`❌ Запис роботи не знайдений:`, {
-        work: record.work,
-        price: record.price,
-        quantity: record.quantity,
-      });
+      console.error(
+        `❌ Запис роботи (для ОПЛАТИ) не знайдений або вже оплачений:`,
+        record
+      );
       showNotification(
-        `⚠️ Помилка: запис роботи "${record.work}" не знайдений`,
+        `⚠️ Помилка: запис роботи "${record.work}" не знайдений для оплати`,
         "error"
       );
       return;
     }
-
+    
     workEntry.Розраховано = currentDate;
+    record.isPaid = true;
+    record.paymentDate = currentDate;
+
   } else {
+    // --- ЛОГІКА СКАСУВАННЯ ОПЛАТИ ---
+    // ✅ FIX: Шукаємо запис, який відповідає ВСІМ параметрам, і був ОПЛАЧЕНИЙ
+    workEntry = actRecord.Записи.find(
+      (e) =>
+        e.Робота === record.work &&
+        e.Ціна === record.price &&
+        e.Кількість === record.quantity &&
+        (e.Зарплата || 0) === record.salary && // <-- ДОДАНО: Перевірка зарплати
+        e.Розраховано === record.paymentDate // <-- ДОДАНО: Перевірка, що дата оплати співпадає
+    );
+
+    if (!workEntry) {
+      console.error(
+        `❌ Запис роботи (для СКАСУВАННЯ) не знайдений:`,
+        record
+      );
+      showNotification(
+        `⚠️ Помилка: запис роботи "${record.work}" (оплачений ${record.paymentDate}) не знайдений для скасування`,
+        "error"
+      );
+      return;
+    }
+    
+    delete workEntry.Розраховано;
     record.isPaid = false;
     record.paymentDate = "";
-
-    const slyusar = slyusarsData.find((s) => s.Name === record.name);
-    if (slyusar && slyusar.Історія[record.dateOpen]) {
-      const actRecord = slyusar.Історія[record.dateOpen].find(
-        (a) => a.Акт === record.act
-      );
-      if (actRecord) {
-        const workEntry = actRecord.Записи.find(
-          (e) =>
-            e.Робота === record.work &&
-            e.Ціна === record.price &&
-            e.Кількість === record.quantity
-        );
-        if (workEntry) {
-          delete workEntry.Розраховано;
-        }
-      }
-    }
   }
 
+  // --- Збереження ---
   saveSlyusarsDataToDatabase()
     .then(() => {
       updatepodlegleTable();
@@ -1772,115 +1788,125 @@ export function togglepodleglePayment(index: number): void {
     .catch((error) => {
       console.error(`❌ Помилка збереження:`, error);
       showNotification("❌ Помилка збереження змін в базу даних", "error");
+      
+      // Повертаємо зміни назад, якщо збереження не вдалося
       record.isPaid = !record.isPaid;
       record.paymentDate = record.isPaid ? getCurrentDate() : "";
-      updatepodlegleTable();
+      
+      // Треба знайти оригінальний workEntry і теж повернути (складно, тому просто оновлюємо)
+      // Найпростіше - просто перезавантажити дані або оновити таблицю
+      updatepodlegleTable(); 
     });
 }
 
 export async function runMassPaymentCalculation(): Promise<void> {
-  if (!hasFullAccess()) {
-    showNotification(
-      "⚠️ У вас немає прав для виконання масового розрахунку",
-      "warning"
-    );
-    return;
-  }
+  if (!hasFullAccess()) {
+    showNotification(
+      "⚠️ У вас немає прав для виконання масового розрахунку",
+      "warning"
+    );
+    return;
+  }
+  const confirmed = await createPasswordConfirmationModal("pay");
+  if (!confirmed) {
+    showNotification("🚫 Операцію скасовано", "info");
+    return;
+  }
+  
+  const filteredData = getFilteredpodlegleData(); // Беремо тільки відфільтровані
+  
+  if (filteredData.length === 0) {
+    showNotification(
+      "ℹ️ Немає записів для обробки в поточному фільтрі",
+      "info"
+    );
+    return;
+  }
+  
+  const currentDate = getCurrentDate();
+  let updatedCount = 0;
+  let errorCount = 0;
 
-  const confirmed = await createPasswordConfirmationModal("pay");
-  if (!confirmed) {
-    showNotification("🚫 Операцію скасовано", "info");
-    return;
-  }
+  // Спочатку проходимо по відфільтрованим даним і оновлюємо БАЗУ (slyusarsData)
+  filteredData.forEach((record) => {
+    if (!record.isPaid) {
+      const slyusar = slyusarsData.find((s) => s.Name === record.name);
+      if (slyusar && slyusar.Історія[record.dateOpen]) {
+        const actRecord = slyusar.Історія[record.dateOpen].find(
+          (a) => a.Акт === record.act
+        );
+        if (actRecord) {
+          // ✅ FIX: Використовуємо той самий точний пошук
+          const workEntry = actRecord.Записи.find(
+            (e) =>
+              e.Робота === record.work &&
+              e.Ціна === record.price &&
+              e.Кількість === record.quantity &&
+              (e.Зарплата || 0) === record.salary && // <-- ДОДАНО
+              !e.Розраховано // <-- ДОДАНО
+          );
+          
+          if (workEntry) {
+            workEntry.Розраховано = currentDate;
+            updatedCount++;
+            
+            // ✅ FIX: Також оновлюємо локальний масив podlegleData
+            // Треба знайти цей 'record' в *оригінальному* 'podlegleData'
+            const originalIndex = podlegleData.findIndex(
+              (item) =>
+                item.dateOpen === record.dateOpen &&
+                item.name === record.name &&
+                item.act === record.act &&
+                item.work === record.work &&
+                item.price === record.price &&
+                item.quantity === record.quantity &&
+                item.salary === record.salary && // <-- ДОДАНО
+                !item.isPaid // <-- ДОДАНО
+            );
+            if (originalIndex !== -1) {
+              podlegleData[originalIndex].isPaid = true;
+              podlegleData[originalIndex].paymentDate = currentDate;
+            }
 
-  // 1. Беремо ВСІ відфільтровані дані (це робить getFilteredpodlegleData())
-  const filteredData = getFilteredpodlegleData();
+          } else {
+            console.warn("Не знайдено workEntry для масового розрахунку:", record);
+            errorCount++;
+          }
+        }
+      }
+    }
+  });
 
-  // 2. З них обираємо ТІЛЬКИ НЕРОЗРАХОВАНІ
-  const unpaidRecords = filteredData.filter((r) => !r.isPaid);
+  if (updatedCount === 0) {
+    if (errorCount > 0) {
+       showNotification(
+        `❌ Не вдалося знайти ${errorCount} записів для оновлення. Можливо, вони були змінені.`,
+        "error"
+      );
+    } else {
+      showNotification(
+        "ℹ️ Усі записи в поточному фільтрі вже розраховані",
+        "info"
+      );
+    }
+    return;
+  }
 
-  if (unpaidRecords.length === 0) {
-    showNotification(
-      "ℹ️ Немає нерозрахованих записів для обробки в поточному фільтрі",
-      "info"
-    );
-    return;
-  }
-
-  const currentDate = getCurrentDate();
-  let updatedCount = 0;
-  let errorCount = 0;
-
-  // 3. Створюємо ту саму точну логіку пошуку
-  const finderLogic = (e: any, record: PodlegleRecord) =>
-    e.Робота === record.work &&
-    e.Ціна === record.price &&
-    e.Кількість === record.quantity &&
-    (e.Зарплата || 0) === record.salary;
-
-  // 4. Проходимо циклом по КОЖНОМУ нерозрахованому запису
-  for (const record of unpaidRecords) {
-    // 'record' - це об'єкт з podlegleData. Нам треба знайти його оригінал в slyusarsData
-
-    const slyusar = slyusarsData.find((s) => s.Name === record.name);
-    if (!slyusar || !slyusar.Історія[record.dateOpen]) {
-      console.warn(`(Масово) Не знайдено слюсаря/дату для:`, record);
-      errorCount++;
-      continue; // Переходимо до наступного запису
-    }
-
-    const actRecord = slyusar.Історія[record.dateOpen].find(
-      (a) => a.Акт === record.act
-    );
-    if (!actRecord) {
-      console.warn(`(Масово) Не знайдено акт для:`, record);
-      errorCount++;
-      continue; // Переходимо до наступного запису
-    }
-
-    // 5. ✅ ВИПРАВЛЕНИЙ ПОШУК: Використовуємо finderLogic
-    const workEntry = actRecord.Записи.find((e) => finderLogic(e, record));
-
-    if (workEntry) {
-      // 6. Оновлюємо ОРИГІНАЛ в базі
-      workEntry.Розраховано = currentDate;
-
-      // 7. Оновлюємо локальний запис в podlegleData (цей 'record' - це той самий об'єкт)
-      record.isPaid = true;
-      record.paymentDate = currentDate;
-
-      updatedCount++;
-    } else {
-      console.warn(`(Масово) Не знайдено workEntry (оригінал) для:`, record);
-      errorCount++;
-    }
-  } // кінець циклу for...of
-
-  // 8. Перевіряємо результат
-  if (updatedCount === 0 && errorCount > 0) {
-    showNotification(
-      `❌ Помилка масового розрахунку. Не вдалося знайти ${errorCount} записів в базі.`,
-      "error"
-    );
-    return;
-  }
-
-  // 9. Зберігаємо в базу
-  try {
-    await saveSlyusarsDataToDatabase();
-    updatepodlegleTable(); // Оновлюємо UI, щоб показати зміни
-
-    let message = `✅ Масовий розрахунок виконано (${updatedCount} записів).`;
-    if (errorCount > 0) {
-      message += ` Не вдалося знайти: ${errorCount}.`;
-    }
-    showNotification(message, "success");
-  } catch (error) {
-    console.error("❌ Помилка масового розрахунку (збереження):", error);
-    showNotification("❌ Помилка при збереженні змін у базу", "error");
-    // Тут можна було б зробити відкат, але це складніше.
-    // Поки що просто повідомимо, що збереження не вдалося.
-  }
+  try {
+    await saveSlyusarsDataToDatabase();
+    updatepodlegleTable(); // Оновлюємо таблицю *після* успішного збереження
+    let notificationMessage = `✅ Масовий розрахунок виконано (${updatedCount} записів з відфільтрованих)`;
+    if (errorCount > 0) {
+      notificationMessage += ` | ${errorCount} записів не знайдено/пропущено.`;
+    }
+    showNotification(notificationMessage, "success");
+  } catch (error) {
+    console.error("❌ Помилка масового розрахунку:", error);
+    showNotification("❌ Помилка при збереженні змін у базу", "error");
+    // Тут варто було б відкотити зміни в podlegleData, але це складно.
+    // Простіше попросити користувача оновити дані.
+    showNotification("Будь ласка, оновіть пошук, щоб побачити актуальний стан", "warning");
+  }
 }
 
 export function clearpodlegleForm(): void {

@@ -1678,102 +1678,85 @@ export function togglepodleglePayment(index: number): void {
 
   const record = podlegleData[index];
 
-  // Знаходимо батьківські об'єкти (Слюсар -> Акт)
+  // 🔍 КРОК 1: Шукаємо слюсаря по прізвищу
   const slyusar = slyusarsData.find((s) => s.Name === record.name);
   if (!slyusar) {
-    console.error(`❌ Слюсаря ${record.name} не знайдено в slyusarsData`);
+    console.error(`❌ Слюсаря "${record.name}" не знайдено в slyusarsData`);
     showNotification(
-      `⚠️ Помилка: слюсаря ${record.name} не знайдено в базі даних`,
+      `⚠️ Помилка: слюсаря "${record.name}" не знайдено в базі даних`,
       "error"
     );
     return;
   }
+  console.log(`✅ Знайдено слюсаря: ${record.name}`);
 
+  // 🔍 КРОК 2: Шукаємо дату відкриття
   if (!slyusar.Історія[record.dateOpen]) {
     console.error(
-      `❌ Дата ${record.dateOpen} не знайдена в історії слюсаря ${record.name}`
+      `❌ Дата відкриття "${record.dateOpen}" не знайдена в історії слюсаря ${record.name}`
     );
     showNotification(
-      `⚠️ Помилка: дата ${record.dateOpen} не знайдена в історії`,
+      `⚠️ Помилка: дата "${record.dateOpen}" не знайдена в історії`,
       "error"
     );
     return;
   }
+  console.log(`✅ Знайдено дату відкриття: ${record.dateOpen}`);
 
+  // 🔍 КРОК 3: Шукаємо акт по номеру
   const actRecord = slyusar.Історія[record.dateOpen].find(
     (a) => a.Акт === record.act
   );
   if (!actRecord) {
     console.error(
-      `❌ Акт ${record.act} не знайдений для дати ${record.dateOpen}`
+      `❌ Акт №${record.act} не знайдений для дати ${record.dateOpen} у слюсаря ${record.name}`
     );
-    showNotification(`⚠️ Помилка: акт ${record.act} не знайдений`, "error");
+    showNotification(
+      `⚠️ Помилка: акт №${record.act} не знайдений`,
+      "error"
+    );
     return;
   }
+  console.log(`✅ Знайдено акт №${record.act}`);
 
-  // --- ПОШУК З УРАХУВАННЯМ ЗАРПЛАТИ ---
-  // Ми шукаємо запис 'e', порівнюючи всі ключі з 'record',
-  // а також нормалізуємо 'e.Зарплата' (яка може бути undefined) до 0,
-  // щоб вона збіглася з 'record.salary' (яка теж 0, якщо зарплати не було).
-  const finderLogic = (e: any) =>
-    e.Робота === record.work &&
-    e.Ціна === record.price &&
-    e.Кількість === record.quantity &&
-    (e.Зарплата || 0) === record.salary;
-  // ---
+  // 🔍 КРОК 4: Шукаємо роботу по назві, ціні та кількості
+  const workEntry = actRecord.Записи.find(
+    (e) =>
+      e.Робота === record.work &&
+      e.Ціна === record.price &&
+      e.Кількість === record.quantity
+  );
 
+  if (!workEntry) {
+    console.error(`❌ Запис роботи не знайдений в акті №${record.act}:`, {
+      name: record.name,
+      act: record.act,
+      work: record.work,
+      price: record.price,
+      quantity: record.quantity,
+    });
+    showNotification(
+      `⚠️ Помилка: робота "${record.work}" (${record.price} грн × ${record.quantity}) не знайдена в акті №${record.act}`,
+      "error"
+    );
+    return;
+  }
+  console.log(`✅ Знайдено роботу: ${record.work} (${record.price} × ${record.quantity})`);
+
+  // 🔍 КРОК 5: Встановлюємо або скасовуємо розрахунок
   if (!record.isPaid) {
-    // --- ДІЯ: РОЗРАХУВАТИ ---
     const currentDate = getCurrentDate();
-
-    // Знаходимо запис за допомогою НОВОЇ логіки
-    const workEntry = actRecord.Записи.find(finderLogic);
-
-    if (!workEntry) {
-      console.error(`❌ Запис роботи (для оплати) не знайдений:`, {
-        work: record.work,
-        price: record.price,
-        quantity: record.quantity,
-        salary: record.salary, // Перевіряємо, чи правильно шукали
-      });
-      showNotification(
-        `⚠️ Помилка: запис роботи "${record.work}" не знайдений в базі`,
-        "error"
-      );
-      return;
-    }
-
-    // Оновлюємо оригінальний запис в базі даних
-    workEntry.Розраховано = currentDate;
-
-    // Оновлюємо локальний запис для UI
     record.isPaid = true;
     record.paymentDate = currentDate;
+    workEntry.Розраховано = currentDate;
+    console.log(`✅ Встановлено розрахунок на ${currentDate}`);
   } else {
-    // --- ДІЯ: СКАСУВАТИ РОЗРАХУНОК ---
-
-    // Знаходимо запис за допомогою НОВОЇ логіки
-    const workEntry = actRecord.Записи.find(finderLogic);
-
-    if (workEntry) {
-      // Оновлюємо оригінальний запис в базі даних
-      delete workEntry.Розраховано;
-    } else {
-      // Це не критична помилка, але варто знати
-      console.warn(`Запис роботи (для скасування) не знайдений:`, {
-        work: record.work,
-        price: record.price,
-        quantity: record.quantity,
-        salary: record.salary,
-      });
-    }
-
-    // Оновлюємо локальний запис для UI
     record.isPaid = false;
     record.paymentDate = "";
+    delete workEntry.Розраховано;
+    console.log(`✅ Скасовано розрахунок`);
   }
 
-  // Зберігаємо зміни
   saveSlyusarsDataToDatabase()
     .then(() => {
       updatepodlegleTable();
@@ -1787,14 +1770,13 @@ export function togglepodleglePayment(index: number): void {
     .catch((error) => {
       console.error(`❌ Помилка збереження:`, error);
       showNotification("❌ Помилка збереження змін в базу даних", "error");
-
-      // Відкат змін в UI у разі помилки збереження
       record.isPaid = !record.isPaid;
       record.paymentDate = record.isPaid ? getCurrentDate() : "";
       updatepodlegleTable();
     });
 }
 
+// ===== ВИПРАВЛЕНА ФУНКЦІЯ runMassPaymentCalculation =====
 export async function runMassPaymentCalculation(): Promise<void> {
   if (!hasFullAccess()) {
     showNotification(
@@ -1836,27 +1818,47 @@ export async function runMassPaymentCalculation(): Promise<void> {
       );
 
       if (originalIndex !== -1) {
+        // 🔍 КРОК 1: Шукаємо слюсаря по прізвищу
+        const slyusar = slyusarsData.find((s) => s.Name === record.name);
+        if (!slyusar) {
+          console.warn(`⚠️ Пропущено: слюсаря "${record.name}" не знайдено`);
+          return;
+        }
+
+        // 🔍 КРОК 2: Перевіряємо дату відкриття
+        if (!slyusar.Історія[record.dateOpen]) {
+          console.warn(`⚠️ Пропущено: дата "${record.dateOpen}" не знайдена для ${record.name}`);
+          return;
+        }
+
+        // 🔍 КРОК 3: Шукаємо акт по номеру
+        const actRecord = slyusar.Історія[record.dateOpen].find(
+          (a) => a.Акт === record.act
+        );
+        if (!actRecord) {
+          console.warn(`⚠️ Пропущено: акт №${record.act} не знайдений для ${record.name}`);
+          return;
+        }
+
+        // 🔍 КРОК 4: Шукаємо роботу по назві, ціні та кількості
+        const workEntry = actRecord.Записи.find(
+          (e) =>
+            e.Робота === record.work &&
+            e.Ціна === record.price &&
+            e.Кількість === record.quantity
+        );
+        if (!workEntry) {
+          console.warn(`⚠️ Пропущено: робота "${record.work}" не знайдена в акті №${record.act}`);
+          return;
+        }
+
+        // ✅ Встановлюємо розрахунок
         podlegleData[originalIndex].isPaid = true;
         podlegleData[originalIndex].paymentDate = currentDate;
+        workEntry.Розраховано = currentDate;
         updatedCount++;
-
-        const slyusar = slyusarsData.find((s) => s.Name === record.name);
-        if (slyusar && slyusar.Історія[record.dateOpen]) {
-          const actRecord = slyusar.Історія[record.dateOpen].find(
-            (a) => a.Акт === record.act
-          );
-          if (actRecord) {
-            const workEntry = actRecord.Записи.find(
-              (e) =>
-                e.Робота === record.work &&
-                e.Ціна === record.price &&
-                e.Кількість === record.quantity
-            );
-            if (workEntry) {
-              workEntry.Розраховано = currentDate;
-            }
-          }
-        }
+        
+        console.log(`✅ Розраховано: ${record.name} | Акт №${record.act} | ${record.work}`);
       }
     }
   });

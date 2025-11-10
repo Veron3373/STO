@@ -3,8 +3,6 @@ import { supabase } from "../../../vxid/supabaseClient";
 import { updateAllBd, CRUD } from "../dodatu_inchi_bazu_danux";
 import { initBatchImport } from "./batchImportSclad";
 
-// У функції рендеру форми, наприклад:
-
 /** ====== СТАН МАГАЗИН ====== */
 export type ShopEditState = {
   originalName: string | null;
@@ -47,11 +45,10 @@ export function resetDetailState() {
 
 /** ====== SCLAD ID (ключ для UPDATE/DELETE) ====== */
 let currentScladId: string | null = null;
-let persistentScladId: string | null = null; // ✅ НОВЕ: зберігає ID навіть при зміні режиму
+let persistentScladId: string | null = null;
 
 function setScladId(id: string | null) {
   currentScladId = id;
-  // ✅ НОВЕ: зберігаємо ID в persistent змінній
   if (id) {
     persistentScladId = id;
   }
@@ -60,18 +57,15 @@ function setScladId(id: string | null) {
 }
 
 export function getCurrentScladId() {
-  // ✅ НОВЕ: повертаємо persistent ID якщо current пустий
   return currentScladId || persistentScladId;
 }
 
-// Якорі значень, з яких стартуємо редагування
 let originalScladId: string | null = null;
 let originalPartNumber: string | null = null;
 export function getOriginalScladAnchor() {
   return { id: originalScladId, part: originalPartNumber };
 }
 
-/** ✅ НОВА ФУНКЦІЯ: Очищення всіх ID при справжньому додаванні нового запису */
 function clearAllScladIds() {
   currentScladId = null;
   persistentScladId = null;
@@ -79,6 +73,55 @@ function clearAllScladIds() {
   originalPartNumber = null;
   const hidden = document.getElementById("hidden-sclad-id") as HTMLInputElement | null;
   if (hidden) hidden.value = "";
+}
+
+/** ====== КЕШ ДЛЯ ДЕТАЛЕЙ ====== */
+let detailsCache: string[] = [];
+let lastDetailQuery = "";
+
+/** Завантаження ВСІХ деталей з бази даних (пагінація для великих обсягів) */
+async function loadDetailsFromDB(): Promise<string[]> {
+  const names: string[] = [];
+  let hasMore = true;
+  let offset = 0;
+  const batchSize = 1000; // Завантажуємо по 1000 записів за раз
+
+  console.log("Початок завантаження деталей з БД...");
+
+  while (hasMore) {
+    const { data, error, count } = await supabase
+      .from("details")
+      .select("data", { count: "exact" })
+      .range(offset, offset + batchSize - 1);
+
+    if (error) {
+      console.error("Помилка завантаження деталей:", error);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      data.forEach((r: any) => {
+        const nm = r?.data ? String(r.data).trim() : "";
+        if (nm) names.push(nm);
+      });
+
+      offset += batchSize;
+      hasMore = data.length === batchSize;
+      
+      console.log(`Завантажено ${names.length} деталей...`);
+    } else {
+      hasMore = false;
+    }
+
+    // Якщо є точна кількість і ми вже все завантажили
+    if (count !== null && offset >= count) {
+      hasMore = false;
+    }
+  }
+
+  console.log(`Завершено завантаження ${names.length} деталей з БД`);
+  
+  return Array.from(new Set(names)).sort();
 }
 
 /** Рендер форми «Склад» */
@@ -108,7 +151,6 @@ export async function renderScladForm() {
   `;
   host.classList.remove("hidden-all_other_bases");
 
-  // ✅ ВИПРАВЛЕНО: встановлюємо збережений ID в hidden поле
   const hidden = document.getElementById("hidden-sclad-id") as HTMLInputElement | null;
   if (hidden && persistentScladId) {
     hidden.value = persistentScladId;
@@ -116,7 +158,7 @@ export async function renderScladForm() {
   }
 
   await wireShopAutocomplete("sclad_shop", "sclad_shop_dd");
-  await wireDetailsAutocomplete("sclad_detail", "sclad_detail_dd");
+  await wireDetailsAutocompleteWithLiveLoad("sclad_detail", "sclad_detail_dd");
   await wireLinkedAutocomplete();
 
   const dateInput = host.querySelector<HTMLInputElement>("#sclad_date");
@@ -143,7 +185,6 @@ export async function renderScladForm() {
   });
   snapshotToAllBd();
 
-  // Додаємо ініціалізацію batch-імпорту після рендеру форми
   initBatchImport();
 }
 
@@ -245,25 +286,13 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
   });
 }
 
-/* ==== автопідказка деталі ==== */
-async function wireDetailsAutocomplete(inputId: string, dropdownId: string) {
+/* ==== НОВИЙ автокомпліт деталі з підтягуванням даних ==== */
+async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: string) {
   const input = document.getElementById(inputId) as HTMLInputElement | null;
   const dd = document.getElementById(dropdownId) as HTMLDivElement | null;
   if (!input || !dd) return;
 
-  const { data, error } = await supabase.from("details").select("detail_id,data");
-  if (error) return console.error("Помилка details:", error);
-
-  const names: string[] = [];
-  const nameToId = new Map<string, number>();
-  (data ?? []).forEach((r: any) => {
-    const nm = r?.data ? String(r.data).trim() : "";
-    if (nm) {
-      names.push(nm);
-      nameToId.set(nm, Number(r.detail_id));
-    }
-  });
-  const uniqueSorted = Array.from(new Set(names)).sort();
+  let nameToId = new Map<string, number>();
 
   const setBaseOnce = () => {
     if (!detailEditState.touched) {
@@ -272,16 +301,14 @@ async function wireDetailsAutocomplete(inputId: string, dropdownId: string) {
       detailEditState.baseDetailId = nameToId.get(val) ?? null;
     }
   };
+
   const updateCurrent = (v: string) => {
     detailEditState.touched = true;
     detailEditState.currentName = (v ?? "").trim();
   };
 
-  const render = (filter: string) => {
+  const render = (filtered: string[]) => {
     dd.innerHTML = "";
-    const filtered = filter
-      ? uniqueSorted.filter((o) => o.toLowerCase().includes(filter.toLowerCase()))
-      : uniqueSorted;
     if (!filtered.length) return dd.classList.add("hidden-all_other_bases");
 
     filtered.forEach((val) => {
@@ -303,25 +330,99 @@ async function wireDetailsAutocomplete(inputId: string, dropdownId: string) {
     dd.style.minWidth = `${input.getBoundingClientRect().width}px`;
   };
 
-  input.addEventListener("focus", () => {
+  // Завантаження даних при введенні >= 3 символів
+  const loadAndFilter = async (query: string) => {
+    const trimmedQuery = query.trim();
+    
+    // Якщо менше 3 символів - очищаємо
+    if (trimmedQuery.length < 3) {
+      detailsCache = [];
+      lastDetailQuery = "";
+      dd.classList.add("hidden-all_other_bases");
+      return;
+    }
+
+    // Перевірка чи потрібно перезавантажувати дані
+    const needsReload = trimmedQuery.length < lastDetailQuery.length || 
+                        !lastDetailQuery || 
+                        !trimmedQuery.startsWith(lastDetailQuery.substring(0, 3));
+
+    if (needsReload) {
+      // Завантажуємо ВСІ дані з бази (з пагінацією)
+      console.log("Завантаження ВСІХ деталей з БД...");
+      const allDetails = await loadDetailsFromDB();
+      
+      // Завантажуємо ID для ВСІХ деталей (також з пагінацією)
+      nameToId = new Map();
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("details")
+          .select("detail_id,data")
+          .range(offset, offset + batchSize - 1);
+
+        if (!error && data && data.length > 0) {
+          data.forEach((r: any) => {
+            const nm = r?.data ? String(r.data).trim() : "";
+            if (nm) nameToId.set(nm, Number(r.detail_id));
+          });
+          
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      detailsCache = allDetails;
+      lastDetailQuery = trimmedQuery;
+      console.log(`Завантажено і закешовано ${detailsCache.length} деталей`);
+    } else {
+      // Просто оновлюємо останній запит
+      lastDetailQuery = trimmedQuery;
+    }
+
+    // Фільтруємо з кешу
+    const filtered = detailsCache.filter((name) =>
+      name.toLowerCase().includes(trimmedQuery.toLowerCase())
+    );
+
+    console.log(`Знайдено ${filtered.length} деталей за запитом "${trimmedQuery}"`);
+    render(filtered);
+  };
+
+  input.addEventListener("input", async () => {
+    const val = input.value;
     setBaseOnce();
-    render(input.value);
+    updateCurrent(val);
+    await loadAndFilter(val);
   });
-  input.addEventListener("click", () => render(input.value));
-  input.addEventListener("input", () => {
+
+  input.addEventListener("focus", async () => {
     setBaseOnce();
-    updateCurrent(input.value);
-    render(input.value);
+    if (input.value.trim().length >= 3) {
+      await loadAndFilter(input.value);
+    }
+  });
+
+  input.addEventListener("click", async () => {
+    if (input.value.trim().length >= 3) {
+      await loadAndFilter(input.value);
+    }
   });
 
   document.addEventListener("click", (e) => {
-    if (!dd.contains(e.target as Node) && e.target !== input) dd.classList.add("hidden-all_other_bases");
+    if (!dd.contains(e.target as Node) && e.target !== input) {
+      dd.classList.add("hidden-all_other_bases");
+    }
   });
 }
 
 /* ==== автокомпліт SCLAD по part_number (з дублями) ==== */
 function fillFormFieldsFromSclad(record: any) {
-  // ✅ ВИПРАВЛЕНО: завжди зберігаємо ID запису, незалежно від режиму
   if (record?.sclad_id) {
     setScladId(String(record.sclad_id));
     originalScladId = String(record.sclad_id);
@@ -427,7 +528,6 @@ async function wireLinkedAutocomplete() {
       renderDropdown(filtered, (rec) => {
         input.value = rec.part_number;
         fillFormFieldsFromSclad(rec);
-        // ✅ ВИПРАВЛЕНО: не очищаємо ID при виборі з автокомпліту
         dd.classList.add("hidden-all_other_bases");
         snapshotToAllBd();
       });
@@ -441,10 +541,8 @@ async function wireLinkedAutocomplete() {
     if (input.value.trim().length >= 3) handleInput();
   });
 
-  // ✅ НОВЕ: обробка очищення поля - очищаємо ID тільки якщо поле стало повністю пустим
   input.addEventListener("input", () => {
     if (!input.value.trim()) {
-      // Тільки якщо режим "Додати", очищаємо всі ID
       if ((CRUD ?? "").toLowerCase() === "додати") {
         clearAllScladIds();
       }
@@ -494,11 +592,11 @@ function selectDropdownItem(items: NodeListOf<Element>, index: number) {
   });
 }
 
-/** «чернетка» у all_bd */
 function pick(id: string) {
   const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
   return el ? el.value : "";
 }
+
 function snapshotToAllBd() {
   const payload = {
     table: "sclad",
@@ -517,9 +615,7 @@ function snapshotToAllBd() {
   updateAllBd(JSON.stringify(payload, null, 2));
 }
 
-/* ====== НОВІ ЕКСПОРТИ ДЛЯ ОЧИЩЕННЯ ПРИ НОВОМУ ДОДАВАННІ ====== */
 export function clearScladForm() {
-  // Очищаємо форму та всі ID
   clearAllScladIds();
 
   const formFields = [
@@ -538,14 +634,16 @@ export function clearScladForm() {
     if (el) el.value = "";
   });
 
-  // Скидаємо стани
   resetShopState();
   resetDetailState();
+
+  // Очищаємо кеш деталей
+  detailsCache = [];
+  lastDetailQuery = "";
 
   snapshotToAllBd();
 }
 
-/* ====== Експорти ====== */
 export const handleScladClick = async () => {
   await renderScladForm();
   console.log("Склад форма відкрита, поточний ID:", getCurrentScladId());

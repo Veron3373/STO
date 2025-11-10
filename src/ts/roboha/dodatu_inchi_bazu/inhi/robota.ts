@@ -13,6 +13,10 @@ let currentConfig: {
   needsJsonParsing?: boolean;
 } | null = null;
 
+// 🔥 КЕШ для оптимізації
+let cachedOptions: string[] = [];
+let lastInputLength = 0;
+
 const databaseMapping = {
   Робота: { table: "works", field: "data" },
 };
@@ -116,43 +120,84 @@ const updateAllBdFromInput = (
   }
 };
 
-const createCustomDropdown = (
-  data: any[],
+// 🔥 НОВА ФУНКЦІЯ: підтягування даних з БД з фільтром
+async function fetchOptionsFromDB(
+  table: string,
   field: string,
-  inputElement: HTMLInputElement | null
-) => {
+  filter: string
+): Promise<{ options: string[]; fullData: any[] }> {
+  try {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .ilike(field, `%${filter}%`)
+      .limit(200);
+
+    if (error || !data) {
+      console.error(`Помилка завантаження з ${table}:`, error);
+      return { options: [], fullData: [] };
+    }
+
+    const uniqueValues = new Set<string>();
+
+    data.forEach((item: any) => {
+      const value = item[field];
+      if (value !== null && value !== undefined) {
+        const stringValue = String(value).trim();
+        if (stringValue) uniqueValues.add(stringValue);
+      }
+    });
+
+    return {
+      options: Array.from(uniqueValues).sort(),
+      fullData: data,
+    };
+  } catch (err) {
+    console.error(`Помилка при запиті до ${table}:`, err);
+    return { options: [], fullData: [] };
+  }
+}
+
+const createCustomDropdown = (inputElement: HTMLInputElement | null) => {
   const dropdown = document.getElementById(
     "custom-dropdown-all_other_bases"
   ) as HTMLDivElement;
   if (!dropdown || !inputElement) return;
 
-  currentLoadedData = data;
-
-  const values = data
-    .map((item) => {
-      const value = item[field];
-      if (value !== null && value !== undefined) {
-        return String(value).trim();
-      }
-      return null;
-    })
-    .filter((val): val is string => typeof val === "string" && val.length > 0);
-
-  const uniqueValues = [...new Set(values)].sort();
-
-  const renderSuggestions = (filter: string) => {
+  const renderSuggestions = async (filter: string) => {
     dropdown.innerHTML = "";
 
-    const filtered = uniqueValues.filter((val) =>
-      val.toLowerCase().includes(filter.toLowerCase())
-    );
+    if (!currentConfig) return;
 
-    if (filtered.length === 0) {
+    const currentInputLength = filter.length;
+
+    // 🔥 ВИПРАВЛЕНО: підтягуємо з БД тільки якщо видалили символ АБО >= 3 символи
+    if (currentInputLength < lastInputLength || currentInputLength >= 3) {
+      const result = await fetchOptionsFromDB(
+        currentConfig.table,
+        currentConfig.field,
+        filter
+      );
+      cachedOptions = result.options;
+      currentLoadedData = result.fullData;
+    } else if (currentInputLength < 3) {
+      // Якщо менше 3 символів - очищуємо
+      cachedOptions = [];
+      currentLoadedData = [];
+      dropdown.classList.add("hidden-all_other_bases");
+      lastInputLength = currentInputLength;
+      return;
+    }
+
+    lastInputLength = currentInputLength;
+
+    // 🔥 ВИПРАВЛЕНО: НЕ фільтруємо повторно, показуємо що прийшло з БД
+    if (cachedOptions.length === 0) {
       dropdown.classList.add("hidden-all_other_bases");
       return;
     }
 
-    filtered.forEach((val) => {
+    cachedOptions.forEach((val) => {
       const item = document.createElement("div");
       item.className = "custom-dropdown-item";
       item.textContent = val;
@@ -167,13 +212,13 @@ const createCustomDropdown = (
     dropdown.classList.remove("hidden-all_other_bases");
   };
 
-  inputElement.addEventListener("input", () => {
-    renderSuggestions(inputElement.value.trim());
+  inputElement.addEventListener("input", async () => {
+    await renderSuggestions(inputElement.value.trim());
     updateAllBdFromInput(inputElement.value.trim(), false);
   });
 
-  inputElement.addEventListener("focus", () => {
-    renderSuggestions(inputElement.value.trim());
+  inputElement.addEventListener("focus", async () => {
+    await renderSuggestions(inputElement.value.trim());
   });
 
   document.addEventListener("click", (e) => {
@@ -191,6 +236,11 @@ const loadDatabaseData = async (buttonText: string) => {
   if (!config) return;
 
   currentConfig = config;
+
+  // 🔥 СКИДАЄМО КЕШ при зміні таблиці
+  cachedOptions = [];
+  lastInputLength = 0;
+  currentLoadedData = [];
 
   try {
     const searchInput = document.getElementById(
@@ -212,10 +262,7 @@ const loadDatabaseData = async (buttonText: string) => {
 
     updateTableNameDisplay(buttonText, config.table);
 
-    const { data, error } = await supabase.from(config.table).select("*");
-    if (error || !data) throw new Error(error?.message || "Дані не отримані");
-
-    createCustomDropdown(data, config.field, searchInput);
+    createCustomDropdown(searchInput);
   } catch (err) {
     console.error(`Помилка завантаження з ${buttonText}`, err);
   }

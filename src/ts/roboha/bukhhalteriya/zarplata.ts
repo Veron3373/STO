@@ -730,6 +730,8 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       throw new Error(`Помилка отримання даних: ${fetchError.message}`);
     }
 
+    console.log("📥 Отримано записів з бази:", existingData?.length || 0);
+
     const primaryKeyCandidates = ["id", "slyusars_id", "uid", "pk"];
     const detectPrimaryKey = (row: any): string | null => {
       if (!row) return null;
@@ -737,44 +739,48 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       return null;
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
+    console.log("🔑 Виявлено первинний ключ:", primaryKey || "не знайдено");
 
     for (const slyusar of slyusarsData) {
       try {
+        console.log(`🔄 Обробка слюсаря: ${slyusar.Name}`);
+
         const target = existingData?.find((item) => {
           let js = item.data;
           if (typeof js === "string") {
             try {
               js = JSON.parse(js);
             } catch {
-              /* ignore */
+              return false;
             }
           }
           return js && js.Name === slyusar.Name;
         });
 
         if (!target) {
-          console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
+          console.warn(`⚠️ Не знайдено запис для слюсаря: ${slyusar.Name}`);
           continue;
         }
 
+        console.log(`✅ Знайдено запис для ${slyusar.Name}, оновлення...`);
+
         if (primaryKey) {
-          const { data: upd, error: updErr } = await supabase
+          const { error: updErr } = await supabase
             .from("slyusars")
             .update({ data: slyusar })
             .eq(primaryKey, target[primaryKey])
             .select();
 
           if (updErr) {
-            console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
+            console.error(`❌ Помилка оновлення ${slyusar.Name}:`, updErr);
             throw updErr;
           } else {
             console.log(
-              `✅ Оновлено по ключу (${primaryKey}) для ${slyusar.Name}`,
-              upd
+              `✅ Оновлено по ключу (${primaryKey}) для ${slyusar.Name}`
             );
           }
         } else {
-          const { data: upd, error: updErr } = await supabase
+          const { error: updErr } = await supabase
             .from("slyusars")
             .update({ data: slyusar })
             .contains("data", { Name: slyusar.Name })
@@ -782,23 +788,24 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
 
           if (updErr) {
             console.error(
-              `Помилка оновлення (fallback) ${slyusar.Name}:`,
+              `❌ Помилка оновлення (fallback) ${slyusar.Name}:`,
               updErr
             );
             throw updErr;
           } else {
-            console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`, upd);
+            console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
           }
         }
       } catch (recordError) {
         console.error(
-          `Помилка обробки запису для ${slyusar.Name}:`,
+          `❌ Помилка обробки запису для ${slyusar.Name}:`,
           recordError
         );
         throw recordError;
       }
     }
 
+    console.log("✅ Всі зміни успішно збережено в базу");
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
     console.error("❌ Помилка збереження в базу slyusars:", error);
@@ -1736,6 +1743,9 @@ export function togglepodleglePayment(index: number): void {
     }
 
     workEntry.Розраховано = currentDate;
+    console.log(
+      `✅ Встановлено Розраховано = "${currentDate}" для роботи "${record.work}"`
+    );
   } else {
     record.isPaid = false;
     record.paymentDate = "";
@@ -1754,10 +1764,21 @@ export function togglepodleglePayment(index: number): void {
         );
         if (workEntry) {
           delete workEntry.Розраховано;
+          console.log(`✅ Видалено Розраховано для роботи "${record.work}"`);
         }
       }
     }
   }
+
+  console.log(`💾 Збереження змін для ${record.name}...`);
+  console.log(
+    `📝 Дані перед збереженням:`,
+    JSON.stringify(
+      slyusarsData.find((s) => s.Name === record.name),
+      null,
+      2
+    )
+  );
 
   saveSlyusarsDataToDatabase()
     .then(() => {

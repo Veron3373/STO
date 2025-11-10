@@ -1079,13 +1079,11 @@ export function searchDataInDatabase(
   selectedName: string
 ): void {
   podlegleData = [];
-
-  // Якщо немає дат - встановлюємо 01.01.2025 як початкову
+  // ✅ ДОДАНО: Якщо немає дат - встановлюємо 01.01.2025 як початкову
   if (!dateOpen && !dateClose) {
     dateOpen = "01.01.2025";
     console.log("📅 Використано дату за замовчуванням: 01.01.2025");
   }
-
   if (slyusarsData.length === 0) {
     showNotification(
       "⚠️ Немає даних з бази slyusars. Спробуйте перезавантажити сторінку.",
@@ -1138,7 +1136,7 @@ export function searchDataInDatabase(
               margin: totalPrice - salary,
               isClosed: record.ДатаЗакриття !== null,
               isPaid: true,
-              paymentDate: payDmy, // ✅ Тут правильно
+              paymentDate: payDmy,
             });
           });
         } else {
@@ -1153,11 +1151,6 @@ export function searchDataInDatabase(
             if (entry.Кількість === 0) return;
             const totalPrice = entry.Ціна * entry.Кількість;
             const salary = entry.Зарплата || 0;
-
-            // ✅ ВИПРАВЛЕННЯ: Додаємо дату з entry.Розраховано
-            const paymentDate = entry.Розраховано || "";
-            const isPaid = !!entry.Розраховано;
-
             podlegleData.push({
               dateOpen: openDmy,
               dateClose: record.ДатаЗакриття || "",
@@ -1172,8 +1165,8 @@ export function searchDataInDatabase(
               salary,
               margin: totalPrice - salary,
               isClosed: record.ДатаЗакриття !== null,
-              isPaid: isPaid, // ✅ ВИПРАВЛЕНО
-              paymentDate: paymentDate, // ✅ ВИПРАВЛЕНО
+              isPaid: !!entry.Розраховано,
+              paymentDate: entry.Розраховано || "",
             });
           });
         }
@@ -1183,7 +1176,7 @@ export function searchDataInDatabase(
 
   console.log(`📊 Знайдено ${podlegleData.length} записів в базі slyusars`);
 
-  // Фільтр по роботі
+  // ✅ ДОДАЄМО ФІЛЬТР ПО РОБОТІ
   const workInput =
     byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() ||
     "";
@@ -1197,15 +1190,16 @@ export function searchDataInDatabase(
     );
   }
 
-  // Сортування
   podlegleData.sort((a, b) => {
+    // Спочатку сортуємо за номером акту (більший номер - вище)
     const actA = parseInt(a.act) || 0;
     const actB = parseInt(b.act) || 0;
 
     if (actA !== actB) {
-      return actB - actA;
+      return actB - actA; // Зворотний порядок: 300 > 299 > 298
     }
 
+    // Якщо акти однакові, сортуємо за датою
     const ka =
       podlegleDateFilterMode === "paid"
         ? toIsoDate(a.paymentDate || a.dateOpen)
@@ -1253,6 +1247,7 @@ export function searchDataInDatabase(
   refreshWorkDropdownOptions();
   updatepodlegleTable();
 }
+
 // Функція для локальної фільтрації завантажених даних
 export function filterPodlegleData(): void {
   if (!hasPodlegleDataLoaded || allPodlegleData.length === 0) {

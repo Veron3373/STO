@@ -120,10 +120,9 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     return [];
   }
 
-  // Перевіряємо чи потрібно завантажувати з бази
   const needsReload = 
-    !nameAutocompleteCache ||                           // кеш порожній
-    !q.startsWith(nameAutocompleteCache.query);         // користувач видалив символи
+    !nameAutocompleteCache ||
+    !q.startsWith(nameAutocompleteCache.query);
 
   if (needsReload) {
     await loadNameAutocompleteData(q);
@@ -133,29 +132,31 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     return [];
   }
 
-  // Фільтруємо з кешу
-  console.log(`🔎 Фільтрація з кешу для "${q}"`);
+  console.log(`🔎 Фільтрація для "${q}"`);
   
-  const filteredWorks = nameAutocompleteCache.works.filter((name) =>
-    name.toLowerCase().includes(q)
-  );
+  const filteredDetails = nameAutocompleteCache.details
+    .filter((name) => name.toLowerCase().includes(q))
+    .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
+    .map((x) => ({
+      label: x,
+      value: shortenName(x),
+      fullName: x,
+      itemType: 'detail' as const,
+    }));
   
-  const filteredDetails = nameAutocompleteCache.details.filter((name) =>
-    name.toLowerCase().includes(q)
-  );
+  const filteredWorks = nameAutocompleteCache.works
+    .filter((name) => name.toLowerCase().includes(q))
+    .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
+    .map((x) => ({
+      label: x,
+      value: shortenName(x),
+      fullName: x,
+      itemType: 'work' as const,
+    }));
 
-  const allFiltered = [...filteredDetails, ...filteredWorks];
-  
-  // Обмежуємо до 50 результатів
-  const limited = allFiltered.slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS);
-  
-  console.log(`📋 Знайдено ${allFiltered.length}, показуємо ${limited.length}`);
+  console.log(`📋 Деталей: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`);
 
-  return limited.map((x) => ({
-    label: x,
-    value: shortenName(x),
-    fullName: x,
-  }));
+  return [...filteredDetails, ...filteredWorks];
 }
 
 /* ====================== helpers ====================== */
@@ -424,6 +425,7 @@ type Suggest = {
   sclad_id?: number;
   labelHtml?: string;
   fullName?: string;
+  itemType?: 'detail' | 'work';
 };
 
 let currentAutocompleteInput: HTMLElement | null = null;
@@ -455,10 +457,13 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   list.style.visibility = "hidden";
   list.style.zIndex = "100000";
 
-  suggestions.forEach((s) => {
-    const { label, value, sclad_id, labelHtml, fullName } = s;
+suggestions.forEach((s) => {
+    const { label, value, sclad_id, labelHtml, fullName, itemType } = s;
     const li = document.createElement("li");
     li.className = "autocomplete-item";
+    
+    if (itemType === 'detail') li.classList.add("item-detail");
+    if (itemType === 'work') li.classList.add("item-work");
     li.tabIndex = 0;
     li.dataset.value = value;
     if (sclad_id !== undefined) li.dataset.scladId = String(sclad_id);

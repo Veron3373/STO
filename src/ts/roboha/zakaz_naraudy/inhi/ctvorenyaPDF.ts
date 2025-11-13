@@ -120,20 +120,28 @@ export async function printModalToPdf(): Promise<void> {
   // збереження стилів
   const originalBodyStyle = modalBody.style.cssText;
   const originalModalWidth = modalContent?.style.width || "";
-  const originalModalMaxWidth = modalContent?.style.maxWidth || "";
+  const originalModalMaxWidth = modalContent?.style.maxWidth || ""; // елементи, які ховаємо
 
   // елементи, які ховаємо
+  // ... (код всередині printModalToPdf) ...
+
   const elementsToHide: HTMLElement[] = [
     document.getElementById("print-act-button") as HTMLElement,
     document.getElementById("add-row-button") as HTMLElement,
     document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLElement,
     document.getElementById("status-lock-btn") as HTMLElement,
     document.getElementById("sklad") as HTMLElement,
+
+    // <--- ДОДАНО: Приховуємо нові кнопки-іконки під час друку
+    document.getElementById("create-act-btn") as HTMLElement,
+    document.getElementById("create-invoice-btn") as HTMLElement,
+    // <--- КІНЕЦЬ ДОДАНОГО
+
     document.querySelector(".modal-close-button") as HTMLElement,
     document.querySelector(".modal-footer") as HTMLElement,
   ].filter(Boolean) as HTMLElement[];
 
-  // таблиця для приховування колонок
+   // таблиця для приховування колонок
   const table = document.querySelector(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} table.zakaz_narayd-items-table`
   ) as HTMLTableElement | null;

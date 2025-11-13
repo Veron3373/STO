@@ -7,6 +7,7 @@ import {
   globalCache,
   loadGlobalData,
   ACT_ITEMS_TABLE_CONTAINER_ID,
+  ZAKAZ_NARAYD_SAVE_BTN_ID, // <-- Імпортуємо ID кнопки збереження
 } from "../globalCache";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import {
@@ -15,9 +16,7 @@ import {
 } from "../../tablucya/users";
 
 // Імпортуємо функцію показу модального вікна
-// Якщо експорту немає - потрібно додати в modalMain.ts: export { showModal };
-// Або використати альтернативну функцію відкриття акту
-import { showModal } from "../modalMain"; // Замінити на правильну назву функції
+import { showModal } from "../modalMain";
 
 /* ======================== Локальні утиліти для синхронізації shops ======================== */
 
@@ -407,20 +406,20 @@ export function initStatusLockDelegation(): void {
         globalCache.isActClosed = false;
         await loadGlobalData();
 
-        // ЗАМІСТЬ showModal використовуємо правильну функцію
-        // Варіант 1: якщо є функція openActModal
         await showModal(actId);
-
-        // Варіант 2: якщо потрібно просто перезавантажити сторінку
-        // window.location.reload();
-
-        // Варіант 3: якщо є інша функція показу модального вікна
-        // await відкритиМодальнеВікноАкту(actId);
 
         refreshActsTable();
         showNotification("Акт успішно відкрито", "success");
       } else {
         // --------------------------- ЗАКРИТТЯ АКТУ ---------------------------
+
+        // ▼▼▼ ПОЧАТОК ЗМІН: Зберігаємо акт перед закриттям ▼▼▼
+        console.log("Автоматичне збереження перед закриттям...");
+        (
+          document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLButtonElement
+        )?.click();
+        // ▲▲▲ КІНЕЦЬ ЗМІН ▲▲▲
+
         const confirmed = await showViknoPidtverdchennayZakruttiaAkty(actId);
         if (!confirmed) {
           showNotification("Скасовано закриття акту", "warning");
@@ -478,8 +477,7 @@ export function initStatusLockDelegation(): void {
         globalCache.isActClosed = true;
         await loadGlobalData();
 
-        // ЗАМІСТЬ showModal використовуємо правильну функцію
-       await showModal(actId);
+        await showModal(actId);
 
         refreshActsTable();
         showNotification("Акт успішно закрито", "success");

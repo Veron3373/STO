@@ -144,41 +144,21 @@ function collectPrevWorkRowsFromCache(): Array<{
     Зарплата?: number;
   }> = [];
 
+  // ВИПРАВЛЕННЯ: беремо дані з initialActItems (початковий стан)
   for (const it of globalCache.initialActItems || []) {
     if (it.type !== "work") continue;
     const slyusarName = (it.person_or_store || "").trim();
     if (!slyusarName) continue;
-
-    const tableRows = document.querySelectorAll(
-      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
-    );
-    let slyusarSum = 0;
-
-    tableRows.forEach((row) => {
-      const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
-      const pibCell = row.querySelector(
-        '[data-name="pib_magazin"]'
-      ) as HTMLElement;
-      const slyusarSumCell = row.querySelector(
-        '[data-name="slyusar_sum"]'
-      ) as HTMLElement;
-
-      if (
-        nameCell?.textContent?.trim() === it.name &&
-        pibCell?.textContent?.trim() === slyusarName
-      ) {
-        slyusarSum = parseNum(slyusarSumCell?.textContent);
-      }
-    });
 
     out.push({
       slyusarName,
       Найменування: it.name || "",
       Кількість: Number(it.quantity ?? 0),
       Ціна: Number(it.price ?? 0),
-      Зарплата: slyusarSum,
+      Зарплата: 0, // Для старих записів зарплата не важлива
     });
   }
+
   return out;
 }
 
@@ -242,6 +222,37 @@ async function syncSlyusarsHistoryForAct(params: {
   const curBySlyusar = group(params.currentRows);
   const prevBySlyusar = group(params.prevRows);
 
+  /**
+   * Розгортає скорочену назву для збереження
+   */
+  function expandNameForSave(shortenedName: string): string {
+    if (!shortenedName || !shortenedName.includes("....."))
+      return shortenedName;
+
+    const allNames = [...globalCache.works, ...globalCache.details];
+    const [firstPart, lastPart] = shortenedName.split(".....");
+
+    const fullName = allNames.find((name) => {
+      const sentences = name
+        .split(/(?<=\.)\s*/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (sentences.length < 2) return false;
+      const lastSentence = sentences[sentences.length - 1];
+      return (
+        name.startsWith(firstPart) &&
+        (name.endsWith(lastPart) || lastSentence === lastPart)
+      );
+    });
+
+    console.log(`🔄 Розгортання назви:`, {
+      скорочена: shortenedName,
+      повна: fullName || shortenedName,
+    });
+
+    return fullName || shortenedName;
+  }
+
   // ОНОВИТИ / СТВОРИТИ
   for (const [slyusarName, rows] of curBySlyusar.entries()) {
     const slyRow = await fetchSlyusarByName(slyusarName);
@@ -266,10 +277,23 @@ async function syncSlyusarsHistoryForAct(params: {
       const qty = Number(r.Кількість) || 0;
       const price = Number(r.Ціна) || 0;
       const zp = Number(r.Зарплата) || 0;
+
+      // ← ДОДАНО: Розгортаємо назву перед збереженням
+      const workName = r.Найменування || "";
+      const fullWorkName = workName.includes(".....")
+        ? expandNameForSave(workName)
+        : workName;
+
+      console.log(`📝 Зберігаємо роботу:`, {
+        original: workName,
+        full: fullWorkName,
+        зарплата: zp,
+      });
+
       zapis.push({
         Ціна: price,
         Кількість: qty,
-        Робота: r.Найменування || "",
+        Робота: fullWorkName, // ← Зберігаємо ПОВНУ назву
         Зарплата: zp,
       });
       summaRob += price * qty;
@@ -529,12 +553,8 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
     const workName = cleanText(nameCell?.textContent);
     if (!workName) return;
 
-    const qtyCell = row.querySelector(
-      '[data-name="id_count"]'
-    ) as HTMLElement;
-    const priceCell = row.querySelector(
-      '[data-name="price"]'
-    ) as HTMLElement;
+    const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement;
+    const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
     const pibCell = row.querySelector(
       '[data-name="pib_magazin"]'
     ) as HTMLElement;

@@ -20,72 +20,118 @@ function showNotification(message: string, type: string): void {
   console.log(`[${type}] ${message}`);
 }
 
+function expandName(shortenedName: string): string {
+  if (!shortenedName || !shortenedName.includes(".....")) return shortenedName;
+
+  const allNames = [...globalCache.works, ...globalCache.details];
+  const [firstPart, lastPart] = shortenedName.split(".....");
+
+  const fullName = allNames.find((name) => {
+    const sentences = name
+      .split(/(?<=\.)\s*/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (sentences.length < 2) return false;
+    const lastSentence = sentences[sentences.length - 1];
+    return (
+      name.startsWith(firstPart) &&
+      (name.endsWith(lastPart) || lastSentence === lastPart)
+    );
+  });
+
+  return fullName || shortenedName;
+}
+
 /**
  * Отримує зарплату з історії слюсаря для конкретної роботи та акту
  * @param slyusarName - ім'я слюсаря
  * @param workName - назва роботи
- * @param actId - номер акту (необов'язковий, якщо не вказано - шукає останнє значення)
+ * @param actId - номер акту (ОБОВ'ЯЗКОВИЙ параметр)
  */
 function getSlyusarSalaryFromHistory(
   slyusarName: string,
   workName: string,
-  actId?: number | null
+  actId: number | null
 ): number | null {
-  if (!slyusarName || !workName) return null;
+  if (!slyusarName || !workName || !actId) {
+    console.log(
+      "❌ getSlyusarSalaryFromHistory: відсутні обов'язкові параметри",
+      {
+        slyusarName,
+        workName,
+        actId,
+      }
+    );
+    return null;
+  }
 
   const slyusar = globalCache.slyusars.find(
     (s) => s.Name?.toLowerCase() === slyusarName.toLowerCase()
   );
 
-  if (!slyusar?.["Історія"]) return null;
-
-  const history = slyusar["Історія"];
-
-  // Якщо вказано actId - шукаємо конкретно для цього акту
-  if (actId) {
-    for (const dateKey in history) {
-      const dayBucket = history[dateKey];
-      if (!Array.isArray(dayBucket)) continue;
-
-      for (const actEntry of dayBucket) {
-        // Перевіряємо, чи це потрібний акт
-        if (Number(actEntry?.["Акт"]) !== Number(actId)) continue;
-
-        const zapisi = actEntry?.["Записи"];
-        if (!Array.isArray(zapisi)) continue;
-
-        const workRecord = zapisi.find(
-          (z: any) => z.Робота?.toLowerCase() === workName.toLowerCase()
-        );
-
-        if (workRecord && typeof workRecord.Зарплата === "number") {
-          return workRecord.Зарплата;
-        }
-      }
-    }
-    // Якщо для конкретного акту не знайшли - повертаємо null
+  if (!slyusar?.["Історія"]) {
+    console.log(`⚠️ Слюсар "${slyusarName}" не знайдений або немає історії`);
     return null;
   }
 
-  // Якщо actId не вказано - шукаємо останнє значення (старий алгоритм)
+  const history = slyusar["Історія"];
+  const targetActId = String(actId);
+
+  console.log(`🔍 Шукаємо зарплату для:`, {
+    slyusarName,
+    workName,
+    actId: targetActId,
+    isShortened: workName.includes("....."), // ← ДОДАНО
+  });
+
+  // ← ДОДАНО: Розгортаємо скорочену назву
+  const fullWorkName = expandName(workName);
+  console.log(`📝 Розгорнута назва: "${fullWorkName}"`);
+
   for (const dateKey in history) {
     const dayBucket = history[dateKey];
     if (!Array.isArray(dayBucket)) continue;
 
     for (const actEntry of dayBucket) {
+      const entryActId = String(actEntry?.["Акт"] || "");
+
+      if (entryActId !== targetActId) continue;
+
+      console.log(`✅ Знайдено акт ${targetActId} в даті ${dateKey}`);
+
       const zapisi = actEntry?.["Записи"];
-      if (!Array.isArray(zapisi)) continue;
+      if (!Array.isArray(zapisi)) {
+        console.log(`⚠️ Немає записів в акті ${targetActId}`);
+        continue;
+      }
 
-      const workRecord = zapisi.find(
-        (z: any) => z.Робота?.toLowerCase() === workName.toLowerCase()
-      );
+      // ← ВИПРАВЛЕНО: Порівнюємо як скорочену, так і повну назву
+      const workRecord = zapisi.find((z: any) => {
+        const recordWork = z.Робота?.trim() || "";
+        const recordWorkLower = recordWork.toLowerCase();
+        const workNameLower = workName.toLowerCase();
+        const fullWorkNameLower = fullWorkName.toLowerCase();
 
-      if (workRecord && typeof workRecord.Зарплата === "number") {
-        return workRecord.Зарплата;
+        return (
+          recordWorkLower === workNameLower ||
+          recordWorkLower === fullWorkNameLower
+        );
+      });
+
+      if (workRecord) {
+        const salary = workRecord.Зарплата;
+        console.log(`💰 Знайдено зарплату для "${workName}":`, salary);
+
+        if (typeof salary === "number") {
+          return salary;
+        }
       }
     }
   }
 
+  console.log(
+    `❌ Зарплату не знайдено для акту ${targetActId}, роботи "${workName}"`
+  );
   return null;
 }
 
@@ -153,7 +199,7 @@ export function calculateSlyusarSum(totalSum: number, percent: number): number {
 }
 
 /**
- * Оновлює зарплату слюсаря в рядку (async версія)
+ * Оновлює зарплату слюсаря в рядку (async версія) - ВИПРАВЛЕНА
  */
 async function updateSlyusarSalaryInRow(
   row: HTMLTableRowElement
@@ -162,6 +208,7 @@ async function updateSlyusarSalaryInRow(
 
   const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
   const typeFromCell = nameCell?.getAttribute("data-type");
+
   if (typeFromCell !== "works") {
     const slyusarSumCell = row.querySelector(
       '[data-name="slyusar_sum"]'
@@ -189,22 +236,39 @@ async function updateSlyusarSalaryInRow(
     return;
   }
 
-  // 1. Спробуємо отримати з історії для конкретного акту
+  // КРИТИЧНО: ЗАВЖДИ використовуємо actId з кешу
   const actId = globalCache.currentActId;
+
+  if (!actId) {
+    console.warn("⚠️ globalCache.currentActId не встановлено!");
+    return;
+  }
+
+  console.log(`🔄 Оновлення зарплати для рядка:`, {
+    actId,
+    slyusarName,
+    workName,
+    totalSum,
+  });
+
+  // 1. ОБОВ'ЯЗКОВО шукаємо в історії для ПОТОЧНОГО акту
   const historySalary = getSlyusarSalaryFromHistory(
     slyusarName,
     workName,
-    actId
+    actId // ← ЗАВЖДИ передаємо actId
   );
 
   if (historySalary !== null) {
+    console.log(`✅ Встановлюємо зарплату з історії: ${historySalary}`);
     slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
     return;
   }
 
-  // 2. Історії немає - рахуємо від відсотка (ASYNC)
+  // 2. Якщо в історії немає - рахуємо від відсотка
+  console.log(`⚙️ Зарплати в історії немає, рахуємо від відсотка`);
   const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
+  console.log(`💰 Розрахована зарплата: ${calculatedSalary} (${percent}%)`);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 }
 
@@ -231,13 +295,10 @@ export function updateAllSlyusarSumsFromHistory(): void {
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") continue;
 
-    void updateSlyusarSalaryInRow(row); // ← додай void
+    void updateSlyusarSalaryInRow(row);
   }
 }
 
-/**
- * Перераховує суму в рядку і оновлює зарплату слюсаря (async)
- */
 /**
  * Перераховує суму в рядку і оновлює зарплату слюсаря (async)
  */
@@ -262,20 +323,28 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
 }
 
 /**
- * Ініціалізує зарплати слюсарів при завантаженні акту (async)
+ * Ініціалізує зарплати слюсарів при завантаженні акту - ВИПРАВЛЕНА
  */
 export async function initializeSlyusarSalaries(): Promise<void> {
   if (!globalCache.settings.showZarplata) return;
+
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
   );
   if (!tableBody) return;
 
+  const actId = globalCache.currentActId;
+
+  if (!actId) {
+    console.warn("⚠️ initializeSlyusarSalaries: actId не встановлено");
+    return;
+  }
+
+  console.log(`🚀 Ініціалізація зарплат для акту ${actId}`);
+
   const rows = Array.from(
     tableBody.querySelectorAll<HTMLTableRowElement>("tr")
   );
-
-  const actId = globalCache.currentActId;
 
   for (const row of rows) {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
@@ -294,8 +363,12 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
     if (!workName || !slyusarName || !slyusarSumCell) continue;
 
+    // Якщо вже є значення - пропускаємо
     const existingValue = slyusarSumCell.textContent?.trim();
     if (existingValue) {
+      console.log(
+        `⏭️ Пропускаємо "${workName}" - вже є значення: ${existingValue}`
+      );
       continue;
     }
 
@@ -304,22 +377,30 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
     if (totalSum <= 0) continue;
 
+    console.log(`🔍 Обробка роботи "${workName}" для "${slyusarName}"`);
+
+    // КРИТИЧНО: шукаємо ТІЛЬКИ для поточного акту
     const historySalary = getSlyusarSalaryFromHistory(
       slyusarName,
       workName,
-      actId
+      actId // ← ЗАВЖДИ передаємо поточний actId
     );
 
     if (historySalary !== null) {
+      console.log(`✅ Встановлено з історії: ${historySalary}`);
       slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
       continue;
     }
 
-    // ASYNC отримання відсотка
+    // Якщо в історії немає - рахуємо від відсотка
+    console.log(`⚙️ Розрахунок від відсотка`);
     const percent = await getSlyusarWorkPercent(slyusarName);
     const calculatedSalary = calculateSlyusarSum(totalSum, percent);
+    console.log(`💰 Розраховано: ${calculatedSalary} (${percent}%)`);
     slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
   }
+
+  console.log(`✅ Ініціалізація зарплат завершена для акту ${actId}`);
 }
 
 /**
@@ -384,7 +465,6 @@ function createRowHtml(
     item?.type === "detail" ? "details" : item?.type === "work" ? "works" : "";
   const pibMagazinType = item?.type === "detail" ? "shops" : "slyusars";
 
-  // ← БЕЗПЕЧНЕ ОТРИМАННЯ ЗНАЧЕНЬ з перевіркою
   const catalogValue = showCatalog ? item?.catalog || "" : "";
   const pibMagazinValue = showPibMagazin ? item?.person_or_store || "" : "";
   const scladIdAttr =
@@ -392,7 +472,7 @@ function createRowHtml(
       ? `data-sclad-id="${item.sclad_id}"`
       : "";
 
-  const slyusarSumValue = ""; // Завантажується окремо
+  const slyusarSumValue = "";
 
   const catalogCellHTML = showCatalog
     ? `<td contenteditable="${isEditable}" class="editable-autocomplete catalog-cell" data-name="catalog" ${scladIdAttr}>${catalogValue}</td>`
@@ -452,6 +532,7 @@ export function generateTableHTML(
   const showCatalog = globalCache.settings.showCatalog;
   const showZarplata = globalCache.settings.showZarplata;
   const isRestricted = userAccessLevel === "Слюсар";
+  const isAdmin = userAccessLevel === "Адміністратор";
 
   const catalogColumnHeader = showCatalog ? "<th>Каталог</th>" : "";
   const pibMagazinColumnHeader = showPibMagazin ? "<th>ПІБ _ Магазин</th>" : "";
@@ -502,15 +583,24 @@ export function generateTableHTML(
   const buttons = globalCache.isActClosed
     ? ""
     : `
-    <div class="zakaz_narayd-buttons-container${
-      isRestricted ? " obmesheniy" : ""
-    }">
-      <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
-      <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
-    </div>`;
+    <div class="zakaz_narayd-buttons-container${
+        isRestricted ? " obmesheniy" : ""
+      }">
+      <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
+      
+      ${
+        isAdmin
+          ? `
+      <button type="button" class="action-button-icon" id="create-act-btn" title="Створити акт?">🗂️</button>
+      <button type="button" class="action-button-icon" id="create-invoice-btn" title="Створити рахунок">✍️</button>
+      `
+          : ""
+      }
+            <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
+    </div>`;
 
   const tableHTML = `
-    <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
+    <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
       <table class="zakaz_narayd-items-table">
         <thead>
           <tr>
@@ -536,32 +626,27 @@ export function generateTableHTML(
     ) as HTMLInputElement | null;
     if (!avans) return;
 
-    // утиліти
-    const unformat = (s: string) => s.replace(/\s+/g, ""); // забрати пробіли
+    const unformat = (s: string) => s.replace(/\s+/g, "");
     const format = (num: number) => {
       const str = String(num);
       return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     };
 
-    // автопідгін ширини
     const autoFit = () => {
       const visibleLen = (avans.value || avans.placeholder || "0").length;
       const ch = Math.min(Math.max(visibleLen, 3), 16);
       avans.style.width = ch + "ch";
     };
 
-    // КРИТИЧНО: форматуємо початкове значення як ЧИСЛО
     const initialValue = parseInt(unformat(avans.value) || "0");
     avans.value = format(initialValue);
     autoFit();
     updateFinalSumWithAvans();
 
-    // м'яке форматування під час вводу
     const onInput = () => {
       const selEndBefore = avans.selectionEnd ?? avans.value.length;
       const digitsBefore = unformat(avans.value.slice(0, selEndBefore)).length;
 
-      // Парсимо як число і форматуємо
       const numValue = parseInt(unformat(avans.value) || "0");
       avans.value = format(numValue);
       autoFit();
@@ -618,7 +703,7 @@ export function addNewRow(containerId: string): void {
   const rowCount = tableBody.children.length;
   const showPibMagazin = globalCache.settings.showPibMagazin;
   const showCatalog = globalCache.settings.showCatalog;
-  const showZarplata = globalCache.settings.showZarplata; // ← ДОДАНО
+  const showZarplata = globalCache.settings.showZarplata;
 
   const newRowHTML = createRowHtml(
     null,
@@ -626,7 +711,7 @@ export function addNewRow(containerId: string): void {
     showPibMagazin,
     showCatalog,
     showZarplata
-  ); // ← ДОДАНО ПАРАМЕТР
+  );
   tableBody.insertAdjacentHTML("beforeend", newRowHTML);
 
   if (!globalCache.isActClosed) {
@@ -690,7 +775,6 @@ export function updateCalculatedSumsInFooter(): void {
   set("total-details-sum", totalDetailsSum);
   set("total-overall-sum", totalOverallSum);
 
-  // Оновлюємо відображення з урахуванням авансу
   updateFinalSumWithAvans();
 }
 
@@ -722,7 +806,6 @@ function updateFinalSumWithAvans(): void {
   if (avans > 0) {
     const finalSum = overallSum - avans;
 
-    // Показуємо формулу: загальна сума - аванс = фінальна сума
     avansSubtractDisplay.textContent = ` - ${formatNumberWithSpaces(
       Math.round(avans)
     )} грн`;
@@ -735,7 +818,6 @@ function updateFinalSumWithAvans(): void {
     finalSumDisplay.style.color = "#1a73e8";
     finalSumDisplay.style.display = "inline";
   } else {
-    // Якщо аванс = 0, ховаємо формулу
     avansSubtractDisplay.style.display = "none";
     finalSumDisplay.style.display = "none";
   }

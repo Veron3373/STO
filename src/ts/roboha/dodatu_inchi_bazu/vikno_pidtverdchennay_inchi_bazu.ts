@@ -202,7 +202,7 @@ async function handleEdit(
     if (tableName === "slyusars") {
       // Отримуємо додаткові дані для слюсаря
       const additionalData = getSlusarAdditionalData();
-      
+
       console.log("Редагування слюсаря - додаткові дані:", additionalData);
 
       // Оновлюємо Name, Пароль, Доступ та ПроцентРоботи, зберігаємо решту структури
@@ -230,7 +230,7 @@ async function handleEdit(
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
-      
+
       console.log("Дані для оновлення слюсаря:", updateData.data);
     } else if (
       tableName === "incomes" ||
@@ -263,7 +263,6 @@ async function handleEdit(
     return false;
   }
 }
-
 
 async function handleDelete(tableName: string, data: any): Promise<boolean> {
   try {
@@ -379,7 +378,7 @@ async function handleAdd(
     if (tableName === "slyusars") {
       // Отримуємо додаткові дані для слюсаря
       const additionalData = getSlusarAdditionalData();
-      
+
       console.log("Додавання нового слюсаря - додаткові дані:", additionalData);
 
       // Створюємо повну структуру для слюсаря
@@ -391,7 +390,7 @@ async function handleAdd(
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
-      
+
       console.log("Дані для вставки нового слюсаря:", insertData.data);
     } else if (["incomes", "receivers", "shops"].includes(tableName)) {
       insertData.data = { Name: newValue };
@@ -492,8 +491,40 @@ export function showSavePromptModal(): Promise<boolean> {
         console.log("Catalog number:", catalogNumber);
 
         const results: boolean[] = [];
+        
+        // ==========================================================
+        // ✅ ПОЧАТОК ВИПРАВЛЕННЯ: ОБРОБКА "FAKTURA" (КОНТРАГЕНТИ)
+        // ==========================================================
+        if (tableFromDraft === "faktura") {
+          console.log("Handling 'faktura' CRUD operation...");
+          // Динамічно імпортуємо обробник, щоб уникнути проблем з залежностями
+          const { tryHandleFakturaCrud } = await import("./inhi/contragent");
+          const ok = await tryHandleFakturaCrud();
+          results.push(ok);
 
-        // 3) ВИПРАВЛЕНА ЛОГІКА:
+          // Негайно завершуємо операцію, не переходячи до іншої логіки
+          success = results.every(Boolean);
+          cleanup();
+          
+          if (success) {
+            toast("✅ Операцію виконано успішно", "#4caf50");
+            resetShopState();
+            resetDetailState();
+            await clearInputAndReloadData();
+            document.dispatchEvent(new CustomEvent("other-base-data-updated"));
+          } else {
+            closeAllModals();
+            toast("❌ Помилка при збереженні (faktura)", "#f44336");
+          }
+          resolve(success);
+          return; // <-- ДУЖЕ ВАЖЛИВО: вийти, щоб не виконувати логіку нижче
+        }
+        // ==========================================================
+        // ❌ КІНЕЦЬ ВИПРАВЛЕННЯ
+        // ==========================================================
+
+
+        // 3) ВИПРАВЛЕНА ЛОГІКА (для sclad, shops, details):
         if (CRUD === "Редагувати") {
           console.log("Edit mode: processing operations...");
 

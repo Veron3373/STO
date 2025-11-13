@@ -218,3 +218,29 @@
 .yes-no-buttons-all_other_bases .yes-button-all_other_bases:hover {
   filter: brightness(1.06);
 }
+
+/* Стилі для форми контрагентів */
+.contragent-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* Textarea як інпут, але багато рядків */
+.textarea-all_other_bases {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  background: #fff;
+  border: 1px solid #cfd7e2;
+  border-radius: 10px;
+  outline: 0;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+  resize: vertical;           /* дозволити зміну висоти */
+  line-height: 1.35;
+  white-space: pre-wrap;      /* перенос рядків */
+  word-break: break-word;     /* перенос довгих слів */
+}
+
+.textarea-all_other_bases:focus {
+  border-color: #7cb7ff;
+  box-shadow: 0 0 0 3px rgba(86, 156, 214, 0.25);
+}

@@ -26,6 +26,7 @@ import {
   handlepodlegleAddRecord,
   deletepodlegleRecord,
   togglepodleglePayment,
+  clearpodlegleForm, // <--- ДОДАНО
 } from "./zarplata";
 
 import {
@@ -338,49 +339,70 @@ function setButtonLoadingEl(
   }
 }
 
+// [НОВИЙ КОД]
 export function clearForm(): void {
   const activeSection = document.querySelector<HTMLElement>(
     ".Bukhhalter-form-section.Bukhhalter-active"
   );
   if (!activeSection) return;
 
+  // --- ПОЧАТОК ВИПРАВЛЕННЯ ---
+  // Викликаємо правильну функцію очищення для кожної вкладки
+
   if (currentTab === "magazine") {
     clearMagazineForm();
+    // Функція clearMagazineForm сама покаже сповіщення
     return;
   }
 
   if (currentTab === "details") {
     clearDetailsForm();
+    // Функція clearDetailsForm сама покаже сповіщення
     return;
   }
 
   if (currentTab === "vutratu") {
     clearvutratuForm();
+    // Функція clearvutratuForm сама покаже сповіщення
     return;
   }
 
+  if (currentTab === "podlegle") {
+    if (typeof clearpodlegleForm === "function") {
+      // Викликаємо імпортовану функцію з zarplata.ts
+      clearpodlegleForm(); // Вона вже містить updateTable та showNotification
+    } else {
+      // Запасний варіант, якщо імпорт не спрацював
+      console.error("clearpodlegleForm is not imported or not a function");
+      const inputs = activeSection.querySelectorAll<HTMLInputElement>(
+        "input:not([readonly])"
+      );
+      inputs.forEach((input) => {
+        input.value = "";
+      });
+      const selects =
+        activeSection.querySelectorAll<HTMLSelectElement>("select");
+      selects.forEach((select) => {
+        select.value = "";
+      });
+      showNotification("Фільтри очищено (частково)", "info", 1500);
+    }
+    return; // <--- ВАЖЛИВО
+  }
+  // --- КІНЕЦЬ ВИПРАВЛЕННЯ ---
+
+  // Цей код не має виконуватись, якщо всі вкладки оброблені
+  console.warn(`Невідома вкладка для очищення: ${currentTab}`);
   const inputs = activeSection.querySelectorAll<HTMLInputElement>(
     "input:not([readonly])"
   );
   inputs.forEach((input) => {
     input.value = "";
   });
-
   const selects = activeSection.querySelectorAll<HTMLSelectElement>("select");
   selects.forEach((select) => {
     select.value = "";
   });
-
-  if (currentTab === "podlegle") {
-    const paymentToggle = byId<HTMLInputElement>("payment-filter-toggle");
-    const statusToggle = byId<HTMLInputElement>("status-filter-toggle");
-
-    if (paymentToggle) paymentToggle.value = "2";
-    if (statusToggle) statusToggle.value = "2";
-
-    updatepodlegleTable();
-  }
-
   updateTotalSum();
   showNotification("Фільтри очищено", "info", 1500);
 }

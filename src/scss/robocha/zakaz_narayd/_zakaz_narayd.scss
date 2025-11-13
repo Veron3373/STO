@@ -297,6 +297,26 @@ body {
   transition: background-color 0.2s ease;
   border: none;
 }
+
+.action-button-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem; /* Зробимо емодзі більшим */
+  padding: 0 5px;
+  margin: 0 5px;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.2s, transform 0.2s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+/* КІНЕЦЬ ЗМІН 
+*/
+
 .close-act-button {
   background-color: #d32f2f;
   color: #fff;
@@ -533,8 +553,14 @@ body {
 .autocomplete-item.neutral {
   color: #888;
 }
-.autocomplete-item.positive {
-  color: #2e7d32;
+.autocomplete-item.item-detail {
+  color: #1e88e5 !important;
+  font-weight: 600;
+}
+
+.autocomplete-item.item-work {
+  color: #43a047 !important;
+  font-weight: 600;
 }
 
 /* editable поле — підсвітка тільки коли список ЗАКРИТИЙ */
@@ -601,13 +627,26 @@ h1 {
   justify-content: center;
 }
 
-.obmesheniy,
-.zakaz_narayd-buttons-containerobmesheniy {
+// Базовий стиль для контейнера кнопок
+.zakaz_narayd-buttons-container {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 24px;
-  gap: 10px;
+  align-items: center; // Вирівнюємо кнопки по вертикалі
+  padding: 10px 0px;
+  gap: 10px; // Залишаємо проміжок між іконками
+}
+
+// Магія Flexbox для розташування
+.zakaz_narayd-buttons-container {
+  
+  // Кнопка "Додати рядок"
+  #add-row-button {
+    margin-right: auto; // Відштовхує все, що праворуч, до правого краю
+  }
+
+  // Кнопка "Створити рахунок" (друга іконка)
+  #create-invoice-btn {
+    margin-right: auto; // Відштовхує все, що праворуч (кнопку Зберегти), до правого краю
+  }
 }
 
 /* ===== Стилі для кнопки видалення в стовпці "Найменування" ===== */

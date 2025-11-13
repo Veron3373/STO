@@ -33,6 +33,7 @@ export const updateTableNameDisplay = (
 };
 
 // Функція для очищення всіх даних
+// Функція для очищення всіх даних
 export const clearAllData = () => {
   const searchInput = document.getElementById(
     "search-input-all_other_bases"
@@ -55,6 +56,22 @@ export const clearAllData = () => {
     slusarInputs.remove();
   }
 
+  // Очищуємо форму контрагентів
+  const contragentForm = document.getElementById("contragent-form");
+  if (contragentForm) {
+    contragentForm.remove();
+  }
+
+  // Видаляємо всі календарі контрагентів
+  document.querySelectorAll(".contragent-calendar").forEach((cal) => {
+    cal.remove();
+  });
+
+  // Видаляємо всі dropdown-и контрагентів
+  document.querySelectorAll(".contragent-dropdown").forEach((dropdown) => {
+    dropdown.remove();
+  });
+
   all_bd = null;
 };
 
@@ -72,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .querySelectorAll(".modal-overlay-all_other_bases")
       .forEach((modal) => modal.classList.add("hidden-all_other_bases"));
   };
-          /*<button class="toggle-button-all_other_bases">Приймальник</button>*/
+  /*<button class="toggle-button-all_other_bases">Приймальник</button>*/
   const modal_all_other_bases = document.createElement("div");
   modal_all_other_bases.className =
     "modal-overlay-all_other_bases hidden-all_other_bases";
@@ -84,6 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <button class="toggle-button-all_other_bases">Склад</button>
           <button class="toggle-button-all_other_bases">Робота</button>
           <button class="toggle-button-all_other_bases">Співробітники</button>
+          <button class="toggle-button-all_other_bases">Контрагент</button>
           <button class="toggle-button-all_other_bases">Джерело</button>
         </div>
         <div class="modal-right-all_other_bases">
@@ -136,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ВИПРАВЛЕННЯ: Додаємо обробник закриття модального вікна при кліку поза ним
-/*   modal_all_other_bases.addEventListener("click", (e) => {
+  /*   modal_all_other_bases.addEventListener("click", (e) => {
     if (e.target === modal_all_other_bases) {
       closeAllModals();
     }
@@ -215,6 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
         Співробітники: "slyusars",
         Приймальник: "receivers",
         Джерело: "incomes",
+        Контрагент: "faktura",
       };
 
       document.dispatchEvent(
@@ -250,6 +269,11 @@ document.addEventListener("DOMContentLoaded", () => {
         case "Джерело": {
           const { handleDhereloClick } = await import("./inhi/djerelo");
           await handleDhereloClick();
+          break;
+        }
+        case "Контрагент": {
+          const { handleDhereloContragent } = await import("./inhi/contragent");
+          await handleDhereloContragent();
           break;
         }
       }

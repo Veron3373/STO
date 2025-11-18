@@ -1,0 +1,212 @@
+// src\scss\robocha\zakaz_narayd\_actRaxunok.scss
+
+.act-raxunok-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+
+  &.hidden {
+    display: none;
+  }
+}
+
+.act-raxunok-content {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+.act-raxunok-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+
+  &:hover {
+    background-color: #f5f5f5;
+    color: #000;
+    transform: rotate(90deg);
+  }
+}
+
+.act-raxunok-header {
+  text-align: center;
+  margin-bottom: 32px;
+
+  h2 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    color: #1a1a1a;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    font-size: 15px;
+    color: #666;
+  }
+}
+
+.act-raxunok-buttons {
+  display: flex;
+  gap: 16px;
+  flex-direction: column;
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+  }
+}
+
+.act-raxunok-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .btn-icon {
+    font-size: 48px;
+    transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn-description {
+    font-size: 13px;
+    color: #666;
+    position: relative;
+    z-index: 1;
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+
+    .btn-icon {
+      transform: scale(1.1);
+    }
+  }
+
+  &:active {
+    transform: translateY(-2px);
+  }
+
+  // Стиль для кнопки "Рахунок"
+  &.act-raxunok-btn-invoice {
+    &:hover {
+      border-color: #2196f3;
+      background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
+
+      .btn-icon {
+        filter: drop-shadow(0 2px 4px rgba(33, 150, 243, 0.3));
+      }
+
+      .btn-text {
+        color: #1976d2;
+      }
+    }
+  }
+
+  // Стиль для кнопки "Акт"
+  &.act-raxunok-btn-act {
+    &:hover {
+      border-color: #4caf50;
+      background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%);
+
+      .btn-icon {
+        filter: drop-shadow(0 2px 4px rgba(76, 175, 80, 0.3));
+      }
+
+      .btn-text {
+        color: #388e3c;
+      }
+    }
+  }
+}
+
+// Анімації
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Адаптивність для маленьких екранів
+@media (max-width: 479px) {
+  .act-raxunok-content {
+    padding: 24px;
+  }
+
+  .act-raxunok-btn {
+    padding: 20px 16px;
+
+    .btn-icon {
+      font-size: 40px;
+    }
+
+    .btn-text {
+      font-size: 16px;
+    }
+  }
+}

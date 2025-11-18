@@ -302,9 +302,7 @@ body {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.5rem; /* Зробимо емодзі більшим */
-  padding: 0 5px;
-  margin: 0 5px;
+  font-size: 1.2rem; /* Зробимо емодзі більшим */
   line-height: 1;
   opacity: 0.8;
   transition: opacity 0.2s, transform 0.2s;
@@ -459,13 +457,33 @@ body {
 }
 .status-row {
   display: flex;
+  justify-content: flex-end; // ← ЗМІНА: вирівнюємо все по правому краю
+  align-items: center;
+  width: 100%;
+  gap: 0.5rem; // ← можна зменшити gap між іконками
+}
+
+// Якщо потрібно, щоб дата була зліва, а іконки справа:
+.status-row {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  min-width: 240px;
+  width: 100%;
   gap: 1rem;
 }
-.status-dates span {
+// І додайте обгортку для іконок у TypeScript коді:
+.status-dates {
+  display: flex;
+  gap: 0.5rem;
   white-space: nowrap;
+}
+
+// Група іконок буде прилипати до правого краю
+.status-icons {
+  display: flex;
+  gap: 0.25rem; // ← невеликий проміжок між іконками
+  align-items: center;
+  margin-left: auto; // ← відштовхує іконки праворуч
 }
 
 /* ===== Попередження/бейджі для qty/price (підтримка з TS) ===== */

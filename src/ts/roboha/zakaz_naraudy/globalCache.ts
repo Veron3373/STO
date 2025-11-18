@@ -211,28 +211,26 @@ export async function loadGlobalData(): Promise<void> {
     if (skladErr)
       console.warn("⚠️ Не вдалося отримати sclad:", skladErr.message);
 
-// ========== ВИПРАВЛЕНО: works і details - TEXT, не JSONB ==========
+// ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
     globalCache.works =
       worksData
         ?.map((r: any) => {
-          const raw = r.data;
-          if (typeof raw === "string") return raw.trim();
-          if (raw && typeof raw === "object" && "data" in raw) return raw.data?.trim();
-          return "";
+          // r.data - це просто текстовий рядок
+          const text = String(r.data || "").trim();
+          return text;
         })
         .filter(Boolean) || [];
 
     globalCache.details =
       detailsData
         ?.map((r: any) => {
-          const raw = r.data;
-          if (typeof raw === "string") return raw.trim();
-          if (raw && typeof raw === "object" && "data" in raw) return raw.data?.trim();
-          return "";
+          // r.data - це просто текстовий рядок
+          const text = String(r.data || "").trim();
+          return text;
         })
         .filter(Boolean) || [];
 
-    console.log(`✅ Робіт: ${globalCache.works.length}, Деталей: ${globalCache.details.length}`);
+    console.log(`✅ Завантажено - Робіт: ${globalCache.works.length}, Деталей: ${globalCache.details.length}`);
 
     // слюсарі: нормально парсимо, як і раніше
     globalCache.slyusars =

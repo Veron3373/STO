@@ -47,6 +47,12 @@ import { formatDate } from "./inhi/formatuvannya_datu";
 import { addSaveHandler } from "./inhi/zberechennya_zmin_y_danux_aktu";
 import { userAccessLevel } from "../tablucya/users";
 import { canUserOpenActs } from "../tablucya/users";
+import {
+  createModalActRaxunok,
+  initModalActRaxunokHandlers,
+  initCreateActRaxunokButton,
+  MODAL_ACT_RAXUNOK_ID,
+} from "./inhi/actRaxunok";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -147,7 +153,7 @@ export async function showModal(actId: number): Promise<void> {
     }
     renderModalContent(act, actDetails, clientData, carData);
     updateAllSlyusarSumsFromHistory();
-    await fillMissingSlyusarSums(); // Додаємо await
+    await fillMissingSlyusarSums();
     checkSlyusarSumWarningsOnLoad();
     await addModalHandlers(actId, actDetails, clientData?.phone);
     await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
@@ -164,9 +170,6 @@ export async function showModal(actId: number): Promise<void> {
   }
 }
 
-/**
- * Заповнює відсутні зарплати слюсарів (async)
- */
 async function fillMissingSlyusarSums(): Promise<void> {
   if (!globalCache.settings.showZarplata || userAccessLevel === "Слюсар")
     return;
@@ -197,7 +200,6 @@ async function fillMissingSlyusarSums(): Promise<void> {
 
     if (!slyusarName) continue;
 
-    // ASYNC отримання відсотка
     const percent = await getSlyusarWorkPercent(slyusarName);
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
@@ -398,6 +400,15 @@ async function createRequiredModals(): Promise<void> {
   elem = document.getElementById(viknoVvodyParoluId);
   if (elem) elem.remove();
   document.body.appendChild(createViknoVvodyParolu());
+
+  elem = document.getElementById(MODAL_ACT_RAXUNOK_ID);
+  if (elem) elem.remove();
+  const actRaxunokModal = createModalActRaxunok();
+  document.body.appendChild(actRaxunokModal);
+  
+  initModalActRaxunokHandlers();
+  
+  console.log("✅ Модальне вікно actRaxunok створено та ініціалізовано");
 }
 
 async function fetchClientData(clientId: number | null): Promise<any> {
@@ -444,7 +455,6 @@ function renderModalContent(
   const isClosed = globalCache.isActClosed;
   const isRestricted = userAccessLevel === "Слюсар";
 
-  // ← ДОДАНО: отримуємо налаштування видимості
   const showCatalog = globalCache.settings.showCatalog;
   const showPibMagazin = globalCache.settings.showPibMagazin;
 
@@ -467,7 +477,6 @@ function renderModalContent(
   const editableClass = isClosed ? "cursor-not-allowed" : "";
   const photoCellHtml = `<div id="photo-section-slot"></div>`;
 
-  // ← ОНОВЛЕНО: безпечна обробка даних з перевіркою налаштувань
   const allItems = [
     ...(actDetails?.["Деталі"] || []).map((item: any) => ({
       type: "detail",
@@ -475,9 +484,9 @@ function renderModalContent(
       quantity: item["Кількість"] || 0,
       price: item["Ціна"] || 0,
       sum: item["Сума"] || 0,
-      person_or_store: showPibMagazin ? item["Магазин"] || "" : "", // ← ПЕРЕВІРКА
-      catalog: showCatalog ? item["Каталог"] || "" : "", // ← ПЕРЕВІРКА
-      sclad_id: showCatalog ? item["sclad_id"] || null : null, // ← ПЕРЕВІРКА
+      person_or_store: showPibMagazin ? item["Магазин"] || "" : "",
+      catalog: showCatalog ? item["Каталог"] || "" : "",
+      sclad_id: showCatalog ? item["sclad_id"] || null : null,
       slyusar_id: null,
     })),
     ...(actDetails?.["Роботи"] || []).map((item: any) => ({
@@ -486,15 +495,15 @@ function renderModalContent(
       quantity: item["Кількість"] || 0,
       price: item["Ціна"] || 0,
       sum: item["Сума"] || 0,
-      person_or_store: showPibMagazin ? item["Слюсар"] || "" : "", // ← ПЕРЕВІРКА
-      catalog: showCatalog ? item["Каталог"] || "" : "", // ← ПЕРЕВІРКА
+      person_or_store: showPibMagazin ? item["Слюсар"] || "" : "",
+      catalog: showCatalog ? item["Каталог"] || "" : "",
       sclad_id: showCatalog ? null : null,
       slyusar_id: item["slyusar_id"] || null,
     })),
   ];
 
   globalCache.initialActItems = allItems;
-  //console.log("Initial act items saved:", globalCache.initialActItems);
+  
   body.innerHTML = `
     <div class="zakaz_narayd-header">
       <div class="zakaz_narayd-header-info">
@@ -550,7 +559,21 @@ function renderModalContent(
             carInfo.nomer || ""
           ).trim()}`.trim() || "—"
         )}
-        ${createTableRow("Vincode", carInfo.vin)}
+        ${createTableRow(
+          "Vincode",
+          `
+          <div class="status-row">
+            <span>${carInfo.vin}</span>
+            <div class="status-icons">
+              ${
+                isRestricted
+                  ? ""
+                  : `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+              }
+            </div>
+          </div>
+          `
+        )}
         ${createTableRow("Двигун", carInfo.engine)}
         ${createTableRow(
           "Пробіг",
@@ -593,7 +616,7 @@ function renderModalContent(
     ${generateTableHTML(allItems, globalCache.settings.showPibMagazin)}
     ${isClosed ? createClosedActClaimText() : ""}
   `;
-  // Встановлюємо початкове значення авансу (форматування відбувається в modalUI.ts)
+  
   setTimeout(() => {
     const avansInput = document.getElementById(
       "editable-avans"
@@ -602,9 +625,7 @@ function renderModalContent(
 
     const avansValue = Number(act?.avans ?? actDetails?.["Аванс"] ?? 0);
     avansInput.value = String(avansValue);
-
-    // Форсуємо те ж форматування і авто-підгін ширини, що й при ручному вводі
-    avansInput.dispatchEvent(new Event("input")); // або: avansInput.dispatchEvent(new Event("blur"));
+    avansInput.dispatchEvent(new Event("input"));
   }, 60);
 }
 
@@ -613,7 +634,7 @@ function createClosedActClaimText(): string {
     <div class="closed-act-info">
       <p><strong>Претензій до вартості замовлення, виконаних робіт, встановлених запчастин та використаних матеріалів не маю.</strong></p>
       <p><strong>Гарантійні зобов'язання</strong></p>
-         <p>Виконавець гарантує відповідне відремонтованого ДТЗ (або його складових запчастин) вимогам технічної документації та нормативних документів виробника за умов виконання Замовником правил експлуатації ДТЗ. Гарантійний термін експлуатації на запасні частини встановлюється згідно з Законом України "Про захист прав споживачів". Гарантійні зобов'язання виконавця не розповсюджуються на запасні частини, надані Замовником. Деталі, що не були затребувані Замовником на момент видачі автомобіля, утилізуються та поверненню не підлягають. Цим підписом я надаю однозначну згоду на обробку моїх персональних даних з метою надання сервісних, гарантійних та інших супутніх послуг. Я повідомлений(на) про свої права, передбачені ст. 8 Закону України "Про захист персональних даних".</p>
+      <p>Виконавець гарантує відповідне відремонтованого ДТЗ (або його складових запчастин) вимогам технічної документації та нормативних документів виробника за умов виконання Замовником правил експлуатації ДТЗ. Гарантійний термін експлуатації на запасні частини встановлюється згідно з Законом України "Про захист прав споживачів". Гарантійні зобов'язання виконавця не розповсюджуються на запасні частини, надані Замовником. Деталі, що не були затребувані Замовником на момент видачі автомобіля, утилізуються та поверненню не підлягають. Цим підписом я надаю однозначну згоду на обробку моїх персональних даних з метою надання сервісних, гарантійних та інших супутніх послуг. Я повідомлений(на) про свої права, передбачені ст. 8 Закону України "Про захист персональних даних".</p>
       <br>
       <table>
         <tr><td><strong>Замовник:</strong> З об'ємом та вартістю робіт згоден</td><td><strong>Виконавець:</strong></td></tr>
@@ -641,11 +662,14 @@ async function addModalHandlers(
 
   initPhoneClickHandler(body, clientPhone);
   addSaveHandler(actId, actDetails);
-
-  // Додайте цей виклик
   initDeleteRowHandler();
 
   if (!isRestricted) {
+    setTimeout(() => {
+      initCreateActRaxunokButton();
+      console.log("✅ Кнопка Акт/Рахунок ініціалізована");
+    }, 100);
+
     const printButton = document.getElementById("print-act-button");
     printButton?.addEventListener("click", () => {
       const prev = globalCache.settings.showCatalog;
@@ -656,6 +680,7 @@ async function addModalHandlers(
         globalCache.settings.showCatalog = prev;
       }
     });
+    
     const skladButton = document.getElementById("sklad");
     skladButton?.addEventListener("click", () => showModalAllOtherBases());
   }
@@ -677,7 +702,6 @@ async function addModalHandlers(
     });
   }
 
-  // Додаємо обробник для поля авансу
   const avansInput = document.getElementById(
     "editable-avans"
   ) as HTMLInputElement;
@@ -689,6 +713,28 @@ async function addModalHandlers(
 
   body.addEventListener("input", handleInputChange);
   updateCalculatedSumsInFooter();
+}
+
+function expandName(shortenedName: string): string {
+  if (!shortenedName || !shortenedName.includes(".....")) return shortenedName;
+
+  const allNames = [...globalCache.works, ...globalCache.details];
+  const [firstPart, lastPart] = shortenedName.split(".....");
+
+  const fullName = allNames.find((name) => {
+    const sentences = name
+      .split(/(?<=\.)\s*/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (sentences.length < 2) return false;
+    const lastSentence = sentences[sentences.length - 1];
+    return (
+      name.startsWith(firstPart) &&
+      (name.endsWith(lastPart) || lastSentence === lastPart)
+    );
+  });
+
+  return fullName || shortenedName;
 }
 
 function handleInputChange(event: Event): void {
@@ -724,7 +770,6 @@ function handleInputChange(event: Event): void {
       }
       const row = target.closest("tr") as HTMLTableRowElement;
       if (row) {
-        // ASYNC виклик
         calculateRowSum(row).catch((err) => {
           console.error("Помилка при розрахунку суми:", err);
         });
@@ -732,7 +777,6 @@ function handleInputChange(event: Event): void {
       break;
     }
     case "slyusar_sum": {
-      // Обробка редагування поля "Слюсарю" - дозволяємо тільки цифри
       const cleanedValue = target.textContent?.replace(/[^0-9]/g, "") || "";
       const formattedValue = formatNumberWithSpaces(cleanedValue, 0, 0);
       if (target.textContent !== formattedValue) {
@@ -757,28 +801,47 @@ function handleInputChange(event: Event): void {
       break;
     }
     case "name": {
-      const name = target.textContent?.trim() || "";
+      if ((target as any)._fromAutocomplete) {
+        delete (target as any)._fromAutocomplete;
+        updateCalculatedSumsInFooter();
+        break;
+      }
 
-      const isInWorks = globalCache.works.includes(name);
-      const isInDetails = globalCache.details.includes(name);
+      const displayedName = target.textContent?.trim() || "";
+      const fullName = expandName(displayedName);
 
-      // якщо назва точна й є лише в одному списку – беремо його
-      // якщо немає або є в обох – вважаємо "details" (безпечніше для складу/цін)
-      const type = isInWorks && !isInDetails ? "works" : "details";
+      const isInWorks = globalCache.works.includes(fullName);
+      const isInDetails = globalCache.details.includes(fullName);
+
+      let type: "details" | "works";
+      if (isInDetails && !isInWorks) {
+        type = "details";
+      } else if (isInWorks && !isInDetails) {
+        type = "works";
+      } else {
+        type = "works";
+      }
+
       target.setAttribute("data-type", type);
 
-      if (name && globalCache.settings.showPibMagazin) {
+      console.log(`🔧 Тип для "${displayedName}" → "${fullName}": ${type}`, {
+        isInDetails,
+        isInWorks,
+      });
+
+      if (displayedName && globalCache.settings.showPibMagazin) {
         const row = target.closest("tr") as HTMLTableRowElement;
         const pibMagCell = row?.querySelector(
           '[data-name="pib_magazin"]'
         ) as HTMLElement | null;
-        if (pibMagCell && !pibMagCell.textContent?.trim()) {
+
+        if (row && pibMagCell && !pibMagCell.textContent?.trim()) {
           if (type === "works") {
             const userName = getUserNameFromLocalStorage();
             if (userName) {
               pibMagCell.textContent = userName;
               pibMagCell.setAttribute("data-type", "slyusars");
-              if (row) calculateRowSum(row); // async всередині
+              void calculateRowSum(row);
             }
           } else {
             pibMagCell.setAttribute("data-type", "shops");
@@ -791,7 +854,6 @@ function handleInputChange(event: Event): void {
     }
 
     case "pib_magazin": {
-      // При зміні ПІБ/Магазин перераховуємо суму слюсаря (ASYNC)
       const row = target.closest("tr") as HTMLTableRowElement;
       if (row) {
         calculateRowSum(row).catch((err) => {
@@ -809,7 +871,6 @@ function handleInputChange(event: Event): void {
           const originalCaretPosition = selection?.focusOffset || 0;
           target.textContent = formattedValue;
 
-          // Відновлюємо позицію курсора
           if (selection && target.firstChild) {
             const formattedLength = formattedValue.length;
             const originalLength = cleanedValue.length;

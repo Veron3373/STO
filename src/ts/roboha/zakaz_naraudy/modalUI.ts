@@ -532,7 +532,6 @@ export function generateTableHTML(
   const showCatalog = globalCache.settings.showCatalog;
   const showZarplata = globalCache.settings.showZarplata;
   const isRestricted = userAccessLevel === "Слюсар";
-  const isAdmin = userAccessLevel === "Адміністратор";
 
   const catalogColumnHeader = showCatalog ? "<th>Каталог</th>" : "";
   const pibMagazinColumnHeader = showPibMagazin ? "<th>ПІБ _ Магазин</th>" : "";
@@ -587,16 +586,7 @@ export function generateTableHTML(
         isRestricted ? " obmesheniy" : ""
       }">
       <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
-      
-      ${
-        isAdmin
-          ? `
-      <button type="button" class="action-button-icon" id="create-act-btn" title="Створити акт?">🗂️</button>
-      <button type="button" class="action-button-icon" id="create-invoice-btn" title="Створити рахунок">✍️</button>
-      `
-          : ""
-      }
-            <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
+      <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
     </div>`;
 
   const tableHTML = `
@@ -748,10 +738,20 @@ export function updateCalculatedSumsInFooter(): void {
       if (!type || (type !== "details" && type !== "works")) {
         const isInWorks = works.has(name);
         const isInDetails = details.has(name);
-        type = isInWorks && !isInDetails ? "works" : "details";
+
+        // ВИПРАВЛЕНА ЛОГІКА:
+        if (isInDetails && !isInWorks) {
+          type = "details";
+        } else if (isInWorks && !isInDetails) {
+          type = "works";
+        } else {
+          type = "works"; // за замовчуванням
+        }
+
         nameCell.setAttribute("data-type", type);
       }
 
+      // ВИПРАВЛЕНО: works → 🛠️ totalWorksSum, details → ⚙️ totalDetailsSum
       if (type === "works") {
         sums.totalWorksSum += sum;
         iconCell.textContent = `🛠️ ${index + 1}`;

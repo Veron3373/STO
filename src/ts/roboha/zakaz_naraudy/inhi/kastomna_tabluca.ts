@@ -20,7 +20,7 @@ export {
 /* ====================== настройки ====================== */
 const CATALOG_SUGGEST_MIN = 3;
 const LIVE_WARNINGS = false;
-const NAME_AUTOCOMPLETE_MIN_CHARS = 3;  // мінімум символів для пошуку
+const NAME_AUTOCOMPLETE_MIN_CHARS = 3; // мінімум символів для пошуку
 const NAME_AUTOCOMPLETE_MAX_RESULTS = 50; // максимум результатів
 
 // Кеш для відсотку
@@ -28,10 +28,10 @@ let cachedPercent: number | null = null;
 
 /* ====================== кеш для автодоповнення назв ====================== */
 let nameAutocompleteCache: {
-  query: string;           // запит, за яким завантажили
-  works: string[];         // роботи з бази
-  details: string[];       // деталі з бази
-  timestamp: number;       // час завантаження
+  query: string; // запит, за яким завантажили
+  works: string[]; // роботи з бази
+  details: string[]; // деталі з бази
+  timestamp: number; // час завантаження
 } | null = null;
 
 /** Завантажити відсоток з бази даних settings */
@@ -74,7 +74,7 @@ async function loadNameAutocompleteData(query: string): Promise<void> {
 
   try {
     const searchPattern = `%${query}%`;
-    
+
     const [worksResult, detailsResult] = await Promise.all([
       supabase
         .from("works")
@@ -91,7 +91,7 @@ async function loadNameAutocompleteData(query: string): Promise<void> {
     const works = (worksResult.data || [])
       .map((r: any) => r.data || "")
       .filter(Boolean);
-    
+
     const details = (detailsResult.data || [])
       .map((r: any) => r.data || "")
       .filter(Boolean);
@@ -103,7 +103,9 @@ async function loadNameAutocompleteData(query: string): Promise<void> {
       timestamp: Date.now(),
     };
 
-    console.log(`✅ Завантажено: ${works.length} робіт, ${details.length} деталей`);
+    console.log(
+      `✅ Завантажено: ${works.length} робіт, ${details.length} деталей`
+    );
   } catch (error) {
     console.error("❌ Помилка завантаження даних для автодоповнення:", error);
     nameAutocompleteCache = null;
@@ -115,14 +117,13 @@ async function loadNameAutocompleteData(query: string): Promise<void> {
  */
 async function getNameSuggestions(query: string): Promise<Suggest[]> {
   const q = query.trim().toLowerCase();
-  
+
   if (q.length < NAME_AUTOCOMPLETE_MIN_CHARS) {
     return [];
   }
 
-  const needsReload = 
-    !nameAutocompleteCache ||
-    !q.startsWith(nameAutocompleteCache.query);
+  const needsReload =
+    !nameAutocompleteCache || !q.startsWith(nameAutocompleteCache.query);
 
   if (needsReload) {
     await loadNameAutocompleteData(q);
@@ -133,7 +134,7 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
   }
 
   console.log(`🔎 Фільтрація для "${q}"`);
-  
+
   const filteredDetails = nameAutocompleteCache.details
     .filter((name) => name.toLowerCase().includes(q))
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
@@ -141,9 +142,9 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       label: x,
       value: shortenName(x),
       fullName: x,
-      itemType: 'detail' as const,
+      itemType: "detail" as const,
     }));
-  
+
   const filteredWorks = nameAutocompleteCache.works
     .filter((name) => name.toLowerCase().includes(q))
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
@@ -151,10 +152,12 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       label: x,
       value: shortenName(x),
       fullName: x,
-      itemType: 'work' as const,
+      itemType: "work" as const,
     }));
 
-  console.log(`📋 Деталей: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`);
+  console.log(
+    `📋 Деталей: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`
+  );
 
   return [...filteredDetails, ...filteredWorks];
 }
@@ -339,9 +342,7 @@ function setCellText(cell: HTMLElement | null, text: string) {
   cell.dispatchEvent(new Event("input", { bubbles: true }));
 }
 function parseNum(text: string | null | undefined) {
-  return parseFloat(
-    (text || "0").replace(/\s/g, "").replace(",", ".")
-  ) || 0;
+  return parseFloat((text || "0").replace(/\s/g, "").replace(",", ".")) || 0;
 }
 
 function getRowSum(row: HTMLElement) {
@@ -425,7 +426,7 @@ type Suggest = {
   sclad_id?: number;
   labelHtml?: string;
   fullName?: string;
-  itemType?: 'detail' | 'work';
+  itemType?: "detail" | "work";
 };
 
 let currentAutocompleteInput: HTMLElement | null = null;
@@ -457,17 +458,18 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   list.style.visibility = "hidden";
   list.style.zIndex = "100000";
 
-suggestions.forEach((s) => {
+  suggestions.forEach((s) => {
     const { label, value, sclad_id, labelHtml, fullName, itemType } = s;
     const li = document.createElement("li");
     li.className = "autocomplete-item";
-    
-    if (itemType === 'detail') li.classList.add("item-detail");
-    if (itemType === 'work') li.classList.add("item-work");
+
+    if (itemType === "detail") li.classList.add("item-detail");
+    if (itemType === "work") li.classList.add("item-work");
     li.tabIndex = 0;
     li.dataset.value = value;
     if (sclad_id !== undefined) li.dataset.scladId = String(sclad_id);
     if (fullName) li.dataset.fullName = fullName;
+    if (itemType) li.dataset.itemType = itemType; // ← ДОДАЙТЕ ЦЕЙ РЯДОК
 
     const m = label.match(/К-ть:\s*(-?\d+)/);
     if (m) {
@@ -485,6 +487,10 @@ suggestions.forEach((s) => {
       const chosenValue = el.dataset.value || value;
       const chosenScladId = Number(el.dataset.scladId) || undefined;
       const chosenFullName = el.dataset.fullName;
+      const chosenItemType = el.dataset.itemType as
+        | "detail"
+        | "work"
+        | undefined; // ← ДОДАЙТЕ ЦЕ
 
       const dataName = target.getAttribute("data-name");
       if (dataName === "catalog") {
@@ -496,15 +502,35 @@ suggestions.forEach((s) => {
         const shortenedText = shortenName(fullText);
         target.textContent = shortenedText;
 
+        // 1. Сирий тип з підказки ("detail" | "work")
+        const rawItemType =
+          chosenItemType ||
+          (globalCache.details.includes(fullText) ? "detail" : "work");
+
+        // 2. Нормалізуємо до того, що використовується у всій таблиці:
+        //    "details" (деталь) або "works" (робота)
+        const typeToSet = rawItemType === "detail" ? "details" : "works";
+
+        // 3. Записуємо тип у комірку з найменуванням
+        target.setAttribute("data-type", typeToSet);
+
         const row = target.closest("tr")!;
         const pibMagCell = row.querySelector(
           '[data-name="pib_magazin"]'
         ) as HTMLElement | null;
+
         if (pibMagCell) {
-          const isDetail = globalCache.details.includes(fullText);
-          pibMagCell.setAttribute("data-type", isDetail ? "shops" : "slyusars");
+          // 4. Для деталей → магазини, для робіт → слюсарі
+          pibMagCell.setAttribute(
+            "data-type",
+            typeToSet === "details" ? "shops" : "slyusars"
+          );
           pibMagCell.textContent = "";
         }
+
+        // позначаємо, що ця зміна прийшла з автодоповнення
+        (target as any)._fromAutocomplete = true;
+
         target.dispatchEvent(new Event("input", { bubbles: true }));
         target.focus();
       } else {
@@ -1091,6 +1117,12 @@ async function applyCatalogSelectionById(
 
   const nameToSet = fullName || shortenName(picked.name || "");
   setCellText(nameCell, nameToSet);
+
+  // КРИТИЧНО: Встановлюємо тип "details" для деталей зі складу
+  if (nameCell) {
+    nameCell.setAttribute("data-type", "details");
+    console.log(`✅ Встановлено тип "details" для "${nameToSet}"`);
+  }
   setCellText(priceCell, formatUA(priceWithMarkup));
   if (catalogCell) {
     catalogCell.setAttribute("data-sclad-id", String(picked.sclad_id));
@@ -1119,24 +1151,60 @@ async function applyCatalogSelectionById(
   }
 }
 
-/** ПІБ/Магазин: тип */
+/** ПІБ/Магазин: визначає тип на основі бази даних */
 function updatePibMagazinDataType(pibMagazinCell: HTMLElement): string {
   const currentRow = pibMagazinCell.closest("tr");
   const nameCell = currentRow?.querySelector(
     '[data-name="name"]'
-  ) as HTMLElement;
-  const nameQuery = nameCell?.textContent?.trim() || "";
+  ) as HTMLElement | null;
 
-  const isExactDetail = globalCache.details.some(
-    (d) => d.toLowerCase() === nameQuery.toLowerCase()
-  );
-  const isExactWork = globalCache.works.some(
-    (w) => w.toLowerCase() === nameQuery.toLowerCase()
+  const nameQuery = (nameCell?.textContent || "").trim();
+
+  // 1. Якщо у "Найменування" вже є data-type – ДОВІРЯЄМО йому
+  const explicitType = nameCell?.getAttribute("data-type");
+  if (explicitType === "details") {
+    pibMagazinCell.setAttribute("data-type", "shops");
+    return "shops";      // деталь → магазини
+  }
+  if (explicitType === "works") {
+    pibMagazinCell.setAttribute("data-type", "slyusars");
+    return "slyusars";   // робота → слюсарі
+  }
+
+  // 2. Якщо назва пуста – дефолтно слюсар
+  if (!nameQuery) {
+    pibMagazinCell.setAttribute("data-type", "slyusars");
+    return "slyusars";
+  }
+
+  // 3. Fallback: аналізуємо, де назва є в кеші (на випадок, якщо data-type не виставлений)
+  const nameQueryLower = nameQuery.toLowerCase();
+
+  const isInDetails = globalCache.details.some(
+    (d) => d.toLowerCase() === nameQueryLower
   );
 
-  let targetType = "slyusars";
-  if (isExactDetail && !isExactWork) targetType = "shops";
+  const isInWorks = globalCache.works.some(
+    (w) => w.toLowerCase() === nameQueryLower
+  );
+
+  console.log(`🔍 Перевірка типу для "${nameQuery}":`, {
+    isInDetails,
+    isInWorks,
+  });
+
+  let targetType: "shops" | "slyusars";
+
+  if (isInDetails && !isInWorks) {
+    targetType = "shops";     // ДЕТАЛЬ → МАГАЗИН
+  } else if (isInWorks && !isInDetails) {
+    targetType = "slyusars";  // РОБОТА → СЛЮСАР
+  } else {
+    targetType = "slyusars";  // за замовчуванням слюсар
+  }
 
   pibMagazinCell.setAttribute("data-type", targetType);
+  console.log(`✅ Встановлено тип: ${targetType}`);
+
   return targetType;
 }

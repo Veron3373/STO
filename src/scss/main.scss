@@ -11,4 +11,6 @@
 @use "./robocha/tablucya/users";
 @use "./robocha/bukhhalteriya/bukhhalteriya";
 @use "./robocha/dodatu_inchi_bazu/downlExcel";
-@use "./robocha/zakaz_narayd/actRaxunok";
+@use "./robocha/zakaz_narayd/faktura";
+@use "./robocha/zakaz_narayd/fakturaAct";
+@use "./robocha/zakaz_narayd/fakturaRaxunok";

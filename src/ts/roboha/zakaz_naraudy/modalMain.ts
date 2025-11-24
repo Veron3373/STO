@@ -1,4 +1,5 @@
 // src\ts\roboha\zakaz_naraudy\modalMain.ts
+import { cacheHiddenColumnsData } from "./inhi/zberechennya_zmin_y_danux_aktu";
 import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "./inhi/vspluvauhe_povidomlenna";
 import {
@@ -45,14 +46,19 @@ import {
 import { showModalAllOtherBases } from "../dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 import { formatDate } from "./inhi/formatuvannya_datu";
 import { addSaveHandler } from "./inhi/zberechennya_zmin_y_danux_aktu";
-import { userAccessLevel } from "../tablucya/users";
-import { canUserOpenActs } from "../tablucya/users";
+import {
+  userAccessLevel,
+  canUserOpenActs,
+  canUserSeeZarplataColumn,
+  canUserSeePriceColumns,
+} from "../tablucya/users";
+
 import {
   createModalActRaxunok,
   initModalActRaxunokHandlers,
   initCreateActRaxunokButton,
   MODAL_ACT_RAXUNOK_ID,
-} from "./inhi/actRaxunok";
+} from "./inhi/faktura"; // <--- НОВИЙ ФАЙЛ
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -106,6 +112,232 @@ function initDeleteRowHandler(): void {
   });
 }
 
+/**
+ * Допоміжна функція: читає boolean-настройку з таблиці settings
+ * для конкретного рядка (setting_id) та колонки (назви ролі).
+ * Якщо щось пішло не так — ПОВЕРТАЄ true (нічого не ховаємо).
+ */
+async function getRoleSettingBool(
+  settingId: number,
+  columnName: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select(columnName)
+      .eq("setting_id", settingId)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        `Помилка читання settings (setting_id=${settingId}, col=${columnName}):`,
+        error
+      );
+      return true;
+    }
+
+    if (!data) {
+      console.warn(
+        `settings: не знайдено рядок setting_id=${settingId} для колонки ${columnName}`
+      );
+      return true;
+    }
+
+    const safeData: Record<string, unknown> =
+      (data ?? {}) as unknown as Record<string, unknown>;
+    const value = safeData[columnName];
+
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value === 1;
+    if (typeof value === "string") {
+      const v = value.trim().toLowerCase();
+      if (["true", "1", "yes", "y"].includes(v)) return true;
+      if (["false", "0", "no", "n"].includes(v)) return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error(
+      `Виняток при читанні settings (setting_id=${settingId}, col=${columnName}):`,
+      e
+    );
+    return true;
+  }
+}
+
+/**
+ * Перевіряє, чи потрібно показувати кнопку замка (закриття акту)
+ * по ролі та налаштуванням таблиці settings.
+ *
+ * Мапа:
+ *  - Слюсар      → settings.setting_id = 3,  колонка "Слюсар"
+ *  - Запчастист  → settings.setting_id = 16, колонка "Запчастист"
+ *  - Складовщик  → settings.setting_id = 13, колонка "Складовщик"
+ *
+ *  - Адміністратор → завжди TRUE
+ *  - Приймальник та інші ролі → TRUE (поки що без обмежень)
+ */
+async function canUserSeeLockButton(): Promise<boolean> {
+  const role = userAccessLevel;
+
+  if (!role) return true;
+
+  if (role === "Адміністратор") return true;
+
+  let settingId: number | null = null;
+  let columnName: string | null = null;
+
+  switch (role) {
+    case "Слюсар":
+      settingId = 3;
+      columnName = "Слюсар";
+      break;
+
+    case "Запчастист":
+      settingId = 16;
+      columnName = "Запчастист";
+      break;
+
+    case "Складовщик":
+      settingId = 13;
+      columnName = "Складовщик";
+      break;
+
+    default:
+      return true;
+  }
+
+  if (!settingId || !columnName) return true;
+
+  return await getRoleSettingBool(settingId, columnName);
+}
+
+/**
+ * Чи можна показувати кнопку "Акт Рахунок? 🗂️"
+ *
+ * Мапа:
+ *  - Приймальник → settings.setting_id = 18, колонка "Приймальник"
+ *  - Запчастист  → settings.setting_id = 19, колонка "Запчастист"
+ *  - Складовщик  → settings.setting_id = 16, колонка "Складовщик"
+ *
+ *  - Адміністратор → завжди TRUE
+ *  - Слюсар та інші → TRUE (але Слюсар все одно обрізається по isRestricted)
+ */
+async function canUserSeeCreateActButton(): Promise<boolean> {
+  const role = userAccessLevel;
+
+  if (!role) return true;
+  if (role === "Адміністратор") return true;
+
+  let settingId: number | null = null;
+  let columnName: string | null = null;
+
+  switch (role) {
+    case "Приймальник":
+      settingId = 18;
+      columnName = "Приймальник";
+      break;
+
+    case "Запчастист":
+      settingId = 19;
+      columnName = "Запчастист";
+      break;
+
+    case "Складовщик":
+      settingId = 16;
+      columnName = "Складовщик";
+      break;
+
+    default:
+      return true;
+  }
+
+  if (!settingId || !columnName) return true;
+  return await getRoleSettingBool(settingId, columnName);
+}
+
+/**
+ * Чи можна показувати кнопку "Друк акту 🖨️"
+ *
+ * Мапа:
+ *  - Приймальник → settings.setting_id = 19, колонка "Приймальник"
+ *  - Запчастист  → settings.setting_id = 20, колонка "Запчастист"
+ *  - Складовщик  → settings.setting_id = 17, колонка "Складовщик"
+ */
+async function canUserSeePrintActButton(): Promise<boolean> {
+  const role = userAccessLevel;
+
+  if (!role) return true;
+  if (role === "Адміністратор") return true;
+
+  let settingId: number | null = null;
+  let columnName: string | null = null;
+
+  switch (role) {
+    case "Приймальник":
+      settingId = 19;
+      columnName = "Приймальник";
+      break;
+
+    case "Запчастист":
+      settingId = 20;
+      columnName = "Запчастист";
+      break;
+
+    case "Складовщик":
+      settingId = 17;
+      columnName = "Складовщик";
+      break;
+
+    default:
+      return true;
+  }
+
+  if (!settingId || !columnName) return true;
+  return await getRoleSettingBool(settingId, columnName);
+}
+
+/**
+ * Чи можна показувати кнопку "Склад 📦"
+ *
+ * Мапа:
+ *  - Приймальник → settings.setting_id = 20, колонка "Приймальник"
+ *  - Запчастист  → settings.setting_id = 21, колонка "Запчастист"
+ *  - Складовщик  → settings.setting_id = 18, колонка "Складовщик"
+ */
+async function canUserSeeSkladButton(): Promise<boolean> {
+  const role = userAccessLevel;
+
+  if (!role) return true;
+  if (role === "Адміністратор") return true;
+
+  let settingId: number | null = null;
+  let columnName: string | null = null;
+
+  switch (role) {
+    case "Приймальник":
+      settingId = 20;
+      columnName = "Приймальник";
+      break;
+
+    case "Запчастист":
+      settingId = 21;
+      columnName = "Запчастист";
+      break;
+
+    case "Складовщик":
+      settingId = 18;
+      columnName = "Складовщик";
+      break;
+
+    default:
+      return true;
+  }
+
+  if (!settingId || !columnName) return true;
+  return await getRoleSettingBool(settingId, columnName);
+}
+
 export async function showModal(actId: number): Promise<void> {
   const canOpen = await canUserOpenActs();
 
@@ -126,32 +358,76 @@ export async function showModal(actId: number): Promise<void> {
   showNotification("Завантаження даних акту...", "info", 2000);
   modal.classList.remove("hidden");
   body.innerHTML = "";
+
   try {
     await loadGlobalData();
+
+    // 🔽 Доступ до колонки "Зар-та" по ролі (по settings)
+    if (userAccessLevel && userAccessLevel !== "Адміністратор") {
+      const canSeeZarplata = await canUserSeeZarplataColumn();
+      globalCache.settings.showZarplata = canSeeZarplata;
+    }
+    // Для Адміністратора залишаємо як прийшло з loadGlobalData()
+
     await createRequiredModals();
+
     const { data: act, error: actError } = await supabase
       .from("acts")
       .select("*")
       .eq("act_id", actId)
       .single();
+
     if (actError || !act) {
       handleLoadError(actError);
       return;
     }
+
     globalCache.currentActId = actId;
     globalCache.isActClosed = !!act.date_off;
+
     const [clientData, carData] = await Promise.all([
       fetchClientData(act.client_id),
       fetchCarData(act.cars_id),
     ]);
+
     const actDetails = safeParseJSON(act.info || act.data || act.details) || {};
+
+    cacheHiddenColumnsData(actDetails);
     globalCache.oldNumbers = new Map<number, number>();
     for (const d of actDetails?.["Деталі"] || []) {
       const id = Number(d?.sclad_id);
       const qty = Number(d?.["Кількість"] ?? 0);
       if (id) globalCache.oldNumbers.set(id, qty);
     }
-    renderModalContent(act, actDetails, clientData, carData);
+
+    // 🔑 ВАЖЛИВО: визначаємо, чи показувати кнопки (за роллю + settings)
+    const [
+      canShowLockButton,
+      canShowCreateActBtn,
+      canShowPrintActBtn,
+      canShowSkladBtn,
+    ] = await Promise.all([
+      canUserSeeLockButton(),
+      canUserSeeCreateActButton(),
+      canUserSeePrintActButton(),
+      canUserSeeSkladButton(),
+    ]);
+
+    renderModalContent(
+      act,
+      actDetails,
+      clientData,
+      carData,
+      canShowLockButton,
+      canShowCreateActBtn,
+      canShowPrintActBtn,
+      canShowSkladBtn
+    );
+
+    // 🔽 ТУТ ВЖЕ Є ТАБЛИЦЯ В DOM — МОЖНА ХОВАТИ/ПОКАЗУВАТИ ЦІНА/СУМА
+    const canSeePriceCols = await canUserSeePriceColumns();
+    togglePriceColumnsVisibility(canSeePriceCols);
+
     updateAllSlyusarSumsFromHistory();
     await fillMissingSlyusarSums();
     checkSlyusarSumWarningsOnLoad();
@@ -307,28 +583,34 @@ function applyAccessRestrictionsToNewRow(): void {
   if (!table) return;
 
   const lastRow = table.querySelector("tbody tr:last-child");
-  if (lastRow) {
-    const cells = lastRow.querySelectorAll("td");
-    cells.forEach((cell) => {
-      const dataName = cell.getAttribute("data-name");
-      if (
-        dataName === "price" ||
-        dataName === "sum" ||
-        dataName === "slyusar_sum"
-      ) {
-        cell.classList.add("hidden");
-      }
-    });
-  }
+  if (!lastRow) return;
+
+  const cells = lastRow.querySelectorAll("td");
+  cells.forEach((cell) => {
+    const dataName = cell.getAttribute("data-name");
+
+    // Ціна / Сума — як раніше ховаємо для слюсаря (якщо тобі ще потрібно)
+    if (dataName === "price" || dataName === "sum") {
+      cell.classList.add("hidden");
+    }
+
+    // Зар-та ховаємо ТІЛЬКИ якщо в налаштуваннях вимкнена
+    if (dataName === "slyusar_sum" && !globalCache.settings.showZarplata) {
+      cell.classList.add("hidden");
+    }
+  });
 }
 
+/**
+ * Обмеження доступу:
+ *  - Слюсар: ховаємо друк, склад, забороняємо створення папки для фото.
+ *  - Замок тепер НЕ ховаємо тут, а керуємось canUserSeeLockButton().
+ */
 function applyAccessRestrictions(): void {
   if (userAccessLevel === "Слюсар") {
-    const statusLockBtn = document.getElementById("status-lock-btn");
     const printActButton = document.getElementById("print-act-button");
     const skladButton = document.getElementById("sklad");
 
-    if (statusLockBtn) statusLockBtn.classList.add("hidden");
     if (printActButton) printActButton.classList.add("hidden");
     if (skladButton) skladButton.classList.add("hidden");
     restrictPhotoAccess();
@@ -405,9 +687,9 @@ async function createRequiredModals(): Promise<void> {
   if (elem) elem.remove();
   const actRaxunokModal = createModalActRaxunok();
   document.body.appendChild(actRaxunokModal);
-  
+
   initModalActRaxunokHandlers();
-  
+
   console.log("✅ Модальне вікно actRaxunok створено та ініціалізовано");
 }
 
@@ -448,7 +730,11 @@ function renderModalContent(
   act: any,
   actDetails: any,
   clientData: any,
-  carData: any
+  carData: any,
+  canShowLockButton: boolean,
+  canShowCreateActBtn: boolean,
+  canShowPrintActBtn: boolean,
+  canShowSkladBtn: boolean
 ): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
@@ -503,7 +789,9 @@ function renderModalContent(
   ];
 
   globalCache.initialActItems = allItems;
-  
+
+  const showLockButton = canShowLockButton;
+
   body.innerHTML = `
     <div class="zakaz_narayd-header">
       <div class="zakaz_narayd-header-info">
@@ -542,14 +830,15 @@ function renderModalContent(
               }
             </div>
             ${
-              isRestricted
-                ? ""
-                : `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${
+              showLockButton
+                ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${
                     act.act_id
                   }">
                    ${isClosed ? "🔒" : "🗝️"}
                    </button>`
+                : ""
             }
+
           </div>
         `
         )}
@@ -566,9 +855,9 @@ function renderModalContent(
             <span>${carInfo.vin}</span>
             <div class="status-icons">
               ${
-                isRestricted
-                  ? ""
-                  : `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+                !isRestricted && canShowCreateActBtn
+                  ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+                  : ""
               }
             </div>
           </div>
@@ -590,33 +879,33 @@ function renderModalContent(
         <div class="reason-text">
           <strong>Причина звернення:</strong>
           <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${
-    actDetails?.["Причина звернення"] || "—"
-  }</span>
+            actDetails?.["Причина звернення"] || "—"
+          }</span>
         </div>
         ${
-          isRestricted
-            ? ""
-            : `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+          !isRestricted && canShowPrintActBtn
+            ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+            : ""
         }
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">
           <strong>Рекомендації:</strong>
           <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${
-    actDetails?.["Рекомендації"] || "—"
-  }</span>
+            actDetails?.["Рекомендації"] || "—"
+          }</span>
         </div>
         ${
-          isRestricted
-            ? ""
-            : `<button id="sklad" title="Склад" class="sklad">📦</button>`
+          !isRestricted && canShowSkladBtn
+            ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
+            : ""
         }
       </div>
     </div>
     ${generateTableHTML(allItems, globalCache.settings.showPibMagazin)}
     ${isClosed ? createClosedActClaimText() : ""}
   `;
-  
+
   setTimeout(() => {
     const avansInput = document.getElementById(
       "editable-avans"
@@ -654,11 +943,9 @@ async function addModalHandlers(
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
 
-  if (!isRestricted) {
-    import("./inhi/knopka_zamok").then(({ initStatusLockDelegation }) => {
-      initStatusLockDelegation();
-    });
-  }
+  import("./inhi/knopka_zamok").then(({ initStatusLockDelegation }) => {
+    initStatusLockDelegation();
+  });
 
   initPhoneClickHandler(body, clientPhone);
   addSaveHandler(actId, actDetails);
@@ -680,7 +967,7 @@ async function addModalHandlers(
         globalCache.settings.showCatalog = prev;
       }
     });
-    
+
     const skladButton = document.getElementById("sklad");
     skladButton?.addEventListener("click", () => showModalAllOtherBases());
   }
@@ -829,22 +1116,27 @@ function handleInputChange(event: Event): void {
         isInWorks,
       });
 
+      // ⬇️ ВИПРАВЛЕНО: Завжди підтягуємо ім'я для робіт, навіть якщо є значення
       if (displayedName && globalCache.settings.showPibMagazin) {
         const row = target.closest("tr") as HTMLTableRowElement;
         const pibMagCell = row?.querySelector(
           '[data-name="pib_magazin"]'
         ) as HTMLElement | null;
 
-        if (row && pibMagCell && !pibMagCell.textContent?.trim()) {
+        if (row && pibMagCell) {
           if (type === "works") {
             const userName = getUserNameFromLocalStorage();
             if (userName) {
+              // ⬇️ КРИТИЧНО: Встановлюємо ім'я ЗАВЖДИ для робіт
               pibMagCell.textContent = userName;
               pibMagCell.setAttribute("data-type", "slyusars");
               void calculateRowSum(row);
             }
           } else {
-            pibMagCell.setAttribute("data-type", "shops");
+            // Для деталей очищуємо, якщо порожньо
+            if (!pibMagCell.textContent?.trim()) {
+              pibMagCell.setAttribute("data-type", "shops");
+            }
           }
         }
       }
@@ -891,7 +1183,8 @@ function handleInputChange(event: Event): void {
   }
 }
 
-function getUserNameFromLocalStorage(): string | null {
+/** Отримує ім'я користувача з localStorage */
+export function getUserNameFromLocalStorage(): string | null {
   try {
     const USER_DATA_KEY = "userAuthData";
     const storedData = localStorage.getItem(USER_DATA_KEY);
@@ -906,4 +1199,17 @@ function getUserNameFromLocalStorage(): string | null {
     );
     return null;
   }
+}
+
+function togglePriceColumnsVisibility(show: boolean): void {
+  const displayValue = show ? "" : "none";
+
+  // Всі клітинки та заголовки з data-col="price" або data-col="sum"
+  const priceCells = document.querySelectorAll<HTMLElement>(
+    '[data-col="price"], [data-col="sum"]'
+  );
+
+  priceCells.forEach((el) => {
+    el.style.display = displayValue;
+  });
 }

@@ -11,4 +11,5 @@ import "./roboha/redahyvatu_klient_machuna/pidtverdutu_sberihannya_PIB_avto";
 import "./roboha/zakaz_naraudy/inhi/vikno_vvody_parolu";
 import "./roboha/bukhhalteriya/rosraxunok";
 import "./roboha/bukhhalteriya/prubutok";
-import "./roboha/zakaz_naraudy/inhi/actRaxunok";
+import "./roboha/zakaz_naraudy/inhi/fakturaRaxunok";
+import "./roboha/zakaz_naraudy/inhi/fakturaAct";

@@ -49,7 +49,7 @@ export class SearchHandler {
     private showSearchInput(): void {
         this.searchInput.css('visibility', 'visible');
         this.searchInput.animate({
-            width: '200px', // Збільшено для зручності введення складних запитів
+            width: '200px',
             padding: '3px 7px',
             opacity: '1'
         }, 300, () => this.searchInput.focus());

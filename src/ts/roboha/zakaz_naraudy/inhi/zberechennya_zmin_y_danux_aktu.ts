@@ -1,4 +1,5 @@
-//src\ts\roboha\zakaz_naraudy\inhi\zberechennya_zmin_y_danux_aktu.ts
+// ===== ФАЙЛ: src/ts/roboha/zakaz_naraudy/inhi/zberechennya_zmin_y_danux_aktu.ts =====
+
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import {
@@ -15,6 +16,7 @@ import { refreshActsTable } from "../../tablucya/tablucya";
 import { refreshQtyWarningsIn } from "./kastomna_tabluca";
 import { syncShopsOnActSave } from "./save_shops";
 import { syncSlyusarsOnActSave } from "./save_work";
+import { userAccessLevel } from "../../tablucya/users";
 
 /* =============================== ТИПИ І ІНТЕРФЕЙСИ =============================== */
 
@@ -48,6 +50,9 @@ interface ParsedItem {
   slyusarSum?: number;
 }
 
+// КЕШ: Зберігаємо ТІЛЬКИ ЦІНУ (суму перерахуємо від кількості при збереженні)
+const hiddenColumnsCache = new Map<string, number>();
+
 /* =============================== УТИЛІТИ =============================== */
 
 const cleanText = (s?: string | null): string =>
@@ -68,6 +73,38 @@ const validateActId = (actId: number): void => {
   }
 };
 
+/**
+ * Зберігає ціни з об'єкта даних (JSON) у тимчасовий кеш.
+ * Це потрібно для Слюсаря, у якого ціни приховані в HTML.
+ */
+export function cacheHiddenColumnsData(actDetails: any): void {
+  hiddenColumnsCache.clear();
+  
+  // Якщо користувач не Слюсар, можна не кешувати (але для надійності залишимо)
+  if (userAccessLevel !== "Слюсар") return;
+
+  console.log("💾 Кешування прихованих цін для Слюсаря...");
+
+  const details = Array.isArray(actDetails?.["Деталі"]) ? actDetails["Деталі"] : [];
+  const works = Array.isArray(actDetails?.["Роботи"]) ? actDetails["Роботи"] : [];
+
+  // Кешуємо ціни деталей
+  details.forEach((d: any) => {
+    const name = d["Деталь"]?.trim();
+    const price = Number(d["Ціна"]) || 0;
+    if (name) hiddenColumnsCache.set(name, price);
+  });
+
+  // Кешуємо ціни робіт
+  works.forEach((w: any) => {
+    const name = w["Робота"]?.trim();
+    const price = Number(w["Ціна"]) || 0;
+    if (name) hiddenColumnsCache.set(name, price);
+  });
+
+  console.log(`📦 Закешовано цін для ${hiddenColumnsCache.size} позицій.`);
+}
+
 /* =============================== РОБОТА З ТАБЛИЦЕЮ =============================== */
 
 function readTableNewNumbers(): Map<number, number> {
@@ -77,17 +114,11 @@ function readTableNewNumbers(): Map<number, number> {
   const numberMap = new Map<number, number>();
 
   tableRows.forEach((row) => {
-    const nameCell = row.querySelector(
-      '[data-name="name"]'
-    ) as HTMLElement | null;
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
     if (!nameCell?.textContent?.trim()) return;
 
-    const catalogCell = row.querySelector(
-      '[data-name="catalog"]'
-    ) as HTMLElement | null;
-    const qtyCell = row.querySelector(
-      '[data-name="id_count"]'
-    ) as HTMLElement | null;
+    const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
+    const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
 
     if (!scladIdAttr) return;
@@ -104,6 +135,10 @@ function readTableNewNumbers(): Map<number, number> {
 }
 
 function parseTableRows(): ParsedItem[] {
+  const isRestricted = userAccessLevel === "Слюсар";
+  
+  console.log(`📊 Збір даних таблиці. Рівень доступу: ${userAccessLevel}`);
+
   const tableRows = document.querySelectorAll(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
   );
@@ -114,24 +149,47 @@ function parseTableRows(): ParsedItem[] {
     const name = getCellText(nameCell);
     if (!name) return;
 
-    const quantityCell = row.querySelector(
-      '[data-name="id_count"]'
-    ) as HTMLElement;
+    const quantityCell = row.querySelector('[data-name="id_count"]') as HTMLElement;
     const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
+    
     const pibMagazinCell = globalCache.settings.showPibMagazin
       ? (row.querySelector('[data-name="pib_magazin"]') as HTMLElement)
       : null;
     const catalogCell = globalCache.settings.showCatalog
       ? (row.querySelector('[data-name="catalog"]') as HTMLElement)
       : null;
-    const slyusarSumCell = row.querySelector(
-      '[data-name="slyusar_sum"]'
-    ) as HTMLElement;
+    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
 
+    // 1. Кількість беремо завжди з таблиці (користувач міг її змінити)
     const quantity = parseNum(quantityCell?.textContent);
-    const price = parseNum(priceCell?.textContent);
-    const sum = parseNum(sumCell?.textContent);
+    
+    let price = 0;
+    let sum = 0;
+
+    // 2. Логіка отримання ЦІНИ та СУМИ
+    if (isRestricted) {
+      // === ЛОГІКА ДЛЯ СЛЮСАРЯ ===
+      // Шукаємо ціну в кеші за назвою
+      const cachedPrice = hiddenColumnsCache.get(name);
+      
+      if (cachedPrice !== undefined) {
+        price = cachedPrice;
+        sum = price * quantity; // Перераховуємо суму
+        // console.log(`✅ (Слюсар) Відновлено ціну для "${name}": ${price}, Сума: ${sum}`);
+      } else {
+        // Якщо це новий рядок, якого не було в базі - ціна 0 (це нормально)
+        price = 0;
+        sum = 0;
+        console.log(`⚠️ (Слюсар) Новий рядок, ціна 0: "${name}"`);
+      }
+    } else {
+      // === ЛОГІКА ДЛЯ АДМІНА/ІНШИХ ===
+      // Беремо значення прямо з таблиці
+      price = parseNum(priceCell?.textContent);
+      sum = parseNum(sumCell?.textContent);
+    }
+
     const pibMagazin = getCellText(pibMagazinCell);
     const catalog = getCellText(catalogCell);
     const slyusarSum = parseNum(slyusarSumCell?.textContent);
@@ -164,8 +222,6 @@ function parseTableRows(): ParsedItem[] {
 
   return items;
 }
-
-/* =============================== РОБОТА З БАЗОЮ ДАНИХ =============================== */
 
 async function updateScladActNumbers(
   actId: number,
@@ -277,8 +333,6 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
   }
 }
 
-/* =============================== ГОЛОВНА ЛОГІКА ЗБЕРЕЖЕННЯ =============================== */
-
 function calculateDeltas(): Map<number, number> {
   const newNumbers = readTableNewNumbers();
   const oldNumbers = globalCache.oldNumbers || new Map<number, number>();
@@ -307,7 +361,7 @@ function processItems(items: ParsedItem[]) {
 
   let totalDetailsSum = 0;
   let totalWorksSum = 0;
-  let totalWorksProfit = 0; // <<< нове
+  let totalWorksProfit = 0;
 
   items.forEach((item) => {
     const {
@@ -326,7 +380,7 @@ function processItems(items: ParsedItem[]) {
     const itemBase = { Кількість: quantity, Ціна: price, Сума: sum };
 
     if (type === "work") {
-      const salary = Number(slyusarSum || 0); // ← Це правильно
+      const salary = Number(slyusarSum || 0);
       const profit = Math.max(0, Number((sum - salary).toFixed(2)));
 
       works.push({
@@ -335,7 +389,7 @@ function processItems(items: ParsedItem[]) {
         Слюсар: pibMagazin,
         Каталог: catalog,
         slyusar_id,
-        Зарплата: salary, // ← ВАЖЛИВО
+        Зарплата: salary,
         Прибуток: profit,
       });
 
@@ -348,7 +402,7 @@ function processItems(items: ParsedItem[]) {
           Найменування: name,
           Кількість: quantity,
           Ціна: price,
-          Зарплата: salary, // ← ВАЖЛИВО: передаємо зарплату
+          Зарплата: salary,
         });
       }
     } else {
@@ -384,7 +438,7 @@ function processItems(items: ParsedItem[]) {
     totalDetailsSum,
     totalWorksSum,
     grandTotalSum: totalDetailsSum + totalWorksSum,
-    totalWorksProfit, // <<< нове
+    totalWorksProfit,
   };
 }
 
@@ -431,11 +485,10 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     throw new Error("Неможливо редагувати закритий акт");
   }
 
-  // Отримуємо значення пробігу та перетворюємо на число
   const probigText = cleanText(
     document.getElementById(EDITABLE_PROBIG_ID)?.textContent
   );
-  const probigCleaned = probigText.replace(/\s/g, ""); // Видаляємо всі пробіли
+  const probigCleaned = probigText.replace(/\s/g, "");
   const newProbig =
     probigCleaned && /^\d+$/.test(probigCleaned)
       ? Number(probigCleaned)
@@ -456,10 +509,9 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     totalDetailsSum,
     totalWorksSum,
     grandTotalSum,
-    totalWorksProfit, // <<< додано
+    totalWorksProfit,
   } = processItems(items);
 
-  // Отримуємо значення авансу
   const avansInput = document.getElementById(
     "editable-avans"
   ) as HTMLInputElement;
@@ -478,7 +530,6 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "За роботу": totalWorksSum,
     "Загальна сума": grandTotalSum,
     Аванс: avansValue,
-    // підсумки прибутку:
     "Прибуток за деталі":
       originalActData &&
       typeof originalActData["Прибуток за деталі"] === "number"
@@ -519,8 +570,6 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   updateCalculatedSumsInFooter();
   refreshActsTable();
 }
-
-/* =============================== ЕКСПОРТОВАНІ ФУНКЦІЇ =============================== */
 
 export function addSaveHandler(actId: number, originalActData: any): void {
   const saveButton = document.getElementById(

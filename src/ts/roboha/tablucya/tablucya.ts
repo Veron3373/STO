@@ -57,6 +57,23 @@ function formatDateTime(date: Date): { date: string; time: string } {
   return { date: dateStr, time: timeStr };
 }
 
+/**
+ * НОВА функція: Конвертує дату з формату ISO (2025-09-11) в формат DD.MM.YY
+ */
+function convertISOtoShortDate(isoDate: string | null): string | null {
+  if (!isoDate) return null;
+  try {
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return null;
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear().toString().slice(-2); // Беремо останні 2 цифри року
+    return `${day}.${month}.${year}`;
+  } catch {
+    return null;
+  }
+}
+
 function validateDateFormat(dateStr: string): boolean {
   const dateRegex = /^\d{2}\.\d{2}\.\d{4}$/;
   if (!dateRegex.test(dateStr)) return false;
@@ -145,7 +162,6 @@ function createClientCell(
     td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;
   });
   
-  // Додаємо обробник з перевіркою доступу
   td.addEventListener("click", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -172,7 +188,6 @@ function createCarCell(
     td.innerHTML += `<div style="color: #ff8800; font-size: 0.9em; word-wrap: break-word; word-break: break-word; white-space: normal;">${carInfo.number}</div>`;
   }
   
-  // Додаємо обробник з перевіркою доступу
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -191,6 +206,7 @@ function createCarCell(
  */
 function createDateCell(act: any, actId: number): HTMLTableCellElement {
   const td = document.createElement("td");
+  
   const actDate = getActDateAsDate(act);
   if (actDate) {
     const { date, time } = formatDateTime(actDate);
@@ -199,7 +215,6 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
     td.innerHTML = `<div>-</div>`;
   }
   
-  // Додаємо обробник з перевіркою доступу
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -214,16 +229,44 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
 }
 
 /**
- * ОНОВЛЕНА функція створення стандартної комірки з перевіркою доступу
+ * ОНОВЛЕНА функція створення стандартної комірки з перевіркою доступу та мітками
  */
 function createStandardCell(
   content: string,
-  actId: number
+  act: any,
+  actId: number,
+  isActNumberCell: boolean = false
 ): HTMLTableCellElement {
   const td = document.createElement("td");
+  td.classList.add("act-table-cell"); // Додаємо клас
   td.innerHTML = content;
+
+  if (isActNumberCell) {
+    // Додаємо дані про акт (верхня мітка)
+    if (act.contrAgent_act && act.contrAgent_act_data) {
+      const actNum = act.contrAgent_act;
+      const actDateFormatted = convertISOtoShortDate(act.contrAgent_act_data);
+      if (actDateFormatted) {
+        const actLabel = document.createElement("div");
+        actLabel.classList.add("act-label"); // Використовуємо клас замість inline стилів
+        actLabel.textContent = `ОУ-${actNum} / ${actDateFormatted}`;
+        td.appendChild(actLabel);
+      }
+    }
+
+    // Додаємо дані про рахунок (нижня мітка)
+    if (act.contrAgent_raxunok && act.contrAgent_raxunok_data) {
+      const raxunokNum = act.contrAgent_raxunok;
+      const raxunokDateFormatted = convertISOtoShortDate(act.contrAgent_raxunok_data);
+      if (raxunokDateFormatted) {
+        const raxunokLabel = document.createElement("div");
+        raxunokLabel.classList.add("raxunok-label"); // Використовуємо клас замість inline стилів
+        raxunokLabel.textContent = `СФ-${raxunokNum} / ${raxunokDateFormatted}`;
+        td.appendChild(raxunokLabel);
+      }
+    }
+  }
   
-  // Додаємо обробник з перевіркою доступу
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -290,10 +333,13 @@ function renderActsRows(
     const row = document.createElement("tr");
     row.classList.add(isClosed ? "row-closed" : "row-open");
 
+    // Комірка № акту - З МІТКАМИ (передаємо true)
     row.appendChild(
       createStandardCell(
         `${lockIcon} ${act.act_id?.toString() || "N/A"}`,
-        act.act_id
+        act,
+        act.act_id,
+        true // <-- ДОДАЛИ true для показу міток
       )
     );
     row.appendChild(createDateCell(act, act.act_id));
@@ -301,10 +347,13 @@ function renderActsRows(
     row.appendChild(createCarCell(carInfo, act.act_id));
 
     if (accessLevel !== "Слюсар") {
+      // Комірка суми - БЕЗ МІТОК (передаємо false або нічого)
       row.appendChild(
         createStandardCell(
           `${getActAmount(act).toLocaleString("uk-UA")} грн`,
-          act.act_id
+          act,
+          act.act_id,
+          false // <-- ДОДАЛИ false, щоб НЕ показувати мітки
         )
       );
     }
@@ -405,14 +454,44 @@ function filterActs(
 ): any[] {
   if (!searchTerm) return acts;
   const filters = parseSearchTerm(searchTerm);
+  
   return acts.filter((act) => {
     const clientInfo = getClientInfo(act, clients);
     const carInfo = getCarInfo(act, cars);
     const actDate = getActDateAsDate(act);
     const formattedDate = actDate ? formatDate(actDate) : "";
     const amount = getActAmount(act);
+    
+    // НОВА ЛОГІКА: Отримуємо дані про рахунок та акт
+    const raxunokNum = act.contrAgent_raxunok || "";
+    const actNum = act.contrAgent_act || "";
 
     return filters.every((filter) => {
+      const searchValue = filter.value.toUpperCase();
+      
+      // НОВА ФУНКЦІЯ: Пошук по СФ- (рахунок)
+      if (searchValue.startsWith("СФ-")) {
+        const numPart = searchValue.replace("СФ-", "").trim();
+        if (!numPart) {
+          // Якщо тільки "СФ-", показуємо всі акти з рахунками
+          return raxunokNum !== "" && raxunokNum !== null;
+        }
+        // Якщо "СФ-123", фільтруємо по номеру
+        return raxunokNum.toString().includes(numPart);
+      }
+      
+      // НОВА ФУНКЦІЯ: Пошук по ОУ- (акт)
+      if (searchValue.startsWith("ОУ-")) {
+        const numPart = searchValue.replace("ОУ-", "").trim();
+        if (!numPart) {
+          // Якщо тільки "ОУ-", показуємо всі акти з актами
+          return actNum !== "" && actNum !== null;
+        }
+        // Якщо "ОУ-123", фільтруємо по номеру
+        return actNum.toString().includes(numPart);
+      }
+
+      // Стандартні фільтри
       switch (filter.key.toLowerCase()) {
         case "акт":
           return act.act_id?.toString().includes(filter.value);
@@ -441,7 +520,9 @@ function filterActs(
             carInfo.name.toLowerCase().includes(filter.value.toLowerCase()) ||
             act.act_id?.toString().includes(filter.value) ||
             formattedDate.includes(filter.value) ||
-            amount.toString().includes(filter.value)
+            amount.toString().includes(filter.value) ||
+            raxunokNum.toString().includes(filter.value) || // Додано пошук по рахунку
+            actNum.toString().includes(filter.value) // Додано пошук по акту
           );
       }
     });
@@ -666,7 +747,6 @@ export async function loadActsTable(
     }
   }
 
-  // НОВА ПЕРЕВІРКА: Чи може користувач бачити акти?
   const canView = await canUserViewActs();
   if (!canView) {
     console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до перегляду актів (setting перевірка)`);
@@ -851,7 +931,6 @@ export async function initializeActsSystem(): Promise<void> {
       return;
     }
 
-    // НОВА ПЕРЕВІРКА: Чи може користувач бачити акти?
     const canView = await canUserViewActs();
     if (!canView) {
       console.warn(`⚠️ Користувач ${userAccessLevel} не має доступу до перегляду актів`);

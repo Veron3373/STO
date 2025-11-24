@@ -1,4 +1,4 @@
-//src\ts\roboha\redahyvatu_klient_machuna\vikno_klient_machuna.ts
+// src/ts/roboha/redahyvatu_klient_machuna/vikno_klient_machuna.ts
 import { supabase } from "../../vxid/supabaseClient";
 import "../../../scss/main.scss";
 import { loadActsTable } from "../tablucya/tablucya";
@@ -44,8 +44,9 @@ function formatPhoneNumber(value: string): string {
 }
 
 export function getModalFormValues() {
+  // Оновлено: тепер підтримує і Input, і Textarea
   const get = (id: string) =>
-    (document.getElementById(id) as HTMLInputElement | null)?.value || "";
+    (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null)?.value || "";
   const phoneValue = get(phoneInputId);
   return {
     client_id: selectedClientId,
@@ -146,10 +147,12 @@ function createModalElement(): HTMLDivElement {
 }
 
 function createInputFields(): string {
+  // ЗМІНА ТУТ: Замінили input на textarea для clientInputId
+  // Додали стилі resize: none, overflow: hidden, rows=1
   return `
     <div class="field-create-sakaz_narad">
       <label for="${clientInputId}">ПІБ</label>
-      <input type="text" id="${clientInputId}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" />
+      <textarea id="${clientInputId}" class="input-create-sakaz_narad" placeholder="Введіть ПІБ" autocomplete="off" rows="1" style="resize: none; overflow-y: hidden; min-height: 38px; padding-top: 8px; line-height: 1.4;"></textarea>
       <ul id="${clientListId}" class="suggestions-list-create-sakaz_narad"></ul>
     </div>
     <div class="field-create-sakaz_narad">
@@ -248,8 +251,15 @@ function setupPhoneFormatting(phoneInput: HTMLInputElement) {
   });
 }
 
+// --- ДОПОМІЖНА ФУНКЦІЯ ДЛЯ АВТО-РОЗШИРЕННЯ ---
+function autoResizeTextarea(element: HTMLTextAreaElement) {
+  element.style.height = 'auto';
+  element.style.height = element.scrollHeight + 'px';
+}
+
+// ЗМІНА ТУТ: Додали HTMLTextAreaElement до типу input
 function setupAutocomplete(
-  input: HTMLInputElement,
+  input: HTMLInputElement | HTMLTextAreaElement,
   list: HTMLUListElement,
   items: any[],
   labelFn: (i: any) => string,
@@ -257,7 +267,7 @@ function setupAutocomplete(
   showOnFocus: boolean = false,
   key?: string,
   minLength: number = 0,
-  customFilter?: (item: any, searchValue: string) => boolean // Новий параметр
+  customFilter?: (item: any, searchValue: string) => boolean
 ) {
   if (key && currentAutocompletes[key]) {
     const oldData = currentAutocompletes[key];
@@ -265,7 +275,15 @@ function setupAutocomplete(
     input.removeEventListener("focus", oldData.focusHandler);
     input.removeEventListener("blur", oldData.blurHandler);
   }
-  const inputHandler = () => render();
+  
+  const inputHandler = () => {
+    render();
+    // Якщо це textarea, викликаємо авто-розширення
+    if (input instanceof HTMLTextAreaElement) {
+      autoResizeTextarea(input);
+    }
+  };
+
   const focusHandler = () => {
     if (showOnFocus) {
       renderAll();
@@ -289,7 +307,6 @@ function setupAutocomplete(
     const val = input.value.toLowerCase();
     if (val.length < minLength && !showOnFocus) return;
     
-    // Використовуємо кастомну функцію фільтрації, якщо вона передана
     const filtered = customFilter
       ? items.filter((i) => customFilter(i, val))
       : items.filter((i) => labelFn(i).toLowerCase().includes(val));
@@ -301,6 +318,10 @@ function setupAutocomplete(
         input.value = labelFn(i);
         list.innerHTML = "";
         onSelect(i);
+        // Якщо вибрали зі списку, оновлюємо висоту
+        if (input instanceof HTMLTextAreaElement) {
+          autoResizeTextarea(input);
+        }
       });
       list.appendChild(li);
     });
@@ -314,6 +335,10 @@ function setupAutocomplete(
         input.value = labelFn(i);
         list.innerHTML = "";
         onSelect(i);
+        // Якщо вибрали зі списку, оновлюємо висоту
+        if (input instanceof HTMLTextAreaElement) {
+           autoResizeTextarea(input);
+        }
       });
       list.appendChild(li);
     });
@@ -371,8 +396,12 @@ async function fetchClientData(clientId: string) {
 async function fillClientInfo(clientId: string) {
   const clientData = await fetchClientData(clientId);
   if (clientData) {
-    (document.getElementById(clientInputId) as HTMLInputElement).value =
-      clientData["ПІБ"] || "";
+    // ЗМІНА ТУТ: Приводимо до HTMLTextAreaElement
+    const clientInput = document.getElementById(clientInputId) as HTMLTextAreaElement;
+    clientInput.value = clientData["ПІБ"] || "";
+    // Оновлюємо висоту після завантаження даних
+    autoResizeTextarea(clientInput);
+
     const phoneInput = document.getElementById(
       phoneInputId
     ) as HTMLInputElement;
@@ -460,7 +489,6 @@ async function loadUniqueData() {
   }
 }
 
-// Функція для форматування тексту: перша літера велика, решта малі
 function formatDisplayText(text: string): string {
   if (!text) return "";
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
@@ -498,7 +526,6 @@ function setupEditingAutocompletes() {
   ) as HTMLInputElement;
   const carVinList = document.getElementById(carVinListId) as HTMLUListElement;
 
-  // Підготовка даних з auto.json з додатковими полями для пошуку
   const carSuggestions = autoData.data.flatMap((mark) =>
     mark.models.map((model) => ({
       mark_id: formatDisplayText(mark.id),
@@ -509,25 +536,18 @@ function setupEditingAutocompletes() {
     }))
   );
 
-  // Функція для перевірки відповідності пошукового запиту
   const matchesSearch = (item: any, searchValue: string): boolean => {
     const search = searchValue.toLowerCase();
-    
-    // Перевірка англійських назв (mark_id та name)
     const englishMatch = 
       item.mark_id.toLowerCase().includes(search) ||
       item.name.toLowerCase().includes(search) ||
       item.display.toLowerCase().includes(search);
-    
-    // Перевірка кириличних назв
     const cyrillicMatch = 
       item.mark_cyrillic.toLowerCase().includes(search) ||
       item.model_cyrillic.toLowerCase().includes(search);
-    
     return englishMatch || cyrillicMatch;
   };
 
-  // Налаштування автозаповнення для поля моделі авто з покращеним пошуком
   setupAutocomplete(
     carModelInput,
     carModelList,
@@ -538,8 +558,8 @@ function setupEditingAutocompletes() {
     },
     false,
     "carModelEdit",
-    2, // Показувати після введення 2 символів
-    matchesSearch // Передаємо кастомну функцію фільтрації
+    2,
+    matchesSearch
   );
 
   setupSimpleAutocomplete(
@@ -623,9 +643,12 @@ async function showModalCreateSakazNarad() {
   const modalElement = document.getElementById(modalOverlayId)!;
   const closeBtn = document.getElementById(modalCloseBtnId)!;
   const btnEdit = document.getElementById(btnEditId)!;
+  
+  // ЗМІНА ТУТ: Приводимо до HTMLTextAreaElement
   const clientInput = document.getElementById(
     clientInputId
-  ) as HTMLInputElement;
+  ) as HTMLTextAreaElement;
+  
   const clientList = document.getElementById(clientListId) as HTMLUListElement;
   const carNumberInput = document.getElementById(
     carNumberInputId
@@ -646,6 +669,11 @@ async function showModalCreateSakazNarad() {
   const phoneList = document.getElementById(phoneListId) as HTMLUListElement;
   const extraInput = document.getElementById(extraInputId) as HTMLInputElement;
   setupPhoneFormatting(phoneInput);
+  
+  // Додаємо слухач для clientInput, щоб він розширювався під час ручного введення
+  // (хоча setupAutocomplete це теж робить, але для безпеки)
+  clientInput.addEventListener('input', () => autoResizeTextarea(clientInput));
+
   const editableFieldsInitially = [
     clientInput,
     carModelInput,
@@ -967,6 +995,8 @@ async function showModalCreateSakazNarad() {
     const ownerData = await fetchClientData(car.client_id);
     if (ownerData) {
       clientInput.value = ownerData["ПІБ"] || "";
+      autoResizeTextarea(clientInput); // Оновлюємо висоту після вибору авто
+      
       phoneInput.value = ownerData["Телефон"] || "";
       extraInput.value = ownerData["Додаткові"] || "";
       carIncomeInput.value = ownerData["Джерело"] || "";
@@ -996,6 +1026,7 @@ async function showModalCreateSakazNarad() {
         const isEditUnlocked = btnEdit.dataset.unlocked === "true";
         if (isEditUnlocked) {
           clientInput.value = selectedClient.fullName;
+          autoResizeTextarea(clientInput); // Оновлюємо висоту при виборі клієнта
           console.log("🔓 Відкрито: дані не підтягуються автоматично");
           return;
         }
@@ -1041,8 +1072,9 @@ function clearCarAndContactFields() {
     const input = document.getElementById(id) as
       | HTMLInputElement
       | HTMLSelectElement
+      | HTMLTextAreaElement // Додано
       | null;
-    if (input instanceof HTMLInputElement) {
+    if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
       input.value = "";
     } else if (input instanceof HTMLSelectElement) {
       input.selectedIndex = 0;

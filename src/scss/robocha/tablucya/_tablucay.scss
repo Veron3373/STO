@@ -1,116 +1,203 @@
+// _tablucya.scss
+
 html,
 body {
   margin: 0;
   padding: 0;
-  overflow-x: hidden;         /* горизонталь не потрібна */
+  overflow-x: hidden;
 }
 
 /* Контейнер таблиці */
 #table-container-modal-sakaz_narad {
   width: calc(100% - 20px);
   margin: 0 10px 10px 10px;
-  overflow: hidden;           /* сам контейнер без скролів */
+  overflow: hidden;
   box-sizing: border-box;
   padding: 0;
   z-index: 10;
+
+  /* Таблиця */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background-color: rgba(255, 255, 255, 0.95);
+  }
+
+  /* Заголовок фіксуємо */
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: #177245;
+
+    tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+  }
+
+  /* ТІЛО: саме тут з'являється вертикальний скрол */
+  tbody {
+    display: block;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #d7ebff !important;
+        opacity: 1;
+      }
+
+      &.selected {
+        background-color: #ffeb3b !important;
+      }
+
+      &:last-child td {
+        padding-bottom: 5px;
+      }
+    }
+  }
+
+  /* Базова типографіка клітинок */
+  th,
+  td {
+    border: 1px solid #000;
+    padding: 8px 10px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* --- Фіксовані ширини колонок --- */
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 100px;
+  }
+
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 150px;
+  }
+
+  th:nth-child(3),
+  td:nth-child(3) {
+    width: auto;
+  }
+
+  th:nth-child(4),
+  td:nth-child(4) {
+    width: 180px;
+  }
+
+  /* "Сумма" — базово 130px для всіх пристроїв */
+  th:nth-child(5),
+  td:nth-child(5) {
+    width: 130px;
+  }
+
+  /* Заголовки */
+  th {
+    color: #fff;
+    font-weight: bold;
+    background-color: #177245;
+  }
+
+  /* Додаткові стилі */
+  .phone-blue-italic {
+    color: blue;
+  }
+
+  .car-red-bold {
+    color: rgb(195, 109, 28);
+    font-weight: bold;
+  }
 }
 
-/* Таблиця */
-#table-container-modal-sakaz_narad table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  background-color: rgba(255, 255, 255, 0.95);
+/* Статуси рядків */
+.row-open {
+  background-color: #e2f7e1;
 }
 
-/* Заголовок фіксуємо */
-#table-container-modal-sakaz_narad thead {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background-color: #177245;
+.row-closed {
+  background-color: #f3f3f3;
+  opacity: 0.6;
 }
 
-/* ТІЛО: саме тут з’являється вертикальний скрол */
-#table-container-modal-sakaz_narad tbody {
-  display: block;             /* щоб скролився тільки tbody */
-  overflow-y: auto;           /* ✔ вертикальний скрол */
-  overflow-x: hidden;
+.search-input {
+  margin-top: 1px;
 }
 
-/* Щоб ширини в thead/tbody збігалися */
-#table-container-modal-sakaz_narad thead tr,
-#table-container-modal-sakaz_narad tbody tr {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
+/* Стилі для комірок таблиці актів */
+.act-table-cell {
+  position: relative;
+  padding: 8px;
+
+  // Мітка акту (верхня)
+  .act-label {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.60em;
+    color: #8B0000;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  // Мітка рахунку (нижня)
+  .raxunok-label {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.60em;
+    color: #8B0000;
+    line-height: 1.2;
+    text-align: center;
+  }
 }
-
-/* Базова типографіка клітинок */
-#table-container-modal-sakaz_narad th,
-#table-container-modal-sakaz_narad td {
-  border: 1px solid #000;
-  padding: 8px 10px;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* --- Фіксовані ширини колонок --- */
-#table-container-modal-sakaz_narad th:nth-child(1),
-#table-container-modal-sakaz_narad td:nth-child(1) { width: 100px; }
-
-#table-container-modal-sakaz_narad th:nth-child(2),
-#table-container-modal-sakaz_narad td:nth-child(2) { width: 150px; }
-
-#table-container-modal-sakaz_narad th:nth-child(3),
-#table-container-modal-sakaz_narad td:nth-child(3) { width: auto; }
-
-#table-container-modal-sakaz_narad th:nth-child(4),
-#table-container-modal-sakaz_narad td:nth-child(4) { width: 180px; }
-
-/* “Сумма” — базово 130px для всіх пристроїв */
-#table-container-modal-sakaz_narad th:nth-child(5),
-#table-container-modal-sakaz_narad td:nth-child(5) { width: 130px; }
-
-/* Заголовки */
-#table-container-modal-sakaz_narad th {
-  color: #fff;
-  font-weight: bold;
-  background-color: #177245;
-}
-
-/* Ховери/вибір/статуси */
-#table-container-modal-sakaz_narad tr { cursor: pointer; transition: background-color 0.2s ease; }
-#table-container-modal-sakaz_narad tr:hover { background-color: #d7ebff !important; opacity: 1; }
-#table-container-modal-sakaz_narad tr.selected { background-color: #ffeb3b !important; }
-#table-container-modal-sakaz_narad .phone-blue-italic { color: blue; }
-#table-container-modal-sakaz_narad .car-red-bold { color: rgb(195, 109, 28); font-weight: bold; }
-#table-container-modal-sakaz_narad tbody tr:last-child td { padding-bottom: 5px; }
-
-.row-open  { background-color: #e2f7e1; }
-.row-closed{ background-color: #f3f3f3; opacity: .6; }
-
-.search-input { margin-top: 1px; }
 
 /* ---- Висоти (щоб тіло займало екран і скролилося) ---- */
 @media (min-width: 1025px) {
-  #table-container-modal-sakaz_narad { max-height: calc(100vh - 40px); }
-  #table-container-modal-sakaz_narad tbody { max-height: calc(100vh - 85px); } /* підженете під свою шапку */
+  #table-container-modal-sakaz_narad {
+    max-height: calc(100vh - 40px);
 
-  /* 🔸 ЛИШЕ НА ДЕСКТОПІ: при вертикальному скролі у tbody розширюємо заголовок “Сумма” */
-  #table-container-modal-sakaz_narad.has-vscroll table th:nth-child(5) {
-    width: 146px;
+    tbody {
+      max-height: calc(100vh - 85px);
+    }
+
+    /* 🔸 ЛИШЕ НА ДЕСКТОПІ: при вертикальному скролі у tbody розширюємо заголовок "Сумма" */
+    &.has-vscroll table th:nth-child(5) {
+      width: 146px;
+    }
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
-  #table-container-modal-sakaz_narad { max-height: calc(93vh - 10px); }
-  #table-container-modal-sakaz_narad tbody { max-height: calc(93vh - 120px); }
+  #table-container-modal-sakaz_narad {
+    max-height: calc(93vh - 10px);
+
+    tbody {
+      max-height: calc(93vh - 120px);
+    }
+  }
 }
 
 @media (max-width: 768px) {
-  #table-container-modal-sakaz_narad { max-height: calc(93vh - 5px); }
-  #table-container-modal-sakaz_narad tbody { max-height: calc(93vh - 120px); }
+  #table-container-modal-sakaz_narad {
+    max-height: calc(93vh - 5px);
+
+    tbody {
+      max-height: calc(93vh - 120px);
+    }
+  }
 }

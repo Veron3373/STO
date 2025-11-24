@@ -16,6 +16,7 @@ export {
   initializeActWarnings,
   resetActDataCache,
 } from "./kastomna_tabluca_poperedhennya";
+import { getUserNameFromLocalStorage } from "../modalMain";
 
 /* ====================== настройки ====================== */
 const CATALOG_SUGGEST_MIN = 3;
@@ -481,65 +482,70 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
     if (labelHtml) li.innerHTML = labelHtml;
     else li.textContent = label;
 
-    li.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      const el = e.currentTarget as HTMLElement;
-      const chosenValue = el.dataset.value || value;
-      const chosenScladId = Number(el.dataset.scladId) || undefined;
-      const chosenFullName = el.dataset.fullName;
-      const chosenItemType = el.dataset.itemType as
-        | "detail"
-        | "work"
-        | undefined; // ← ДОДАЙТЕ ЦЕ
+li.addEventListener("mousedown", (e) => {
+  e.preventDefault();
+  const el = e.currentTarget as HTMLElement;
+  const chosenValue = el.dataset.value || value;
+  const chosenScladId = Number(el.dataset.scladId) || undefined;
+  const chosenFullName = el.dataset.fullName;
+  const chosenItemType = el.dataset.itemType as
+    | "detail"
+    | "work"
+    | undefined;
 
-      const dataName = target.getAttribute("data-name");
-      if (dataName === "catalog") {
-        target.textContent = chosenValue;
-        if (chosenScladId !== undefined)
-          applyCatalogSelectionById(target, chosenScladId, chosenFullName);
-      } else if (dataName === "name") {
-        const fullText = chosenFullName || label;
-        const shortenedText = shortenName(fullText);
-        target.textContent = shortenedText;
+  const dataName = target.getAttribute("data-name");
+  if (dataName === "catalog") {
+    target.textContent = chosenValue;
+    if (chosenScladId !== undefined)
+      applyCatalogSelectionById(target, chosenScladId, chosenFullName);
+  } else if (dataName === "name") {
+    const fullText = chosenFullName || label;
+    const shortenedText = shortenName(fullText);
+    target.textContent = shortenedText;
 
-        // 1. Сирий тип з підказки ("detail" | "work")
-        const rawItemType =
-          chosenItemType ||
-          (globalCache.details.includes(fullText) ? "detail" : "work");
+    const rawItemType =
+      chosenItemType ||
+      (globalCache.details.includes(fullText) ? "detail" : "work");
 
-        // 2. Нормалізуємо до того, що використовується у всій таблиці:
-        //    "details" (деталь) або "works" (робота)
-        const typeToSet = rawItemType === "detail" ? "details" : "works";
+    const typeToSet = rawItemType === "detail" ? "details" : "works";
 
-        // 3. Записуємо тип у комірку з найменуванням
-        target.setAttribute("data-type", typeToSet);
+    target.setAttribute("data-type", typeToSet);
 
-        const row = target.closest("tr")!;
-        const pibMagCell = row.querySelector(
-          '[data-name="pib_magazin"]'
-        ) as HTMLElement | null;
+    const row = target.closest("tr")!;
+    const pibMagCell = row.querySelector(
+      '[data-name="pib_magazin"]'
+    ) as HTMLElement | null;
 
-        if (pibMagCell) {
-          // 4. Для деталей → магазини, для робіт → слюсарі
-          pibMagCell.setAttribute(
-            "data-type",
-            typeToSet === "details" ? "shops" : "slyusars"
-          );
-          pibMagCell.textContent = "";
+    if (pibMagCell) {
+      pibMagCell.setAttribute(
+        "data-type",
+        typeToSet === "details" ? "shops" : "slyusars"
+      );
+      
+      // ⬇️ ДОДАНО: Підтягуємо ім'я слюсаря для робіт
+      if (typeToSet === "works") {
+        const userName = getUserNameFromLocalStorage();
+        if (userName) {
+          pibMagCell.textContent = userName;
+          console.log(`✅ Встановлено слюсаря з localStorage: ${userName}`);
         }
-
-        // позначаємо, що ця зміна прийшла з автодоповнення
-        (target as any)._fromAutocomplete = true;
-
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-        target.focus();
       } else {
-        target.textContent = chosenValue;
-        target.dispatchEvent(new Event("input", { bubbles: true }));
+        pibMagCell.textContent = "";
       }
+    }
 
-      closeAutocompleteList();
-    });
+    // позначаємо, що ця зміна прийшла з автодоповнення
+    (target as any)._fromAutocomplete = true;
+
+    target.dispatchEvent(new Event("input", { bubbles: true }));
+    target.focus();
+  } else {
+    target.textContent = chosenValue;
+    target.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  closeAutocompleteList();
+});
 
     list.appendChild(li);
   });

@@ -199,7 +199,7 @@ export function calculateSlyusarSum(totalSum: number, percent: number): number {
 }
 
 /**
- * Оновлює зарплату слюсаря в рядку (async версія) - ВИПРАВЛЕНА
+ * Оновлює зарплату слюсаря в рядку (async версія) - ВИПРАВЛЕНА ВЕРСІЯ 2.0
  */
 async function updateSlyusarSalaryInRow(
   row: HTMLTableRowElement
@@ -231,12 +231,6 @@ async function updateSlyusarSalaryInRow(
   const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
   const totalSum = parseNumber(sumCell?.textContent);
 
-  if (totalSum <= 0) {
-    slyusarSumCell.textContent = "";
-    return;
-  }
-
-  // КРИТИЧНО: ЗАВЖДИ використовуємо actId з кешу
   const actId = globalCache.currentActId;
 
   if (!actId) {
@@ -251,11 +245,11 @@ async function updateSlyusarSalaryInRow(
     totalSum,
   });
 
-  // 1. ОБОВ'ЯЗКОВО шукаємо в історії для ПОТОЧНОГО акту
+  // 1. ПРІОРИТЕТ: Шукаємо в історії для ПОТОЧНОГО акту
   const historySalary = getSlyusarSalaryFromHistory(
     slyusarName,
     workName,
-    actId // ← ЗАВЖДИ передаємо actId
+    actId
   );
 
   if (historySalary !== null) {
@@ -264,7 +258,14 @@ async function updateSlyusarSalaryInRow(
     return;
   }
 
-  // 2. Якщо в історії немає - рахуємо від відсотка
+  // 2. ВИПРАВЛЕННЯ: Якщо в історії немає І totalSum <= 0 - очищуємо
+  if (totalSum <= 0) {
+    console.log(`⚠️ Сума <= 0 і немає даних в історії - очищуємо`);
+    slyusarSumCell.textContent = "";
+    return;
+  }
+
+  // 3. Якщо є сума, але немає в історії - рахуємо від відсотка
   console.log(`⚙️ Зарплати в історії немає, рахуємо від відсотка`);
   const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
@@ -272,6 +273,81 @@ async function updateSlyusarSalaryInRow(
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 }
 
+/**
+ * Ініціалізує зарплати слюсарів при завантаженні акту - ВИПРАВЛЕНА ВЕРСІЯ 2.0
+ */
+export async function initializeSlyusarSalaries(): Promise<void> {
+  if (!globalCache.settings.showZarplata) return;
+
+  const tableBody = document.querySelector<HTMLTableSectionElement>(
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
+  );
+  if (!tableBody) return;
+
+  const actId = globalCache.currentActId;
+
+  if (!actId) {
+    console.warn("⚠️ initializeSlyusarSalaries: actId не встановлено");
+    return;
+  }
+
+  console.log(`🚀 Ініціалізація зарплат для акту ${actId}`);
+
+  const rows = Array.from(
+    tableBody.querySelectorAll<HTMLTableRowElement>("tr")
+  );
+
+  for (const row of rows) {
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+    const typeFromCell = nameCell?.getAttribute("data-type");
+
+    if (typeFromCell !== "works") continue;
+
+    const workName = nameCell?.textContent?.trim();
+    const pibCell = row.querySelector(
+      '[data-name="pib_magazin"]'
+    ) as HTMLElement;
+    const slyusarName = pibCell?.textContent?.trim();
+    const slyusarSumCell = row.querySelector(
+      '[data-name="slyusar_sum"]'
+    ) as HTMLElement;
+
+    if (!workName || !slyusarName || !slyusarSumCell) continue;
+
+    const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
+    const totalSum = parseNumber(sumCell?.textContent);
+
+    console.log(`🔍 Обробка роботи "${workName}" для "${slyusarName}"`);
+
+    // КРИТИЧНО: Завжди шукаємо в історії ПЕРШИМ
+    const historySalary = getSlyusarSalaryFromHistory(
+      slyusarName,
+      workName,
+      actId
+    );
+
+    if (historySalary !== null) {
+      console.log(`✅ Встановлено з історії: ${historySalary}`);
+      slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
+      continue; // ← ВАЖЛИВО: переходимо до наступного рядка
+    }
+
+    // ВИПРАВЛЕННЯ: Якщо немає в історії і сума <= 0 - пропускаємо
+    if (totalSum <= 0) {
+      console.log(`⏭️ Сума <= 0 і немає в історії - пропускаємо`);
+      continue;
+    }
+
+    // Якщо немає в історії, але є сума - рахуємо від відсотка
+    console.log(`⚙️ Розрахунок від відсотка`);
+    const percent = await getSlyusarWorkPercent(slyusarName);
+    const calculatedSalary = calculateSlyusarSum(totalSum, percent);
+    console.log(`💰 Розраховано: ${calculatedSalary} (${percent}%)`);
+    slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
+  }
+
+  console.log(`✅ Ініціалізація зарплат завершена для акту ${actId}`);
+}
 /**
  * Оновлює "Зар-та" для всіх робіт у таблиці з урахуванням історії/відсотків
  * Використовується з modalMain.ts одразу після рендеру модалки.
@@ -320,87 +396,6 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
     await updateSlyusarSalaryInRow(row);
   }
   updateCalculatedSumsInFooter();
-}
-
-/**
- * Ініціалізує зарплати слюсарів при завантаженні акту - ВИПРАВЛЕНА
- */
-export async function initializeSlyusarSalaries(): Promise<void> {
-  if (!globalCache.settings.showZarplata) return;
-
-  const tableBody = document.querySelector<HTMLTableSectionElement>(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
-  );
-  if (!tableBody) return;
-
-  const actId = globalCache.currentActId;
-
-  if (!actId) {
-    console.warn("⚠️ initializeSlyusarSalaries: actId не встановлено");
-    return;
-  }
-
-  console.log(`🚀 Ініціалізація зарплат для акту ${actId}`);
-
-  const rows = Array.from(
-    tableBody.querySelectorAll<HTMLTableRowElement>("tr")
-  );
-
-  for (const row of rows) {
-    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
-    const typeFromCell = nameCell?.getAttribute("data-type");
-
-    if (typeFromCell !== "works") continue;
-
-    const workName = nameCell?.textContent?.trim();
-    const pibCell = row.querySelector(
-      '[data-name="pib_magazin"]'
-    ) as HTMLElement;
-    const slyusarName = pibCell?.textContent?.trim();
-    const slyusarSumCell = row.querySelector(
-      '[data-name="slyusar_sum"]'
-    ) as HTMLElement;
-
-    if (!workName || !slyusarName || !slyusarSumCell) continue;
-
-    // Якщо вже є значення - пропускаємо
-    const existingValue = slyusarSumCell.textContent?.trim();
-    if (existingValue) {
-      console.log(
-        `⏭️ Пропускаємо "${workName}" - вже є значення: ${existingValue}`
-      );
-      continue;
-    }
-
-    const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
-    const totalSum = parseNumber(sumCell?.textContent);
-
-    if (totalSum <= 0) continue;
-
-    console.log(`🔍 Обробка роботи "${workName}" для "${slyusarName}"`);
-
-    // КРИТИЧНО: шукаємо ТІЛЬКИ для поточного акту
-    const historySalary = getSlyusarSalaryFromHistory(
-      slyusarName,
-      workName,
-      actId // ← ЗАВЖДИ передаємо поточний actId
-    );
-
-    if (historySalary !== null) {
-      console.log(`✅ Встановлено з історії: ${historySalary}`);
-      slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
-      continue;
-    }
-
-    // Якщо в історії немає - рахуємо від відсотка
-    console.log(`⚙️ Розрахунок від відсотка`);
-    const percent = await getSlyusarWorkPercent(slyusarName);
-    const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-    console.log(`💰 Розраховано: ${calculatedSalary} (${percent}%)`);
-    slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
-  }
-
-  console.log(`✅ Ініціалізація зарплат завершена для акту ${actId}`);
 }
 
 /**
@@ -454,8 +449,7 @@ function createRowHtml(
   item: any | null,
   index: number,
   showPibMagazin: boolean,
-  showCatalog: boolean,
-  showZarplata: boolean
+  showCatalog: boolean
 ): string {
   const isActClosed = globalCache.isActClosed;
   const isEditable = !isActClosed;
@@ -484,10 +478,33 @@ function createRowHtml(
       }">${pibMagazinValue}</td>`
     : "";
 
-  const zarplataCellHTML =
-    showZarplata && !isRestricted
-      ? `<td contenteditable="${isEditable}" class="text-right editable-number slyusar-sum-cell" data-name="slyusar_sum">${slyusarSumValue}</td>`
+  const priceValue =
+    item && typeof item.price === "number"
+      ? formatNumberWithSpaces(Math.round(item.price))
       : "";
+  const sumValue =
+    item && typeof item.sum === "number"
+      ? formatNumberWithSpaces(Math.round(item.sum))
+      : "";
+
+  // ⚡ ВАЖЛИВО: завжди створюємо комірки "Ціна" і "Сума",
+  // а показ/приховування робимо через JS (togglePriceColumnsVisibility)
+  const priceCellHTML = `<td data-col="price" contenteditable="${
+    isEditable && !isRestricted
+  }" class="text-right editable-autocomplete price-cell" data-name="price">${priceValue}</td>`;
+
+  const sumCellHTML = `<td data-col="sum" class="text-right" data-name="sum">${sumValue}</td>`;
+
+  const showZarplata = globalCache.settings.showZarplata;
+  const canEditZarplata = isEditable && showZarplata; // акт відкритий і стовпець увімкнено
+
+  const zarplataCellHTML = showZarplata
+    ? `<td contenteditable="${canEditZarplata}"
+        class="text-right editable-number slyusar-sum-cell"
+        data-name="slyusar_sum">
+       ${slyusarSumValue}
+     </td>`
+    : "";
 
   return `
     <tr>
@@ -506,20 +523,8 @@ function createRowHtml(
       <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
     item ? formatNumberWithSpaces(item.quantity) : ""
   }</td>
-      ${
-        isRestricted
-          ? ""
-          : `<td contenteditable="${isEditable}" class="text-right editable-autocomplete price-cell" data-name="price">${
-              item ? formatNumberWithSpaces(Math.round(item.price)) : ""
-            }</td>`
-      }
-      ${
-        isRestricted
-          ? ""
-          : `<td class="text-right" data-name="sum">${
-              item ? formatNumberWithSpaces(Math.round(item.sum)) : ""
-            }</td>`
-      }
+      ${priceCellHTML}
+      ${sumCellHTML}
       ${zarplataCellHTML}
       ${pibMagazinCellHTML}
     </tr>`;
@@ -535,23 +540,20 @@ export function generateTableHTML(
 
   const catalogColumnHeader = showCatalog ? "<th>Каталог</th>" : "";
   const pibMagazinColumnHeader = showPibMagazin ? "<th>ПІБ _ Магазин</th>" : "";
-  const zarplataColumnHeader =
-    showZarplata && !isRestricted ? "<th>Зар-та</th>" : "";
+  const zarplataColumnHeader = showZarplata ? "<th>Зар-та</th>" : "";
+
+  // ⚡ НОВЕ: заголовки для "Ціна" і "Сума" з data-col
+  const priceColumnHeader = '<th class="text-right" data-col="price">Ціна</th>';
+  const sumColumnHeader = '<th class="text-right" data-col="sum">Сума</th>';
 
   const actItemsHtml =
     allItems.length > 0
       ? allItems
           .map((item, index) =>
-            createRowHtml(
-              item,
-              index,
-              showPibMagazin,
-              showCatalog,
-              showZarplata
-            )
+            createRowHtml(item, index, showPibMagazin, showCatalog)
           )
           .join("")
-      : createRowHtml(null, 0, showPibMagazin, showCatalog, showZarplata);
+      : createRowHtml(null, 0, showPibMagazin, showCatalog);
 
   const sumsFooter = isRestricted
     ? ""
@@ -582,15 +584,15 @@ export function generateTableHTML(
   const buttons = globalCache.isActClosed
     ? ""
     : `
-    <div class="zakaz_narayd-buttons-container${
-        isRestricted ? " obmesheniy" : ""
-      }">
-      <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
+    <div class="zakaz_narayd-buttons-container${
+      isRestricted ? " obmesheniy" : ""
+    }">
+      <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
       <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
-    </div>`;
+    </div>`;
 
   const tableHTML = `
-    <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
+    <div class="zakaz_narayd-table-container-value" id="${ACT_ITEMS_TABLE_CONTAINER_ID}">
       <table class="zakaz_narayd-items-table">
         <thead>
           <tr>
@@ -598,8 +600,8 @@ export function generateTableHTML(
             <th>Найменування</th>
             ${catalogColumnHeader}
             <th class="text-right">К-ть</th>
-            ${isRestricted ? "" : '<th class="text-right">Ціна</th>'}
-            ${isRestricted ? "" : '<th class="text-right">Сума</th>'}
+            ${priceColumnHeader}
+            ${sumColumnHeader}
             ${zarplataColumnHeader}
             ${pibMagazinColumnHeader}
           </tr>
@@ -693,15 +695,8 @@ export function addNewRow(containerId: string): void {
   const rowCount = tableBody.children.length;
   const showPibMagazin = globalCache.settings.showPibMagazin;
   const showCatalog = globalCache.settings.showCatalog;
-  const showZarplata = globalCache.settings.showZarplata;
 
-  const newRowHTML = createRowHtml(
-    null,
-    rowCount,
-    showPibMagazin,
-    showCatalog,
-    showZarplata
-  );
+  const newRowHTML = createRowHtml(null, rowCount, showPibMagazin, showCatalog);
   tableBody.insertAdjacentHTML("beforeend", newRowHTML);
 
   if (!globalCache.isActClosed) {

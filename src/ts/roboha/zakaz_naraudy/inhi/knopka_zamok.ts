@@ -13,6 +13,7 @@ import { refreshActsTable } from "../../tablucya/tablucya";
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
+  canUserCloseActs,
 } from "../../tablucya/users";
 
 // Імпортуємо функцію показу модального вікна
@@ -339,8 +340,9 @@ export function initStatusLockDelegation(): void {
     btn.disabled = true;
 
     try {
+      // ======================= ВІДКРИТТЯ АКТУ =======================
       if (globalCache.isActClosed) {
-        // --------------------------- ВІДКРИТТЯ АКТУ ---------------------------
+        // Відкрити акт може тільки адміністратор
         if (!hasFullAccess()) {
           showNotification(
             "❌ Тільки адміністратор може відкривати закриті акти",
@@ -411,15 +413,39 @@ export function initStatusLockDelegation(): void {
         refreshActsTable();
         showNotification("Акт успішно відкрито", "success");
       } else {
-        // --------------------------- ЗАКРИТТЯ АКТУ ---------------------------
+        // ======================= ЗАКРИТТЯ АКТУ =======================
 
-        // ▼▼▼ ПОЧАТОК ЗМІН: Зберігаємо акт перед закриттям ▼▼▼
+        // 1️⃣ Перевіряємо право закриття акту через settings (Приймальник/Слюсар/Запчастист/Складовщик)
+        //    Адміністратор завжди має право незалежно від settings.
+        let canClose = true;
+        if (!hasFullAccess()) {
+          try {
+            canClose = await canUserCloseActs();
+          } catch (permErr) {
+            console.error("Помилка перевірки прав закриття акту:", permErr);
+            // Якщо щось пішло не так при читанні settings — МИ НЕ БЛОКУЄМО,
+            // щоб не покласти роботу. Але це можна змінити, якщо хочеш.
+            canClose = true;
+          }
+
+          if (!canClose) {
+            showNotification(
+              "У вас немає права закривати акти. Зверніться до адміністратора.",
+              "warning",
+              4000
+            );
+            btn.disabled = false;
+            return;
+          }
+        }
+
+        // 2️⃣ Автозбереження перед закриттям
         console.log("Автоматичне збереження перед закриттям...");
         (
           document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLButtonElement
         )?.click();
-        // ▲▲▲ КІНЕЦЬ ЗМІН ▲▲▲
 
+        // 3️⃣ Вікно підтвердження закриття (як в адміна, з попередженнями)
         const confirmed = await showViknoPidtverdchennayZakruttiaAkty(actId);
         if (!confirmed) {
           showNotification("Скасовано закриття акту", "warning");

@@ -13,3 +13,8 @@ import "./roboha/bukhhalteriya/rosraxunok";
 import "./roboha/bukhhalteriya/prubutok";
 import "./roboha/zakaz_naraudy/inhi/fakturaRaxunok";
 import "./roboha/zakaz_naraudy/inhi/fakturaAct";
+import "./roboha/zakaz_naraudy/inhi/act_change_tracker";
+import "./roboha/zakaz_naraudy/inhi/act_changes_highlighter";
+import "./roboha/zakaz_naraudy/inhi/act_notifications";
+import "./roboha/zakaz_naraudy/inhi/act_notifications_ui";
+import "./roboha/zakaz_naraudy/inhi/act_realtime_subscription";

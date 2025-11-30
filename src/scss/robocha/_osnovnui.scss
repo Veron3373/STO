@@ -36,25 +36,53 @@ html {
 .main-menu {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Розподіляємо простір між .menu-items і .alim */
+  justify-content: space-between;
+  /* Розподіляємо простір між елементами */
   margin: 7px 0;
   padding: 0;
   list-style: none;
-  width: 100%; /* Забезпечуємо, що меню займає всю ширину */
+  width: 100%;
+  /* Забезпечуємо, що меню займає всю ширину */
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    margin-left: 15px;
+    /* Відступ зліва 15 пікселів */
+    font-size: 0.85rem;
+    color: gray;
+    user-select: none;
+    /* Заборона виділення тексту */
+    pointer-events: none;
+    /* Заборона взаємодії */
+    line-height: 1.2;
+
+    .user-surname {
+      font-weight: 600;
+    }
+
+    .user-access {
+      font-size: 0.75rem;
+      color: #888;
+    }
+  }
 
   .menu-items {
     display: flex;
     align-items: center;
-    justify-content: center; /* Центруємо всі елементи, включаючи лупу */
-    flex-grow: 1; /* Дозволяємо розширюватися для центрування */
+    justify-content: center;
+    /* Центруємо всі елементи, включаючи лупу */
+    flex-grow: 1;
+    /* Дозволяємо розширюватися для центрування */
 
-    > li {
+    >li {
       display: flex;
       align-items: center;
       margin-left: 20px;
 
       &:first-child {
-        margin-left: 0; /* Прибираємо лівий відступ для першого елемента */
+        margin-left: 0;
+        /* Прибираємо лівий відступ для першого елемента */
       }
 
       a {
@@ -73,7 +101,8 @@ html {
     .search-container {
       display: flex;
       align-items: center;
-      margin-left: 20px; /* Відступ від календаря */
+      margin-left: 20px;
+      /* Відступ від календаря */
 
       .search-icon {
         order: -1;
@@ -93,13 +122,14 @@ html {
   }
 
   .alim {
-    margin-left: auto; /* Штовхає 
-    margin-right: 15px; /* Відступ від правого краю 15 пікселів */
+    margin-left: auto;
+    /* Штовхає вправо */
+    margin-right: 12px;
+    /* Відступ від правого краю */
     font-size: 0.85rem;
     color: gray;
     user-select: none;
     pointer-events: none;
-    margin-right: 12px;
   }
 }
 

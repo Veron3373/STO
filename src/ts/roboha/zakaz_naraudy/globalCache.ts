@@ -89,13 +89,14 @@ export interface ActItem {
 export interface GlobalDataCache {
   works: string[];
   details: string[];
-  slyusars: Array<{ Name: string; [k: string]: any }>;
-  shops: Array<{ Name: string; [k: string]: any }>;
-  settings: { 
-    showPibMagazin: boolean; 
+  slyusars: Array<{ Name: string;[k: string]: any }>;
+  shops: Array<{ Name: string;[k: string]: any }>;
+  settings: {
+    showPibMagazin: boolean;
     showCatalog: boolean;
     showZarplata: boolean;  // ← ДОДАНО
     showSMS: boolean;        // ← ДОДАНО
+    preferredLanguage: "uk" | "en"; // ← ДОДАНО: мова інтерфейсу
   };
   isActClosed: boolean;
   currentActId: number | null;
@@ -120,11 +121,12 @@ export const globalCache: GlobalDataCache = {
   details: [],
   slyusars: [],
   shops: [],
-  settings: { 
-    showPibMagazin: true, 
+  settings: {
+    showPibMagazin: true,
     showCatalog: true,
     showZarplata: true,  // ← ДОДАНО
-    showSMS: false       // ← ДОДАНО
+    showSMS: false,      // ← ДОДАНО
+    preferredLanguage: "uk" // ← ДОДАНО: типово українська
   },
   isActClosed: false,
   currentActId: null,
@@ -167,9 +169,8 @@ function dedupeSklad<
   const seen = new Set<string>();
   const out: T[] = [];
   for (const r of rows) {
-    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${
-      r.quantity
-    }`;
+    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${r.quantity
+      }`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -207,11 +208,12 @@ export async function loadGlobalData(): Promise<void> {
     const settingCatalog = settingsRows?.find((s: any) => s.setting_id === 2);
     const settingZarplata = settingsRows?.find((s: any) => s.setting_id === 3);
     const settingSMS = settingsRows?.find((s: any) => s.setting_id === 5);
+    const settingLanguage = settingsRows?.find((s: any) => s.setting_id === 6);
 
     if (skladErr)
       console.warn("⚠️ Не вдалося отримати sclad:", skladErr.message);
 
-// ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
+    // ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
     globalCache.works =
       worksData
         ?.map((r: any) => {
@@ -242,7 +244,7 @@ export async function loadGlobalData(): Promise<void> {
         .filter(Boolean) || [];
 
     // магазини: ТЕПЕР витягуємо Name і з об'єктів, і з подвійно-JSON-рядків, і з «просто рядка»
-    const shopsParsed: Array<{ Name: string; [k: string]: any }> = [];
+    const shopsParsed: Array<{ Name: string;[k: string]: any }> = [];
     for (const row of shopsData || []) {
       let raw = row?.data;
 
@@ -273,6 +275,7 @@ export async function loadGlobalData(): Promise<void> {
       showCatalog: !!settingCatalog?.data,
       showZarplata: !!settingZarplata?.data,
       showSMS: !!settingSMS?.data,
+      preferredLanguage: (settingLanguage?.data === "en" ? "en" : "uk"),
     };
 
 

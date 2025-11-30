@@ -1,4 +1,4 @@
-// ===== ФАЙЛ: src/ts/roboha/zakaz_naraudy/inhi/zberechennya_zmin_y_danux_aktu.ts =====
+// ===== ФАЙЛ: src/ts/roboha/zakaz_naraudy/inhi/zberechennya_zmin_y_danux_aktu_NEW.ts =====
 
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
@@ -11,12 +11,13 @@ import {
   ACT_ITEMS_TABLE_CONTAINER_ID,
   loadGlobalData,
 } from "../globalCache";
+import type { ActItem } from "../globalCache";
 import { updateCalculatedSumsInFooter } from "../modalUI";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import { refreshQtyWarningsIn } from "./kastomna_tabluca";
 import { syncShopsOnActSave } from "./save_shops";
 import { syncSlyusarsOnActSave } from "./save_work";
-import { userAccessLevel } from "../../tablucya/users";
+import { userAccessLevel, userName } from "../../tablucya/users";
 
 /* =============================== ТИПИ І ІНТЕРФЕЙСИ =============================== */
 
@@ -37,7 +38,7 @@ interface WorkRow {
   Зарплата: number;
 }
 
-interface ParsedItem {
+export interface ParsedItem {
   type: "detail" | "work";
   name: string;
   quantity: number;
@@ -48,6 +49,16 @@ interface ParsedItem {
   sclad_id: number | null;
   slyusar_id: number | null;
   slyusarSum?: number;
+}
+
+interface ActChangeRecord {
+  act_id: number;
+  item_name: string;
+  cina: number;
+  kilkist: number;
+  zarplata: number;
+  dodav_vudaluv: boolean;
+  changed_by_surname: string;
 }
 
 // КЕШ: Зберігаємо ТІЛЬКИ ЦІНУ (суму перерахуємо від кількості при збереженні)
@@ -79,7 +90,7 @@ const validateActId = (actId: number): void => {
  */
 export function cacheHiddenColumnsData(actDetails: any): void {
   hiddenColumnsCache.clear();
-  
+
   // Якщо користувач не Слюсар, можна не кешувати (але для надійності залишимо)
   if (userAccessLevel !== "Слюсар") return;
 
@@ -134,9 +145,9 @@ function readTableNewNumbers(): Map<number, number> {
   return numberMap;
 }
 
-function parseTableRows(): ParsedItem[] {
+export function parseTableRows(): ParsedItem[] {
   const isRestricted = userAccessLevel === "Слюсар";
-  
+
   console.log(`📊 Збір даних таблиці. Рівень доступу: ${userAccessLevel}`);
 
   const tableRows = document.querySelectorAll(
@@ -152,7 +163,7 @@ function parseTableRows(): ParsedItem[] {
     const quantityCell = row.querySelector('[data-name="id_count"]') as HTMLElement;
     const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
-    
+
     const pibMagazinCell = globalCache.settings.showPibMagazin
       ? (row.querySelector('[data-name="pib_magazin"]') as HTMLElement)
       : null;
@@ -163,7 +174,7 @@ function parseTableRows(): ParsedItem[] {
 
     // 1. Кількість беремо завжди з таблиці (користувач міг її змінити)
     const quantity = parseNum(quantityCell?.textContent);
-    
+
     let price = 0;
     let sum = 0;
 
@@ -172,7 +183,7 @@ function parseTableRows(): ParsedItem[] {
       // === ЛОГІКА ДЛЯ СЛЮСАРЯ ===
       // Шукаємо ціну в кеші за назвою
       const cachedPrice = hiddenColumnsCache.get(name);
-      
+
       if (cachedPrice !== undefined) {
         price = cachedPrice;
         sum = price * quantity; // Перераховуємо суму
@@ -476,9 +487,158 @@ function updateInitialActItems(details: any[], works: any[]): void {
       person_or_store: w.Слюсар || "",
       sclad_id: null,
       slyusar_id: w.slyusar_id ?? null,
+      slyusarSum: w.Зарплата || 0,
     })),
   ];
 }
+
+/* =============================== ЛОГУВАННЯ ЗМІН (НОВИЙ КОД) =============================== */
+
+/**
+ * Конвертує ActItem[] (з globalCache) в ParsedItem[] для порівняння
+ */
+function convertActItemsToParsedItems(items: ActItem[]): ParsedItem[] {
+  return items.map(item => ({
+    type: item.type,
+    name: item.name,
+    quantity: item.quantity,
+    price: item.price,
+    sum: item.sum,
+    pibMagazin: item.person_or_store || "",
+    catalog: item.catalog || "",
+    sclad_id: item.sclad_id ?? null,
+    slyusar_id: item.slyusar_id ?? null,
+    slyusarSum: 0, // ActItem не має цього поля, використовуємо 0
+  }));
+}
+
+/**
+ * Порівнює початкові та поточні елементи акту і повертає додані та видалені позиції
+ */
+function compareActChanges(
+  initialItems: ActItem[],
+  currentItems: ParsedItem[]
+): { added: ParsedItem[]; deleted: ParsedItem[] } {
+  // Конвертуємо ActItem[] в ParsedItem[] для порівняння
+  const initialParsed = convertActItemsToParsedItems(initialItems);
+
+  // Створюємо унікальний ключ для кожної позиції (тип + назва)
+  const createKey = (item: ParsedItem) => `${item.type}:${item.name}`;
+
+  // Створюємо мапи для швидкого пошуку
+  const initialMap = new Map<string, ParsedItem>();
+  const currentMap = new Map<string, ParsedItem>();
+
+  initialParsed.forEach(item => {
+    initialMap.set(createKey(item), item);
+  });
+
+  currentItems.forEach(item => {
+    currentMap.set(createKey(item), item);
+  });
+
+  // Знаходимо додані позиції (є в current, немає в initial)
+  const added: ParsedItem[] = [];
+  currentItems.forEach(item => {
+    const key = createKey(item);
+    if (!initialMap.has(key)) {
+      added.push(item);
+    }
+  });
+
+  // Знаходимо видалені позиції (є в initial, немає в current)
+  const deleted: ParsedItem[] = [];
+  initialParsed.forEach(item => {
+    const key = createKey(item);
+    if (!currentMap.has(key)) {
+      deleted.push(item);
+    }
+  });
+
+  return { added, deleted };
+}
+
+/**
+ * Записує зміни в таблицю act_changes_notifications
+ */
+async function logActChanges(
+  actId: number,
+  added: ParsedItem[],
+  deleted: ParsedItem[]
+): Promise<void> {
+  // ⚠️ КРИТИЧНО: Перевірка ролі користувача
+  if (userAccessLevel === "Адміністратор") {
+    console.log("⏭️ Адміністратор - логування змін пропущено");
+    return;
+  }
+
+  // ✅ ФУНКЦІЯ ВИЗНАЧЕННЯ АВТОРА ЗМІН
+  const getChangeAuthor = (item: ParsedItem): string => {
+    const currentUser = userName || "Невідомо";
+
+    // 1. Якщо це ДЕТАЛЬ -> повертаємо того, хто зайшов (userName)
+    if (item.type === 'detail') {
+      return currentUser;
+    }
+
+    // 2. Якщо це РОБОТА -> перевіряємо ПІБ_Магазин (це буде слюсар)
+    if (item.type === 'work') {
+      const workerName = item.pibMagazin ? item.pibMagazin.trim() : "";
+      // Якщо є ім'я слюсаря - беремо його, інакше - того, хто зайшов
+      return workerName || currentUser;
+    }
+
+    // Fallback (на всяк випадок)
+    return currentUser;
+  };
+
+  const records: ActChangeRecord[] = [];
+
+  // Додані позиції
+  added.forEach(item => {
+    records.push({
+      act_id: actId,
+      item_name: item.name,
+      cina: item.price,
+      kilkist: item.quantity,
+      zarplata: item.slyusarSum || 0,
+      dodav_vudaluv: true,
+      changed_by_surname: getChangeAuthor(item) // <-- Використовуємо нову логіку
+    });
+  });
+
+  // Видалені позиції
+  deleted.forEach(item => {
+    records.push({
+      act_id: actId,
+      item_name: item.name,
+      cina: item.price,
+      kilkist: item.quantity,
+      zarplata: item.slyusarSum || 0,
+      dodav_vudaluv: false,
+      changed_by_surname: getChangeAuthor(item) // <-- Використовуємо нову логіку
+    });
+  });
+
+  if (records.length === 0) {
+    console.log("📝 Змін не виявлено");
+    return;
+  }
+
+  // Запис в БД
+  const { error } = await supabase
+    .from("act_changes_notifications")
+    .insert(records);
+
+  if (error) {
+    console.error("❌ Помилка запису змін:", error);
+    throw error;
+  } else {
+    console.log(`✅ Записано ${records.length} змін в БД`);
+  }
+}
+
+/* =============================== ЗБЕРЕЖЕННЯ АКТУ =============================== */
 
 async function saveActData(actId: number, originalActData: any): Promise<void> {
   if (globalCache.isActClosed) {
@@ -532,7 +692,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     Аванс: avansValue,
     "Прибуток за деталі":
       originalActData &&
-      typeof originalActData["Прибуток за деталі"] === "number"
+        typeof originalActData["Прибуток за деталі"] === "number"
         ? originalActData["Прибуток за деталі"]
         : 0,
     "Прибуток за роботу": Number((totalWorksProfit || 0).toFixed(2)),
@@ -557,6 +717,20 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   await applyScladDeltas(deltas);
   await syncShopsOnActSave(actId, detailRowsForShops);
   await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
+
+  // ===== ЛОГУВАННЯ ЗМІН =====
+  try {
+    const currentItems = items;
+    const { added, deleted } = compareActChanges(
+      globalCache.initialActItems || [],
+      currentItems
+    );
+    await logActChanges(actId, added, deleted);
+  } catch (logError) {
+    console.error("⚠️ Помилка логування змін:", logError);
+    // Не блокуємо збереження через помилку логування
+  }
+  // =====================================
 
   globalCache.oldNumbers = readTableNewNumbers();
   updateInitialActItems(details, works);

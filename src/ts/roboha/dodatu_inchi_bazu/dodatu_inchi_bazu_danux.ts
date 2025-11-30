@@ -1,6 +1,7 @@
 // src\ts\roboha\dodatu_inchi_bazu\dodatu_inchi_bazu_danux.ts
 
 import { supabase } from "../../vxid/supabaseClient";
+import { canUserSeeEmployeeButton } from "../tablucya/users";
 import {
   showSavePromptModal,
   createSavePromptModal,
@@ -284,10 +285,24 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .querySelectorAll('a.menu-link.all_other_bases[data-action="openClient"]')
     .forEach((link) => {
-      link.addEventListener("click", (e) => {
+      link.addEventListener("click", async (e) => {
         e.preventDefault();
         closeAllModals();
         modal_all_other_bases.classList.remove("hidden-all_other_bases");
+
+        // Перевірка чи може користувач бачити кнопку "Співробітники"
+        const canSeeEmployeeButton = await canUserSeeEmployeeButton();
+        const employeeButton = Array.from(
+          modal_all_other_bases.querySelectorAll(".toggle-button-all_other_bases")
+        ).find((btn) => btn.textContent?.trim() === "Співробітники") as HTMLElement | undefined;
+
+        if (employeeButton) {
+          if (canSeeEmployeeButton) {
+            employeeButton.style.display = "";
+          } else {
+            employeeButton.style.display = "none";
+          }
+        }
       });
     });
 

@@ -96,7 +96,7 @@ async function shopExistsByName(name: string): Promise<boolean> {
       const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
       const nm = normalizeName(d?.Name ?? "");
       if (nm && nm === needle) return true;
-    } catch {}
+    } catch { }
   }
   return false;
 }
@@ -297,7 +297,7 @@ async function slusarExistsByName(name: string): Promise<boolean> {
       const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
       const nm = normalizeName(d?.Name ?? "");
       if (nm && nm === needle) return true;
-    } catch {}
+    } catch { }
   }
   return false;
 }
@@ -471,7 +471,7 @@ export function showSavePromptModal(): Promise<boolean> {
         }
 
         const results: boolean[] = [];
-        
+
         // ==========================================================
         // ✅ ОБРОБКА "FAKTURA" (КОНТРАГЕНТИ) - ПРІОРИТЕТ #1
         // ==========================================================
@@ -482,7 +482,7 @@ export function showSavePromptModal(): Promise<boolean> {
 
           success = results.every(Boolean);
           cleanup();
-          
+
           if (success) {
             resetShopState();
             resetDetailState();

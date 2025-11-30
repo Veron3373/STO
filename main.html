@@ -12,6 +12,10 @@
 
 <body class="page-2">
     <ul class="main-menu">
+        <div class="user-info">
+            <div class="user-surname">Завантаження...</div>
+            <div class="user-access">Завантаження...</div>
+        </div>
         <div class="menu-items" id="menu-items-to-hide" style="display: none;">
             <li><a href="" id="logout-link" class="menu-link">Вихід</a></li>
             <li><a href="#" class="menu-link" data-action="openSettings">Налаштування</a></li>
@@ -44,7 +48,7 @@
         import { loadActsTable, initializeActsSystem } from "/src/ts/roboha/tablucya/tablucya.ts";
         import {
             showLoginModalBeforeTable,
-            updateUIBasedOnAccess, // Імпортуємо функцію оновлення UI
+            updateUIBasedOnAccess,
             logoutFromSystemAndRedirect
         } from "/src/ts/roboha/tablucya/users.ts";
 
@@ -53,19 +57,42 @@
 
         /**
          * Управління видимістю головного меню.
-         * Ця функція викликається з initializeSystem.
          */
         function updateMenuVisibility(isVisible) {
             const menu = document.getElementById("menu-items-to-hide");
             if (menu) {
-                // Використовуємо display, а не клас, для негайного блокування.
                 menu.style.display = isVisible ? "flex" : "none";
             }
         }
 
         /**
+         * Функція оновлення відображення інформації про користувача в меню
+         */
+        function updateUserInfoDisplay() {
+            try {
+                const storedData = localStorage.getItem("userAuthData");
+                if (storedData) {
+                    const userData = JSON.parse(storedData);
+                    const userSurnameElement = document.querySelector('.user-surname');
+                    const userAccessElement = document.querySelector('.user-access');
+
+                    if (userSurnameElement && userData.Name) {
+                        userSurnameElement.textContent = userData.Name;
+                    }
+
+                    if (userAccessElement && userData.Доступ) {
+                        userAccessElement.textContent = userData.Доступ;
+                    }
+
+                    console.log('✅ Інформацію про користувача оновлено:', userData.Name, userData.Доступ);
+                }
+            } catch (error) {
+                console.error('❌ Помилка при оновленні інформації користувача:', error);
+            }
+        }
+
+        /**
          * Функція ініціалізації системи після входу.
-         * НЕ ВИКЛИКАЄ updateUIBasedOnAccess, оскільки це робиться нижче.
          */
         function initializeSystem() {
             let currentFilterType = 'open';
@@ -79,7 +106,6 @@
             // Ініціалізація DateRangePicker
             $('#dateRangePicker').daterangepicker(
                 {
-                    // ... (Ваші налаштування daterangepicker) ...
                     locale: {
                         format: 'DD.MM.YYYY',
                         separator: ' - ',
@@ -165,29 +191,27 @@
 
             // Ініціалізація системи (завантаження таблиці)
             initializeActsSystem();
-            updateMenuVisibility(true); // Показуємо меню після ініціалізації
+            updateMenuVisibility(true);
         }
 
         window.initializeSystem = initializeSystem;
 
         /**
          * Головна логіка: автентифікація при завантаженні сторінки
-         * Блокує відображення, доки не буде отримано рівень доступу.
          */
         async function startAuthenticationAndInit() {
-            // Приховуємо меню, поки не підтверджено доступ (забезпечено style="display: none;" у HTML)
-            // Чекаємо, доки користувач увійде (автоматично або вручну)
             const accessLevel = await showLoginModalBeforeTable();
 
-            // Якщо доступ отримано
             if (accessLevel) {
                 // 1. Оновлюємо інтерфейс відповідно до доступу
                 await updateUIBasedOnAccess(accessLevel);
 
-                // 2. Ініціалізуємо систему (яка викличе initializeActsSystem та updateMenuVisibility(true))
+                // 2. Заповнюємо інформацію про користувача в меню
+                updateUserInfoDisplay();
+
+                // 3. Ініціалізуємо систему
                 initializeSystem();
             } else {
-                // Якщо не вдалося увійти, відображаємо повідомлення, але не ініціалізуємо систему
                 console.error("❌ Вхід не вдалося здійснити. Система не ініціалізована.");
             }
         }

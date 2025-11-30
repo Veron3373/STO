@@ -10,7 +10,7 @@
 </head>
 
 <body>
-  <div class="Bukhhalter-container">
+  <div class="Bukhhalter-container" style="display: none; visibility: hidden;">
     <div class="Bukhhalter-table-section">
       <div class="Bukhhalter-section-header">
         <div class="Bukhhalter-table-title" id="table-title">👥 Дані підлеглих</div>
@@ -370,10 +370,17 @@
     <div class="Bukhhalter-control-section">
       <!-- Кнопки вкладок -->
       <div class="Bukhhalter-tabs">
-        <button class="Bukhhalter-tab-btn Bukhhalter-active" onclick="switchTab(event, 'magazine')">🏪 Склад</button>
-        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'podlegle')">👨‍🔧 Зарплата</button>
-        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'details')">⚙️ Деталі</button>
-        <button class="Bukhhalter-tab-btn" onclick="switchTab(event, 'vutratu')">💰 Прибуток</button>
+        <button id="tab-btn-magazine" class="Bukhhalter-tab-btn" style="display: none;"
+          onclick="switchTab(event, 'magazine')">🏪 Склад</button>
+
+        <button id="tab-btn-podlegle" class="Bukhhalter-tab-btn" style="display: none;"
+          onclick="switchTab(event, 'podlegle')">👨‍🔧 Зарплата</button>
+
+        <button id="tab-btn-details" class="Bukhhalter-tab-btn" style="display: none;"
+          onclick="switchTab(event, 'details')">⚙️ Деталі</button>
+
+        <button id="tab-btn-vutratu" class="Bukhhalter-tab-btn" style="display: none;"
+          onclick="switchTab(event, 'vutratu')">💰 Прибуток</button>
       </div>
 
       <div class="Bukhhalter-form-container">

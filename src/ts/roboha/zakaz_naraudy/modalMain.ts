@@ -51,6 +51,7 @@ import {
   canUserOpenActs,
   canUserSeeZarplataColumn,
   canUserSeePriceColumns,
+  canUserAddRowToAct,
 } from "../tablucya/users";
 
 import {
@@ -59,6 +60,8 @@ import {
   initCreateActRaxunokButton,
   MODAL_ACT_RAXUNOK_ID,
 } from "./inhi/faktura"; // <--- НОВИЙ ФАЙЛ
+
+import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -406,11 +409,13 @@ export async function showModal(actId: number): Promise<void> {
       canShowCreateActBtn,
       canShowPrintActBtn,
       canShowSkladBtn,
+      canShowAddRowBtn,
     ] = await Promise.all([
       canUserSeeLockButton(),
       canUserSeeCreateActButton(),
       canUserSeePrintActButton(),
       canUserSeeSkladButton(),
+      canUserAddRowToAct(),
     ]);
 
     renderModalContent(
@@ -421,7 +426,8 @@ export async function showModal(actId: number): Promise<void> {
       canShowLockButton,
       canShowCreateActBtn,
       canShowPrintActBtn,
-      canShowSkladBtn
+      canShowSkladBtn,
+      canShowAddRowBtn
     );
 
     // 🔽 ТУТ ВЖЕ Є ТАБЛИЦЯ В DOM — МОЖНА ХОВАТИ/ПОКАЗУВАТИ ЦІНА/СУМА
@@ -435,6 +441,14 @@ export async function showModal(actId: number): Promise<void> {
     await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
     await refreshPhotoData(actId);
     applyAccessRestrictions();
+
+    // 🔽 Підсвічування змін для Адміністратора
+    if (userAccessLevel === "Адміністратор") {
+      await checkAndHighlightChanges(actId);
+    }
+
+    // 🔽 Перевірка прав на кнопку "Додати рядок" - тепер це робиться при рендері
+    // await toggleAddRowButtonVisibility();
 
     showNotification("Дані успішно завантажено", "success", 1500);
   } catch (error) {
@@ -720,9 +734,8 @@ function handleLoadError(error: any): void {
     "error"
   );
   if (body) {
-    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${
-      error?.message || "Перевірте підключення."
-    }</p>`;
+    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${error?.message || "Перевірте підключення."
+      }</p>`;
   }
 }
 
@@ -734,7 +747,8 @@ function renderModalContent(
   canShowLockButton: boolean,
   canShowCreateActBtn: boolean,
   canShowPrintActBtn: boolean,
-  canShowSkladBtn: boolean
+  canShowSkladBtn: boolean,
+  canShowAddRowBtn: boolean
 ): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
@@ -805,104 +819,99 @@ function renderModalContent(
         ${createTableRow("Акт №", `<span id="act-number">${act.act_id}</span>`)}
         ${createTableRow("Клієнт", clientInfo.fio)}
         ${createTableRow(
-          "Телефон",
-          `<span style="color: blue;">${clientInfo.phone}</span>`
-        )}
+    "Телефон",
+    `<span style="color: blue;">${clientInfo.phone}</span>`
+  )}
         ${createTableRow("Примітка:", clientInfo.note)}
         ${createTableRow("Фото", photoCellHtml)}
       </table>
       <table class="zakaz_narayd-table right">
         ${createTableRow(
-          isClosed ? "Закритий" : "Відкритий",
-          `
+    isClosed ? "Закритий" : "Відкритий",
+    `
           <div class="status-row">
             <div class="status-dates">
-              ${
-                isClosed
-                  ? `<span class="red">${formatDate(
-                      act.date_off
-                    )}</span> | <span class="green">${formatDate(
-                      act.date_on
-                    )}</span>`
-                  : `<span class="green">${
-                      formatDate(act.date_on) || "-"
-                    }</span>`
-              }
+              ${isClosed
+      ? `<span class="red">${formatDate(
+        act.date_off
+      )}</span> | <span class="green">${formatDate(
+        act.date_on
+      )}</span>`
+      : `<span class="green">${formatDate(act.date_on) || "-"
+      }</span>`
+    }
             </div>
-            ${
-              showLockButton
-                ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${
-                    act.act_id
-                  }">
+            ${showLockButton
+      ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id
+      }">
                    ${isClosed ? "🔒" : "🗝️"}
                    </button>`
-                : ""
-            }
+      : ""
+    }
 
           </div>
         `
-        )}
+  )}
         ${createTableRow(
-          "Автомобіль",
-          `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
-            carInfo.nomer || ""
-          ).trim()}`.trim() || "—"
-        )}
+    "Автомобіль",
+    `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
+      carInfo.nomer || ""
+    ).trim()}`.trim() || "—"
+  )}
         ${createTableRow(
-          "Vincode",
-          `
+    "Vincode",
+    `
           <div class="status-row">
             <span>${carInfo.vin}</span>
             <div class="status-icons">
-              ${
-                !isRestricted && canShowCreateActBtn
-                  ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
-                  : ""
-              }
+              ${!isRestricted && canShowCreateActBtn
+      ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+      : ""
+    }
             </div>
           </div>
           `
-        )}
+  )}
         ${createTableRow("Двигун", carInfo.engine)}
         ${createTableRow(
-          "Пробіг",
-          `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
-            actDetails?.["Пробіг"],
-            0,
-            0
-          )}</span>`
-        )}
+    "Пробіг",
+    `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
+      actDetails?.["Пробіг"],
+      0,
+      0
+    )}</span>`
+  )}
       </table>
     </div>
     <div class="reason-container">
       <div class="zakaz_narayd-reason-line">
         <div class="reason-text">
           <strong>Причина звернення:</strong>
-          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${
-            actDetails?.["Причина звернення"] || "—"
-          }</span>
+          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${actDetails?.["Причина звернення"] || "—"
+    }</span>
         </div>
-        ${
-          !isRestricted && canShowPrintActBtn
-            ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
-            : ""
-        }
+        ${!isRestricted && canShowPrintActBtn
+      ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+      : ""
+    }
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">
           <strong>Рекомендації:</strong>
-          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${
-            actDetails?.["Рекомендації"] || "—"
-          }</span>
+          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${actDetails?.["Рекомендації"] || "—"
+    }</span>
         </div>
-        ${
-          !isRestricted && canShowSkladBtn
-            ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
-            : ""
-        }
+        ${!isRestricted && canShowSkladBtn
+      ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
+      : ""
+    }
       </div>
     </div>
-    ${generateTableHTML(allItems, globalCache.settings.showPibMagazin)}
+    ${generateTableHTML(
+      allItems,
+      globalCache.settings.showPibMagazin,
+      canShowAddRowBtn
+    )}
     ${isClosed ? createClosedActClaimText() : ""}
   `;
 

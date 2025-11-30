@@ -6,6 +6,10 @@ import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna"
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
+  canUserPayMagazine,
+  canUserUnpayMagazine,
+  canUserReturnMagazine,
+  canUserCancelReturnMagazine,
 } from "../tablucya/users";
 
 // ==== Доступ та підтвердження пароля (для масового розрахунку) ====
@@ -709,8 +713,8 @@ class SmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-          .filter((item) => item.toLowerCase().includes(q))
-          .slice(0, this.config.maxItems)
+        .filter((item) => item.toLowerCase().includes(q))
+        .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -735,9 +739,8 @@ class SmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${
-          index === this.selectedIndex ? "selected" : ""
-        }" 
+        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
+          }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -1178,8 +1181,8 @@ function mapRowToMagazineRecord(row: any): MagazineRecord {
     typeof row?.akt === "number"
       ? row.akt
       : row?.akt != null
-      ? Number(row.akt) || null
-      : null;
+        ? Number(row.akt) || null
+        : null;
 
   return {
     pkName: pk?.name,
@@ -1369,8 +1372,7 @@ async function loadScladData(
   } catch (err) {
     console.error("Помилка завантаження sclad з Supabase:", err);
     showNotification(
-      `Помилка завантаження даних з бази sclad: ${
-        err instanceof Error ? err.message : "Невідома помилка"
+      `Помилка завантаження даних з бази sclad: ${err instanceof Error ? err.message : "Невідома помилка"
       }`,
       "error",
       5000
@@ -1529,12 +1531,12 @@ export function updateMagazineTotalSum(): void {
   totalSumElement.innerHTML = `
   <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
     <span style="color: #ffffff;">Загальна сума: <strong style="color: #333;">💰 ${formatNumber(
-      totalSum
-    )}</strong> грн</span>
+    totalSum
+  )}</strong> грн</span>
     <span style="color: #666;">|</span>
     <span style="color: #ffffff;">На складі: <strong style="color: #8B0000;">💶 ${formatNumber(
-      remainingSum
-    )}</strong> грн</span>
+    remainingSum
+  )}</strong> грн</span>
   </div>
 `;
 }
@@ -1548,8 +1550,8 @@ export function getMagazineExportData(): any[] {
         item.isPaid && item.rosraxovano
           ? formatDate(item.rosraxovano)
           : item.isPaid
-          ? "Розраховано"
-          : "Не розраховано",
+            ? "Розраховано"
+            : "Не розраховано",
       date_open: formatDate(item.date_open || ""),
       shops: item.shops,
       rahunok: item.rahunok,
@@ -1599,8 +1601,8 @@ export function updateMagazineTable(): void {
         item.isPaid && item.rosraxovano
           ? formatDate(item.rosraxovano)
           : item.isPaid
-          ? "Розраховано"
-          : "Не розраховано";
+            ? "Розраховано"
+            : "Не розраховано";
 
       let stockClass = "";
       if (remainder > 0) {
@@ -1641,9 +1643,8 @@ export function updateMagazineTable(): void {
       return `
         <tr onclick="handleRowClick(${index})" class="${rowClass}">
           <td>
-            <button class="Bukhhalter-payment-btn ${
-              item.isPaid ? "paid" : "unpaid"
-            }" ${paymentDisabled} ${paymentOnclick}
+            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
+        }" ${paymentDisabled} ${paymentOnclick}
               title="${item.isPaid ? "Розраховано" : "Не розраховано"}">
               ${paymentIcon} ${paymentText}
             </button>
@@ -1683,12 +1684,22 @@ export async function toggleMagazinePayment(index: number): Promise<void> {
     return;
   }
 
-  if (!hasFullAccess()) {
-    showNotification("⚠️ У вас немає прав для зміни статусу оплати", "warning");
+  const action: "pay" | "unpay" = item.isPaid ? "unpay" : "pay";
+
+  // Перевірка прав доступу замість hasFullAccess()
+  const hasPayPermission = await canUserPayMagazine();
+  const hasUnpayPermission = await canUserUnpayMagazine();
+
+  if (action === "pay" && !hasPayPermission) {
+    showNotification("⚠️ У вас немає прав для розрахунку товарів", "warning");
     return;
   }
 
-  const action: "pay" | "unpay" = item.isPaid ? "unpay" : "pay";
+  if (action === "unpay" && !hasUnpayPermission) {
+    showNotification("⚠️ У вас немає прав для відміни розрахунку", "warning");
+    return;
+  }
+
   const confirmed = await createPasswordConfirmationModal(action);
   if (!confirmed) {
     showNotification("🚫 Операцію скасовано", "info");
@@ -1747,6 +1758,20 @@ export async function toggleReturn(index: number): Promise<void> {
   if (!item) return;
 
   const action: "return" | "unreturn" = item.isReturned ? "unreturn" : "return";
+
+  // Перевірка прав доступу
+  const hasReturnPermission = await canUserReturnMagazine();
+  const hasCancelReturnPermission = await canUserCancelReturnMagazine();
+
+  if (action === "return" && !hasReturnPermission) {
+    showNotification("⚠️ У вас немає прав для повернення товарів", "warning");
+    return;
+  }
+
+  if (action === "unreturn" && !hasCancelReturnPermission) {
+    showNotification("⚠️ У вас немає прав для відміни повернення", "warning");
+    return;
+  }
 
   if (action === "unreturn" && item.povernennya) {
     const { dateISO } = splitDateTimeSafe(item.povernennya);
@@ -1877,7 +1902,7 @@ function initMagazineAutoBehaviors(): void {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2;
       console.log("Payment filter changed to:", newValue);
       currentFilters.paymentStatus = newValue;
-      applyLocalFilters(magazineData);
+      applyLocalFilters(allMagazineData);
       updateMagazineTable();
       updateMagazineTotalSum();
     });
@@ -1904,7 +1929,7 @@ function initMagazineAutoBehaviors(): void {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2 | 3 | 4;
       console.log("Availability filter changed to:", newValue);
       currentFilters.availabilityStatus = newValue;
-      applyLocalFilters(magazineData);
+      applyLocalFilters(allMagazineData);
       updateMagazineTable();
       updateMagazineTotalSum();
     });

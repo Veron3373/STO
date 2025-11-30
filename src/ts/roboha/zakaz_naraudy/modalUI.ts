@@ -13,7 +13,7 @@ import {
   setupAutocompleteForEditableCells,
   refreshQtyWarningsIn,
 } from "./inhi/kastomna_tabluca";
-import { userAccessLevel } from "../tablucya/users";
+import { userAccessLevel, canUserAddRowToAct } from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
 
 function showNotification(message: string, type: string): void {
@@ -449,7 +449,8 @@ function createRowHtml(
   item: any | null,
   index: number,
   showPibMagazin: boolean,
-  showCatalog: boolean
+  showCatalog: boolean,
+  canDelete: boolean = true // <--- НОВИЙ ПАРАМЕТР
 ): string {
   const isActClosed = globalCache.isActClosed;
   const isEditable = !isActClosed;
@@ -473,9 +474,8 @@ function createRowHtml(
     : "";
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${
-        item ? pibMagazinType : ""
-      }">${pibMagazinValue}</td>`
+    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${item ? pibMagazinType : ""
+    }">${pibMagazinValue}</td>`
     : "";
 
   const priceValue =
@@ -489,9 +489,8 @@ function createRowHtml(
 
   // ⚡ ВАЖЛИВО: завжди створюємо комірки "Ціна" і "Сума",
   // а показ/приховування робимо через JS (togglePriceColumnsVisibility)
-  const priceCellHTML = `<td data-col="price" contenteditable="${
-    isEditable && !isRestricted
-  }" class="text-right editable-autocomplete price-cell" data-name="price">${priceValue}</td>`;
+  const priceCellHTML = `<td data-col="price" contenteditable="${isEditable && !isRestricted
+    }" class="text-right editable-autocomplete price-cell" data-name="price">${priceValue}</td>`;
 
   const sumCellHTML = `<td data-col="sum" class="text-right" data-name="sum">${sumValue}</td>`;
 
@@ -506,23 +505,24 @@ function createRowHtml(
      </td>`
     : "";
 
+  // 🔽 ЛОГІКА ВИДАЛЕННЯ:
+  // Кнопка показується ТІЛЬКИ якщо акт відкритий І користувач має права (canDelete)
+  const showDeleteBtn = !isActClosed && canDelete;
+
   return `
     <tr>
       <td class="row-index">${index + 1}</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none;">${
-    item?.name || ""
-  }</div>
-        ${
-          !isActClosed
-            ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
-            : ""
-        }
+        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none;">${item?.name || ""
+    }</div>
+        ${showDeleteBtn
+      ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
+      : ""
+    }
       </td>
       ${catalogCellHTML}
-      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
-    item ? formatNumberWithSpaces(item.quantity) : ""
-  }</td>
+      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${item ? formatNumberWithSpaces(item.quantity) : ""
+    }</td>
       ${priceCellHTML}
       ${sumCellHTML}
       ${zarplataCellHTML}
@@ -532,7 +532,8 @@ function createRowHtml(
 
 export function generateTableHTML(
   allItems: any[],
-  showPibMagazin: boolean
+  showPibMagazin: boolean,
+  canAddRow: boolean = true
 ): string {
   const showCatalog = globalCache.settings.showCatalog;
   const showZarplata = globalCache.settings.showZarplata;
@@ -549,11 +550,11 @@ export function generateTableHTML(
   const actItemsHtml =
     allItems.length > 0
       ? allItems
-          .map((item, index) =>
-            createRowHtml(item, index, showPibMagazin, showCatalog)
-          )
-          .join("")
-      : createRowHtml(null, 0, showPibMagazin, showCatalog);
+        .map((item, index) =>
+          createRowHtml(item, index, showPibMagazin, showCatalog, canAddRow) // <--- ПЕРЕДАЄМО canAddRow
+        )
+        .join("")
+      : createRowHtml(null, 0, showPibMagazin, showCatalog, canAddRow); // <--- ПЕРЕДАЄМО canAddRow
 
   const sumsFooter = isRestricted
     ? ""
@@ -571,22 +572,22 @@ export function generateTableHTML(
       <span class="sum-currency">грн</span>
     </p>
       <p><strong>За роботу:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-works-sum">${formatNumberWithSpaces(
-        0
-      )}</span> грн</p>
+      0
+    )}</span> грн</p>
       <p><strong>За деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-sum">${formatNumberWithSpaces(
-        0
-      )}</span> грн</p>
+      0
+    )}</span> грн</p>
       <p id="overall-sum-line"><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
-        0
-      )}</span> грн<span id="avans-subtract-display" class="avans-subtract-display" style="display: none;"></span><span id="final-sum-display" class="final-sum-display" style="display: none;"></span></p>
+      0
+    )}</span> грн<span id="avans-subtract-display" class="avans-subtract-display" style="display: none;"></span><span id="final-sum-display" class="final-sum-display" style="display: none;"></span></p>
     </div>`;
 
-  const buttons = globalCache.isActClosed
-    ? ""
-    : `
-    <div class="zakaz_narayd-buttons-container${
-      isRestricted ? " obmesheniy" : ""
-    }">
+  const buttons =
+    globalCache.isActClosed || !canAddRow
+      ? ""
+      : `
+    <div class="zakaz_narayd-buttons-container${isRestricted ? " obmesheniy" : ""
+      }">
       <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
       <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
     </div>`;
@@ -686,6 +687,54 @@ export function generateTableHTML(
   return tableHTML;
 }
 
+/**
+ * Приховує або показує кнопки "➕ Додати рядок" та "💾 Зберегти зміни" на основі прав користувача
+ * Викликається після рендерингу модального вікна
+ * Для Запчастиста та Складовщика обидві кнопки керуються однією перевіркою прав
+ */
+export async function toggleAddRowButtonVisibility(): Promise<void> {
+  const addRowButton = document.getElementById("add-row-button");
+  const saveButton = document.getElementById("save-act-data");
+
+  // Якщо кнопок немає (акт закритий) - нічого не робимо
+  if (!addRowButton && !saveButton) {
+    return;
+  }
+
+  try {
+    const canAdd = await canUserAddRowToAct();
+
+    if (!canAdd) {
+      // Приховуємо обидві кнопки
+      if (addRowButton) {
+        addRowButton.style.display = "none";
+      }
+      if (saveButton) {
+        saveButton.style.display = "none";
+      }
+      console.log("🚫 Кнопки 'Додати рядок' та 'Зберегти зміни' приховано (немає прав доступу)");
+    } else {
+      // Показуємо обидві кнопки
+      if (addRowButton) {
+        addRowButton.style.display = "";
+      }
+      if (saveButton) {
+        saveButton.style.display = "";
+      }
+      console.log("✅ Кнопки 'Додати рядок' та 'Зберегти зміни' доступні");
+    }
+  } catch (error) {
+    console.error("❌ Помилка при перевірці прав на додавання рядків:", error);
+    // У випадку помилки - показуємо кнопки (безпечніший варіант)
+    if (addRowButton) {
+      addRowButton.style.display = "";
+    }
+    if (saveButton) {
+      saveButton.style.display = "";
+    }
+  }
+}
+
 export function addNewRow(containerId: string): void {
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     `#${containerId} tbody`
@@ -696,7 +745,15 @@ export function addNewRow(containerId: string): void {
   const showPibMagazin = globalCache.settings.showPibMagazin;
   const showCatalog = globalCache.settings.showCatalog;
 
-  const newRowHTML = createRowHtml(null, rowCount, showPibMagazin, showCatalog);
+  // При додаванні нового рядка кнопкою, ми явно маємо право (кнопка була доступна)
+  // тому canDelete = true
+  const newRowHTML = createRowHtml(
+    null,
+    rowCount,
+    showPibMagazin,
+    showCatalog,
+    true
+  );
   tableBody.insertAdjacentHTML("beforeend", newRowHTML);
 
   if (!globalCache.isActClosed) {
@@ -823,9 +880,8 @@ export function createTableRow(
   value: string,
   className: string = ""
 ): string {
-  return `<tr><td>${label}</td><td${
-    className ? ` class="${className}"` : ""
-  }>${value}</td></tr>`;
+  return `<tr><td>${label}</td><td${className ? ` class="${className}"` : ""
+    }>${value}</td></tr>`;
 }
 
 export function createModal(): void {

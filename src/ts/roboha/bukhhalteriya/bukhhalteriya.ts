@@ -26,8 +26,15 @@ import {
   handlepodlegleAddRecord,
   deletepodlegleRecord,
   togglepodleglePayment,
-  clearpodlegleForm, // <--- ДОДАНО
+  clearpodlegleForm,
 } from "./zarplata";
+
+import {
+  canUserSeeSkladButton,
+  canUserSeeDetailsButton,
+  attemptAutoLogin,
+  userAccessLevel
+} from "../tablucya/users";
 
 import {
   calculateMagazineTotalSum,
@@ -787,7 +794,7 @@ export async function runMassPaymentCalculation(e?: Event): Promise<void> {
       await runMassPaymentCalculationForvutratu();
     } else {
       showNotification(
-        "Спочатку оберіть вкладку 👥 Співробітники, 🏪 Магазин, 📊 По Актам або 💰 Прибуток",
+        "Спочатку оберіть вкладку 👨‍🔧 Зарплата, 🏪 Магазин, ⚙️ Деталі або 💰 Прибуток",
         "info"
       );
     }
@@ -818,10 +825,50 @@ function initializeDateInputs(): void {
   });
 }
 
+// src/ts/roboha/bukhhalteriya/bukhhalteriya.ts
+
 window.addEventListener("load", async function () {
-  console.log("Початок ініціалізації бухгалтерії...");
+  console.log("🚀 Початок ініціалізації бухгалтерії...");
+
+  // [FIX] Контейнер тепер прихований за замовчуванням через CSS (style="display: none; visibility: hidden;")
+  const mainContainer = document.querySelector('.Bukhhalter-container') as HTMLElement;
 
   try {
+    // 1. Авторизація та визначення ролі
+    await attemptAutoLogin();
+    const role = userAccessLevel;
+    console.log("👤 Поточна роль:", role);
+
+    // 2. Отримуємо посилання на кнопки
+    const btnSklad = document.getElementById("tab-btn-magazine");
+    const btnZarplata = document.getElementById("tab-btn-podlegle");
+    const btnVutratu = document.getElementById("tab-btn-vutratu");
+    const btnDetails = document.getElementById("tab-btn-details");
+
+    // 3. Логіка відображення кнопок (ХОВАЄМО/ПОКАЗУЄМО)
+
+    // --- Склад ---
+    const canSeeSklad = await canUserSeeSkladButton();
+    if (btnSklad) {
+      btnSklad.style.display = canSeeSklad ? "" : "none";
+    }
+
+    // --- Деталі ---
+    const canSeeDetails = await canUserSeeDetailsButton();
+    if (btnDetails) {
+      btnDetails.style.display = canSeeDetails ? "" : "none";
+    }
+
+    // --- Зарплата та Прибуток (Тільки Адмін) ---
+    const isAdmin = role === "Адміністратор";
+    if (btnZarplata) {
+      btnZarplata.style.display = isAdmin ? "" : "none";
+    }
+    if (btnVutratu) {
+      btnVutratu.style.display = isAdmin ? "" : "none";
+    }
+
+    // 4. Ініціалізація даних (завантажуємо довідники, селекти тощо)
     await loadSlyusarsData();
     initializeDetailsData();
     initializevutratuData();
@@ -834,43 +881,82 @@ window.addEventListener("load", async function () {
     createMagazineAvailabilityToggle();
     createShopsSelect();
 
-    // Явно встановлюємо вкладку "Склад" як активну
-    currentTab = "magazine";
-
-    // Оновлюємо відображення таблиці для вкладки "Склад"
-    updateTableDisplay();
     initializeDateInputs();
 
-    // ДОДАТИ: Ініціалізація всіх перемикачів фільтрації дат
-    console.log("🔧 Ініціалізація перемикачів фільтрації дат...");
+    // 5. 🎯 АВТО-КЛІК АБО БЛОКУВАННЯ
+    const allTabButtons = document.querySelectorAll<HTMLElement>(".Bukhhalter-tab-btn");
+    let firstVisibleTab: HTMLElement | null = null;
 
-    // Затримка для гарантії що DOM повністю готовий
-    setTimeout(() => {
-      // Ініціалізуємо перемикачі для всіх вкладок
-      if (typeof (window as any).initMagazineDateFilterToggle === "function") {
-        (window as any).initMagazineDateFilterToggle();
-        console.log("✅ Перемикач магазину ініціалізовано");
+    for (let i = 0; i < allTabButtons.length; i++) {
+      const btn = allTabButtons[i];
+      // Перевіряємо, чи кнопка видима (display != none)
+      if (btn && btn.style.display !== "none") {
+        firstVisibleTab = btn;
+        break; // Знайшли першу, зупиняємось
+      }
+    }
+
+    if (firstVisibleTab) {
+      console.log(`🔘 Авто-клік по вкладці: "${firstVisibleTab.innerText}"`);
+
+      // [FIX] Якщо є доступні вкладки, показуємо ВЕСЬ контейнер
+      if (mainContainer) {
+        mainContainer.style.display = '';
+        mainContainer.style.visibility = 'visible';
       }
 
-      if (typeof (window as any).initPodlegleDateFilterToggle === "function") {
-        (window as any).initPodlegleDateFilterToggle();
-        console.log("✅ Перемикач підлеглих ініціалізовано");
+      firstVisibleTab.click();
+
+      // 6. Додаткова ініціалізація перемикачів (тільки якщо доступ дозволено)
+      console.log("🔧 Ініціалізація перемикачів фільтрації...");
+      setTimeout(() => {
+        if (typeof (window as any).initMagazineDateFilterToggle === "function") (window as any).initMagazineDateFilterToggle();
+        if (typeof (window as any).initPodlegleDateFilterToggle === "function") (window as any).initPodlegleDateFilterToggle();
+        if (typeof (window as any).initDetailsDateFilterToggle === "function") (window as any).initDetailsDateFilterToggle();
+        if (typeof (window as any).initvutratuDateFilterToggle === "function") (window as any).initvutratuDateFilterToggle();
+      }, 200);
+
+    } else {
+      // ⛔ ЛОГІКА БЛОКУВАННЯ, ЯКЩО ЖОДНА ВКЛАДКА НЕ ДОСТУПНА
+      console.warn("⛔ Доступ заблоковано: немає доступних вкладок.");
+
+      // Очищаємо основний контейнер, щоб приховати інтерфейс (хоча він і так прихований, але для надійності)
+      if (mainContainer) {
+        mainContainer.innerHTML = '';
       }
 
-      if (typeof (window as any).initDetailsDateFilterToggle === "function") {
-        (window as any).initDetailsDateFilterToggle();
-        console.log("✅ Перемикач деталей ініціалізовано");
-      }
+      // Створюємо повноекранне повідомлення
+      const accessDeniedOverlay = document.createElement('div');
+      accessDeniedOverlay.id = 'access-denied-overlay';
+      accessDeniedOverlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #f8f9fa; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; z-index: 99999;
+        font-family: 'Segoe UI', sans-serif; text-align: center;
+      `;
 
-      if (typeof (window as any).initvutratuDateFilterToggle === "function") {
-        (window as any).initvutratuDateFilterToggle();
-        console.log("✅ Перемикач витрат ініціалізовано");
-      }
-    }, 200);
+      accessDeniedOverlay.innerHTML = `
+        <div style="font-size: 64px; margin-bottom: 20px;">⛔</div>
+        <h1 style="color: #dc3545; margin: 0 0 10px 0;">Доступ заборонено</h1>
+        <p style="color: #555; font-size: 18px; margin-bottom: 30px;">
+          У вас немає прав доступу до розділу Бухгалтерія.<br>
+          Будь ласка, зверніться до Адміністратора.
+        </p>
+        <a href="main.html" style="
+          padding: 12px 24px; background: #6c757d; color: white;
+          text-decoration: none; border-radius: 8px; font-weight: 500;
+          transition: background 0.2s;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        " onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">
+          🔙 Повернутися на Головну
+        </a>
+      `;
 
-    console.log("✅ Ініціалізація завершена. Активна вкладка: Склад");
+      document.body.appendChild(accessDeniedOverlay);
+    }
+
   } catch (error) {
-    console.error("Помилка ініціалізації:", error);
+    console.error("❌ Помилка ініціалізації:", error);
   }
 });
 function openActModal(act: string | number) {

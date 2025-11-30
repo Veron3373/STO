@@ -14,6 +14,7 @@ import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
   canUserCloseActs,
+  canUserOpenClosedActs,
 } from "../../tablucya/users";
 
 // Імпортуємо функцію показу модального вікна
@@ -342,15 +343,28 @@ export function initStatusLockDelegation(): void {
     try {
       // ======================= ВІДКРИТТЯ АКТУ =======================
       if (globalCache.isActClosed) {
-        // Відкрити акт може тільки адміністратор
+        // Перевіряємо право відкриття акту через settings
+        // Адміністратор завжди має право, інші ролі перевіряються через БД
+        let canOpen = true;
+
         if (!hasFullAccess()) {
-          showNotification(
-            "❌ Тільки адміністратор може відкривати закриті акти",
-            "error",
-            4000
-          );
-          btn.disabled = false;
-          return;
+          try {
+            canOpen = await canUserOpenClosedActs();
+          } catch (permErr) {
+            console.error("Помилка перевірки прав відкриття акту:", permErr);
+            // Якщо помилка при читанні settings — блокуємо доступ для безпеки
+            canOpen = false;
+          }
+
+          if (!canOpen) {
+            showNotification(
+              "❌ У вас ця функція недоступна. Зверніться до адміністратора.",
+              "warning",
+              4000
+            );
+            btn.disabled = false;
+            return;
+          }
         }
 
         const passwordCorrect = await showViknoVvodyParolu(actId);

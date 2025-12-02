@@ -1,17 +1,17 @@
-// ===== ФАЙЛ: src/ts/roboha/tablucya/act_notifications_ui.ts =====
+// ===== ФАЙЛ: src/ts/roboha/tablucya/povidomlennya_tablucya.ts =====
 
 export interface ActNotificationPayload {
-  id?: number;
-  notification_id?: number;
-  act_id: number;
+  act_id: number;          // ⚡ ГОЛОВНЕ ПОЛЕ (Обов'язкове)
+  notification_id?: number; // Зробив необов'язковим (?) щоб виправити помилку TS
+  id?: number;             
   changed_by_surname: string;
   item_name: string;
   dodav_vudaluv: boolean;
   created_at?: string;
-  data?: string;
+  data?: string; 
 }
 
-// ... (код аудіо контексту без змін) ...
+// --- ЗВУКОВІ ЕФЕКТИ ---
 let globalAudioContext: AudioContext | null = null;
 function getAudioContext(): AudioContext | null {
   try {
@@ -25,7 +25,6 @@ function getAudioContext(): AudioContext | null {
 }
 
 function playNotificationSound(isAdded: boolean) {
-    // ... (код звуку без змін) ...
     try {
         const audioCtx = getAudioContext();
         if (!audioCtx) return;
@@ -43,7 +42,6 @@ function playNotificationSound(isAdded: boolean) {
 }
 
 function playCloseSound() {
-    // ... (код звуку без змін) ...
     try {
         const audioCtx = getAudioContext();
         if (!audioCtx) return;
@@ -63,7 +61,6 @@ function playCloseSound() {
     } catch (e) {}
 }
 
-// ... (функції getOrCreateContainer, formatTimeOnly, reindexBadges без змін) ...
 function getOrCreateContainer(): HTMLElement {
   let container = document.getElementById("act-realtime-container");
   if (!container) {
@@ -94,9 +91,13 @@ function reindexBadges() {
 
 export function showRealtimeActNotification(payload: ActNotificationPayload): void {
   const container = getOrCreateContainer();
-  const dbId = payload.id || payload.notification_id;
+  
+  // Формуємо хоч якийсь унікальний ID для HTML елемента
+  const dbId = payload.notification_id || payload.id || Date.now() + Math.random();
 
-  if (dbId && container.querySelector(`[data-id="${dbId}"]`)) return;
+  // ⚡ ГОЛОВНЕ: Шукаємо по ACT_ID, щоб не дублювати, якщо це те саме оновлення
+  // (Але якщо треба показувати всі дії по черзі, цю перевірку можна спростити)
+  if (container.querySelector(`[data-id="${dbId}"]`)) return;
 
   const isAdded = payload.dodav_vudaluv;
   const icon = isAdded ? "✅" : "❌";
@@ -107,9 +108,10 @@ export function showRealtimeActNotification(payload: ActNotificationPayload): vo
   const toast = document.createElement("div");
   toast.className = `act-notification-toast ${typeClass}`;
   
-  // ⚡ ЗБЕРІГАЄМО ID ЗАПИСУ І ID АКТУ
-  if (dbId) toast.setAttribute("data-id", dbId.toString());
-  toast.setAttribute("data-act-id", payload.act_id.toString()); // <--- НОВЕ
+  // Зберігаємо ID
+  toast.setAttribute("data-id", dbId.toString());
+  // ⚡ Зберігаємо act_id для пошуку
+  toast.setAttribute("data-act-id", payload.act_id.toString());
 
   toast.innerHTML = `
     <div class="toast-header-row">
@@ -149,19 +151,19 @@ export function showRealtimeActNotification(payload: ActNotificationPayload): vo
   });
 }
 
-/** * ⚡ НОВА ФУНКЦІЯ: Знаходить всі тости по номеру акту і видаляє їх
+/** * ⚡ ФУНКЦІЯ ВИДАЛЕННЯ ПО ACT_ID
+ * Шукає всі повідомлення з таким номером акту і видаляє їх
  */
 export function removeNotificationsForAct(actId: number): void {
     const container = document.getElementById("act-realtime-container");
     if (!container) return;
 
-    // Знаходимо всі картки, які мають цей act-id
+    // Шукаємо по атрибуту data-act-id
     const toasts = container.querySelectorAll(`.act-notification-toast[data-act-id="${actId}"]`);
     
     if (toasts.length > 0) {
-        // playCloseSound(); // Можна увімкнути звук
+        console.log(`🧹 Видаляємо все для Акту №${actId}`);
         toasts.forEach(toast => {
-            // Перевіряємо, чи ми вже не видаляємо його
             if (!toast.classList.contains('closing')) {
                 removeToastElement(toast as HTMLElement);
             }
@@ -169,13 +171,13 @@ export function removeNotificationsForAct(actId: number): void {
     }
 }
 
+/** * Допоміжна функція для видалення одного конкретного повідомлення (якщо треба)
+ */
 export function removeRealtimeNotification(dbId: number): void {
     const container = document.getElementById("act-realtime-container");
     if (!container) return;
-    const toastToRemove = container.querySelector(`.act-notification-toast[data-id="${dbId}"]`);
-    if (toastToRemove) {
-        removeToastElement(toastToRemove as HTMLElement);
-    }
+    const toast = container.querySelector(`.act-notification-toast[data-id="${dbId}"]`);
+    if (toast) removeToastElement(toast as HTMLElement);
 }
 
 function removeToastElement(toast: HTMLElement) {

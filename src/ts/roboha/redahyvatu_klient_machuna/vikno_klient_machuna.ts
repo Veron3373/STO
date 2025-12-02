@@ -46,7 +46,12 @@ function formatPhoneNumber(value: string): string {
 export function getModalFormValues() {
   // Оновлено: тепер підтримує і Input, і Textarea
   const get = (id: string) =>
-    (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null)?.value || "";
+    (
+      document.getElementById(id) as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null
+    )?.value || "";
   const phoneValue = get(phoneInputId);
   return {
     client_id: selectedClientId,
@@ -253,8 +258,8 @@ function setupPhoneFormatting(phoneInput: HTMLInputElement) {
 
 // --- ДОПОМІЖНА ФУНКЦІЯ ДЛЯ АВТО-РОЗШИРЕННЯ ---
 function autoResizeTextarea(element: HTMLTextAreaElement) {
-  element.style.height = 'auto';
-  element.style.height = element.scrollHeight + 'px';
+  element.style.height = "auto";
+  element.style.height = element.scrollHeight + "px";
 }
 
 // ЗМІНА ТУТ: Додали HTMLTextAreaElement до типу input
@@ -275,7 +280,7 @@ function setupAutocomplete(
     input.removeEventListener("focus", oldData.focusHandler);
     input.removeEventListener("blur", oldData.blurHandler);
   }
-  
+
   const inputHandler = () => {
     render();
     // Якщо це textarea, викликаємо авто-розширення
@@ -306,11 +311,11 @@ function setupAutocomplete(
     list.innerHTML = "";
     const val = input.value.toLowerCase();
     if (val.length < minLength && !showOnFocus) return;
-    
+
     const filtered = customFilter
       ? items.filter((i) => customFilter(i, val))
       : items.filter((i) => labelFn(i).toLowerCase().includes(val));
-    
+
     filtered.forEach((i) => {
       const li = document.createElement("li");
       li.textContent = labelFn(i);
@@ -337,7 +342,7 @@ function setupAutocomplete(
         onSelect(i);
         // Якщо вибрали зі списку, оновлюємо висоту
         if (input instanceof HTMLTextAreaElement) {
-           autoResizeTextarea(input);
+          autoResizeTextarea(input);
         }
       });
       list.appendChild(li);
@@ -397,7 +402,9 @@ async function fillClientInfo(clientId: string) {
   const clientData = await fetchClientData(clientId);
   if (clientData) {
     // ЗМІНА ТУТ: Приводимо до HTMLTextAreaElement
-    const clientInput = document.getElementById(clientInputId) as HTMLTextAreaElement;
+    const clientInput = document.getElementById(
+      clientInputId
+    ) as HTMLTextAreaElement;
     clientInput.value = clientData["ПІБ"] || "";
     // Оновлюємо висоту після завантаження даних
     autoResizeTextarea(clientInput);
@@ -538,11 +545,11 @@ function setupEditingAutocompletes() {
 
   const matchesSearch = (item: any, searchValue: string): boolean => {
     const search = searchValue.toLowerCase();
-    const englishMatch = 
+    const englishMatch =
       item.mark_id.toLowerCase().includes(search) ||
       item.name.toLowerCase().includes(search) ||
       item.display.toLowerCase().includes(search);
-    const cyrillicMatch = 
+    const cyrillicMatch =
       item.mark_cyrillic.toLowerCase().includes(search) ||
       item.model_cyrillic.toLowerCase().includes(search);
     return englishMatch || cyrillicMatch;
@@ -643,12 +650,12 @@ async function showModalCreateSakazNarad() {
   const modalElement = document.getElementById(modalOverlayId)!;
   const closeBtn = document.getElementById(modalCloseBtnId)!;
   const btnEdit = document.getElementById(btnEditId)!;
-  
+
   // ЗМІНА ТУТ: Приводимо до HTMLTextAreaElement
   const clientInput = document.getElementById(
     clientInputId
   ) as HTMLTextAreaElement;
-  
+
   const clientList = document.getElementById(clientListId) as HTMLUListElement;
   const carNumberInput = document.getElementById(
     carNumberInputId
@@ -669,10 +676,10 @@ async function showModalCreateSakazNarad() {
   const phoneList = document.getElementById(phoneListId) as HTMLUListElement;
   const extraInput = document.getElementById(extraInputId) as HTMLInputElement;
   setupPhoneFormatting(phoneInput);
-  
+
   // Додаємо слухач для clientInput, щоб він розширювався під час ручного введення
   // (хоча setupAutocomplete це теж робить, але для безпеки)
-  clientInput.addEventListener('input', () => autoResizeTextarea(clientInput));
+  clientInput.addEventListener("input", () => autoResizeTextarea(clientInput));
 
   const editableFieldsInitially = [
     clientInput,
@@ -761,7 +768,7 @@ async function showModalCreateSakazNarad() {
           console.error("💥 Виняток при завантаженні джерел:", e);
         }
       }
-   } else {
+    } else {
       // Закриваємо замок - повертаємо оригінальний колір
       btnEdit.style.backgroundColor = "";
       btnEdit.style.color = "";
@@ -898,7 +905,10 @@ async function showModalCreateSakazNarad() {
       const missing = [];
       if (clientName === "") missing.push("ПІБ");
       if (carModel === "") missing.push("Автомобіль");
-      showLockToggleMessage(false, `❌ Заповніть поле: ${missing.join(" та ")}`);
+      showLockToggleMessage(
+        false,
+        `❌ Заповніть поле: ${missing.join(" та ")}`
+      );
       return false;
     }
     return true;
@@ -996,7 +1006,7 @@ async function showModalCreateSakazNarad() {
     if (ownerData) {
       clientInput.value = ownerData["ПІБ"] || "";
       autoResizeTextarea(clientInput); // Оновлюємо висоту після вибору авто
-      
+
       phoneInput.value = ownerData["Телефон"] || "";
       extraInput.value = ownerData["Додаткові"] || "";
       carIncomeInput.value = ownerData["Джерело"] || "";
@@ -1074,7 +1084,10 @@ function clearCarAndContactFields() {
       | HTMLSelectElement
       | HTMLTextAreaElement // Додано
       | null;
-    if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+    if (
+      input instanceof HTMLInputElement ||
+      input instanceof HTMLTextAreaElement
+    ) {
       input.value = "";
     } else if (input instanceof HTMLSelectElement) {
       input.selectedIndex = 0;
@@ -1086,8 +1099,21 @@ function clearCarAndContactFields() {
 document.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector('[data-action="openHome"]')
-    ?.addEventListener("click", (e) => {
+    ?.addEventListener("click", async (e) => { // 1. Додано async
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      // 2. ДОДАНО ПЕРЕВІРКУ АВТОРИЗАЦІЇ
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.warn("⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається.");
+        // Тут можна викликати вашу функцію показу помилки, якщо вона не викликається автоматично глобально
+        // Але головне - ми не йдемо далі:
+        return; 
+      }
+
       showModalCreateSakazNarad();
     });
 });

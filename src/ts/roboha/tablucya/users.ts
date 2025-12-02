@@ -517,6 +517,23 @@ export function createLoginModal(): Promise<string | null> {
 }
 
 export async function showLoginModalBeforeTable(): Promise<string | null> {
+  // 1. 🔥 ПЕРЕВІРКА ГЛОБАЛЬНОЇ СЕСІЇ (Google)
+  // Перш ніж малювати модалку, питаємо Supabase: "Ми взагалі залогінені?"
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    console.warn("⛔ Немає авторизації Google. Модальне вікно пароля приховано.");
+    
+    // ВАРІАНТ 1: Просто викидаємо на вхід (найкраще для безпеки)
+    window.location.href = "/STO/index.html"; 
+    
+    // ВАРІАНТ 2: Якщо хочеш просто "чорний екран" без перенаправлення, закоментуй рядок вище.
+    // Але краще перенаправити.
+    
+    return null; // Повертаємо null, код далі не піде, модалка не створиться
+  }
+
+  // 2. Якщо Google-сесія є, перевіряємо чи збережений внутрішній пароль
   const { accessLevel: autoAccessLevel } = await attemptAutoLogin();
 
   if (autoAccessLevel) {
@@ -524,6 +541,7 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
     return autoAccessLevel;
   }
 
+  // 3. Якщо збереженого пароля немає - ТІЛЬКИ ТОДІ показуємо модалку
   return await createLoginModal();
 }
 

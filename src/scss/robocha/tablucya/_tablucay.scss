@@ -10,6 +10,7 @@ body {
 /* =========================================
    ТАБЛИЦЯ (ОСНОВНИЙ КОНТЕЙНЕР)
    ========================================= */
+
 #table-container-modal-sakaz_narad {
   width: calc(100% - 20px);
   margin: 0 10px 10px 10px;
@@ -172,12 +173,9 @@ body {
 @media (min-width: 1025px) {
   #table-container-modal-sakaz_narad {
     max-height: calc(100vh - 40px);
-
     tbody {
       max-height: calc(100vh - 85px);
     }
-
-    /* 🔸 ЛИШЕ НА ДЕСКТОПІ: при вертикальному скролі у tbody розширюємо заголовок "Сумма" */
     &.has-vscroll table th:nth-child(5) {
       width: 146px;
     }
@@ -187,7 +185,6 @@ body {
 @media (min-width: 769px) and (max-width: 1024px) {
   #table-container-modal-sakaz_narad {
     max-height: calc(93vh - 10px);
-
     tbody {
       max-height: calc(93vh - 120px);
     }
@@ -197,7 +194,6 @@ body {
 @media (max-width: 768px) {
   #table-container-modal-sakaz_narad {
     max-height: calc(93vh - 5px);
-
     tbody {
       max-height: calc(93vh - 120px);
     }
@@ -210,242 +206,61 @@ body {
 
 /* Підсвічування змінених актів в списку */
 .act-modified {
-  background-color: #e3f2fd !important; /* світло-синій */
-  border: 2px solid #2196f3 !important; /* синій як паста */
+  background-color: #e3f2fd !important;
+  border: 2px solid #2196f3 !important;
   transition: all 0.3s ease;
-
   &:hover {
     background-color: #bbdefb !important;
     box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
   }
 }
 
-/* Клас для рядків актів, які мають зміни (Realtime підсвітка - Синя ручка) */
+/* Клас для рядків актів (Синя ручка) */
 .act-modified-blue-pen {
   background-color: rgba(33, 150, 243, 0.12) !important;
   position: relative;
   z-index: 1;
   box-shadow: inset 0 0 0 2px #2196f3 !important;
   transition: background-color 0.3s ease;
-
   &:hover {
     background-color: rgba(33, 150, 243, 0.25) !important;
     cursor: pointer;
   }
-
   td {
     color: #01579b;
     font-weight: 500;
   }
 }
 
-/* Пульсація доданих елементів (3 секунди) */
+/* Пульсація доданих елементів */
 .item-added {
   animation: highlight-added 3s ease-in-out;
 }
-
 @keyframes highlight-added {
-  0% {
-    background-color: transparent;
-    border: 2px solid transparent;
-  }
-  25% {
-    background-color: #e3f2fd;
-    border: 2px solid #2196f3;
-  }
-  50% {
-    background-color: #bbdefb;
-    border: 2px solid #2196f3;
-  }
-  75% {
-    background-color: #e3f2fd;
-    border: 2px solid #2196f3;
-  }
-  100% {
-    background-color: transparent;
-    border: 2px solid transparent;
-  }
+  0% { background-color: transparent; border: 2px solid transparent; }
+  25% { background-color: #e3f2fd; border: 2px solid #2196f3; }
+  50% { background-color: #bbdefb; border: 2px solid #2196f3; }
+  75% { background-color: #e3f2fd; border: 2px solid #2196f3; }
+  100% { background-color: transparent; border: 2px solid transparent; }
 }
 
-/* Пульсація видалених елементів (3 секунди, світло-червоний) */
+/* Пульсація видалених елементів */
 .item-deleted {
   animation: highlight-deleted 3s ease-in-out;
 }
-
 @keyframes highlight-deleted {
-  0% {
-    background-color: transparent;
-    border: 2px solid transparent;
-  }
-  25% {
-    background-color: #ffcdd2;
-    border: 2px solid #f44336;
-  }
-  50% {
-    background-color: #ffebee;
-    border: 2px solid #f44336;
-  }
-  75% {
-    background-color: #ffcdd2;
-    border: 2px solid #f44336;
-  }
-  100% {
-    background-color: transparent;
-    border: 2px solid transparent;
-  }
+  0% { background-color: transparent; border: 2px solid transparent; }
+  25% { background-color: #ffcdd2; border: 2px solid #f44336; }
+  50% { background-color: #ffebee; border: 2px solid #f44336; }
+  75% { background-color: #ffcdd2; border: 2px solid #f44336; }
+  100% { background-color: transparent; border: 2px solid transparent; }
 }
 
-/* Повільна пульсація (легенько, не швидко) */
+/* Повільна пульсація */
 .item-pulse-slow {
   animation: pulse-slow 1.5s ease-in-out 2;
 }
-
 @keyframes pulse-slow {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.02);
-    opacity: 0.9;
-  }
-}
-
-/* =========================================
-   НОВІ СТИЛІ ДЛЯ СПОВІЩЕНЬ (NOTIFICATIONS)
-   (Зліва, смужка справа, скрол)
-   ========================================= */
-
-#act-realtime-container {
-  position: fixed;
-  bottom: 20px;
-  left: 280px; /* Зміщено вліво на 280px */
-  z-index: 10002;
-  display: flex;
-  flex-direction: column;
-  gap: 5px; /* ГЕП 5 пікселів */
-  pointer-events: auto;
-  max-height: 90vh; /* Щоб не перекривало весь екран */
-  overflow-y: auto; /* Скрол */
-  overflow-x: hidden;
-  padding: 10px; /* Відступ для тіней */
-  width: 360px;
-
-  /* Приховуємо скролбар, але функціонал лишаємо */
-  &::-webkit-scrollbar {
-    width: 0 !important;
-  }
-  scrollbar-width: none;
-}
-
-/* Окреме повідомлення (Toast) */
-.act-notification-toast {
-  background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  padding: 12px 16px;
-  width: 100%;
-  box-sizing: border-box;
-  cursor: pointer;
-
-  /* Анімація входу: зліва */
-  transform: translateX(-150%);
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.27),
-    opacity 0.3s ease;
-  opacity: 0;
-  margin-bottom: 0;
-
-  /* СМУЖКА СПРАВА (буде перевизначена класами нижче) */
-  border-right: 4px solid transparent;
-  border-left: none;
-
-  &:hover {
-    background-color: rgba(255, 255, 255, 1);
-    transform: scale(1.02) translateX(0) !important; /* Трохи збільшується */
-  }
-
-  /* Стан показу */
-  &.show {
-    transform: translateX(0);
-    opacity: 1;
-  }
-
-  /* Стан закриття (тікає вправо) */
-  &.closing {
-    transform: translateX(150%);
-    opacity: 0;
-  }
-
-  /* Варіант: Додано (Зелений) */
-  &.type-added {
-    border-right-color: #10b981;
-
-    .status-text {
-      color: #10b981;
-    }
-  }
-
-  /* Варіант: Видалено (Червоний) */
-  &.type-deleted {
-    border-right-color: #ef4444;
-
-    .status-text {
-      color: #ef4444;
-    }
-  }
-
-  /* Внутрішня структура (Flex) */
-  .toast-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 4px;
-  }
-
-  .toast-header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .toast-body {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  /* ТИПОГРАФІКА (ШРИФТИ ТА КОЛЬОРИ НЕЗМІННІ) */
-  .act-id {
-    font-weight: 700;
-    color: #1e3a8a;
-    font-size: 14px;
-  }
-
-  .status-text {
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    /* Колір задається у батька (.type-added/deleted) */
-  }
-
-  .user-surname {
-    font-size: 12px;
-    color: #64748b;
-    margin-left: auto;
-  }
-
-  .item-icon {
-    font-size: 16px;
-  }
-
-  .item-name {
-    font-size: 13px;
-    color: #334155;
-    font-weight: 500;
-    margin-top: 2px;
-  }
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.9; }
 }

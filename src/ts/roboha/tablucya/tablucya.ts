@@ -12,7 +12,7 @@ import {
 } from "./users";
 
 // 👇 ІМПОРТ НОВОЇ ФУНКЦІЇ ПОВІДОМЛЕНЬ
-import { showRealtimeActNotification } from "../../roboha/zakaz_naraudy/inhi/act_notifications_ui";
+import { showRealtimeActNotification } from "./povidomlennya_tablucya";
 
 document.addEventListener("click", (e) => {
   const target = e.target as HTMLElement | null;
@@ -85,7 +85,12 @@ function validateDateFormat(dateStr: string): boolean {
   const month = parseInt(m);
   const year = parseInt(y);
   return (
-    day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 2000 && year <= 2100
+    day >= 1 &&
+    day <= 31 &&
+    month >= 1 &&
+    month <= 12 &&
+    year >= 2000 &&
+    year <= 2100
   );
 }
 
@@ -133,10 +138,10 @@ function subscribeToActNotifications() {
         const newNotification = payload.new;
         if (newNotification && newNotification.act_id) {
           const actId = Number(newNotification.act_id);
-          
+
           // 1. Додаємо ID в локальний сет для підсвітки
           modifiedActIdsGlobal.add(actId);
-          
+
           // 2. Миттєво підсвічуємо рядок в DOM (синя ручка)
           highlightRowInDom(actId);
 
@@ -145,7 +150,7 @@ function subscribeToActNotifications() {
             act_id: actId,
             changed_by_surname: newNotification.changed_by_surname,
             item_name: newNotification.item_name,
-            dodav_vudaluv: newNotification.dodav_vudaluv
+            dodav_vudaluv: newNotification.dodav_vudaluv,
           });
         }
       }
@@ -157,7 +162,9 @@ function subscribeToActNotifications() {
  * Знаходить рядок в таблиці і додає клас підсвітки (Синя ручка)
  */
 function highlightRowInDom(actId: number) {
-  const table = document.querySelector("#table-container-modal-sakaz_narad table");
+  const table = document.querySelector(
+    "#table-container-modal-sakaz_narad table"
+  );
   if (!table) return;
 
   const rows = table.querySelectorAll("tbody tr");
@@ -182,18 +189,20 @@ function clearNotificationVisualOnly(actId: number) {
 
   if (modifiedActIdsGlobal.has(actId)) {
     modifiedActIdsGlobal.delete(actId);
-    
-    const table = document.querySelector("#table-container-modal-sakaz_narad table");
+
+    const table = document.querySelector(
+      "#table-container-modal-sakaz_narad table"
+    );
     if (table) {
       const rows = table.querySelectorAll("tbody tr");
       rows.forEach((row) => {
         const firstCell = row.querySelector("td");
         if (firstCell) {
-           const cellText = firstCell.textContent || "";
-           const cellActId = parseInt(cellText.replace(/\D/g, ""));
-           if (cellActId === actId) {
-             row.classList.remove("act-modified-blue-pen");
-           }
+          const cellText = firstCell.textContent || "";
+          const cellActId = parseInt(cellText.replace(/\D/g, ""));
+          if (cellActId === actId) {
+            row.classList.remove("act-modified-blue-pen");
+          }
         }
       });
     }
@@ -204,7 +213,10 @@ function clearNotificationVisualOnly(actId: number) {
 // ОБРОБКА ДАНИХ АКТІВ
 // =============================================================================
 
-function getClientInfo(act: any, clients: any[]): { pib: string; phone: string } {
+function getClientInfo(
+  act: any,
+  clients: any[]
+): { pib: string; phone: string } {
   const client = clients?.find((c) => c.client_id === act.client_id);
   const clientData = safeParseJSON(client?.data);
   const pib = clientData?.["ПІБ"] || "Невідомо";
@@ -257,7 +269,7 @@ function createClientCell(
   phones.forEach((p) => {
     td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;
   });
-  
+
   td.addEventListener("click", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -267,7 +279,7 @@ function createClientCell(
       showNoAccessNotification();
     }
   });
-  
+
   return td;
 }
 
@@ -280,7 +292,7 @@ function createCarCell(
   if (carInfo.number) {
     td.innerHTML += `<div style="color: #ff8800; font-size: 0.9em; word-wrap: break-word; word-break: break-word; white-space: normal;">${carInfo.number}</div>`;
   }
-  
+
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -290,7 +302,7 @@ function createCarCell(
       showNoAccessNotification();
     }
   });
-  
+
   return td;
 }
 
@@ -303,7 +315,7 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
   } else {
     td.innerHTML = `<div>-</div>`;
   }
-  
+
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -313,7 +325,7 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
       showNoAccessNotification();
     }
   });
-  
+
   return td;
 }
 
@@ -340,7 +352,9 @@ function createStandardCell(
     }
     if (act.contrAgent_raxunok && act.contrAgent_raxunok_data) {
       const raxunokNum = act.contrAgent_raxunok;
-      const raxunokDateFormatted = convertISOtoShortDate(act.contrAgent_raxunok_data);
+      const raxunokDateFormatted = convertISOtoShortDate(
+        act.contrAgent_raxunok_data
+      );
       if (raxunokDateFormatted) {
         const raxunokLabel = document.createElement("div");
         raxunokLabel.classList.add("raxunok-label");
@@ -349,7 +363,7 @@ function createStandardCell(
       }
     }
   }
-  
+
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
@@ -359,7 +373,7 @@ function createStandardCell(
       showNoAccessNotification();
     }
   });
-  
+
   return td;
 }
 
@@ -403,12 +417,12 @@ function renderActsRows(
     const clientInfo = getClientInfo(act, clients);
     const carInfo = getCarInfo(act, cars);
     const row = document.createElement("tr");
-    
+
     row.classList.add(isClosed ? "row-closed" : "row-open");
 
     // ПЕРЕВІРКА ПІДСВІТКИ (СИНЯ РУЧКА)
     if (act.act_id && modifiedActIds.has(Number(act.act_id))) {
-       row.classList.add("act-modified-blue-pen");
+      row.classList.add("act-modified-blue-pen");
     }
 
     // Комірка № акту
@@ -455,7 +469,9 @@ function sortActs(): void {
     sortByDateStep = 1;
   } else {
     actsGlobal.sort(
-      (a, b) => (getActDateAsDate(b)?.getTime() || 0) - (getActDateAsDate(a)?.getTime() || 0)
+      (a, b) =>
+        (getActDateAsDate(b)?.getTime() || 0) -
+        (getActDateAsDate(a)?.getTime() || 0)
     );
     sortByDateStep = 0;
   }
@@ -463,7 +479,11 @@ function sortActs(): void {
 
 function getDefaultDateRange(): string {
   const today = new Date();
-  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+  const lastMonth = new Date(
+    today.getFullYear(),
+    today.getMonth() - 1,
+    today.getDate()
+  );
   return `${formatDate(lastMonth)} - ${formatDate(today)}`;
 }
 
@@ -476,7 +496,7 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
   const currentValue = input.value.trim();
   if (currentValue === "Відкриті" || currentValue === "Закриті") return null;
   if (!currentValue.includes(" - ")) return null;
-  
+
   const [startStr, endStr] = currentValue.split(" - ");
   if (!validateDateFormat(startStr) || !validateDateFormat(endStr)) return null;
 
@@ -492,10 +512,15 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
   }
 }
 
-function filterActs(acts: any[], searchTerm: string, clients: any[], cars: any[]): any[] {
+function filterActs(
+  acts: any[],
+  searchTerm: string,
+  clients: any[],
+  cars: any[]
+): any[] {
   if (!searchTerm) return acts;
   const filters = parseSearchTerm(searchTerm);
-  
+
   return acts.filter((act) => {
     const clientInfo = getClientInfo(act, clients);
     const carInfo = getCarInfo(act, cars);
@@ -516,15 +541,27 @@ function filterActs(acts: any[], searchTerm: string, clients: any[], cars: any[]
         return !numPart ? actNum : actNum.toString().includes(numPart);
       }
       switch (filter.key.toLowerCase()) {
-        case "акт": return act.act_id?.toString().includes(filter.value);
-        case "сума": return amount >= parseFloat(filter.value);
-        case "дата": return formattedDate.includes(filter.value);
+        case "акт":
+          return act.act_id?.toString().includes(filter.value);
+        case "сума":
+          return amount >= parseFloat(filter.value);
+        case "дата":
+          return formattedDate.includes(filter.value);
         case "тел":
-        case "телефон": return clientInfo.phone.includes(filter.value);
-        case "піб": return clientInfo.pib.toLowerCase().includes(filter.value.toLowerCase());
-        case "машина": return carInfo.name.toLowerCase().includes(filter.value.toLowerCase());
-        case "номер": return carInfo.number.includes(filter.value);
-        default: return (
+        case "телефон":
+          return clientInfo.phone.includes(filter.value);
+        case "піб":
+          return clientInfo.pib
+            .toLowerCase()
+            .includes(filter.value.toLowerCase());
+        case "машина":
+          return carInfo.name
+            .toLowerCase()
+            .includes(filter.value.toLowerCase());
+        case "номер":
+          return carInfo.number.includes(filter.value);
+        default:
+          return (
             clientInfo.pib.toLowerCase().includes(filter.value.toLowerCase()) ||
             clientInfo.phone.includes(filter.value) ||
             carInfo.number.includes(filter.value) ||
@@ -555,14 +592,24 @@ function parseSearchTerm(searchTerm: string): { key: string; value: string }[] {
 // ЗАВАНТАЖЕННЯ ДАНИХ
 // =============================================================================
 
-async function loadActsFromDB(dateFrom: string | null, dateTo: string | null, filterType: "open" | "closed" | null = null): Promise<any[] | null> {
+async function loadActsFromDB(
+  dateFrom: string | null,
+  dateTo: string | null,
+  filterType: "open" | "closed" | null = null
+): Promise<any[] | null> {
   let query = supabase.from("acts").select("*");
   if (filterType === "open") query = query.is("date_off", null);
   else if (filterType === "closed") query = query.not("date_off", "is", null);
-  else if (dateFrom && dateTo) query = query.gte("date_on", dateFrom).lte("date_on", dateTo);
+  else if (dateFrom && dateTo)
+    query = query.gte("date_on", dateFrom).lte("date_on", dateTo);
   else {
     const fallbackDates = getDateRange();
-    if (fallbackDates) query = supabase.from("acts").select("*").gte("date_on", fallbackDates.dateFrom).lte("date_on", fallbackDates.dateTo);
+    if (fallbackDates)
+      query = supabase
+        .from("acts")
+        .select("*")
+        .gte("date_on", fallbackDates.dateFrom)
+        .lte("date_on", fallbackDates.dateTo);
     else return [];
   }
   query = query.order("act_id", { ascending: false });
@@ -575,20 +622,26 @@ async function loadActsFromDB(dateFrom: string | null, dateTo: string | null, fi
 }
 
 async function loadClientsFromDB(): Promise<any[] | null> {
-  const { data: clients, error: clientError } = await supabase.from("clients").select("client_id, data");
-  return clientError ? null : (clients || []);
+  const { data: clients, error: clientError } = await supabase
+    .from("clients")
+    .select("client_id, data");
+  return clientError ? null : clients || [];
 }
 
 async function loadCarsFromDB(): Promise<any[] | null> {
-  const { data: cars, error: carsError } = await supabase.from("cars").select("cars_id, data");
-  return carsError ? null : (cars || []);
+  const { data: cars, error: carsError } = await supabase
+    .from("cars")
+    .select("cars_id, data");
+  return carsError ? null : cars || [];
 }
 
 // =============================================================================
 // СТВОРЕННЯ ТАБЛИЦІ
 // =============================================================================
 
-function createTableHeader(accessLevel: string | null): HTMLTableSectionElement {
+function createTableHeader(
+  accessLevel: string | null
+): HTMLTableSectionElement {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   const headers = ["№ акту", "Дата", "Клієнт 🔽", "Автомобіль"];
@@ -609,10 +662,19 @@ function createTableHeader(accessLevel: string | null): HTMLTableSectionElement 
 }
 
 function updateTableBody(): void {
-  const table = document.querySelector("#table-container-modal-sakaz_narad table");
+  const table = document.querySelector(
+    "#table-container-modal-sakaz_narad table"
+  );
   if (!table) return;
   const newTbody = document.createElement("tbody");
-  renderActsRows(actsGlobal, clientsGlobal, carsGlobal, newTbody, userAccessLevel, modifiedActIdsGlobal);
+  renderActsRows(
+    actsGlobal,
+    clientsGlobal,
+    carsGlobal,
+    newTbody,
+    userAccessLevel,
+    modifiedActIdsGlobal
+  );
   const oldTbody = table.querySelector("tbody");
   if (oldTbody) oldTbody.replaceWith(newTbody);
   applyVerticalScrollbarCompensation();
@@ -624,19 +686,31 @@ function createTable(accessLevel: string | null): HTMLTableElement {
   table.style.borderCollapse = "collapse";
   const thead = createTableHeader(accessLevel);
   const tbody = document.createElement("tbody");
-  renderActsRows(actsGlobal, clientsGlobal, carsGlobal, tbody, accessLevel, modifiedActIdsGlobal);
+  renderActsRows(
+    actsGlobal,
+    clientsGlobal,
+    carsGlobal,
+    tbody,
+    accessLevel,
+    modifiedActIdsGlobal
+  );
   table.appendChild(thead);
   table.appendChild(tbody);
   return table;
 }
 
 function showNoDataMessage(message: string): void {
-  const container = document.getElementById("table-container-modal-sakaz_narad");
-  if (container) container.innerHTML = `<div style="text-align: center; padding: 20px; color: #666;">${message}</div>`;
+  const container = document.getElementById(
+    "table-container-modal-sakaz_narad"
+  );
+  if (container)
+    container.innerHTML = `<div style="text-align: center; padding: 20px; color: #666;">${message}</div>`;
 }
 
 function showAuthRequiredMessage(): void {
-  const container = document.getElementById("table-container-modal-sakaz_narad");
+  const container = document.getElementById(
+    "table-container-modal-sakaz_narad"
+  );
   if (container) {
     container.innerHTML = `<div style="text-align: center; padding: 40px; color: #666;">
       <div style="font-size: 48px; margin-bottom: 20px;">🔐</div>
@@ -645,12 +719,15 @@ function showAuthRequiredMessage(): void {
       <button id="authRetryBtn" style="background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 15px;">Увійти</button>
     </div>`;
     const retryBtn = document.getElementById("authRetryBtn");
-    if (retryBtn) retryBtn.addEventListener("click", () => initializeActsSystem());
+    if (retryBtn)
+      retryBtn.addEventListener("click", () => initializeActsSystem());
   }
 }
 
 function showNoViewAccessMessage(): void {
-  const container = document.getElementById("table-container-modal-sakaz_narad");
+  const container = document.getElementById(
+    "table-container-modal-sakaz_narad"
+  );
   if (container) {
     container.innerHTML = `<div style="text-align: center; padding: 40px; color: #666;">
       <div style="font-size: 48px; margin-bottom: 20px;">🚫</div>
@@ -661,7 +738,9 @@ function showNoViewAccessMessage(): void {
 }
 
 function applyVerticalScrollbarCompensation(): void {
-  const container = document.getElementById("table-container-modal-sakaz_narad");
+  const container = document.getElementById(
+    "table-container-modal-sakaz_narad"
+  );
   const tbody = container?.querySelector("tbody") as HTMLElement | null;
   if (!container || !tbody) return;
   const hasVScroll = tbody.scrollHeight > tbody.clientHeight;
@@ -696,7 +775,9 @@ export async function loadActsTable(
     let finalDateFrom: string | null = null;
     let finalDateTo: string | null = null;
     let finalFilterType: "open" | "closed" | null = filterType || null;
-    const dateRangePicker = document.getElementById("dateRangePicker") as HTMLInputElement;
+    const dateRangePicker = document.getElementById(
+      "dateRangePicker"
+    ) as HTMLInputElement;
 
     if (finalFilterType === "open" || finalFilterType === "closed") {
       finalDateFrom = null;
@@ -719,8 +800,14 @@ export async function loadActsTable(
             const [startStr, endStr] = defaultRange.split(" - ");
             const [d1, m1, y1] = startStr.split(".");
             const [d2, m2, y2] = endStr.split(".");
-            finalDateFrom = `${y1}-${m1.padStart(2, "0")}-${d1.padStart(2, "0")} 00:00:00`;
-            finalDateTo = `${y2}-${m2.padStart(2, "0")}-${d2.padStart(2, "0")} 23:59:59`;
+            finalDateFrom = `${y1}-${m1.padStart(2, "0")}-${d1.padStart(
+              2,
+              "0"
+            )} 00:00:00`;
+            finalDateTo = `${y2}-${m2.padStart(2, "0")}-${d2.padStart(
+              2,
+              "0"
+            )} 23:59:59`;
             if (dateRangePicker) dateRangePicker.value = defaultRange;
           }
         }
@@ -749,7 +836,9 @@ export async function loadActsTable(
     }
 
     const table = createTable(userAccessLevel);
-    const container = document.getElementById("table-container-modal-sakaz_narad");
+    const container = document.getElementById(
+      "table-container-modal-sakaz_narad"
+    );
     if (!container) return;
     container.innerHTML = "";
     container.appendChild(table);
@@ -761,9 +850,13 @@ export async function loadActsTable(
 
 export async function refreshActsTable(): Promise<void> {
   if (!isUserAuthenticated()) return;
-  const searchInput = document.getElementById("searchInput") as HTMLInputElement;
+  const searchInput = document.getElementById(
+    "searchInput"
+  ) as HTMLInputElement;
   const currentSearchTerm = searchInput?.value?.trim() || "";
-  const dateRangePicker = document.getElementById("dateRangePicker") as HTMLInputElement;
+  const dateRangePicker = document.getElementById(
+    "dateRangePicker"
+  ) as HTMLInputElement;
   const currentValue = dateRangePicker?.value?.trim() || "";
 
   let currentFilterType: "open" | "closed" | null = null;
@@ -779,23 +872,37 @@ export async function refreshActsTable(): Promise<void> {
       currentDateTo = dates.dateTo;
     }
   }
-  loadActsTable(currentDateFrom, currentDateTo, currentFilterType, currentSearchTerm);
+  loadActsTable(
+    currentDateFrom,
+    currentDateTo,
+    currentFilterType,
+    currentSearchTerm
+  );
 }
 
 function watchDateRangeChanges(): void {
-  const dateRangePicker = document.getElementById("dateRangePicker") as HTMLInputElement;
+  const dateRangePicker = document.getElementById(
+    "dateRangePicker"
+  ) as HTMLInputElement;
   if (!dateRangePicker) return;
   let lastValue = dateRangePicker.value;
   const observer = new MutationObserver(() => {
     const currentValue = dateRangePicker.value;
     if (currentValue !== lastValue) {
       lastValue = currentValue;
-      const searchInput = document.getElementById("searchInput") as HTMLInputElement;
+      const searchInput = document.getElementById(
+        "searchInput"
+      ) as HTMLInputElement;
       const currentSearchTerm = searchInput?.value?.trim() || "";
       loadActsTable(undefined, undefined, undefined, currentSearchTerm);
     }
   });
-  observer.observe(dateRangePicker, { attributes: true, childList: true, characterData: true, subtree: true });
+  observer.observe(dateRangePicker, {
+    attributes: true,
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
   window.addEventListener("beforeunload", () => observer.disconnect());
 }
 
@@ -814,10 +921,10 @@ export async function initializeActsSystem(): Promise<void> {
     }
 
     await loadActsTable(null, null, "open");
-    
+
     // ✅ АКТИВУЄМО REALTIME ПІДПИСКУ
     subscribeToActNotifications();
-    
+
     watchDateRangeChanges();
     window.addEventListener("resize", applyVerticalScrollbarCompensation);
     console.log("✅ Система ініціалізована.");

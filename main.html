@@ -8,25 +8,78 @@
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
     <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
+
+    <style>
+        /* Стилі для пошуку */
+        .search-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+            margin-left: 15px;
+        }
+
+        .search-input {
+            width: 0;
+            padding: 0;
+            border: none;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+            background: transparent;
+            color: #333;
+            font-size: 16px;
+            outline: none;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            visibility: hidden;
+        }
+
+        .search-input.active {
+            width: 220px;
+            padding: 5px 10px;
+            opacity: 1;
+            visibility: visible;
+            margin-left: 5px;
+            border-bottom: 2px solid #4a90e2;
+        }
+
+        .search-icon {
+            cursor: pointer;
+            font-size: 1.4em;
+            padding: 5px;
+            color: #555;
+            transition: color 0.3s;
+        }
+
+        .search-icon:hover {
+            color: #4a90e2;
+            transform: scale(1.1);
+        }
+
+        .search-input::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+            font-style: italic;
+        }
+    </style>
 </head>
 
 <body class="page-2">
     <ul class="main-menu">
-        <div class="user-info">
-            <div class="user-surname">Завантаження...</div>
-            <div class="user-access">Завантаження...</div>
+        <div class="user-info" id="userInfoBlock" style="display: none;">
+            <div class="user-surname"></div>
+            <div class="user-access"></div>
         </div>
+        
         <div class="menu-items" id="menu-items-to-hide" style="display: none;">
-            <li><a href="" id="logout-link" class="menu-link">Вихід</a></li>
+            <li><a href="#" id="logout-link" class="menu-link" onclick="window.logoutFromSystemAndRedirect(); return false;">Вихід</a></li>
             <li><a href="#" class="menu-link" data-action="openSettings">Налаштування</a></li>
             <li><a href="#" class="menu-link all_other_bases" data-action="openClient">Додати</a></li>
-            <li><a href="bukhhalteriya.html" class="menu-link all_other_bases_Bukhh"
-                    data-action="openBukhhalteriya">Бухгалтерія</a></li>
+            <li><a href="bukhhalteriya.html" class="menu-link all_other_bases_Bukhh" data-action="openBukhhalteriya">Бухгалтерія</a></li>
             <li class="active"><a href="#" class="menu-link" data-action="openHome">Наряд</a></li>
+            
             <li><input type="text" id="dateRangePicker" readonly /></li>
+            
             <li class="search-container">
-                <span id="searchIcon" class="search-icon">🔍</span>
-                <input type="text" id="searchInput" class="search-input" placeholder="Пошук..." />
+                <span id="searchIcon" class="search-icon" title="Пошук">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="Введіть номер, авто або клієнта..." />
             </li>
         </div>
         <li class="alim">1.2.0 / © 2025 Алім</li>
@@ -52,12 +105,37 @@
             logoutFromSystemAndRedirect
         } from "/src/ts/roboha/tablucya/users.ts";
 
-        // Робимо logoutFromSystemAndRedirect глобальною
         window.logoutFromSystemAndRedirect = logoutFromSystemAndRedirect;
 
         /**
-         * Управління видимістю головного меню.
+         * Перевірка авторизації (швидка)
          */
+        function checkAuthLocal() {
+            const storedData = localStorage.getItem("userAuthData");
+            if (!storedData) return false;
+            try {
+                const parsed = JSON.parse(storedData);
+                return !!(parsed.Name && parsed.Доступ);
+            } catch { return false; }
+        }
+
+        /**
+         * Функція БЛОКУВАННЯ (викликаємо при кліку)
+         */
+        function blockActionIfNoAuth(e) {
+            if (!checkAuthLocal()) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                // 🛑 ТУТ ВИВОДИМО ПОВІДОМЛЕННЯ ПРО БЛОКУВАННЯ
+                alert("⛔ Доступ заблоковано. Ви не авторизовані.");
+                
+                return true; // Заблоковано
+            }
+            return false; // Дозволено
+        }
+
         function updateMenuVisibility(isVisible) {
             const menu = document.getElementById("menu-items-to-hide");
             if (menu) {
@@ -65,43 +143,75 @@
             }
         }
 
-        /**
-         * Функція оновлення відображення інформації про користувача в меню
-         */
         function updateUserInfoDisplay() {
             try {
                 const storedData = localStorage.getItem("userAuthData");
                 if (storedData) {
                     const userData = JSON.parse(storedData);
+                    const userInfoDiv = document.getElementById('userInfoBlock');
                     const userSurnameElement = document.querySelector('.user-surname');
                     const userAccessElement = document.querySelector('.user-access');
 
-                    if (userSurnameElement && userData.Name) {
-                        userSurnameElement.textContent = userData.Name;
-                    }
-
-                    if (userAccessElement && userData.Доступ) {
-                        userAccessElement.textContent = userData.Доступ;
-                    }
-
-                    console.log('✅ Інформацію про користувача оновлено:', userData.Name, userData.Доступ);
+                    if (userSurnameElement) userSurnameElement.textContent = userData.Name;
+                    if (userAccessElement) userAccessElement.textContent = userData.Доступ;
+                    if (userInfoDiv) userInfoDiv.style.display = 'flex';
                 }
-            } catch (error) {
-                console.error('❌ Помилка при оновленні інформації користувача:', error);
-            }
+            } catch (error) { console.error(error); }
         }
 
-        /**
-         * Функція ініціалізації системи після входу.
-         */
+        // --- НАЛАШТУВАННЯ БЛОКУВАННЯ ДЛЯ ПОШУКУ ТА КАЛЕНДАРЯ ---
+        function setupBlockers() {
+            // 1. Блокуємо ПОШУК
+            $('#searchIcon').on('click', function(e) {
+                if (blockActionIfNoAuth(e)) return; // Якщо блоковано - вихід
+
+                // Якщо дійшли сюди - значить авторизовані, відкриваємо пошук
+                const input = $('#searchInput');
+                input.toggleClass('active');
+                if (input.hasClass('active')) {
+                    input.focus();
+                }
+            });
+
+            $('#searchInput').on('focus click keydown', function(e) {
+                if (blockActionIfNoAuth(e)) {
+                    $(this).blur(); // Прибираємо фокус
+                }
+            });
+
+            // 2. Блокуємо КАЛЕНДАР
+            // Перехоплюємо подію перед відкриттям
+            $('#dateRangePicker').on('show.daterangepicker', function(e, picker) {
+                if (!checkAuthLocal()) {
+                    picker.hide(); // Негайно ховаємо
+                    e.preventDefault();
+                    alert("⛔ Доступ до календаря заблоковано. Ви не авторизовані.");
+                }
+            });
+
+            // Блокуємо клік по інпуту календаря
+            $('#dateRangePicker').on('click focus', function(e) {
+                if (blockActionIfNoAuth(e)) {
+                    $(this).blur();
+                }
+            });
+        }
+
         function initializeSystem() {
             let currentFilterType = 'open';
-            let currentDateFrom = null;
-            let currentDateTo = null;
-            let isInitialized = false;
+            
+            // Запускаємо логіку блокувальників
+            setupBlockers();
 
-            if (isInitialized) return;
-            isInitialized = true;
+            // Закриття пошуку при кліку поза ним
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.search-container').length) {
+                    const input = $('#searchInput');
+                    if (input.hasClass('active') && input.val() === '') {
+                        input.removeClass('active');
+                    }
+                }
+            });
 
             // Ініціалізація DateRangePicker
             $('#dateRangePicker').daterangepicker(
@@ -115,10 +225,7 @@
                         toLabel: 'До',
                         weekLabel: 'Тиж',
                         daysOfWeek: ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-                        monthNames: [
-                            'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-                            'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
-                        ],
+                        monthNames: ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'],
                         firstDay: 1
                     },
                     opens: 'center',
@@ -133,20 +240,16 @@
                         'Сьогодні': [moment(), moment()],
                         'Останні 7 днів': [moment().subtract(6, 'days'), moment()],
                         'Поточний місяць': [moment().startOf('month'), moment().endOf('month')],
-                        'Минулий місяць': [
-                            moment().subtract(1, 'month').startOf('month'),
-                            moment().subtract(1, 'month').endOf('month')
-                        ]
+                        'Минулий місяць': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
                     },
                     showCustomRangeLabel: false
                 },
                 function (start, end, label) {
+                    // Ця функція спрацює тільки якщо календар відкрився (тобто пройшов перевірку)
                     if (label === 'Відкриті') {
                         $('#dateRangePicker').val('Відкриті');
                         $('#dateRangePicker').data('daterangepicker').element.removeClass('active-range');
                         currentFilterType = 'open';
-                        currentDateFrom = null;
-                        currentDateTo = null;
                         loadActsTable(null, null, 'open');
                         this.setStartDate(moment().startOf('year'));
                         this.setEndDate(moment());
@@ -154,8 +257,6 @@
                         $('#dateRangePicker').val('Закриті');
                         $('#dateRangePicker').data('daterangepicker').element.removeClass('active-range');
                         currentFilterType = 'closed';
-                        currentDateFrom = null;
-                        currentDateTo = null;
                         loadActsTable(null, null, 'closed');
                         this.setStartDate(moment('02.01.2025', 'DD.MM.YYYY'));
                         this.setEndDate(moment());
@@ -164,59 +265,54 @@
                         $('#dateRangePicker').val(formatted);
                         $('#dateRangePicker').data('daterangepicker').element.addClass('active-range');
                         currentFilterType = 'date_range';
-                        currentDateFrom = start.format("YYYY-MM-DD 00:00:00");
-                        currentDateTo = end.format("YYYY-MM-DD 23:59:59");
-                        loadActsTable(currentDateFrom, currentDateTo, null);
+                        loadActsTable(start.format("YYYY-MM-DD 00:00:00"), end.format("YYYY-MM-DD 23:59:59"), null);
                     }
                 }
             );
 
-            // Ініціалізуємо з "Відкриті" після входу
+            // Значення за замовчуванням
             $('#dateRangePicker').val('Відкриті');
             currentFilterType = 'open';
-
             const picker = $('#dateRangePicker').data('daterangepicker');
-            if (picker) {
-                picker.setStartDate(moment().startOf('year'));
-                picker.setEndDate(moment());
-            }
+            if(picker) { picker.setStartDate(moment().startOf('year')); picker.setEndDate(moment()); }
 
-            // Ініціалізація пошуку та таблиці
+            // Ініціалізація пошуку
             const searchHandler = setupSearchWithTableFilter(
                 loadActsTable,
                 () => currentFilterType,
-                () => ({ dateFrom: currentDateFrom, dateTo: currentDateTo })
+                () => {
+                    // Тут треба отримати актуальні дати, якщо вибрано діапазон
+                    // Для спрощення поки повертаємо null, це доопрацюється в loadActsTable
+                    return { dateFrom: null, dateTo: null }; 
+                }
             );
             window.searchHandler = searchHandler;
 
-            // Ініціалізація системи (завантаження таблиці)
             initializeActsSystem();
+            
+            // ВАЖЛИВО: Меню показуємо, але елементи всередині захищені
             updateMenuVisibility(true);
         }
 
         window.initializeSystem = initializeSystem;
 
-        /**
-         * Головна логіка: автентифікація при завантаженні сторінки
-         */
         async function startAuthenticationAndInit() {
             const accessLevel = await showLoginModalBeforeTable();
 
             if (accessLevel) {
-                // 1. Оновлюємо інтерфейс відповідно до доступу
                 await updateUIBasedOnAccess(accessLevel);
-
-                // 2. Заповнюємо інформацію про користувача в меню
                 updateUserInfoDisplay();
-
-                // 3. Ініціалізуємо систему
                 initializeSystem();
             } else {
-                console.error("❌ Вхід не вдалося здійснити. Система не ініціалізована.");
+                console.error("❌ Вхід не вдалося здійснити.");
+                // Навіть якщо вхід не вдався, ми можемо показати меню (заблоковане), 
+                // АБО залишити схованим. 
+                // Якщо хочеш, щоб було видно "Закриті" кнопки - розкоментуй рядок нижче:
+                // updateMenuVisibility(true); 
+                // setupBlockers(); // І обов'язково навісити блокувальники
             }
         }
 
-        // Запускаємо процес
         startAuthenticationAndInit(); 
     </script>
 </body>

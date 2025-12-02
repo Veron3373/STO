@@ -1,0 +1,40 @@
+// src/ts/roboha/bukhhalteriya/bukhhalteriya_auth_guard.ts
+// Захист сторінки bukhhalteriya.html від неавторизованого доступу
+
+import { supabase } from "../../vxid/supabaseClient";
+
+// src/ts/roboha/bukhhalteriya/bukhhalteriya_auth_guard.ts
+
+// 👇 Додай імпорт
+import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
+
+async function checkAuthOnPageLoad(): Promise<void> {
+  console.log("🔒 Перевірка авторизації...");
+
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error || !session) {
+    alert("⛔ Доступ заблоковано.");
+    window.location.href = "/STO/";
+    return;
+  }
+
+  console.log("✅ Авторизовано");
+
+  // 👇 ЗАПУСКАЄМО ЗМІНУ URL ТУТ (коли вхід успішний)
+  obfuscateCurrentUrl();
+
+  // Показуємо контент
+  const container = document.querySelector(
+    ".Bukhhalter-container"
+  ) as HTMLElement;
+  if (container) {
+    container.style.display = "block";
+    container.style.visibility = "visible";
+  }
+}
+
+checkAuthOnPageLoad();

@@ -59,6 +59,7 @@ interface ActChangeRecord {
   zarplata: number;
   dodav_vudaluv: boolean;
   changed_by_surname: string;
+  data: string;
 }
 
 // КЕШ: Зберігаємо ТІЛЬКИ ЦІНУ (суму перерахуємо від кількості при збереженні)
@@ -96,8 +97,12 @@ export function cacheHiddenColumnsData(actDetails: any): void {
 
   console.log("💾 Кешування прихованих цін для Слюсаря...");
 
-  const details = Array.isArray(actDetails?.["Деталі"]) ? actDetails["Деталі"] : [];
-  const works = Array.isArray(actDetails?.["Роботи"]) ? actDetails["Роботи"] : [];
+  const details = Array.isArray(actDetails?.["Деталі"])
+    ? actDetails["Деталі"]
+    : [];
+  const works = Array.isArray(actDetails?.["Роботи"])
+    ? actDetails["Роботи"]
+    : [];
 
   // Кешуємо ціни деталей
   details.forEach((d: any) => {
@@ -125,11 +130,17 @@ function readTableNewNumbers(): Map<number, number> {
   const numberMap = new Map<number, number>();
 
   tableRows.forEach((row) => {
-    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+    const nameCell = row.querySelector(
+      '[data-name="name"]'
+    ) as HTMLElement | null;
     if (!nameCell?.textContent?.trim()) return;
 
-    const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
-    const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
+    const catalogCell = row.querySelector(
+      '[data-name="catalog"]'
+    ) as HTMLElement | null;
+    const qtyCell = row.querySelector(
+      '[data-name="id_count"]'
+    ) as HTMLElement | null;
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
 
     if (!scladIdAttr) return;
@@ -160,7 +171,9 @@ export function parseTableRows(): ParsedItem[] {
     const name = getCellText(nameCell);
     if (!name) return;
 
-    const quantityCell = row.querySelector('[data-name="id_count"]') as HTMLElement;
+    const quantityCell = row.querySelector(
+      '[data-name="id_count"]'
+    ) as HTMLElement;
     const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
 
@@ -170,7 +183,9 @@ export function parseTableRows(): ParsedItem[] {
     const catalogCell = globalCache.settings.showCatalog
       ? (row.querySelector('[data-name="catalog"]') as HTMLElement)
       : null;
-    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+    const slyusarSumCell = row.querySelector(
+      '[data-name="slyusar_sum"]'
+    ) as HTMLElement;
 
     // 1. Кількість беремо завжди з таблиці (користувач міг її змінити)
     const quantity = parseNum(quantityCell?.textContent);
@@ -498,7 +513,7 @@ function updateInitialActItems(details: any[], works: any[]): void {
  * Конвертує ActItem[] (з globalCache) в ParsedItem[] для порівняння
  */
 function convertActItemsToParsedItems(items: ActItem[]): ParsedItem[] {
-  return items.map(item => ({
+  return items.map((item) => ({
     type: item.type,
     name: item.name,
     quantity: item.quantity,
@@ -529,17 +544,17 @@ function compareActChanges(
   const initialMap = new Map<string, ParsedItem>();
   const currentMap = new Map<string, ParsedItem>();
 
-  initialParsed.forEach(item => {
+  initialParsed.forEach((item) => {
     initialMap.set(createKey(item), item);
   });
 
-  currentItems.forEach(item => {
+  currentItems.forEach((item) => {
     currentMap.set(createKey(item), item);
   });
 
   // Знаходимо додані позиції (є в current, немає в initial)
   const added: ParsedItem[] = [];
-  currentItems.forEach(item => {
+  currentItems.forEach((item) => {
     const key = createKey(item);
     if (!initialMap.has(key)) {
       added.push(item);
@@ -548,7 +563,7 @@ function compareActChanges(
 
   // Знаходимо видалені позиції (є в initial, немає в current)
   const deleted: ParsedItem[] = [];
-  initialParsed.forEach(item => {
+  initialParsed.forEach((item) => {
     const key = createKey(item);
     if (!currentMap.has(key)) {
       deleted.push(item);
@@ -577,12 +592,12 @@ async function logActChanges(
     const currentUser = userName || "Невідомо";
 
     // 1. Якщо це ДЕТАЛЬ -> повертаємо того, хто зайшов (userName)
-    if (item.type === 'detail') {
+    if (item.type === "detail") {
       return currentUser;
     }
 
     // 2. Якщо це РОБОТА -> перевіряємо ПІБ_Магазин (це буде слюсар)
-    if (item.type === 'work') {
+    if (item.type === "work") {
       const workerName = item.pibMagazin ? item.pibMagazin.trim() : "";
       // Якщо є ім'я слюсаря - беремо його, інакше - того, хто зайшов
       return workerName || currentUser;
@@ -595,7 +610,8 @@ async function logActChanges(
   const records: ActChangeRecord[] = [];
 
   // Додані позиції
-  added.forEach(item => {
+  // Додані позиції (рядок 598-608)
+  added.forEach((item) => {
     records.push({
       act_id: actId,
       item_name: item.name,
@@ -603,12 +619,13 @@ async function logActChanges(
       kilkist: item.quantity,
       zarplata: item.slyusarSum || 0,
       dodav_vudaluv: true,
-      changed_by_surname: getChangeAuthor(item) // <-- Використовуємо нову логіку
+      changed_by_surname: getChangeAuthor(item),
+      data: new Date().toISOString(), // ← ДОДАЙТЕ ЦЕЙ РЯДОК
     });
   });
 
-  // Видалені позиції
-  deleted.forEach(item => {
+  // Видалені позиції (рядок 611-621)
+  deleted.forEach((item) => {
     records.push({
       act_id: actId,
       item_name: item.name,
@@ -616,7 +633,8 @@ async function logActChanges(
       kilkist: item.quantity,
       zarplata: item.slyusarSum || 0,
       dodav_vudaluv: false,
-      changed_by_surname: getChangeAuthor(item) // <-- Використовуємо нову логіку
+      changed_by_surname: getChangeAuthor(item),
+      data: new Date().toISOString(), // ← ДОДАЙТЕ ЦЕЙ РЯДОК
     });
   });
 
@@ -692,7 +710,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     Аванс: avansValue,
     "Прибуток за деталі":
       originalActData &&
-        typeof originalActData["Прибуток за деталі"] === "number"
+      typeof originalActData["Прибуток за деталі"] === "number"
         ? originalActData["Прибуток за деталі"]
         : 0,
     "Прибуток за роботу": Number((totalWorksProfit || 0).toFixed(2)),

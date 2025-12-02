@@ -160,6 +160,7 @@ export async function recordActChanges(
         item_name: change.item_name,
         changed_by_surname: userSurname,
         viewed: false,
+        data: new Date().toISOString()
     }));
 
     // Записуємо в Supabase

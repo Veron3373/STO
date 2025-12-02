@@ -1,4 +1,6 @@
+
 import "./roboha/tablucya/tablucya";
+import "./roboha/tablucya/perevirka_avtoruzacii";
 import "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
 import "./roboha/dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 import "./roboha/nalachtuvannay/nalachtuvannay";
@@ -16,5 +18,6 @@ import "./roboha/zakaz_naraudy/inhi/fakturaAct";
 import "./roboha/zakaz_naraudy/inhi/act_change_tracker";
 import "./roboha/zakaz_naraudy/inhi/act_changes_highlighter";
 import "./roboha/zakaz_naraudy/inhi/act_notifications";
-import "./roboha/zakaz_naraudy/inhi/act_notifications_ui";
+import "./roboha/tablucya/povidomlennya_tablucya";
 import "./roboha/zakaz_naraudy/inhi/act_realtime_subscription";
+

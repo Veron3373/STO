@@ -287,14 +287,33 @@ document.addEventListener("DOMContentLoaded", () => {
     .forEach((link) => {
       link.addEventListener("click", async (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        // 1. ДОДАНО ПЕРЕВІРКУ АВТОРИЗАЦІЇ
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          console.warn(
+            "⛔ Користувач не авторизований. Модальне вікно 'Додати' не відкривається."
+          );
+          return; // Зупиняємо виконання, модалка не відкриється
+        }
+
         closeAllModals();
         modal_all_other_bases.classList.remove("hidden-all_other_bases");
 
         // Перевірка чи може користувач бачити кнопку "Співробітники"
         const canSeeEmployeeButton = await canUserSeeEmployeeButton();
         const employeeButton = Array.from(
-          modal_all_other_bases.querySelectorAll(".toggle-button-all_other_bases")
-        ).find((btn) => btn.textContent?.trim() === "Співробітники") as HTMLElement | undefined;
+          modal_all_other_bases.querySelectorAll(
+            ".toggle-button-all_other_bases"
+          )
+        ).find((btn) => btn.textContent?.trim() === "Співробітники") as
+          | HTMLElement
+          | undefined;
 
         if (employeeButton) {
           if (canSeeEmployeeButton) {

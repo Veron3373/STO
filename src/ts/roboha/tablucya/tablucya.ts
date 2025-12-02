@@ -12,7 +12,7 @@ import {
 } from "./users";
 
 // 👇 ІМПОРТ НОВОЇ ФУНКЦІЇ ПОВІДОМЛЕНЬ
-import { showRealtimeActNotification } from "./povidomlennya_tablucya";
+import { showRealtimeActNotification, removeNotificationsForAct } from "./povidomlennya_tablucya";
 
 document.addEventListener("click", (e) => {
   const target = e.target as HTMLElement | null;
@@ -182,7 +182,7 @@ function highlightRowInDom(actId: number) {
 }
 
 /**
- * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
+ * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці та повідомлення в UI, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
  */
 function clearNotificationVisualOnly(actId: number) {
   if (userAccessLevel !== "Адміністратор") return;
@@ -206,6 +206,9 @@ function clearNotificationVisualOnly(actId: number) {
         }
       });
     }
+
+    // Також видаляємо повідомлення з UI
+    removeNotificationsForAct(actId);
   }
 }
 

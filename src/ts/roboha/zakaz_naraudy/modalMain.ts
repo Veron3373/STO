@@ -62,6 +62,7 @@ import {
 } from "./inhi/faktura"; // <--- НОВИЙ ФАЙЛ
 
 import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
+import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -445,6 +446,8 @@ export async function showModal(actId: number): Promise<void> {
     // 🔽 Підсвічування змін для Адміністратора
     if (userAccessLevel === "Адміністратор") {
       await checkAndHighlightChanges(actId);
+      // Видаляємо повідомлення з UI для цього акту
+      removeNotificationsForAct(actId);
     }
 
     // 🔽 Перевірка прав на кнопку "Додати рядок" - тепер це робиться при рендері

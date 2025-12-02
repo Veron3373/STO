@@ -1,13 +1,54 @@
 // ===== ФАЙЛ: src/ts/roboha/zakaz_naraudy/inhi/act_realtime_subscription.ts =====
 
 import { supabase } from "../../../vxid/supabaseClient";
-import { 
-  showRealtimeActNotification, 
-  removeNotificationsForAct,   
-  removeRealtimeNotification
-} from "../../tablucya/povidomlennya_tablucya"; 
+import {
+  showRealtimeActNotification,
+  removeNotificationsForAct,
+  removeRealtimeNotification,
+} from "../../tablucya/povidomlennya_tablucya";
 
 let subscriptionChannel: any = null;
+
+// 🔁 Фолбек: синхронізуємо DOM з реальною БД
+async function syncNotificationsWithDatabaseAfterDelete() {
+  const container = document.getElementById("act-realtime-container");
+  if (!container) return;
+
+  const toastElements = Array.from(
+    container.querySelectorAll<HTMLElement>(".act-notification-toast")
+  );
+  if (!toastElements.length) return;
+
+  // Унікальні act_id з DOM
+  const actIds = Array.from(
+    new Set(
+      toastElements
+        .map((t) => Number(t.getAttribute("data-act-id")))
+        .filter((id) => !Number.isNaN(id))
+    )
+  );
+
+  if (!actIds.length) return;
+
+  const { data, error } = await supabase
+    .from("act_changes_notifications")
+    .select("act_id")
+    .in("act_id", actIds);
+
+  if (error) {
+    console.error("❌ Помилка при перевірці нотифікацій:", error);
+    return;
+  }
+
+  const aliveActIds = new Set<number>((data || []).map((row: any) => row.act_id));
+
+  // Для тих актів, яких вже немає в таблиці, чистимо всі тости
+  actIds.forEach((actId) => {
+    if (!aliveActIds.has(actId)) {
+      removeNotificationsForAct(actId);
+    }
+  });
+}
 
 export function initActChangesSubscription(): void {
   console.log("🔔 Ініціалізація Realtime підписки...");
@@ -18,8 +59,7 @@ export function initActChangesSubscription(): void {
 
   subscriptionChannel = supabase
     .channel("act-changes")
-
-    // 1) Нові повідомлення по акту
+    // INSERT → показати нове повідомлення
     .on(
       "postgres_changes",
       {
@@ -31,8 +71,7 @@ export function initActChangesSubscription(): void {
         showRealtimeActNotification(payload.new as any);
       }
     )
-
-    // 2) Видалення записів із основної таблиці
+    // DELETE → прибрати повідомлення
     .on(
       "postgres_changes",
       {
@@ -40,54 +79,31 @@ export function initActChangesSubscription(): void {
         schema: "public",
         table: "act_changes_notifications",
       },
-      (payload) => {
-        console.log("🗑️ DELETE з act_changes_notifications:", payload);
+      async (payload) => {
+        console.log("🗑️ Отримано DELETE:", payload);
 
         const oldRow: any = payload.old || {};
         const actId: number | undefined = oldRow.act_id;
-        const notifId: number | undefined =
+        const deletedId: number | undefined =
           oldRow.notification_id ?? oldRow.id;
 
         if (actId != null) {
-          // Якщо Realtime віддає act_id (REPLICA IDENTITY FULL) –
-          // просто чистимо всі тости цього акту
-          console.log(`✅ DELETE: очищаємо тости для Акту №${actId}`);
+          // База дала act_id → видаляємо всі тости по цьому акту
+          console.log(`✅ DELETE з act_id=${actId} → чистимо всі тости для акту.`);
           removeNotificationsForAct(actId);
-        } else if (notifId != null) {
-          // fallback: видаляємо хоча б один конкретний тост
-          console.log(`⚠️ DELETE без act_id, видаляємо тост id=${notifId}`);
-          removeRealtimeNotification(notifId);
+        } else if (deletedId != null) {
+          // Є тільки ID рядка → видаляємо один тост
+          console.log(`✅ DELETE з notification_id=${deletedId} → чистимо один тост.`);
+          removeRealtimeNotification(deletedId);
         } else {
-          console.log("⚠️ DELETE без act_id і notification_id");
+          // Нічого корисного в payload.old (типова історія без REPLICA IDENTITY FULL)
+          console.warn(
+            "⚠️ DELETE без act_id та notification_id → запускаємо синхронізацію з БД."
+          );
+          await syncNotificationsWithDatabaseAfterDelete();
         }
       }
     )
-
-    // 3) Перенесення в duplicate = акт відкрили і «прочитали» зміни
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "act_changes_notifications_duplicate",
-      },
-      (payload) => {
-        const newRow: any = payload.new || {};
-        const actId: number | undefined = newRow.act_id;
-
-        if (actId != null) {
-          console.log(
-            `♻️ INSERT в act_changes_notifications_duplicate: Акт №${actId} відкритий, чистимо тости`
-          );
-          removeNotificationsForAct(actId);
-        } else {
-          console.log(
-            "⚠️ INSERT в duplicate без act_id – нема що чистити на фронті"
-          );
-        }
-      }
-    )
-
     .subscribe();
 }
 

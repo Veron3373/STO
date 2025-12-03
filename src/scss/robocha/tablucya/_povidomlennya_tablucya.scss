@@ -76,8 +76,11 @@
   transform: translateX(0) scale(0.7);
   opacity: 0;
 
-  transition: transform 0.10s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.8s ease, max-height 0.8s ease, margin 0.8s ease;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease-out,
+    max-height 0.4s ease-in-out,
+    margin 0.4s ease-in-out;
 
   display: none; // за замовчуванням сховані
 
@@ -92,6 +95,20 @@
   &.show {
     opacity: 1;
     transform: translateX(0) scale(0.7);
+  }
+
+  /* плавний "приліт" нового тосту справа */
+  &.incoming {
+    transform: translateX(120%) scale(0.7);
+    opacity: 0;
+    transition:
+      transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1),
+      opacity 0.6s ease-out;
+  }
+
+  &.incoming.show {
+    transform: translateX(0) scale(0.7);
+    opacity: 1;
   }
 
   /* 1️⃣ перший тост у розгорнутому стані при ховері */
@@ -124,22 +141,16 @@
   /* Закриття по кліку (клас додається з TS) */
   &.closing {
     display: block !important;
+    pointer-events: none;
 
     transform: translateX(150%) scale(0.7) !important;
     opacity: 0 !important;
 
-    max-height: 0 !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    border: none !important;
-
-    pointer-events: none;
-
-    transition: transform 0.10s cubic-bezier(0.68, -0.55, 0.265, 1.55),
-      opacity 0.8s ease, max-height 0.8s ease 0.05s,
-      margin 0.8s ease 0.05s;
+    /* тільки плавний виліт вправо, без зміни висоти/маргінів,
+       щоб верхня карточка не "підстрибувала" */
+    transition:
+      transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+      opacity 0.4s ease-out;
   }
 
   /* Кольори за типом */

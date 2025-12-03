@@ -163,7 +163,7 @@ function expandStack(container: HTMLElement) {
 
   const first = toasts[0]; // перший у DOM (внизу візуально через column-reverse)
   const FIRST_DURATION = 40; // скільки розкривається перший
-  const STEP_DELAY = 15 // затримка між появою наступних
+  const STEP_DELAY = 15; // затримка між появою наступних
 
   // 1. перший – збільшуємо
   first.classList.add("toast-expanded");
@@ -216,16 +216,19 @@ function collapseStack(container: HTMLElement) {
     hoverTimeouts.push(id);
   }
 
-  // 2. після того, як всі інші сховалися – стискаємо перший назад
+  // 2. після того, як всі інші сховалися – повертаємо перший у режим мініатюри
   const totalDelay =
-    STEP_DELAY * Math.max(0, toasts.length - 1) + HIDE_DURATION ;
+    STEP_DELAY * Math.max(0, toasts.length - 1) + HIDE_DURATION;
 
   const firstId = window.setTimeout(() => {
     first.classList.remove("toast-expanded");
+    first.classList.remove("stack-visible");
+    first.classList.remove("stack-hiding");
   }, totalDelay);
 
   hoverTimeouts.push(firstId);
 }
+
 
 // ==========================
 //   КОНТЕЙНЕР НОТИФІКАЦІЙ
@@ -268,7 +271,8 @@ export function showRealtimeActNotification(
   const timeString = formatTimeOnly(payload.created_at || payload.data);
 
   const toast = document.createElement("div");
-  toast.className = `act-notification-toast ${typeClass}`;
+  // додаємо службовий клас incoming для анімації "прильоту"
+  toast.className = `act-notification-toast incoming ${typeClass}`;
 
   // зберігаємо id та act_id у data-атрибути
   toast.setAttribute("data-id", String(dbId));
@@ -301,6 +305,11 @@ export function showRealtimeActNotification(
       // перший елемент завжди маленький, решта – сховані (через SCSS)
       toast.classList.add("show");
       reindexBadges();
+
+      // після завершення "прильоту" прибираємо службовий клас
+      window.setTimeout(() => {
+        toast.classList.remove("incoming");
+      }, 700);
 
       // при ховері скролимо так, щоб нове було видно
       if (container.matches(":hover")) {
@@ -363,10 +372,11 @@ function removeToastElement(toast: HTMLElement) {
 
   requestAnimationFrame(() => reindexBadges());
 
+  // даємо часу спочатку поїхати вправо, потім плавно "опустити" стек
   setTimeout(() => {
     if (toast.parentNode) {
       toast.remove();
       requestAnimationFrame(() => reindexBadges());
     }
-  }, 500);
+  }, 400);
 }

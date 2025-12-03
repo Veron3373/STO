@@ -931,8 +931,13 @@ export async function initializeActsSystem(): Promise<void> {
     subscribeToActNotifications();
 
     // 📥 ЗАВАНТАЖУЄМО ІСНУЮЧІ ПОВІДОМЛЕННЯ З БД
+    console.log(`🔍 [initializeActsSystem] accessLevel = "${accessLevel}"`);
     if (accessLevel === "Адміністратор") {
+      console.log("📥 [initializeActsSystem] Викликаємо loadAndShowExistingNotifications...");
       await loadAndShowExistingNotifications();
+      console.log("✅ [initializeActsSystem] loadAndShowExistingNotifications завершено");
+    } else {
+      console.log(`⏭️ [initializeActsSystem] Пропускаємо loadAndShowExistingNotifications (accessLevel = "${accessLevel}")`);
     }
 
     watchDateRangeChanges();

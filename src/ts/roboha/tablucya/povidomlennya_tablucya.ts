@@ -430,19 +430,25 @@ function removeToastElement(toast: HTMLElement) {
  * Викликається при ініціалізації сторінки або поверненні з іншої сторінки
  */
 export async function loadAndShowExistingNotifications(): Promise<void> {
-  console.log("📥 Завантажуємо існуючі повідомлення...");
+  console.log("📥 [loadAndShowExistingNotifications] ПОЧАТОК: Завантажуємо існуючі повідомлення...");
 
   const notifications = await loadUnseenNotifications();
 
+  console.log(`📊 [loadAndShowExistingNotifications] Отримано ${notifications.length} повідомлень з БД`);
+  console.log("📊 [loadAndShowExistingNotifications] Дані:", notifications);
+
   if (notifications.length === 0) {
-    console.log("ℹ️ Немає невидалених повідомлень для відображення");
+    console.log("ℹ️ [loadAndShowExistingNotifications] Немає невидалених повідомлень для відображення");
     return;
   }
 
-  console.log(`📢 Відображаємо ${notifications.length} збережених повідомлень`);
+  console.log(`📢 [loadAndShowExistingNotifications] Відображаємо ${notifications.length} збережених повідомлень`);
 
   // Показуємо кожне повідомлення (від старіших до новіших)
-  notifications.forEach((notification) => {
+  notifications.forEach((notification, index) => {
+    console.log(`📝 [loadAndShowExistingNotifications] Показуємо повідомлення ${index + 1}/${notifications.length}:`, notification);
     showRealtimeActNotification(notification);
   });
+
+  console.log("✅ [loadAndShowExistingNotifications] ЗАВЕРШЕНО: Всі повідомлення відображені");
 }

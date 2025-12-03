@@ -4,7 +4,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import type { ActNotificationPayload } from "./povidomlennya_tablucya";
 
 /**
- * Позначає повідомлення як видалене в БД (встановлює delit = FALSE)
+ * Позначає повідомлення як видалене в БД (встановлює delit = TRUE)
  * @param notificationId - ID повідомлення з таблиці act_changes_notifications
  * @returns true якщо успішно, false якщо помилка
  */
@@ -16,7 +16,7 @@ export async function markNotificationAsDeleted(
 
         const { error } = await supabase
             .from("act_changes_notifications")
-            .update({ delit: false })
+            .update({ delit: true }) // TRUE = видалене, не показувати
             .eq("notification_id", notificationId);
 
         if (error) {
@@ -33,17 +33,19 @@ export async function markNotificationAsDeleted(
 }
 
 /**
- * Завантажує всі невидалені повідомлення з БД (delit IS NULL або delit = TRUE)
+ * Завантажує всі невидалені повідомлення з БД (delit = FALSE)
  * @returns Масив повідомлень або пустий масив при помилці
  */
 export async function loadUnseenNotifications(): Promise<ActNotificationPayload[]> {
     try {
         console.log("📥 Завантажуємо невидалені повідомлення з БД...");
 
+        // Вибираємо записи де delit = FALSE або delit = NULL (невидалені, показувати)
+        // При кліку встановлюється delit = TRUE (видалене, не показувати)
         const { data, error } = await supabase
             .from("act_changes_notifications")
             .select("*")
-            .or("delit.is.null,delit.eq.true")
+            .or("delit.is.null,delit.eq.false") // NULL або FALSE = показувати
             .order("created_at", { ascending: true }); // від старіших до новіших
 
         if (error) {

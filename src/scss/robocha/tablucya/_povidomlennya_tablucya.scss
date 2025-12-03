@@ -76,8 +76,8 @@
   transform: translateX(0) scale(0.7);
   opacity: 0;
 
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease;
+  transition: transform 0.10s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.8s ease, max-height 0.8s ease, margin 0.8s ease;
 
   display: none; // за замовчуванням сховані
 
@@ -137,9 +137,9 @@
 
     pointer-events: none;
 
-    transition: transform 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55),
-      opacity 0.25s ease, max-height 0.25s ease 0.05s,
-      margin 0.25s ease 0.05s;
+    transition: transform 0.10s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+      opacity 0.8s ease, max-height 0.8s ease 0.05s,
+      margin 0.8s ease 0.05s;
   }
 
   /* Кольори за типом */

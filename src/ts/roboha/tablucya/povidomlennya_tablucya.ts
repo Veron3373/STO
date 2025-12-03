@@ -162,8 +162,8 @@ function expandStack(container: HTMLElement) {
   if (!toasts.length) return;
 
   const first = toasts[0]; // перший у DOM (внизу візуально через column-reverse)
-  const FIRST_DURATION = 140; // скільки розкривається перший
-  const STEP_DELAY = 45 // затримка між появою наступних
+  const FIRST_DURATION = 40; // скільки розкривається перший
+  const STEP_DELAY = 15 // затримка між появою наступних
 
   // 1. перший – збільшуємо
   first.classList.add("toast-expanded");
@@ -195,8 +195,8 @@ function collapseStack(container: HTMLElement) {
   if (!toasts.length) return;
 
   const first = toasts[0];
-  const STEP_DELAY = 45;
-  const HIDE_DURATION = 145;
+  const STEP_DELAY = 15;
+  const HIDE_DURATION = 40;
 
   // 1. ховаємо всі, крім першого, зверху вниз (візуально: останній у DOM → перший)
   let order = 0;
@@ -218,7 +218,7 @@ function collapseStack(container: HTMLElement) {
 
   // 2. після того, як всі інші сховалися – стискаємо перший назад
   const totalDelay =
-    STEP_DELAY * Math.max(0, toasts.length - 1) + HIDE_DURATION + 40;
+    STEP_DELAY * Math.max(0, toasts.length - 1) + HIDE_DURATION ;
 
   const firstId = window.setTimeout(() => {
     first.classList.remove("toast-expanded");

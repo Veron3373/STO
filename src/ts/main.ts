@@ -20,4 +20,5 @@ import "./roboha/zakaz_naraudy/inhi/act_changes_highlighter";
 import "./roboha/zakaz_naraudy/inhi/act_notifications";
 import "./roboha/tablucya/povidomlennya_tablucya";
 import "./roboha/zakaz_naraudy/inhi/act_realtime_subscription";
+import "./vxid/url_obfuscator";
 

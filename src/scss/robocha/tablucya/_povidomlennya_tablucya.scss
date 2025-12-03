@@ -1,122 +1,161 @@
 /* =========================================
-   НОВІ СТИЛІ ДЛЯ СПОВІЩЕНЬ (STACK MODE)
+   КОНТЕЙНЕР ДЛЯ НОТИФІКАЦІЙ АКТІВ
    ========================================= */
 
 #act-realtime-container {
   position: fixed;
-  bottom: 10px; /* Трохи відступимо від низу */
+  bottom: 15px;
   left: 260px;
   z-index: 100;
   width: 360px;
-  
+
+  max-height: 91vh;
+
   display: flex;
-  flex-direction: column;
-  justify-content: flex-end; /* Притискаємо до низу */
-  gap: 0; /* Відступи регулюємо через margin елементів */
+  flex-direction: column-reverse; // нове приходить вниз
+  align-items: flex-start;
+  gap: 5px;
 
-  /* Обмеження висоти та скрол */
-  max-height: 90vh; /* Щоб не вилізло за екран */
-  overflow-y: hidden; /* За замовчуванням скрол прихований */
+  padding: 10px 0 10px 10px;
+
+  pointer-events: none;
+  overflow-y: hidden;
   overflow-x: hidden;
-  
-  padding: 10px;
-  pointer-events: none; /* Пропускаємо кліки крізь пустий контейнер */
 
-  /* --- ЛОГІКА ХОВЕРА (РОЗГОРТАННЯ) --- */
   transition: all 0.3s ease;
 
   &:hover {
-    overflow-y: auto; /* Вмикаємо скрол при наведенні */
-    pointer-events: auto; /* Вмикаємо події миші */
-    background-color: rgba(255, 255, 255, 0.05); /* Легкий фон (опціонально) */
-    border-radius: 12px;
-    
-    /* При ховері показуємо ВСІ елементи */
-    .act-notification-toast {
-      display: block !important;
-      margin-bottom: 10px;
-    }
+    pointer-events: auto;
+    overflow-y: auto;
+    padding-right: 2px;
 
-    /* Стилізуємо скролбар */
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    backdrop-filter: blur(2px);
+
     &::-webkit-scrollbar {
-      width: 4px !important;
+      width: 10px;
+    }
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 5px;
+      margin: 4px 0;
     }
     &::-webkit-scrollbar-thumb {
-      background: #ccc; 
-      border-radius: 4px;
+      background-color: #888;
+      border-radius: 5px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      background-clip: padding-box;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: #555;
     }
   }
 }
 
-/* Окреме повідомлення (Toast) */
+/* =========================================
+   ОКРЕМА НОТИФІКАЦІЯ (TOAST)
+   ========================================= */
+
 .act-notification-toast {
+  position: relative;
   background-color: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
   padding: 12px 16px;
-  width: 100%;
+  width: calc(100% - 12px);
+  margin-right: 8px;
   box-sizing: border-box;
   cursor: pointer;
-  pointer-events: auto; /* Самі плашки клікабельні */
+  pointer-events: auto;
 
-  /* --- ЛОГІКА ПРИХОВУВАННЯ (STACK) --- */
-  /* За замовчуванням ховаємо ВСЕ */
-  display: none; 
-
-  /* Але останній елемент (найсвіжіший) показуємо ЗАВЖДИ */
-  &:last-child {
-    display: block;
-    margin-bottom: 0; /* У складеному стані відступ не треба */
-  }
-
-  /* --- АНІМАЦІЯ ПОЯВИ --- */
-  transform: translateX(-120%); 
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.27), 
-              opacity 0.3s ease;
+  transform-origin: bottom left;
+  transform: translateX(0) scale(0.7);
   opacity: 0;
 
-  /* СМУЖКА СПРАВА */
-  border-right: 4px solid transparent;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease;
+
+  display: none; // за замовчуванням сховані
+
+  /* ПЕРШИЙ елемент (мініатюра) – завжди один видимий */
+  &:first-child {
+    display: block;
+    opacity: 1;
+    transform: translateX(0) scale(0.7);
+  }
+
+  /* базова поява нового тосту */
+  &.show {
+    opacity: 1;
+    transform: translateX(0) scale(0.7);
+  }
+
+  /* 1️⃣ перший тост у розгорнутому стані при ховері */
+  &.toast-expanded:first-child {
+    transform: translateX(0) scale(1);
+  }
+
+  /* 2️⃣ інші тости, коли стек розгорнуто */
+  &.stack-visible {
+    display: block;
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  /* 3️⃣ стан згортання для внутрішніх тостів */
+  &.stack-hiding {
+    opacity: 0;
+    transform: translateX(20px) scale(0.9);
+  }
+
+  border-right: 4px solid #ccc;
   border-left: none;
 
   &:hover:not(.closing) {
-    background-color: rgba(255, 255, 255, 1);
-    transform: scale(1.02) translateX(0);
+    transform: scale(1.02) !important;
+    z-index: 10;
+    background-color: #fff;
   }
 
-  /* СТАН ПОКАЗУ (На екрані) */
-  &.show {
-    transform: translateX(0);
-    opacity: 1;
-  }
-
-  /* --- АНІМАЦІЯ ЗАКРИТТЯ --- */
+  /* Закриття по кліку (клас додається з TS) */
   &.closing {
-    /* При закритті важливо форсувати показ, щоб анімація програлась */
-    display: block !important; 
-    transform: translateX(150%) !important; 
+    display: block !important;
+
+    transform: translateX(150%) scale(0.7) !important;
     opacity: 0 !important;
+
+    max-height: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border: none !important;
+
     pointer-events: none;
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), 
-                opacity 0.4s ease !important;
+
+    transition: transform 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+      opacity 0.25s ease, max-height 0.25s ease 0.05s,
+      margin 0.25s ease 0.05s;
   }
 
-  /* Статуси */
+  /* Кольори за типом */
   &.type-added {
     border-right-color: #10b981;
-    .status-text { color: #10b981; }
+    .status-text {
+      color: #10b981;
+    }
   }
-
   &.type-deleted {
     border-right-color: #ef4444;
-    .status-text { color: #ef4444; }
+    .status-text {
+      color: #ef4444;
+    }
   }
 
-  /* Внутрішні елементи (без змін) */
   .toast-header-row {
     display: flex;
     justify-content: space-between;
@@ -124,16 +163,13 @@
     margin-bottom: 6px;
 
     .header-left {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
     }
   }
 
   .notification-count-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background-color: #ef4444;
     color: white;
     font-size: 11px;
@@ -141,30 +177,60 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
-    transition: all 0.2s ease;
   }
 
   .toast-meta-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
   }
 
   .meta-time-oval {
-      background-color: #e0e0e0;
-      color: #333;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 600;
   }
 
-  .act-id { font-weight: 700; color: #1e3a8a; font-size: 14px; }
-  .status-text { font-size: 11px; font-weight: 600; line-height: 1; }
-  .user-surname { font-size: 12px; color: #64748b; font-weight: 600; }
-  .toast-body-row { display: flex; align-items: flex-start; gap: 8px; }
-  .item-icon { font-size: 16px; }
-  .item-name { font-size: 13px; color: #334155; font-weight: 500; margin-top: 2px; }
+  .act-id {
+    font-weight: 700;
+    color: #1e3a8a;
+    font-size: 14px;
+  }
+
+  .status-text {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .user-surname {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .toast-body-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .item-icon {
+    font-size: 16px;
+  }
+
+  .item-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    margin-top: 2px;
+  }
 }

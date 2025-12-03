@@ -5,6 +5,7 @@ import {
   showRealtimeActNotification,
   removeNotificationsForAct,
   removeRealtimeNotification,
+  loadAndShowExistingNotifications,
 } from "../../tablucya/povidomlennya_tablucya";
 
 let subscriptionChannel: any = null;
@@ -50,7 +51,7 @@ async function syncNotificationsWithDatabaseAfterDelete() {
   });
 }
 
-export function initActChangesSubscription(): void {
+export async function initActChangesSubscription(): Promise<void> {
   console.log("🔔 Ініціалізація Realtime підписки...");
 
   if (subscriptionChannel) {
@@ -105,6 +106,10 @@ export function initActChangesSubscription(): void {
       }
     )
     .subscribe();
+
+  // 📥 Завантажуємо існуючі повідомлення після підписки
+  console.log("📥 Завантажуємо існуючі невидалені повідомлення...");
+  await loadAndShowExistingNotifications();
 }
 
 export function unsubscribeFromActChanges(): void {
@@ -113,3 +118,4 @@ export function unsubscribeFromActChanges(): void {
     subscriptionChannel = null;
   }
 }
+

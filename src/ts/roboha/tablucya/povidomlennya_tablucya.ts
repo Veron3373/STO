@@ -1,5 +1,7 @@
 // ===== ФАЙЛ: src/ts/roboha/tablucya/povidomlennya_tablucya.ts =====
 
+import { markNotificationAsDeleted, loadUnseenNotifications } from "./mark_notification_deleted";
+
 export interface ActNotificationPayload {
   act_id: number;              // номер акту (обов'язковий)
   notification_id?: number;    // pk з таблиці act_changes_notifications
@@ -60,6 +62,38 @@ function playNotificationSound(isAdded: boolean) {
     // ігноруємо
   }
 }
+
+
+// ==========================
+//   ГРУПУВАННЯ ЗВУКІВ (DEBOUNCE)
+// ==========================
+
+let soundBurstTimeout: number | null = null;
+let lastBurstIsAdded: boolean | null = null;
+
+// за який час вважаємо, що це "одна пачка"
+const SOUND_BURST_DELAY = 200; // мс
+
+function scheduleNotificationSound(isAdded: boolean) {
+  // запам'ятовуємо тип останньої нотифікації (додано / видалено)
+  lastBurstIsAdded = isAdded;
+
+  // якщо таймер уже був – скасовуємо, бо прилетіло ще одне
+  if (soundBurstTimeout !== null) {
+    window.clearTimeout(soundBurstTimeout);
+  }
+
+  // ставимо новий таймер – якщо за 200мс більше нічого не прийде,
+  // граємо звук саме для останнього isAdded
+  soundBurstTimeout = window.setTimeout(() => {
+    if (lastBurstIsAdded !== null) {
+      playNotificationSound(lastBurstIsAdded);
+    }
+    soundBurstTimeout = null;
+    lastBurstIsAdded = null;
+  }, SOUND_BURST_DELAY);
+}
+
 
 function playCloseSound() {
   try {
@@ -298,7 +332,7 @@ export function showRealtimeActNotification(
 
   // додаємо на початок DOM (через column-reverse – буде найнижче візуально)
   container.prepend(toast);
-  playNotificationSound(isAdded);
+  scheduleNotificationSound(isAdded);
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -318,10 +352,16 @@ export function showRealtimeActNotification(
     });
   });
 
-  // клік по картці – закрити її
-  toast.addEventListener("click", (e) => {
+  // клік по картці – закрити її та позначити як видалене в БД
+  toast.addEventListener("click", async (e) => {
     e.stopPropagation();
     playCloseSound();
+
+    // Позначаємо повідомлення як видалене в БД перед видаленням з DOM
+    if (dbId && typeof dbId === 'number') {
+      await markNotificationAsDeleted(dbId);
+    }
+
     removeToastElement(toast);
   });
 }
@@ -379,4 +419,30 @@ function removeToastElement(toast: HTMLElement) {
       requestAnimationFrame(() => reindexBadges());
     }
   }, 400);
+}
+
+// ==========================
+//  ЗАВАНТАЖЕННЯ ІСНУЮЧИХ ПОВІДОМЛЕНЬ
+// ==========================
+
+/**
+ * Завантажує та відображає всі невидалені повідомлення з БД
+ * Викликається при ініціалізації сторінки або поверненні з іншої сторінки
+ */
+export async function loadAndShowExistingNotifications(): Promise<void> {
+  console.log("📥 Завантажуємо існуючі повідомлення...");
+
+  const notifications = await loadUnseenNotifications();
+
+  if (notifications.length === 0) {
+    console.log("ℹ️ Немає невидалених повідомлень для відображення");
+    return;
+  }
+
+  console.log(`📢 Відображаємо ${notifications.length} збережених повідомлень`);
+
+  // Показуємо кожне повідомлення (від старіших до новіших)
+  notifications.forEach((notification) => {
+    showRealtimeActNotification(notification);
+  });
 }

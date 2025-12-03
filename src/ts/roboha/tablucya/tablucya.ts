@@ -12,7 +12,7 @@ import {
 } from "./users";
 
 // 👇 ІМПОРТ НОВОЇ ФУНКЦІЇ ПОВІДОМЛЕНЬ
-import { showRealtimeActNotification, removeNotificationsForAct } from "./povidomlennya_tablucya";
+import { showRealtimeActNotification, removeNotificationsForAct, loadAndShowExistingNotifications } from "./povidomlennya_tablucya";
 
 document.addEventListener("click", (e) => {
   const target = e.target as HTMLElement | null;
@@ -148,9 +148,11 @@ function subscribeToActNotifications() {
           // 3. 👇 ПОКАЗУЄМО КРАСИВЕ ПОВІДОМЛЕННЯ ВНИЗУ СПРАВА 👇
           showRealtimeActNotification({
             act_id: actId,
+            notification_id: newNotification.notification_id, // ✅ ДОДАНО
             changed_by_surname: newNotification.changed_by_surname,
             item_name: newNotification.item_name,
             dodav_vudaluv: newNotification.dodav_vudaluv,
+            created_at: newNotification.created_at, // ✅ ДОДАНО
           });
         }
       }
@@ -927,6 +929,11 @@ export async function initializeActsSystem(): Promise<void> {
 
     // ✅ АКТИВУЄМО REALTIME ПІДПИСКУ
     subscribeToActNotifications();
+
+    // 📥 ЗАВАНТАЖУЄМО ІСНУЮЧІ ПОВІДОМЛЕННЯ З БД
+    if (accessLevel === "Адміністратор") {
+      await loadAndShowExistingNotifications();
+    }
 
     watchDateRangeChanges();
     window.addEventListener("resize", applyVerticalScrollbarCompensation);

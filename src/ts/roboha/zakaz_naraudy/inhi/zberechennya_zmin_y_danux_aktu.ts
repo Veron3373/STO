@@ -59,6 +59,7 @@ interface ActChangeRecord {
   zarplata: number;
   dodav_vudaluv: boolean;
   changed_by_surname: string;
+  delit: boolean; // ✅ Додано для позначення видалених повідомлень
   data: string;
 }
 
@@ -620,6 +621,7 @@ async function logActChanges(
       zarplata: item.slyusarSum || 0,
       dodav_vudaluv: true,
       changed_by_surname: getChangeAuthor(item),
+      delit: false, // ✅ За замовчуванням FALSE = показувати
       data: new Date().toISOString(), // ← ДОДАЙТЕ ЦЕЙ РЯДОК
     });
   });
@@ -634,6 +636,7 @@ async function logActChanges(
       zarplata: item.slyusarSum || 0,
       dodav_vudaluv: false,
       changed_by_surname: getChangeAuthor(item),
+      delit: false, // ✅ За замовчуванням FALSE = показувати
       data: new Date().toISOString(), // ← ДОДАЙТЕ ЦЕЙ РЯДОК
     });
   });
@@ -710,7 +713,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     Аванс: avansValue,
     "Прибуток за деталі":
       originalActData &&
-      typeof originalActData["Прибуток за деталі"] === "number"
+        typeof originalActData["Прибуток за деталі"] === "number"
         ? originalActData["Прибуток за деталі"]
         : 0,
     "Прибуток за роботу": Number((totalWorksProfit || 0).toFixed(2)),

@@ -160,6 +160,7 @@ export async function recordActChanges(
         item_name: change.item_name,
         changed_by_surname: userSurname,
         viewed: false,
+        delit: false, // ✅ За замовчуванням FALSE = показувати
         data: new Date().toISOString()
     }));
 

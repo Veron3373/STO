@@ -33,20 +33,18 @@ export async function markNotificationAsDeleted(
 }
 
 /**
- * Завантажує всі невидалені повідомлення з БД (delit = FALSE)
- * @returns Масив повідомлень або пустий масив при помилці
+ * Завантажує всі НЕвидалені повідомлення з БД (delit = FALSE)
+ * і повертає їх у форматі ActNotificationPayload
  */
 export async function loadUnseenNotifications(): Promise<ActNotificationPayload[]> {
     try {
-        console.log("📥 Завантажуємо невидалені повідомлення з БД...");
+        console.log("📥 Завантажуємо невидалені (delit = FALSE) повідомлення з БД...");
 
-        // Вибираємо записи де delit = FALSE або delit = NULL (невидалені, показувати)
-        // При кліку встановлюється delit = TRUE (видалене, не показувати)
         const { data, error } = await supabase
             .from("act_changes_notifications")
             .select("*")
-            .or("delit.is.null,delit.eq.false") // NULL або FALSE = показувати
-            .order("created_at", { ascending: true }); // від старіших до новіших
+            .eq("delit", false)                     // ✅ беремо тільки рядки, де delit = FALSE
+            .order("data", { ascending: true });    // ✅ у тебе колонка часу називається data
 
         if (error) {
             console.error("❌ Помилка при завантаженні повідомлень:", error);
@@ -67,7 +65,9 @@ export async function loadUnseenNotifications(): Promise<ActNotificationPayload[
             changed_by_surname: row.changed_by_surname || "Невідомо",
             item_name: row.item_name || "",
             dodav_vudaluv: row.dodav_vudaluv ?? true,
-            created_at: row.created_at,
+            // timestamp беремо з колонки "data" (як у твоїй таблиці),
+            // але на всякий випадок підтримаємо і created_at, якщо ти її потім додаси
+            created_at: row.data ?? row.created_at,
         }));
     } catch (err) {
         console.error("❌ Виняток при завантаженні повідомлень:", err);

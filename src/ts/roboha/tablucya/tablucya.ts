@@ -106,7 +106,8 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
 
   const { data, error } = await supabase
     .from("act_changes_notifications")
-    .select("act_id");
+    .select("act_id")
+    .eq("delit", false);            // ✅ тільки "не видалені" нотифікації
 
   if (error) {
     console.error("❌ Помилка завантаження сповіщень:", error);
@@ -116,6 +117,7 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
   const ids = new Set((data || []).map((item) => Number(item.act_id)));
   return ids;
 }
+
 
 /**
  * 2. Підписується на нові сповіщення (PUSH) без перезавантаження таблиці

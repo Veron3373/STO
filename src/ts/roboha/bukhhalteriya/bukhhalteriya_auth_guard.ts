@@ -17,8 +17,8 @@ async function checkAuthOnPageLoad(): Promise<void> {
   } = await supabase.auth.getSession();
 
   if (error || !session) {
-    alert("⛔ Доступ заблоковано.");
-    window.location.href = "/STO/";
+    console.warn("⛔ Доступ заблоковано. Немає сесії.");
+    window.location.href = "https://veron3373.github.io/STO/main.html";
     return;
   }
 

@@ -274,7 +274,7 @@ export async function updateUIBasedOnAccess(
     ?.closest("li") as HTMLElement | null;
   // Додано для Планування
   const planuvanyaMenuItem = document
-    .querySelector('[data-action="planuvannya"]')
+    .querySelector('[data-action="openPlanyvannya"]')
     ?.closest("li") as HTMLElement | null;
 
   const setVisibility = (element: HTMLElement | null, isVisible: boolean) => {
@@ -535,8 +535,8 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
 
   if (!session) {
     console.warn("⛔ Немає авторизації Google. Модальне вікно пароля приховано.");
-    window.location.href = "/STO/index.html"; 
-    return null; 
+    window.location.href = "/STO/index.html";
+    return null;
   }
 
   // 2. Якщо Google-сесія є, перевіряємо чи збережений внутрішній пароль

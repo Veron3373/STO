@@ -1,4 +1,4 @@
-// src\ts\roboha\tablucya\users.ts (ОНОВЛЕНИЙ КОД)
+// src\ts\roboha\tablucya\users.ts (ОНОВЛЕНИЙ КОД - ВИПРАВЛЕНО ДУБЛІКАТИ)
 import { supabase } from "../../vxid/supabaseClient";
 
 // =============================================================================
@@ -118,14 +118,14 @@ async function checkPassword(inputPassword: string): Promise<{
       .from("slyusars")
       .select("data");
 
-    console.log("📦 Supabase response:", { slyusars, error });
+    // console.log("📦 Supabase response:", { slyusars, error });
 
     if (error || !slyusars) {
       console.error("❌ Помилка:", error);
       return { isValid: false, accessLevel: null, userName: null };
     }
 
-    console.log("✅ Отримано записів:", slyusars.length);
+    // console.log("✅ Отримано записів:", slyusars.length);
 
     const foundUser = slyusars.find((slyusar) => {
       const slyusarData = safeParseJSON(slyusar.data);
@@ -272,6 +272,10 @@ export async function updateUIBasedOnAccess(
   const buhhalteriyaMenuItem = document
     .querySelector('[data-action="openBukhhalteriya"]')
     ?.closest("li") as HTMLElement | null;
+  // Додано для Планування
+  const planuvanyaMenuItem = document
+    .querySelector('[data-action="planuvannya"]')
+    ?.closest("li") as HTMLElement | null;
 
   const setVisibility = (element: HTMLElement | null, isVisible: boolean) => {
     if (element) {
@@ -284,6 +288,7 @@ export async function updateUIBasedOnAccess(
     setVisibility(addClientMenuItem, false);
     setVisibility(homeMenuItem, false);
     setVisibility(buhhalteriyaMenuItem, false);
+    setVisibility(planuvanyaMenuItem, false);
     return;
   }
 
@@ -291,6 +296,7 @@ export async function updateUIBasedOnAccess(
   let shouldRenderAdd = true;
   let shouldRenderHome = true;
   let shouldRenderBuhhalteriya = true;
+  let shouldRenderPlanuvannya = true;
 
   // --- Логіка приховування для Слюсар, Запчастист, Складовщик ---
   if (
@@ -300,6 +306,7 @@ export async function updateUIBasedOnAccess(
   ) {
     shouldRenderSettings = false;
     shouldRenderHome = false;
+    shouldRenderPlanuvannya = false; // За замовчуванням приховано
   }
 
   // --- Перевірки для Приймальника ---
@@ -307,35 +314,41 @@ export async function updateUIBasedOnAccess(
     shouldRenderSettings = await getSettingValue(1, "Приймальник");
     shouldRenderAdd = await getSettingValue(2, "Приймальник");
     shouldRenderBuhhalteriya = await getSettingValue(4, "Приймальник");
+    shouldRenderPlanuvannya = await getSettingValue(21, "Приймальник");
   }
 
   // --- Перевірки для Слюсаря ---
   if (accessLevel === "Слюсар") {
     shouldRenderAdd = false;
     shouldRenderBuhhalteriya = false;
+    shouldRenderPlanuvannya = await getSettingValue(6, "Слюсар");
   }
 
   // --- Перевірки для Запчастиста ---
   if (accessLevel === "Запчастист") {
     shouldRenderAdd = await getSettingValue(1, "Запчастист");
     shouldRenderBuhhalteriya = await getSettingValue(2, "Запчастист");
+    shouldRenderPlanuvannya = await getSettingValue(23, "Запчастист");
   }
 
   // --- Перевірки для Складовщика ---
   if (accessLevel === "Складовщик") {
     shouldRenderAdd = await getSettingValue(1, "Складовщик");
+    shouldRenderPlanuvannya = await getSettingValue(20, "Складовщик");
   }
 
   setVisibility(settingsMenuItem, shouldRenderSettings);
   setVisibility(addClientMenuItem, shouldRenderAdd);
   setVisibility(homeMenuItem, shouldRenderHome);
   setVisibility(buhhalteriyaMenuItem, shouldRenderBuhhalteriya);
+  setVisibility(planuvanyaMenuItem, shouldRenderPlanuvannya);
 
   console.log(`✅ UI оновлено для рівня доступу: ${accessLevel}`, {
     Налаштування: shouldRenderSettings,
     Додати: shouldRenderAdd,
     Наряд: shouldRenderHome,
     Бухгалтерія: shouldRenderBuhhalteriya,
+    Планування: shouldRenderPlanuvannya,
   });
 }
 
@@ -518,19 +531,12 @@ export function createLoginModal(): Promise<string | null> {
 
 export async function showLoginModalBeforeTable(): Promise<string | null> {
   // 1. 🔥 ПЕРЕВІРКА ГЛОБАЛЬНОЇ СЕСІЇ (Google)
-  // Перш ніж малювати модалку, питаємо Supabase: "Ми взагалі залогінені?"
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
     console.warn("⛔ Немає авторизації Google. Модальне вікно пароля приховано.");
-    
-    // ВАРІАНТ 1: Просто викидаємо на вхід (найкраще для безпеки)
     window.location.href = "/STO/index.html"; 
-    
-    // ВАРІАНТ 2: Якщо хочеш просто "чорний екран" без перенаправлення, закоментуй рядок вище.
-    // Але краще перенаправити.
-    
-    return null; // Повертаємо null, код далі не піде, модалка не створиться
+    return null; 
   }
 
   // 2. Якщо Google-сесія є, перевіряємо чи збережений внутрішній пароль
@@ -571,7 +577,6 @@ export async function initializeAuthSystem(): Promise<void> {
 export async function canUserSeeZarplataColumn(): Promise<boolean> {
   const role = userAccessLevel;
 
-  // Якщо ролі ще немає або це Адміністратор — логіку вирішуємо у showModal
   if (!role || role === "Адміністратор") {
     return true;
   }
@@ -586,7 +591,6 @@ export async function canUserSeeZarplataColumn(): Promise<boolean> {
     case "Складовщик":
       return await getSettingValue(11, "Складовщик");
     default:
-      // На всяк випадок — якщо якась інша роль, то не блокуємо
       return true;
   }
 }
@@ -604,11 +608,9 @@ async function getSettingBoolFromSettings(
 
     if (error) {
       console.error("Помилка читання settings:", error);
-      // Якщо помилка — **нічого не ховаємо**, повертаємо TRUE
       return true;
     }
 
-    // 👇 головне виправлення — явно кастимо data до словника
     const safeData = data as unknown as Record<string, unknown>;
     const value = safeData?.[columnName];
 
@@ -619,7 +621,6 @@ async function getSettingBoolFromSettings(
       return v === "true" || v === "1" || v === "yes" || v === "y";
     }
 
-    // Невідомий формат — не ховаємо
     return true;
   } catch (e) {
     console.error("Виняток при читанні settings:", e);
@@ -629,27 +630,15 @@ async function getSettingBoolFromSettings(
 
 /**
  * Чи може поточний користувач бачити колонки "Ціна" та "Сума".
- *
- * Мапа:
- *  - Приймальник  → settings.setting_id = 15, колонка "Приймальник"
- *  - Слюсар       → settings.setting_id = 2,  колонка "Слюсар"
- *  - Запчастист   → settings.setting_id = 15, колонка "Запчастист"
- *  - Складовщик   → settings.setting_id = 12, колонка "Складовщик"
- *
- *  - Адміністратор → завжди TRUE (все показувати)
  */
 export async function canUserSeePriceColumns(): Promise<boolean> {
-  const role = userAccessLevel; // ти вже читаєш це з localStorage
+  const role = userAccessLevel;
 
-  // Якщо ще немає ролі — краще нічого не ховати
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню."
-    );
+    console.warn("userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню.");
     return true;
   }
 
-  // Адміністратор — завжди все бачить
   if (role === "Адміністратор") {
     return true;
   }
@@ -662,22 +651,18 @@ export async function canUserSeePriceColumns(): Promise<boolean> {
       settingId = 15;
       columnName = "Приймальник";
       break;
-
     case "Слюсар":
       settingId = 2;
       columnName = "Слюсар";
       break;
-
     case "Запчастист":
       settingId = 15;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 12;
       columnName = "Складовщик";
       break;
-
     default:
       console.warn(`Невідома роль "${role}", не обмежуємо Ціна/Сума.`);
       return true;
@@ -710,22 +695,18 @@ export async function canUserCloseActs(): Promise<boolean> {
       settingId = 16;
       columnName = "Приймальник";
       break;
-
     case "Слюсар":
       settingId = 4;
       columnName = "Слюсар";
       break;
-
     case "Запчастист":
       settingId = 17;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 14;
       columnName = "Складовщик";
       break;
-
     default:
       console.warn(`Невідома роль "${role}", не обмежуємо закриття акту.`);
       return true;
@@ -740,27 +721,15 @@ export async function canUserCloseActs(): Promise<boolean> {
 
 /**
  * Перевірка чи може поточний користувач відкривати закриті акти.
- *
- * Мапа:
- *  - Приймальник  → settings.setting_id = 17, колонка "Приймальник"
- *  - Слюсар       → settings.setting_id = 5,  колонка "Слюсар"
- *  - Запчастист   → settings.setting_id = 18, колонка "Запчастист"
- *  - Складовщик   → settings.setting_id = 15, колонка "Складовщик"
- *
- *  - Адміністратор → завжди TRUE (може відкривати все)
  */
 export async function canUserOpenClosedActs(): Promise<boolean> {
   const role = userAccessLevel;
 
-  // Якщо ще немає ролі — краще не блокувати
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню."
-    );
+    console.warn("userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню.");
     return true;
   }
 
-  // Адміністратор — завжди може відкривати
   if (role === "Адміністратор") {
     return true;
   }
@@ -773,22 +742,18 @@ export async function canUserOpenClosedActs(): Promise<boolean> {
       settingId = 17;
       columnName = "Приймальник";
       break;
-
     case "Слюсар":
       settingId = 5;
       columnName = "Слюсар";
       break;
-
     case "Запчастист":
       settingId = 18;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 15;
       columnName = "Складовщик";
       break;
-
     default:
       console.warn(`Невідома роль "${role}", не обмежуємо відкриття актів.`);
       return true;
@@ -803,30 +768,16 @@ export async function canUserOpenClosedActs(): Promise<boolean> {
 
 /**
  * Перевірка чи може поточний користувач додавати рядки до акту.
- *
- * Мапа:
- *  - Запчастист   → settings.setting_id = 22, колонка "Запчастист"
- *  - Складовщик   → settings.setting_id = 19, колонка "Складовщик"
- *
- *  - Адміністратор, Приймальник, Слюсар → завжди TRUE (можуть додавати рядки)
  */
 export async function canUserAddRowToAct(): Promise<boolean> {
   const role = userAccessLevel;
 
-  // Якщо ще немає ролі — краще не блокувати
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню."
-    );
+    console.warn("userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню.");
     return true;
   }
 
-  // Адміністратор, Приймальник, Слюсар — завжди можуть додавати рядки
-  if (
-    role === "Адміністратор" ||
-    role === "Приймальник" ||
-    role === "Слюсар"
-  ) {
+  if (role === "Адміністратор" || role === "Приймальник" || role === "Слюсар") {
     return true;
   }
 
@@ -838,14 +789,11 @@ export async function canUserAddRowToAct(): Promise<boolean> {
       settingId = 22;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 19;
       columnName = "Складовщик";
       break;
-
     default:
-      // Для невідомих ролей — не блокуємо
       console.warn(`Невідома роль "${role}", дозволяємо додавання рядків.`);
       return true;
   }
@@ -858,27 +806,16 @@ export async function canUserAddRowToAct(): Promise<boolean> {
 }
 
 /**
- * Перевірка чи може поточний користувач бачити кнопку "Співробітники" в модалці.
- *
- * Мапа:
- *  - Приймальник  → settings.setting_id = 3, колонка "Приймальник"
- *  - Складовщик   → settings.setting_id = 2, колонка "Складовщик"
- *
- *  - Адміністратор → завжди TRUE (завжди показувати)
- *  - Інші ролі → завжди TRUE (за замовчуванням показувати)
+ * Перевірка чи може поточний користувач бачити кнопку "Співробітники".
  */
 export async function canUserSeeEmployeeButton(): Promise<boolean> {
   const role = userAccessLevel;
 
-  // Якщо ще немає ролі — краще не блокувати
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню."
-    );
+    console.warn("userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню.");
     return true;
   }
 
-  // Адміністратор — завжди може бачити кнопку
   if (role === "Адміністратор") {
     return true;
   }
@@ -891,14 +828,11 @@ export async function canUserSeeEmployeeButton(): Promise<boolean> {
       settingId = 3;
       columnName = "Приймальник";
       break;
-
     case "Складовщик":
       settingId = 2;
       columnName = "Складовщик";
       break;
-
     default:
-      // Для інших ролей (Слюсар, Запчастист тощо) — показуємо кнопку
       return true;
   }
 
@@ -911,16 +845,12 @@ export async function canUserSeeEmployeeButton(): Promise<boolean> {
 
 /**
  * Перевірка чи може користувач бачити кнопку "Склад" (Магазин).
- * * Логіка:
-/**
- * Перевірка чи може користувач бачити кнопку "Склад" (Магазин).
  */
 export async function canUserSeeSkladButton(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) return false;
 
-  // 1. Адміністратор та Складовщик -> ЗАВЖДИ TRUE (без запиту до бази)
   if (role === "Адміністратор" || role === "Складовщик") {
     return true;
   }
@@ -930,23 +860,17 @@ export async function canUserSeeSkladButton(): Promise<boolean> {
 
   switch (role) {
     case "Приймальник":
-      // ID 5 для Приймальника (згідно ТЗ)
       settingId = 5;
       columnName = "Приймальник";
       break;
-
     case "Запчастист":
-      // ❗ ID 6 для Запчастиста
       settingId = 6;
       columnName = "Запчастист";
       break;
-    
     default:
-      // Для інших ролей (Слюсар і т.д.) доступу немає
       return false;
   }
 
-  // Робимо запит до бази, якщо налаштування існують для ролі
   if (settingId !== null && columnName !== null) {
     return await getSettingBoolFromSettings(settingId, columnName);
   }
@@ -956,18 +880,12 @@ export async function canUserSeeSkladButton(): Promise<boolean> {
 
 /**
  * Перевірка чи може користувач бачити кнопку "Деталі".
- * Логіка:
- * - Адміністратор -> ЗАВЖДИ TRUE
- * - Приймальник -> settings.setting_id = 13
- * - Запчастист -> settings.setting_id = 11
- * - Складовщик -> settings.setting_id = 8
  */
 export async function canUserSeeDetailsButton(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) return false;
 
-  // Адміністратор бачить все за замовчуванням
   if (role === "Адміністратор") {
     return true;
   }
@@ -980,24 +898,18 @@ export async function canUserSeeDetailsButton(): Promise<boolean> {
       settingId = 13;
       columnName = "Приймальник";
       break;
-
     case "Запчастист":
       settingId = 11;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
-      // ✅ ТУТ ЗМІНИ: Шукаємо ID 8 у стовпці Складовщик
       settingId = 8;
       columnName = "Складовщик";
       break;
-
     default:
-      // Інші ролі (наприклад, Слюсар) не бачать
       return false;
   }
 
-  // Якщо ID та колонка визначені, робимо запит до бази
   if (settingId !== null && columnName !== null) {
     return await getSettingBoolFromSettings(settingId, columnName);
   }
@@ -1005,20 +917,12 @@ export async function canUserSeeDetailsButton(): Promise<boolean> {
   return false;
 }
 
-
-
 // =============================================================================
 // ПЕРЕВІРКА ПРАВ ДОСТУПУ ДЛЯ КНОПОК СКЛАДУ (МАГАЗИНУ)
 // =============================================================================
 
 /**
  * Перевірка чи може користувач розраховувати товари в складі/магазині.
- * 
- * Мапа:
- *  - Приймальник  → settings.setting_id = 6, колонка "Приймальник"
- *  - Запчастист   → settings.setting_id = 7, колонка "Запчастист"
- *  - Складовщик   → settings.setting_id = 4, колонка "Складовщик"
- *  - Адміністратор → завжди TRUE
  */
 export async function canUserPayMagazine(): Promise<boolean> {
   const role = userAccessLevel;
@@ -1040,17 +944,14 @@ export async function canUserPayMagazine(): Promise<boolean> {
       settingId = 6;
       columnName = "Приймальник";
       break;
-
     case "Запчастист":
       settingId = 7;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 4;
       columnName = "Складовщик";
       break;
-
     default:
       console.warn(`Невідома роль "${role}", не дозволяємо розрахунок.`);
       return false;
@@ -1065,12 +966,6 @@ export async function canUserPayMagazine(): Promise<boolean> {
 
 /**
  * Перевірка чи може користувач відміняти розрахунок товарів в складі/магазині.
- * 
- * Мапа:
- *  - Приймальник  → settings.setting_id = 7, колонка "Приймальник"
- *  - Запчастист   → settings.setting_id = 8, колонка "Запчастист"
- *  - Складовщик   → settings.setting_id = 5, колонка "Складовщик"
- *  - Адміністратор → завжди TRUE
  */
 export async function canUserUnpayMagazine(): Promise<boolean> {
   const role = userAccessLevel;
@@ -1092,17 +987,14 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
       settingId = 7;
       columnName = "Приймальник";
       break;
-
     case "Запчастист":
       settingId = 8;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 5;
       columnName = "Складовщик";
       break;
-
     default:
       console.warn(`Невідома роль "${role}", не дозволяємо відміну розрахунку.`);
       return false;
@@ -1117,12 +1009,6 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
 
 /**
  * Перевірка чи може користувач повертати товари в магазин.
- * 
- * Мапа:
- *  - Приймальник  → settings.setting_id = 8, колонка "Приймальник"
- *  - Запчастист   → settings.setting_id = 9, колонка "Запчастист"
- *  - Складовщик   → settings.setting_id = 6, колонка "Складовщик"
- *  - Адміністратор → завжди TRUE
  */
 export async function canUserReturnMagazine(): Promise<boolean> {
   const role = userAccessLevel;
@@ -1144,17 +1030,14 @@ export async function canUserReturnMagazine(): Promise<boolean> {
       settingId = 8;
       columnName = "Приймальник";
       break;
-
     case "Запчастист":
       settingId = 9;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 6;
       columnName = "Складовщик";
       break;
-
     default:
       console.warn(`Невідома роль "${role}", не дозволяємо повернення.`);
       return false;
@@ -1169,12 +1052,6 @@ export async function canUserReturnMagazine(): Promise<boolean> {
 
 /**
  * Перевірка чи може користувач відміняти повернення товарів в магазин.
- * 
- * Мапа:
- *  - Приймальник  → settings.setting_id = 9, колонка "Приймальник"
- *  - Запчастист   → settings.setting_id = 10, колонка "Запчастист"
- *  - Складовщик   → settings.setting_id = 7, колонка "Складовщик"
- *  - Адміністратор → завжди TRUE
  */
 export async function canUserCancelReturnMagazine(): Promise<boolean> {
   const role = userAccessLevel;
@@ -1196,17 +1073,14 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
       settingId = 9;
       columnName = "Приймальник";
       break;
-
     case "Запчастист":
       settingId = 10;
       columnName = "Запчастист";
       break;
-
     case "Складовщик":
       settingId = 7;
       columnName = "Складовщик";
       break;
-
     default:
       console.warn(`Невідома роль "${role}", не дозволяємо відміну повернення.`);
       return false;

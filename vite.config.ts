@@ -11,13 +11,14 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, "index.html"),
         main: resolve(__dirname, "main.html"),
-        bukhhalteriya: resolve(__dirname, 'bukhhalteriya.html'),
+        bukhhalteriya: resolve(__dirname, "bukhhalteriya.html"),
+        planyvannya: resolve(__dirname, "planyvannya.html"),
       },
       output: {
         manualChunks: {
-          supabase: ['@supabase/supabase-js'],
-          pdf: ['jspdf', 'html2canvas'],
-          react: ['react', 'react-dom'],
+          supabase: ["@supabase/supabase-js"],
+          pdf: ["jspdf", "html2canvas"],
+          react: ["react", "react-dom"],
         },
       },
     },

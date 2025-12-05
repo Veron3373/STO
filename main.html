@@ -67,19 +67,24 @@
             <div class="user-surname"></div>
             <div class="user-access"></div>
         </div>
-        
+
         <div class="menu-items" id="menu-items-to-hide" style="display: none;">
-            <li><a href="#" id="logout-link" class="menu-link" onclick="window.logoutFromSystemAndRedirect(); return false;">Вихід</a></li>
+            <li><a href="#" id="logout-link" class="menu-link"
+                    onclick="window.logoutFromSystemAndRedirect(); return false;">Вихід</a></li>
             <li><a href="#" class="menu-link" data-action="openSettings">Налаштування</a></li>
             <li><a href="#" class="menu-link all_other_bases" data-action="openClient">Додати</a></li>
-            <li><a href="bukhhalteriya.html" class="menu-link all_other_bases_Bukhh" data-action="openBukhhalteriya">Бухгалтерія</a></li>
+            <li><a href="bukhhalteriya.html" class="menu-link all_other_bases_Bukhh"
+                    data-action="openBukhhalteriya">Бухгалтерія</a></li>
             <li class="active"><a href="#" class="menu-link" data-action="openHome">Наряд</a></li>
-            
+            <li style="display: none;" id="menu-item-planyvannya"><a href="planyvannya.html" class="menu-link"
+                    data-action="openPlanyvannya">Планування</a></li>
+
             <li><input type="text" id="dateRangePicker" readonly /></li>
-            
+
             <li class="search-container">
                 <span id="searchIcon" class="search-icon" title="Пошук">🔍</span>
-                <input type="text" id="searchInput" class="search-input" placeholder="Введіть номер, авто або клієнта..." />
+                <input type="text" id="searchInput" class="search-input"
+                    placeholder="Введіть номер, авто або клієнта..." />
             </li>
         </div>
         <li class="alim">1.2.0 / © 2025 Алім</li>
@@ -127,10 +132,10 @@
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                
+
                 // 🛑 ТУТ ВИВОДИМО ПОВІДОМЛЕННЯ ПРО БЛОКУВАННЯ
                 alert("⛔ Доступ заблоковано. Ви не авторизовані.");
-                
+
                 return true; // Заблоковано
             }
             return false; // Дозволено
@@ -162,7 +167,7 @@
         // --- НАЛАШТУВАННЯ БЛОКУВАННЯ ДЛЯ ПОШУКУ ТА КАЛЕНДАРЯ ---
         function setupBlockers() {
             // 1. Блокуємо ПОШУК
-            $('#searchIcon').on('click', function(e) {
+            $('#searchIcon').on('click', function (e) {
                 if (blockActionIfNoAuth(e)) return; // Якщо блоковано - вихід
 
                 // Якщо дійшли сюди - значить авторизовані, відкриваємо пошук
@@ -173,7 +178,7 @@
                 }
             });
 
-            $('#searchInput').on('focus click keydown', function(e) {
+            $('#searchInput').on('focus click keydown', function (e) {
                 if (blockActionIfNoAuth(e)) {
                     $(this).blur(); // Прибираємо фокус
                 }
@@ -181,7 +186,7 @@
 
             // 2. Блокуємо КАЛЕНДАР
             // Перехоплюємо подію перед відкриттям
-            $('#dateRangePicker').on('show.daterangepicker', function(e, picker) {
+            $('#dateRangePicker').on('show.daterangepicker', function (e, picker) {
                 if (!checkAuthLocal()) {
                     picker.hide(); // Негайно ховаємо
                     e.preventDefault();
@@ -190,7 +195,7 @@
             });
 
             // Блокуємо клік по інпуту календаря
-            $('#dateRangePicker').on('click focus', function(e) {
+            $('#dateRangePicker').on('click focus', function (e) {
                 if (blockActionIfNoAuth(e)) {
                     $(this).blur();
                 }
@@ -199,12 +204,12 @@
 
         function initializeSystem() {
             let currentFilterType = 'open';
-            
+
             // Запускаємо логіку блокувальників
             setupBlockers();
 
             // Закриття пошуку при кліку поза ним
-            $(document).on('click', function(e) {
+            $(document).on('click', function (e) {
                 if (!$(e.target).closest('.search-container').length) {
                     const input = $('#searchInput');
                     if (input.hasClass('active') && input.val() === '') {
@@ -274,7 +279,7 @@
             $('#dateRangePicker').val('Відкриті');
             currentFilterType = 'open';
             const picker = $('#dateRangePicker').data('daterangepicker');
-            if(picker) { picker.setStartDate(moment().startOf('year')); picker.setEndDate(moment()); }
+            if (picker) { picker.setStartDate(moment().startOf('year')); picker.setEndDate(moment()); }
 
             // Ініціалізація пошуку
             const searchHandler = setupSearchWithTableFilter(
@@ -283,13 +288,13 @@
                 () => {
                     // Тут треба отримати актуальні дати, якщо вибрано діапазон
                     // Для спрощення поки повертаємо null, це доопрацюється в loadActsTable
-                    return { dateFrom: null, dateTo: null }; 
+                    return { dateFrom: null, dateTo: null };
                 }
             );
             window.searchHandler = searchHandler;
 
             initializeActsSystem();
-            
+
             // ВАЖЛИВО: Меню показуємо, але елементи всередині захищені
             updateMenuVisibility(true);
         }

@@ -243,7 +243,7 @@ $reminder: #003d82;
 
     .post-time-header {
       display: grid;
-      grid-template-columns: repeat(24, 1fr);
+      grid-template-columns: repeat(12, 1fr);
       padding: 12px 24px;
       padding-right: 32px;
       border-bottom: 2px solid $border-gray;
@@ -273,38 +273,39 @@ $reminder: #003d82;
       }
 
       .post-time-cell {
-        text-align: center;
-        font-weight: 600;
-        font-size: 16px;
         position: relative;
         z-index: 2;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 4px 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        border-right: 1px solid $border-gray;
+
+        &:last-child {
+          border-right: none;
+        }
+
+        .post-hour {
+          font-size: 16px;
+          font-weight: 600;
+          color: $text-dark;
+          text-align: left;
+          padding: 4px 0 2px 8px;
+          grid-column: 1 / -1;
+        }
 
         .post-minutes {
           font-size: 12px;
           font-weight: 400;
           color: #666;
-          display: block;
-          margin-top: 2px;
-        }
-
-        &:nth-child(2n)::after {
-          content: '';
-          position: absolute;
-          right: 0;
-          top: 0;
-          bottom: 0;
-          width: 1px;
-          background: $border-gray;
-          z-index: 3;
+          text-align: left;
+          padding: 2px 0 4px 8px;
+          grid-column: 2 / 3;
         }
 
         &.post-past-time {
-          color: #999;
+          .post-hour {
+            color: #999;
+          }
 
           .post-minutes {
             color: #999;

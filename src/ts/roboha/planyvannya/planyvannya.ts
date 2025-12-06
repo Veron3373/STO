@@ -197,7 +197,7 @@ class CalendarWidget {
 
             pastPercentage = (minutesPassed / totalMinutes) * 100;
 
-            const slotIndex = Math.floor(minutesPassed / 30);
+            const slotIndex = Math.floor(minutesPassed / 60);
 
             for (let i = 0; i < children.length; i++) {
                 const cell = children[i];

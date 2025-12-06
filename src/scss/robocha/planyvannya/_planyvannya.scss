@@ -134,16 +134,16 @@ $row-margin: 6px;
   .post-main-content {
     display: flex;
     flex: 1;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   // Sidebar
   .post-sidebar {
-    width: 260px;
+    width: 220px;
     background: $white;
-    border-right: 1px solid $border-gray;
-    padding: 20px;
-    overflow-y: auto;
+    border-right: none;
+    padding: 10px 0 10px 10px;
     display: flex;
     flex-direction: column;
 
@@ -343,7 +343,6 @@ $row-margin: 6px;
 
     .post-calendar-grid {
       flex: 1;
-      overflow-y: scroll;
       padding: 0;
       position: relative;
       background: $white;

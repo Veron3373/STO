@@ -19,7 +19,15 @@
         <span class="post-logo-text">B.S.Motorservice</span>
       </div>
       <nav class="post-nav" id="postNav">
-        <a href="#" class="post-nav-link" id="postNavLinkHome">Головна</a>
+        <a href="#" class="post-nav-link post-active" id="postNavLinkHome">Головна</a>
+        
+        <!-- Календарна навігація в header -->
+        <div class="post-header-calendar-nav">
+          <button class="post-today-btn" id="postTodayBtn">Сьогодні</button>
+          <button class="post-nav-arrow" id="headerNavPrev">‹</button>
+          <div class="post-current-date" id="postHeaderDateDisplay"></div>
+          <button class="post-nav-arrow" id="headerNavNext">›</button>
+        </div>
       </nav>
       <div class="post-header-actions" id="postHeaderActions">
         <button class="post-icon-btn" id="postBtnPhone"><span>📞</span></button>
@@ -97,12 +105,7 @@
       <!-- Calendar -->
       <main class="post-calendar-area" id="postCalendarArea">
         <div class="post-calendar-controls">
-          <div class="post-today-btn" id="postTodayBtn">Сьогодні</div>
-          <div class="post-date-navigation">
-            <button class="post-nav-arrow" id="headerNavPrev">‹</button>
-            <div class="post-current-date" id="postHeaderDateDisplay"></div>
-            <button class="post-nav-arrow" id="headerNavNext">›</button>
-          </div>
+          <!-- Прихована секція, навігація перенесена в header -->
         </div>
 
         <div class="post-time-header" id="postTimeHeader">

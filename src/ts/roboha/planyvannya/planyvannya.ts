@@ -70,20 +70,18 @@ class CalendarWidget {
     }
 
     private handlePrev(): void {
-        this.viewMonth--;
-        if (this.viewMonth < 0) {
-            this.viewMonth = 11;
-            this.viewYear--;
-        }
+        // Переходимо на попередній день
+        this.selectedDate.setDate(this.selectedDate.getDate() - 1);
+        this.viewMonth = this.selectedDate.getMonth();
+        this.viewYear = this.selectedDate.getFullYear();
         this.render();
     }
 
     private handleNext(): void {
-        this.viewMonth++;
-        if (this.viewMonth > 11) {
-            this.viewMonth = 0;
-            this.viewYear++;
-        }
+        // Переходимо на наступний день
+        this.selectedDate.setDate(this.selectedDate.getDate() + 1);
+        this.viewMonth = this.selectedDate.getMonth();
+        this.viewYear = this.selectedDate.getFullYear();
         this.render();
     }
 

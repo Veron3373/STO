@@ -60,7 +60,7 @@ $reminder: #003d82;
     .post-nav {
       display: flex;
       gap: 8px;
-      flex: 1;
+      align-items: center;
 
       .post-nav-link {
         padding: 10px 20px;
@@ -78,11 +78,60 @@ $reminder: #003d82;
           border-bottom: 2px solid $white;
         }
       }
+
+      // Додаємо стилі для календарної навігації в header
+      .post-header-calendar-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: 24px;
+        padding-left: 24px;
+        border-left: 1px solid rgba(255, 255, 255, 0.2);
+
+        .post-today-btn {
+          padding: 6px 12px;
+          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: 500;
+          color: $white;
+          font-size: 14px;
+          transition: background 0.2s;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.25);
+          }
+        }
+
+        .post-nav-arrow {
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: $white;
+          padding: 0 8px;
+          transition: opacity 0.2s;
+
+          &:hover {
+            opacity: 0.8;
+          }
+        }
+
+        .post-current-date {
+          font-size: 15px;
+          font-weight: 500;
+          color: $white;
+          min-width: 200px;
+          text-align: center;
+        }
+      }
     }
 
     .post-header-actions {
       display: flex;
       gap: 8px;
+      margin-left: auto;
 
       .post-icon-btn {
         width: 40px;
@@ -243,80 +292,7 @@ $reminder: #003d82;
     overflow: hidden;
 
     .post-calendar-controls {
-      display: flex;
-      align-items: center;
-      padding: 16px 24px;
-      border-bottom: 1px solid $border-gray;
-      gap: 16px;
-
-      .post-today-btn {
-        padding: 8px 16px;
-        background: $light-gray;
-        border: 1px solid $border-gray;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-        min-width: 80px;
-        text-align: center;
-
-        &:hover {
-          background: color.adjust($light-gray, $lightness: -5%);
-        }
-      }
-
-      .post-date-navigation {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-
-        .post-nav-arrow {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: $text-dark;
-
-          &:hover {
-            color: $primary-blue;
-          }
-        }
-
-        .post-current-date {
-          font-size: 16px;
-          font-weight: 500;
-        }
-      }
-
-      .post-view-controls {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-
-        .post-toggle-switch {
-          padding: 8px 16px;
-          background: $light-gray;
-          border: 1px solid $border-gray;
-          border-radius: 20px;
-          cursor: pointer;
-
-          &:hover {
-            background: color.adjust($light-gray, $lightness: -5%);
-          }
-        }
-      }
-
-      .post-close-btn {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #666;
-
-        &:hover {
-          color: $text-dark;
-        }
-      }
+      display: none; // Ховаємо, бо перенесли в header
     }
 
     .post-time-header {

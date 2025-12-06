@@ -244,12 +244,12 @@ $reminder: #003d82;
     .post-time-header {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
-      padding: 8px 24px;
+      padding: 8px 24px 16px 24px;
       padding-right: 32px;
       border-bottom: 2px solid $border-gray;
       position: relative;
       overflow: hidden;
-      min-height: 60px;
+      min-height: 70px;
 
       &::before {
         content: '';
@@ -279,32 +279,32 @@ $reminder: #003d82;
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 0;
-        border-right: 1px solid $border-gray;
-
-        &:last-child {
-          border-right: none;
-        }
+        align-items: center;
 
         .post-hour {
-          font-size: 17px;
-          font-weight: 600;
+          font-size: 14px;
+          font-weight: 400;
           color: $text-dark;
-          text-align: left;
-          padding: 6px 0 4px 12px;
-          grid-column: 1 / -1;
+          text-align: center;
+          padding: 4px;
+          grid-column: 1 / 2;
           border-right: 1px solid $border-gray;
-          position: relative;
         }
 
         .post-minutes {
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 400;
-          color: #666;
-          text-align: left;
-          padding: 6px 0 4px 12px;
+          color: #999;
+          text-align: center;
+          padding: 4px;
           grid-column: 2 / 3;
-          border-left: 1px solid $border-gray;
-          position: relative;
+          border-right: 1px solid $border-gray;
+        }
+
+        &:last-child {
+          .post-minutes {
+            border-right: none;
+          }
         }
 
         &.post-past-time {
@@ -347,10 +347,14 @@ $reminder: #003d82;
         pointer-events: none;
         z-index: 1;
         display: grid;
-        grid-template-columns: repeat(12, 1fr);
+        grid-template-columns: repeat(24, 1fr);
 
         .post-hour-line {
           border-right: 1px solid $border-gray;
+
+          &:nth-child(2n) {
+            border-right: 1px solid $border-gray;
+          }
 
           &:last-child {
             border-right: none;

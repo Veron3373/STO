@@ -50,7 +50,7 @@ class CalendarWidget {
             linesContainer = document.createElement('div');
             linesContainer.className = 'post-grid-lines';
 
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 24; i++) {
                 const line = document.createElement('div');
                 line.className = 'post-hour-line';
                 linesContainer.appendChild(line);

@@ -180,24 +180,25 @@ class CalendarWidget {
         }
 
         let pastPercentage = 0;
-        if (allPast) pastPercentage = 100;
+        if (allPast) {
+            pastPercentage = 100;
+            children.forEach(c => c.classList.add('post-past-time'));
+        } else if (checkTime) {
+            const startHour = 8;
+            const currentHour = now.getHours();
+            const currentMin = now.getMinutes();
 
-        const startHour = 8;
-        const endHour = 20;
-        const totalSlots = (endHour - startHour) * 2; // 24 слоти по 30 хв
-
-        const currentHour = now.getHours();
-        const currentMin = now.getMinutes();
-
-        if (checkTime) {
-            // Визначаємо поточний 30-хвилинний слот
+            // Визначаємо поточний 30-хвилинний слот з початку робочого дня
             let minutesPassed = (currentHour - startHour) * 60 + currentMin;
-
             if (minutesPassed < 0) minutesPassed = 0;
-            if (minutesPassed > (endHour - startHour) * 60) minutesPassed = (endHour - startHour) * 60;
+
+            const totalMinutes = 12 * 60; // 8:00 до 20:00 = 12 годин
+            if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
             // Округлюємо до найближчого 30-хвилинного слоту
             const currentSlot = Math.floor(minutesPassed / 30);
+            const totalSlots = 24; // 12 годин * 2 слоти
+            
             pastPercentage = (currentSlot / totalSlots) * 100;
 
             // Позначаємо минулі комірки
@@ -209,8 +210,6 @@ class CalendarWidget {
                     cell.classList.add('post-past-time');
                 }
             }
-        } else if (allPast) {
-            children.forEach(c => c.classList.add('post-past-time'));
         } else {
             children.forEach(c => c.classList.remove('post-past-time'));
         }

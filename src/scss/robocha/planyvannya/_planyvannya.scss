@@ -327,6 +327,7 @@ $reminder: #003d82;
       display: grid;
       grid-template-columns: repeat(24, 1fr);
       padding: 12px 24px;
+      padding-right: 32px; // 24px + 8px scrollbar compensation
       border-bottom: 2px solid $border-gray;
       background: $light-gray;
 
@@ -358,13 +359,16 @@ $reminder: #003d82;
 
     .post-calendar-grid {
       flex: 1;
-      overflow-y: auto;
+      overflow-y: scroll; // Always show scrollbar to match header padding
       padding: 0 24px;
       /* Vertical grid lines - 36 cols. 12 hours. 
          Line every 3 cols (1 hour). 
          3 cols = 3/36 = 1/12 = 8.333%
       */
-      background: repeating-linear-gradient(to right,
+      background: linear-gradient(to right,
+          #e0e0e0 var(--past-percentage, 0%),
+          transparent var(--past-percentage, 0%)),
+        repeating-linear-gradient(to right,
           transparent,
           transparent calc(100% / 12 - 1px),
           $border-gray calc(100% / 12 - 1px),

@@ -1,4 +1,3 @@
-//src\ts\roboha\planyvannya\planyvannya.ts
 
 class CalendarWidget {
     private viewYear: number;
@@ -134,6 +133,7 @@ class CalendarWidget {
 
     private updateHeaderTimeStyles(): void {
         const timeHeader = document.getElementById('postTimeHeader');
+        const calendarGrid = document.getElementById('postCalendarGrid');
         if (!timeHeader) return;
 
         const children = Array.from(timeHeader.children) as HTMLElement[];
@@ -152,34 +152,57 @@ class CalendarWidget {
             checkTime = true;
         }
 
+        // Default to 0% (no gray) or 100% (all gray)
+        let pastPercentage = 0;
+        if (allPast) pastPercentage = 100;
+
+        // We have 12 hours: 8:00 to 20:00 (720 minutes)
+        const startHour = 8;
+        const endHour = 20;
+        const totalMinutes = (endHour - startHour) * 60;
+
         const currentHour = now.getHours();
         const currentMin = now.getMinutes();
 
-        for (let i = 0; i < children.length; i++) {
-            const cell = children[i];
-            cell.classList.remove('post-past-time');
+        if (checkTime) {
+            // Calculate minutes passed since 8:00
+            let minutesPassed = (currentHour - startHour) * 60 + currentMin;
 
-            if (allPast) {
-                cell.classList.add('post-past-time');
-                continue;
-            }
+            if (minutesPassed < 0) minutesPassed = 0;
+            if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
-            if (checkTime) {
-                // i=0 -> 8:00, i=1 -> 8:30
-                const cellHour = 8 + Math.floor(i / 2);
-                const cellMin = (i % 2) * 30;
+            // Calculate slot index (0 to 23).
+            const slotIndex = Math.floor(minutesPassed / 30);
 
-                let slotEndHour = cellHour;
-                let slotEndMin = cellMin + 30;
-                if (slotEndMin >= 60) {
-                    slotEndHour++;
-                    slotEndMin -= 60;
-                }
+            // If current block 14:30-15:00 is "started", mark it past
+            // slotIndex is 13 (14th slot). We want to gray out 14 slots (0..13).
+            // So grayMinutes = (slotIndex + 1) * 30.
+            const grayMinutes = (slotIndex + 1) * 30;
 
-                if (currentHour > slotEndHour || (currentHour === slotEndHour && currentMin >= slotEndMin)) {
+            const finalGrayMinutes = Math.min(grayMinutes, totalMinutes);
+
+            pastPercentage = (finalGrayMinutes / totalMinutes) * 100;
+
+            // Apply to Header Cells
+            for (let i = 0; i < children.length; i++) {
+                const cell = children[i];
+                cell.classList.remove('post-past-time');
+
+                if (i <= slotIndex) {
                     cell.classList.add('post-past-time');
                 }
             }
+        } else if (allPast) {
+            // All cells gray
+            children.forEach(c => c.classList.add('post-past-time'));
+        } else {
+            // Future date, no gray
+            children.forEach(c => c.classList.remove('post-past-time'));
+        }
+
+        // Apply background gradient to grid
+        if (calendarGrid) {
+            calendarGrid.style.setProperty('--past-percentage', `${pastPercentage}%`);
         }
     }
 

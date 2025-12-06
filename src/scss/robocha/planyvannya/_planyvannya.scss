@@ -325,10 +325,10 @@ $reminder: #003d82;
       padding: 12px 24px;
       padding-right: 32px;
       border-bottom: 2px solid $border-gray;
-      background: $light-gray;
       position: relative;
+      overflow: hidden;
 
-      // Вертикальні лінії (кожна година = 2 комірки)
+      // Фон для всіх комірок
       &::before {
         content: '';
         position: absolute;
@@ -336,13 +336,20 @@ $reminder: #003d82;
         left: 24px;
         right: 32px;
         bottom: 0;
-        background: repeating-linear-gradient(to right,
-            transparent,
-            transparent calc(100% / 12 - 1px),
-            $border-gray calc(100% / 12 - 1px),
-            $border-gray calc(100% / 12));
-        pointer-events: none;
+        background: $light-gray;
         z-index: 0;
+      }
+
+      // Сіра заливка для минулого часу в header
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 24px;
+        bottom: 0;
+        width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
+        background: #e0e0e0;
+        z-index: 1;
       }
 
       .post-time-cell {
@@ -350,7 +357,11 @@ $reminder: #003d82;
         font-weight: 600;
         font-size: 16px;
         position: relative;
-        z-index: 1;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
 
         .post-minutes {
           font-size: 12px;
@@ -358,8 +369,19 @@ $reminder: #003d82;
           color: #666;
         }
 
+        // Вертикальні лінії після парних комірок (після кожної години)
+        &:nth-child(2n)::after {
+          content: '';
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 1px;
+          background: $border-gray;
+          z-index: 3;
+        }
+
         &.post-past-time {
-          background: #e0e0e0;
           color: #999;
 
           .post-minutes {
@@ -372,37 +394,43 @@ $reminder: #003d82;
     .post-calendar-grid {
       flex: 1;
       overflow-y: scroll;
-      padding: 0 24px;
+      padding: 0;
       position: relative;
+      background: $white;
 
       // Сіра заливка для минулого часу
       &::before {
         content: '';
         position: absolute;
         top: 0;
-        left: 24px;
+        left: 0;
         bottom: 0;
-        width: calc(var(--past-percentage, 0%) * (100% - 48px) / 100);
+        width: calc(var(--past-percentage, 0%));
         background: #e0e0e0;
         pointer-events: none;
         z-index: 0;
+        margin-left: 24px;
       }
 
-      // Вертикальні лінії (точно як у header)
-      &::after {
-        content: '';
+      // Вертикальні лінії години
+      .post-grid-lines {
         position: absolute;
         top: 0;
         left: 24px;
         right: 24px;
         bottom: 0;
-        background: repeating-linear-gradient(to right,
-            transparent,
-            transparent calc(100% / 12 - 1px),
-            $border-gray calc(100% / 12 - 1px),
-            $border-gray calc(100% / 12));
         pointer-events: none;
         z-index: 1;
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+
+        .post-hour-line {
+          border-right: 1px solid $border-gray;
+
+          &:last-child {
+            border-right: none;
+          }
+        }
       }
     }
 
@@ -410,7 +438,7 @@ $reminder: #003d82;
       display: grid;
       grid-template-columns: repeat(24, 1fr);
       gap: 0;
-      padding: 12px 0;
+      padding: 12px 24px;
       border-bottom: 1px solid #eee;
       position: relative;
       z-index: 2;

@@ -1,5 +1,3 @@
-//src\ts\roboha\planyvannya\planyvannya.ts
-
 class CalendarWidget {
     private viewYear: number;
     private viewMonth: number;
@@ -37,7 +35,31 @@ class CalendarWidget {
         if (prevBtn) prevBtn.addEventListener('click', () => this.handlePrev());
         if (nextBtn) nextBtn.addEventListener('click', () => this.handleNext());
 
+        // Додаємо вертикальні лінії в grid
+        this.addGridLines();
+
         this.render();
+    }
+
+    private addGridLines(): void {
+        const calendarGrid = document.getElementById('postCalendarGrid');
+        if (!calendarGrid) return;
+
+        // Перевіряємо чи вже є лінії
+        let linesContainer = calendarGrid.querySelector('.post-grid-lines');
+        if (!linesContainer) {
+            linesContainer = document.createElement('div');
+            linesContainer.className = 'post-grid-lines';
+
+            // Додаємо 12 ліній (для 12 годин)
+            for (let i = 0; i < 12; i++) {
+                const line = document.createElement('div');
+                line.className = 'post-hour-line';
+                linesContainer.appendChild(line);
+            }
+
+            calendarGrid.appendChild(linesContainer);
+        }
     }
 
     private goToToday(): void {
@@ -159,19 +181,19 @@ class CalendarWidget {
             if (minutesPassed < 0) minutesPassed = 0;
             if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
-            // Визначаємо поточний слот (0-23, кожен по 30 хв)
             const slotIndex = Math.floor(minutesPassed / 30);
-
-            // ВИПРАВЛЕНО: Заливаємо ВСІ слоти до поточного включно
-            // Якщо зараз 14:47, то slotIndex = 13 (блок 14:30-15:00)
-            // Заливаємо 14 блоків (0-13), тобто до кінця блоку 14:30-15:00
             const graySlots = slotIndex + 1;
             const grayMinutes = graySlots * 30;
 
             const finalGrayMinutes = Math.min(grayMinutes, totalMinutes);
-            pastPercentage = (finalGrayMinutes / totalMinutes) * 100;
+            
+            // Відсоток для CSS (враховуючи padding 24px з обох боків)
+            const gridWidth = calendarGrid.offsetWidth - 48; // minus padding
+            const totalWidth = calendarGrid.offsetWidth;
+            const actualPercentage = (finalGrayMinutes / totalMinutes) * (gridWidth / totalWidth) * 100;
+            
+            pastPercentage = actualPercentage;
 
-            // Застосовуємо стилі до комірок header
             for (let i = 0; i < children.length; i++) {
                 const cell = children[i];
                 cell.classList.remove('post-past-time');
@@ -186,7 +208,8 @@ class CalendarWidget {
             children.forEach(c => c.classList.remove('post-past-time'));
         }
 
-        // Застосовуємо градієнт до grid
+        // Застосовуємо змінну для обох header і grid
+        timeHeader.style.setProperty('--past-percentage', `${pastPercentage}%`);
         calendarGrid.style.setProperty('--past-percentage', `${pastPercentage}%`);
     }
 
@@ -251,10 +274,6 @@ class CalendarWidget {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    new CalendarWidget();
-});
-// Initialize on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     new CalendarWidget();
 });

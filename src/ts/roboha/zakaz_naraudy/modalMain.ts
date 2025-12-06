@@ -147,8 +147,10 @@ async function getRoleSettingBool(
       return true;
     }
 
-    const safeData: Record<string, unknown> =
-      (data ?? {}) as unknown as Record<string, unknown>;
+    const safeData: Record<string, unknown> = (data ?? {}) as unknown as Record<
+      string,
+      unknown
+    >;
     const value = safeData[columnName];
 
     if (typeof value === "boolean") return value;
@@ -737,8 +739,9 @@ function handleLoadError(error: any): void {
     "error"
   );
   if (body) {
-    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${error?.message || "Перевірте підключення."
-      }</p>`;
+    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${
+      error?.message || "Перевірте підключення."
+    }</p>`;
   }
 }
 
@@ -810,104 +813,114 @@ function renderModalContent(
   const showLockButton = canShowLockButton;
 
   body.innerHTML = `
-    <div class="zakaz_narayd-header">
-      <div class="zakaz_narayd-header-info">
-        <h1>B.S.Motorservice</h1>
-        <p>Адрес: вул. Корольова, 6, Вінниця</p>
-        <p>068 931 24 38 тел</p>
-      </div>
+     <div class="zakaz_narayd-header">
+       <img src="/STO/logoOsnovne.jpg" alt="Лого" class="logo-square">
+        <div class="zakaz_narayd-header-info">
+         <h1>B.S.Motorservice</h1>
+         <p>Адрес: вул. Корольова, 6, Вінниця</p>
+         <p>068 931 24 38 тел</p>
+       </div>
     </div>
     <div class="zakaz_narayd-table-container">
       <table class="zakaz_narayd-table left">
         ${createTableRow("Акт №", `<span id="act-number">${act.act_id}</span>`)}
         ${createTableRow("Клієнт", clientInfo.fio)}
         ${createTableRow(
-    "Телефон",
-    `<span style="color: blue;">${clientInfo.phone}</span>`
-  )}
+          "Телефон",
+          `<span style="color: blue;">${clientInfo.phone}</span>`
+        )}
         ${createTableRow("Примітка:", clientInfo.note)}
         ${createTableRow("Фото", photoCellHtml)}
       </table>
       <table class="zakaz_narayd-table right">
         ${createTableRow(
-    isClosed ? "Закритий" : "Відкритий",
-    `
+          isClosed ? "Закритий" : "Відкритий",
+          `
           <div class="status-row">
             <div class="status-dates">
-              ${isClosed
-      ? `<span class="red">${formatDate(
-        act.date_off
-      )}</span> | <span class="green">${formatDate(
-        act.date_on
-      )}</span>`
-      : `<span class="green">${formatDate(act.date_on) || "-"
-      }</span>`
-    }
+              ${
+                isClosed
+                  ? `<span class="red">${formatDate(
+                      act.date_off
+                    )}</span> | <span class="green">${formatDate(
+                      act.date_on
+                    )}</span>`
+                  : `<span class="green">${
+                      formatDate(act.date_on) || "-"
+                    }</span>`
+              }
             </div>
-            ${showLockButton
-      ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id
-      }">
+            ${
+              showLockButton
+                ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${
+                    act.act_id
+                  }">
                    ${isClosed ? "🔒" : "🗝️"}
                    </button>`
-      : ""
-    }
+                : ""
+            }
 
           </div>
         `
-  )}
+        )}
         ${createTableRow(
-    "Автомобіль",
-    `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
-      carInfo.nomer || ""
-    ).trim()}`.trim() || "—"
-  )}
+          "Автомобіль",
+          `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
+            carInfo.nomer || ""
+          ).trim()}`.trim() || "—"
+        )}
         ${createTableRow(
-    "Vincode",
-    `
+          "Vincode",
+          `
           <div class="status-row">
             <span>${carInfo.vin}</span>
             <div class="status-icons">
-              ${!isRestricted && canShowCreateActBtn
-      ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
-      : ""
-    }
+              ${
+                !isRestricted && canShowCreateActBtn
+                  ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+                  : ""
+              }
             </div>
           </div>
           `
-  )}
+        )}
         ${createTableRow("Двигун", carInfo.engine)}
         ${createTableRow(
-    "Пробіг",
-    `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
-      actDetails?.["Пробіг"],
-      0,
-      0
-    )}</span>`
-  )}
+          "Пробіг",
+          `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
+            actDetails?.["Пробіг"],
+            0,
+            0
+          )}</span>`
+        )}
       </table>
     </div>
     <div class="reason-container">
       <div class="zakaz_narayd-reason-line">
         <div class="reason-text">
           <strong>Причина звернення:</strong>
-          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${actDetails?.["Причина звернення"] || "—"
-    }</span>
+          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${
+    actDetails?.["Причина звернення"] || "—"
+  }</span>
         </div>
-        ${!isRestricted && canShowPrintActBtn
-      ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
-      : ""
-    }
+        ${
+          !isRestricted && canShowPrintActBtn
+            ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+            : ""
+        }
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">
           <strong>Рекомендації:</strong>
-          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${actDetails?.["Рекомендації"] || "—"
-    }</span>
+          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${
+    actDetails?.["Рекомендації"] || "—"
+  }</span>
         </div>
-        ${!isRestricted && canShowSkladBtn
-      ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
-      : ""
-    }
+        ${
+          !isRestricted && canShowSkladBtn
+            ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
+            : ""
+        }
       </div>
     </div>
     ${generateTableHTML(

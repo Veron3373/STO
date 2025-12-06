@@ -85,10 +85,6 @@ body {
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
 
-  &-logo img {
-    max-height: 80px;
-  }
-
   &-info {
     display: flex;
     flex-direction: column;
@@ -105,6 +101,17 @@ body {
     }
   }
 }
+
+/* Логотип в акті: рівний «квадрат» 100×100 */
+.logo-square {
+  width: 100px;
+  height: 100px;
+  border-radius: 16px;   /* можна 0, якщо хочеш зовсім квадрат */
+  overflow: hidden;
+  display: block;
+  object-fit: cover;      /* обрізає зайве без спотворень */
+}
+
 
 .zakaz_narayd-modal-body {
   padding: 0;
@@ -692,4 +699,3 @@ tr:hover .delete-row-btn {
   outline: 2px solid #000 !important;
   outline-offset: -2px;
 }
-

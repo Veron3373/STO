@@ -21,12 +21,19 @@
       <nav class="post-nav" id="postNav">
         <a href="#" class="post-nav-link" id="postNavLinkHome">Головна</a>
       </nav>
+      <div class="post-header-actions" id="postHeaderActions">
+        <button class="post-icon-btn" id="postBtnPhone"><span>📞</span></button>
+        <button class="post-icon-btn" id="postBtnChat"><span>💬</span></button>
+        <button class="post-icon-btn post-alert" id="postBtnAlert"><span>🔔</span></button>
+        <button class="post-icon-btn" id="postBtnProfile"><span>👤</span></button>
+      </div>
     </header>
 
     <div class="post-main-content" id="postMainContent">
       <!-- Sidebar -->
       <aside class="post-sidebar" id="postSidebar">
-       
+        <button class="post-add-btn" id="postAddBtn">+ Записати</button>
+        
         <div class="post-location-section" id="postLocationSection">
           <div class="post-sub-location" id="postSubLocation1">
             <span>ЦЕХ 1</span>
@@ -79,6 +86,10 @@
             </div>
           </div>
 
+          <div class="post-sub-location" id="postSubLocation4">
+            <span>НАГАДУВАННЯ</span>
+            <button class="post-toggle-btn" id="postToggleBtn4">▼</button>
+          </div>
           <button class="post-add-reminder-btn" id="postAddReminderBtn">⊕ додати</button>
         </div>
       </aside>
@@ -155,6 +166,23 @@
             <div class="post-color-box post-reserve"></div>
             <span>Резерв поста</span>
           </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-first-time"></div>
+            <span>Перший раз</span>
+          </div>
+          <div class="post-legend-item">
+            <span>⚡ Потрібна електрика</span>
+          </div>
+          <div class="post-legend-item">
+            <span>🚗 Потрібна мийка</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-alert-color"></div>
+            <span>Зірвалося нагадування</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-reminder-color"></div>
+            <span>Нагадування встановлено</span>
           </div>
         </div>
       </main>

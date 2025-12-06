@@ -127,18 +127,24 @@ function playCloseSound() {
 // ==========================
 
 function formatTimeOnly(dateStr?: string): string {
-  if (!dateStr) {
-    return new Date().toLocaleTimeString("uk-UA", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString("uk-UA", {
+  const date = dateStr ? new Date(dateStr) : new Date();
+
+  // час: години та хвилини
+  const timePart = date.toLocaleTimeString("uk-UA", {
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  // дата: число та місяць
+  const datePart = date.toLocaleDateString("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+
+  // формат: 15:07 / 05.12
+  return `${timePart} / ${datePart}`;
 }
+
 
 function reindexBadges() {
   const container = document.getElementById("act-realtime-container");

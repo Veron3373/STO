@@ -22,8 +22,9 @@
     <!-- Header -->
     <header class="post-header" id="postHeader">
       <nav class="post-nav" id="postNav">
-        <a href="https://veron3373.github.io/STO/main.html" class="post-nav-link post-active" id="postNavLinkHome">🛠️← СТО</a>
-        
+        <a href="https://veron3373.github.io/STO/main.html" class="post-nav-link post-active" id="postNavLinkHome">🛠️←
+          СТО</a>
+
         <!-- Календарна навігація в header -->
         <div class="post-header-calendar-nav">
           <button class="post-today-btn" id="postTodayBtn">Сьогодні</button>
@@ -104,57 +105,57 @@
             <div class="post-hour">8</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">9</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">10</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">11</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">12</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">13</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">14</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">15</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">16</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">17</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">18</div>
             <div class="post-minutes">30</div>
           </div>
-          
+
           <div class="post-time-cell">
             <div class="post-hour">19</div>
             <div class="post-minutes">30</div>
@@ -162,28 +163,73 @@
         </div>
 
         <div class="post-calendar-grid" id="postCalendarGrid">
-          <div class="post-appointments-row" id="postAppointmentsRow1">
-            <div class="post-appointment post-pink" id="postAppointment1" style="grid-column: 2 / 6;">
-              <div class="post-car-model">LAND ROVER RANGE ROVER</div>
-              <div class="post-car-number">А 001 АА 77</div>
-              <div class="post-client-name">Володимир Іванов</div>
+          <!-- Grid Lines (Background) -->
+          <div class="post-grid-lines">
+            <!-- JS generates lines here inside .post-grid-lines -->
+          </div>
+
+          <!-- ЦЕХ 1 Section -->
+          <div class="post-grid-section" id="gridSection1">
+            <div class="post-grid-shop-header" id="gridShopHeader1"></div>
+            <div class="post-grid-posts-container" id="gridPostsContainer1">
+              <!-- Post 1 Row -->
+              <div class="post-grid-row" id="gridRow1">
+                <div class="post-appointment post-pink" id="postAppointment1" style="grid-column: 2 / 6;">
+                  <div class="post-car-model">LAND ROVER RANGE ROVER</div>
+                  <div class="post-car-number">А 001 АА 77</div>
+                  <div class="post-client-name">Володимир Іванов</div>
+                </div>
+                <div class="post-appointment post-green" id="postAppointment2" style="grid-column: 6 / 10;">
+                  <div class="post-car-model">LAND ROVER DISCOVERY4</div>
+                  <div class="post-car-number">А 001 АА 77</div>
+                  <div class="post-client-name">Дмитро Орешкін</div>
+                  <span class="post-icon">🚗 🔧</span>
+                </div>
+                <!-- Moving some appointments to other rows for demo -->
+              </div>
+
+              <!-- Post 2 Row -->
+              <div class="post-grid-row" id="gridRow2">
+                <div class="post-appointment post-beige" id="postAppointment3" style="grid-column: 12 / 16;">
+                  <div class="post-car-model">LAND ROVER DISCOVERY4</div>
+                  <div class="post-car-number">А 001 АА 77</div>
+                  <div class="post-client-name">Олексій</div>
+                </div>
+              </div>
+
+              <!-- Post 3 Row -->
+              <div class="post-grid-row" id="gridRow3">
+                <div class="post-appointment post-beige" id="postAppointment4" style="grid-column: 18 / 22;">
+                  <div class="post-car-model">LAND ROVER FREELAND</div>
+                  <div class="post-car-number">А 001 АА 77</div>
+                  <div class="post-client-name">Павло Кисельов</div>
+                </div>
+              </div>
             </div>
-            <div class="post-appointment post-green" id="postAppointment2" style="grid-column: 6 / 10;">
-              <div class="post-car-model">LAND ROVER DISCOVERY4</div>
-              <div class="post-car-number">А 001 АА 77</div>
-              <div class="post-client-name">Дмитро Орешкін</div>
-              <span class="post-icon">🚗 🔧</span>
+          </div>
+
+          <!-- ЦЕХ 2 Section -->
+          <div class="post-grid-section" id="gridSection2">
+            <div class="post-grid-shop-header" id="gridShopHeader2"></div>
+            <div class="post-grid-posts-container" id="gridPostsContainer2">
+              <div class="post-grid-row" id="gridRow4"></div> <!-- Post 4 -->
+              <div class="post-grid-row" id="gridRow5"></div> <!-- Post 5 -->
+              <div class="post-grid-row" id="gridRow6"></div> <!-- Post 6 -->
             </div>
-            <div class="post-appointment post-beige" id="postAppointment3" style="grid-column: 12 / 16;">
-              <div class="post-car-model">LAND ROVER DISCOVERY4</div>
-              <div class="post-car-number">А 001 АА 77</div>
-              <div class="post-client-name">Олексій</div>
+          </div>
+
+          <!-- МИЙКА Section -->
+          <div class="post-grid-section" id="gridSection3">
+            <div class="post-grid-shop-header" id="gridShopHeader3"></div>
+            <div class="post-grid-posts-container" id="gridPostsContainer3">
+              <div class="post-grid-row" id="gridRow7"></div> <!-- Post 7 -->
             </div>
-            <div class="post-appointment post-beige" id="postAppointment4" style="grid-column: 18 / 22;">
-              <div class="post-car-model">LAND ROVER FREELAND</div>
-              <div class="post-car-number">А 001 АА 77</div>
-              <div class="post-client-name">Павло Кисельов</div>
-            </div>
+          </div>
+
+          <!-- НАГАДУВАННЯ Section -->
+          <div class="post-grid-section" id="gridSection4">
+            <div class="post-grid-shop-header" id="gridShopHeader4"></div>
+            <!-- No posts defined for reminders in this demo, but structure is there -->
           </div>
         </div>
       </main>

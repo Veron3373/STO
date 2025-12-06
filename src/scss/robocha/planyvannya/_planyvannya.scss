@@ -157,12 +157,16 @@ $reminder: #003d82;
       margin-bottom: 8px;
       font-weight: 500;
       cursor: pointer;
+      height: 40px;
+      /* Fixed height for alignment */
+      box-sizing: border-box;
 
       .post-toggle-btn {
         background: none;
         border: none;
         cursor: pointer;
         font-size: 12px;
+        transition: transform 0.2s;
       }
     }
 
@@ -171,12 +175,15 @@ $reminder: #003d82;
       margin-bottom: 12px;
 
       .post-post-item {
-        padding: 10px;
+        padding: 6px 10px;
         margin-bottom: 6px;
         border-left: 3px solid $primary-blue;
         background: #f9f9f9;
         cursor: pointer;
         transition: background 0.2s;
+        height: 70px;
+        /* Fixed height for alignment */
+        box-sizing: border-box;
 
         &:hover {
           background: #f0f0f0;
@@ -348,6 +355,7 @@ $reminder: #003d82;
         z-index: 0;
       }
 
+      // Grid Lines
       .post-grid-lines {
         position: absolute;
         top: 0;
@@ -355,9 +363,12 @@ $reminder: #003d82;
         right: 24px;
         bottom: 0;
         pointer-events: none;
-        z-index: 1;
+        z-index: 0;
+        /* Lower z-index to be behind content */
         display: grid;
         grid-template-columns: repeat(24, 1fr);
+        height: 100%;
+        /* Fallback */
 
         .post-hour-line {
           border-right: 1px solid $border-gray;
@@ -371,60 +382,89 @@ $reminder: #003d82;
           }
         }
       }
-    }
 
-    .post-appointments-row {
-      display: grid;
-      grid-template-columns: repeat(24, 1fr);
-      gap: 0;
-      padding: 0 24px;
-      border-bottom: 1px solid #eee;
-      position: relative;
-      z-index: 2;
+      // Sections
 
-      .post-appointment {
-        padding: 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
+
+      .post-grid-shop-header {
+        height: $header-height;
+        margin-bottom: $row-margin;
+        background: rgba(0, 0, 0, 0.02);
+        /* Little visual cue */
+        border-radius: 4px;
+      }
+
+
+
+      .post-grid-row {
+        height: $row-height;
+        margin-bottom: $row-margin;
+        display: grid;
+        grid-template-columns: repeat(24, 1fr);
+        gap: 0;
+        padding: 0 24px;
+        border-bottom: 1px solid #eee;
+        /* Maintain the look */
         position: relative;
+        z-index: 2;
+        align-items: center;
+        /* Vertically center appointments if they are smaller */
 
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
+        .post-appointment {
+          padding: 6px 10px;
+          /* Reduced padding to fit fixed height */
+          height: calc(100% - 10px);
+          /* Fit within row with some margin */
+          border-radius: 6px;
+          font-size: 11px;
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+          position: relative;
+          overflow: hidden;
 
-        .post-car-model {
-          font-weight: 600;
-          margin-bottom: 4px;
-        }
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+          }
 
-        .post-car-number {
-          font-weight: 500;
-          margin-bottom: 4px;
-        }
+          .post-car-model {
+            font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
 
-        .post-client-name {
-          color: #666;
-        }
+          .post-car-number {
+            font-weight: 500;
+            margin-bottom: 2px;
+          }
 
-        .post-icon {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-        }
+          .post-client-name {
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
 
-        &.post-pink {
-          background: #ffb3b3;
-        }
+          .post-icon {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+          }
 
-        &.post-green {
-          background: #b3e6cc;
-        }
+          &.post-pink {
+            background: #ffb3b3;
+          }
 
-        &.post-beige {
-          background: #ffefb3;
+          &.post-green {
+            background: #b3e6cc;
+          }
+
+          &.post-beige {
+            background: #ffefb3;
+          }
         }
       }
     }
@@ -432,9 +472,6 @@ $reminder: #003d82;
 
   // Mini Calendar
   .post-mini-calendar {
-    width: 240px;
-    background: $white;
-    border-left: 1px solid $border-gray;
     padding: 20px;
     overflow-y: auto;
 
@@ -587,3 +624,13 @@ $reminder: #003d82;
     }
   }
 }
+
+/* This closes the outermost container, e.g., .post-calendar-wrapper */
+
+/* Utility */
+.hidden {
+  display: none !important;
+}
+}
+
+```

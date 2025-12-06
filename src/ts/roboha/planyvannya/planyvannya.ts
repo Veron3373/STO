@@ -38,7 +38,71 @@ class CalendarWidget {
         if (monthNextBtn) monthNextBtn.addEventListener('click', () => this.handleMonthNext());
 
         this.addGridLines();
+        this.initLayoutControl();
         this.render();
+    }
+
+    private initLayoutControl(): void {
+        // 1. Scroll Sync
+        const sidebar = document.getElementById('postSidebar');
+        const grid = document.getElementById('postCalendarGrid');
+
+        if (sidebar && grid) {
+            let isSyncing = false;
+            sidebar.addEventListener('scroll', () => {
+                if (!isSyncing) {
+                    isSyncing = true;
+                    grid.scrollTop = sidebar.scrollTop;
+                    // Slightly delay releasing lock to prevent loop
+                    setTimeout(() => isSyncing = false, 50);
+                }
+            });
+            grid.addEventListener('scroll', () => {
+                if (!isSyncing) {
+                    isSyncing = true;
+                    sidebar.scrollTop = grid.scrollTop;
+                    setTimeout(() => isSyncing = false, 50);
+                }
+            });
+        }
+
+        // 2. Toggles (Expand/Collapse Shops)
+        // We have 4 potential sections based on HTML structure
+        for (let i = 1; i <= 4; i++) {
+            const toggleBtn = document.getElementById(`postToggleBtn${i}`);
+            const sidebarList = document.getElementById(`postPostsList${i}`); // May not exist for empty sections
+            const gridContainer = document.getElementById(`gridPostsContainer${i}`);
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // prevent header click if we add one later
+
+                    const isHidden = sidebarList ? sidebarList.classList.contains('hidden') : gridContainer?.classList.contains('hidden');
+                    const newStateIsHidden = !isHidden;
+
+                    if (sidebarList) {
+                        if (newStateIsHidden) sidebarList.classList.add('hidden');
+                        else sidebarList.classList.remove('hidden');
+                    }
+
+                    if (gridContainer) {
+                        if (newStateIsHidden) gridContainer.classList.add('hidden');
+                        else gridContainer.classList.remove('hidden');
+                    }
+
+                    // Rotate arrow
+                    toggleBtn.style.transform = newStateIsHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+                });
+            }
+
+            // Also make the whole header clickable for better UX?
+            const subLocation = document.getElementById(`postSubLocation${i}`);
+            if (subLocation && toggleBtn) {
+                subLocation.addEventListener('click', () => {
+                    toggleBtn.click();
+                });
+            }
+        }
     }
 
     private addGridLines(): void {

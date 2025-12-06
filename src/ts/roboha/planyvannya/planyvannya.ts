@@ -4,31 +4,49 @@ class CalendarWidget {
     private viewYear: number;
     private viewMonth: number; // 0-11
     private today: Date;
+    private selectedDate: Date;
     private container: HTMLElement | null;
-    private yearDisplay: HTMLElement | null;
+    private headerDateDisplay: HTMLElement | null;
 
     constructor() {
         this.today = new Date();
+        // Normalize today to start of day for comparison
+        this.today.setHours(0, 0, 0, 0);
+
+        this.selectedDate = new Date(this.today);
         this.viewYear = this.today.getFullYear();
         this.viewMonth = this.today.getMonth();
 
         this.container = document.getElementById('postCalendarContainer');
-        this.yearDisplay = document.getElementById('postYearDisplay');
+        this.headerDateDisplay = document.getElementById('postHeaderDateDisplay');
 
         this.init();
     }
 
     private init(): void {
+        // Top Header Navigation
+        const headerPrev = document.getElementById('headerNavPrev');
+        const headerNext = document.getElementById('headerNavNext');
+        const todayBtn = document.getElementById('postTodayBtn');
+
+        if (headerPrev) headerPrev.addEventListener('click', () => this.handlePrev());
+        if (headerNext) headerNext.addEventListener('click', () => this.handleNext());
+        if (todayBtn) todayBtn.addEventListener('click', () => this.goToToday());
+
+        // Sidebar Navigation (keep existing functional)
         const prevBtn = document.getElementById('postYearPrev');
         const nextBtn = document.getElementById('postYearNext');
 
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => this.handlePrev());
-        }
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => this.handleNext());
-        }
+        if (prevBtn) prevBtn.addEventListener('click', () => this.handlePrev());
+        if (nextBtn) nextBtn.addEventListener('click', () => this.handleNext());
 
+        this.render();
+    }
+
+    private goToToday(): void {
+        this.selectedDate = new Date(this.today);
+        this.viewMonth = this.today.getMonth();
+        this.viewYear = this.today.getFullYear();
         this.render();
     }
 
@@ -58,11 +76,43 @@ class CalendarWidget {
         return months[monthIndex];
     }
 
+    private formatFullDate(date: Date): string {
+        const days = [
+            'Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота'
+        ];
+        const dayName = days[date.getDay()];
+        const day = date.getDate();
+
+        // Proper UA genitive case for months is complex, keeping simple or mapping:
+        const monthsGenitive = [
+            'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+            'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
+        ];
+        const monthName = monthsGenitive[date.getMonth()];
+
+        return `${dayName}, ${day} ${monthName} ${date.getFullYear()}`;
+    }
+
+    private selectDate(year: number, month: number, day: number): void {
+        this.selectedDate = new Date(year, month, day);
+        this.render(); // Re-render to update highlights and text
+    }
+
     private render(): void {
-        if (!this.container || !this.yearDisplay) return;
+        if (!this.container) return;
+
+        // Update Header Text
+        if (this.headerDateDisplay) {
+            this.headerDateDisplay.textContent = this.formatFullDate(this.selectedDate);
+        }
+
+        // Update Sidebar Year Display (if it exists)
+        const sidebarYear = document.getElementById('postYearDisplay');
+        if (sidebarYear) {
+            sidebarYear.textContent = this.viewYear.toString();
+        }
 
         this.container.innerHTML = '';
-        this.yearDisplay.textContent = this.viewYear.toString();
 
         // Render current view month
         this.container.appendChild(this.renderMonth(this.viewYear, this.viewMonth));
@@ -121,14 +171,27 @@ class CalendarWidget {
             const daySpan = document.createElement('span');
             daySpan.textContent = day.toString();
 
-            // Check if today
+            const currentDate = new Date(year, month, day);
+
+            // Check if selected
             if (
-                day === this.today.getDate() &&
-                month === this.today.getMonth() &&
-                year === this.today.getFullYear()
+                currentDate.getDate() === this.selectedDate.getDate() &&
+                currentDate.getMonth() === this.selectedDate.getMonth() &&
+                currentDate.getFullYear() === this.selectedDate.getFullYear()
             ) {
-                daySpan.className = 'post-today';
+                daySpan.className = 'post-selected-date';
             }
+            // Check if today (secondary style if needed, or just rely on selection if default)
+            else if (
+                currentDate.getDate() === this.today.getDate() &&
+                currentDate.getMonth() === this.today.getMonth() &&
+                currentDate.getFullYear() === this.today.getFullYear()
+            ) {
+                daySpan.className = 'post-today'; // Keep original blue if not selected
+            }
+
+            // Add click event
+            daySpan.addEventListener('click', () => this.selectDate(year, month, day));
 
             daysDiv.appendChild(daySpan);
         }

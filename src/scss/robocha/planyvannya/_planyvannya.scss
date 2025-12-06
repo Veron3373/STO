@@ -260,6 +260,8 @@ $reminder: #003d82;
         border-radius: 4px;
         cursor: pointer;
         font-weight: 500;
+        min-width: 80px;
+        text-align: center;
 
         &:hover {
           background: color.adjust($light-gray, $lightness: -5%);
@@ -338,6 +340,10 @@ $reminder: #003d82;
           font-weight: 400;
           color: #666;
         }
+
+        &:nth-child(3n) {
+          border-right: 1px solid $border-gray;
+        }
       }
     }
 
@@ -345,6 +351,15 @@ $reminder: #003d82;
       flex: 1;
       overflow-y: auto;
       padding: 0 24px;
+      /* Vertical grid lines - 36 cols. 12 hours. 
+         Line every 3 cols (1 hour). 
+         3 cols = 3/36 = 1/12 = 8.333%
+      */
+      background: repeating-linear-gradient(to right,
+          transparent,
+          transparent calc(100% / 12 - 1px),
+          $border-gray calc(100% / 12 - 1px),
+          $border-gray calc(100% / 12));
     }
 
     .post-master-row {
@@ -546,6 +561,13 @@ $reminder: #003d82;
           &.post-today {
             background: $primary-blue;
             color: $white;
+            font-weight: 600;
+          }
+
+          &.post-selected-date {
+            background: #ffe082;
+            /* Yellow */
+            color: $text-dark;
             font-weight: 600;
           }
         }

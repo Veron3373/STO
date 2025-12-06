@@ -134,8 +134,7 @@ $row-margin: 6px;
   .post-main-content {
     display: flex;
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
   // Sidebar
@@ -181,8 +180,9 @@ $row-margin: 6px;
 
       .post-post-item {
         padding: 6px 10px;
-        margin-bottom: 6px;
+        margin-bottom: 0;
         border-left: 3px solid $primary-blue;
+        border-bottom: 1px solid $border-gray;
         background: #f9f9f9;
         cursor: pointer;
         transition: background 0.2s;
@@ -343,6 +343,7 @@ $row-margin: 6px;
 
     .post-calendar-grid {
       flex: 1;
+      overflow-y: auto;
       padding: 0;
       position: relative;
       background: $white;
@@ -402,17 +403,15 @@ $row-margin: 6px;
 
       .post-grid-row {
         height: $row-height;
-        margin-bottom: $row-margin;
+        margin-bottom: 0;
         display: grid;
         grid-template-columns: repeat(24, 1fr);
         gap: 0;
         padding: 0 24px;
-        border-bottom: 1px solid #eee;
-        /* Maintain the look */
+        border-bottom: 1px solid $border-gray;
         position: relative;
         z-index: 2;
         align-items: center;
-        /* Vertically center appointments if they are smaller */
 
         .post-appointment {
           padding: 6px 10px;

@@ -18,12 +18,7 @@ $reminder: #003d82;
 
 // Всі стилі тільки для планувальника
 .post-planning-container {
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
+  // Спочатку власні властивості контейнера
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
   font-size: 14px;
   color: $text-dark;
@@ -31,6 +26,13 @@ $reminder: #003d82;
   display: flex;
   flex-direction: column;
   height: 100vh;
+
+  // Потім вкладені правила
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
   // Header
   .post-header {

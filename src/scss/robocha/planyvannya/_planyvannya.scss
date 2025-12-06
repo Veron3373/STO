@@ -323,7 +323,7 @@ $reminder: #003d82;
 
     .post-time-header {
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
+      grid-template-columns: repeat(36, 1fr);
       padding: 12px 24px;
       border-bottom: 2px solid $border-gray;
       background: $light-gray;
@@ -363,7 +363,7 @@ $reminder: #003d82;
 
     .post-appointments-row {
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
+      grid-template-columns: repeat(36, 1fr);
       gap: 8px;
       padding: 12px 0;
       border-bottom: 1px solid #eee;

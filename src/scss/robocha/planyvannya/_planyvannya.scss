@@ -269,7 +269,7 @@ $reminder: #003d82;
         left: 24px;
         bottom: 0;
         width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
-        background: #e8e8e8;
+        background: rgba(180, 180, 180, 0.5);
         z-index: 1;
       }
 
@@ -285,19 +285,28 @@ $reminder: #003d82;
           font-size: 14px;
           font-weight: 600;
           color: $text-dark;
-          text-align: center;
-          padding: 4px;
+          text-align: left;
+          padding: 4px 4px 4px 8px;
           grid-column: 1 / 2;
-          border-right: 1px solid $border-gray;
+          position: relative;
+
+          &::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 50%;
+            width: 1px;
+            background: $border-gray;
+          }
         }
 
         .post-minutes {
           font-size: 12px;
           font-weight: 400;
           color: $text-dark;
-          text-align: center;
-          padding: 4px;
-          padding-top: 7px;
+          text-align: left;
+          padding: 0px 4px 4px 8px;
           grid-column: 2 / 3;
           border-right: 1px solid $border-gray;
         }
@@ -334,7 +343,7 @@ $reminder: #003d82;
         left: 24px;
         bottom: 0;
         width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
-        background: #e8e8e8;
+        background: rgba(180, 180, 180, 0.5);
         pointer-events: none;
         z-index: 0;
       }

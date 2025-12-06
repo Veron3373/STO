@@ -1,4 +1,3 @@
-//src\ts\roboha\planyvannya\planyvannya.ts
 class CalendarWidget {
     private viewYear: number;
     private viewMonth: number;
@@ -22,23 +21,23 @@ class CalendarWidget {
     }
 
     private init(): void {
+        // Кнопки в header - рухають ДНІ
         const headerPrev = document.getElementById('headerNavPrev');
         const headerNext = document.getElementById('headerNavNext');
         const todayBtn = document.getElementById('postTodayBtn');
 
-        if (headerPrev) headerPrev.addEventListener('click', () => this.handlePrev());
-        if (headerNext) headerNext.addEventListener('click', () => this.handleNext());
+        if (headerPrev) headerPrev.addEventListener('click', () => this.handleDayPrev());
+        if (headerNext) headerNext.addEventListener('click', () => this.handleDayNext());
         if (todayBtn) todayBtn.addEventListener('click', () => this.goToToday());
 
-        const prevBtn = document.getElementById('postYearPrev');
-        const nextBtn = document.getElementById('postYearNext');
+        // Кнопки в sidebar (біля року) - рухають МІСЯЦІ
+        const monthPrevBtn = document.getElementById('postYearPrev');
+        const monthNextBtn = document.getElementById('postYearNext');
 
-        if (prevBtn) prevBtn.addEventListener('click', () => this.handlePrev());
-        if (nextBtn) nextBtn.addEventListener('click', () => this.handleNext());
+        if (monthPrevBtn) monthPrevBtn.addEventListener('click', () => this.handleMonthPrev());
+        if (monthNextBtn) monthNextBtn.addEventListener('click', () => this.handleMonthNext());
 
-        // Додаємо вертикальні лінії в grid
         this.addGridLines();
-
         this.render();
     }
 
@@ -46,13 +45,11 @@ class CalendarWidget {
         const calendarGrid = document.getElementById('postCalendarGrid');
         if (!calendarGrid) return;
 
-        // Перевіряємо чи вже є лінії
         let linesContainer = calendarGrid.querySelector('.post-grid-lines');
         if (!linesContainer) {
             linesContainer = document.createElement('div');
             linesContainer.className = 'post-grid-lines';
 
-            // Додаємо 12 ліній (для 12 годин)
             for (let i = 0; i < 12; i++) {
                 const line = document.createElement('div');
                 line.className = 'post-hour-line';
@@ -70,19 +67,37 @@ class CalendarWidget {
         this.render();
     }
 
-    private handlePrev(): void {
-        // Переходимо на попередній день
+    // Рух по ДНЯХ (для кнопок в header)
+    private handleDayPrev(): void {
         this.selectedDate.setDate(this.selectedDate.getDate() - 1);
         this.viewMonth = this.selectedDate.getMonth();
         this.viewYear = this.selectedDate.getFullYear();
         this.render();
     }
 
-    private handleNext(): void {
-        // Переходимо на наступний день
+    private handleDayNext(): void {
         this.selectedDate.setDate(this.selectedDate.getDate() + 1);
         this.viewMonth = this.selectedDate.getMonth();
         this.viewYear = this.selectedDate.getFullYear();
+        this.render();
+    }
+
+    // Рух по МІСЯЦЯХ (для кнопок в sidebar)
+    private handleMonthPrev(): void {
+        this.viewMonth--;
+        if (this.viewMonth < 0) {
+            this.viewMonth = 11;
+            this.viewYear--;
+        }
+        this.render();
+    }
+
+    private handleMonthNext(): void {
+        this.viewMonth++;
+        if (this.viewMonth > 11) {
+            this.viewMonth = 0;
+            this.viewYear++;
+        }
         this.render();
     }
 
@@ -169,32 +184,25 @@ class CalendarWidget {
 
         const startHour = 8;
         const endHour = 20;
-        const totalMinutes = (endHour - startHour) * 60; // 720 хвилин
+        const totalMinutes = (endHour - startHour) * 60;
 
         const currentHour = now.getHours();
         const currentMin = now.getMinutes();
 
         if (checkTime) {
-            // ВИПРАВЛЕНО: Точна кількість хвилин з початку робочого дня
             let minutesPassed = (currentHour - startHour) * 60 + currentMin;
 
             if (minutesPassed < 0) minutesPassed = 0;
             if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
-            // Відсоток ТОЧНО по хвилинах (не по блоках)
-            // Наприклад: 15:47 = 7*60 + 47 = 467 хвилин з 8:00
-            // 467 / 720 = 64.86%
             pastPercentage = (minutesPassed / totalMinutes) * 100;
 
-            // Визначаємо які комірки повністю в минулому
-            // Комірка = 30 хвилин
             const slotIndex = Math.floor(minutesPassed / 30);
 
             for (let i = 0; i < children.length; i++) {
                 const cell = children[i];
                 cell.classList.remove('post-past-time');
 
-                // Повністю сірі тільки ті комірки, які ЗАКІНЧИЛИСЬ
                 if (i < slotIndex) {
                     cell.classList.add('post-past-time');
                 }
@@ -205,7 +213,6 @@ class CalendarWidget {
             children.forEach(c => c.classList.remove('post-past-time'));
         }
 
-        // Застосовуємо змінну для обох header і grid
         timeHeader.style.setProperty('--past-percentage', `${pastPercentage}%`);
         calendarGrid.style.setProperty('--past-percentage', `${pastPercentage}%`);
     }

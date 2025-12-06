@@ -244,11 +244,12 @@ $reminder: #003d82;
     .post-time-header {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
-      padding: 12px 24px;
+      padding: 8px 24px;
       padding-right: 32px;
       border-bottom: 2px solid $border-gray;
       position: relative;
       overflow: hidden;
+      min-height: 60px;
 
       &::before {
         content: '';
@@ -285,21 +286,25 @@ $reminder: #003d82;
         }
 
         .post-hour {
-          font-size: 16px;
+          font-size: 17px;
           font-weight: 600;
           color: $text-dark;
           text-align: left;
-          padding: 4px 0 2px 8px;
+          padding: 6px 0 4px 12px;
           grid-column: 1 / -1;
+          border-right: 1px solid $border-gray;
+          position: relative;
         }
 
         .post-minutes {
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 400;
           color: #666;
           text-align: left;
-          padding: 2px 0 4px 8px;
+          padding: 6px 0 4px 12px;
           grid-column: 2 / 3;
+          border-left: 1px solid $border-gray;
+          position: relative;
         }
 
         &.post-past-time {

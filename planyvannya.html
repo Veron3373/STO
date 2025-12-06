@@ -4,15 +4,227 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Бухгалтерія</title>
+  <title>Планувальник</title>
   <link rel="stylesheet" href="./src/scss/robocha/planyvannya/_planyvannya.scss" />
   <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
   <script type="module" src="./src/ts/roboha/planyvannya/planyvannya.ts"></script>
 </head>
 
 <body>
-  <div class="Planning-container" style="display: none;">
-    <h1>Тестова сторінка</h1>
+  <div class="post-planning-container" id="postPlanningContainer">
+    <!-- Header -->
+    <header class="post-header" id="postHeader">
+      <div class="post-logo" id="postLogo">
+        <img src="/STO/logo.jpg" alt="Лого">
+        <span class="post-logo-text">B.S.Motorservice</span>
+      </div>
+      <nav class="post-nav" id="postNav">
+        <a href="#" class="post-nav-link" id="postNavLinkHome">Головна</a>
+      </nav>
+      <div class="post-header-actions" id="postHeaderActions">
+        <button class="post-icon-btn" id="postBtnPhone"><span>📞</span></button>
+        <button class="post-icon-btn" id="postBtnChat"><span>💬</span></button>
+        <button class="post-icon-btn post-alert" id="postBtnAlert"><span>🔔</span></button>
+        <button class="post-icon-btn" id="postBtnProfile"><span>👤</span></button>
+      </div>
+    </header>
+
+    <div class="post-main-content" id="postMainContent">
+      <!-- Sidebar -->
+      <aside class="post-sidebar" id="postSidebar">
+        <button class="post-add-btn" id="postAddBtn">+ Записати</button>
+        
+        <div class="post-location-section" id="postLocationSection">
+          <div class="post-sub-location" id="postSubLocation1">
+            <span>ЦЕХ 1</span>
+            <button class="post-toggle-btn" id="postToggleBtn1">▼</button>
+          </div>
+          
+          <div class="post-posts-list" id="postPostsList1">
+            <div class="post-post-item" id="postPostItem1">
+              <div class="post-post-title">Пост 1</div>
+              <div class="post-post-subtitle">2 стоєчний підйомник</div>
+            </div>
+            <div class="post-post-item" id="postPostItem2">
+              <div class="post-post-title">Пост 2</div>
+              <div class="post-post-subtitle">4 стоєчний УУК</div>
+            </div>
+            <div class="post-post-item" id="postPostItem3">
+              <div class="post-post-title">Пост 3</div>
+              <div class="post-post-subtitle">2 стоєчний</div>
+            </div>
+          </div>
+
+          <div class="post-sub-location" id="postSubLocation2">
+            <span>ЦЕХ 2</span>
+            <button class="post-toggle-btn" id="postToggleBtn2">▼</button>
+          </div>
+          
+          <div class="post-posts-list" id="postPostsList2">
+            <div class="post-post-item" id="postPostItem4">
+              <div class="post-post-title">Пост 4</div>
+              <div class="post-post-subtitle">2 стоєчний</div>
+            </div>
+            <div class="post-post-item" id="postPostItem5">
+              <div class="post-post-title">Пост 5</div>
+              <div class="post-post-subtitle">Пост електрика</div>
+            </div>
+            <div class="post-post-item" id="postPostItem6">
+              <div class="post-post-title">Пост 6</div>
+              <div class="post-post-subtitle">2 стоєчний</div>
+            </div>
+          </div>
+
+          <div class="post-sub-location" id="postSubLocation3">
+            <span>МИЙКА</span>
+            <button class="post-toggle-btn" id="postToggleBtn3">▼</button>
+          </div>
+          
+          <div class="post-posts-list" id="postPostsList3">
+            <div class="post-post-item" id="postPostItem7">
+              <div class="post-post-title">Пост 7</div>
+            </div>
+          </div>
+
+          <div class="post-sub-location" id="postSubLocation4">
+            <span>НАГАДУВАННЯ</span>
+            <button class="post-toggle-btn" id="postToggleBtn4">▼</button>
+          </div>
+          <button class="post-add-reminder-btn" id="postAddReminderBtn">⊕ додати</button>
+        </div>
+      </aside>
+
+      <!-- Calendar -->
+      <main class="post-calendar-area" id="postCalendarArea">
+        <div class="post-time-header" id="postTimeHeader">
+          <div class="post-time-cell" id="postTimeCell1">8<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell2">9<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell3">10<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell4">11<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell5">12<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell6">13<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell7">14<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell8">15<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell9">16<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell10">17<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell11">18<span class="post-minutes">30</span></div>
+          <div class="post-time-cell" id="postTimeCell12">19<span class="post-minutes">30</span></div>
+        </div>
+
+        <div class="post-calendar-grid" id="postCalendarGrid">
+          <!-- Master Row 1 -->
+          <div class="post-master-row" id="postMasterRow1">
+            <div class="post-master-label">Майстер: Олександр Іванов</div>
+            <div class="post-parts-label">Запчастини: Іван Олександров</div>
+          </div>
+          
+          <div class="post-appointments-row" id="postAppointmentsRow1">
+            <div class="post-appointment post-pink" id="postAppointment1" style="grid-column: 1 / 3;">
+              <div class="post-car-model">LAND ROVER RANGE ROVER</div>
+              <div class="post-car-number">А 001 АА 77</div>
+              <div class="post-client-name">Володимир Іванов</div>
+            </div>
+            <div class="post-appointment post-green" id="postAppointment2" style="grid-column: 3 / 5;">
+              <div class="post-car-model">LAND ROVER DISCOVERY4</div>
+              <div class="post-car-number">А 001 АА 77</div>
+              <div class="post-client-name">Дмитро Орешкін</div>
+              <span class="post-icon">🚗 🔧</span>
+            </div>
+            <div class="post-appointment post-beige" id="postAppointment3" style="grid-column: 6 / 8;">
+              <div class="post-car-model">LAND ROVER DISCOVERY4</div>
+              <div class="post-car-number">А 001 АА 77</div>
+              <div class="post-client-name">Олексій</div>
+            </div>
+            <div class="post-appointment post-beige" id="postAppointment4" style="grid-column: 9 / 11;">
+              <div class="post-car-model">LAND ROVER FREELAND</div>
+              <div class="post-car-number">А 001 АА 77</div>
+              <div class="post-client-name">Павло Кисельов</div>
+            </div>
+          </div>
+
+          <!-- Additional rows would be added here -->
+        </div>
+
+        <div class="post-legend" id="postLegend">
+          <div class="post-legend-item">
+            <div class="post-color-box post-scheduled"></div>
+            <span>Запланований</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-no-show"></div>
+            <span>Не приїхав</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-in-progress"></div>
+            <span>В роботі</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-repaired"></div>
+            <span>Відремонтований</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-reserve"></div>
+            <span>Резерв поста</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-first-time"></div>
+            <span>Перший раз</span>
+          </div>
+          <div class="post-legend-item">
+            <span>⚡ Потрібна електрика</span>
+          </div>
+          <div class="post-legend-item">
+            <span>🚗 Потрібна мийка</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-alert-color"></div>
+            <span>Зірвалося нагадування</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-reminder-color"></div>
+            <span>Нагадування встановлено</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- Mini Calendar -->
+      <aside class="post-mini-calendar" id="postMiniCalendar">
+        <div class="post-year-nav" id="postYearNav">
+          <button id="postYearPrev">‹</button>
+          <span id="postYearDisplay">2023</span>
+          <button id="postYearNext">›</button>
+        </div>
+        
+        <div class="post-month-calendar" id="postMonthCalendar1">
+          <h3>Липень</h3>
+          <div class="post-weekdays">
+            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Нд</span>
+          </div>
+          <div class="post-days" id="postDaysJuly">
+            <span></span><span></span><span></span><span></span><span></span><span>1</span><span>2</span>
+            <span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
+            <span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span class="post-today">15</span><span>16</span>
+            <span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span><span>23</span>
+            <span>24</span><span>25</span><span>26</span><span>27</span><span>28</span><span>29</span><span>30</span>
+            <span>31</span>
+          </div>
+        </div>
+
+        <div class="post-month-calendar" id="postMonthCalendar2">
+          <h3>Серпень</h3>
+          <div class="post-weekdays">
+            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Нд</span>
+          </div>
+          <div class="post-days" id="postDaysAugust">
+            <span></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+            <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
+            <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+            <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
+            <span>28</span><span>29</span><span>30</span><span>31</span>
+          </div>
+        </div>
+      </aside>
+    </div>
   </div>
   <script type="module" src="./src/ts/roboha/planyvannya/planyvannya_auth_guard.ts"></script>
 </body>

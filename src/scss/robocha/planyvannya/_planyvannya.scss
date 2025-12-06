@@ -1,4 +1,3 @@
-//src\scss\robocha\planyvannya\_planyvannya.scss
 @use "sass:color";
 
 // Кольори
@@ -16,9 +15,7 @@ $repaired: #e6e6e6;
 $alert: #ff0000;
 $reminder: #003d82;
 
-// Всі стилі тільки для планувальника
 .post-planning-container {
-  // Спочатку власні властивості контейнера
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
   font-size: 14px;
   color: $text-dark;
@@ -27,7 +24,6 @@ $reminder: #003d82;
   flex-direction: column;
   height: 100vh;
 
-  // Потім вкладені правила
   * {
     margin: 0;
     padding: 0;
@@ -327,14 +323,34 @@ $reminder: #003d82;
       display: grid;
       grid-template-columns: repeat(24, 1fr);
       padding: 12px 24px;
-      padding-right: 32px; // 24px + 8px scrollbar compensation
+      padding-right: 32px;
       border-bottom: 2px solid $border-gray;
       background: $light-gray;
+      position: relative;
+
+      // Вертикальні лінії (кожна година = 2 комірки)
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 24px;
+        right: 32px;
+        bottom: 0;
+        background: repeating-linear-gradient(to right,
+            transparent,
+            transparent calc(100% / 12 - 1px),
+            $border-gray calc(100% / 12 - 1px),
+            $border-gray calc(100% / 12));
+        pointer-events: none;
+        z-index: 0;
+      }
 
       .post-time-cell {
         text-align: center;
         font-weight: 600;
         font-size: 16px;
+        position: relative;
+        z-index: 1;
 
         .post-minutes {
           font-size: 12px;
@@ -350,32 +366,45 @@ $reminder: #003d82;
             color: #999;
           }
         }
-
-        &:nth-child(2n) {
-          border-right: 1px solid $border-gray;
-        }
       }
     }
 
     .post-calendar-grid {
       flex: 1;
-      overflow-y: scroll; // Always show scrollbar to match header padding
+      overflow-y: scroll;
       padding: 0 24px;
-      /* Vertical grid lines - 36 cols. 12 hours. 
-         Line every 3 cols (1 hour). 
-         3 cols = 3/36 = 1/12 = 8.333%
-      */
-      background: linear-gradient(to right,
-          #e0e0e0 var(--past-percentage, 0%),
-          transparent var(--past-percentage, 0%)),
-        repeating-linear-gradient(to right,
-          transparent,
-          transparent calc(100% / 12 - 1px),
-          $border-gray calc(100% / 12 - 1px),
-          $border-gray calc(100% / 12));
+      position: relative;
+
+      // Сіра заливка для минулого часу
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 24px;
+        bottom: 0;
+        width: calc(var(--past-percentage, 0%) * (100% - 48px) / 100);
+        background: #e0e0e0;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      // Вертикальні лінії (точно як у header)
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 24px;
+        right: 24px;
+        bottom: 0;
+        background: repeating-linear-gradient(to right,
+            transparent,
+            transparent calc(100% / 12 - 1px),
+            $border-gray calc(100% / 12 - 1px),
+            $border-gray calc(100% / 12));
+        pointer-events: none;
+        z-index: 1;
+      }
     }
-
-
 
     .post-appointments-row {
       display: grid;
@@ -383,6 +412,8 @@ $reminder: #003d82;
       gap: 0;
       padding: 12px 0;
       border-bottom: 1px solid #eee;
+      position: relative;
+      z-index: 2;
 
       .post-appointment {
         padding: 10px;
@@ -567,7 +598,6 @@ $reminder: #003d82;
 
           &.post-selected-date {
             background: #ffe082;
-            /* Yellow */
             color: $text-dark;
             font-weight: 600;
           }
@@ -576,7 +606,7 @@ $reminder: #003d82;
     }
   }
 
-  // Scrollbar тільки всередині планувальника
+  // Scrollbar
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;

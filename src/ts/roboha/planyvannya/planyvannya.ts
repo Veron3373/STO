@@ -1,7 +1,8 @@
+//src\ts\roboha\planyvannya\planyvannya.ts
 
 class CalendarWidget {
     private viewYear: number;
-    private viewMonth: number; // 0-11
+    private viewMonth: number;
     private today: Date;
     private selectedDate: Date;
     private container: HTMLElement | null;
@@ -9,7 +10,6 @@ class CalendarWidget {
 
     constructor() {
         this.today = new Date();
-        // Normalize today to start of day for comparison
         this.today.setHours(0, 0, 0, 0);
 
         this.selectedDate = new Date(this.today);
@@ -23,7 +23,6 @@ class CalendarWidget {
     }
 
     private init(): void {
-        // Top Header Navigation
         const headerPrev = document.getElementById('headerNavPrev');
         const headerNext = document.getElementById('headerNavNext');
         const todayBtn = document.getElementById('postTodayBtn');
@@ -32,7 +31,6 @@ class CalendarWidget {
         if (headerNext) headerNext.addEventListener('click', () => this.handleNext());
         if (todayBtn) todayBtn.addEventListener('click', () => this.goToToday());
 
-        // Sidebar Navigation (keep existing functional)
         const prevBtn = document.getElementById('postYearPrev');
         const nextBtn = document.getElementById('postYearNext');
 
@@ -82,7 +80,6 @@ class CalendarWidget {
         const dayName = days[date.getDay()];
         const day = date.getDate();
 
-        // Proper UA genitive case for months is complex, keeping simple or mapping:
         const monthsGenitive = [
             'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
             'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
@@ -94,32 +91,27 @@ class CalendarWidget {
 
     private selectDate(year: number, month: number, day: number): void {
         this.selectedDate = new Date(year, month, day);
-        this.render(); // Re-render to update highlights and text
+        this.render();
     }
 
     private render(): void {
         if (!this.container) return;
 
-        // Update Header Text
         if (this.headerDateDisplay) {
             this.headerDateDisplay.textContent = this.formatFullDate(this.selectedDate);
         }
 
-        // Update Sidebar Year Display (if it exists)
         const sidebarYear = document.getElementById('postYearDisplay');
         if (sidebarYear) {
             sidebarYear.textContent = this.viewYear.toString();
         }
 
-        // Update Time Header Styles (Gray out past hours)
         this.updateHeaderTimeStyles();
 
         this.container.innerHTML = '';
 
-        // Render current view month
         this.container.appendChild(this.renderMonth(this.viewYear, this.viewMonth));
 
-        // Calculate next month
         let nextMonth = this.viewMonth + 1;
         let nextYear = this.viewYear;
         if (nextMonth > 11) {
@@ -127,14 +119,13 @@ class CalendarWidget {
             nextYear++;
         }
 
-        // Render next month
         this.container.appendChild(this.renderMonth(nextYear, nextMonth));
     }
 
     private updateHeaderTimeStyles(): void {
         const timeHeader = document.getElementById('postTimeHeader');
         const calendarGrid = document.getElementById('postCalendarGrid');
-        if (!timeHeader) return;
+        if (!timeHeader || !calendarGrid) return;
 
         const children = Array.from(timeHeader.children) as HTMLElement[];
         const now = new Date();
@@ -152,11 +143,9 @@ class CalendarWidget {
             checkTime = true;
         }
 
-        // Default to 0% (no gray) or 100% (all gray)
         let pastPercentage = 0;
         if (allPast) pastPercentage = 100;
 
-        // We have 12 hours: 8:00 to 20:00 (720 minutes)
         const startHour = 8;
         const endHour = 20;
         const totalMinutes = (endHour - startHour) * 60;
@@ -165,57 +154,50 @@ class CalendarWidget {
         const currentMin = now.getMinutes();
 
         if (checkTime) {
-            // Calculate minutes passed since 8:00
             let minutesPassed = (currentHour - startHour) * 60 + currentMin;
 
             if (minutesPassed < 0) minutesPassed = 0;
             if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
-            // Calculate slot index (0 to 23).
+            // Визначаємо поточний слот (0-23, кожен по 30 хв)
             const slotIndex = Math.floor(minutesPassed / 30);
 
-            // If current block 14:30-15:00 is "started", mark it past
-            // slotIndex is 13 (14th slot). We want to gray out 14 slots (0..13).
-            // So grayMinutes = (slotIndex + 1) * 30.
-            const grayMinutes = (slotIndex + 1) * 30;
+            // ВИПРАВЛЕНО: Заливаємо ВСІ слоти до поточного включно
+            // Якщо зараз 14:47, то slotIndex = 13 (блок 14:30-15:00)
+            // Заливаємо 14 блоків (0-13), тобто до кінця блоку 14:30-15:00
+            const graySlots = slotIndex + 1;
+            const grayMinutes = graySlots * 30;
 
             const finalGrayMinutes = Math.min(grayMinutes, totalMinutes);
-
             pastPercentage = (finalGrayMinutes / totalMinutes) * 100;
 
-            // Apply to Header Cells
+            // Застосовуємо стилі до комірок header
             for (let i = 0; i < children.length; i++) {
                 const cell = children[i];
                 cell.classList.remove('post-past-time');
 
-                if (i <= slotIndex) {
+                if (i < graySlots) {
                     cell.classList.add('post-past-time');
                 }
             }
         } else if (allPast) {
-            // All cells gray
             children.forEach(c => c.classList.add('post-past-time'));
         } else {
-            // Future date, no gray
             children.forEach(c => c.classList.remove('post-past-time'));
         }
 
-        // Apply background gradient to grid
-        if (calendarGrid) {
-            calendarGrid.style.setProperty('--past-percentage', `${pastPercentage}%`);
-        }
+        // Застосовуємо градієнт до grid
+        calendarGrid.style.setProperty('--past-percentage', `${pastPercentage}%`);
     }
 
     private renderMonth(year: number, month: number): HTMLElement {
         const monthDiv = document.createElement('div');
         monthDiv.className = 'post-month-calendar';
 
-        // Header
         const h3 = document.createElement('h3');
         h3.textContent = this.getMonthName(month);
         monthDiv.appendChild(h3);
 
-        // Weekdays
         const weekdaysDiv = document.createElement('div');
         weekdaysDiv.className = 'post-weekdays';
         const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -226,40 +208,32 @@ class CalendarWidget {
         });
         monthDiv.appendChild(weekdaysDiv);
 
-        // Days grid
         const daysDiv = document.createElement('div');
         daysDiv.className = 'post-days';
 
-        // Calculate first day of month and number of days
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
 
-        // Adjust for Monday start (0-6 -> 1-7, where 7 is Sunday)
         let startDay = firstDay.getDay();
-        if (startDay === 0) startDay = 7; // Sunday needs to be 7
+        if (startDay === 0) startDay = 7;
 
-        // Empty cells for days before start of month
         for (let i = 1; i < startDay; i++) {
-            daysDiv.appendChild(document.createElement('span')); // Empty span
+            daysDiv.appendChild(document.createElement('span'));
         }
 
-        // Days
         for (let day = 1; day <= lastDay.getDate(); day++) {
             const daySpan = document.createElement('span');
             daySpan.textContent = day.toString();
 
             const currentDate = new Date(year, month, day);
 
-            // Check if selected
             if (
                 currentDate.getDate() === this.selectedDate.getDate() &&
                 currentDate.getMonth() === this.selectedDate.getMonth() &&
                 currentDate.getFullYear() === this.selectedDate.getFullYear()
             ) {
                 daySpan.className = 'post-selected-date';
-            }
-            // Check if today (secondary style if needed, or just rely on selection if default)
-            else if (
+            } else if (
                 currentDate.getDate() === this.today.getDate() &&
                 currentDate.getMonth() === this.today.getMonth() &&
                 currentDate.getFullYear() === this.today.getFullYear()
@@ -267,7 +241,6 @@ class CalendarWidget {
                 daySpan.className = 'post-today';
             }
 
-            // Add click event
             daySpan.addEventListener('click', () => this.selectDate(year, month, day));
 
             daysDiv.appendChild(daySpan);
@@ -278,6 +251,9 @@ class CalendarWidget {
     }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    new CalendarWidget();
+});
 // Initialize on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     new CalendarWidget();

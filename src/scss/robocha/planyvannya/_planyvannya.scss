@@ -325,7 +325,7 @@ $reminder: #003d82;
 
     .post-time-header {
       display: grid;
-      grid-template-columns: repeat(36, 1fr);
+      grid-template-columns: repeat(24, 1fr);
       padding: 12px 24px;
       border-bottom: 2px solid $border-gray;
       background: $light-gray;
@@ -341,7 +341,7 @@ $reminder: #003d82;
           color: #666;
         }
 
-        &:nth-child(3n) {
+        &:nth-child(2n) {
           border-right: 1px solid $border-gray;
         }
       }
@@ -362,23 +362,11 @@ $reminder: #003d82;
           $border-gray calc(100% / 12));
     }
 
-    .post-master-row {
-      display: flex;
-      gap: 16px;
-      padding: 12px 0;
-      border-bottom: 1px solid $border-gray;
-      background: #fafafa;
-      font-weight: 500;
 
-      .post-master-label,
-      .post-parts-label {
-        flex: 1;
-      }
-    }
 
     .post-appointments-row {
       display: grid;
-      grid-template-columns: repeat(36, 1fr);
+      grid-template-columns: repeat(24, 1fr);
       gap: 8px;
       padding: 12px 0;
       border-bottom: 1px solid #eee;

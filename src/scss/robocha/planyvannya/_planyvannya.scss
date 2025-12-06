@@ -340,7 +340,7 @@ $reminder: #003d82;
         z-index: 0;
       }
 
-      // Сіра заливка для минулого часу в header
+      // Сіра заливка для минулого часу в header (ТОЧНО по відсотку)
       &::after {
         content: '';
         position: absolute;
@@ -401,18 +401,17 @@ $reminder: #003d82;
       position: relative;
       background: $white;
 
-      // Сіра заливка для минулого часу
+      // Сіра заливка для минулого часу (ТОЧНО по відсотку)
       &::before {
         content: '';
         position: absolute;
         top: 0;
-        left: 0;
+        left: 24px;
         bottom: 0;
-        width: calc(var(--past-percentage, 0%));
+        width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
         background: #e0e0e0;
         pointer-events: none;
         z-index: 0;
-        margin-left: 24px;
       }
 
       // Вертикальні лінії години

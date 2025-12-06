@@ -170,40 +170,33 @@ class CalendarWidget {
 
         const startHour = 8;
         const endHour = 20;
-        const totalMinutes = (endHour - startHour) * 60;
+        const totalMinutes = (endHour - startHour) * 60; // 720 хвилин
 
         const currentHour = now.getHours();
         const currentMin = now.getMinutes();
 
         if (checkTime) {
+            // ВИПРАВЛЕНО: Точна кількість хвилин з початку робочого дня
             let minutesPassed = (currentHour - startHour) * 60 + currentMin;
 
             if (minutesPassed < 0) minutesPassed = 0;
             if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
-            // ВИПРАВЛЕНО: Заливаємо тільки ЗАВЕРШЕНІ блоки
-            // Якщо зараз 15:47, то слот 15:30-16:00 ще не закінчився
-            // Тому заливаємо тільки до 15:30 (не включаючи поточний блок)
-            const slotIndex = Math.floor(minutesPassed / 30);
-            
-            // Заливаємо тільки завершені слоти (без поточного)
-            const graySlots = slotIndex;
-            const grayMinutes = graySlots * 30;
+            // Відсоток ТОЧНО по хвилинах (не по блоках)
+            // Наприклад: 15:47 = 7*60 + 47 = 467 хвилин з 8:00
+            // 467 / 720 = 64.86%
+            pastPercentage = (minutesPassed / totalMinutes) * 100;
 
-            const finalGrayMinutes = Math.min(grayMinutes, totalMinutes);
-            
-            // Відсоток для CSS (враховуючи padding 24px з обох боків)
-            const gridWidth = calendarGrid.offsetWidth - 48;
-            const totalWidth = calendarGrid.offsetWidth;
-            const actualPercentage = (finalGrayMinutes / totalMinutes) * (gridWidth / totalWidth) * 100;
-            
-            pastPercentage = actualPercentage;
+            // Визначаємо які комірки повністю в минулому
+            // Комірка = 30 хвилин
+            const slotIndex = Math.floor(minutesPassed / 30);
 
             for (let i = 0; i < children.length; i++) {
                 const cell = children[i];
                 cell.classList.remove('post-past-time');
 
-                if (i < graySlots) {
+                // Повністю сірі тільки ті комірки, які ЗАКІНЧИЛИСЬ
+                if (i < slotIndex) {
                     cell.classList.add('post-past-time');
                 }
             }

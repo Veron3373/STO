@@ -195,13 +195,13 @@ class CalendarWidget {
             const totalMinutes = 12 * 60; // 8:00 до 20:00 = 12 годин
             if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
-            // Округлюємо до найближчого 30-хвилинного слоту
+            // Округлюємо до найближчого 30-хвилинного слоту (для тексту)
             const currentSlot = Math.floor(minutesPassed / 30);
-            const totalSlots = 24; // 12 годин * 2 слоти
-            
-            pastPercentage = (currentSlot / totalSlots) * 100;
 
-            // Позначаємо минулі комірки
+            // Percentage точний (для графіки)
+            pastPercentage = (minutesPassed / totalMinutes) * 100;
+
+            // Позначаємо минулі комірки (текст)
             for (let i = 0; i < children.length; i++) {
                 const cell = children[i];
                 cell.classList.remove('post-past-time');

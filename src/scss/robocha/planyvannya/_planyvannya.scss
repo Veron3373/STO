@@ -100,7 +100,7 @@ $reminder: #003d82;
           font-size: 28px;
           cursor: pointer;
           color: $white;
-          padding: 4px 12px;
+          padding: 4px 20px;
           transition: all 0.2s;
           line-height: 1;
 
@@ -118,7 +118,7 @@ $reminder: #003d82;
           font-size: 15px;
           font-weight: 500;
           color: $white;
-          min-width: 250px;
+          min-width: 150px;
           text-align: center;
         }
       }
@@ -430,7 +430,7 @@ $reminder: #003d82;
         font-size: 28px;
         cursor: pointer;
         color: $text-dark;
-        padding: 8px 12px;
+        padding: 8px 20px;
         border-radius: 4px;
         transition: all 0.2s;
         line-height: 1;

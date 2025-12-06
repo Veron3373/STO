@@ -34,21 +34,6 @@ body {
     z-index: 5;
     background-color: #177245;
     display: block;
-    overflow-y: scroll;
-    /* Приховуємо scrollbar */
-    scrollbar-width: none;
-    /* Firefox */
-    -ms-overflow-style: none;
-    /* IE/Edge */
-
-    &::-webkit-scrollbar {
-      width: 17px;
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: transparent;
-    }
 
     tr {
       display: table;

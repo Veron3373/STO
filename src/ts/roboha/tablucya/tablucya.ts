@@ -749,9 +749,19 @@ function applyVerticalScrollbarCompensation(): void {
     "table-container-modal-sakaz_narad"
   );
   const tbody = container?.querySelector("tbody") as HTMLElement | null;
-  if (!container || !tbody) return;
+  const thead = container?.querySelector("thead") as HTMLElement | null;
+  if (!container || !tbody || !thead) return;
+
   const hasVScroll = tbody.scrollHeight > tbody.clientHeight;
   container.classList.toggle("has-vscroll", hasVScroll);
+
+  // Динамічна компенсація ширини скролбара для thead
+  if (hasVScroll) {
+    const scrollbarWidth = tbody.offsetWidth - tbody.clientWidth;
+    thead.style.paddingRight = `${scrollbarWidth}px`;
+  } else {
+    thead.style.paddingRight = "0px";
+  }
 }
 
 // =============================================================================

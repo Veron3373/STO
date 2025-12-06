@@ -341,6 +341,15 @@ $reminder: #003d82;
           color: #666;
         }
 
+        &.post-past-time {
+          background: #e0e0e0;
+          color: #999;
+
+          .post-minutes {
+            color: #999;
+          }
+        }
+
         &:nth-child(2n) {
           border-right: 1px solid $border-gray;
         }
@@ -367,7 +376,7 @@ $reminder: #003d82;
     .post-appointments-row {
       display: grid;
       grid-template-columns: repeat(24, 1fr);
-      gap: 8px;
+      gap: 0;
       padding: 12px 0;
       border-bottom: 1px solid #eee;
 

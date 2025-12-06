@@ -112,6 +112,9 @@ class CalendarWidget {
             sidebarYear.textContent = this.viewYear.toString();
         }
 
+        // Update Time Header Styles (Gray out past hours)
+        this.updateHeaderTimeStyles();
+
         this.container.innerHTML = '';
 
         // Render current view month
@@ -127,6 +130,57 @@ class CalendarWidget {
 
         // Render next month
         this.container.appendChild(this.renderMonth(nextYear, nextMonth));
+    }
+
+    private updateHeaderTimeStyles(): void {
+        const timeHeader = document.getElementById('postTimeHeader');
+        if (!timeHeader) return;
+
+        const children = Array.from(timeHeader.children) as HTMLElement[];
+        const now = new Date();
+
+        const startOfToday = new Date(this.today);
+        const selected = new Date(this.selectedDate);
+        selected.setHours(0, 0, 0, 0);
+
+        let allPast = false;
+        let checkTime = false;
+
+        if (selected < startOfToday) {
+            allPast = true;
+        } else if (selected.getTime() === startOfToday.getTime()) {
+            checkTime = true;
+        }
+
+        const currentHour = now.getHours();
+        const currentMin = now.getMinutes();
+
+        for (let i = 0; i < children.length; i++) {
+            const cell = children[i];
+            cell.classList.remove('post-past-time');
+
+            if (allPast) {
+                cell.classList.add('post-past-time');
+                continue;
+            }
+
+            if (checkTime) {
+                // i=0 -> 8:00, i=1 -> 8:30
+                const cellHour = 8 + Math.floor(i / 2);
+                const cellMin = (i % 2) * 30;
+
+                let slotEndHour = cellHour;
+                let slotEndMin = cellMin + 30;
+                if (slotEndMin >= 60) {
+                    slotEndHour++;
+                    slotEndMin -= 60;
+                }
+
+                if (currentHour > slotEndHour || (currentHour === slotEndHour && currentMin >= slotEndMin)) {
+                    cell.classList.add('post-past-time');
+                }
+            }
+        }
     }
 
     private renderMonth(year: number, month: number): HTMLElement {
@@ -187,7 +241,7 @@ class CalendarWidget {
                 currentDate.getMonth() === this.today.getMonth() &&
                 currentDate.getFullYear() === this.today.getFullYear()
             ) {
-                daySpan.className = 'post-today'; // Keep original blue if not selected
+                daySpan.className = 'post-today';
             }
 
             // Add click event

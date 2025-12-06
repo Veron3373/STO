@@ -184,26 +184,28 @@ class CalendarWidget {
 
         const startHour = 8;
         const endHour = 20;
-        const totalMinutes = (endHour - startHour) * 60;
+        const totalSlots = (endHour - startHour) * 2; // 24 слоти по 30 хв
 
         const currentHour = now.getHours();
         const currentMin = now.getMinutes();
 
         if (checkTime) {
+            // Визначаємо поточний 30-хвилинний слот
             let minutesPassed = (currentHour - startHour) * 60 + currentMin;
 
             if (minutesPassed < 0) minutesPassed = 0;
-            if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
+            if (minutesPassed > (endHour - startHour) * 60) minutesPassed = (endHour - startHour) * 60;
 
-            pastPercentage = (minutesPassed / totalMinutes) * 100;
+            // Округлюємо до найближчого 30-хвилинного слоту
+            const currentSlot = Math.floor(minutesPassed / 30);
+            pastPercentage = (currentSlot / totalSlots) * 100;
 
-            const slotIndex = Math.floor(minutesPassed / 60);
-
+            // Позначаємо минулі комірки
             for (let i = 0; i < children.length; i++) {
                 const cell = children[i];
                 cell.classList.remove('post-past-time');
 
-                if (i < slotIndex) {
+                if (i < currentSlot) {
                     cell.classList.add('post-past-time');
                 }
             }

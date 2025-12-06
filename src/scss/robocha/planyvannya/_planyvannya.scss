@@ -244,12 +244,12 @@ $reminder: #003d82;
     .post-time-header {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
-      padding: 8px 24px 16px 24px;
+      padding: 8px 24px 8px 24px;
       padding-right: 32px;
       border-bottom: 2px solid $border-gray;
       position: relative;
       overflow: hidden;
-      min-height: 70px;
+      min-height: 50px;
 
       &::before {
         content: '';
@@ -258,7 +258,7 @@ $reminder: #003d82;
         left: 24px;
         right: 32px;
         bottom: 0;
-        background: $light-gray;
+        background: transparent;
         z-index: 0;
       }
 
@@ -269,7 +269,7 @@ $reminder: #003d82;
         left: 24px;
         bottom: 0;
         width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
-        background: #e0e0e0;
+        background: #e8e8e8;
         z-index: 1;
       }
 
@@ -279,11 +279,11 @@ $reminder: #003d82;
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 0;
-        align-items: center;
+        align-items: start;
 
         .post-hour {
           font-size: 14px;
-          font-weight: 400;
+          font-weight: 600;
           color: $text-dark;
           text-align: center;
           padding: 4px;
@@ -294,9 +294,10 @@ $reminder: #003d82;
         .post-minutes {
           font-size: 12px;
           font-weight: 400;
-          color: #999;
+          color: $text-dark;
           text-align: center;
           padding: 4px;
+          padding-top: 7px;
           grid-column: 2 / 3;
           border-right: 1px solid $border-gray;
         }
@@ -333,7 +334,7 @@ $reminder: #003d82;
         left: 24px;
         bottom: 0;
         width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
-        background: #e0e0e0;
+        background: #e8e8e8;
         pointer-events: none;
         z-index: 0;
       }
@@ -367,7 +368,7 @@ $reminder: #003d82;
       display: grid;
       grid-template-columns: repeat(24, 1fr);
       gap: 0;
-      padding: 12px 24px;
+      padding: 0 24px;
       border-bottom: 1px solid #eee;
       position: relative;
       z-index: 2;

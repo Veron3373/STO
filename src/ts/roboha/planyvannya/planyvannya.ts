@@ -1,3 +1,4 @@
+//src\ts\roboha\planyvannya\planyvannya.ts
 class CalendarWidget {
     private viewYear: number;
     private viewMonth: number;

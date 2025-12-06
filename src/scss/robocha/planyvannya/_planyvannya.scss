@@ -1,7 +1,7 @@
 @use "sass:color";
 
 // Кольори
-$primary-blue: #004d26; // Змінено на зелений
+$primary-blue: #004d26;
 $light-gray: #f5f5f5;
 $border-gray: #ddd;
 $text-dark: #333;
@@ -72,6 +72,7 @@ $reminder: #003d82;
         gap: 12px;
         padding-left: 24px;
         border-left: 1px solid rgba(255, 255, 255, 0.2);
+        margin-left: auto;
 
         .post-today-btn {
           padding: 6px 12px;
@@ -109,47 +110,6 @@ $reminder: #003d82;
           color: $white;
           min-width: 200px;
           text-align: center;
-        }
-      }
-
-      // Легенда в header
-      .post-legend {
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        margin-left: auto;
-        padding: 0;
-        border: none;
-        background: transparent;
-        font-size: 12px;
-
-        .post-legend-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: $white;
-
-          .post-color-box {
-            width: 16px;
-            height: 16px;
-            border-radius: 3px;
-
-            &.post-scheduled {
-              background: $scheduled;
-            }
-
-            &.post-no-show {
-              background: $no-show;
-            }
-
-            &.post-in-progress {
-              background: $in-progress;
-            }
-
-            &.post-repaired {
-              background: $repaired;
-            }
-          }
         }
       }
     }
@@ -271,10 +231,6 @@ $reminder: #003d82;
     background: $white;
     overflow: hidden;
 
-    .post-calendar-controls {
-      display: none; // Ховаємо, бо перенесли в header
-    }
-
     .post-time-header {
       display: grid;
       grid-template-columns: repeat(24, 1fr);
@@ -284,7 +240,6 @@ $reminder: #003d82;
       position: relative;
       overflow: hidden;
 
-      // Фон для всіх комірок
       &::before {
         content: '';
         position: absolute;
@@ -296,7 +251,6 @@ $reminder: #003d82;
         z-index: 0;
       }
 
-      // Сіра заливка для минулого часу в header (ТОЧНО по відсотку)
       &::after {
         content: '';
         position: absolute;
@@ -328,7 +282,6 @@ $reminder: #003d82;
           margin-top: 2px;
         }
 
-        // Вертикальні лінії після парних комірок (після кожної години)
         &:nth-child(2n)::after {
           content: '';
           position: absolute;
@@ -357,7 +310,6 @@ $reminder: #003d82;
       position: relative;
       background: $white;
 
-      // Сіра заливка для минулого часу (ТОЧНО по відсотку)
       &::before {
         content: '';
         position: absolute;
@@ -370,7 +322,6 @@ $reminder: #003d82;
         z-index: 0;
       }
 
-      // Вертикальні лінії години
       .post-grid-lines {
         position: absolute;
         top: 0;
@@ -530,6 +481,47 @@ $reminder: #003d82;
             background: #ffe082;
             color: $text-dark;
             font-weight: 600;
+          }
+        }
+      }
+    }
+
+    // Легенда в sidebar
+    .post-legend {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid $border-gray;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .post-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: $text-dark;
+
+        .post-color-box {
+          width: 20px;
+          height: 20px;
+          border-radius: 4px;
+          flex-shrink: 0;
+
+          &.post-scheduled {
+            background: $scheduled;
+          }
+
+          &.post-no-show {
+            background: $no-show;
+          }
+
+          &.post-in-progress {
+            background: $in-progress;
+          }
+
+          &.post-repaired {
+            background: $repaired;
           }
         }
       }

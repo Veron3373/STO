@@ -31,26 +31,6 @@
           <div class="post-current-date" id="postHeaderDateDisplay"></div>
           <button class="post-nav-arrow" id="headerNavNext">›</button>
         </div>
-
-        <!-- Легенда в header справа -->
-        <div class="post-legend" id="postLegend">
-          <div class="post-legend-item">
-            <div class="post-color-box post-scheduled"></div>
-            <span>Запланований</span>
-          </div>
-          <div class="post-legend-item">
-            <div class="post-color-box post-no-show"></div>
-            <span>Не приїхав</span>
-          </div>
-          <div class="post-legend-item">
-            <div class="post-color-box post-in-progress"></div>
-            <span>В роботі</span>
-          </div>
-          <div class="post-legend-item">
-            <div class="post-color-box post-repaired"></div>
-            <span>Відремонтований</span>
-          </div>
-        </div>
       </nav>
     </header>
 
@@ -119,10 +99,6 @@
 
       <!-- Calendar -->
       <main class="post-calendar-area" id="postCalendarArea">
-        <div class="post-calendar-controls">
-          <!-- Прихована секція, навігація перенесена в header -->
-        </div>
-
         <div class="post-time-header" id="postTimeHeader">
           <div class="post-time-cell">8</div>
           <div class="post-time-cell"><span class="post-minutes">30</span></div>
@@ -162,7 +138,6 @@
         </div>
 
         <div class="post-calendar-grid" id="postCalendarGrid">
-
           <div class="post-appointments-row" id="postAppointmentsRow1">
             <div class="post-appointment post-pink" id="postAppointment1" style="grid-column: 2 / 6;">
               <div class="post-car-model">LAND ROVER RANGE ROVER</div>
@@ -186,8 +161,6 @@
               <div class="post-client-name">Павло Кисельов</div>
             </div>
           </div>
-
-          <!-- Additional rows would be added here -->
         </div>
       </main>
 
@@ -195,11 +168,31 @@
       <aside class="post-mini-calendar" id="postMiniCalendar">
         <div class="post-year-nav" id="postYearNav">
           <button id="postYearPrev">‹</button>
-          <span id="postYearDisplay">2023</span>
+          <span id="postYearDisplay">2025</span>
           <button id="postYearNext">›</button>
         </div>
 
         <div id="postCalendarContainer"></div>
+
+        <!-- Легенда перенесена сюди -->
+        <div class="post-legend" id="postLegend">
+          <div class="post-legend-item">
+            <div class="post-color-box post-scheduled"></div>
+            <span>Запланований</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-no-show"></div>
+            <span>Не приїхав</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-in-progress"></div>
+            <span>В роботі</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-repaired"></div>
+            <span>Відремонтований</span>
+          </div>
+        </div>
       </aside>
     </div>
   </div>

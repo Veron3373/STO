@@ -362,11 +362,14 @@ $reminder: #003d82;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        padding: 4px 0;
 
         .post-minutes {
           font-size: 12px;
           font-weight: 400;
           color: #666;
+          display: block;
+          margin-top: 2px;
         }
 
         // Вертикальні лінії після парних комірок (після кожної години)

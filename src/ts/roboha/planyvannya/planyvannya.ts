@@ -181,14 +181,19 @@ class CalendarWidget {
             if (minutesPassed < 0) minutesPassed = 0;
             if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
 
+            // ВИПРАВЛЕНО: Заливаємо тільки ЗАВЕРШЕНІ блоки
+            // Якщо зараз 15:47, то слот 15:30-16:00 ще не закінчився
+            // Тому заливаємо тільки до 15:30 (не включаючи поточний блок)
             const slotIndex = Math.floor(minutesPassed / 30);
-            const graySlots = slotIndex + 1;
+            
+            // Заливаємо тільки завершені слоти (без поточного)
+            const graySlots = slotIndex;
             const grayMinutes = graySlots * 30;
 
             const finalGrayMinutes = Math.min(grayMinutes, totalMinutes);
             
             // Відсоток для CSS (враховуючи padding 24px з обох боків)
-            const gridWidth = calendarGrid.offsetWidth - 48; // minus padding
+            const gridWidth = calendarGrid.offsetWidth - 48;
             const totalWidth = calendarGrid.offsetWidth;
             const actualPercentage = (finalGrayMinutes / totalMinutes) * (gridWidth / totalWidth) * 100;
             

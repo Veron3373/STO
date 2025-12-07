@@ -347,37 +347,35 @@ function createStandardCell(
   td.innerHTML = content;
 
   if (isActNumberCell) {
-    // Додаємо "ОУ" зверху
     if (act.contrAgent_act && act.contrAgent_act_data) {
-      const ouLabel = document.createElement("div");
-      ouLabel.classList.add("ou-prefix-label");
-      ouLabel.textContent = "ОУ";
-      td.appendChild(ouLabel);
-
       const actNum = act.contrAgent_act;
       const actDateFormatted = convertISOtoShortDate(act.contrAgent_act_data);
+
+      // 1. ОУ-8 / 07.12 малим темно-помаранчевим зверху
       if (actDateFormatted) {
         const actLabel = document.createElement("div");
-        actLabel.classList.add("act-label");
+        actLabel.classList.add("act-label-small");
         actLabel.textContent = `ОУ-${actNum} / ${actDateFormatted}`;
         td.appendChild(actLabel);
       }
+
+      // 2. Тільки номер акту великим
+      const actNumberBig = document.createElement("div");
+      actNumberBig.classList.add("act-number-big");
+      actNumberBig.textContent = actNum;
+      td.appendChild(actNumberBig);
     }
 
-    // Додаємо "СФ" знизу
     if (act.contrAgent_raxunok && act.contrAgent_raxunok_data) {
-      const sfLabel = document.createElement("div");
-      sfLabel.classList.add("sf-prefix-label");
-      sfLabel.textContent = "СФ";
-      td.appendChild(sfLabel);
-
       const raxunokNum = act.contrAgent_raxunok;
       const raxunokDateFormatted = convertISOtoShortDate(
         act.contrAgent_raxunok_data
       );
+
+      // 3. СФ-8 / 07.12 малим темно-помаранчевим знизу
       if (raxunokDateFormatted) {
         const raxunokLabel = document.createElement("div");
-        raxunokLabel.classList.add("raxunok-label");
+        raxunokLabel.classList.add("raxunok-label-small");
         raxunokLabel.textContent = `СФ-${raxunokNum} / ${raxunokDateFormatted}`;
         td.appendChild(raxunokLabel);
       }

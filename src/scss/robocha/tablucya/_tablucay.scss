@@ -1,4 +1,4 @@
-// _tablucya.scss
+// _tablucya.scss ось цей 
 
 html,
 body {
@@ -120,16 +120,25 @@ body {
     font-weight: bold;
   }
 
-  /* Лейбли для ОУ та СФ */
-  .ou-prefix-label {
-    font-size: 0.7em;
-    color: #666;
+  /* Нові стилі для актів та рахунків */
+  .act-label-small {
+    font-size: 0.65em;
+    color: #e67300; // темно-помаранчевий
+    line-height: 1.2;
     margin-bottom: 2px;
   }
 
-  .sf-prefix-label {
-    font-size: 0.7em;
+  .act-number-big {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #000;
+    margin: 3px 0;
+  }
+
+  .raxunok-label-small {
+    font-size: 0.65em;
     color: #e67300; // темно-помаранчевий
+    line-height: 1.2;
     margin-top: 2px;
   }
 }

@@ -344,35 +344,33 @@ function createStandardCell(
 ): HTMLTableCellElement {
   const td = document.createElement("td");
   td.classList.add("act-table-cell");
-  td.innerHTML = content;
 
   if (isActNumberCell) {
+    // 1. ЗВЕРХУ: ОУ-123 / 01.12.24 малим темно-помаранчевим
     if (act.contrAgent_act && act.contrAgent_act_data) {
       const actNum = act.contrAgent_act;
       const actDateFormatted = convertISOtoShortDate(act.contrAgent_act_data);
 
-      // 1. ОУ-8 / 07.12 малим темно-помаранчевим зверху
       if (actDateFormatted) {
         const actLabel = document.createElement("div");
         actLabel.classList.add("act-label-small");
         actLabel.textContent = `ОУ-${actNum} / ${actDateFormatted}`;
         td.appendChild(actLabel);
       }
-
-      // 2. Тільки номер акту великим
-      const actNumberBig = document.createElement("div");
-      actNumberBig.classList.add("act-number-big");
-      actNumberBig.textContent = actNum;
-      td.appendChild(actNumberBig);
     }
 
+    // 2. ПОСЕРЕДИНІ: 🗝️ 1234 нормальним розміром
+    const mainNumber = document.createElement("div");
+    mainNumber.innerHTML = content;
+    td.appendChild(mainNumber);
+
+    // 3. ЗНИЗУ: СФ-123 / 15.12.24 малим темно-помаранчевим
     if (act.contrAgent_raxunok && act.contrAgent_raxunok_data) {
       const raxunokNum = act.contrAgent_raxunok;
       const raxunokDateFormatted = convertISOtoShortDate(
         act.contrAgent_raxunok_data
       );
 
-      // 3. СФ-8 / 07.12 малим темно-помаранчевим знизу
       if (raxunokDateFormatted) {
         const raxunokLabel = document.createElement("div");
         raxunokLabel.classList.add("raxunok-label-small");
@@ -380,6 +378,8 @@ function createStandardCell(
         td.appendChild(raxunokLabel);
       }
     }
+  } else {
+    td.innerHTML = content;
   }
 
   td.addEventListener("dblclick", async () => {

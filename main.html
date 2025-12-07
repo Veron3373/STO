@@ -167,16 +167,7 @@
         // --- НАЛАШТУВАННЯ БЛОКУВАННЯ ДЛЯ ПОШУКУ ТА КАЛЕНДАРЯ ---
         function setupBlockers() {
             // 1. Блокуємо ПОШУК
-            $('#searchIcon').on('click', function (e) {
-                if (blockActionIfNoAuth(e)) return; // Якщо блоковано - вихід
 
-                // Якщо дійшли сюди - значить авторизовані, відкриваємо пошук
-                const input = $('#searchInput');
-                input.toggleClass('active');
-                if (input.hasClass('active')) {
-                    input.focus();
-                }
-            });
 
             $('#searchInput').on('focus click keydown', function (e) {
                 if (blockActionIfNoAuth(e)) {

@@ -1,11 +1,11 @@
 // Функціональність пошуку для таблиці
 export class SearchHandler {
-    private searchIcon: JQuery<HTMLElement>;
+
     private searchInput: JQuery<HTMLElement>;
     private onSearchCallback?: (searchTerm: string) => void;
 
     constructor() {
-        this.searchIcon = $('#searchIcon');
+
         this.searchInput = $('#searchInput');
         this.initSearch();
     }
@@ -35,13 +35,7 @@ export class SearchHandler {
     /**
      * Перемикання видимості поля пошуку
      */
-    private toggleSearchInput(): void {
-        if (this.searchInput.width() === 0) {
-            this.showSearchInput();
-        } else {
-            this.hideSearchInput();
-        }
-    }
+
 
     /**
      * Показати поле пошуку

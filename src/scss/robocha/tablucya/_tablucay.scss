@@ -34,26 +34,7 @@ body {
     z-index: 5;
     background-color: #177245;
     display: block;
-    overflow-y: scroll;
-    overflow-x: hidden;
-
-    /* Приховуємо скролбар в шапці (білу смугу), але зберігаємо резервування місця */
-    &::-webkit-scrollbar {
-      width: 17px;
-      /* така ж ширина як у tbody для вирівнювання */
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: transparent;
-    }
-
-    scrollbar-color: transparent transparent;
-    /* Firefox */
+    overflow: hidden;
 
     tr {
       display: table;

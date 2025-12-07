@@ -751,22 +751,20 @@ function applyVerticalScrollbarCompensation(): void {
   const tbody = container?.querySelector("tbody") as HTMLElement | null;
   const thead = container?.querySelector("thead") as HTMLElement | null;
   const theadTr = thead?.querySelector("tr") as HTMLElement | null;
-  if (!container || !tbody || !thead || !theadTr) return;
+  const lastTh = theadTr?.querySelector("th:last-child") as HTMLElement | null;
+  if (!container || !tbody || !thead || !theadTr || !lastTh) return;
 
   const hasVScroll = tbody.scrollHeight > tbody.clientHeight;
   container.classList.toggle("has-vscroll", hasVScroll);
 
-  // Динамічна компенсація ширини скролбара для tr всередині thead
+  // Динамічна компенсація ширини скролбара
   if (hasVScroll) {
     const scrollbarWidth = tbody.offsetWidth - tbody.clientWidth;
-    // Застосовуємо компенсацію до tr, щоб колонки вирівнювалися
-    theadTr.style.paddingRight = `${scrollbarWidth}px`;
-    theadTr.style.boxSizing = "border-box";
+    // Додаємо border-right до останньої th для компенсації скролбару
+    lastTh.style.borderRight = `${scrollbarWidth}px solid #177245`;
   } else {
-    theadTr.style.paddingRight = "0px";
+    lastTh.style.borderRight = "1px solid #000";
   }
-  // Скидаємо padding з thead
-  thead.style.paddingRight = "0px";
 }
 
 // =============================================================================

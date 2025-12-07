@@ -156,23 +156,14 @@ body {
   }
 }
 
-/* Клас для рядків актів (Синя ручка) */
-.act-modified-blue-pen {
-  background-color: rgba(33, 150, 243, 0.12) !important;
-  position: relative;
-  z-index: 1;
-  box-shadow: inset 0 0 0 2px #2196f3 !important;
-  transition: background-color 0.3s ease;
+/* Статуси рядків (відновлено) */
+.row-open {
+  background-color: #e2f7e1 !important;
+}
 
-  &:hover {
-    background-color: rgba(33, 150, 243, 0.25) !important;
-    cursor: pointer;
-  }
-
-  td {
-    color: #01579b;
-    font-weight: 500;
-  }
+.row-closed {
+  background-color: #f3f3f3 !important;
+  opacity: 0.6;
 }
 
 /* Пульсація доданих елементів */

@@ -65,10 +65,7 @@ body {
   /* ТІЛО: саме тут з'являється вертикальний скрол */
   tbody {
     display: block;
-    overflow-y: scroll;
-    /* Завжди показувати скролбар для вирівнювання з thead */
-    scrollbar-gutter: stable;
-    /* Резервує місце для скролбару навіть коли він не потрібен */
+    overflow-y: auto;
     overflow-x: hidden;
 
     tr {

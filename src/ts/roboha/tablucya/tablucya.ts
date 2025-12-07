@@ -684,7 +684,7 @@ function updateTableBody(): void {
   );
   const oldTbody = table.querySelector("tbody");
   if (oldTbody) oldTbody.replaceWith(newTbody);
-  applyVerticalScrollbarCompensation();
+
 }
 
 function createTable(accessLevel: string | null): HTMLTableElement {
@@ -744,28 +744,7 @@ function showNoViewAccessMessage(): void {
   }
 }
 
-function applyVerticalScrollbarCompensation(): void {
-  const container = document.getElementById(
-    "table-container-modal-sakaz_narad"
-  );
-  const tbody = container?.querySelector("tbody") as HTMLElement | null;
-  const thead = container?.querySelector("thead") as HTMLElement | null;
-  const theadTr = thead?.querySelector("tr") as HTMLElement | null;
-  const lastTh = theadTr?.querySelector("th:last-child") as HTMLElement | null;
-  if (!container || !tbody || !thead || !theadTr || !lastTh) return;
-
-  const hasVScroll = tbody.scrollHeight > tbody.clientHeight;
-  container.classList.toggle("has-vscroll", hasVScroll);
-
-  // Динамічна компенсація ширини скролбара
-  if (hasVScroll) {
-    const scrollbarWidth = tbody.offsetWidth - tbody.clientWidth;
-    // Додаємо border-right до останньої th для компенсації скролбару
-    lastTh.style.borderRight = `${scrollbarWidth}px solid #177245`;
-  } else {
-    lastTh.style.borderRight = "1px solid #000";
-  }
-}
+// Функція applyVerticalScrollbarCompensation видалена, оскільки вирівнювання тепер контролюється CSS (sticky header)
 
 // =============================================================================
 // ОСНОВНІ ФУНКЦІОНАЛЬНІ
@@ -862,7 +841,7 @@ export async function loadActsTable(
     if (!container) return;
     container.innerHTML = "";
     container.appendChild(table);
-    applyVerticalScrollbarCompensation();
+
   } catch (error) {
     console.error("💥 Критична помилка:", error);
   }
@@ -956,7 +935,7 @@ export async function initializeActsSystem(): Promise<void> {
     }
 
     watchDateRangeChanges();
-    window.addEventListener("resize", applyVerticalScrollbarCompensation);
+
     console.log("✅ Система ініціалізована.");
   } catch (error) {
     console.error("💥 Помилка ініціалізації:", error);

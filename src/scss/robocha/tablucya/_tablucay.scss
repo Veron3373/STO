@@ -14,10 +14,15 @@ body {
 #table-container-modal-sakaz_narad {
   width: calc(100% - 20px);
   margin: 0 10px 10px 10px;
-  overflow: hidden;
+  overflow: auto;
+  /* Container handles scrolling */
   box-sizing: border-box;
   padding: 0;
   z-index: 10;
+  border-radius: 8px;
+  /* Added matching rounded corners if desired, or keep as is */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* Optional visual polish */
 
   /* Таблиця */
   table {
@@ -27,32 +32,31 @@ body {
     background-color: rgba(255, 255, 255, 0.95);
   }
 
-  /* Заголовок фіксуємо */
+  /* Sticky Header */
   thead {
-    position: sticky;
-    top: 0;
+    /* No display:block needed */
     z-index: 5;
-    background-color: #177245;
-    display: block;
-    overflow: hidden;
 
-    tr {
-      display: table;
-      width: 100%;
-      table-layout: fixed;
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background-color: #177245;
+      /* Header background must be on TH for sticky to cover content */
+      color: #fff;
+      font-weight: bold;
+      border: 1px solid #000;
+      /* Ensure borders match */
+      box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+      /* Optional: visual separation */
     }
   }
 
-  /* ТІЛО: саме тут з'являється вертикальний скрол */
+  /* Body */
   tbody {
-    display: block;
-    overflow-y: auto;
-    overflow-x: hidden;
 
+    /* Standard table behavior */
     tr {
-      display: table;
-      width: 100%;
-      table-layout: fixed;
       cursor: pointer;
       transition: background-color 0.2s ease;
 
@@ -63,10 +67,6 @@ body {
 
       &.selected {
         background-color: #ffeb3b !important;
-      }
-
-      &:last-child td {
-        padding-bottom: 5px;
       }
     }
   }
@@ -82,51 +82,32 @@ body {
     text-overflow: ellipsis;
   }
 
-  /* --- Фіксовані ширини колонок через flex --- */
+  /* --- Widths (using standard width instead of flex) --- */
   th:nth-child(1),
   td:nth-child(1) {
-    flex: 0 0 100px;
     width: 100px;
-    min-width: 100px;
-    max-width: 100px;
   }
 
   th:nth-child(2),
   td:nth-child(2) {
-    flex: 0 0 150px;
     width: 150px;
-    min-width: 150px;
-    max-width: 150px;
   }
 
   th:nth-child(3),
   td:nth-child(3) {
-    flex: 1 1 auto;
-    min-width: 100px;
+    /* Auto width column - let table layout handle it */
+    width: auto;
   }
 
   th:nth-child(4),
   td:nth-child(4) {
-    flex: 0 0 180px;
     width: 180px;
-    min-width: 180px;
-    max-width: 180px;
   }
 
   /* "Сумма" */
   th:nth-child(5),
   td:nth-child(5) {
-    flex: 0 0 130px;
     width: 130px;
-    min-width: 130px;
-    max-width: 130px;
-  }
-
-  /* Заголовки */
-  th {
-    color: #fff;
-    font-weight: bold;
-    background-color: #177245;
   }
 
   /* Додаткові стилі */
@@ -140,78 +121,22 @@ body {
   }
 }
 
-/* Статуси рядків */
-.row-open {
-  background-color: #e2f7e1;
-}
-
-.row-closed {
-  background-color: #f3f3f3;
-  opacity: 0.6;
-}
-
-.search-input {
-  margin-top: 1px;
-}
-
-/* Стилі для комірок таблиці актів */
-.act-table-cell {
-  position: relative;
-  padding: 8px;
-
-  // Мітка акту (верхня)
-  .act-label {
-    position: absolute;
-    top: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.6em;
-    color: #8b0000;
-    line-height: 1.2;
-    text-align: center;
-  }
-
-  // Мітка рахунку (нижня)
-  .raxunok-label {
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.6em;
-    color: #8b0000;
-    line-height: 1.2;
-    text-align: center;
-  }
-}
-
-/* ---- Висоти (щоб тіло займало екран і скролилося) ---- */
+/* ---- Висоти (щоб контейнер займав екран і скролився) ---- */
 @media (min-width: 1025px) {
   #table-container-modal-sakaz_narad {
     max-height: calc(100vh - 40px);
-
-    tbody {
-      max-height: calc(100vh - 85px);
-    }
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
   #table-container-modal-sakaz_narad {
     max-height: calc(93vh - 10px);
-
-    tbody {
-      max-height: calc(93vh - 120px);
-    }
   }
 }
 
 @media (max-width: 768px) {
   #table-container-modal-sakaz_narad {
     max-height: calc(93vh - 5px);
-
-    tbody {
-      max-height: calc(93vh - 120px);
-    }
   }
 }
 

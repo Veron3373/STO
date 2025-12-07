@@ -1,11 +1,13 @@
 // Функціональність пошуку для таблиці
 export class SearchHandler {
 
+    private searchIcon: JQuery<HTMLElement>;
     private searchInput: JQuery<HTMLElement>;
     private onSearchCallback?: (searchTerm: string) => void;
 
     constructor() {
 
+        this.searchIcon = $('#searchIcon');
         this.searchInput = $('#searchInput');
         this.initSearch();
     }
@@ -28,15 +30,20 @@ export class SearchHandler {
      * Прив'язка подій до елементів пошуку
      */
     private bindEvents(): void {
-        // this.searchIcon.on('click', () => this.toggleSearchInput());
+        this.searchIcon.on('click', () => this.toggleSearchInput());
         this.searchInput.on('input', () => this.handleSearchInput());
     }
 
     /**
      * Перемикання видимості поля пошуку
      */
-
-
+    private toggleSearchInput(): void {
+        if (this.searchInput.width() === 0) {
+            this.showSearchInput();
+        } else {
+            this.hideSearchInput();
+        }
+    }
     /**
      * Показати поле пошуку
      */

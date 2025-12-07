@@ -147,12 +147,14 @@ body {
 /* Підсвічування змінених актів в списку */
 .act-modified {
   background-color: #e3f2fd !important;
-  border: 2px solid #2196f3 !important;
+  box-shadow: inset 0 0 0 2px #2196f3 !important;
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 
   &:hover {
     background-color: #bbdefb !important;
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+    box-shadow: inset 0 0 0 2px #2196f3, 0 4px 12px rgba(33, 150, 243, 0.3) !important;
   }
 }
 
@@ -166,6 +168,25 @@ body {
   opacity: 0.6;
 }
 
+/* Клас для рядків актів (Синя ручка) */
+.act-modified-blue-pen {
+  background-color: rgba(33, 150, 243, 0.12) !important;
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px #2196f3 !important;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: rgba(33, 150, 243, 0.25) !important;
+    cursor: pointer;
+  }
+
+  td {
+    color: #01579b;
+    font-weight: 500;
+  }
+}
+
 /* Пульсація доданих елементів */
 .item-added {
   animation: highlight-added 3s ease-in-out;
@@ -174,27 +195,27 @@ body {
 @keyframes highlight-added {
   0% {
     background-color: transparent;
-    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 0 transparent;
   }
 
   25% {
     background-color: #e3f2fd;
-    border: 2px solid #2196f3;
+    box-shadow: inset 0 0 0 2px #2196f3;
   }
 
   50% {
     background-color: #bbdefb;
-    border: 2px solid #2196f3;
+    box-shadow: inset 0 0 0 2px #2196f3;
   }
 
   75% {
     background-color: #e3f2fd;
-    border: 2px solid #2196f3;
+    box-shadow: inset 0 0 0 2px #2196f3;
   }
 
   100% {
     background-color: transparent;
-    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 0 transparent;
   }
 }
 
@@ -206,27 +227,27 @@ body {
 @keyframes highlight-deleted {
   0% {
     background-color: transparent;
-    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 0 transparent;
   }
 
   25% {
     background-color: #ffcdd2;
-    border: 2px solid #f44336;
+    box-shadow: inset 0 0 0 2px #f44336;
   }
 
   50% {
     background-color: #ffebee;
-    border: 2px solid #f44336;
+    box-shadow: inset 0 0 0 2px #f44336;
   }
 
   75% {
     background-color: #ffcdd2;
-    border: 2px solid #f44336;
+    box-shadow: inset 0 0 0 2px #f44336;
   }
 
   100% {
     background-color: transparent;
-    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 0 transparent;
   }
 }
 

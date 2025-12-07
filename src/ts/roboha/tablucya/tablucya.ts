@@ -347,7 +347,13 @@ function createStandardCell(
   td.innerHTML = content;
 
   if (isActNumberCell) {
+    // Додаємо "ОУ" зверху
     if (act.contrAgent_act && act.contrAgent_act_data) {
+      const ouLabel = document.createElement("div");
+      ouLabel.classList.add("ou-prefix-label");
+      ouLabel.textContent = "ОУ";
+      td.appendChild(ouLabel);
+
       const actNum = act.contrAgent_act;
       const actDateFormatted = convertISOtoShortDate(act.contrAgent_act_data);
       if (actDateFormatted) {
@@ -357,7 +363,14 @@ function createStandardCell(
         td.appendChild(actLabel);
       }
     }
+
+    // Додаємо "СФ" знизу
     if (act.contrAgent_raxunok && act.contrAgent_raxunok_data) {
+      const sfLabel = document.createElement("div");
+      sfLabel.classList.add("sf-prefix-label");
+      sfLabel.textContent = "СФ";
+      td.appendChild(sfLabel);
+
       const raxunokNum = act.contrAgent_raxunok;
       const raxunokDateFormatted = convertISOtoShortDate(
         act.contrAgent_raxunok_data

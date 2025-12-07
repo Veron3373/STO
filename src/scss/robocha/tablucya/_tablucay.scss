@@ -119,6 +119,19 @@ body {
     color: rgb(195, 109, 28);
     font-weight: bold;
   }
+
+  /* Лейбли для ОУ та СФ */
+  .ou-prefix-label {
+    font-size: 0.7em;
+    color: #666;
+    margin-bottom: 2px;
+  }
+
+  .sf-prefix-label {
+    font-size: 0.7em;
+    color: #e67300; // темно-помаранчевий
+    margin-top: 2px;
+  }
 }
 
 /* ---- Висоти (щоб контейнер займав екран і скролився) ---- */

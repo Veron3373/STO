@@ -14,11 +14,11 @@ export class SearchHandler {
      * Ініціалізація функціональності пошуку
      */
     private initSearch(): void {
-        this.searchInput.css({ 
-            'width': '0', 
-            'padding': '0', 
-            'opacity': '0', 
-            'visibility': 'hidden' 
+        this.searchInput.css({
+            'width': '0',
+            'padding': '0',
+            'opacity': '0',
+            'visibility': 'hidden'
         });
 
         this.bindEvents();
@@ -28,7 +28,7 @@ export class SearchHandler {
      * Прив'язка подій до елементів пошуку
      */
     private bindEvents(): void {
-        this.searchIcon.on('click', () => this.toggleSearchInput());
+        // this.searchIcon.on('click', () => this.toggleSearchInput());
         this.searchInput.on('input', () => this.handleSearchInput());
     }
 
@@ -133,17 +133,17 @@ export function setupSearchWithTableFilter(
     getCurrentDateRange: () => { dateFrom: string | null; dateTo: string | null }
 ): SearchHandler {
     const searchHandler = new SearchHandler();
-    
+
     searchHandler.setSearchCallback((searchTerm: string) => {
         const filterType = getCurrentFilterType();
         const { dateFrom, dateTo } = getCurrentDateRange();
-        
+
         if (filterType === 'open') {
             loadActsTable(null, null, 'open', searchTerm);
         } else {
             loadActsTable(dateFrom, dateTo, null, searchTerm);
         }
     });
-    
+
     return searchHandler;
 }

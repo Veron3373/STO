@@ -1,4 +1,4 @@
-/* Базові стилі */ 
+/* Базові стилі */
 
 /* ==================== БАЗОВІ СТИЛІ ==================== */
 *,
@@ -41,6 +41,7 @@ body {
   --transition: all 0.3s ease;
 
   /* Ширини колонок */
+  --col-rozrahovano: 61px;
   --col-money-vutratu: 70px;
   --col-money: 60px;
   --col-robota: 180px;
@@ -130,11 +131,9 @@ body {
 }
 
 .Bukhhalter-total-sum {
-  background: linear-gradient(
-    135deg,
-    var(--primary-color),
-    var(--primary-hover)
-  );
+  background: linear-gradient(135deg,
+      var(--primary-color),
+      var(--primary-hover));
   color: white;
   padding: 8px 15px;
   border-radius: var(--small-radius);
@@ -625,31 +624,27 @@ body {
 .Bukhhalter-payment-toggle,
 .Bukhhalter-status-toggle,
 .Bukhhalter-expense-type-toggle {
-  background: linear-gradient(
-    to right,
-    var(--success-color) 0%,
-    var(--success-color) 33.33%,
-    var(--danger-color) 33.33%,
-    var(--danger-color) 66.66%,
-    var(--orange1) 66.66%,
-    var(--orange2) 100%
-  );
+  background: linear-gradient(to right,
+      var(--success-color) 0%,
+      var(--success-color) 33.33%,
+      var(--danger-color) 33.33%,
+      var(--danger-color) 66.66%,
+      var(--orange1) 66.66%,
+      var(--orange2) 100%);
 }
 
 .Bukhhalter-availability-toggle {
-  background: linear-gradient(
-    to right,
-    #4caf50 0%,
-    #4caf50 20%,
-    #9e9e9e 20%,
-    #9e9e9e 40%,
-    #f44336 40%,
-    #f44336 60%,
-    #2196f3 60%,
-    #2196f3 80%,
-    #ff9800 80%,
-    #ff9800 100%
-  );
+  background: linear-gradient(to right,
+      #4caf50 0%,
+      #4caf50 20%,
+      #9e9e9e 20%,
+      #9e9e9e 40%,
+      #f44336 40%,
+      #f44336 60%,
+      #2196f3 60%,
+      #2196f3 80%,
+      #ff9800 80%,
+      #ff9800 100%);
 }
 
 /* Повзунки */
@@ -786,6 +781,35 @@ body {
   width: var(--col-prumitku);
 }
 
+/* Розраховано column - перша колонка для всіх таблиць */
+#podlegle-table th:first-child,
+#podlegle-table td:first-child,
+#magazine-table th:first-child,
+#magazine-table td:first-child,
+#details-table th:first-child,
+#details-table td:first-child,
+#vutratu-table th:first-child,
+#vutratu-table td:first-child {
+  min-width: var(--col-rozrahovano);
+  width: var(--col-rozrahovano);
+}
+
+/* Розмір шрифту для емодзі та тексту в заголовку Розраховано */
+#podlegle-table th:first-child .table-header-emoji,
+#magazine-table th:first-child .table-header-emoji,
+#details-table th:first-child .table-header-emoji,
+#vutratu-table th:first-child .table-header-emoji {
+  font-size: 18px;
+}
+
+#podlegle-table th:first-child .table-header-text,
+#magazine-table th:first-child .table-header-text,
+#details-table th:first-child .table-header-text,
+#vutratu-table th:first-child .table-header-text {
+  font-size: 12px;
+}
+
+
 /* ==================== ПОВЕРНЕННЯ ==================== */
 .magazine-povernennya,
 .return-cell {
@@ -832,7 +856,7 @@ body {
   text-align: center;
 }
 
-.return-date > div {
+.return-date>div {
   margin: 0;
 }
 
@@ -1106,7 +1130,7 @@ body {
     font-size: 9px;
   }
 
-  .return-date > div {
+  .return-date>div {
     font-size: 8px;
   }
 
@@ -1217,7 +1241,7 @@ body {
     flex-direction: column;
     gap: 6px;
   }
-  
+
   .date-filter-btn {
     width: 100%;
     font-size: 12px;

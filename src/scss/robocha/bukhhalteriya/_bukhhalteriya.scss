@@ -781,9 +781,11 @@ body {
   width: var(--col-prumitku);
 }
 
-/* Розраховано column - перша колонка для всіх таблиць (крім magazine) */
+/* Розраховано column - перша колонка для всіх таблиць */
 #podlegle-table th:first-child,
 #podlegle-table td:first-child,
+#magazine-table th:first-child,
+#magazine-table td:first-child,
 #details-table th:first-child,
 #details-table td:first-child,
 #vutratu-table th:first-child,
@@ -794,12 +796,14 @@ body {
 
 /* Розмір шрифту для емодзі та тексту в заголовку Розраховано */
 #podlegle-table th:first-child .table-header-emoji,
+#magazine-table th:first-child .table-header-emoji,
 #details-table th:first-child .table-header-emoji,
 #vutratu-table th:first-child .table-header-emoji {
   font-size: 18px;
 }
 
 #podlegle-table th:first-child .table-header-text,
+#magazine-table th:first-child .table-header-text,
 #details-table th:first-child .table-header-text,
 #vutratu-table th:first-child .table-header-text {
   font-size: 12px;

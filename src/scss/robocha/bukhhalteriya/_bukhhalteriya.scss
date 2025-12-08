@@ -55,7 +55,7 @@ body {
 
 /* ==================== КОНТЕЙНЕРИ ==================== */
 .Bukhhalter-container {
-  //margin: 5px;
+  margin: 5px;
   padding: 5px;
   display: flex;
   gap: 5px;
@@ -377,7 +377,7 @@ body {
 .Bukhhalter-tab-btn {
   background: #e0e0e0;
   border: none;
-  padding: 5px 2px;
+  padding: 8px 5px;
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
@@ -405,7 +405,7 @@ body {
 .Bukhhalter-form-container {
   background: white;
   border-radius: var(--border-radius);
-  padding: 10px;
+  padding: 20px;
   box-shadow: var(--shadow);
   flex: 1;
   overflow-y: auto;

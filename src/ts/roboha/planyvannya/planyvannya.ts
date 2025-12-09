@@ -5,7 +5,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedDate = new Date(today);
   let viewYear = today.getFullYear();
 
-  // DOM елементи
   const headerDateEl = document.getElementById("postHeaderDateDisplay") as HTMLElement;
   const yearDisplayEl = document.getElementById("postYearDisplay") as HTMLElement;
   const sidebarEl = document.getElementById("postSidebar") as HTMLElement;
@@ -27,12 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
   nextYearBtn.addEventListener("click", () => { viewYear++; render(); });
 
   // Синхронізація скролів
-  sidebarEl.addEventListener("scroll", () => {
-    gridSectionsEl.scrollTop = sidebarEl.scrollTop;
-  });
-  gridSectionsEl.addEventListener("scroll", () => {
-    sidebarEl.scrollTop = gridSectionsEl.scrollTop;
-  });
+  sidebarEl.addEventListener("scroll", () => gridSectionsEl.scrollTop = sidebarEl.scrollTop);
+  gridSectionsEl.addEventListener("scroll", () => sidebarEl.scrollTop = gridSectionsEl.scrollTop);
 
   // Згортання цехів
   for (let i = 1; i <= 4; i++) {
@@ -44,10 +39,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!toggleBtn || !header) continue;
 
     const toggle = () => {
-      const isHidden = postsList?.classList.toggle("hidden") ?? false;
-      gridContainer?.classList.toggle("hidden", isHidden);
-      toggleBtn.textContent = isHidden ? "Right Arrow" : "Down Arrow";
-      toggleBtn.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
+      const hidden = postsList?.classList.toggle("hidden") ?? false;
+      gridContainer?.classList.toggle("hidden", hidden);
+      toggleBtn.textContent = hidden ? "Right Arrow" : "Down Arrow";
+      toggleBtn.style.transform = hidden ? "rotate(0deg)" : "rotate(-90deg)";
     };
 
     toggleBtn.addEventListener("click", e => { e.stopPropagation(); toggle(); });
@@ -55,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Формат дати
-  const formatFullDate = (d: Date) => {
+  const formatDate = (d: Date) => {
     const days = ["Неділя", "Понеділок", "Вівторок", "Середа", "Четвер", "Пʼятниця", "Субота"];
     const months = ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"];
     return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
@@ -63,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Рендер
   const render = () => {
-    headerDateEl.textContent = formatFullDate(selectedDate);
+    headerDateEl.textContent = formatDate(selectedDate);
     yearDisplayEl.textContent = viewYear.toString();
     renderMiniCalendar();
   };
@@ -107,12 +102,12 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Демо-записи
-  const addDemo = () => {
-    const demos = [
+  const demo = () => {
+    const arr = [
       {p:1,s:2,e:6,m:"LAND ROVER RANGE ROVER",n:"А 001 АА 77",c:"Володимир Іванов",st:"no-show"},
       {p:1,s:6,e:11,m:"LAND ROVER DISCOVERY4",n:"А 001 АА 77",c:"Дмитро Орешкін",st:"in-progress"}
     ];
-    demos.forEach(a => {
+    arr.forEach(a => {
       const row = document.querySelector(`.post-grid-row[data-post-id="${a.p}"]`) as HTMLElement;
       if (!row) return;
       const el = document.createElement("div");
@@ -124,5 +119,5 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   render();
-  addDemo();
+  demo();
 });

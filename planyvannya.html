@@ -4,96 +4,175 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Планувальник СТО</title>
-  <link rel="stylesheet" href="./scss/style.scss" />
+  <link rel="stylesheet" href="./src/scss/robocha/planyvannya/_planyvannya.scss" />
+  <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
 </head>
 <body>
-  <div class="planning-container">
-
-    <!-- HEADER -->
-    <header class="header">
-      <div class="header-left">Автосервіс</div>
-      <div class="header-center">
-        <button id="todayBtn">Сьогодні</button>
-        <button id="prevDay">‹</button>
-        <div id="currentDate"></div>
-        <button id="nextDay">›</button>
-      </div>
+  <div class="post-planning-container" id="postPlanningContainer">
+    <!-- Header -->
+    <header class="post-header" id="postHeader">
+      <nav class="post-nav" id="postNav">
+        <a href="https://veron3373.github.io/STO/main.html" class="post-nav-link post-active">СТО</a>
+        <div class="post-header-calendar-nav">
+          <button class="post-today-btn" id="postTodayBtn">Сьогодні</button>
+          <button class="post-nav-arrow" id="headerNavPrev">Left Arrow</button>
+          <div class="post-current-date" id="postHeaderDateDisplay"></div>
+          <button class="post-nav-arrow" id="headerNavNext">Right Arrow</button>
+        </div>
+      </nav>
     </header>
 
-    <main class="main-content">
-
-      <!-- ЛІВА ПАНЕЛЬ -->
-      <aside class="sidebar" id="sidebar">
-        <div class="shop" data-shop="1">
-          <div class="shop-header">ЦЕХ 1 <button class="toggle">Down Arrow</button></div>
-          <div class="posts">
-            <div class="post" data-post="1"><div class="title">Пост 1</div><div class="subtitle">2-стійковий підйомник</div></div>
-            <div class="post" data-post="2"><div class="title">Пост 2</div><div class="subtitle">4-стійковий УУК</div></div>
-            <div class="post" data-post="3"><div class="title">Пост 3</div><div class="subtitle">2-стійковий</div></div>
+    <div class="post-main-content" id="postMainContent">
+      <!-- Sidebar -->
+      <aside class="post-sidebar" id="postSidebar">
+        <div class="post-location-section" id="postLocationSection">
+          <div class="post-sub-location" id="postSubLocation1">
+            <span>ЦЕХ 1</span>
+            <button class="post-toggle-btn" id="postToggleBtn1">Down Arrow</button>
           </div>
-        </div>
-
-        <div class="shop" data-shop="2">
-          <div class="shop-header">ЦЕХ 2 <button class="toggle">Down Arrow</button></div>
-          <div class="posts">
-            <div class="post" data-post="4"><div class="title">Пост 4</div><div class="subtitle">2-стійковий</div></div>
-            <div class="post" data-post="5"><div class="title">Пост 5</div><div class="subtitle">Пост електрика</div></div>
-            <div class="post" data-post="6"><div class="title">Пост 6</div><div class="subtitle">2-стійковий</div></div>
+          <div class="post-posts-list" id="postPostsList1">
+            <div class="post-post-item" data-post-id="1">
+              <div class="post-post-title">Пост 1</div>
+              <div class="post-post-subtitle">2 стоєчний підйомник</div>
+            </div>
+            <div class="post-post-item" data-post-id="2">
+              <div class="post-post-title">Пост 2</div>
+              <div class="post-post-subtitle">4 стоєчний УУК</div>
+            </div>
+            <div class="post-post-item" data-post-id="3">
+              <div class="post-post-title">Пост 3</div>
+              <div class="post-post-subtitle">2 стоєчний</div>
+            </div>
           </div>
-        </div>
 
-        <div class="shop" data-shop="3">
-          <div class="shop-header">МИЙКА <button class="toggle">Down Arrow</button></div>
-          <div class="posts">
-            <div class="post" data-post="7"><div class="title">Пост 7</div></div>
+          <div class="post-sub-location" id="postSubLocation2">
+            <span>ЦЕХ 2</span>
+            <button class="post-toggle-btn" id="postToggleBtn2">Down Arrow</button>
           </div>
-        </div>
-
-        <div class="shop" data-shop="4">
-          <div class="shop-header">НАГАДУВАННЯ <button class="toggle">Down Arrow</button></div>
-          <div class="posts"></div>
-        </div>
-
-        <button class="add-reminder">Add додати нагадування</button>
-      </aside>
-
-      <!-- ЦЕНТР — КАЛЕНДАР -->
-      <div class="calendar-wrapper">
-        <div class="time-header">
-          <div>8<sup>30</sup></div><div>9<sup>30</sup></div><div>10<sup>30</sup></div>
-          <div>11<sup>30</sup></div><div>12<sup>30</sup></div><div>13<sup>30</sup></div>
-          <div>14<sup>30</sup></div><div>15<sup>30</sup></div><div>16<sup>30</sup></div>
-          <div>17<sup>30</sup></div><div>18<sup>30</sup></div><div>19<sup>30</sup></div>
-        </div>
-
-        <div class="calendar-content">
-          <div class="grid" id="grid">
-            <!-- Динамічно заповнюється JS -->
+          <div class="post-posts-list" id="postPostsList2">
+            <div class="post-post-item" data-post-id="4">
+              <div class="post-post-title">Пост 4</div>
+              <div class="post-post-subtitle">2 стоєчний</div>
+            </div>
+            <div class="post-post-item" data-post-id="5">
+              <div class="post-post-title">Пост 5</div>
+              <div class="post-post-subtitle">Пост електрика</div>
+            </div>
+            <div class="post-post-item" data-post-id="6">
+              <div class="post-post-title">Пост 6</div>
+              <div class="post-post-subtitle">2 стоєчний</div>
+            </div>
           </div>
-          <div class="grid-lines"></div>
-        </div>
-      </div>
 
-      <!-- ПРАВА ПАНЕЛЬ -->
-      <aside class="right-panel">
-        <div class="year-nav">
-          <button id="prevYear">‹</button>
-          <span id="year">2025</span>
-          <button id="nextYear">›</button>
-        </div>
-        <div id="miniCalendar"></div>
+          <div class="post-sub-location" id="postSubLocation3">
+            <span>МИЙКА</span>
+            <button class="post-toggle-btn" id="postToggleBtn3">Down Arrow</button>
+          </div>
+          <div class="post-posts-list" id="postPostsList3">
+            <div class="post-post-item" data-post-id="7">
+              <div class="post-post-title">Пост 7</div>
+            </div>
+          </div>
 
-        <div class="legend">
-          <div><span class="color scheduled"></span> Запланований</div>
-          <div><span class="color no-show"></span> Не приїхав</div>
-          <div><span class="color in-progress"></span> В роботі</div>
-          <div><span class="color repaired"></span> Відремонтовано</div>
+          <div class="post-sub-location" id="postSubLocation4">
+            <span>НАГАДУВАННЯ</span>
+            <button class="post-toggle-btn" id="postToggleBtn4">Down Arrow</button>
+          </div>
+          <button class="post-add-reminder-btn" id="postAddReminderBtn">Add додати</button>
         </div>
       </aside>
 
-    </main>
+      <!-- Calendar -->
+      <main class="post-calendar-area" id="postCalendarArea">
+        <div class="post-time-header" id="postTimeHeader">
+          <!-- 12 слотів по 30 хв від 8:00 до 20:00 -->
+          <div class="post-time-cell"><div class="post-hour">8</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">9</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">10</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">11</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">12</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">13</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">14</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">15</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">16</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">17</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">18</div><div class="post-minutes">30</div></div>
+          <div class="post-time-cell"><div class="post-hour">19</div><div class="post-minutes">30</div></div>
+        </div>
+
+        <div class="post-calendar-grid" id="postCalendarGrid">
+          <div class="post-grid-lines"></div>
+
+          <div id="postGridSections">
+            <!-- ЦЕХ 1 -->
+            <div class="post-grid-section" data-section="1">
+              <div class="post-grid-shop-header">ЦЕХ 1</div>
+              <div class="post-grid-posts-container" id="gridPostsContainer1">
+                <div class="post-grid-row" data-post-id="1"></div>
+                <div class="post-grid-row" data-post-id="2"></div>
+                <div class="post-grid-row" data-post-id="3"></div>
+              </div>
+            </div>
+
+            <!-- ЦЕХ 2 -->
+            <div class="post-grid-section" data-section="2">
+              <div class="post-grid-shop-header">ЦЕХ 2</div>
+              <div class="post-grid-posts-container" id="gridPostsContainer2">
+                <div class="post-grid-row" data-post-id="4"></div>
+                <div class="post-grid-row" data-post-id="5"></div>
+                <div class="post-grid-row" data-post-id="6"></div>
+              </div>
+            </div>
+
+            <!-- МИЙКА -->
+            <div class="post-grid-section" data-section="3">
+              <div class="post-grid-shop-header">МИЙКА</div>
+              <div class="post-grid-posts-container" id="gridPostsContainer3">
+                <div class="post-grid-row" data-post-id="7"></div>
+              </div>
+            </div>
+
+            <!-- НАГАДУВАННЯ -->
+            <div class="post-grid-section" data-section="4">
+              <div class="post-grid-shop-header">НАГАДУВАННЯ</div>
+              <div class="post-grid-posts-container"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Mini Calendar -->
+      <aside class="post-mini-calendar" id="postMiniCalendar">
+        <div class="post-year-nav" id="postYearNav">
+          <button id="postYearPrev">Left Arrow</button>
+          <span id="postYearDisplay">2025</span>
+          <button id="postYearNext">Right Arrow</button>
+        </div>
+        <div id="postCalendarContainer"></div>
+
+        <div class="post-legend" id="postLegend">
+          <div class="post-legend-item">
+            <div class="post-color-box post-scheduled"></div>
+            <span>Запланований</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-no-show"></div>
+            <span>Не приїхав</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-in-progress"></div>
+            <span>В роботі</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-repaired"></div>
+            <span>Відремонтований</span>
+          </div>
+        </div>
+      </aside>
+    </div>
   </div>
 
-  <script type="module" src="./ts/main.ts"></script>
+  <!-- ОДИН ЄДИНИЙ ПРАВИЛЬНИЙ СКРИПТ — ОЦЕ ВСЕ ВИРІШУЄ -->
+  <script type="module" src="./src/ts/roboha/planyvannya/planyvannya.ts"></script>
 </body>
 </html>

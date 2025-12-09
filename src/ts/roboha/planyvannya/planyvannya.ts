@@ -4,7 +4,6 @@ class CalendarWidget {
     private today: Date;
     private selectedDate: Date;
     
-    // Елементи DOM
     private container: HTMLElement | null;
     private headerDateDisplay: HTMLElement | null;
     private timeHeader: HTMLElement | null;
@@ -30,23 +29,21 @@ class CalendarWidget {
         const headerPrev = document.getElementById('headerNavPrev');
         const headerNext = document.getElementById('headerNavNext');
         const todayBtn = document.getElementById('postTodayBtn');
-
         if (headerPrev) headerPrev.addEventListener('click', () => this.handleDayPrev());
         if (headerNext) headerNext.addEventListener('click', () => this.handleDayNext());
         if (todayBtn) todayBtn.addEventListener('click', () => this.goToToday());
 
         const monthPrevBtn = document.getElementById('postYearPrev');
         const monthNextBtn = document.getElementById('postYearNext');
-
         if (monthPrevBtn) monthPrevBtn.addEventListener('click', () => this.handleMonthPrev());
         if (monthNextBtn) monthNextBtn.addEventListener('click', () => this.handleMonthNext());
 
         this.initToggles();
         this.render();
         
-        // Запускаємо таймер
+        // Таймер для лінії часу
         this.updateTimeMarker();
-        setInterval(() => this.updateTimeMarker(), 60000); // Оновлення щохвилини
+        setInterval(() => this.updateTimeMarker(), 60000);
     }
 
     private initToggles(): void {
@@ -54,7 +51,6 @@ class CalendarWidget {
             const toggleBtn = document.getElementById(`postToggleBtn${i}`);
             const sectionHeader = document.getElementById(`postSubLocation${i}`);
             const sectionContent = document.getElementById(`postSectionContent${i}`);
-
             const toggleAction = (e: Event) => {
                 e.stopPropagation();
                 if (sectionContent && toggleBtn) {
@@ -77,31 +73,21 @@ class CalendarWidget {
         let decimal = 0;
 
         if (selected < startOfToday) {
-            // Минула дата - все сіре
             decimal = 1;
         } else if (selected.getTime() === startOfToday.getTime()) {
-            // Сьогодні - рахуємо точний час
             const startHour = 8;
             const endHour = 20;
-            const totalMinutes = (endHour - startHour) * 60; // 720 хв
-            
+            const totalMinutes = (endHour - startHour) * 60; 
             const currentHour = now.getHours();
             const currentMin = now.getMinutes();
-            
-            // Скільки хвилин пройшло з 8:00
             let minutesPassed = (currentHour - startHour) * 60 + currentMin;
-            
             if (minutesPassed < 0) minutesPassed = 0;
             if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
-
-            // Отримуємо десяткове число від 0 до 1 (наприклад, 0.5 для 14:00)
             decimal = minutesPassed / totalMinutes;
         } else {
-            // Майбутнє - нічого не сіре
             decimal = 0;
         }
 
-        // Передаємо просто число в CSS змінну
         if (this.timeHeader) {
             this.timeHeader.style.setProperty('--past-percentage', decimal.toString());
         }
@@ -110,7 +96,6 @@ class CalendarWidget {
         }
     }
 
-    // ... Решта методів без змін (render, goToToday, handleDayPrev і т.д.) ...
     private goToToday(): void {
         this.selectedDate = new Date(this.today);
         this.viewMonth = this.today.getMonth();

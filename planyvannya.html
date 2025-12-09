@@ -1,29 +1,19 @@
 <!DOCTYPE html>
 <html lang="uk">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Планувальник</title>
   <link rel="stylesheet" href="./src/scss/robocha/planyvannya/_planyvannya.scss" />
-  <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
-  <script type="module" src="./src/ts/roboha/planyvannya/planyvannya.ts"></script>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
+    body { margin: 0; padding: 0; overflow: hidden; }
   </style>
 </head>
-
 <body>
   <div class="post-planning-container" id="postPlanningContainer">
     <header class="post-header" id="postHeader">
       <nav class="post-nav" id="postNav">
-        <a href="https://veron3373.github.io/STO/main.html" class="post-nav-link post-active" id="postNavLinkHome">🛠️←
-          СТО</a>
-
+        <a href="#" class="post-nav-link post-active" id="postNavLinkHome">🛠️← СТО</a>
         <div class="post-header-calendar-nav">
           <button class="post-today-btn" id="postTodayBtn">Сьогодні</button>
           <button class="post-nav-arrow" id="headerNavPrev">‹</button>
@@ -34,9 +24,8 @@
     </header>
 
     <div class="post-main-content">
-
       <div class="post-scheduler-wrapper" id="postSchedulerWrapper">
-
+        
         <div class="post-sticky-header">
           <div class="post-header-corner">
             <span>Пости / Час</span>
@@ -45,50 +34,38 @@
           <div class="post-time-header" id="postTimeHeader">
             <div class="post-time-cell hour-cell">8</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">9</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">10</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">11</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">12</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">13</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">14</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">15</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">16</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">17</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">18</div>
             <div class="post-time-cell min-cell">30</div>
-
             <div class="post-time-cell hour-cell">19</div>
             <div class="post-time-cell min-cell">30</div>
           </div>
         </div>
 
         <div class="post-scheduler-body" id="postCalendarGrid">
-
+          
           <div class="post-section-group" id="sectionGroup1">
             <div class="post-section-header" id="postSubLocation1">
               <span>ЦЕХ 1</span>
               <button class="post-toggle-btn" id="postToggleBtn1">▼</button>
             </div>
-
             <div class="post-section-content" id="postSectionContent1">
               <div class="post-unified-row">
                 <div class="post-row-label">
@@ -108,7 +85,6 @@
                   </div>
                 </div>
               </div>
-
               <div class="post-unified-row">
                 <div class="post-row-label">
                   <div class="post-post-title">Пост 2</div>
@@ -122,7 +98,6 @@
                   </div>
                 </div>
               </div>
-
               <div class="post-unified-row">
                 <div class="post-row-label">
                   <div class="post-post-title">Пост 3</div>
@@ -190,12 +165,13 @@
               <button class="post-toggle-btn" id="postToggleBtn4">▼</button>
             </div>
             <div class="post-section-content" id="postSectionContent4">
-              <button class="post-add-reminder-btn" id="postAddReminderBtn" style="margin: 10px;">⊕ додати</button>
+              <button class="post-add-reminder-btn" id="postAddReminderBtn">⊕ додати</button>
             </div>
           </div>
 
         </div>
       </div>
+
       <aside class="post-mini-calendar" id="postMiniCalendar">
         <div class="post-year-nav" id="postYearNav">
           <button id="postYearPrev">‹</button>
@@ -204,24 +180,14 @@
         </div>
         <div id="postCalendarContainer"></div>
         <div class="post-legend" id="postLegend">
-          <div class="post-legend-item">
-            <div class="post-color-box post-scheduled"></div><span>Запланований</span>
-          </div>
-          <div class="post-legend-item">
-            <div class="post-color-box post-no-show"></div><span>Не приїхав</span>
-          </div>
-          <div class="post-legend-item">
-            <div class="post-color-box post-in-progress"></div><span>В роботі</span>
-          </div>
-          <div class="post-legend-item">
-            <div class="post-color-box post-repaired"></div><span>Відремонтований</span>
-          </div>
+          <div class="post-legend-item"><div class="post-color-box post-scheduled"></div><span>Запланований</span></div>
+          <div class="post-legend-item"><div class="post-color-box post-no-show"></div><span>Не приїхав</span></div>
+          <div class="post-legend-item"><div class="post-color-box post-in-progress"></div><span>В роботі</span></div>
+          <div class="post-legend-item"><div class="post-color-box post-repaired"></div><span>Відремонтований</span></div>
         </div>
       </aside>
-
     </div>
   </div>
   <script type="module" src="./src/ts/roboha/planyvannya/planyvannya_auth_guard.ts"></script>
 </body>
-
 </html>

@@ -1,21 +1,15 @@
-// --- ЗМІННІ (Variables) ---
-$primary-blue: #004d26; // Основний колір (зелений з лого)
+// --- ЗМІННІ ---
+$primary-blue: #004d26;
 $light-gray: #f5f5f5;
-$border-gray: #ddd;     // Звичайні лінії
-$border-dark: #bbb;     // Темніші лінії (розділювачі годин)
+$border-gray: #ddd;
+$border-dark: #bbb; // Темніша лінія розділення годин
 $text-dark: #333;
 $white: #fff;
 
-// Кольори статусів записів
-$scheduled: #ffefb3;   // Бежевий
-$no-show: #ffb3b3;     // Червонуватий
-$in-progress: #b3e6cc; // Зелений
-$repaired: #e6e6e6;    // Сірий
-
 // Розміри
-$header-height: 45px;       // Висота шапки з часом
-$row-height: 70px;          // Висота одного рядка (поста)
-$sidebar-width: 220px;      // Ширина лівої колонки з назвами
+$header-height: 45px;
+$row-height: 70px;
+$sidebar-width: 220px;
 
 // --- БАЗОВІ СТИЛІ ---
 .post-planning-container {
@@ -25,353 +19,152 @@ $sidebar-width: 220px;      // Ширина лівої колонки з наз�
   background: $light-gray;
   display: flex;
   flex-direction: column;
-  height: 100vh; // На весь екран
+  height: 100vh;
   margin: 0; padding: 0;
   overflow: hidden;
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
 }
 
-// --- ВЕРХНІЙ HEADER (Навігація сайту) ---
+// --- HEADER (Навігація) ---
 .post-header {
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  background: $primary-blue;
-  color: $white;
-  height: 50px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  z-index: 200;
-
+  display: flex; align-items: center; padding: 0 24px; background: $primary-blue; color: $white; height: 50px; flex-shrink: 0; z-index: 200;
   .post-nav {
     display: flex; gap: 16px; align-items: center; width: 100%;
-
-    .post-nav-link {
-      padding: 8px 16px; color: $white; text-decoration: none; border-radius: 4px; font-weight: 500;
-      transition: background 0.2s;
-      &:hover { background: rgba(255, 255, 255, 0.1); }
-      &.post-active { background: rgba(255, 255, 255, 0.2); }
-    }
-
-    .post-header-calendar-nav {
-      display: flex; align-items: center; gap: 12px; margin-left: auto;
-      
-      .post-today-btn {
-        padding: 6px 12px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255,255,255,0.3);
-        border-radius: 4px; color: $white; cursor: pointer; font-size: 13px;
-        &:hover { background: rgba(255, 255, 255, 0.25); }
-      }
-      .post-nav-arrow {
-        background: transparent; border: none; color: $white; font-size: 24px; cursor: pointer; line-height: 1;
-        &:hover { transform: scale(1.2); }
-      }
-      .post-current-date { font-weight: 600; min-width: 150px; text-align: center; font-size: 15px; }
+    .post-nav-link { padding: 8px 16px; color: $white; text-decoration: none; border-radius: 4px; font-weight: 500; &:hover { background: rgba(255, 255, 255, 0.1); } &.post-active { background: rgba(255, 255, 255, 0.2); }}
+    .post-header-calendar-nav { display: flex; align-items: center; gap: 12px; margin-left: auto; 
+      .post-today-btn { padding: 6px 12px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: $white; cursor: pointer; &:hover { background: rgba(255, 255, 255, 0.25); }}
+      .post-nav-arrow { background: transparent; border: none; color: $white; font-size: 24px; cursor: pointer; &:hover { transform: scale(1.2); }}
+      .post-current-date { font-weight: 600; min-width: 150px; text-align: center; }
     }
   }
 }
 
-// --- ГОЛОВНИЙ КОНТЕНТ (Layout) ---
+// --- MAIN CONTENT ---
 .post-main-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden; // Ховаємо скрол контейнера
-  height: calc(100vh - 50px);
+  display: flex; flex: 1; overflow: hidden; height: calc(100vh - 50px);
 }
 
-// 1. ЛІВИЙ БЛОК + ЦЕНТРАЛЬНА СІТКА (Єдиний Wrapper)
+// 1. ГОЛОВНИЙ WRAPPER
 .post-scheduler-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto; // Головний вертикальний скрол тут
-  background: $white;
-  position: relative;
-  border-right: 1px solid $border-gray;
-
-  // Стилізація скролбару
+  flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: $white; position: relative; border-right: 1px solid $border-gray;
   &::-webkit-scrollbar { width: 10px; height: 10px; }
   &::-webkit-scrollbar-track { background: $light-gray; }
-  &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; border: 2px solid $light-gray; &:hover { background: #999; } }
+  &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; border: 2px solid $light-gray; }
 }
 
-// 2. STICKY HEADER (Закріплена шапка з часом)
+// 2. STICKY HEADER (Часова шкала)
 .post-sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: $white;
-  display: flex;
-  border-bottom: 1px solid $border-dark; // Чітка лінія під шапкою
-  min-height: $header-height;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-
-  // Пустий кут над назвами постів
+  position: sticky; top: 0; z-index: 100; background: $white; display: flex; border-bottom: 1px solid $border-dark; min-height: $header-height;
+  
   .post-header-corner {
-    width: $sidebar-width;
-    min-width: $sidebar-width;
-    background: #f8f9fa;
-    border-right: 1px solid $border-gray;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    color: #888;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    width: $sidebar-width; min-width: $sidebar-width; background: #f8f9fa; border-right: 1px solid $border-gray;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; color: #888; font-size: 11px; text-transform: uppercase;
   }
 
-  // Часова шкала
   .post-time-header {
-    flex: 1;
-    display: grid;
-    // 24 рівні колонки: [Година][30хв][Година][30хв]...
-    grid-template-columns: repeat(24, 1fr); 
-    position: relative;
-    background: #fff;
+    flex: 1; display: grid; grid-template-columns: repeat(24, 1fr); position: relative; background: #fff;
 
-    // Індикатор минулого часу (Overlay на шапку)
+    // --- СІРА ЗАЛИВКА + ЧЕРВОНА ЛІНІЯ (В ШАПЦІ) ---
     &::after {
-        content: '';
-        position: absolute;
-        top: 0; bottom: 0; left: 0;
-        width: calc(var(--past-percentage, 0%) * 100%);
-        background: rgba(0, 0, 0, 0.04); // Легке затемнення минулого
-        pointer-events: none;
-        z-index: 1;
-        border-right: 1px solid red; // Червона лінія "зараз"
+        content: ''; position: absolute; top: 0; bottom: 0; left: 0;
+        // Ширина вираховується точно
+        width: calc(var(--past-percentage, 0) * 100%); 
+        background: rgba(0, 0, 0, 0.05); // Сірий фон
+        border-right: 2px solid #ff0000; // Червона лінія
+        pointer-events: none; z-index: 2;
     }
 
     .post-time-cell {
-      display: flex;
-      align-items: center;
-      position: relative;
-      height: 100%;
+      display: flex; position: relative; height: 100%;
+      padding-left: 6px; 
       
-      // Стиль для ПОВНОЇ ГОДИНИ (8, 9, 10...)
+      // ГОДИНИ (8, 9, 10...)
       &.hour-cell {
-        background: $white;
-        font-weight: 800;
-        font-size: 16px;
-        color: $text-dark;
-        justify-content: flex-start; // Вирівнювання ліворуч
-        padding-left: 8px;
-        border-right: 1px dashed #eee; // Легка лінія між годиною і 30 хв
+        background: $white; color: $text-dark; font-size: 15px; font-weight: 400; // Не жирний
+        align-items: center; justify-content: flex-start; // Притиснуто вліво
+        border-right: 1px dashed #eee; // Легка лінія посередині години
       }
 
-      // Стиль для 30 ХВИЛИН (смужка)
+      // ХВИЛИНИ (30)
       &.min-cell {
-        background: #fafafa; // Легкий сірий фон (як смужка)
-        font-size: 11px;
-        color: #999;
-        font-weight: 500;
-        justify-content: center;
-        border-right: 1px solid $border-dark; // Чітка лінія розділення годин
+        background: #fafafa; color: #999; font-size: 11px; font-weight: 400;
+        align-items: flex-start; // Піднімаємо вгору
+        padding-top: 4px; 
+        justify-content: flex-start; // Притиснуто вліво
+        border-right: 1px solid $border-dark; // Темніша лінія в кінці години
       }
-
-      // Прибираємо бордер у останнього елемента
       &:last-child { border-right: none; }
     }
   }
 }
 
-// 3. ТІЛО ПЛАНУВАЛЬНИКА
+// 3. ТІЛО ТАБЛИЦІ
 .post-scheduler-body {
-  position: relative;
-  min-height: 100%;
+  position: relative; min-height: 100%;
   
-  // Фонові вертикальні лінії (ГРАДІЄНТ)
-  // Розрахунок: (100% ширини - ширина сайдбару) / 24 колонки
+  // Сітка
   background-size: calc((100% - #{$sidebar-width}) / 24) 100%; 
-  
-  // Два градієнти: один для годин (суцільний), один для півгодин (пунктир або світлий)
-  // Тут простий варіант: однакові лінії для кожної клітинки grid
   background-image: linear-gradient(to right, $border-gray 1px, transparent 1px);
-  
-  background-position-x: $sidebar-width; // Зсув початку сітки
-  background-repeat: repeat-x;
+  background-position-x: $sidebar-width; background-repeat: repeat-x;
+
+  // --- СІРА ЗАЛИВКА + ЧЕРВОНА ЛІНІЯ (В ТІЛІ НА ВСЮ ВИСОТУ) ---
+  &::after {
+    content: ''; 
+    position: absolute; 
+    top: 0; bottom: 0; 
+    left: $sidebar-width; // Починаємо після сайдбару
+    // Розрахунок ширини відносно робочої області
+    width: calc(var(--past-percentage, 0) * (100% - #{$sidebar-width})); 
+    background: rgba(0, 0, 0, 0.05); // Сірий фон
+    border-right: 2px solid #ff0000; // Червона лінія
+    pointer-events: none; 
+    z-index: 10; // Поверх сітки, але під картками (appointment має бути вище)
+  }
 }
 
-// Заголовки цехів (Роздільники груп)
+// Заголовки секцій
 .post-section-header {
-  position: sticky;
-  top: $header-height; // Липне під шапкою часу
-  z-index: 90;
-  background: #e9ecef; // Світло-сірий фон заголовка
-  color: #495057;
-  padding: 0 16px;
-  font-weight: 700;
-  font-size: 13px;
-  border-bottom: 1px solid $border-gray;
-  border-top: 1px solid $border-gray;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  height: 32px; // Компактна висота
-  text-transform: uppercase;
-
-  &:hover { background: #dee2e6; color: #000; }
-
-  .post-toggle-btn {
-    background: none; border: none; font-size: 10px; cursor: pointer; color: inherit;
-    transition: transform 0.2s;
-  }
+  position: sticky; top: $header-height; z-index: 90; background: #e9ecef; color: #495057; padding: 0 16px; font-weight: 700; font-size: 13px;
+  border-bottom: 1px solid $border-gray; border-top: 1px solid $border-gray; display: flex; justify-content: space-between; align-items: center; cursor: pointer; height: 32px;
+  .post-toggle-btn { background: none; border: none; font-size: 10px; cursor: pointer; color: inherit; transition: transform 0.2s; }
 }
+.post-section-content.hidden { display: none; }
 
-.post-section-content {
-  // Клас для приховування секцій
-  &.hidden { display: none; }
-}
-
-// 4. ЄДИНИЙ РЯДОК (Unified Row)
+// Рядки
 .post-unified-row {
-  display: flex;
-  height: $row-height;
-  border-bottom: 1px solid $border-gray;
-  background: transparent;
-  position: relative;
-  
-  &:hover {
-    // Підсвітка всього рядка при наведенні
-    background: rgba(0, 0, 0, 0.015);
-    .post-row-label { background: #f1f3f5; color: $primary-blue; }
-  }
+  display: flex; height: $row-height; border-bottom: 1px solid $border-gray; background: transparent; position: relative;
+  &:hover { background: rgba(0, 0, 0, 0.015); .post-row-label { background: #f1f3f5; color: $primary-blue; }}
 
-  // Ліва частина (Інфо про пост)
   .post-row-label {
-    width: $sidebar-width;
-    min-width: $sidebar-width;
-    border-right: 3px solid $primary-blue; // Акцентна лінія
-    padding: 8px 16px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    background: #f8f9fa;
-    z-index: 5; // Поверх сітки
-    transition: background 0.2s;
-    
+    width: $sidebar-width; min-width: $sidebar-width; border-right: 3px solid $primary-blue; padding: 8px 16px;
+    display: flex; flex-direction: column; justify-content: center; background: #f8f9fa; z-index: 20; 
     .post-post-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: $text-dark; }
     .post-post-subtitle { font-size: 12px; color: #888; }
   }
 
-  // Права частина (Трек для записів)
   .post-row-track {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(24, 1fr); // 24 слоти (по 30 хв)
-    position: relative;
-    padding: 6px 0; // Відступ зверху/знизу для карток
+    flex: 1; display: grid; grid-template-columns: repeat(24, 1fr); position: relative; padding: 6px 0;
     
-    // Тінь минулого часу (для рядка)
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0; bottom: 0; left: 0;
-        width: calc(var(--past-percentage, 0%) * 100%);
-        background: rgba(0, 0, 0, 0.04); 
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    // Картки записів (Appointment Cards)
     .post-appointment {
-      margin: 0 4px; // Відступи між картками
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      cursor: pointer;
-      z-index: 2;
-      overflow: hidden;
-      white-space: nowrap;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-      display: flex; flex-direction: column; justify-content: center;
-      border-left-width: 4px; // Жирніша лінія зліва
-      border-left-style: solid;
-
-      &:hover { 
-        transform: translateY(-2px) scale(1.01); 
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); 
-        z-index: 10; 
-      }
+      margin: 0 4px; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; 
+      z-index: 30; // Картки ВИЩЕ за червону лінію
+      overflow: hidden; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; border-left-width: 4px; border-left-style: solid; transition: all 0.2s;
+      &:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); z-index: 40; }
       
-      // Стилі кольорів (залежно від класу)
       &.post-pink { background: #ffe3e3; border-left-color: #fa5252; color: #491212; }
       &.post-green { background: #d3f9d8; border-left-color: #40c057; color: #0b2e13; }
       &.post-beige { background: #fff3bf; border-left-color: #fab005; color: #5f370e; }
       
       .post-car-model { font-weight: 700; margin-bottom: 2px; font-size: 12px; }
-      .post-car-number { font-size: 11px; font-family: monospace; background: rgba(255,255,255,0.4); display: inline-block; padding: 1px 4px; border-radius: 3px; margin-bottom: 2px; width: fit-content;}
-      .post-client-name { font-size: 11px; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; }
-      
-      .post-icon { position: absolute; top: 6px; right: 6px; font-size: 14px; opacity: 0.7; }
+      .post-car-number { font-size: 11px; font-family: monospace; background: rgba(255,255,255,0.4); display: inline-block; padding: 1px 4px; border-radius: 3px; width: fit-content;}
     }
   }
 }
 
-// Кнопка "Додати нагадування"
-.post-add-reminder-btn {
-  padding: 10px; margin: 10px; width: calc(100% - 20px);
-  background: $white; border: 2px dashed $border-gray; border-radius: 6px; 
-  color: #888; cursor: pointer; font-weight: 600;
-  transition: all 0.2s;
-  &:hover { border-color: $primary-blue; color: $primary-blue; background: #f8f9fa; }
-}
-
-// 5. ПРАВА КОЛОНКА (Міні календар)
-.post-mini-calendar {
-  width: 300px; // Трохи ширше
-  background: $white;
-  border-left: 1px solid $border-gray;
-  padding: 24px;
-  overflow-y: auto;
-  display: flex; flex-direction: column; z-index: 150;
-  box-shadow: -2px 0 10px rgba(0,0,0,0.05);
-
-  .post-year-nav {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
-    button { 
-      background: none; border: none; font-size: 20px; cursor: pointer; color: #888;
-      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      &:hover { background: $light-gray; color: $text-dark; }
-    }
-    span { font-size: 18px; font-weight: 700; color: $text-dark; }
-  }
-
-  // Внутрішні стилі міні-календаря
-  .post-month-calendar {
-    margin-bottom: 30px;
-    h3 { font-size: 14px; margin-bottom: 15px; text-align: center; text-transform: uppercase; letter-spacing: 1px; color: $primary-blue; }
-    
-    .post-weekdays { 
-      display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; 
-      font-size: 11px; font-weight: 700; color: #adb5bd; margin-bottom: 8px; 
-    }
-    
-    .post-days { 
-      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; row-gap: 8px;
-      span { 
-        aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; border-radius: 50%; color: $text-dark;
-        &:hover { background: $light-gray; }
-        &.post-today { background: transparent; border: 2px solid $primary-blue; color: $primary-blue; font-weight: 700; }
-        &.post-selected-date { background: $primary-blue; color: $white; font-weight: 700; box-shadow: 0 2px 4px rgba(0,77,38,0.3); }
-      }
-    }
-  }
-
-  // Легенда статусів
-  .post-legend {
-    margin-top: auto; padding-top: 20px; border-top: 1px solid $border-gray; display: flex; flex-direction: column; gap: 10px;
-    h4 { font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-    .post-legend-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #555;
-      .post-color-box { width: 14px; height: 14px; border-radius: 3px; 
-        &.post-scheduled { background: $scheduled; border: 1px solid darken($scheduled, 10%); }
-        &.post-no-show { background: $no-show; border: 1px solid darken($no-show, 10%); }
-        &.post-in-progress { background: $in-progress; border: 1px solid darken($in-progress, 10%); }
-        &.post-repaired { background: $repaired; border: 1px solid darken($repaired, 10%); }
-      }
-    }
-  }
+// Кнопка та правий календар
+.post-add-reminder-btn { padding: 10px; margin: 10px; width: calc(100% - 20px); background: $white; border: 2px dashed $border-gray; border-radius: 6px; color: #888; cursor: pointer; &:hover { border-color: $primary-blue; color: $primary-blue; }}
+.post-mini-calendar { width: 300px; background: $white; border-left: 1px solid $border-gray; padding: 24px; overflow-y: auto; z-index: 150; 
+  .post-year-nav { display: flex; justify-content: space-between; margin-bottom: 20px; button { background: none; border: none; font-size: 20px; cursor: pointer; } span { font-weight: 700; }}
+  .post-month-calendar { margin-bottom: 30px; .post-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 700; color: #adb5bd; } .post-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; span { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; &.post-today { border: 2px solid $primary-blue; color: $primary-blue; font-weight: 700; } &.post-selected-date { background: $primary-blue; color: $white; }}}}
+  .post-legend { margin-top: auto; padding-top: 20px; border-top: 1px solid $border-gray; display: flex; flex-direction: column; gap: 10px; .post-legend-item { display: flex; gap: 10px; .post-color-box { width: 14px; height: 14px; border-radius: 3px; &.post-scheduled { background: #ffefb3; } &.post-no-show { background: #ffb3b3; } &.post-in-progress { background: #b3e6cc; } &.post-repaired { background: #e6e6e6; }}}}
 }

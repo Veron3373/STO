@@ -1,636 +1,241 @@
-// Кольори
-$primary-blue: #004d26;
-$light-gray: #f5f5f5;
-$border-gray: #ddd;
-$text-dark: #333;
-$white: #fff;
+:root {
+  --primary: #004d26;
+  --bg: #f9f9f9;
+  --light: #fff;
+  --border: #ddd;
+  --scheduled: #ffefb3;
+  --no-show: #ffb3b3;
+  --in-progress: #b3e6cc;
+  --repaired: #e6e6e6;
+}
 
-// Кольори статусів
-$scheduled: #ffefb3;
-$no-show: #ffb3b3;
-$in-progress: #b3e6cc;
-$repaired: #e6e6e6;
-$alert: #ff0000;
-$reminder: #003d82;
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); height: 100vh; overflow: hidden; }
 
-// Layout heights for alignment
-$header-height: 40px;
-$row-height: 70px;
-$row-margin: 6px;
+.planning-container { display: flex; flex-direction: column; height: 100vh; }
 
-.post-planning-container {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
-  font-size: 14px;
-  color: $text-dark;
-  background: $light-gray;
+/* HEADER */
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 12px 24px;
   display: flex;
-  flex-direction: column;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  // Header
-  .post-header {
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  .header-left { font-size: 20px; font-weight: 600; }
+  .header-center {
     display: flex;
     align-items: center;
-    padding: 12px 24px;
-    background: $primary-blue;
-    color: $white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-    .post-nav {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      flex: 1;
-      width: 100%;
-
-      .post-nav-link {
-        padding: 10px 20px;
-        color: $white;
-        text-decoration: none;
-        border-radius: 4px;
-        transition: background 0.2s;
-        white-space: nowrap;
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.1);
-        }
-
-        &.post-active {
-          background: rgba(255, 255, 255, 0.15);
-        }
-      }
-
-      // Календарна навігація в header
-      .post-header-calendar-nav {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding-left: 24px;
-        border-left: 1px solid rgba(255, 255, 255, 0.2);
-        margin-left: auto;
-
-        .post-today-btn {
-          padding: 8px 16px;
-          background: rgba(255, 255, 255, 0.15);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: 500;
-          color: $white;
-          font-size: 14px;
-          transition: all 0.2s;
-
-          &:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: translateY(-1px);
-          }
-
-          &:active {
-            transform: translateY(0);
-          }
-        }
-
-        .post-nav-arrow {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 4px;
-          font-size: 28px;
-          cursor: pointer;
-          color: $white;
-          padding: 4px 20px;
-          transition: all 0.2s;
-          line-height: 1;
-
-          &:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.1);
-          }
-
-          &:active {
-            transform: scale(0.95);
-          }
-        }
-
-        .post-current-date {
-          font-size: 15px;
-          font-weight: 500;
-          color: $white;
-          min-width: 150px;
-          text-align: center;
-        }
-      }
-    }
-  }
-
-  // Main Content
-  .post-main-content {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  // Sidebar
-  .post-sidebar {
-    width: 220px;
-    background: $white;
-    border-right: none;
-    padding: 10px 0 10px 10px;
-    display: flex;
-    flex-direction: column;
-
-    .post-location-section {
-      flex: 1;
-    }
-
-    .post-location-header,
-    .post-sub-location {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px;
-      background: $light-gray;
-      border-radius: 4px;
-      margin-bottom: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      height: 40px;
-      /* Fixed height for alignment */
-      box-sizing: border-box;
-
-      .post-toggle-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 12px;
-        transition: transform 0.2s;
-      }
-    }
-
-    .post-posts-list {
-      margin-left: 16px;
-      margin-bottom: 12px;
-
-      .post-post-item {
-        padding: 6px 10px;
-        margin-bottom: 0;
-        border-left: 3px solid $primary-blue;
-        border-bottom: 1px solid $border-gray;
-        background: #f9f9f9;
-        cursor: pointer;
-        transition: background 0.2s;
-        height: 70px;
-        /* Fixed height for alignment */
-        box-sizing: border-box;
-
-        &:hover {
-          background: #f0f0f0;
-        }
-
-        .post-post-title {
-          font-weight: 500;
-          margin-bottom: 4px;
-        }
-
-        .post-post-subtitle {
-          font-size: 12px;
-          color: #666;
-        }
-      }
-    }
-
-    .post-add-reminder-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px;
-      background: none;
-      border: 1px dashed $border-gray;
-      border-radius: 4px;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 8px;
-
-      &:hover {
-        background: $light-gray;
-      }
-    }
-
-    .post-footer-info {
-      margin-top: auto;
-      padding-top: 20px;
-      border-top: 1px solid $border-gray;
-      font-size: 11px;
-      color: #666;
-
-      p {
-        margin-bottom: 4px;
-      }
-
-      a {
-        color: $primary-blue;
-        text-decoration: none;
-
-        &:hover {
-          text-decoration: underline;
-        }
-      }
-    }
-  }
-
-  // Calendar Area
-  .post-calendar-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: $white;
-    overflow: hidden;
-
-    .post-time-header {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      padding: 8px 24px 8px 24px;
-      padding-right: 32px;
-      border-bottom: 2px solid $border-gray;
-      position: relative;
-      overflow: hidden;
-      min-height: 50px;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 24px;
-        right: 32px;
-        bottom: 0;
-        background: transparent;
-        z-index: 0;
-      }
-
-      &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 24px;
-        bottom: 0;
-        width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
-        background: rgba(180, 180, 180, 0.5);
-        z-index: 1;
-      }
-
-      .post-time-cell {
-        position: relative;
-        z-index: 2;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0;
-        align-items: start;
-
-        .post-hour {
-          font-size: 14px;
-          font-weight: 600;
-          color: $text-dark;
-          text-align: left;
-          padding: 4px 4px 4px 8px;
-          grid-column: 1 / 2;
-          position: relative;
-
-          &::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 50%;
-            width: 1px;
-            background: $border-gray;
-          }
-        }
-
-        .post-minutes {
-          font-size: 12px;
-          font-weight: 400;
-          color: $text-dark;
-          text-align: left;
-          padding: 0px 4px 4px 8px;
-          grid-column: 2 / 3;
-          border-right: 1px solid $border-gray;
-        }
-
-        &:last-child {
-          .post-minutes {
-            border-right: none;
-          }
-        }
-
-        &.post-past-time {
-          .post-hour {
-            color: #999;
-          }
-
-          .post-minutes {
-            color: #999;
-          }
-        }
-      }
-    }
-
-    .post-calendar-grid {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0;
-      position: relative;
-      background: $white;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 24px;
-        bottom: 0;
-        width: calc(var(--past-percentage, 0%) * (100% - 56px) / 100);
-        background: rgba(180, 180, 180, 0.5);
-        pointer-events: none;
-        z-index: 0;
-      }
-
-      // Grid Lines
-      .post-grid-lines {
-        position: absolute;
-        top: 0;
-        left: 24px;
-        right: 24px;
-        bottom: 0;
-        pointer-events: none;
-        z-index: 0;
-        /* Lower z-index to be behind content */
-        display: grid;
-        grid-template-columns: repeat(24, 1fr);
-        height: 100%;
-        /* Fallback */
-
-        .post-hour-line {
-          border-right: 1px solid $border-gray;
-
-          &:nth-child(2n) {
-            border-right: 1px solid $border-gray;
-          }
-
-          &:last-child {
-            border-right: none;
-          }
-        }
-      }
-
-      // Sections
-
-
-      .post-grid-shop-header {
-        height: $header-height;
-        margin-bottom: $row-margin;
-        background: rgba(0, 0, 0, 0.02);
-        /* Little visual cue */
-        border-radius: 4px;
-      }
-
-
-
-      .post-grid-row {
-        height: $row-height;
-        margin-bottom: 0;
-        display: grid;
-        grid-template-columns: repeat(24, 1fr);
-        gap: 0;
-        padding: 0 24px;
-        border-bottom: 1px solid $border-gray;
-        position: relative;
-        z-index: 2;
-        align-items: center;
-
-        .post-appointment {
-          padding: 6px 10px;
-          /* Reduced padding to fit fixed height */
-          height: calc(100% - 10px);
-          /* Fit within row with some margin */
-          border-radius: 6px;
-          font-size: 11px;
-          cursor: pointer;
-          transition: transform 0.2s, box-shadow 0.2s;
-          position: relative;
-          overflow: hidden;
-
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-            z-index: 10;
-          }
-
-          .post-car-model {
-            font-weight: 600;
-            margin-bottom: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .post-car-number {
-            font-weight: 500;
-            margin-bottom: 2px;
-          }
-
-          .post-client-name {
-            color: #666;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .post-icon {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-          }
-
-          &.post-pink {
-            background: #ffb3b3;
-          }
-
-          &.post-green {
-            background: #b3e6cc;
-          }
-
-          &.post-beige {
-            background: #ffefb3;
-          }
-        }
-      }
-    }
-  }
-
-  // Mini Calendar
-  .post-mini-calendar {
-    padding: 20px;
-    overflow-y: auto;
-
-    .post-year-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-
-      button {
-        background: none;
-        border: none;
-        font-size: 28px;
-        cursor: pointer;
-        color: $text-dark;
-        padding: 8px 20px;
-        border-radius: 4px;
-        transition: all 0.2s;
-        line-height: 1;
-
-        &:hover {
-          color: $primary-blue;
-          background: $light-gray;
-        }
-
-        &:active {
-          transform: scale(0.95);
-        }
-      }
-
-      span {
-        font-size: 18px;
-        font-weight: 600;
-      }
-    }
-
-    .post-month-calendar {
-      margin-bottom: 24px;
-
-      h3 {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 12px;
-        color: $text-dark;
-      }
-
-      .post-weekdays {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-        margin-bottom: 8px;
-        font-size: 11px;
-        font-weight: 600;
-        color: #666;
-        text-align: center;
-      }
-
-      .post-days {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-        font-size: 12px;
-
-        span {
-          aspect-ratio: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          cursor: pointer;
-          transition: background 0.2s;
-
-          &:hover {
-            background: $light-gray;
-          }
-
-          &.post-today {
-            background: $primary-blue;
-            color: $white;
-            font-weight: 600;
-          }
-
-          &.post-selected-date {
-            background: #ffe082;
-            color: $text-dark;
-            font-weight: 600;
-          }
-        }
-      }
-    }
-
-    // Легенда в sidebar
-    .post-legend {
-      margin-top: 24px;
-      padding-top: 20px;
-      border-top: 1px solid $border-gray;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-
-      .post-legend-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: $text-dark;
-
-        .post-color-box {
-          width: 20px;
-          height: 20px;
-          border-radius: 4px;
-          flex-shrink: 0;
-
-          &.post-scheduled {
-            background: $scheduled;
-          }
-
-          &.post-no-show {
-            background: $no-show;
-          }
-
-          &.post-in-progress {
-            background: $in-progress;
-          }
-
-          &.post-repaired {
-            background: $repaired;
-          }
-        }
-      }
-    }
-  }
-
-  // Scrollbar
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: $light-gray;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-
-    &:hover {
-      background: #999;
-    }
+    gap: 16px;
+    button { background: rgba(255,255,255,0.15); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    #currentDate { font-size: 17px; min-width: 260px; text-align: center; font-weight: 500; }
+    button:nth-child(2), button:nth-child(3) { font-size: 28px; padding: 4px 20px; }
   }
 }
 
-/* This closes the outermost container, e.g., .post-calendar-wrapper */
+/* MAIN */
+.main-content { display: flex; flex: 1; overflow: hidden; }
 
-/* Utility */
-.hidden {
-  display: none !important;
+/* SIDEBAR */
+.sidebar {
+  width: 280px;
+  background: var(--light);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 12px;
+}
+.shop {
+  margin-bottom: 20px;
+  .shop-header {
+    background: #f0f0f0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    .toggle { background:none; border:none; font-size:16px; cursor:pointer; transition:0.2s; }
+  }
+  .posts {
+    transition: max-height 0.3s;
+    overflow: hidden;
+    .post {
+      background: #fafafa;
+      border-left: 4px solid var(--primary);
+      padding: 12px 16px;
+      margin: 6px 0;
+      border-radius: 0 8px 8px 0;
+      height: 76px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      .title { font-weight: 600; }
+      .subtitle { font-size: 12px; color: #666; margin-top: 4px; }
+    }
+  }
+  &.collapsed .posts { max-height: 0 !important; }
+}
+.add-reminder {
+  margin: 20px 12px 0;
+  padding: 12px;
+  width: calc(100% - 24px);
+  border: 2px dashed #ccc;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* КАЛЕНДАР */
+.calendar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+.time-header {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  border-bottom: 2px solid var(--border);
+  padding: 0 24px;
+  > div {
+    text-align: center;
+    padding: 12px 0 8px;
+    font-size: 14px;
+    position: relative;
+    sup { font-size: 10px; opacity: 0.7; }
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 12px; bottom: 12px;
+      width: 1px;
+      background: var(--border);
+    }
+  }
+}
+.calendar-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#grid {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 24px 50px;
+}
+.shop-row {
+  margin-bottom: 30px;
+  .shop-title {
+    background: #f0f0f0;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .post-row {
+    height: 76px;
+    background: #fcfcfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+  }
+}
+.appointment {
+  position: absolute;
+  background: #ffefb3;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  cursor: pointer;
+  overflow: hidden;
+  &.no-show { background: var(--no-show); }
+  &.in-progress { background: var(--in-progress); }
+  &.repaired { background: var(--repaired); }
+  &:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.2); z-index: 10; }
+}
+.grid-lines {
+  position: absolute;
+  top: 0; left: 24px; right: 24px; bottom: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  > div {
+    border-right: 1px solid #eee;
+    &:nth-child(even) { border-color: #ddd; }
+  }
+}
+
+/* ПРАВА ПАНЕЛЬ */
+.right-panel {
+  width: 300px;
+  background: white;
+  border-left: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+  .year-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    button { background:none; border:none; font-size:24px; cursor:pointer; }
+    span { font-size:18px; font-weight:600; }
+  }
+  .month {
+    margin-bottom: 30px;
+    h3 { margin-bottom: 10px; font-size:14px; font-weight:600; }
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7,1fr);
+      text-align:center;
+      font-size:12px;
+      font-weight:600;
+      color:#666;
+      margin-bottom:8px;
+    }
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7,1fr);
+      gap:4px;
+      span {
+        aspect-ratio:1;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border-radius:50%;
+        cursor:pointer;
+        font-size:13px;
+        &.today { background:var(--primary); color:white; font-weight:bold; }
+        &.selected { background:#ffe082; font-weight:bold; }
+        &:hover { background:#f0f0f0; }
+      }
+    }
+  }
+  .legend {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    > div {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:10px;
+      font-size:13px;
+    }
+    .color {
+      width:20px;
+      height:20px;
+      border-radius:4px;
+      display:inline-block;
+      &.scheduled { background:var(--scheduled); }
+      &.no-show { background:var(--no-show); }
+      &.in-progress { background:var(--in-progress); }
+      &.repaired { background:var(--repaired); }
+    }
+  }
 }

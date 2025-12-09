@@ -1,348 +1,202 @@
-class CalendarWidget {
-    private viewYear: number;
-    private viewMonth: number;
-    private today: Date;
-    private selectedDate: Date;
-    private container: HTMLElement | null;
-    private headerDateDisplay: HTMLElement | null;
+// src/ts/roboha/planyvannya/planyvannya.ts
 
-    constructor() {
-        this.today = new Date();
-        this.today.setHours(0, 0, 0, 0);
+document.addEventListener("DOMContentLoaded", () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-        this.selectedDate = new Date(this.today);
-        this.viewYear = this.today.getFullYear();
-        this.viewMonth = this.today.getMonth();
+  let selectedDate = new Date(today);
+  let viewYear = today.getFullYear();
 
-        this.container = document.getElementById('postCalendarContainer');
-        this.headerDateDisplay = document.getElementById('postHeaderDateDisplay');
+  // ──────────────────────────────────────────────
+  // DOM елементи
+  // ──────────────────────────────────────────────
+  const headerDateEl = document.getElementById("postHeaderDateDisplay") as HTMLElement;
+  const yearDisplayEl = document.getElementById("postYearDisplay") as HTMLElement;
+  const sidebarEl = document.getElementById("postSidebar") as HTMLElement;
+  const gridSectionsEl = document.getElementById("postGridSections") as HTMLElement;
+  const miniCalendarContainer = document.getElementById("postCalendarContainer") as HTMLElement;
 
-        this.init();
-    }
+  // Кнопки
+  const todayBtn = document.getElementById("postTodayBtn") as HTMLButtonElement;
+  const prevDayBtn = document.getElementById("headerNavPrev") as HTMLButtonElement;
+  const nextDayBtn = document.getElementById("headerNavNext") as HTMLButtonElement;
+  const prevYearBtn = document.getElementById("postYearPrev") as HTMLButtonElement;
+  const nextYearBtn = document.getElementById("postYearNext") as HTMLButtonElement;
 
-    private init(): void {
-        // Кнопки в header - рухають ДНІ
-        const headerPrev = document.getElementById('headerNavPrev');
-        const headerNext = document.getElementById('headerNavNext');
-        const todayBtn = document.getElementById('postTodayBtn');
+  // ──────────────────────────────────────────────
+  // Навігація
+  // ──────────────────────────────────────────────
+  todayBtn.addEventListener("click", () => {
+    selectedDate = new Date(today);
+    render();
+  });
 
-        if (headerPrev) headerPrev.addEventListener('click', () => this.handleDayPrev());
-        if (headerNext) headerNext.addEventListener('click', () => this.handleDayNext());
-        if (todayBtn) todayBtn.addEventListener('click', () => this.goToToday());
+  prevDayBtn.addEventListener("click", () => {
+    selectedDate.setDate(selectedDate.getDate() - 1);
+    render();
+  });
 
-        // Кнопки в sidebar (біля року) - рухають МІСЯЦІ
-        const monthPrevBtn = document.getElementById('postYearPrev');
-        const monthNextBtn = document.getElementById('postYearNext');
+  nextDayBtn.addEventListener("click", () => {
+    selectedDate.setDate(selectedDate.getDate() + 1);
+    render();
+  });
 
-        if (monthPrevBtn) monthPrevBtn.addEventListener('click', () => this.handleMonthPrev());
-        if (monthNextBtn) monthNextBtn.addEventListener('click', () => this.handleMonthNext());
+  prevYearBtn.addEventListener("click", () => {
+    viewYear--;
+    render();
+  });
 
-        this.addGridLines();
-        this.initLayoutControl();
-        this.render();
-    }
+  nextYearBtn.addEventListener("click", () => {
+    viewYear++;
+    render();
+  });
 
-    private initLayoutControl(): void {
-        // 1. Scroll Sync
-        const sidebar = document.getElementById('postSidebar');
-        const grid = document.getElementById('postCalendarGrid');
+  // ──────────────────────────────────────────────
+  // Синхронізація скролів — ВИПРАВЛЕНО!
+  // ──────────────────────────────────────────────
+  sidebarEl.addEventListener("scroll", () => {
+    gridSectionsEl.scrollTop = sidebarEl.scrollTop;
+  });
 
-        if (sidebar && grid) {
-            let isSyncing = false;
-            sidebar.addEventListener('scroll', () => {
-                if (!isSyncing) {
-                    isSyncing = true;
-                    grid.scrollTop = sidebar.scrollTop;
-                    // Slightly delay releasing lock to prevent loop
-                    setTimeout(() => isSyncing = false, 50);
-                }
-            });
-            grid.addEventListener('scroll', () => {
-                if (!isSyncing) {
-                    isSyncing = true;
-                    sidebar.scrollTop = grid.scrollTop;
-                    setTimeout(() => isSyncing = false, 50);
-                }
-            });
+  gridSectionsEl.addEventListener("scroll", () => {
+    sidebarEl.scrollTop = gridSectionsEl.scrollTop;
+  });
+
+  // ──────────────────────────────────────────────
+  // Згортання цехів
+  // ──────────────────────────────────────────────
+  for (let i = 1; i <= 4; i++) {
+    const toggleBtn = document.getElementById(`postToggleBtn${i}`) as HTMLButtonElement;
+    const header = document.getElementById(`postSubLocation${i}`) as HTMLElement;
+    const postsList = document.getElementById(`postPostsList${i}`) as HTMLElement | null;
+    const gridContainer = document.querySelector(
+      `.post-grid-section[data-section="${i}"] .post-grid-posts-container`
+    ) as HTMLElement | null;
+
+    if (!toggleBtn || !header) continue;
+
+    const toggle = () => {
+      const isHidden = postsList?.classList.toggle("hidden") ?? false;
+      gridContainer?.classList.toggle("hidden", isHidden);
+
+      toggleBtn.textContent = isHidden ? "Right Arrow" : "Down Arrow";
+      toggleBtn.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
+    };
+
+    toggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggle();
+    });
+
+    header.addEventListener("click", () => toggleBtn.click());
+  }
+
+  // ──────────────────────────────────────────────
+  // Формат дати
+  // ──────────────────────────────────────────────
+  const formatFullDate = (date: Date): string => {
+    const days = ["Неділя", "Понеділок", "Вівторок", "Середа", "Четвер", "Пʼятниця", "Субота"];
+    const months = ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"];
+    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  // ──────────────────────────────────────────────
+  // Рендер
+  // ──────────────────────────────────────────────
+  const render = () => {
+    headerDateEl.textContent = formatFullDate(selectedDate);
+    yearDisplayEl.textContent = viewYear.toString();
+    renderMiniCalendar();
+  };
+
+  const renderMiniCalendar = () => {
+    miniCalendarContainer.innerHTML = "";
+
+    const monthNames = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+
+    for (let m = 0; m < 12; m++) {
+      const monthDiv = document.createElement("div");
+      monthDiv.className = "post-month-calendar";
+
+      const h3 = document.createElement("h3");
+      h3.textContent = monthNames[m];
+      monthDiv.appendChild(h3);
+
+      const weekdays = document.createElement("div");
+      weekdays.className = "post-weekdays";
+      ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"].forEach((d) => {
+        const span = document.createElement("span");
+        span.textContent = d;
+        weekdays.appendChild(span);
+      });
+      monthDiv.appendChild(weekdays);
+
+      const daysGrid = document.createElement("div");
+      daysGrid.className = "post-days";
+
+      const firstDay = new Date(viewYear, m, 1).getDay();
+      const offset = firstDay === 0 ? 6 : firstDay - 1;
+
+      for (let i = 0; i < offset; i++) {
+        daysGrid.appendChild(document.createElement("span"));
+      }
+
+      const daysInMonth = new Date(viewYear, m + 1, 0).getDate();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const span = document.createElement("span");
+        span.textContent = d.toString();
+
+        const thisDate = new Date(viewYear, m, d);
+
+        if (thisDate.toDateString() === today.toDateString()) {
+          span.classList.add("post-today");
+        }
+        if (thisDate.toDateString() === selectedDate.toDateString()) {
+          span.classList.add("post-selected-date");
         }
 
-        // 2. Toggles (Expand/Collapse Shops)
-        // We have 4 potential sections based on HTML structure
-        for (let i = 1; i <= 4; i++) {
-            const toggleBtn = document.getElementById(`postToggleBtn${i}`);
-            const sidebarList = document.getElementById(`postPostsList${i}`); // May not exist for empty sections
-            const gridContainer = document.getElementById(`gridPostsContainer${i}`);
-
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // prevent header click if we add one later
-
-                    const isHidden = sidebarList ? sidebarList.classList.contains('hidden') : gridContainer?.classList.contains('hidden');
-                    const newStateIsHidden = !isHidden;
-
-                    if (sidebarList) {
-                        if (newStateIsHidden) sidebarList.classList.add('hidden');
-                        else sidebarList.classList.remove('hidden');
-                    }
-
-                    if (gridContainer) {
-                        if (newStateIsHidden) gridContainer.classList.add('hidden');
-                        else gridContainer.classList.remove('hidden');
-                    }
-
-                    // Rotate arrow
-                    toggleBtn.style.transform = newStateIsHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
-                });
-            }
-
-            // Also make the whole header clickable for better UX?
-            const subLocation = document.getElementById(`postSubLocation${i}`);
-            if (subLocation && toggleBtn) {
-                subLocation.addEventListener('click', () => {
-                    toggleBtn.click();
-                });
-            }
-        }
-    }
-
-    private addGridLines(): void {
-        const calendarGrid = document.getElementById('postCalendarGrid');
-        if (!calendarGrid) return;
-
-        let linesContainer = calendarGrid.querySelector('.post-grid-lines');
-        if (!linesContainer) {
-            linesContainer = document.createElement('div');
-            linesContainer.className = 'post-grid-lines';
-
-            for (let i = 0; i < 24; i++) {
-                const line = document.createElement('div');
-                line.className = 'post-hour-line';
-                linesContainer.appendChild(line);
-            }
-
-            calendarGrid.appendChild(linesContainer);
-        }
-    }
-
-    private goToToday(): void {
-        this.selectedDate = new Date(this.today);
-        this.viewMonth = this.today.getMonth();
-        this.viewYear = this.today.getFullYear();
-        this.render();
-    }
-
-    // Рух по ДНЯХ (для кнопок в header)
-    private handleDayPrev(): void {
-        this.selectedDate.setDate(this.selectedDate.getDate() - 1);
-        this.viewMonth = this.selectedDate.getMonth();
-        this.viewYear = this.selectedDate.getFullYear();
-        this.render();
-    }
-
-    private handleDayNext(): void {
-        this.selectedDate.setDate(this.selectedDate.getDate() + 1);
-        this.viewMonth = this.selectedDate.getMonth();
-        this.viewYear = this.selectedDate.getFullYear();
-        this.render();
-    }
-
-    // Рух по МІСЯЦЯХ (для кнопок в sidebar)
-    private handleMonthPrev(): void {
-        this.viewMonth--;
-        if (this.viewMonth < 0) {
-            this.viewMonth = 11;
-            this.viewYear--;
-        }
-        this.render();
-    }
-
-    private handleMonthNext(): void {
-        this.viewMonth++;
-        if (this.viewMonth > 11) {
-            this.viewMonth = 0;
-            this.viewYear++;
-        }
-        this.render();
-    }
-
-    private getMonthName(monthIndex: number): string {
-        const months = [
-            'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-            'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
-        ];
-        return months[monthIndex];
-    }
-
-    private formatFullDate(date: Date): string {
-        const days = [
-            'Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота'
-        ];
-        const dayName = days[date.getDay()];
-        const day = date.getDate();
-
-        const monthsGenitive = [
-            'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
-            'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
-        ];
-        const monthName = monthsGenitive[date.getMonth()];
-
-        return `${dayName}, ${day} ${monthName} ${date.getFullYear()}`;
-    }
-
-    private selectDate(year: number, month: number, day: number): void {
-        this.selectedDate = new Date(year, month, day);
-        this.render();
-    }
-
-    private render(): void {
-        if (!this.container) return;
-
-        if (this.headerDateDisplay) {
-            this.headerDateDisplay.textContent = this.formatFullDate(this.selectedDate);
-        }
-
-        const sidebarYear = document.getElementById('postYearDisplay');
-        if (sidebarYear) {
-            sidebarYear.textContent = this.viewYear.toString();
-        }
-
-        this.updateHeaderTimeStyles();
-
-        this.container.innerHTML = '';
-
-        this.container.appendChild(this.renderMonth(this.viewYear, this.viewMonth));
-
-        let nextMonth = this.viewMonth + 1;
-        let nextYear = this.viewYear;
-        if (nextMonth > 11) {
-            nextMonth = 0;
-            nextYear++;
-        }
-
-        this.container.appendChild(this.renderMonth(nextYear, nextMonth));
-    }
-
-    private updateHeaderTimeStyles(): void {
-        const timeHeader = document.getElementById('postTimeHeader');
-        const calendarGrid = document.getElementById('postCalendarGrid');
-        if (!timeHeader || !calendarGrid) return;
-
-        const children = Array.from(timeHeader.children) as HTMLElement[];
-        const now = new Date();
-
-        const startOfToday = new Date(this.today);
-        const selected = new Date(this.selectedDate);
-        selected.setHours(0, 0, 0, 0);
-
-        let allPast = false;
-        let checkTime = false;
-
-        if (selected < startOfToday) {
-            allPast = true;
-        } else if (selected.getTime() === startOfToday.getTime()) {
-            checkTime = true;
-        }
-
-        let pastPercentage = 0;
-        if (allPast) {
-            pastPercentage = 100;
-            children.forEach(c => c.classList.add('post-past-time'));
-        } else if (checkTime) {
-            const startHour = 8;
-            const currentHour = now.getHours();
-            const currentMin = now.getMinutes();
-
-            // Визначаємо поточний 30-хвилинний слот з початку робочого дня
-            let minutesPassed = (currentHour - startHour) * 60 + currentMin;
-            if (minutesPassed < 0) minutesPassed = 0;
-
-            const totalMinutes = 12 * 60; // 8:00 до 20:00 = 12 годин
-            if (minutesPassed > totalMinutes) minutesPassed = totalMinutes;
-
-            // Округлюємо до найближчого 30-хвилинного слоту (для тексту)
-            const currentSlot = Math.floor(minutesPassed / 30);
-
-            // Percentage точний (для графіки)
-            pastPercentage = (minutesPassed / totalMinutes) * 100;
-
-            // Позначаємо минулі комірки (текст)
-            for (let i = 0; i < children.length; i++) {
-                const cell = children[i];
-                cell.classList.remove('post-past-time');
-
-                if (i < currentSlot) {
-                    cell.classList.add('post-past-time');
-                }
-            }
-        } else {
-            children.forEach(c => c.classList.remove('post-past-time'));
-        }
-
-        timeHeader.style.setProperty('--past-percentage', `${pastPercentage}%`);
-        calendarGrid.style.setProperty('--past-percentage', `${pastPercentage}%`);
-    }
-
-    private renderMonth(year: number, month: number): HTMLElement {
-        const monthDiv = document.createElement('div');
-        monthDiv.className = 'post-month-calendar';
-
-        const h3 = document.createElement('h3');
-        h3.textContent = this.getMonthName(month);
-        monthDiv.appendChild(h3);
-
-        const weekdaysDiv = document.createElement('div');
-        weekdaysDiv.className = 'post-weekdays';
-        const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-        weekdays.forEach(day => {
-            const span = document.createElement('span');
-            span.textContent = day;
-            weekdaysDiv.appendChild(span);
+        span.addEventListener("click", () => {
+          selectedDate = new Date(viewYear, m, d);
+          render();
         });
-        monthDiv.appendChild(weekdaysDiv);
 
-        const daysDiv = document.createElement('div');
-        daysDiv.className = 'post-days';
+        daysGrid.appendChild(span);
+      }
 
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-
-        let startDay = firstDay.getDay();
-        if (startDay === 0) startDay = 7;
-
-        for (let i = 1; i < startDay; i++) {
-            daysDiv.appendChild(document.createElement('span'));
-        }
-
-        for (let day = 1; day <= lastDay.getDate(); day++) {
-            const daySpan = document.createElement('span');
-            daySpan.textContent = day.toString();
-
-            const currentDate = new Date(year, month, day);
-
-            if (
-                currentDate.getDate() === this.selectedDate.getDate() &&
-                currentDate.getMonth() === this.selectedDate.getMonth() &&
-                currentDate.getFullYear() === this.selectedDate.getFullYear()
-            ) {
-                daySpan.className = 'post-selected-date';
-            } else if (
-                currentDate.getDate() === this.today.getDate() &&
-                currentDate.getMonth() === this.today.getMonth() &&
-                currentDate.getFullYear() === this.today.getFullYear()
-            ) {
-                daySpan.className = 'post-today';
-            }
-
-            daySpan.addEventListener('click', () => this.selectDate(year, month, day));
-
-            daysDiv.appendChild(daySpan);
-        }
-
-        monthDiv.appendChild(daysDiv);
-        return monthDiv;
+      monthDiv.appendChild(daysGrid);
+      miniCalendarContainer.appendChild(monthDiv);
     }
-}
+  };
 
-document.addEventListener('DOMContentLoaded', () => {
-    new CalendarWidget();
+  // ──────────────────────────────────────────────
+  // Демо-записи (видали, коли підключиш бекенд)
+  // ──────────────────────────────────────────────
+  const addDemoAppointments = () => {
+    const appointments = [
+      { postId: 1, start: 2, end: 6, model: "LAND ROVER RANGE ROVER", number: "А 001 АА 77", client: "Володимир Іванов", status: "no-show" },
+      { postId: 1, start: 6, end: 11, model: "LAND ROVER DISCOVERY4", number: "А 001 АА 77", client: "Дмитро Орешкін", status: "in-progress" },
+    ];
+
+    appointments.forEach((app) => {
+      const row = document.querySelector(`.post-grid-row[data-post-id="${app.postId}"]`) as HTMLElement;
+      if (!row) return;
+
+      const el = document.createElement("div");
+      el.className = `post-appointment post-${app.status}`;
+      el.style.gridColumn = `${app.start} / ${app.end}`;
+      el.innerHTML = `
+        <div class="post-car-model">${app.model}</div>
+        <div class="post-car-number">${app.number}</div>
+        <div class="post-client-name">${app.client}</div>
+      `;
+      row.appendChild(el);
+    });
+  };
+
+  // ──────────────────────────────────────────────
+  // Старт
+  // ──────────────────────────────────────────────
+  render();
+  addDemoAppointments();
 });

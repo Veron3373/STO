@@ -41,7 +41,7 @@ class CalendarWidget {
         this.initToggles();
         this.render();
         
-        // Таймер для лінії часу
+        // Таймер для червоної лінії
         this.updateTimeMarker();
         setInterval(() => this.updateTimeMarker(), 60000);
     }
@@ -158,8 +158,8 @@ class CalendarWidget {
             const span = document.createElement('span');
             span.textContent = day.toString();
             const current = new Date(year, month, day);
-            if (current.toDateString() === this.selectedDate.toDateString()) { span.className = 'post-selected-date'; }
-            else if (current.toDateString() === this.today.toDateString()) { span.className = 'post-today'; }
+            if (current.toDateString() === this.selectedDate.toDateString()) { span.className = 'post-selected-date'; } // Жовтий (вибрано)
+            else if (current.toDateString() === this.today.toDateString()) { span.className = 'post-today'; } // Зелений (сьогодні)
             span.addEventListener('click', () => { this.selectedDate = new Date(year, month, day); this.render(); });
             daysDiv.appendChild(span);
         }

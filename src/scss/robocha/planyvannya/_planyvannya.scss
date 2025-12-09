@@ -1,241 +1,322 @@
-:root {
-  --primary: #004d26;
-  --bg: #f9f9f9;
-  --light: #fff;
-  --border: #ddd;
-  --scheduled: #ffefb3;
-  --no-show: #ffb3b3;
-  --in-progress: #b3e6cc;
-  --repaired: #e6e6e6;
+// --- ЗМІННІ ---
+$primary-blue: #004d26;
+$light-gray: #f5f5f5;
+$border-gray: #ddd;
+$text-dark: #333;
+$white: #fff;
+
+// Статуси
+$scheduled: #ffefb3;
+$no-show: #ffb3b3;
+$in-progress: #b3e6cc;
+$repaired: #e6e6e6;
+
+// Розміри
+$header-height: 50px;       // Висота шапки з часом
+$row-height: 70px;          // Висота одного рядка (поста)
+$sidebar-width: 220px;      // Ширина лівої частини (назви постів)
+
+// --- БАЗОВІ СТИЛІ ---
+.post-planning-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 14px;
+  color: $text-dark;
+  background: $light-gray;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0; padding: 0;
+  overflow: hidden;
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); height: 100vh; overflow: hidden; }
-
-.planning-container { display: flex; flex-direction: column; height: 100vh; }
-
-/* HEADER */
-.header {
-  background: var(--primary);
-  color: white;
-  padding: 12px 24px;
+// --- ГОЛОВНИЙ HEADER (Навігація) ---
+.post-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  .header-left { font-size: 20px; font-weight: 600; }
-  .header-center {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    button { background: rgba(255,255,255,0.15); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-    #currentDate { font-size: 17px; min-width: 260px; text-align: center; font-weight: 500; }
-    button:nth-child(2), button:nth-child(3) { font-size: 28px; padding: 4px 20px; }
-  }
-}
+  padding: 8px 24px;
+  background: $primary-blue;
+  color: $white;
+  height: 50px;
+  flex-shrink: 0;
 
-/* MAIN */
-.main-content { display: flex; flex: 1; overflow: hidden; }
+  .post-nav {
+    display: flex; gap: 16px; align-items: center; width: 100%;
 
-/* SIDEBAR */
-.sidebar {
-  width: 280px;
-  background: var(--light);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 16px 12px;
-}
-.shop {
-  margin-bottom: 20px;
-  .shop-header {
-    background: #f0f0f0;
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    .toggle { background:none; border:none; font-size:16px; cursor:pointer; transition:0.2s; }
-  }
-  .posts {
-    transition: max-height 0.3s;
-    overflow: hidden;
-    .post {
-      background: #fafafa;
-      border-left: 4px solid var(--primary);
-      padding: 12px 16px;
-      margin: 6px 0;
-      border-radius: 0 8px 8px 0;
-      height: 76px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      .title { font-weight: 600; }
-      .subtitle { font-size: 12px; color: #666; margin-top: 4px; }
+    .post-nav-link {
+      padding: 8px 16px; color: $white; text-decoration: none; border-radius: 4px;
+      &:hover { background: rgba(255, 255, 255, 0.1); }
+      &.post-active { background: rgba(255, 255, 255, 0.15); }
+    }
+
+    .post-header-calendar-nav {
+      display: flex; align-items: center; gap: 12px; margin-left: auto;
+      
+      .post-today-btn {
+        padding: 6px 12px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 4px; color: $white; cursor: pointer;
+        &:hover { background: rgba(255, 255, 255, 0.25); }
+      }
+      .post-nav-arrow {
+        background: transparent; border: none; color: $white; font-size: 24px; cursor: pointer;
+        &:hover { transform: scale(1.2); }
+      }
+      .post-current-date { font-weight: 500; min-width: 140px; text-align: center; }
     }
   }
-  &.collapsed .posts { max-height: 0 !important; }
-}
-.add-reminder {
-  margin: 20px 12px 0;
-  padding: 12px;
-  width: calc(100% - 24px);
-  border: 2px dashed #ccc;
-  background: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
 }
 
-/* КАЛЕНДАР */
-.calendar-wrapper {
+// --- MAIN CONTENT (Layout) ---
+.post-main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden; // Прибираємо скроли з контейнера, скрол буде всередині wrapper
+}
+
+// 1. ЛІВИЙ БЛОК + ЦЕНТРАЛЬНА СІТКА (Єдиний Wrapper)
+.post-scheduler-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: white;
-}
-.time-header {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  border-bottom: 2px solid var(--border);
-  padding: 0 24px;
-  > div {
-    text-align: center;
-    padding: 12px 0 8px;
-    font-size: 14px;
-    position: relative;
-    sup { font-size: 10px; opacity: 0.7; }
-    &:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      right: 0; top: 12px; bottom: 12px;
-      width: 1px;
-      background: var(--border);
-    }
-  }
-}
-.calendar-content {
-  flex: 1;
+  overflow-y: auto; // Головний вертикальний скрол тут
+  background: $white;
   position: relative;
-  overflow: hidden;
+  border-right: 1px solid $border-gray;
+
+  // Стилізація скролбару
+  &::-webkit-scrollbar { width: 10px; height: 10px; }
+  &::-webkit-scrollbar-track { background: $light-gray; }
+  &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; &:hover { background: #999; } }
 }
-#grid {
-  height: 100%;
-  overflow-y: auto;
-  padding: 16px 24px 50px;
-}
-.shop-row {
-  margin-bottom: 30px;
-  .shop-title {
-    background: #f0f0f0;
-    padding: 10px 16px;
-    border-radius: 8px;
+
+// 2. STICKY HEADER (Закріплена шапка з часом)
+.post-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: $white;
+  display: flex;
+  border-bottom: 2px solid $border-gray;
+  min-height: $header-height;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+
+  .post-header-corner {
+    width: $sidebar-width;
+    min-width: $sidebar-width;
+    background: #f0f2f5;
+    border-right: 1px solid $border-gray;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 600;
-    margin-bottom: 8px;
+    color: #666;
+    font-size: 12px;
+    text-transform: uppercase;
   }
-  .post-row {
-    height: 76px;
-    background: #fcfcfc;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    margin-bottom: 6px;
-    position: relative;
+
+  .post-time-header {
+    flex: 1;
     display: grid;
-    grid-template-columns: repeat(24, 1fr);
-  }
-}
-.appointment {
-  position: absolute;
-  background: #ffefb3;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 11.5px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  cursor: pointer;
-  overflow: hidden;
-  &.no-show { background: var(--no-show); }
-  &.in-progress { background: var(--in-progress); }
-  &.repaired { background: var(--repaired); }
-  &:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.2); z-index: 10; }
-}
-.grid-lines {
-  position: absolute;
-  top: 0; left: 24px; right: 24px; bottom: 0;
-  pointer-events: none;
-  display: grid;
-  grid-template-columns: repeat(24, 1fr);
-  > div {
-    border-right: 1px solid #eee;
-    &:nth-child(even) { border-color: #ddd; }
+    grid-template-columns: repeat(24, 1fr); // 12 годин * 2 (півгодини)
+    position: relative;
+
+    // Індикатор минулого часу (Overlay)
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0; bottom: 0; left: 0;
+        width: calc(var(--past-percentage, 0%) * 100%);
+        background: rgba(180, 180, 180, 0.2);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .post-time-cell {
+      grid-column: span 2; // Кожна комірка займає 2 слоти (1 годину), але всередині показує 30 хв
+      display: flex;
+      border-right: 1px solid $border-gray;
+      padding: 4px;
+      align-items: flex-end;
+      
+      .post-hour { font-weight: bold; font-size: 14px; margin-right: 2px; }
+      .post-minutes { font-size: 11px; color: #666; margin-bottom: 2px; }
+      
+      &:last-child { border-right: none; }
+    }
   }
 }
 
-/* ПРАВА ПАНЕЛЬ */
-.right-panel {
-  width: 300px;
-  background: white;
-  border-left: 1px solid var(--border);
+// 3. ТІЛО ПЛАНУВАЛЬНИКА
+.post-scheduler-body {
+  position: relative;
+  min-height: 100%;
+  
+  // Фонові вертикальні лінії (через градієнт)
+  // Це замінює купу div-ів і гарантує ідеальне співпадіння
+  background-size: calc((100% - #{$sidebar-width}) / 24) 100%; 
+  background-image: linear-gradient(to right, $border-gray 1px, transparent 1px);
+  background-position-x: $sidebar-width; // Зсув на ширину лівої колонки
+  background-repeat: repeat-x;
+}
+
+// Заголовки цехів (Роздільники)
+.post-section-header {
+  position: sticky;
+  top: $header-height; // Липне одразу під часом
+  z-index: 90;
+  background: #e1e5eb;
+  color: $text-dark;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  border-bottom: 1px solid $border-gray;
+  border-top: 1px solid $border-gray;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  height: 36px;
+
+  &:hover { background: #d4d9e0; }
+
+  .post-toggle-btn {
+    background: none; border: none; font-size: 10px; cursor: pointer;
+    transition: transform 0.2s;
+  }
+}
+
+.post-section-content {
+  // Контейнер для рядків, може бути прихований
+  &.hidden { display: none; }
+}
+
+// 4. ЄДИНИЙ РЯДОК (Unified Row)
+.post-unified-row {
+  display: flex;
+  height: $row-height;
+  border-bottom: 1px solid $border-gray;
+  background: transparent; // Прозорий, щоб видно було лінії фону
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.02);
+    .post-row-label { background: #f0f0f0; }
+  }
+
+  // Ліва частина (Інфо про пост)
+  .post-row-label {
+    width: $sidebar-width;
+    min-width: $sidebar-width;
+    border-right: 3px solid $primary-blue;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #f9f9f9;
+    z-index: 5; // Поверх ліній
+    
+    .post-post-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .post-post-subtitle { font-size: 12px; color: #666; }
+  }
+
+  // Права частина (Трек для записів)
+  .post-row-track {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr); // 24 слоти (по 30 хв)
+    position: relative;
+    padding: 4px 0;
+    
+    // Тінь минулого часу (для кожного рядка)
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0; bottom: 0; left: 0;
+        width: calc(var(--past-percentage, 0%) * 100%);
+        background: rgba(180, 180, 180, 0.1); 
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    // Картки записів
+    .post-appointment {
+      margin: 1px 2px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      z-index: 2;
+      overflow: hidden;
+      white-space: nowrap;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+      transition: all 0.2s;
+      display: flex; flex-direction: column; justify-content: center;
+
+      &:hover { 
+        transform: translateY(-2px); 
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+        z-index: 10; 
+      }
+      
+      // Кольори
+      &.post-pink { background: #ffb3b3; border-left: 3px solid #e05e5e; }
+      &.post-green { background: #b3e6cc; border-left: 3px solid #4db380; }
+      &.post-beige { background: #ffefb3; border-left: 3px solid #e6c300; }
+      
+      .post-car-model { font-weight: 700; margin-bottom: 1px; }
+      .post-car-number { font-size: 10px; opacity: 0.9; }
+      .post-client-name { font-size: 10px; color: #444; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; }
+      
+      .post-icon { position: absolute; top: 4px; right: 4px; font-size: 10px; }
+    }
+  }
+}
+
+// Кнопка "Додати нагадування"
+.post-add-reminder-btn {
+  padding: 8px 16px; background: none; border: 1px dashed #999; border-radius: 4px; color: #666; cursor: pointer;
+  &:hover { background: #e6e6e6; color: $text-dark; }
+}
+
+// 5. ПРАВА КОЛОНКА (Міні календар)
+.post-mini-calendar {
+  width: 280px;
+  background: $white;
+  border-left: 1px solid $border-gray;
   padding: 20px;
   overflow-y: auto;
-  .year-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    button { background:none; border:none; font-size:24px; cursor:pointer; }
-    span { font-size:18px; font-weight:600; }
+  display: flex; flex-direction: column;
+
+  .post-year-nav {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+    button { background: none; border: none; font-size: 24px; cursor: pointer; &:hover { color: $primary-blue; }}
+    span { font-size: 18px; font-weight: 600; }
   }
-  .month {
-    margin-bottom: 30px;
-    h3 { margin-bottom: 10px; font-size:14px; font-weight:600; }
-    .weekdays {
-      display: grid;
-      grid-template-columns: repeat(7,1fr);
-      text-align:center;
-      font-size:12px;
-      font-weight:600;
-      color:#666;
-      margin-bottom:8px;
-    }
-    .days {
-      display: grid;
-      grid-template-columns: repeat(7,1fr);
-      gap:4px;
-      span {
-        aspect-ratio:1;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        border-radius:50%;
-        cursor:pointer;
-        font-size:13px;
-        &.today { background:var(--primary); color:white; font-weight:bold; }
-        &.selected { background:#ffe082; font-weight:bold; }
-        &:hover { background:#f0f0f0; }
+
+  // (Внутрішні стилі календаря - standard grid)
+  .post-month-calendar {
+    margin-bottom: 24px;
+    h3 { font-size: 14px; margin-bottom: 10px; text-align: center; }
+    .post-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; font-weight: bold; color: #999; margin-bottom: 5px; }
+    .post-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; 
+      span { 
+        aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; border-radius: 50%;
+        &:hover { background: $light-gray; }
+        &.post-today { background: $primary-blue; color: $white; }
+        &.post-selected-date { background: #ffe082; color: $text-dark; font-weight: bold; }
       }
     }
   }
-  .legend {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-    > div {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-bottom:10px;
-      font-size:13px;
-    }
-    .color {
-      width:20px;
-      height:20px;
-      border-radius:4px;
-      display:inline-block;
-      &.scheduled { background:var(--scheduled); }
-      &.no-show { background:var(--no-show); }
-      &.in-progress { background:var(--in-progress); }
-      &.repaired { background:var(--repaired); }
+
+  .post-legend {
+    margin-top: auto; padding-top: 20px; border-top: 1px solid $border-gray; display: flex; flex-direction: column; gap: 8px;
+    .post-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; 
+      .post-color-box { width: 16px; height: 16px; border-radius: 3px; 
+        &.post-scheduled { background: $scheduled; }
+        &.post-no-show { background: $no-show; }
+        &.post-in-progress { background: $in-progress; }
+        &.post-repaired { background: $repaired; }
+      }
     }
   }
 }

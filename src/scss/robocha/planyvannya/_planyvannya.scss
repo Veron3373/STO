@@ -1,19 +1,19 @@
 // --- ЗМІННІ ---
-$primary-blue: #004d26; // Темно-зелений (основний)
+$primary-blue: #004d26; // Основний зелений
 $light-gray: #f5f5f5;
 $border-gray: #ddd;
-$border-dark: #bbb; // Темніша лінія
+$border-dark: #bbb;
 $text-dark: #333;
 $white: #fff;
 
-// Кольори для міні-календаря
-$today-green: #004d26; // Зелений для "Сьогодні"
-$selected-yellow: #ffe082; // Жовтий для вибору
+// Кольори календаря
+$today-bg: #004d26; // Зелений фон для сьогодні
+$selected-bg: #ffe082; // Жовтий фон для вибраної
 
 // Розміри
 $header-height: 45px;
 $row-height: 70px;
-$sidebar-width: 220px;
+$sidebar-width: 220px; // Фіксована ширина
 
 // --- БАЗОВІ СТИЛІ ---
 .post-planning-container {
@@ -48,7 +48,7 @@ $sidebar-width: 220px;
   display: flex; flex: 1; overflow: hidden; height: calc(100vh - 50px);
 }
 
-// 1. ГОЛОВНИЙ WRAPPER (Ліва частина + Сітка)
+// 1. ГОЛОВНИЙ WRAPPER
 .post-scheduler-wrapper {
   flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: $white; position: relative; border-right: 1px solid $border-gray;
   &::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -56,53 +56,34 @@ $sidebar-width: 220px;
   &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; border: 2px solid $light-gray; }
 }
 
-// 2. STICKY HEADER (Часова шкала)
+// 2. STICKY HEADER
 .post-sticky-header {
   position: sticky; top: 0; z-index: 100; background: $white; display: flex; border-bottom: 1px solid $border-dark; min-height: $header-height;
   
   .post-header-corner {
-    width: $sidebar-width; min-width: $sidebar-width; background: #f8f9fa; border-right: 1px solid $border-gray;
+    // ВАЖЛИВО: Фіксована ширина, не стискається
+    width: $sidebar-width; min-width: $sidebar-width; flex-shrink: 0;
+    background: #f8f9fa; border-right: 1px solid $border-gray;
     display: flex; align-items: center; justify-content: center; font-weight: 700; color: #888; font-size: 11px; text-transform: uppercase;
   }
 
   .post-time-header {
     flex: 1; display: grid; grid-template-columns: repeat(24, 1fr); position: relative; background: #fff;
 
-    // --- ЧЕРВОНА ЛІНІЯ (ШАПКА) ---
+    // ЧЕРВОНА ЛІНІЯ (ШАПКА)
     &::after {
         content: ''; position: absolute; top: 0; bottom: 0; left: 0;
         width: calc(var(--past-percentage, 0) * 100%);
-        background: rgba(0, 0, 0, 0.05); // Сірий фон минулого
-        border-right: 2px solid #ff0000; // Червона лінія
+        background: rgba(0, 0, 0, 0.05); 
+        border-right: 2px solid #ff0000;
         pointer-events: none; z-index: 2;
     }
 
     .post-time-cell {
       display: flex; position: relative; height: 100%;
       padding-left: 6px; 
-      
-      // ГОДИНИ (8, 9, 10...) - Великі, білі, зліва
-      &.hour-cell { 
-        background: $white; 
-        color: $text-dark; 
-        font-size: 15px; 
-        font-weight: 400; 
-        align-items: center; 
-        justify-content: flex-start; 
-        border-right: 1px dashed #eee; // Пунктир між годиною і 30 хв
-      }
-
-      // ХВИЛИНИ (30) - Маленькі, зверху, на сірому фоні
-      &.min-cell { 
-        background: #fafafa; // Фон смужки
-        color: #999; 
-        font-size: 11px; 
-        font-weight: 400; 
-        align-items: flex-start; // Притиснути вверх
-        padding-top: 4px; 
-        justify-content: flex-start; 
-        border-right: 1px solid $border-dark; // Темна лінія кінця години
-      }
+      &.hour-cell { background: $white; color: $text-dark; font-size: 15px; font-weight: 400; align-items: center; justify-content: flex-start; border-right: 1px dashed #eee; }
+      &.min-cell { background: #fafafa; color: #999; font-size: 11px; font-weight: 400; align-items: flex-start; padding-top: 4px; justify-content: flex-start; border-right: 1px solid $border-dark; }
       &:last-child { border-right: none; }
     }
   }
@@ -112,21 +93,20 @@ $sidebar-width: 220px;
 .post-scheduler-body {
   position: relative; min-height: 100%;
   
-  // Сітка фоном
+  // Фонові лінії
   background-size: calc((100% - #{$sidebar-width}) / 24) 100%; 
   background-image: linear-gradient(to right, $border-gray 1px, transparent 1px);
   background-position-x: $sidebar-width; background-repeat: repeat-x;
 
-  // --- ЧЕРВОНА ЛІНІЯ (ТІЛО) ---
+  // ЧЕРВОНА ЛІНІЯ (ТІЛО)
   &::after {
     content: ''; position: absolute; top: 0; bottom: 0; 
     left: $sidebar-width; 
-    // Розрахунок ширини
     width: calc(var(--past-percentage, 0) * (100% - #{$sidebar-width})); 
-    background: rgba(0, 0, 0, 0.05); // Сірий фон
-    border-right: 2px solid #ff0000; // Червона лінія
+    background: rgba(0, 0, 0, 0.05); 
+    border-right: 2px solid #ff0000; 
     pointer-events: none; 
-    z-index: 10; // Над сіткою, під картками
+    z-index: 10;
   }
 }
 
@@ -137,15 +117,16 @@ $sidebar-width: 220px;
 }
 .post-section-content.hidden { display: none; }
 
-// РЯДОК (Пост зліва + Сітка справа)
+// РЯДОК
 .post-unified-row {
   display: flex; height: $row-height; border-bottom: 1px solid $border-gray; background: transparent; position: relative;
   &:hover { background: rgba(0, 0, 0, 0.015); .post-row-label { background: #f1f3f5; color: $primary-blue; }}
 
   .post-row-label {
-    width: $sidebar-width; min-width: $sidebar-width; border-right: 3px solid $primary-blue; padding: 8px 16px;
-    display: flex; flex-direction: column; justify-content: center; background: #f8f9fa; 
-    z-index: 20; // Вище за лінію часу
+    // ВАЖЛИВО: Фіксована ширина для лівої сторони
+    width: $sidebar-width; min-width: $sidebar-width; flex-shrink: 0;
+    border-right: 3px solid $primary-blue; padding: 8px 16px;
+    display: flex; flex-direction: column; justify-content: center; background: #f8f9fa; z-index: 20; 
     .post-post-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: $text-dark; }
     .post-post-subtitle { font-size: 12px; color: #888; }
   }
@@ -155,8 +136,7 @@ $sidebar-width: 220px;
     
     .post-appointment {
       margin: 0 4px; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; 
-      z-index: 30; // Вище червоної лінії
-      overflow: hidden; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; border-left-width: 4px; border-left-style: solid; transition: all 0.2s;
+      z-index: 30; overflow: hidden; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; border-left-width: 4px; border-left-style: solid; transition: all 0.2s;
       &:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); z-index: 40; }
       
       &.post-pink { background: #ffe3e3; border-left-color: #fa5252; color: #491212; }
@@ -172,15 +152,11 @@ $sidebar-width: 220px;
 
 // 5. ПРАВА КОЛОНКА (Міні календар)
 .post-mini-calendar {
-  width: 300px; background: $white; border-left: 1px solid $border-gray; padding: 24px; overflow-y: auto; z-index: 150; display: flex; flex-direction: column;
+  width: 280px; background: $white; border-left: 1px solid $border-gray; padding: 24px; overflow-y: auto; z-index: 150; display: flex; flex-direction: column;
   
   .post-year-nav { display: flex; justify-content: space-between; margin-bottom: 20px; button { background: none; border: none; font-size: 20px; cursor: pointer; } span { font-weight: 700; }}
   
-  #postCalendarContainer {
-     width: 100%;
-     min-height: 250px; 
-     flex-grow: 1;
-  }
+  #postCalendarContainer { width: 100%; min-height: 250px; flex-grow: 1; }
 
   .post-month-calendar { margin-bottom: 30px; 
     h3 { font-size: 14px; margin-bottom: 15px; text-align: center; text-transform: uppercase; letter-spacing: 1px; color: $primary-blue; }
@@ -188,20 +164,19 @@ $sidebar-width: 220px;
     .post-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; 
       span { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; 
         
-        // ЗЕЛЕНИЙ ДЛЯ СЬОГОДНІ
+        // СЬОГОДНІ - ЗАЛИВКА
         &.post-today { 
-            background: transparent; 
-            border: 2px solid $today-green; // Зелений контур
-            color: $today-green; 
+            background: $today-bg; // Заливка зеленим
+            color: $white;         // Білий текст
             font-weight: 700; 
+            border: none;          // Без рамки
         } 
         
-        // ЖОВТИЙ ДЛЯ ПЕРЕМІЩЕННЯ (Вибрана дата)
+        // ВИБРАНА - ЗАЛИВКА ЖОВТИМ
         &.post-selected-date { 
-            background: $selected-yellow; 
+            background: $selected-bg; 
             color: $text-dark; 
-            font-weight: 700;
-            border: none;
+            font-weight: 700; 
         }
       }
     }

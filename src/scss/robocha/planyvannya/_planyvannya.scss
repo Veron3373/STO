@@ -77,8 +77,7 @@ $sidebar-width: 300px;
       gap: 12px;
       margin-left: auto;
 
-      .post-today-btn,
-      .post-edit-mode-btn {
+      .post-today-btn {
         padding: 6px 12px;
         background: rgba(255, 255, 255, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.3);
@@ -96,30 +95,43 @@ $sidebar-width: 300px;
       }
 
       .post-edit-mode-btn {
+        padding: 4px;
+        background: transparent;
+        border: none;
+        color: $white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 28px;
+        transition: transform 0.3s ease;
+
+        &:hover {
+          transform: scale(1.2);
+        }
+
+        &:active {
+          transform: scale(0.9);
+        }
+
+        .icon-lock,
+        .icon-unlock {
+          display: block;
+          transition: transform 0.3s ease;
+        }
+
         .icon-lock {
           display: none;
         }
       }
 
       .post-edit-mode-btn.active {
-        background: $yellow;
-        border-color: $yellow;
-        color: $text-dark;
-
         .icon-unlock {
           display: none;
         }
 
         .icon-lock {
           display: block;
-        }
-
-        #editModeText::after {
-          content: 'Готово';
-        }
-
-        #editModeText {
-          font-size: 0;
         }
       }
 

@@ -5,10 +5,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Планувальник</title>
-  <link rel="stylesheet" href="./planyvannya.css" />
+  <link rel="stylesheet" href="./src/scss/robocha/planyvannya/_planyvannya.scss" />
   <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
   <style>
-    body { margin: 0; padding: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
   </style>
 </head>
 
@@ -16,16 +20,19 @@
   <div class="post-planning-container" id="postPlanningContainer">
     <header class="post-header" id="postHeader">
       <nav class="post-nav" id="postNav">
-        <a href="https://veron3373.github.io/STO/main.html" class="post-nav-link post-active" id="postNavLinkHome">🛠️← СТО</a>
+        <a href="https://veron3373.github.io/STO/main.html" class="post-nav-link post-active" id="postNavLinkHome">🛠️←
+          СТО</a>
 
         <div class="post-header-calendar-nav">
           <button class="post-today-btn" id="postTodayBtn">Сьогодні</button>
           <button class="post-edit-mode-btn" id="postEditModeBtn">
-            <svg class="icon-unlock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="icon-unlock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
             </svg>
-            <svg class="icon-lock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+            <svg class="icon-lock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" style="display: none;">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
@@ -39,27 +46,39 @@
     </header>
 
     <div class="post-main-content">
-      
+
       <div class="post-scheduler-wrapper" id="postSchedulerWrapper">
-        
+
         <div class="post-sticky-header">
           <div class="post-header-corner">
             <span>Пости / Час</span>
           </div>
 
           <div class="post-time-header" id="postTimeHeader">
-            <div class="post-time-cell hour-cell">8</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">9</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">10</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">11</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">12</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">13</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">14</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">15</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">16</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">17</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">18</div><div class="post-time-cell min-cell">30</div>
-            <div class="post-time-cell hour-cell">19</div><div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">8</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">9</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">10</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">11</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">12</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">13</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">14</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">15</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">16</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">17</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">18</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">19</div>
+            <div class="post-time-cell min-cell">30</div>
           </div>
         </div>
 
@@ -74,14 +93,22 @@
           <span id="postYearDisplay">2025</span>
           <button id="postYearNext">›</button>
         </div>
-        
+
         <div id="postCalendarContainer"></div>
 
         <div class="post-legend" id="postLegend">
-          <div class="post-legend-item"><div class="post-color-box post-scheduled"></div><span>Запланований</span></div>
-          <div class="post-legend-item"><div class="post-color-box post-no-show"></div><span>Не приїхав</span></div>
-          <div class="post-legend-item"><div class="post-color-box post-in-progress"></div><span>В роботі</span></div>
-          <div class="post-legend-item"><div class="post-color-box post-repaired"></div><span>Відремонтований</span></div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-scheduled"></div><span>Запланований</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-no-show"></div><span>Не приїхав</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-in-progress"></div><span>В роботі</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-repaired"></div><span>Відремонтований</span>
+          </div>
         </div>
       </aside>
 
@@ -122,4 +149,5 @@
 
   <script type="module" src="./src/ts/roboha/planyvannya/planyvannya.ts"></script>
 </body>
+
 </html>

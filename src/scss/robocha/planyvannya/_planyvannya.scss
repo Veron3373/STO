@@ -256,7 +256,7 @@ $sidebar-width: 300px; // Фіксована ширина
   position: sticky;
   top: $header-height;
   z-index: 90;
-  background: #e9ecef;
+  background: #e6e6fa;
   color: #495057;
   padding: 0 16px;
   font-weight: 700;
@@ -306,7 +306,7 @@ $sidebar-width: 300px; // Фіксована ширина
     min-width: $sidebar-width;
     flex-shrink: 0;
     border-right: 3px solid $primary-blue;
-    padding: 8px 16px;
+    padding: 4px 16px;
     display: flex;
     flex-direction: column;
     justify-content: center;

@@ -25,19 +25,6 @@
 
         <div class="post-header-calendar-nav">
           <button class="post-today-btn" id="postTodayBtn">Сьогодні</button>
-          <button class="post-edit-mode-btn" id="postEditModeBtn">
-            <svg class="icon-unlock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-            </svg>
-            <svg class="icon-lock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" style="display: none;">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <span id="editModeText">Редагувати</span>
-          </button>
           <button class="post-nav-arrow" id="headerNavPrev">‹</button>
           <div class="post-current-date" id="postHeaderDateDisplay"></div>
           <button class="post-nav-arrow" id="headerNavNext">›</button>
@@ -51,7 +38,19 @@
 
         <div class="post-sticky-header">
           <div class="post-header-corner">
-            <span>Пости / Час</span>
+            <button class="post-edit-mode-btn" id="postEditModeBtn">
+              <svg class="icon-unlock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+              </svg>
+              <svg class="icon-lock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" style="display: none;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span id="editModeText">Редагувати</span>
+            </button>
           </div>
 
           <div class="post-time-header" id="postTimeHeader">

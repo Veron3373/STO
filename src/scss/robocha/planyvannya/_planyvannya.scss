@@ -116,202 +116,297 @@ $sidebar-width: 300px;
           transform: scale(0.9);
           filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
         }
+      }
 
-        .post-edit-mode-btn.active {
-          .icon-unlock {
-            display: none;
-          }
-
-          .icon-lock {
-            display: block;
-          }
+      .post-edit-mode-btn.active {
+        .icon-unlock {
+          display: none;
         }
 
-        .post-nav-arrow {
-          background: transparent;
-          border: none;
-          color: $white;
-          font-size: 24px;
-          cursor: pointer;
-          transition: transform 0.2s;
-
-          &:hover {
-            transform: scale(1.2);
-          }
+        .icon-lock {
+          display: block;
         }
+      }
 
-        .post-current-date {
-          font-weight: 600;
-          min-width: 200px;
-          text-align: center;
+      .post-nav-arrow {
+        background: transparent;
+        border: none;
+        color: $white;
+        font-size: 24px;
+        cursor: pointer;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: scale(1.2);
         }
+      }
+
+      .post-current-date {
+        font-weight: 600;
+        min-width: 200px;
+        text-align: center;
       }
     }
   }
+}
 
-  // --- MAIN CONTENT ---
-  .post-main-content {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    height: calc(100vh - 50px);
+// --- MAIN CONTENT ---
+.post-main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 50px);
+}
+
+// 1. ГОЛОВНИЙ WRAPPER
+.post-scheduler-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: $white;
+  position: relative;
+  border-right: 1px solid $border-gray;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
   }
 
-  // 1. ГОЛОВНИЙ WRAPPER
-  .post-scheduler-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    background: $white;
-    position: relative;
+  &::-webkit-scrollbar-track {
+    background: $light-gray;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 5px;
+    border: 2px solid $light-gray;
+  }
+}
+
+// 2. STICKY HEADER
+.post-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: $white;
+  display: flex;
+  border-bottom: 1px solid $border-dark;
+  min-height: $header-height;
+
+  .post-header-corner {
+    width: $sidebar-width;
+    min-width: $sidebar-width;
+    flex-shrink: 0;
+    background: #f8f9fa;
     border-right: 1px solid $border-gray;
-
-    &::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: $light-gray;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: #ccc;
-      border-radius: 5px;
-      border: 2px solid $light-gray;
-    }
-  }
-
-  // 2. STICKY HEADER
-  .post-sticky-header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: $white;
     display: flex;
-    border-bottom: 1px solid $border-dark;
-    min-height: $header-height;
-
-    .post-header-corner {
-      width: $sidebar-width;
-      min-width: $sidebar-width;
-      flex-shrink: 0;
-      background: #f8f9fa;
-      border-right: 1px solid $border-gray;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: #888;
-      font-size: 11px;
-      text-transform: uppercase;
-    }
-
-    .post-time-header {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(24, 1fr);
-      position: relative;
-      background: #fff;
-
-      &::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        width: calc(var(--past-percentage, 0) * 100%);
-        background: rgba(230, 230, 250, 0.5);
-        border-right: 2px solid #ff0000;
-        pointer-events: none;
-        z-index: 2;
-      }
-
-      .post-time-cell {
-        display: flex;
-        position: relative;
-        height: 100%;
-
-        &.hour-cell {
-          background: $white;
-          color: $text-dark;
-          font-size: 15px;
-          font-weight: 400;
-          align-items: center;
-          justify-content: flex-start;
-          border-right: 1px dashed #eee;
-        }
-
-        &.min-cell {
-          font-size: 11px;
-          font-weight: 400;
-          align-items: flex-start;
-          padding-top: 4px;
-          justify-content: flex-start;
-          border-right: 1px solid $border-dark;
-        }
-
-        &:last-child {
-          border-right: none;
-        }
-      }
-    }
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
   }
 
-  // 3. ТІЛО ТАБЛИЦІ
-  .post-scheduler-body {
+  .post-time-header {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
     position: relative;
-    min-height: 100%;
-    background-size: calc((100% - #{$sidebar-width}) / 24) 100%;
-    background-image: linear-gradient(to right, $border-gray 1px, transparent 1px);
-    background-position-x: $sidebar-width;
-    background-repeat: repeat-x;
+    background: #fff;
 
     &::after {
       content: "";
       position: absolute;
       top: 0;
       bottom: 0;
-      left: $sidebar-width;
-      width: calc(var(--past-percentage, 0) * (100% - #{$sidebar-width}));
+      left: 0;
+      width: calc(var(--past-percentage, 0) * 100%);
       background: rgba(230, 230, 250, 0.5);
       border-right: 2px solid #ff0000;
       pointer-events: none;
-      z-index: 10;
+      z-index: 2;
+    }
+
+    .post-time-cell {
+      display: flex;
+      position: relative;
+      height: 100%;
+
+      &.hour-cell {
+        background: $white;
+        color: $text-dark;
+        font-size: 15px;
+        font-weight: 400;
+        align-items: center;
+        justify-content: flex-start;
+        border-right: 1px dashed #eee;
+      }
+
+      &.min-cell {
+        font-size: 11px;
+        font-weight: 400;
+        align-items: flex-start;
+        padding-top: 4px;
+        justify-content: flex-start;
+        border-right: 1px solid $border-dark;
+      }
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+  }
+}
+
+// 3. ТІЛО ТАБЛИЦІ
+.post-scheduler-body {
+  position: relative;
+  min-height: 100%;
+  background-size: calc((100% - #{$sidebar-width}) / 24) 100%;
+  background-image: linear-gradient(to right, $border-gray 1px, transparent 1px);
+  background-position-x: $sidebar-width;
+  background-repeat: repeat-x;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: $sidebar-width;
+    width: calc(var(--past-percentage, 0) * (100% - #{$sidebar-width}));
+    background: rgba(230, 230, 250, 0.5);
+    border-right: 2px solid #ff0000;
+    pointer-events: none;
+    z-index: 10;
+  }
+}
+
+.post-section-header {
+  position: sticky;
+  top: $header-height;
+  z-index: 90;
+  background: #e9ecef;
+  color: #495057;
+  padding: 0 16px;
+  font-weight: 700;
+  font-size: 13px;
+  border-bottom: 1px solid $border-gray;
+  border-top: 1px solid $border-gray;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  height: 32px;
+
+  .post-section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .post-section-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .post-delete-btn {
+    background: $red;
+    border: none;
+    color: $white;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background: $red-hover;
+      transform: scale(1.1);
     }
   }
 
-  .post-section-header {
-    position: sticky;
-    top: $header-height;
-    z-index: 90;
-    background: #e9ecef;
-    color: #495057;
-    padding: 0 16px;
-    font-weight: 700;
-    font-size: 13px;
-    border-bottom: 1px solid $border-gray;
-    border-top: 1px solid $border-gray;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .post-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 10px;
     cursor: pointer;
-    height: 32px;
+    color: inherit;
+    transition: transform 0.2s;
 
-    .post-section-header-left {
+    &.collapsed {
+      transform: rotate(-90deg);
+    }
+  }
+}
+
+.post-section-content.hidden {
+  display: none;
+}
+
+// РЯДОК
+.post-unified-row {
+  display: flex;
+  height: $row-height;
+  border-bottom: 1px solid $border-gray;
+  background: transparent;
+  position: relative;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.015);
+
+    .post-row-label {
+      background: #f1f3f5;
+      color: $primary-blue;
+    }
+  }
+
+  .post-row-label {
+    width: $sidebar-width;
+    min-width: $sidebar-width;
+    flex-shrink: 0;
+    border-right: 3px solid $primary-blue;
+    padding: 4px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #f8f9fa;
+    z-index: 20;
+
+    .post-post-delete-container {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 8px;
     }
 
-    .post-section-header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .post-row-label-content {
+      flex: 1;
     }
 
-    .post-delete-btn {
+    .post-post-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: $text-dark;
+    }
+
+    .post-post-subtitle {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .post-post-delete-btn {
       background: $red;
       border: none;
       color: $white;
@@ -323,6 +418,7 @@ $sidebar-width: 300px;
       align-items: center;
       justify-content: center;
       transition: all 0.2s;
+      flex-shrink: 0;
 
       svg {
         width: 14px;
@@ -334,432 +430,337 @@ $sidebar-width: 300px;
         transform: scale(1.1);
       }
     }
-
-    .post-toggle-btn {
-      background: none;
-      border: none;
-      font-size: 10px;
-      cursor: pointer;
-      color: inherit;
-      transition: transform 0.2s;
-
-      &.collapsed {
-        transform: rotate(-90deg);
-      }
-    }
   }
 
-  .post-section-content.hidden {
+  .post-row-track {
+    flex: 1;
     display: none;
-  }
-
-  // РЯДОК
-  .post-unified-row {
-    display: flex;
-    height: $row-height;
-    border-bottom: 1px solid $border-gray;
-    background: transparent;
+    grid-template-columns: repeat(24, 1fr);
     position: relative;
+    padding: 6px 0;
+  }
+}
 
-    &:hover {
-      background: rgba(0, 0, 0, 0.015);
+// КНОПКИ ДОДАВАННЯ
+.post-add-post-btn,
+.post-add-section-btn {
+  background: $white;
+  border: 2px dashed $border-gray;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
 
-      .post-row-label {
-        background: #f1f3f5;
-        color: $primary-blue;
-      }
-    }
-
-    .post-row-label {
-      width: $sidebar-width;
-      min-width: $sidebar-width;
-      flex-shrink: 0;
-      border-right: 3px solid $primary-blue;
-      padding: 4px 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      background: #f8f9fa;
-      z-index: 20;
-
-      .post-post-delete-container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-
-      .post-row-label-content {
-        flex: 1;
-      }
-
-      .post-post-title {
-        font-weight: 700;
-        font-size: 14px;
-        margin-bottom: 4px;
-        color: $text-dark;
-      }
-
-      .post-post-subtitle {
-        font-size: 12px;
-        color: #888;
-      }
-
-      .post-post-delete-btn {
-        background: $red;
-        border: none;
-        color: $white;
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        cursor: pointer;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        flex-shrink: 0;
-
-        svg {
-          width: 14px;
-          height: 14px;
-        }
-
-        &:hover {
-          background: $red-hover;
-          transform: scale(1.1);
-        }
-      }
-    }
-
-    .post-row-track {
-      flex: 1;
-      display: none;
-      grid-template-columns: repeat(24, 1fr);
-      position: relative;
-      padding: 6px 0;
-    }
+  svg {
+    width: 16px;
+    height: 16px;
   }
 
-  // КНОПКИ ДОДАВАННЯ
+  &:hover {
+    border-color: $primary-blue;
+    color: $primary-blue;
+    background: #f0fdf4;
+  }
+}
+
+.post-add-post-btn {
+  padding: 8px;
+  margin: 8px;
+  width: calc(100% - 16px);
+  font-size: 13px;
+}
+
+.post-add-section-btn {
+  padding: 12px;
+  margin: 16px;
+  font-size: 14px;
+  font-weight: 600;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// EDIT MODE
+.post-scheduler-wrapper.edit-mode {
+
+  .post-delete-btn,
+  .post-post-delete-btn,
   .post-add-post-btn,
   .post-add-section-btn {
-    background: $white;
-    border: 2px dashed $border-gray;
-    border-radius: 6px;
-    color: #888;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.2s;
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    &:hover {
-      border-color: $primary-blue;
-      color: $primary-blue;
-      background: #f0fdf4;
-    }
-  }
-
-  .post-add-post-btn {
-    padding: 8px;
-    margin: 8px;
-    width: calc(100% - 16px);
-    font-size: 13px;
-  }
-
-  .post-add-section-btn {
-    padding: 12px;
-    margin: 16px;
-    font-size: 14px;
-    font-weight: 600;
-
-    svg {
-      width: 18px;
-      height: 18px;
-    }
-  }
-
-  // EDIT MODE
-  .post-scheduler-wrapper.edit-mode {
-
-    .post-delete-btn,
-    .post-post-delete-btn,
-    .post-add-post-btn,
-    .post-add-section-btn {
-      display: flex;
-    }
-
-    .post-row-track {
-      display: grid;
-    }
-  }
-
-  // 5. ПРАВА КОЛОНКА (Міні календар)
-  .post-mini-calendar {
-    width: 200px;
-    background: $white;
-    border-left: 1px solid $border-gray;
-    padding: 24px;
-    overflow-y: auto;
-    z-index: 150;
     display: flex;
-    flex-direction: column;
-
-    .post-year-nav {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-
-      button {
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-      }
-
-      span {
-        font-weight: 700;
-      }
-    }
-
-    #postCalendarContainer {
-      width: 100%;
-      min-height: 250px;
-      flex-grow: 1;
-    }
-
-    .post-month-calendar {
-      margin-bottom: 30px;
-
-      h3 {
-        font-size: 14px;
-        margin-bottom: 15px;
-        text-align: center;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: $primary-blue;
-      }
-
-      .post-weekdays {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        text-align: center;
-        font-weight: 700;
-        color: #adb5bd;
-        margin-bottom: 5px;
-      }
-
-      .post-days {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-
-        span {
-          aspect-ratio: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          cursor: pointer;
-
-          &.post-today {
-            background: $today-bg;
-            color: $white;
-            font-weight: 700;
-            border: none;
-          }
-
-          &.post-selected-date {
-            background: $selected-bg;
-            color: $text-dark;
-            font-weight: 700;
-          }
-        }
-      }
-    }
-
-    .post-legend {
-      margin-top: auto;
-      padding-top: 20px;
-      border-top: 1px solid $border-gray;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-
-      .post-legend-item {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-
-        .post-color-box {
-          width: 14px;
-          height: 14px;
-          border-radius: 3px;
-
-          &.post-scheduled {
-            background: #ffefb3;
-          }
-
-          &.post-no-show {
-            background: #ffb3b3;
-          }
-
-          &.post-in-progress {
-            background: #b3e6cc;
-          }
-
-          &.post-repaired {
-            background: #e6e6e6;
-          }
-        }
-      }
-    }
   }
 
-  // --- MODAL ---
-  .post-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    animation: fadeIn 0.2s;
+  .post-row-track {
+    display: grid;
   }
+}
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
+// 5. ПРАВА КОЛОНКА (Міні календар)
+.post-mini-calendar {
+  width: 200px;
+  background: $white;
+  border-left: 1px solid $border-gray;
+  padding: 24px;
+  overflow-y: auto;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
 
-    to {
-      opacity: 1;
-    }
-  }
-
-  .post-modal {
-    background: $white;
-    border-radius: 12px;
-    padding: 24px;
-    width: 400px;
-    max-width: 90vw;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    animation: slideUp 0.2s;
-  }
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  .post-modal-header {
+  .post-year-nav {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     margin-bottom: 20px;
-  }
 
-  .post-modal-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: $primary-blue;
-  }
+    button {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+    }
 
-  .post-modal-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #888;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover {
-      color: $text-dark;
+    span {
+      font-weight: 700;
     }
   }
 
-  .post-modal-body {
+  #postCalendarContainer {
+    width: 100%;
+    min-height: 250px;
+    flex-grow: 1;
+  }
+
+  .post-month-calendar {
+    margin-bottom: 30px;
+
+    h3 {
+      font-size: 14px;
+      margin-bottom: 15px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: $primary-blue;
+    }
+
+    .post-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-weight: 700;
+      color: #adb5bd;
+      margin-bottom: 5px;
+    }
+
+    .post-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+
+      span {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+
+        &.post-today {
+          background: $today-bg;
+          color: $white;
+          font-weight: 700;
+          border: none;
+        }
+
+        &.post-selected-date {
+          background: $selected-bg;
+          color: $text-dark;
+          font-weight: 700;
+        }
+      }
+    }
+  }
+
+  .post-legend {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid $border-gray;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-  }
+    gap: 10px;
 
-  .post-form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
+    .post-legend-item {
+      display: flex;
+      gap: 10px;
+      align-items: center;
 
-  .post-form-label {
-    font-weight: 600;
-    font-size: 13px;
-    color: #495057;
-  }
+      .post-color-box {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
 
-  .post-form-input {
-    padding: 10px 12px;
-    border: 1px solid $border-gray;
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
+        &.post-scheduled {
+          background: #ffefb3;
+        }
 
-    &:focus {
-      outline: none;
-      border-color: $primary-blue;
-      box-shadow: 0 0 0 3px rgba(0, 77, 38, 0.1);
+        &.post-no-show {
+          background: #ffb3b3;
+        }
+
+        &.post-in-progress {
+          background: #b3e6cc;
+        }
+
+        &.post-repaired {
+          background: #e6e6e6;
+        }
+      }
     }
   }
+}
 
-  .post-modal-footer {
-    display: flex;
-    gap: 12px;
-    margin-top: 20px;
+// --- MODAL ---
+.post-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
 
-  .post-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    flex: 1;
-    transition: all 0.2s;
+  to {
+    opacity: 1;
+  }
+}
+
+.post-modal {
+  background: $white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.2s;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
   }
 
-  .post-btn-primary {
-    background: $primary-blue;
-    color: $white;
-
-    &:hover {
-      background: #003d1f;
-    }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
+}
 
-  .post-btn-secondary {
-    background: #e9ecef;
-    color: #495057;
+.post-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
 
-    &:hover {
-      background: #dee2e6;
-    }
+.post-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: $primary-blue;
+}
+
+.post-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: $text-dark;
   }
+}
+
+.post-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.post-form-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #495057;
+}
+
+.post-form-input {
+  padding: 10px 12px;
+  border: 1px solid $border-gray;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-blue;
+    box-shadow: 0 0 0 3px rgba(0, 77, 38, 0.1);
+  }
+}
+
+.post-modal-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.post-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+  transition: all 0.2s;
+}
+
+.post-btn-primary {
+  background: $primary-blue;
+  color: $white;
+
+  &:hover {
+    background: #003d1f;
+  }
+}
+
+.post-btn-secondary {
+  background: #e9ecef;
+  color: #495057;
+
+  &:hover {
+    background: #dee2e6;
+  }
+}

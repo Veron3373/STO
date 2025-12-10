@@ -169,7 +169,7 @@ $sidebar-width: 300px; // Фіксована ширина
     text-transform: uppercase;
   }
 
-.post-time-header {
+  .post-time-header {
     flex: 1;
     display: grid;
     grid-template-columns: repeat(24, 1fr);
@@ -184,9 +184,7 @@ $sidebar-width: 300px; // Фіксована ширина
       bottom: 0;
       left: 0;
       width: calc(var(--past-percentage, 0) * 100%);
-      // --- ЗМІНА ТУТ: Прибираємо background ---
-      // Було: background: rgba(0, 0, 0, 0.05);
-      background: transparent; 
+      background: rgba(0, 0, 0, 0.05);
       border-right: 2px solid #ff0000;
       pointer-events: none;
       z-index: 2;
@@ -196,16 +194,30 @@ $sidebar-width: 300px; // Фіксована ширина
       display: flex;
       position: relative;
       height: 100%;
-      // --- НОВІ СТИЛІ ТУТ: Додаємо стилі для минулого часу ---
-      &.post-past-time {
-        background-color: #e9ecef; // Світло-сірий фон (як на фото 2)
-        color: #999 !important;    // Сірий текст (important щоб перебити колір години)
-        border-color: #dce4ec !important; // Більш бліді рамки
-      }
-      // -------------------------------------------------------
 
       //padding-left: 6px;
       &.hour-cell {
+        background: $white;
+        color: $text-dark;
+        font-size: 15px;
+        font-weight: 400;
+        align-items: center;
+        justify-content: flex-start;
+        border-right: 1px dashed #eee;
+      }
+
+      &.min-cell {
+        /*         background: #fafafa;
+        color: #999; */
+        font-size: 11px;
+        font-weight: 400;
+        align-items: flex-start;
+        padding-top: 4px;
+        justify-content: flex-start;
+        border-right: 1px solid $border-dark;
+      }
+
+      &:last-child {
         border-right: none;
       }
     }

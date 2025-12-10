@@ -95,6 +95,12 @@ $sidebar-width: 300px;
         }
       }
 
+      .post-edit-mode-btn {
+        .icon-lock {
+          display: none;
+        }
+      }
+
       .post-edit-mode-btn.active {
         background: $yellow;
         border-color: $yellow;
@@ -105,7 +111,7 @@ $sidebar-width: 300px;
         }
 
         .icon-lock {
-          display: block !important;
+          display: block;
         }
 
         #editModeText::after {
@@ -309,11 +315,9 @@ $sidebar-width: 300px;
     height: 24px;
     border-radius: 4px;
     cursor: pointer;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    transform: scale(0.8);
     transition: all 0.2s;
 
     svg {
@@ -405,11 +409,9 @@ $sidebar-width: 300px;
       height: 24px;
       border-radius: 4px;
       cursor: pointer;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
-      opacity: 0;
-      transform: scale(0.8);
       transition: all 0.2s;
       flex-shrink: 0;
 
@@ -427,7 +429,7 @@ $sidebar-width: 300px;
 
   .post-row-track {
     flex: 1;
-    display: grid;
+    display: none;
     grid-template-columns: repeat(24, 1fr);
     position: relative;
     padding: 6px 0;
@@ -442,12 +444,10 @@ $sidebar-width: 300px;
   border-radius: 6px;
   color: #888;
   cursor: pointer;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  opacity: 0;
-  transform: translateY(-10px);
   transition: all 0.2s;
 
   svg {
@@ -483,12 +483,16 @@ $sidebar-width: 300px;
 
 // EDIT MODE
 .post-scheduler-wrapper.edit-mode {
+
   .post-delete-btn,
   .post-post-delete-btn,
   .post-add-post-btn,
   .post-add-section-btn {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    display: flex;
+  }
+
+  .post-row-track {
+    display: grid;
   }
 }
 
@@ -594,10 +598,21 @@ $sidebar-width: 300px;
         height: 14px;
         border-radius: 3px;
 
-        &.post-scheduled { background: #ffefb3; }
-        &.post-no-show { background: #ffb3b3; }
-        &.post-in-progress { background: #b3e6cc; }
-        &.post-repaired { background: #e6e6e6; }
+        &.post-scheduled {
+          background: #ffefb3;
+        }
+
+        &.post-no-show {
+          background: #ffb3b3;
+        }
+
+        &.post-in-progress {
+          background: #b3e6cc;
+        }
+
+        &.post-repaired {
+          background: #e6e6e6;
+        }
       }
     }
   }
@@ -619,8 +634,13 @@ $sidebar-width: 300px;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .post-modal {
@@ -634,8 +654,15 @@ $sidebar-width: 300px;
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .post-modal-header {

@@ -135,13 +135,24 @@ class SchedulerApp {
 
   private toggleEditMode(): void {
     this.editMode = !this.editMode;
+    
+    // Toggle button active state
     if (this.editModeBtn) {
+      const iconUnlock = this.editModeBtn.querySelector(".icon-unlock") as HTMLElement;
+      const iconLock = this.editModeBtn.querySelector(".icon-lock") as HTMLElement;
+      
       if (this.editMode) {
         this.editModeBtn.classList.add("active");
+        if (iconUnlock) iconUnlock.style.display = "none";
+        if (iconLock) iconLock.style.display = "block";
       } else {
         this.editModeBtn.classList.remove("active");
+        if (iconUnlock) iconUnlock.style.display = "block";
+        if (iconLock) iconLock.style.display = "none";
       }
     }
+    
+    // Toggle scheduler wrapper edit mode
     if (this.schedulerWrapper) {
       if (this.editMode) {
         this.schedulerWrapper.classList.add("edit-mode");

@@ -1,24 +1,26 @@
 // --- ЗМІННІ ---
-$primary-blue: #004d26; // Основний зелений
+$primary-blue: #004d26;
 $light-gray: #f5f5f5;
 $border-gray: #ddd;
 $border-dark: #bbb;
 $text-dark: #333;
 $white: #fff;
+$red: #fa5252;
+$red-hover: #c92a2a;
+$yellow: #fab005;
 
 // Кольори календаря
-$today-bg: #004d26; // Зелений фон для сьогодні
-$selected-bg: #ffe082; // Жовтий фон для вибраної
+$today-bg: #004d26;
+$selected-bg: #ffe082;
 
 // Розміри
 $header-height: 45px;
 $row-height: 70px;
-$sidebar-width: 300px; // Фіксована ширина
+$sidebar-width: 300px;
 
 // --- БАЗОВІ СТИЛІ ---
 .post-planning-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
   font-size: 14px;
   color: $text-dark;
   background: $light-gray;
@@ -75,16 +77,43 @@ $sidebar-width: 300px; // Фіксована ширина
       gap: 12px;
       margin-left: auto;
 
-      .post-today-btn {
+      .post-today-btn,
+      .post-edit-mode-btn {
         padding: 6px 12px;
         background: rgba(255, 255, 255, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 4px;
         color: $white;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
 
         &:hover {
           background: rgba(255, 255, 255, 0.25);
+        }
+      }
+
+      .post-edit-mode-btn.active {
+        background: $yellow;
+        border-color: $yellow;
+        color: $text-dark;
+
+        .icon-unlock {
+          display: none;
+        }
+
+        .icon-lock {
+          display: block !important;
+        }
+
+        #editModeText::after {
+          content: 'Готово';
+        }
+
+        #editModeText {
+          font-size: 0;
         }
       }
 
@@ -94,6 +123,7 @@ $sidebar-width: 300px; // Фіксована ширина
         color: $white;
         font-size: 24px;
         cursor: pointer;
+        transition: transform 0.2s;
 
         &:hover {
           transform: scale(1.2);
@@ -154,7 +184,6 @@ $sidebar-width: 300px; // Фіксована ширина
   min-height: $header-height;
 
   .post-header-corner {
-    // ВАЖЛИВО: Фіксована ширина, не стискається
     width: $sidebar-width;
     min-width: $sidebar-width;
     flex-shrink: 0;
@@ -176,7 +205,6 @@ $sidebar-width: 300px; // Фіксована ширина
     position: relative;
     background: #fff;
 
-    // ЧЕРВОНА ЛІНІЯ (ШАПКА)
     &::after {
       content: "";
       position: absolute;
@@ -184,7 +212,7 @@ $sidebar-width: 300px; // Фіксована ширина
       bottom: 0;
       left: 0;
       width: calc(var(--past-percentage, 0) * 100%);
-      background: rgba(230, 230, 250, 0.5); // колір заливки минулого часу
+      background: rgba(230, 230, 250, 0.5);
       border-right: 2px solid #ff0000;
       pointer-events: none;
       z-index: 2;
@@ -195,7 +223,6 @@ $sidebar-width: 300px; // Фіксована ширина
       position: relative;
       height: 100%;
 
-      //padding-left: 6px;
       &.hour-cell {
         background: $white;
         color: $text-dark;
@@ -207,8 +234,6 @@ $sidebar-width: 300px; // Фіксована ширина
       }
 
       &.min-cell {
-        /*         background: #fafafa;
-        color: #999; */
         font-size: 11px;
         font-weight: 400;
         align-items: flex-start;
@@ -228,16 +253,11 @@ $sidebar-width: 300px; // Фіксована ширина
 .post-scheduler-body {
   position: relative;
   min-height: 100%;
-
-  // Фонові лінії
   background-size: calc((100% - #{$sidebar-width}) / 24) 100%;
-  background-image: linear-gradient(to right,
-      $border-gray 1px,
-      transparent 1px);
+  background-image: linear-gradient(to right, $border-gray 1px, transparent 1px);
   background-position-x: $sidebar-width;
   background-repeat: repeat-x;
 
-  // ЧЕРВОНА ЛІНІЯ (ТІЛО)
   &::after {
     content: "";
     position: absolute;
@@ -245,7 +265,7 @@ $sidebar-width: 300px; // Фіксована ширина
     bottom: 0;
     left: $sidebar-width;
     width: calc(var(--past-percentage, 0) * (100% - #{$sidebar-width}));
-    background: rgba(230, 230, 250, 0.5); // колір заливки минулого часу
+    background: rgba(230, 230, 250, 0.5);
     border-right: 2px solid #ff0000;
     pointer-events: none;
     z-index: 10;
@@ -269,6 +289,44 @@ $sidebar-width: 300px; // Фіксована ширина
   cursor: pointer;
   height: 32px;
 
+  .post-section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .post-section-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .post-delete-btn {
+    background: $red;
+    border: none;
+    color: $white;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background: $red-hover;
+      transform: scale(1.1);
+    }
+  }
+
   .post-toggle-btn {
     background: none;
     border: none;
@@ -276,6 +334,10 @@ $sidebar-width: 300px; // Фіксована ширина
     cursor: pointer;
     color: inherit;
     transition: transform 0.2s;
+
+    &.collapsed {
+      transform: rotate(-90deg);
+    }
   }
 }
 
@@ -301,7 +363,6 @@ $sidebar-width: 300px; // Фіксована ширина
   }
 
   .post-row-label {
-    // ВАЖЛИВО: Фіксована ширина для лівої сторони
     width: $sidebar-width;
     min-width: $sidebar-width;
     flex-shrink: 0;
@@ -312,6 +373,17 @@ $sidebar-width: 300px; // Фіксована ширина
     justify-content: center;
     background: #f8f9fa;
     z-index: 20;
+
+    .post-post-delete-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .post-row-label-content {
+      flex: 1;
+    }
 
     .post-post-title {
       font-weight: 700;
@@ -324,6 +396,33 @@ $sidebar-width: 300px; // Фіксована ширина
       font-size: 12px;
       color: #888;
     }
+
+    .post-post-delete-btn {
+      background: $red;
+      border: none;
+      color: $white;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.2s;
+      flex-shrink: 0;
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      &:hover {
+        background: $red-hover;
+        transform: scale(1.1);
+      }
+    }
   }
 
   .post-row-track {
@@ -332,80 +431,64 @@ $sidebar-width: 300px; // Фіксована ширина
     grid-template-columns: repeat(24, 1fr);
     position: relative;
     padding: 6px 0;
-
-    .post-appointment {
-      margin: 0 4px;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      cursor: pointer;
-      z-index: 30;
-      overflow: hidden;
-      white-space: nowrap;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      border-left-width: 4px;
-      border-left-style: solid;
-      transition: all 0.2s;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        z-index: 40;
-      }
-
-      &.post-pink {
-        background: #ffe3e3;
-        border-left-color: #fa5252;
-        color: #491212;
-      }
-
-      &.post-green {
-        background: #d3f9d8;
-        border-left-color: #40c057;
-        color: #0b2e13;
-      }
-
-      &.post-beige {
-        background: #fff3bf;
-        border-left-color: #fab005;
-        color: #5f370e;
-      }
-
-      .post-car-model {
-        font-weight: 700;
-        margin-bottom: 2px;
-        font-size: 12px;
-      }
-
-      .post-car-number {
-        font-size: 11px;
-        font-family: monospace;
-        background: rgba(255, 255, 255, 0.4);
-        display: inline-block;
-        padding: 1px 4px;
-        border-radius: 3px;
-        width: fit-content;
-      }
-    }
   }
 }
 
-.post-add-reminder-btn {
-  padding: 10px;
-  margin: 10px;
-  width: calc(100% - 20px);
+// КНОПКИ ДОДАВАННЯ
+.post-add-post-btn,
+.post-add-section-btn {
   background: $white;
   border: 2px dashed $border-gray;
   border-radius: 6px;
   color: #888;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.2s;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 
   &:hover {
     border-color: $primary-blue;
     color: $primary-blue;
+    background: #f0fdf4;
+  }
+}
+
+.post-add-post-btn {
+  padding: 8px;
+  margin: 8px;
+  width: calc(100% - 16px);
+  font-size: 13px;
+}
+
+.post-add-section-btn {
+  padding: 12px;
+  margin: 16px;
+  font-size: 14px;
+  font-weight: 600;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// EDIT MODE
+.post-scheduler-wrapper.edit-mode {
+  .post-delete-btn,
+  .post-post-delete-btn,
+  .post-add-post-btn,
+  .post-add-section-btn {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -477,15 +560,13 @@ $sidebar-width: 300px; // Фіксована ширина
         border-radius: 50%;
         cursor: pointer;
 
-        // СЬОГОДНІ - ЗАЛИВКА
         &.post-today {
-          background: $today-bg; // Заливка зеленим
-          color: $white; // Білий текст
+          background: $today-bg;
+          color: $white;
           font-weight: 700;
-          border: none; // Без рамки
+          border: none;
         }
 
-        // ВИБРАНА - ЗАЛИВКА ЖОВТИМ
         &.post-selected-date {
           background: $selected-bg;
           color: $text-dark;
@@ -513,22 +594,141 @@ $sidebar-width: 300px; // Фіксована ширина
         height: 14px;
         border-radius: 3px;
 
-        &.post-scheduled {
-          background: #ffefb3;
-        }
-
-        &.post-no-show {
-          background: #ffb3b3;
-        }
-
-        &.post-in-progress {
-          background: #b3e6cc;
-        }
-
-        &.post-repaired {
-          background: #e6e6e6;
-        }
+        &.post-scheduled { background: #ffefb3; }
+        &.post-no-show { background: #ffb3b3; }
+        &.post-in-progress { background: #b3e6cc; }
+        &.post-repaired { background: #e6e6e6; }
       }
     }
+  }
+}
+
+// --- MODAL ---
+.post-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.post-modal {
+  background: $white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.2s;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.post-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.post-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: $primary-blue;
+}
+
+.post-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: $text-dark;
+  }
+}
+
+.post-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.post-form-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #495057;
+}
+
+.post-form-input {
+  padding: 10px 12px;
+  border: 1px solid $border-gray;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-blue;
+    box-shadow: 0 0 0 3px rgba(0, 77, 38, 0.1);
+  }
+}
+
+.post-modal-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.post-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+  transition: all 0.2s;
+}
+
+.post-btn-primary {
+  background: $primary-blue;
+  color: $white;
+
+  &:hover {
+    background: #003d1f;
+  }
+}
+
+.post-btn-secondary {
+  background: #e9ecef;
+  color: #495057;
+
+  &:hover {
+    background: #dee2e6;
   }
 }

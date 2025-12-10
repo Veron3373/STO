@@ -184,7 +184,7 @@ $sidebar-width: 300px; // Фіксована ширина
       bottom: 0;
       left: 0;
       width: calc(var(--past-percentage, 0) * 100%);
-      background: rgba(0, 0, 0, 0.05);
+      background: rgba(230, 230, 250 0.05);
       border-right: 2px solid #ff0000;
       pointer-events: none;
       z-index: 2;
@@ -245,7 +245,7 @@ $sidebar-width: 300px; // Фіксована ширина
     bottom: 0;
     left: $sidebar-width;
     width: calc(var(--past-percentage, 0) * (100% - #{$sidebar-width}));
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(230, 230, 250, 0.05);
     border-right: 2px solid #ff0000;
     pointer-events: none;
     z-index: 10;

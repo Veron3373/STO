@@ -64,20 +64,24 @@ class CalendarWidget {
         }
     }
 
-    private updateTimeMarker(): void {
+private updateTimeMarker(): void {
         const now = new Date();
         const startOfToday = new Date(this.today);
         const selected = new Date(this.selectedDate);
         selected.setHours(0, 0, 0, 0);
 
         let decimal = 0;
+        let isTodayOrPast = false;
 
+        // 1. Логіка для червоної лінії та визначення, чи ми дивимось на "сьогодні"
         if (selected < startOfToday) {
             decimal = 1;
+            isTodayOrPast = true;
         } else if (selected.getTime() === startOfToday.getTime()) {
+            isTodayOrPast = true;
             const startHour = 8;
             const endHour = 20;
-            const totalMinutes = (endHour - startHour) * 60; 
+            const totalMinutes = (endHour - startHour) * 60;
             const currentHour = now.getHours();
             const currentMin = now.getMinutes();
             let minutesPassed = (currentHour - startHour) * 60 + currentMin;
@@ -86,13 +90,55 @@ class CalendarWidget {
             decimal = minutesPassed / totalMinutes;
         } else {
             decimal = 0;
+            isTodayOrPast = false;
         }
 
+        // Оновлюємо позицію червоної лінії (залишаємо як було)
         if (this.timeHeader) {
             this.timeHeader.style.setProperty('--past-percentage', decimal.toString());
         }
         if (this.schedulerWrapper) {
              this.schedulerWrapper.style.setProperty('--past-percentage', decimal.toString());
+        }
+
+        // 2. НОВА ЛОГІКА: Фарбуємо клітинки, що минули
+        if (this.timeHeader) {
+            // Отримуємо всі клітинки (і години, і хвилини)
+            const timeCells = this.timeHeader.querySelectorAll('.post-time-cell');
+            const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+            // Припускаємо, що графік починається о 8:00
+            const startHour = 8;
+
+            timeCells.forEach((cell, index) => {
+                // Якщо ми дивимось на майбутню дату, очищаємо всі класи минулого
+                if (!isTodayOrPast || selected > startOfToday) {
+                    cell.classList.remove('post-past-time');
+                    return;
+                }
+                // Якщо дивимось на дату в минулому, фарбуємо все
+                if (selected < startOfToday) {
+                     cell.classList.add('post-past-time');
+                     return;
+                }
+
+                // Якщо дивимось на СЬОГОДНІ, вираховуємо для кожної клітинки
+                // Кожні 2 індекси це 1 година (індекс 0=8:00, 1=8:30, 2=9:00, 3=9:30...)
+                const hoursFromStart = Math.floor(index / 2);
+                const cellHour = startHour + hoursFromStart;
+                // Парний індекс - це :00, непарний - це :30
+                const cellMinute = (index % 2 === 0) ? 0 : 30;
+                
+                // Час цієї конкретної клітинки в хвилинах від початку доби
+                const cellTimeInMinutes = cellHour * 60 + cellMinute;
+
+                // Додаємо 30 хвилин, щоб клітинка "8:00" ставала сірою тільки коли настане 8:30
+                // Якщо хочете, щоб сіріла одразу як настане 8:00, приберіть "+ 30"
+                if (cellTimeInMinutes + 30 <= currentTotalMinutes) {
+                    cell.classList.add('post-past-time');
+                } else {
+                    cell.classList.remove('post-past-time');
+                }
+            });
         }
     }
 

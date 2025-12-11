@@ -109,21 +109,36 @@ class SchedulerApp {
 
   private async loadDataFromDatabase(): Promise<void> {
     try {
-      const response = await fetch("https://api.supabase.co/rest/v1/rpc/get_slyusars_with_posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": "YOUR_SUPABASE_ANON_KEY",
-          "Authorization": "Bearer YOUR_SUPABASE_ANON_KEY"
+      const SUPABASE_URL = "https://fbpaqhqevonddtqcjzzy.supabase.co";
+      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZicGFxaHFldm9uZGR0cWNqenp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5Njc2NTksImV4cCI6MjA1MDU0MzY1OX0.OPSIxlpG3sEPzF2y0Q-cUZG0cT05g_Gg-tz2NUzbbVw";
+
+      // Запит до slyusars з JOIN до post_name
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/slyusars?select=slyusar_id,data,post_sluysar,namber,post_name(post_name_id,name,category)`,
+        {
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
+          }
         }
-      });
+      );
 
       if (!response.ok) {
         throw new Error("Помилка завантаження даних");
       }
 
-      const data: Sluysar[] = await response.json();
-      this.transformDataToSections(data);
+      const data = await response.json();
+      
+      // Трансформація даних
+      const slyusars: Sluysar[] = data.map((item: any) => ({
+        slyusar_id: item.slyusar_id,
+        sluysar_name: item.data.Name,
+        namber: item.namber,
+        post_name: item.post_name.name,
+        category: item.post_name.category
+      }));
+
+      this.transformDataToSections(slyusars);
     } catch (error) {
       console.error("❌ Помилка завантаження даних з БД:", error);
       this.showError("Не вдалося завантажити дані. Спробуйте пізніше.");

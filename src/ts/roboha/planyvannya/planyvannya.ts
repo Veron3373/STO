@@ -109,12 +109,12 @@ class SchedulerApp {
 
   private async loadDataFromDatabase(): Promise<void> {
     try {
-      const SUPABASE_URL = "https://fbpaqhqevonddtqcjzzy.supabase.co";
-      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZicGFxaHFldm9uZGR0cWNqenp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5Njc2NTksImV4cCI6MjA1MDU0MzY1OX0.OPSIxlpG3sEPzF2y0Q-cUZG0cT05g_Gg-tz2NUzbbVw";
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 
-      // Запит до slyusars з JOIN до post_name
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/slyusars?select=slyusar_id,data,post_sluysar,namber,post_name(post_name_id,name,category)`,
+      // Запит 1: Отримуємо всіх слюсарів
+      const slyusarsResponse = await fetch(
+        `${SUPABASE_URL}/rest/v1/slyusars?select=*`,
         {
           headers: {
             "apikey": SUPABASE_KEY,
@@ -123,20 +123,44 @@ class SchedulerApp {
         }
       );
 
-      if (!response.ok) {
+      // Запит 2: Отримуємо всі пости
+      const postsResponse = await fetch(
+        `${SUPABASE_URL}/rest/v1/post_name?select=*`,
+        {
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
+          }
+        }
+      );
+
+      if (!slyusarsResponse.ok || !postsResponse.ok) {
         throw new Error("Помилка завантаження даних");
       }
 
-      const data = await response.json();
+      const slyusarsData = await slyusarsResponse.json();
+      const postsData = await postsResponse.json();
       
+      // Створюємо Map для швидкого пошуку постів
+      const postsMap = new Map<number, any>(
+        postsData.map((post: any) => [post.post_name_id, post])
+      );
+
       // Трансформація даних
-      const slyusars: Sluysar[] = data.map((item: any) => ({
-        slyusar_id: item.slyusar_id,
-        sluysar_name: item.data.Name,
-        namber: item.namber,
-        post_name: item.post_name.name,
-        category: item.post_name.category
-      }));
+      const slyusars: Sluysar[] = slyusarsData
+        .map((item: any) => {
+          const post = postsMap.get(parseInt(item.post_sluysar));
+          if (!post) return null;
+
+          return {
+            slyusar_id: item.slyusar_id,
+            sluysar_name: item.data.Name,
+            namber: item.namber,
+            post_name: post.name as string,
+            category: post.category as string
+          };
+        })
+        .filter((item: Sluysar | null): item is Sluysar => item !== null);
 
       this.transformDataToSections(slyusars);
     } catch (error) {

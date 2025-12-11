@@ -134,6 +134,15 @@ class SchedulerApp {
   }
 
   private toggleEditMode(): void {
+    // Перевірка рівня доступу перед увімкненням режиму редагування
+    if (!this.editMode) {
+      const userData = this.getUserAccessLevel();
+      if (!userData || userData.Доступ !== "Адміністратор") {
+        this.showAccessDeniedModal();
+        return;
+      }
+    }
+
     this.editMode = !this.editMode;
 
     // 1. Перемикання візуального стану кнопки
@@ -150,6 +159,138 @@ class SchedulerApp {
         this.schedulerWrapper.classList.remove("edit-mode");
       }
     }
+  }
+
+  private getUserAccessLevel(): { Name: string; Доступ: string } | null {
+    try {
+      const storedData = localStorage.getItem("userAuthData");
+      if (!storedData) return null;
+      return JSON.parse(storedData);
+    } catch (error) {
+      console.error("❌ Помилка при читанні даних користувача з localStorage:", error);
+      return null;
+    }
+  }
+
+  private showAccessDeniedModal(): void {
+    const modal = document.createElement("div");
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease;
+    `;
+
+    const modalContent = document.createElement("div");
+    modalContent.style.cssText = `
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      max-width: 450px;
+      animation: slideIn 0.3s ease;
+    `;
+
+    const icon = document.createElement("div");
+    icon.style.cssText = `
+      font-size: 64px;
+      margin-bottom: 20px;
+    `;
+    icon.textContent = "🔒";
+
+    const title = document.createElement("h2");
+    title.style.cssText = `
+      margin: 0 0 15px 0;
+      color: white;
+      font-size: 28px;
+      font-weight: 600;
+    `;
+    title.textContent = "Доступ заборонено";
+
+    const message = document.createElement("p");
+    message.style.cssText = `
+      margin: 0 0 30px 0;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      line-height: 1.6;
+    `;
+    message.textContent = "Режим редагування доступний тільки для адміністратора. Зверніться до адміністратора для отримання доступу.";
+
+    const button = document.createElement("button");
+    button.style.cssText = `
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 14px 36px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    `;
+    button.textContent = "Зрозуміло";
+
+    button.addEventListener("mouseenter", () => {
+      button.style.transform = "translateY(-2px)";
+      button.style.boxShadow = "0 6px 20px rgba(0, 0, 0, 0.3)";
+    });
+
+    button.addEventListener("mouseleave", () => {
+      button.style.transform = "translateY(0)";
+      button.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.2)";
+    });
+
+    button.addEventListener("click", () => {
+      modal.style.animation = "fadeOut 0.3s ease";
+      setTimeout(() => modal.remove(), 300);
+    });
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.style.animation = "fadeOut 0.3s ease";
+        setTimeout(() => modal.remove(), 300);
+      }
+    });
+
+    // Додавання анімацій
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateY(-50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    modalContent.appendChild(icon);
+    modalContent.appendChild(title);
+    modalContent.appendChild(message);
+    modalContent.appendChild(button);
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
   }
 
   private updateTimeMarker(): void {

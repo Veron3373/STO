@@ -462,6 +462,15 @@ class SchedulerApp {
 
     calendarGrid.innerHTML = "";
 
+    // Створюємо фонову сітку для ідеального вирівнювання з хедером
+    const bgGrid = document.createElement("div");
+    bgGrid.className = "post-grid-background";
+    for (let i = 0; i < 24; i++) {
+      const cell = document.createElement("div");
+      bgGrid.appendChild(cell);
+    }
+    calendarGrid.appendChild(bgGrid);
+
     this.sections.forEach((section) => {
       const sectionGroup = document.createElement("div");
       sectionGroup.className = "post-section-group";

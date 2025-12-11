@@ -20,8 +20,7 @@ $sidebar-width: 300px;
 
 // --- БАЗОВІ СТИЛІ ---
 .post-planning-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
   font-size: 14px;
   color: $text-dark;
   background: $light-gray;
@@ -92,98 +91,6 @@ $sidebar-width: 300px;
 
         &:hover {
           background: rgba(255, 255, 255, 0.25);
-        }
-      }
-
-      .post-edit-mode-btn {
-        // Скидання стандартних стилів кнопки (прибираємо "уйобіщність")
-        appearance: none;
-        background: transparent;
-        border: none;
-        padding: 0;
-        margin: 0;
-        outline: none; // Прибирає "дибільну обводку"
-        box-shadow: none;
-
-        // Позиціонування
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        // Типографіка
-        font-size: 26px; // Трохи більше, щоб було зручно тицяти
-        line-height: 1;
-        cursor: pointer;
-
-        // Плавна анімація для всіх змін
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-        // Стилі для іконок всередині
-        span {
-          display: block;
-          filter: drop-shadow(
-            0 2px 2px rgba(0, 0, 0, 0.1)
-          ); // Легка тінь для об'єму
-        }
-
-        // Логіка перемикання іконок
-        .icon-view {
-          display: block;
-        }
-        .icon-edit {
-          display: none;
-        }
-
-        // --- СТАНИ ---
-
-        // 1. Hover (Наведення) - Збільшення + Світіння
-        &:hover {
-          transform: scale(1.2) rotate(-5deg); // Легкий нахил для живності
-          filter: drop-shadow(
-            0 0 8px rgba(255, 255, 255, 0.6)
-          ); // Біле світіння
-        }
-
-        // 2. Active (Натискання) - Зменшення (клік)
-        &:active {
-          transform: scale(0.9);
-          filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4));
-        }
-
-        // 3. Focus (Фокус клавіатурою) - прибираємо синю рамку браузера
-        &:focus {
-          outline: none;
-        }
-
-        // --- АКТИВНИЙ РЕЖИМ (EDIT MODE) ---
-        &.active {
-          // Коли клас active додано:
-          .icon-view {
-            display: none; // Ховаємо 🔒
-          }
-          .icon-edit {
-            display: block; // Показуємо 🔓
-            animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          }
-
-          // Трохи змінюємо колір світіння для активного стану
-          &:hover {
-            filter: drop-shadow(
-              0 0 8px rgba(255, 230, 0, 0.6)
-            ); // Жовтувате світіння для відкритого
-          }
-        }
-      }
-
-      // Анімація появи іконки
-      @keyframes popIn {
-        0% {
-          transform: scale(0);
-          opacity: 0;
-        }
-        100% {
-          transform: scale(1);
-          opacity: 1;
         }
       }
 
@@ -324,11 +231,7 @@ $sidebar-width: 300px;
   position: relative;
   min-height: 100%;
   background-size: calc((100% - #{$sidebar-width}) / 24) 100%;
-  background-image: linear-gradient(
-    to right,
-    $border-gray 1px,
-    transparent 1px
-  );
+  background-image: linear-gradient(to right, $border-gray 1px, transparent 1px);
   background-position-x: $sidebar-width;
   background-repeat: repeat-x;
 
@@ -649,7 +552,7 @@ $sidebar-width: 300px;
 
   .post-legend {
     margin-top: auto;
-    padding-top: 20px 0;
+    padding-top: 20px;
     border-top: 1px solid $border-gray;
     display: flex;
     flex-direction: column;
@@ -668,20 +571,89 @@ $sidebar-width: 300px;
         &.post-scheduled {
           background: #ffefb3;
         }
-
         &.post-no-show {
           background: #ffb3b3;
         }
-
         &.post-in-progress {
           background: #b3e6cc;
         }
-
         &.post-repaired {
           background: #e6e6e6;
         }
       }
     }
+  }
+
+  // --- ВСТАВЛЕНО В ПРАВИЛЬНЕ МІСЦЕ (ВСЕРЕДИНІ sidebar) ---
+  .post-edit-mode-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 28px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    span {
+      display: block;
+      line-height: 1;
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    .icon-view {
+      display: block;
+    }
+    .icon-edit {
+      display: none;
+    }
+
+    &:hover {
+      transform: scale(1.2) rotate(-5deg);
+      filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.2));
+    }
+
+    &:active {
+      transform: scale(0.9);
+    }
+
+    &:focus {
+      outline: none;
+    }
+
+    &.active {
+      .icon-view {
+        display: none;
+      }
+      .icon-edit {
+        display: block;
+        animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      &:hover {
+        filter: drop-shadow(0 0 8px rgba(255, 200, 0, 0.5));
+      }
+    }
+  }
+}
+
+// Анімація для кнопки
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 

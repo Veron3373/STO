@@ -230,13 +230,13 @@ $sidebar-width: 300px;
 // 3. ТІЛО ТАБЛИЦІ
 .post-scheduler-body {
   position: relative;
-  min-height: 100%;
+  min-height: calc(100vh - 50px - #{$header-height});
+  display: flex;
+  flex-direction: column;
   background-size: calc((100% - #{$sidebar-width}) / 24) 100%;
-  background-image: linear-gradient(
-    to right,
-    $border-gray 1px,
-    transparent 1px
-  );
+  background-image: linear-gradient(to right,
+      $border-gray 1px,
+      transparent 1px);
   background-position-x: $sidebar-width;
   background-repeat: repeat-x;
 
@@ -244,10 +244,9 @@ $sidebar-width: 300px;
     content: "";
     position: absolute;
     top: 0;
+    bottom: 0;
     left: $sidebar-width;
     width: calc(var(--past-percentage, 0) * (100% - #{$sidebar-width}));
-    height: 100%;
-    min-height: 100%;
     background: rgba(230, 230, 250, 0.5);
     border-right: 2px solid #ff0000;
     pointer-events: none;
@@ -460,6 +459,7 @@ $sidebar-width: 300px;
 
 // EDIT MODE
 .post-scheduler-wrapper.edit-mode {
+
   .post-delete-btn,
   .post-post-delete-btn,
   .post-add-post-btn,
@@ -577,12 +577,15 @@ $sidebar-width: 300px;
         &.post-scheduled {
           background: #ffefb3;
         }
+
         &.post-no-show {
           background: #ffb3b3;
         }
+
         &.post-in-progress {
           background: #b3e6cc;
         }
+
         &.post-repaired {
           background: #e6e6e6;
         }
@@ -627,6 +630,7 @@ $sidebar-width: 300px;
     .icon-view {
       display: block;
     }
+
     .icon-edit {
       display: none;
     }
@@ -648,6 +652,7 @@ $sidebar-width: 300px;
       .icon-view {
         display: none;
       }
+
       .icon-edit {
         display: block;
         animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -659,12 +664,14 @@ $sidebar-width: 300px;
     }
   }
 }
+
 // Анімація для кнопки
 @keyframes popIn {
   0% {
     transform: scale(0);
     opacity: 0;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;

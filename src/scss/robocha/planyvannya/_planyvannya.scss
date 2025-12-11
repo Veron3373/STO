@@ -265,6 +265,10 @@ $sidebar-width: 30%;
     border-right: 1px dashed #eee;
     height: 100%;
 
+    &:nth-child(even) {
+      border-right: 1px solid $border-dark;
+    }
+
     &:last-child {
       border-right: none;
     }

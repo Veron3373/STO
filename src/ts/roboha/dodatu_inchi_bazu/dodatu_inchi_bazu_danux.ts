@@ -36,10 +36,15 @@ export const updateTableNameDisplay = (
 // Функція для очищення всіх даних
 // Функція для очищення всіх даних
 export const clearAllData = () => {
-  const searchInput = document.getElementById(
+  let searchInput = document.getElementById(
     "search-input-all_other_bases"
   ) as HTMLInputElement;
+
   if (searchInput) {
+    // 🔥 РЕШЕТО: Клонуємо елемент, щоб видалити ВСІ старі event listeners
+    const newSearchInput = searchInput.cloneNode(true) as HTMLInputElement;
+    searchInput.parentNode?.replaceChild(newSearchInput, searchInput);
+    searchInput = newSearchInput;
     searchInput.value = "";
   }
 

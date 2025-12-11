@@ -135,24 +135,14 @@ class SchedulerApp {
 
   private toggleEditMode(): void {
     this.editMode = !this.editMode;
-    
-    // Toggle button active state
+
+    // 1. Перемикання візуального стану кнопки
     if (this.editModeBtn) {
-      const iconUnlock = this.editModeBtn.querySelector(".icon-unlock") as HTMLElement;
-      const iconLock = this.editModeBtn.querySelector(".icon-lock") as HTMLElement;
-      
-      if (this.editMode) {
-        this.editModeBtn.classList.add("active");
-        if (iconUnlock) iconUnlock.style.display = "none";
-        if (iconLock) iconLock.style.display = "block";
-      } else {
-        this.editModeBtn.classList.remove("active");
-        if (iconUnlock) iconUnlock.style.display = "block";
-        if (iconLock) iconLock.style.display = "none";
-      }
+      // Просто перемикаємо клас. CSS сам сховає одну іконку і покаже іншу.
+      this.editModeBtn.classList.toggle("active", this.editMode);
     }
-    
-    // Toggle scheduler wrapper edit mode
+
+    // 2. Перемикання режиму планувальника (показ кнопок видалення/додавання)
     if (this.schedulerWrapper) {
       if (this.editMode) {
         this.schedulerWrapper.classList.add("edit-mode");

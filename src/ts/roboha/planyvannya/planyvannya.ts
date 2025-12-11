@@ -1,3 +1,5 @@
+import { supabase } from "../../vxid/supabaseClient";
+
 interface Post {
   id: number;
   title: string;
@@ -109,38 +111,28 @@ class SchedulerApp {
 
   private async loadDataFromDatabase(): Promise<void> {
     try {
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
-
       // Запит 1: Отримуємо всіх слюсарів
-      const slyusarsResponse = await fetch(
-        `${SUPABASE_URL}/rest/v1/slyusars?select=*`,
-        {
-          headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": `Bearer ${SUPABASE_KEY}`
-          }
-        }
-      );
+      const { data: slyusarsData, error: slyusarsError } = await supabase
+        .from("slyusars")
+        .select("*");
+
+      if (slyusarsError) {
+        throw slyusarsError;
+      }
 
       // Запит 2: Отримуємо всі пости
-      const postsResponse = await fetch(
-        `${SUPABASE_URL}/rest/v1/post_name?select=*`,
-        {
-          headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": `Bearer ${SUPABASE_KEY}`
-          }
-        }
-      );
+      const { data: postsData, error: postsError } = await supabase
+        .from("post_name")
+        .select("*");
 
-      if (!slyusarsResponse.ok || !postsResponse.ok) {
+      if (postsError) {
+        throw postsError;
+      }
+
+      if (!slyusarsData || !postsData) {
         throw new Error("Помилка завантаження даних");
       }
 
-      const slyusarsData = await slyusarsResponse.json();
-      const postsData = await postsResponse.json();
-      
       // Створюємо Map для швидкого пошуку постів
       const postsMap = new Map<number, any>(
         postsData.map((post: any) => [post.post_name_id, post])
@@ -703,9 +695,8 @@ class SchedulerApp {
       "листопада",
       "грудня",
     ];
-    return `${days[date.getDay()]}, ${date.getDate()} ${
-      months[date.getMonth()]
-    } ${date.getFullYear()}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]
+      } ${date.getFullYear()}`;
   }
 
   private getMonthName(monthIndex: number): string {

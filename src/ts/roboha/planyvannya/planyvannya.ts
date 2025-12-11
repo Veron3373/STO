@@ -2,6 +2,7 @@ interface Post {
   id: number;
   title: string;
   subtitle: string;
+  namber: number;
 }
 
 interface Section {
@@ -11,46 +12,16 @@ interface Section {
   posts: Post[];
 }
 
-class SchedulerApp {
-  private sections: Section[] = [
-    {
-      id: 1,
-      name: "Підвал №1",
-      collapsed: false,
-      posts: [
-        {
-          id: 1,
-          title: "🔧 Пост збирання двигунів",
-          subtitle: "👨‍🔧 Брацлавець Б.С",
-        },
-        { id: 2, title: "Пост 2", subtitle: "4 стоєчний УУК" },
-        { id: 3, title: "Пост 3", subtitle: "2 стоєчний" },
-      ],
-    },
-    {
-      id: 2,
-      name: "ЦЕХ 2",
-      collapsed: false,
-      posts: [
-        { id: 4, title: "Пост 4", subtitle: "2 стоєчний" },
-        { id: 5, title: "Пост 5", subtitle: "Електрик" },
-        { id: 6, title: "Пост 6", subtitle: "2 стоєчний" },
-      ],
-    },
-    {
-      id: 3,
-      name: "МИЙКА",
-      collapsed: false,
-      posts: [{ id: 7, title: "Пост 7", subtitle: "Мийка" }],
-    },
-    {
-      id: 4,
-      name: "НАГАДУВАННЯ",
-      collapsed: false,
-      posts: [],
-    },
-  ];
+interface Sluysar {
+  slyusar_id: number;
+  sluysar_name: string;
+  namber: number;
+  post_name: string;
+  category: string;
+}
 
+class SchedulerApp {
+  private sections: Section[] = [];
   private editMode: boolean = false;
   private modalType: "section" | "post" = "section";
   private modalTargetSection: number | null = null;
@@ -87,7 +58,10 @@ class SchedulerApp {
     this.init();
   }
 
-  private init(): void {
+  private async init(): Promise<void> {
+    // Завантажити дані з БД
+    await this.loadDataFromDatabase();
+
     // Навігація днями
     const headerPrev = document.getElementById("headerNavPrev");
     const headerNext = document.getElementById("headerNavNext");
@@ -133,8 +107,89 @@ class SchedulerApp {
     setInterval(() => this.updateTimeMarker(), 60000);
   }
 
+  private async loadDataFromDatabase(): Promise<void> {
+    try {
+      const response = await fetch("https://api.supabase.co/rest/v1/rpc/get_slyusars_with_posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": "YOUR_SUPABASE_ANON_KEY",
+          "Authorization": "Bearer YOUR_SUPABASE_ANON_KEY"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Помилка завантаження даних");
+      }
+
+      const data: Sluysar[] = await response.json();
+      this.transformDataToSections(data);
+    } catch (error) {
+      console.error("❌ Помилка завантаження даних з БД:", error);
+      this.showError("Не вдалося завантажити дані. Спробуйте пізніше.");
+    }
+  }
+
+  private transformDataToSections(data: Sluysar[]): void {
+    // Групування за category
+    const grouped = data.reduce((acc, item) => {
+      if (!acc[item.category]) {
+        acc[item.category] = [];
+      }
+      acc[item.category].push(item);
+      return acc;
+    }, {} as Record<string, Sluysar[]>);
+
+    // Створення секцій
+    this.sections = Object.entries(grouped).map(([category, items], index) => {
+      // Сортування за namber всередині категорії
+      items.sort((a, b) => a.namber - b.namber);
+
+      return {
+        id: index + 1,
+        name: category,
+        collapsed: false,
+        posts: items.map(item => ({
+          id: item.slyusar_id,
+          title: item.post_name,
+          subtitle: item.sluysar_name,
+          namber: item.namber
+        }))
+      };
+    });
+
+    // Сортування секцій за мінімальним namber у кожній секції
+    this.sections.sort((a, b) => {
+      const minA = Math.min(...a.posts.map(p => p.namber));
+      const minB = Math.min(...b.posts.map(p => p.namber));
+      return minA - minB;
+    });
+  }
+
+  private showError(message: string): void {
+    const errorDiv = document.createElement("div");
+    errorDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #ff4444;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+    `;
+    errorDiv.textContent = message;
+    document.body.appendChild(errorDiv);
+
+    setTimeout(() => {
+      errorDiv.style.animation = "slideOut 0.3s ease";
+      setTimeout(() => errorDiv.remove(), 300);
+    }, 5000);
+  }
+
   private toggleEditMode(): void {
-    // Перевірка рівня доступу перед увімкненням режиму редагування
     if (!this.editMode) {
       const userData = this.getUserAccessLevel();
       if (!userData || userData.Доступ !== "Адміністратор") {
@@ -145,13 +200,10 @@ class SchedulerApp {
 
     this.editMode = !this.editMode;
 
-    // 1. Перемикання візуального стану кнопки
     if (this.editModeBtn) {
-      // Просто перемикаємо клас. CSS сам сховає одну іконку і покаже іншу.
       this.editModeBtn.classList.toggle("active", this.editMode);
     }
 
-    // 2. Перемикання режиму планувальника (показ кнопок видалення/додавання)
     if (this.schedulerWrapper) {
       if (this.editMode) {
         this.schedulerWrapper.classList.add("edit-mode");
@@ -261,7 +313,6 @@ class SchedulerApp {
       }
     });
 
-    // Додавання анімацій
     const style = document.createElement("style");
     style.textContent = `
       @keyframes fadeIn {
@@ -465,6 +516,7 @@ class SchedulerApp {
           id: Date.now(),
           title: title,
           subtitle: subtitle,
+          namber: 0
         });
       }
     }
@@ -480,11 +532,9 @@ class SchedulerApp {
     calendarGrid.innerHTML = "";
 
     this.sections.forEach((section) => {
-      // Section Group
       const sectionGroup = document.createElement("div");
       sectionGroup.className = "post-section-group";
 
-      // Section Header
       const sectionHeader = document.createElement("div");
       sectionHeader.className = "post-section-header";
 
@@ -518,12 +568,10 @@ class SchedulerApp {
       sectionHeader.appendChild(headerRight);
       sectionHeader.onclick = () => this.toggleSection(section.id);
 
-      // Section Content
       const sectionContent = document.createElement("div");
       sectionContent.className = "post-section-content";
       if (section.collapsed) sectionContent.classList.add("hidden");
 
-      // Posts
       section.posts.forEach((post) => {
         const row = document.createElement("div");
         row.className = "post-unified-row";
@@ -561,7 +609,6 @@ class SchedulerApp {
         sectionContent.appendChild(row);
       });
 
-      // Add Post Button
       const addPostBtn = document.createElement("button");
       addPostBtn.className = "post-add-post-btn";
       addPostBtn.innerHTML = `
@@ -580,7 +627,6 @@ class SchedulerApp {
       calendarGrid.appendChild(sectionGroup);
     });
 
-    // Add Section Button
     const addSectionBtn = document.createElement("button");
     addSectionBtn.className = "post-add-section-btn";
     addSectionBtn.innerHTML = `

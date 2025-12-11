@@ -49,7 +49,7 @@ const checkSlusarDuplicate = async (name: string): Promise<boolean> => {
         const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
         const nm = normalizeName(d?.Name ?? "");
         if (nm && nm === needle) return true;
-      } catch {}
+      } catch { }
     }
     return false;
   } catch (error) {
@@ -120,8 +120,8 @@ const updateAllBdFromInput = async (
               ? { [deepPath[0]]: extractNestedValue(dataFieldValue, deepPath) }
               : typeof dataFieldValue === "object" &&
                 !Array.isArray(dataFieldValue)
-              ? dataFieldValue
-              : { [field]: dataFieldValue },
+                ? dataFieldValue
+                : { [field]: dataFieldValue },
         };
         updateAllBd(JSON.stringify(result, null, 2));
         return;
@@ -323,8 +323,53 @@ const createCustomDropdown = (
   dropdown.style.minWidth = `${rect.width}px`;
 };
 
+// Функція для отримання та відображення статистики співробітників
+const fetchAndDisplayEmployeeStats = async () => {
+  try {
+    const { data: rows, error } = await supabase
+      .from("slyusars")
+      .select("data");
+
+    if (error || !rows) {
+      console.error("Помилка завантаження статистики співробітників:", error);
+      return;
+    }
+
+    // Підрахунок кількості за рівнями доступу
+    const accessLevelCounts: { [key: string]: number } = {};
+
+    rows.forEach((row) => {
+      try {
+        const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+        const accessLevel = data?.Доступ || "Невідомо";
+
+        if (accessLevelCounts[accessLevel]) {
+          accessLevelCounts[accessLevel]++;
+        } else {
+          accessLevelCounts[accessLevel] = 1;
+        }
+      } catch (e) {
+        console.error("Помилка парсингу даних співробітника:", e);
+      }
+    });
+
+    // Формування тексту статистики
+    const statsText = Object.entries(accessLevelCounts)
+      .map(([level, count]) => `${level}: ${count}`)
+      .join(", ");
+
+    // Відображення статистики
+    const statsContainer = document.getElementById("employee-stats-container");
+    if (statsContainer) {
+      statsContainer.textContent = statsText;
+    }
+  } catch (error) {
+    console.error("Критична помилка при отриманні статистики:", error);
+  }
+};
+
 // Функція для створення додаткових інпутів
-const createSlusarAdditionalInputs = () => {
+const createSlusarAdditionalInputs = async () => {
   const rightContent = document.querySelector(".modal-right-all_other_bases");
   if (!rightContent) return;
   if (document.getElementById("slusar-additional-inputs")) {
@@ -352,6 +397,10 @@ const createSlusarAdditionalInputs = () => {
       <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
       <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
     </div>
+    <div class="slusar-stats-container">
+      <div class="employee-stats-label">Статистика співробітників:</div>
+      <div id="employee-stats-container" class="employee-stats-content">Завантаження...</div>
+    </div>
   `;
   const yesNoButtons = rightContent.querySelector(
     ".yes-no-buttons-all_other_bases"
@@ -359,6 +408,9 @@ const createSlusarAdditionalInputs = () => {
   if (yesNoButtons) {
     rightContent.insertBefore(additionalInputsContainer, yesNoButtons);
   }
+
+  // Завантажуємо статистику після створення контейнера
+  await fetchAndDisplayEmployeeStats();
 };
 
 // Функція для видалення додаткових інпутів
@@ -456,7 +508,7 @@ export const initYesButtonHandler = () => {
       const searchInput = document.getElementById(
         "search-input-all_other_bases"
       ) as HTMLInputElement;
-      
+
       if (!searchInput || !percentInput) return;
 
       const name = searchInput.value.trim();
@@ -482,7 +534,7 @@ export const initYesButtonHandler = () => {
         }
 
         let currentData = typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
-        
+
         // Оновлюємо ПроцентРоботи
         currentData = {
           ...currentData,

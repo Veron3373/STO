@@ -157,7 +157,7 @@ class SchedulerApp {
 
           return {
             slyusar_id: item.slyusar_id,
-            sluysar_name: item.data.Name,
+            sluysar_name: `👨‍🔧 ${item.data.Name}`,
             namber: item.namber,
             post_name: post.name as string,
             category: post.category as string

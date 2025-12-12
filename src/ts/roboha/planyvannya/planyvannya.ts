@@ -364,6 +364,8 @@ class SchedulerApp {
     console.log("📊 Позиції для збереження:", validPositions);
 
     try {
+      let successCount = 0;
+
       // Оновлюємо кожну позицію в БД
       for (const pos of validPositions) {
         const updateData: { namber: number; post_sluysar?: string } = {
@@ -377,24 +379,37 @@ class SchedulerApp {
 
         console.log(`💾 Оновлюю slyusar_id ${pos.slyusar_id}:`, updateData);
 
-        const { error } = await supabase
+        const { data, error, count } = await supabase
           .from("slyusars")
           .update(updateData)
-          .eq("slyusar_id", pos.slyusar_id);
+          .eq("slyusar_id", pos.slyusar_id)
+          .select();
+
+        console.log(`📋 Результат оновлення slyusar_id ${pos.slyusar_id}:`, { data, error, count });
 
         if (error) {
           console.error(`❌ Помилка оновлення slyusar_id ${pos.slyusar_id}:`, error);
           throw error;
+        }
+
+        if (data && data.length > 0) {
+          successCount++;
+          console.log(`✅ Успішно оновлено slyusar_id ${pos.slyusar_id}`);
+        } else {
+          console.warn(`⚠️ Запис slyusar_id ${pos.slyusar_id} не знайдено або не оновлено`);
         }
       }
 
       // Очищаємо namber для видалених елементів (теж фільтруємо)
       const validDeletedIds = this.deletedSlyusarIds.filter(id => id < 100000);
       for (const deletedId of validDeletedIds) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("slyusars")
           .update({ namber: null, post_sluysar: null })
-          .eq("slyusar_id", deletedId);
+          .eq("slyusar_id", deletedId)
+          .select();
+
+        console.log(`📋 Результат видалення slyusar_id ${deletedId}:`, { data, error });
 
         if (error) {
           console.error(`❌ Помилка очищення namber для slyusar_id ${deletedId}:`, error);
@@ -402,8 +417,14 @@ class SchedulerApp {
         }
       }
 
-      console.log("✅ Позиції успішно збережено в БД");
-      showNotification("Налаштування успішно збережено!", "success");
+      console.log(`✅ Успішно оновлено ${successCount} з ${validPositions.length} записів`);
+
+      if (successCount > 0) {
+        showNotification("Налаштування успішно збережено!", "success");
+      } else {
+        console.warn("⚠️ Жоден запис не був оновлений. Можливо проблема з правами доступу.");
+        this.showError("Не вдалося оновити записи. Перевірте права доступу.");
+      }
     } catch (error) {
       console.error("❌ Помилка збереження позицій:", error);
       this.showError("Не вдалося зберегти налаштування. Спробуйте пізніше.");

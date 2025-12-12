@@ -482,6 +482,7 @@ $sidebar-width: 30%;
 
 // EDIT MODE
 .post-scheduler-wrapper.edit-mode {
+
   .post-delete-btn,
   .post-post-delete-btn,
   .post-add-post-btn,
@@ -492,6 +493,69 @@ $sidebar-width: 30%;
   .post-row-track {
     display: grid;
   }
+
+  // Draggable елементи в режимі редагування
+  .post-section-header {
+    cursor: grab;
+    user-select: none;
+
+    &:hover {
+      background: #c9ddd7;
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  .post-row-label {
+    cursor: grab;
+    user-select: none;
+
+    &:hover {
+      background: #e8f4e8 !important;
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}
+
+// DRAG PLACEHOLDERS
+.post-drag-placeholder {
+  background: linear-gradient(135deg, rgba(0, 77, 38, 0.1), rgba(0, 77, 38, 0.05));
+  border: 2px dashed $primary-blue;
+  border-radius: 6px;
+  transition: height 0.2s ease;
+  box-sizing: border-box;
+}
+
+.post-section-placeholder {
+  margin: 4px 0;
+  min-height: 60px;
+}
+
+.post-post-placeholder {
+  margin: 2px 0;
+  min-height: 50px;
+}
+
+// DRAGGING STATE
+.post-section-group.dragging,
+.post-unified-row.dragging {
+  opacity: 0.9;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  background: $white;
+  border-radius: 8px;
+  overflow: hidden;
+  transform: rotate(1deg);
+  transition: none;
+  cursor: grabbing !important;
+}
+
+.post-unified-row.dragging {
+  transform: rotate(0.5deg) scale(1.02);
 }
 
 // 5. ПРАВА КОЛОНКА (Міні календар)
@@ -751,7 +815,7 @@ $sidebar-width: 30%;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
- // margin-bottom: 20px;
+  // margin-bottom: 20px;
 }
 
 .post-modal-title {

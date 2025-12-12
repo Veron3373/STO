@@ -416,30 +416,8 @@ class SchedulerApp {
       const sectionHeader = document.createElement("div");
       sectionHeader.className = "post-section-header";
 
-      // Drag handle для секції
-      const dragHandle = document.createElement("div");
-      dragHandle.className = "post-drag-handle post-section-drag-handle";
-      dragHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="8" y1="6" x2="8" y2="6"></line>
-        <line x1="16" y1="6" x2="16" y2="6"></line>
-        <line x1="8" y1="12" x2="8" y2="12"></line>
-        <line x1="16" y1="12" x2="16" y2="12"></line>
-        <line x1="8" y1="18" x2="8" y2="18"></line>
-        <line x1="16" y1="18" x2="16" y2="18"></line>
-      </svg>`;
-      dragHandle.title = "Перетягнути цех";
-
-      // Drag and drop для секції
-      dragHandle.addEventListener("mousedown", (e) => {
-        if (!this.editMode) return;
-        e.preventDefault();
-        e.stopPropagation();
-        this.startSectionDrag(e, sectionGroup, section.id);
-      });
-
       const headerLeft = document.createElement("div");
       headerLeft.className = "post-section-header-left";
-      headerLeft.appendChild(dragHandle);
       const nameSpan = document.createElement("span");
       nameSpan.textContent = section.name;
       headerLeft.appendChild(nameSpan);
@@ -468,12 +446,26 @@ class SchedulerApp {
 
       sectionHeader.appendChild(headerLeft);
       sectionHeader.appendChild(headerRight);
-      sectionHeader.onclick = (e) => {
-        // Не тогглити якщо клікнуто на drag handle
+
+      // Drag and drop для всього хедера секції - тільки в режимі редагування
+      sectionHeader.addEventListener("mousedown", (e) => {
+        if (!this.editMode) return;
+
+        // Не починати drag якщо клікнуто на кнопках
         const target = e.target as HTMLElement;
-        if (target.closest('.post-drag-handle')) return;
+        if (target.closest('.post-delete-btn') || target.closest('.post-toggle-btn')) return;
+
+        e.preventDefault();
+        this.startSectionDrag(e, sectionGroup, section.id);
+      });
+
+      // Click для toggle - тільки якщо НЕ в режимі редагування
+      sectionHeader.addEventListener("click", (e) => {
+        if (this.editMode) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('.post-delete-btn')) return;
         this.toggleSection(section.id);
-      };
+      });
 
       const sectionContent = document.createElement("div");
       sectionContent.className = "post-section-content";
@@ -493,27 +485,6 @@ class SchedulerApp {
         const deleteContainer = document.createElement("div");
         deleteContainer.className = "post-post-delete-container";
 
-        // Drag handle для поста
-        const postDragHandle = document.createElement("div");
-        postDragHandle.className = "post-drag-handle post-post-drag-handle";
-        postDragHandle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="8" y1="6" x2="8" y2="6"></line>
-          <line x1="16" y1="6" x2="16" y2="6"></line>
-          <line x1="8" y1="12" x2="8" y2="12"></line>
-          <line x1="16" y1="12" x2="16" y2="12"></line>
-          <line x1="8" y1="18" x2="8" y2="18"></line>
-          <line x1="16" y1="18" x2="16" y2="18"></line>
-        </svg>`;
-        postDragHandle.title = "Перетягнути пост";
-
-        // Drag and drop для поста
-        postDragHandle.addEventListener("mousedown", (e) => {
-          if (!this.editMode) return;
-          e.preventDefault();
-          e.stopPropagation();
-          this.startPostDrag(e, row, section.id, post.id);
-        });
-
         const labelContent = document.createElement("div");
         labelContent.className = "post-row-label-content";
         labelContent.innerHTML = `
@@ -527,12 +498,26 @@ class SchedulerApp {
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>`;
-        postDeleteBtn.onclick = () => this.deletePost(section.id, post.id);
+        postDeleteBtn.onclick = (e) => {
+          e.stopPropagation();
+          this.deletePost(section.id, post.id);
+        };
 
-        deleteContainer.appendChild(postDragHandle);
         deleteContainer.appendChild(labelContent);
         deleteContainer.appendChild(postDeleteBtn);
         rowLabel.appendChild(deleteContainer);
+
+        // Drag and drop для всього rowLabel - тільки в режимі редагування
+        rowLabel.addEventListener("mousedown", (e) => {
+          if (!this.editMode) return;
+
+          // Не починати drag якщо клікнуто на кнопці видалення
+          const target = e.target as HTMLElement;
+          if (target.closest('.post-post-delete-btn')) return;
+
+          e.preventDefault();
+          this.startPostDrag(e, row, section.id, post.id);
+        });
 
         const rowTrack = document.createElement("div");
         rowTrack.className = "post-row-track";

@@ -4,6 +4,7 @@ import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna"
 
 interface Post {
   id: number;
+  postId: number; // post_id з таблиці post_name
   title: string;
   subtitle: string;
   namber: number;
@@ -21,12 +22,14 @@ interface Sluysar {
   sluysar_name: string;
   namber: number;
   post_name: string;
+  post_id: number; // post_id для збереження в post_sluysar
   category: string;
 }
 
 // Інтерфейс для відстеження позицій
 interface PositionData {
   slyusar_id: number;
+  post_id: number; // post_id для збереження в post_sluysar
   original_namber: number;
   current_namber: number;
 }
@@ -171,6 +174,7 @@ class SchedulerApp {
             sluysar_name: `👨‍🔧 ${item.data.Name}`,
             namber: item.namber,
             post_name: post.name as string,
+            post_id: post.post_id as number,
             category: String(post.category)
           };
         })
@@ -207,6 +211,7 @@ class SchedulerApp {
         collapsed: false,
         posts: items.map(item => ({
           id: item.slyusar_id,
+          postId: item.post_id,
           title: item.post_name,
           subtitle: item.sluysar_name,
           namber: item.namber
@@ -260,6 +265,7 @@ class SchedulerApp {
         const namber = (sectionIndex + 1) + (postIndex + 1) / 10;
         this.initialPositions.push({
           slyusar_id: post.id,
+          post_id: post.postId,
           original_namber: post.namber,
           current_namber: namber
         });
@@ -276,6 +282,7 @@ class SchedulerApp {
         const initial = this.initialPositions.find(p => p.slyusar_id === post.id);
         currentPositions.push({
           slyusar_id: post.id,
+          post_id: post.postId,
           original_namber: initial?.original_namber ?? post.namber,
           current_namber: namber
         });
@@ -353,9 +360,18 @@ class SchedulerApp {
     try {
       // Оновлюємо кожну позицію в БД
       for (const pos of currentPositions) {
+        const updateData: { namber: number; post_sluysar?: string } = {
+          namber: pos.current_namber
+        };
+
+        // Додаємо post_sluysar якщо є post_id
+        if (pos.post_id && pos.post_id > 0) {
+          updateData.post_sluysar = String(pos.post_id);
+        }
+
         const { error } = await supabase
           .from("slyusars")
-          .update({ namber: pos.current_namber })
+          .update(updateData)
           .eq("slyusar_id", pos.slyusar_id);
 
         if (error) {
@@ -581,6 +597,7 @@ class SchedulerApp {
       // Додаємо пост до секції
       section.posts.push({
         id: Date.now() + 1,
+        postId: 0, // Буде заповнено пізніше
         title: data.title,
         subtitle: data.subtitle,
         namber: 0

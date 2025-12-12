@@ -4,6 +4,7 @@
  */
 
 export interface PostData {
+  cehTitle: string;
   title: string;
   subtitle: string;
 }
@@ -42,6 +43,10 @@ export class PostModal {
             </button>
           </div>
           <div class="post-modal-body">
+            <div class="post-form-group">
+              <label class="post-form-label" id="postCehFormLabelTitle">Назва цеху</label>
+              <input type="text" class="post-form-input" id="postCehFormInputTitle" placeholder="Наприклад: ЦЕХ 3">
+            </div>
             <div class="post-form-group">
               <label class="post-form-label" id="postPostFormLabelTitle">Назва поста</label>
               <input type="text" class="post-form-input" id="postPostFormInputTitle" placeholder="Наприклад: Пост 8">
@@ -95,19 +100,27 @@ export class PostModal {
   /**
    * Відкриває модалку для створення поста
    * @param onSubmit Колбек при успішному створенні
+   * @param prefillCehTitle Попередньо заповнена назва цеху (опціонально)
    */
-  public open(onSubmit: PostSubmitCallback): void {
+  public open(onSubmit: PostSubmitCallback, prefillCehTitle?: string): void {
     this.onSubmitCallback = onSubmit;
 
+    const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
     const inputTitle = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
     const inputSubtitle = document.getElementById('postPostFormInputSubtitle') as HTMLInputElement;
 
+    if (inputCehTitle) inputCehTitle.value = prefillCehTitle || '';
     if (inputTitle) inputTitle.value = '';
     if (inputSubtitle) inputSubtitle.value = '';
 
     if (this.modalOverlay) {
       this.modalOverlay.style.display = 'flex';
-      setTimeout(() => inputTitle?.focus(), 100);
+      // Фокус на перше пусте поле
+      if (prefillCehTitle) {
+        setTimeout(() => inputTitle?.focus(), 100);
+      } else {
+        setTimeout(() => inputCehTitle?.focus(), 100);
+      }
     }
   }
 
@@ -125,11 +138,18 @@ export class PostModal {
    * Обробляє submit форми
    */
   private handleSubmit(): void {
+    const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
     const inputTitle = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
     const inputSubtitle = document.getElementById('postPostFormInputSubtitle') as HTMLInputElement;
 
+    const cehTitle = inputCehTitle?.value.trim() || '';
     const title = inputTitle?.value.trim() || '';
     const subtitle = inputSubtitle?.value.trim() || '';
+
+    if (!cehTitle) {
+      alert('Введіть назву цеху!');
+      return;
+    }
 
     if (!title) {
       alert('Введіть назву поста!');
@@ -137,7 +157,7 @@ export class PostModal {
     }
 
     if (this.onSubmitCallback) {
-      this.onSubmitCallback({ title, subtitle });
+      this.onSubmitCallback({ cehTitle, title, subtitle });
     }
 
     this.close();

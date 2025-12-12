@@ -1,6 +1,5 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
-import { CehModal, type CehData } from "./planyvannya_ceh";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 interface Post {
@@ -50,7 +49,6 @@ class SchedulerApp {
 
   // Модалки
   private postModal: PostModal;
-  private cehModal: CehModal;
 
   // Drag and Drop
   private draggedElement: HTMLElement | null = null;
@@ -79,7 +77,6 @@ class SchedulerApp {
 
     // Ініціалізація модалок
     this.postModal = new PostModal();
-    this.cehModal = new CehModal();
 
     this.init();
   }
@@ -545,36 +542,35 @@ class SchedulerApp {
   }
 
   /**
-   * Відкриває модалку для додавання цеху
-   */
-  private openAddSectionModal(): void {
-    this.cehModal.open((data: CehData) => {
-      this.sections.push({
-        id: Date.now(),
-        name: data.title,
-        collapsed: false,
-        posts: [],
-      });
-      this.renderSections();
-    });
-  }
-
-  /**
    * Відкриває модалку для додавання поста
+   * @param sectionName Опціональна назва секції для попереднього заповнення
    */
-  private openAddPostModal(sectionId: number): void {
+  private openAddPostModal(sectionName?: string): void {
     this.postModal.open((data: PostData) => {
-      const section = this.sections.find((s) => s.id === sectionId);
-      if (section) {
-        section.posts.push({
+      // Шукаємо існуючу секцію за назвою цеху
+      let section = this.sections.find((s) => s.name === data.cehTitle);
+
+      // Якщо секції немає - створюємо нову
+      if (!section) {
+        section = {
           id: Date.now(),
-          title: data.title,
-          subtitle: data.subtitle,
-          namber: 0
-        });
-        this.renderSections();
+          name: data.cehTitle,
+          collapsed: false,
+          posts: []
+        };
+        this.sections.push(section);
       }
-    });
+
+      // Додаємо пост до секції
+      section.posts.push({
+        id: Date.now() + 1,
+        title: data.title,
+        subtitle: data.subtitle,
+        namber: 0
+      });
+
+      this.renderSections();
+    }, sectionName);
   }
 
   private renderSections(): void {
@@ -721,7 +717,7 @@ class SchedulerApp {
                 </svg>
                 Додати пост
             `;
-      addPostBtn.onclick = () => this.openAddPostModal(section.id);
+      addPostBtn.onclick = () => this.openAddPostModal(section.name);
       sectionContent.appendChild(addPostBtn);
 
       sectionGroup.appendChild(sectionHeader);
@@ -730,17 +726,7 @@ class SchedulerApp {
       calendarGrid.appendChild(sectionGroup);
     });
 
-    const addSectionBtn = document.createElement("button");
-    addSectionBtn.className = "post-add-section-btn";
-    addSectionBtn.innerHTML = `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Додати цех
-        `;
-    addSectionBtn.onclick = () => this.openAddSectionModal();
-    calendarGrid.appendChild(addSectionBtn);
+    // Кнопка "Додати цех" видалена - тепер цех створюється через модалку "Додати пост"
   }
 
   // ============== DRAG AND DROP ДЛЯ СЕКЦІЙ ==============

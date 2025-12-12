@@ -462,9 +462,9 @@ $sidebar-width: 30%;
   font-size: 13px;
 
   &:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
-    background: #eff6ff;
+    border-color: $primary-blue;
+    color: $primary-blue;
+    background: #f0fdf4;
   }
 }
 
@@ -519,8 +519,8 @@ $sidebar-width: 30%;
     user-select: none;
 
     &:hover {
-      background: #eff6ff !important;
-      border-right-color: #3b82f6 !important;
+      background: #f0fdf4 !important;
+      border-right-color: $primary-blue !important;
     }
 
     &:active {

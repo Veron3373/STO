@@ -404,7 +404,7 @@ $sidebar-width: 30%;
       color: $white;
       width: 24px;
       height: 24px;
-      border-radius: 4px;
+      border-radius: 50px;
       cursor: pointer;
       display: none;
       align-items: center;
@@ -711,7 +711,7 @@ $sidebar-width: 30%;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 100;
   animation: fadeIn 0.2s;
 }
 

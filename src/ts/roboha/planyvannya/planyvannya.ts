@@ -320,6 +320,7 @@ class SchedulerApp {
     noBtn?.addEventListener("click", () => {
       overlay.remove();
       // Відновлюємо початковий стан - перезавантажуємо дані з БД
+      showNotification("Зміни скасовано", "warning");
       this.restoreInitialState();
     });
   }

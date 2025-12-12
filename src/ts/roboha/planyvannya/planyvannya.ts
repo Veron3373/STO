@@ -60,6 +60,7 @@ class SchedulerApp {
 
   // Position Tracking - відстеження позицій
   private initialPositions: PositionData[] = [];
+  private deletedSlyusarIds: number[] = [];
 
   constructor() {
     this.today = new Date();
@@ -222,6 +223,7 @@ class SchedulerApp {
 
   private openEditMode(): void {
     this.editMode = true;
+    this.deletedSlyusarIds = [];
 
     // Зберігаємо початкові позиції
     this.saveInitialPositions();
@@ -269,6 +271,11 @@ class SchedulerApp {
   }
 
   private checkForChanges(): boolean {
+    // Якщо є видалені елементи - є зміни
+    if (this.deletedSlyusarIds.length > 0) {
+      return true;
+    }
+
     const currentPositions = this.calculateCurrentPositions();
 
     for (const current of currentPositions) {
@@ -342,6 +349,19 @@ class SchedulerApp {
         }
       }
 
+      // Очищаємо namber для видалених елементів
+      for (const deletedId of this.deletedSlyusarIds) {
+        const { error } = await supabase
+          .from("slyusars")
+          .update({ namber: null })
+          .eq("slyusar_id", deletedId);
+
+        if (error) {
+          console.error(`❌ Помилка очищення namber для slyusar_id ${deletedId}:`, error);
+          throw error;
+        }
+      }
+
       console.log("✅ Позиції успішно збережено в БД");
       showNotification("Налаштування успішно збережено!", "success");
     } catch (error) {
@@ -360,6 +380,7 @@ class SchedulerApp {
   private closeEditMode(): void {
     this.editMode = false;
     this.initialPositions = [];
+    this.deletedSlyusarIds = [];
 
     if (this.editModeBtn) {
       this.editModeBtn.classList.remove("active");
@@ -480,6 +501,16 @@ class SchedulerApp {
 
   private deleteSection(sectionId: number): void {
     if (confirm("Видалити цей цех?")) {
+      // Знаходимо секцію для отримання всіх slyusar_id постів
+      const section = this.sections.find((s) => s.id === sectionId);
+      if (section) {
+        // Додаємо всі slyusar_id постів до списку видалених
+        section.posts.forEach((post) => {
+          if (!this.deletedSlyusarIds.includes(post.id)) {
+            this.deletedSlyusarIds.push(post.id);
+          }
+        });
+      }
       this.sections = this.sections.filter((s) => s.id !== sectionId);
       this.renderSections();
     }
@@ -489,6 +520,10 @@ class SchedulerApp {
     if (confirm("Видалити цей пост?")) {
       const section = this.sections.find((s) => s.id === sectionId);
       if (section) {
+        // Додаємо slyusar_id до списку видалених
+        if (!this.deletedSlyusarIds.includes(postId)) {
+          this.deletedSlyusarIds.push(postId);
+        }
         section.posts = section.posts.filter((p) => p.id !== postId);
         this.renderSections();
       }

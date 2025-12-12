@@ -148,8 +148,9 @@ class SchedulerApp {
         postsData.map((post: any) => [post.post_name_id, post])
       );
 
-      // Трансформація даних
+      // Трансформація даних - фільтруємо записи з пустим namber
       const slyusars: Sluysar[] = slyusarsData
+        .filter((item: any) => item.namber !== null && item.namber !== undefined)
         .map((item: any) => {
           const post = postsMap.get(parseInt(item.post_sluysar));
           if (!post) return null;
@@ -500,32 +501,45 @@ class SchedulerApp {
   }
 
   private deleteSection(sectionId: number): void {
-    if (confirm("Видалити цей цех?")) {
-      // Знаходимо секцію для отримання всіх slyusar_id постів
-      const section = this.sections.find((s) => s.id === sectionId);
-      if (section) {
-        // Додаємо всі slyusar_id постів до списку видалених
-        section.posts.forEach((post) => {
-          if (!this.deletedSlyusarIds.includes(post.id)) {
-            this.deletedSlyusarIds.push(post.id);
-          }
-        });
-      }
+    // Знаходимо секцію для отримання назви та всіх slyusar_id постів
+    const section = this.sections.find((s) => s.id === sectionId);
+    if (section) {
+      const sectionName = section.name;
+
+      // Додаємо всі slyusar_id постів до списку видалених
+      section.posts.forEach((post) => {
+        if (!this.deletedSlyusarIds.includes(post.id)) {
+          this.deletedSlyusarIds.push(post.id);
+        }
+      });
+
       this.sections = this.sections.filter((s) => s.id !== sectionId);
       this.renderSections();
+
+      // Показуємо повідомлення
+      showNotification(`Видалено цех: ${sectionName}`, "warning");
     }
   }
 
   private deletePost(sectionId: number, postId: number): void {
-    if (confirm("Видалити цей пост?")) {
-      const section = this.sections.find((s) => s.id === sectionId);
-      if (section) {
+    const section = this.sections.find((s) => s.id === sectionId);
+    if (section) {
+      // Знаходимо пост для отримання назви
+      const post = section.posts.find((p) => p.id === postId);
+      if (post) {
+        const postTitle = post.title;
+        const postSubtitle = post.subtitle;
+
         // Додаємо slyusar_id до списку видалених
         if (!this.deletedSlyusarIds.includes(postId)) {
           this.deletedSlyusarIds.push(postId);
         }
+
         section.posts = section.posts.filter((p) => p.id !== postId);
         this.renderSections();
+
+        // Показуємо повідомлення
+        showNotification(`Видалено пост: ${postTitle} - ${postSubtitle}`, "warning");
       }
     }
   }

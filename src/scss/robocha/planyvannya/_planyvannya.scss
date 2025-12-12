@@ -557,13 +557,13 @@ $sidebar-width: 30%;
   border: 2px solid #f44336; // Червона рамка
   border-radius: 8px;
   overflow: hidden;
-  transform: scale(1.02); // Без перекосу, тільки легке збільшення
+  transform: scaleX(0.98); // Зменшення по ширині, висота незмінна
   transition: none;
   cursor: grabbing !important;
 }
 
 .post-unified-row.dragging {
-  transform: scale(1.02); // Без rotate - елемент рівний
+  transform: scaleX(0.98); // Зменшення по ширині, висота незмінна
   background: #ffcdd2; // Яскравіший червоний для рядка
 
   .post-row-label {

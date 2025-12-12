@@ -145,7 +145,7 @@ class SchedulerApp {
 
       // Створюємо Map для швидкого пошуку постів
       const postsMap = new Map<number, any>(
-        postsData.map((post: any) => [post.post_name_id, post])
+        postsData.map((post: any) => [post.post_id, post])
       );
 
       // Трансформація даних - фільтруємо записи з пустим namber

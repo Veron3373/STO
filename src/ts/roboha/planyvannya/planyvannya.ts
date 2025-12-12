@@ -44,6 +44,12 @@ class SchedulerApp {
   private postModal: PostModal;
   private cehModal: CehModal;
 
+  // Drag and Drop
+  private draggedElement: HTMLElement | null = null;
+  private draggedSectionId: number | null = null;
+  private draggedPostId: number | null = null;
+  private dragPlaceholder: HTMLElement | null = null;
+
   constructor() {
     this.today = new Date();
     this.today.setHours(0, 0, 0, 0);
@@ -401,16 +407,42 @@ class SchedulerApp {
     }
     calendarGrid.appendChild(bgGrid);
 
-    this.sections.forEach((section) => {
+    this.sections.forEach((section, sectionIndex) => {
       const sectionGroup = document.createElement("div");
       sectionGroup.className = "post-section-group";
+      sectionGroup.dataset.sectionId = section.id.toString();
+      sectionGroup.dataset.sectionIndex = sectionIndex.toString();
 
       const sectionHeader = document.createElement("div");
       sectionHeader.className = "post-section-header";
 
+      // Drag handle для секції
+      const dragHandle = document.createElement("div");
+      dragHandle.className = "post-drag-handle post-section-drag-handle";
+      dragHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="8" y2="6"></line>
+        <line x1="16" y1="6" x2="16" y2="6"></line>
+        <line x1="8" y1="12" x2="8" y2="12"></line>
+        <line x1="16" y1="12" x2="16" y2="12"></line>
+        <line x1="8" y1="18" x2="8" y2="18"></line>
+        <line x1="16" y1="18" x2="16" y2="18"></line>
+      </svg>`;
+      dragHandle.title = "Перетягнути цех";
+
+      // Drag and drop для секції
+      dragHandle.addEventListener("mousedown", (e) => {
+        if (!this.editMode) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.startSectionDrag(e, sectionGroup, section.id);
+      });
+
       const headerLeft = document.createElement("div");
       headerLeft.className = "post-section-header-left";
-      headerLeft.innerHTML = `<span>${section.name}</span>`;
+      headerLeft.appendChild(dragHandle);
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = section.name;
+      headerLeft.appendChild(nameSpan);
 
       const headerRight = document.createElement("div");
       headerRight.className = "post-section-header-right";
@@ -436,21 +468,51 @@ class SchedulerApp {
 
       sectionHeader.appendChild(headerLeft);
       sectionHeader.appendChild(headerRight);
-      sectionHeader.onclick = () => this.toggleSection(section.id);
+      sectionHeader.onclick = (e) => {
+        // Не тогглити якщо клікнуто на drag handle
+        const target = e.target as HTMLElement;
+        if (target.closest('.post-drag-handle')) return;
+        this.toggleSection(section.id);
+      };
 
       const sectionContent = document.createElement("div");
       sectionContent.className = "post-section-content";
+      sectionContent.dataset.sectionId = section.id.toString();
       if (section.collapsed) sectionContent.classList.add("hidden");
 
-      section.posts.forEach((post) => {
+      section.posts.forEach((post, postIndex) => {
         const row = document.createElement("div");
         row.className = "post-unified-row";
+        row.dataset.postId = post.id.toString();
+        row.dataset.postIndex = postIndex.toString();
+        row.dataset.sectionId = section.id.toString();
 
         const rowLabel = document.createElement("div");
         rowLabel.className = "post-row-label";
 
         const deleteContainer = document.createElement("div");
         deleteContainer.className = "post-post-delete-container";
+
+        // Drag handle для поста
+        const postDragHandle = document.createElement("div");
+        postDragHandle.className = "post-drag-handle post-post-drag-handle";
+        postDragHandle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="8" y2="6"></line>
+          <line x1="16" y1="6" x2="16" y2="6"></line>
+          <line x1="8" y1="12" x2="8" y2="12"></line>
+          <line x1="16" y1="12" x2="16" y2="12"></line>
+          <line x1="8" y1="18" x2="8" y2="18"></line>
+          <line x1="16" y1="18" x2="16" y2="18"></line>
+        </svg>`;
+        postDragHandle.title = "Перетягнути пост";
+
+        // Drag and drop для поста
+        postDragHandle.addEventListener("mousedown", (e) => {
+          if (!this.editMode) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.startPostDrag(e, row, section.id, post.id);
+        });
 
         const labelContent = document.createElement("div");
         labelContent.className = "post-row-label-content";
@@ -467,6 +529,7 @@ class SchedulerApp {
                 </svg>`;
         postDeleteBtn.onclick = () => this.deletePost(section.id, post.id);
 
+        deleteContainer.appendChild(postDragHandle);
         deleteContainer.appendChild(labelContent);
         deleteContainer.appendChild(postDeleteBtn);
         rowLabel.appendChild(deleteContainer);
@@ -508,6 +571,234 @@ class SchedulerApp {
         `;
     addSectionBtn.onclick = () => this.openAddSectionModal();
     calendarGrid.appendChild(addSectionBtn);
+  }
+
+  // ============== DRAG AND DROP ДЛЯ СЕКЦІЙ ==============
+  private startSectionDrag(_e: MouseEvent, element: HTMLElement, sectionId: number): void {
+    this.draggedElement = element;
+    this.draggedSectionId = sectionId;
+
+    // Створюємо плейсхолдер
+    this.dragPlaceholder = document.createElement("div");
+    this.dragPlaceholder.className = "post-drag-placeholder post-section-placeholder";
+    this.dragPlaceholder.style.height = `${element.offsetHeight}px`;
+
+    // Додаємо клас для перетягування
+    element.classList.add("dragging");
+
+    // Фіксуємо позицію елемента
+    const rect = element.getBoundingClientRect();
+    element.style.position = "fixed";
+    element.style.width = `${rect.width}px`;
+    element.style.left = `${rect.left}px`;
+    element.style.top = `${rect.top}px`;
+    element.style.zIndex = "1000";
+    element.style.pointerEvents = "none";
+
+    // Вставляємо плейсхолдер
+    element.parentNode?.insertBefore(this.dragPlaceholder, element);
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.draggedElement) return;
+
+      const newTop = e.clientY - rect.height / 2;
+      this.draggedElement.style.top = `${newTop}px`;
+
+      // Знаходимо елемент під курсором для визначення нової позиції
+      this.updateSectionPlaceholder(e.clientY);
+    };
+
+    const onMouseUp = () => {
+      this.finishSectionDrag();
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  private updateSectionPlaceholder(mouseY: number): void {
+    if (!this.dragPlaceholder || !this.calendarGrid) return;
+
+    const sectionGroups = Array.from(this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging)"));
+
+    for (const group of sectionGroups) {
+      const rect = group.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+
+      if (mouseY < midpoint) {
+        group.parentNode?.insertBefore(this.dragPlaceholder, group);
+        return;
+      }
+    }
+
+    // Якщо курсор нижче всіх секцій - ставимо в кінець (перед кнопкою додавання)
+    const addBtn = this.calendarGrid.querySelector(".post-add-section-btn");
+    if (addBtn) {
+      addBtn.parentNode?.insertBefore(this.dragPlaceholder, addBtn);
+    }
+  }
+
+  private finishSectionDrag(): void {
+    if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid) return;
+
+    // Визначаємо нову позицію
+    const sectionGroups = Array.from(this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging), .post-drag-placeholder"));
+
+    // Знаходимо реальний індекс
+    let newIndex = 0;
+    for (let i = 0; i < sectionGroups.length; i++) {
+      if (sectionGroups[i] === this.dragPlaceholder) break;
+      if (!sectionGroups[i].classList.contains("dragging") && !sectionGroups[i].classList.contains("post-drag-placeholder")) {
+        newIndex++;
+      }
+    }
+
+    // Переміщуємо секцію в масиві
+    const oldIndex = this.sections.findIndex(s => s.id === this.draggedSectionId);
+    if (oldIndex !== -1 && newIndex !== oldIndex) {
+      const [movedSection] = this.sections.splice(oldIndex, 1);
+      // Коригуємо індекс, якщо переміщуємо вниз
+      const adjustedIndex = newIndex > oldIndex ? newIndex : newIndex;
+      this.sections.splice(adjustedIndex, 0, movedSection);
+    }
+
+    // Очищуємо
+    this.draggedElement.classList.remove("dragging");
+    this.draggedElement.style.position = "";
+    this.draggedElement.style.width = "";
+    this.draggedElement.style.left = "";
+    this.draggedElement.style.top = "";
+    this.draggedElement.style.zIndex = "";
+    this.draggedElement.style.pointerEvents = "";
+
+    this.dragPlaceholder.remove();
+    this.dragPlaceholder = null;
+    this.draggedElement = null;
+    this.draggedSectionId = null;
+
+    // Перемальовуємо
+    this.renderSections();
+  }
+
+  // ============== DRAG AND DROP ДЛЯ ПОСТІВ ==============
+  private startPostDrag(_e: MouseEvent, element: HTMLElement, sectionId: number, postId: number): void {
+    this.draggedElement = element;
+    this.draggedSectionId = sectionId;
+    this.draggedPostId = postId;
+
+    // Створюємо плейсхолдер
+    this.dragPlaceholder = document.createElement("div");
+    this.dragPlaceholder.className = "post-drag-placeholder post-post-placeholder";
+    this.dragPlaceholder.style.height = `${element.offsetHeight}px`;
+
+    // Додаємо клас для перетягування
+    element.classList.add("dragging");
+
+    // Фіксуємо позицію елемента
+    const rect = element.getBoundingClientRect();
+    element.style.position = "fixed";
+    element.style.width = `${rect.width}px`;
+    element.style.left = `${rect.left}px`;
+    element.style.top = `${rect.top}px`;
+    element.style.zIndex = "1000";
+    element.style.pointerEvents = "none";
+
+    // Вставляємо плейсхолдер
+    element.parentNode?.insertBefore(this.dragPlaceholder, element);
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.draggedElement) return;
+
+      const newTop = e.clientY - rect.height / 2;
+      this.draggedElement.style.top = `${newTop}px`;
+
+      // Знаходимо елемент під курсором для визначення нової позиції
+      this.updatePostPlaceholder(e.clientY, sectionId);
+    };
+
+    const onMouseUp = () => {
+      this.finishPostDrag(sectionId);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  private updatePostPlaceholder(mouseY: number, sectionId: number): void {
+    if (!this.dragPlaceholder || !this.calendarGrid) return;
+
+    // Знаходимо контент секції
+    const sectionContent = this.calendarGrid.querySelector(`.post-section-content[data-section-id="${sectionId}"]`);
+    if (!sectionContent) return;
+
+    const postRows = Array.from(sectionContent.querySelectorAll(".post-unified-row:not(.dragging)"));
+
+    for (const row of postRows) {
+      const rect = row.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+
+      if (mouseY < midpoint) {
+        row.parentNode?.insertBefore(this.dragPlaceholder, row);
+        return;
+      }
+    }
+
+    // Якщо курсор нижче всіх постів - ставимо перед кнопкою додавання
+    const addBtn = sectionContent.querySelector(".post-add-post-btn");
+    if (addBtn) {
+      addBtn.parentNode?.insertBefore(this.dragPlaceholder, addBtn);
+    }
+  }
+
+  private finishPostDrag(sectionId: number): void {
+    if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid) return;
+
+    const section = this.sections.find(s => s.id === sectionId);
+    if (!section) return;
+
+    // Знаходимо контент секції
+    const sectionContent = this.calendarGrid.querySelector(`.post-section-content[data-section-id="${sectionId}"]`);
+    if (!sectionContent) return;
+
+    // Визначаємо нову позицію
+    const allElements = Array.from(sectionContent.querySelectorAll(".post-unified-row, .post-drag-placeholder"));
+
+    let newIndex = 0;
+    for (let i = 0; i < allElements.length; i++) {
+      if (allElements[i] === this.dragPlaceholder) break;
+      if (!allElements[i].classList.contains("dragging") && !allElements[i].classList.contains("post-drag-placeholder")) {
+        newIndex++;
+      }
+    }
+
+    // Переміщуємо пост в масиві
+    const oldIndex = section.posts.findIndex(p => p.id === this.draggedPostId);
+    if (oldIndex !== -1 && newIndex !== oldIndex) {
+      const [movedPost] = section.posts.splice(oldIndex, 1);
+      section.posts.splice(newIndex, 0, movedPost);
+    }
+
+    // Очищуємо
+    this.draggedElement.classList.remove("dragging");
+    this.draggedElement.style.position = "";
+    this.draggedElement.style.width = "";
+    this.draggedElement.style.left = "";
+    this.draggedElement.style.top = "";
+    this.draggedElement.style.zIndex = "";
+    this.draggedElement.style.pointerEvents = "";
+
+    this.dragPlaceholder.remove();
+    this.dragPlaceholder = null;
+    this.draggedElement = null;
+    this.draggedSectionId = null;
+    this.draggedPostId = null;
+
+    // Перемальовуємо
+    this.renderSections();
   }
 
   private formatFullDate(date: Date): string {

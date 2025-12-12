@@ -278,7 +278,7 @@ $sidebar-width: 30%;
 .post-section-header {
   position: sticky;
   top: $header-height;
-  z-index: 90;
+  z-index: 101;
   background: #dbe6e3;
   color: #0d8212;
   padding: 0 16px;
@@ -447,7 +447,7 @@ $sidebar-width: 30%;
   gap: 6px;
   transition: all 0.2s;
   position: relative;
-  z-index: 1000;
+  z-index: 100;
 
   svg {
     width: 16px;

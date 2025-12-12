@@ -13,9 +13,20 @@ export interface PostData {
 
 export type PostSubmitCallback = (data: PostData) => void;
 
+interface CategoryData {
+  category_id: number;
+  category: string;
+}
+
+interface PostNameData {
+  post_id: number;
+  name: string;
+  category: number; // category_id в post_name
+}
+
 interface AutocompleteData {
-  categories: string[];
-  postNames: string[];
+  categories: CategoryData[];
+  postNames: PostNameData[];
   slyusarNames: string[];
 }
 
@@ -28,6 +39,7 @@ export class PostModal {
     slyusarNames: []
   };
   private activeDropdowns: HTMLElement[] = [];
+  private selectedCategoryId: number | null = null;
 
   constructor() {
     this.createModalHTML();
@@ -40,21 +52,21 @@ export class PostModal {
    */
   private async loadAutocompleteData(): Promise<void> {
     try {
-      // Завантажуємо категорії з post_category
+      // Завантажуємо категорії з post_category (з id)
       const { data: categoriesData, error: categoriesError } = await supabase
         .from("post_category")
-        .select("category");
+        .select("category_id, category");
 
       if (categoriesError) throw categoriesError;
-      this.autocompleteData.categories = categoriesData?.map((item: any) => item.category) || [];
+      this.autocompleteData.categories = categoriesData || [];
 
-      // Завантажуємо назви постів з post_name
+      // Завантажуємо назви постів з post_name (з category)
       const { data: postNamesData, error: postNamesError } = await supabase
         .from("post_name")
-        .select("name");
+        .select("post_id, name, category");
 
       if (postNamesError) throw postNamesError;
-      this.autocompleteData.postNames = postNamesData?.map((item: any) => item.name) || [];
+      this.autocompleteData.postNames = postNamesData || [];
 
       // Завантажуємо імена слюсарів з slyusars
       const { data: slyusarsData, error: slyusarsError } = await supabase
@@ -66,15 +78,44 @@ export class PostModal {
         ?.filter((item: any) => item.data?.Name)
         .map((item: any) => item.data.Name) || [];
 
-      // Видаляємо дублікати
-      this.autocompleteData.categories = [...new Set(this.autocompleteData.categories)];
-      this.autocompleteData.postNames = [...new Set(this.autocompleteData.postNames)];
+      // Видаляємо дублікати для слюсарів
       this.autocompleteData.slyusarNames = [...new Set(this.autocompleteData.slyusarNames)];
 
       console.log("✅ Дані для автодоповнення завантажено:", this.autocompleteData);
     } catch (error) {
       console.error("❌ Помилка завантаження даних для автодоповнення:", error);
     }
+  }
+
+  /**
+   * Повертає назви категорій
+   */
+  private getCategoryNames(): string[] {
+    return this.autocompleteData.categories.map(c => c.category);
+  }
+
+  /**
+   * Повертає пости, відфільтровані за обраною категорією
+   */
+  private getFilteredPostNames(): string[] {
+    if (this.selectedCategoryId === null) {
+      // Якщо категорія не обрана - повертаємо всі пости
+      return this.autocompleteData.postNames.map(p => p.name);
+    }
+
+    // Фільтруємо пости за category_id
+    return this.autocompleteData.postNames
+      .filter(p => p.category === this.selectedCategoryId)
+      .map(p => p.name);
+  }
+
+  /**
+   * Знаходить category_id за назвою категорії
+   */
+  private findCategoryIdByName(categoryName: string): number | null {
+    const category = this.autocompleteData.categories
+      .find(c => c.category.toLowerCase() === categoryName.toLowerCase());
+    return category ? category.category_id : null;
   }
 
   /**
@@ -156,19 +197,13 @@ export class PostModal {
       });
     }
 
-    // Прив'язуємо автодоповнення до інпутів
-    this.setupAutocomplete(
-      'postCehFormInputTitle',
-      'postCehDropdown',
-      () => this.autocompleteData.categories
-    );
+    // Прив'язуємо автодоповнення до категорій
+    this.setupCategoryAutocomplete();
 
-    this.setupAutocomplete(
-      'postPostFormInputTitle',
-      'postPostNameDropdown',
-      () => this.autocompleteData.postNames
-    );
+    // Прив'язуємо автодоповнення до постів
+    this.setupPostNameAutocomplete();
 
+    // Прив'язуємо автодоповнення до слюсарів
     this.setupAutocomplete(
       'postPostFormInputSubtitle',
       'postSlyusarDropdown',
@@ -181,6 +216,123 @@ export class PostModal {
       if (!target.closest('.post-autocomplete-wrapper')) {
         this.closeAllDropdowns();
       }
+    });
+  }
+
+  /**
+   * Налаштовує автодоповнення для категорій
+   */
+  private setupCategoryAutocomplete(): void {
+    const input = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
+    const dropdown = document.getElementById('postCehDropdown');
+    const postInput = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
+
+    if (!input || !dropdown) return;
+
+    // При введенні тексту
+    input.addEventListener('input', () => {
+      const value = input.value.toLowerCase().trim();
+      const data = this.getCategoryNames();
+
+      // Оновлюємо selectedCategoryId
+      this.selectedCategoryId = this.findCategoryIdByName(input.value.trim());
+
+      // Очищуємо поле поста якщо змінилась категорія
+      if (postInput) postInput.value = '';
+
+      if (value.length === 0) {
+        this.showDropdown(dropdown, data, input);
+      } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
+
+    // При фокусі показуємо dropdown
+    input.addEventListener('focus', () => {
+      const data = this.getCategoryNames();
+      const value = input.value.toLowerCase().trim();
+
+      if (value.length === 0) {
+        this.showDropdown(dropdown, data, input);
+      } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
+
+    // При виборі категорії
+    input.addEventListener('change', () => {
+      this.selectedCategoryId = this.findCategoryIdByName(input.value.trim());
+    });
+
+    // Навігація клавіатурою
+    input.addEventListener('keydown', (e) => {
+      this.handleKeyboardNavigation(e, dropdown, input, () => {
+        // При виборі через клавіатуру оновлюємо selectedCategoryId
+        this.selectedCategoryId = this.findCategoryIdByName(input.value.trim());
+        if (postInput) postInput.value = '';
+      });
+    });
+  }
+
+  /**
+   * Налаштовує автодоповнення для назв постів
+   */
+  private setupPostNameAutocomplete(): void {
+    const input = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
+    const dropdown = document.getElementById('postPostNameDropdown');
+    const categoryInput = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
+
+    if (!input || !dropdown) return;
+
+    // При введенні тексту
+    input.addEventListener('input', () => {
+      // Оновлюємо selectedCategoryId на основі поточного значення категорії
+      if (categoryInput) {
+        this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
+      }
+
+      const value = input.value.toLowerCase().trim();
+      const data = this.getFilteredPostNames();
+
+      if (value.length === 0) {
+        this.showDropdown(dropdown, data, input);
+      } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
+
+    // При фокусі показуємо dropdown
+    input.addEventListener('focus', () => {
+      // Оновлюємо selectedCategoryId на основі поточного значення категорії
+      if (categoryInput) {
+        this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
+      }
+
+      const data = this.getFilteredPostNames();
+      const value = input.value.toLowerCase().trim();
+
+      if (value.length === 0) {
+        this.showDropdown(dropdown, data, input);
+      } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
+
+    // Навігація клавіатурою
+    input.addEventListener('keydown', (e) => {
+      this.handleKeyboardNavigation(e, dropdown, input);
     });
   }
 
@@ -203,14 +355,11 @@ export class PostModal {
       const data = getDataFn();
 
       if (value.length === 0) {
-        // Показуємо всі варіанти при пустому полі (перші 10)
-        this.showDropdown(dropdown, data.slice(0, 10), input);
+        this.showDropdown(dropdown, data, input);
       } else {
-        // Фільтруємо за введеним текстом
         const filtered = data.filter(item =>
           item.toLowerCase().includes(value)
-        ).slice(0, 10);
-
+        );
         this.showDropdown(dropdown, filtered, input);
       }
     });
@@ -221,11 +370,11 @@ export class PostModal {
       const value = input.value.toLowerCase().trim();
 
       if (value.length === 0) {
-        this.showDropdown(dropdown, data.slice(0, 10), input);
+        this.showDropdown(dropdown, data, input);
       } else {
         const filtered = data.filter(item =>
           item.toLowerCase().includes(value)
-        ).slice(0, 10);
+        );
         this.showDropdown(dropdown, filtered, input);
       }
     });
@@ -258,6 +407,14 @@ export class PostModal {
       option.addEventListener('click', () => {
         input.value = item;
         dropdown.style.display = 'none';
+
+        // Якщо це категорія - оновлюємо selectedCategoryId
+        if (input.id === 'postCehFormInputTitle') {
+          this.selectedCategoryId = this.findCategoryIdByName(item);
+          const postInput = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
+          if (postInput) postInput.value = '';
+        }
+
         input.focus();
       });
 
@@ -275,7 +432,12 @@ export class PostModal {
   /**
    * Обробка навігації клавіатурою
    */
-  private handleKeyboardNavigation(e: KeyboardEvent, dropdown: HTMLElement, input: HTMLInputElement): void {
+  private handleKeyboardNavigation(
+    e: KeyboardEvent,
+    dropdown: HTMLElement,
+    input: HTMLInputElement,
+    onSelect?: () => void
+  ): void {
     if (dropdown.style.display !== 'block') return;
 
     const options = dropdown.querySelectorAll('.post-autocomplete-option');
@@ -300,6 +462,7 @@ export class PostModal {
         if (activeOption) {
           input.value = activeOption.textContent || '';
           dropdown.style.display = 'none';
+          if (onSelect) onSelect();
         }
         break;
 
@@ -361,6 +524,13 @@ export class PostModal {
     if (inputTitle) inputTitle.value = '';
     if (inputSubtitle) inputSubtitle.value = '';
 
+    // Оновлюємо selectedCategoryId якщо є prefillCehTitle
+    if (prefillCehTitle) {
+      this.selectedCategoryId = this.findCategoryIdByName(prefillCehTitle);
+    } else {
+      this.selectedCategoryId = null;
+    }
+
     // Закриваємо всі dropdown
     this.closeAllDropdowns();
 
@@ -384,6 +554,7 @@ export class PostModal {
       this.modalOverlay.style.display = 'none';
     }
     this.onSubmitCallback = null;
+    this.selectedCategoryId = null;
   }
 
   /**

@@ -482,7 +482,6 @@ $sidebar-width: 30%;
 
 // EDIT MODE
 .post-scheduler-wrapper.edit-mode {
-
   .post-delete-btn,
   .post-post-delete-btn,
   .post-add-post-btn,
@@ -759,6 +758,7 @@ $sidebar-width: 30%;
   font-size: 18px;
   font-weight: 700;
   color: $primary-blue;
+  margin-bottom: 14px;
 }
 
 .post-modal-close {

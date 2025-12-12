@@ -453,12 +453,6 @@ $sidebar-width: 30%;
     width: 16px;
     height: 16px;
   }
-
-  &:hover {
-    border-color: $primary-blue;
-    color: $primary-blue;
-    background: #f0fdf4;
-  }
 }
 
 .post-add-post-btn {
@@ -466,6 +460,12 @@ $sidebar-width: 30%;
   margin: 8px;
   width: calc(100% - 16px);
   font-size: 13px;
+
+  &:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
+  }
 }
 
 .post-add-section-btn {
@@ -477,6 +477,12 @@ $sidebar-width: 30%;
   svg {
     width: 18px;
     height: 18px;
+  }
+
+  &:hover {
+    border-color: $primary-blue;
+    color: $primary-blue;
+    background: #f0fdf4;
   }
 }
 

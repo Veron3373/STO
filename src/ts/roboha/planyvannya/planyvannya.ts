@@ -1,6 +1,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
 import { CehModal, type CehData } from "./planyvannya_ceh";
+import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 interface Post {
   id: number;
@@ -206,26 +207,7 @@ class SchedulerApp {
   }
 
   private showError(message: string): void {
-    const errorDiv = document.createElement("div");
-    errorDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #ff4444;
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 10000;
-      animation: slideIn 0.3s ease;
-    `;
-    errorDiv.textContent = message;
-    document.body.appendChild(errorDiv);
-
-    setTimeout(() => {
-      errorDiv.style.animation = "slideOut 0.3s ease";
-      setTimeout(() => errorDiv.remove(), 300);
-    }, 5000);
+    showNotification(message, "error", 5000);
   }
 
   private toggleEditMode(): void {
@@ -360,34 +342,11 @@ class SchedulerApp {
       }
 
       console.log("✅ Позиції успішно збережено в БД");
-      this.showSuccess("Налаштування успішно збережено!");
+      showNotification("Налаштування успішно збережено!", "success");
     } catch (error) {
       console.error("❌ Помилка збереження позицій:", error);
       this.showError("Не вдалося зберегти налаштування. Спробуйте пізніше.");
     }
-  }
-
-  private showSuccess(message: string): void {
-    const successDiv = document.createElement("div");
-    successDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #4CAF50;
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 10000;
-      animation: slideIn 0.3s ease;
-    `;
-    successDiv.textContent = message;
-    document.body.appendChild(successDiv);
-
-    setTimeout(() => {
-      successDiv.style.animation = "slideOut 0.3s ease";
-      setTimeout(() => successDiv.remove(), 300);
-    }, 3000);
   }
 
   private async restoreInitialState(): Promise<void> {

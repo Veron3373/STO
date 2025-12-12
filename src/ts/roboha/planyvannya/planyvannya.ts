@@ -136,13 +136,27 @@ class SchedulerApp {
         throw postsError;
       }
 
-      if (!slyusarsData || !postsData) {
+      // Запит 3: Отримуємо категорії
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from("post_category")
+        .select("*");
+
+      if (categoriesError) {
+        throw categoriesError;
+      }
+
+      if (!slyusarsData || !postsData || !categoriesData) {
         throw new Error("Помилка завантаження даних");
       }
 
       // Створюємо Map для швидкого пошуку постів
       const postsMap = new Map<number, any>(
         postsData.map((post: any) => [post.post_id, post])
+      );
+
+      // Створюємо Map для перетворення category_id -> category name
+      const categoryMap = new Map<string, string>(
+        categoriesData.map((cat: any) => [String(cat.category_id), cat.category])
       );
 
       // Трансформація даних - фільтруємо записи з пустим namber
@@ -157,19 +171,19 @@ class SchedulerApp {
             sluysar_name: `👨‍🔧 ${item.data.Name}`,
             namber: item.namber,
             post_name: post.name as string,
-            category: post.category as string
+            category: String(post.category)
           };
         })
         .filter((item: Sluysar | null): item is Sluysar => item !== null);
 
-      this.transformDataToSections(slyusars);
+      this.transformDataToSections(slyusars, categoryMap);
     } catch (error) {
       console.error("❌ Помилка завантаження даних з БД:", error);
       this.showError("Не вдалося завантажити дані. Спробуйте пізніше.");
     }
   }
 
-  private transformDataToSections(data: Sluysar[]): void {
+  private transformDataToSections(data: Sluysar[], categoryMap: Map<string, string>): void {
     // Групування за category
     const grouped = data.reduce((acc, item) => {
       if (!acc[item.category]) {
@@ -180,13 +194,16 @@ class SchedulerApp {
     }, {} as Record<string, Sluysar[]>);
 
     // Створення секцій
-    this.sections = Object.entries(grouped).map(([category, items], index) => {
+    this.sections = Object.entries(grouped).map(([categoryId, items], index) => {
       // Сортування за namber всередині категорії
       items.sort((a, b) => a.namber - b.namber);
 
+      // Отримуємо назву категорії з Map, якщо немає - використовуємо ID
+      const categoryName = categoryMap.get(categoryId) || categoryId;
+
       return {
         id: index + 1,
-        name: category,
+        name: categoryName,
         collapsed: false,
         posts: items.map(item => ({
           id: item.slyusar_id,

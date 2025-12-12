@@ -32,6 +32,8 @@ interface PositionData {
   post_id: number; // post_id для збереження в post_sluysar
   original_namber: number;
   current_namber: number;
+  slyusar_name?: string; // Для пошуку при створенні нового
+  post_title?: string; // Для пошуку post_id
 }
 
 class SchedulerApp {
@@ -58,6 +60,10 @@ class SchedulerApp {
   private draggedSectionId: number | null = null;
   private draggedPostId: number | null = null;
   private dragPlaceholder: HTMLElement | null = null;
+
+  // Maps for lookup
+  private postTitleToIdMap = new Map<string, number>();
+  private slyusarNameToIdMap = new Map<string, number>();
 
   // Position Tracking - відстеження позицій
   private initialPositions: PositionData[] = [];
@@ -156,6 +162,21 @@ class SchedulerApp {
       const postsMap = new Map<number, any>(
         postsData.map((post: any) => [post.post_id, post])
       );
+
+      // Заповнюємо карти пошуку для нових створених елементів
+      this.postTitleToIdMap.clear();
+      postsData.forEach((post: any) => {
+        this.postTitleToIdMap.set(post.name, post.post_id);
+      });
+
+      this.slyusarNameToIdMap.clear();
+      slyusarsData.forEach((slyusar: any) => {
+        if (slyusar.data && slyusar.data.Name) {
+          // Зберігаємо з нормалізованим ключем (lowercase, trimmed)
+          const normalizedName = slyusar.data.Name.toLowerCase().trim();
+          this.slyusarNameToIdMap.set(normalizedName, slyusar.slyusar_id);
+        }
+      });
 
       // Створюємо Map для перетворення category_id -> category name
       const categoryMap = new Map<string, string>(
@@ -284,7 +305,9 @@ class SchedulerApp {
           slyusar_id: post.id,
           post_id: post.postId,
           original_namber: initial?.original_namber ?? post.namber,
-          current_namber: namber
+          current_namber: namber,
+          slyusar_name: post.subtitle,
+          post_title: post.title
         });
       });
     });
@@ -356,51 +379,101 @@ class SchedulerApp {
 
   private async savePositionsToDatabase(): Promise<void> {
     const currentPositions = this.calculateCurrentPositions();
-
-    // Фільтруємо тільки реальні записи з БД (не тимчасові Date.now() id)
-    // Реальні slyusar_id мають бути менше 100000
-    const validPositions = currentPositions.filter(pos => pos.slyusar_id < 100000);
-
-    console.log("📊 Позиції для збереження:", validPositions);
+    console.log("📊 Всі розраховані позиції:", currentPositions);
 
     try {
       let successCount = 0;
 
-      // Оновлюємо кожну позицію в БД
-      for (const pos of validPositions) {
-        const updateData: { namber: number; post_sluysar?: string } = {
+      for (const pos of currentPositions) {
+        let realSlyusarId = pos.slyusar_id;
+        let realPostId = pos.post_id;
+        let isNewSlyusar = false;
+
+        // 1. Спробуємо знайти реальний post_id за назвою, якщо його немає
+        if ((!realPostId || realPostId <= 0) && pos.post_title) {
+          const foundPostId = this.postTitleToIdMap.get(pos.post_title);
+          if (foundPostId) {
+            realPostId = foundPostId;
+            console.log(`🔎 Знайдено post_id ${realPostId} для "${pos.post_title}"`);
+          }
+        }
+
+        // 2. Якщо ID слюсаря тимчасовий (велике число), спробуємо знайти за ім'ям
+        if (realSlyusarId > 100000) {
+          // Очищаємо ім'я від емодзі якщо є
+          const cleanName = pos.slyusar_name?.replace("👨‍🔧 ", "").trim();
+
+          if (cleanName) {
+            // Нормалізуємо для пошуку (lowercase)
+            const normalizedName = cleanName.toLowerCase().trim();
+            console.log(`🔍 Шукаємо слюсаря: "${cleanName}" -> normalized: "${normalizedName}"`);
+            console.log(`📚 Доступні ключі в Map:`, Array.from(this.slyusarNameToIdMap.keys()));
+
+            const foundSlyusarId = this.slyusarNameToIdMap.get(normalizedName);
+            if (foundSlyusarId) {
+              realSlyusarId = foundSlyusarId;
+              console.log(`✅ Знайдено існуючого слюсаря ID ${realSlyusarId} для "${cleanName}"`);
+            } else {
+              isNewSlyusar = true;
+              console.log(`🆕 Слюсаря "${cleanName}" не знайдено, буде створено нового`);
+            }
+          }
+        }
+
+        // 3. Підготовка даних для запису
+        const updateData: any = {
           namber: pos.current_namber
         };
 
-        // Додаємо post_sluysar якщо є post_id
-        if (pos.post_id && pos.post_id > 0) {
-          updateData.post_sluysar = String(pos.post_id);
+        if (realPostId && realPostId > 0) {
+          updateData.post_sluysar = String(realPostId);
         }
 
-        console.log(`💾 Оновлюю slyusar_id ${pos.slyusar_id}:`, updateData);
+        // 4. Виконуємо запит (UPDATE або INSERT)
+        if (isNewSlyusar) {
+          // INSERT
+          const cleanName = pos.slyusar_name?.replace("👨‍🔧 ", "").trim();
+          if (cleanName) {
+            const { data, error } = await supabase
+              .from("slyusars")
+              .insert({
+                data: { "Name": cleanName, "Опис": {}, "Доступ": "Слюсар" },
+                namber: pos.current_namber,
+                post_sluysar: realPostId > 0 ? String(realPostId) : null
+              })
+              .select();
 
-        const { data, error, count } = await supabase
-          .from("slyusars")
-          .update(updateData)
-          .eq("slyusar_id", pos.slyusar_id)
-          .select();
+            if (error) {
+              console.error(`❌ Помилка створення слюсаря ${cleanName}:`, error);
+              throw error;
+            }
+            console.log("✨ Створено нового слюсаря:", data);
 
-        console.log(`📋 Результат оновлення slyusar_id ${pos.slyusar_id}:`, { data, error, count });
+            if (data && data.length > 0) {
+              this.slyusarNameToIdMap.set(cleanName, data[0].slyusar_id);
+              successCount++;
+            }
+          }
+        } else if (realSlyusarId < 100000) {
+          // UPDATE (тільки для реальних ID)
+          console.log(`💾 Оновлюю slyusar_id ${realSlyusarId}:`, updateData);
+          const { data, error } = await supabase
+            .from("slyusars")
+            .update(updateData)
+            .eq("slyusar_id", realSlyusarId)
+            .select();
 
-        if (error) {
-          console.error(`❌ Помилка оновлення slyusar_id ${pos.slyusar_id}:`, error);
-          throw error;
-        }
-
-        if (data && data.length > 0) {
-          successCount++;
-          console.log(`✅ Успішно оновлено slyusar_id ${pos.slyusar_id}`);
+          if (error) {
+            console.error(`❌ Помилка оновлення slyusar_id ${realSlyusarId}:`, error);
+            throw error;
+          }
+          if (data && data.length > 0) successCount++;
         } else {
-          console.warn(`⚠️ Запис slyusar_id ${pos.slyusar_id} не знайдено або не оновлено`);
+          console.warn(`⚠️ Пропущено запис з ID ${realSlyusarId} (не знайдено відповідності)`);
         }
       }
 
-      // Очищаємо namber для видалених елементів (теж фільтруємо)
+      // Очищаємо namber для видалених елементів (теж фільтруємо реальні ID)
       const validDeletedIds = this.deletedSlyusarIds.filter(id => id < 100000);
       for (const deletedId of validDeletedIds) {
         const { data, error } = await supabase
@@ -417,14 +490,17 @@ class SchedulerApp {
         }
       }
 
-      console.log(`✅ Успішно оновлено ${successCount} з ${validPositions.length} записів`);
+      console.log(`✅ Успішно опрацьовано ${successCount} записів`);
 
-      if (successCount > 0) {
+      if (successCount > 0 || validDeletedIds.length > 0) {
         showNotification("Налаштування успішно збережено!", "success");
+        // Важливо: перезавантажуємо дані щоб отримати нові ID
+        await this.restoreInitialState();
       } else {
-        console.warn("⚠️ Жоден запис не був оновлений. Можливо проблема з правами доступу.");
-        this.showError("Не вдалося оновити записи. Перевірте права доступу.");
+        // Якщо нічого не змінилось в БД, але ми тут - можливо це були лише тимчасові зміни які скасувались
+        console.warn("⚠️ Змін в базі даних не зафіксовано.");
       }
+
     } catch (error) {
       console.error("❌ Помилка збереження позицій:", error);
       this.showError("Не вдалося зберегти налаштування. Спробуйте пізніше.");

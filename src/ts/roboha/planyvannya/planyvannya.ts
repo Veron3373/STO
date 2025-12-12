@@ -1,6 +1,6 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
-import { CehModal, type CehData } from "./nalachtuvannay_ceh";
+import { CehModal, type CehData } from "./planyvannya_ceh";
 
 interface Post {
   id: number;

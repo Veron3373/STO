@@ -551,18 +551,31 @@ $sidebar-width: 30%;
 // DRAGGING STATE
 .post-section-group.dragging,
 .post-unified-row.dragging {
-  opacity: 0.9;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  background: $white;
+  opacity: 0.95;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  background: #ffebee; // Світло-червоний фон
+  border: 2px solid #f44336; // Червона рамка
   border-radius: 8px;
   overflow: hidden;
-  transform: rotate(1deg);
+  transform: scale(1.02); // Без перекосу, тільки легке збільшення
   transition: none;
   cursor: grabbing !important;
 }
 
 .post-unified-row.dragging {
-  transform: rotate(0.5deg) scale(1.02);
+  transform: scale(1.02); // Без rotate - елемент рівний
+  background: #ffcdd2; // Яскравіший червоний для рядка
+
+  .post-row-label {
+    background: #ef5350 !important; // Червоний фон для лейбла
+    color: $white !important;
+    border-right-color: #c62828 !important;
+
+    .post-post-title,
+    .post-post-subtitle {
+      color: $white !important;
+    }
+  }
 }
 
 // 5. ПРАВА КОЛОНКА (Міні календар)

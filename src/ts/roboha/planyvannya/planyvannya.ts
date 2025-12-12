@@ -354,7 +354,7 @@ class SchedulerApp {
       for (const deletedId of this.deletedSlyusarIds) {
         const { error } = await supabase
           .from("slyusars")
-          .update({ namber: null })
+          .update({ namber: null, post_sluysar: null })
           .eq("slyusar_id", deletedId);
 
         if (error) {

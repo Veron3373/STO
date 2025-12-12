@@ -22,6 +22,5 @@ import "./roboha/tablucya/povidomlennya_tablucya";
 import "./roboha/zakaz_naraudy/inhi/act_realtime_subscription";
 import "./vxid/url_obfuscator";
 import "./roboha/planyvannya/planyvannya";
-import "./roboha/planyvannya/planyvannya_ceh";
 import "./roboha/planyvannya/planyvannya_post";
 

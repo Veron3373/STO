@@ -750,8 +750,8 @@ $sidebar-width: 30%;
 .post-modal-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: flex-start;
+ // margin-bottom: 20px;
 }
 
 .post-modal-title {

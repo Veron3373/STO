@@ -1,0 +1,152 @@
+// _nalachtuvannay_post.scss
+// Стилі для модалки створення нового поста
+
+// --- ЗМІННІ ---
+$primary-blue: #004d26;
+$border-gray: #ddd;
+$text-dark: #333;
+$white: #fff;
+
+// --- POST MODAL ---
+.post-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: postModalFadeIn 0.2s;
+}
+
+@keyframes postModalFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.post-modal {
+    background: $white;
+    border-radius: 12px;
+    padding: 24px;
+    width: 400px;
+    max-width: 90vw;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    animation: postModalSlideUp 0.2s;
+}
+
+@keyframes postModalSlideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.post-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.post-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: $primary-blue;
+    margin: 0;
+}
+
+.post-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #888;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+
+    &:hover {
+        color: $text-dark;
+    }
+}
+
+.post-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.post-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.post-form-label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #495057;
+}
+
+.post-form-input {
+    padding: 10px 12px;
+    border: 1px solid $border-gray;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:focus {
+        outline: none;
+        border-color: $primary-blue;
+        box-shadow: 0 0 0 3px rgba(0, 77, 38, 0.1);
+    }
+}
+
+.post-modal-footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.post-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.2s;
+}
+
+.post-btn-primary {
+    background: $primary-blue;
+    color: $white;
+
+    &:hover {
+        background: #003d1f;
+    }
+}
+
+.post-btn-secondary {
+    background: #e9ecef;
+    color: #495057;
+
+    &:hover {
+        background: #dee2e6;
+    }
+}

@@ -1,0 +1,59 @@
+// _nalachtuvannay_ceh.scss
+// Стилі для модалки створення нового цеху
+
+// --- ЗМІННІ ---
+$primary-blue: #004d26;
+$border-gray: #ddd;
+$text-dark: #333;
+$white: #fff;
+
+// --- CEH MODAL ---
+// Стилі модалки цеху наслідують загальні стилі з _nalachtuvannay_post.scss
+// Тут можна додати специфічні стилі для модалки цеху
+
+// Якщо потрібні специфічні стилі для модалки цеху:
+#postCehModalOverlay {
+    // Специфічні стилі для модалки цеху
+
+    .post-modal-title {
+        color: $primary-blue;
+    }
+}
+
+// Кнопка "+ Додати цех"
+.post-add-section-btn {
+    background: $white;
+    border: 2px dashed $border-gray;
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+    position: relative;
+    z-index: 100;
+    padding: 12px;
+    margin: 16px;
+    font-size: 14px;
+    font-weight: 600;
+
+    svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    &:hover {
+        border-color: $primary-blue;
+        color: $primary-blue;
+        background: #f0fdf4;
+    }
+}
+
+// В режимі редагування показуємо кнопку
+.post-scheduler-wrapper.edit-mode {
+    .post-add-section-btn {
+        display: flex;
+    }
+}

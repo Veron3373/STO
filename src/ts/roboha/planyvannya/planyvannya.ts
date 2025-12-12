@@ -1,4 +1,6 @@
 import { supabase } from "../../vxid/supabaseClient";
+import { PostModal, type PostData } from "./planyvannya_post";
+import { CehModal, type CehData } from "./nalachtuvannay_ceh";
 
 interface Post {
   id: number;
@@ -25,8 +27,6 @@ interface Sluysar {
 class SchedulerApp {
   private sections: Section[] = [];
   private editMode: boolean = false;
-  private modalType: "section" | "post" = "section";
-  private modalTargetSection: number | null = null;
 
   private today: Date;
   private selectedDate: Date;
@@ -38,8 +38,11 @@ class SchedulerApp {
   private headerDateDisplay: HTMLElement | null;
   private timeHeader: HTMLElement | null;
   private calendarContainer: HTMLElement | null;
-  private modalOverlay: HTMLElement | null;
   private editModeBtn: HTMLElement | null;
+
+  // Модалки
+  private postModal: PostModal;
+  private cehModal: CehModal;
 
   constructor() {
     this.today = new Date();
@@ -54,8 +57,11 @@ class SchedulerApp {
     this.headerDateDisplay = document.getElementById("postHeaderDateDisplay");
     this.timeHeader = document.getElementById("postTimeHeader");
     this.calendarContainer = document.getElementById("postCalendarContainer");
-    this.modalOverlay = document.getElementById("postModalOverlay");
     this.editModeBtn = document.getElementById("postEditModeBtn");
+
+    // Ініціалізація модалок
+    this.postModal = new PostModal();
+    this.cehModal = new CehModal();
 
     this.init();
   }
@@ -88,23 +94,6 @@ class SchedulerApp {
     // Edit Mode (тільки якщо кнопка була створена)
     if (this.editModeBtn) {
       this.editModeBtn.addEventListener("click", () => this.toggleEditMode());
-    }
-
-    // Modal
-    const modalClose = document.getElementById("postModalClose");
-    const modalCancel = document.getElementById("postModalCancel");
-    const modalSubmit = document.getElementById("postModalSubmit");
-
-    if (modalClose)
-      modalClose.addEventListener("click", () => this.closeModal());
-    if (modalCancel)
-      modalCancel.addEventListener("click", () => this.closeModal());
-    if (modalSubmit)
-      modalSubmit.addEventListener("click", () => this.handleModalSubmit());
-    if (this.modalOverlay) {
-      this.modalOverlay.addEventListener("click", (e) => {
-        if (e.target === this.modalOverlay) this.closeModal();
-      });
     }
 
     this.render();
@@ -364,96 +353,37 @@ class SchedulerApp {
     }
   }
 
+  /**
+   * Відкриває модалку для додавання цеху
+   */
   private openAddSectionModal(): void {
-    this.modalType = "section";
-    this.modalTargetSection = null;
-    this.showModal("Новий цех", "Назва цеху", "Наприклад: ЦЕХ 3", false);
-  }
-
-  private openAddPostModal(sectionId: number): void {
-    this.modalType = "post";
-    this.modalTargetSection = sectionId;
-    this.showModal("Новий пост", "Назва поста", "Наприклад: Пост 8", true);
-  }
-
-  private showModal(
-    title: string,
-    label: string,
-    placeholder: string,
-    showSubtitle: boolean
-  ): void {
-    const modalTitle = document.getElementById("postModalTitle");
-    const formLabel = document.getElementById("postFormLabelTitle");
-    const formInput = document.getElementById(
-      "postFormInputTitle"
-    ) as HTMLInputElement;
-    const formGroupSubtitle = document.getElementById("postFormGroupSubtitle");
-    const formInputSubtitle = document.getElementById(
-      "postFormInputSubtitle"
-    ) as HTMLInputElement;
-
-    if (modalTitle) modalTitle.textContent = title;
-    if (formLabel) formLabel.textContent = label;
-    if (formInput) {
-      formInput.placeholder = placeholder;
-      formInput.value = "";
-    }
-    if (formInputSubtitle) formInputSubtitle.value = "";
-    if (formGroupSubtitle) {
-      formGroupSubtitle.style.display = showSubtitle ? "flex" : "none";
-    }
-
-    if (this.modalOverlay) {
-      this.modalOverlay.style.display = "flex";
-      setTimeout(() => formInput?.focus(), 100);
-    }
-  }
-
-  private closeModal(): void {
-    if (this.modalOverlay) {
-      this.modalOverlay.style.display = "none";
-    }
-  }
-
-  private handleModalSubmit(): void {
-    const formInput = document.getElementById(
-      "postFormInputTitle"
-    ) as HTMLInputElement;
-    const formInputSubtitle = document.getElementById(
-      "postFormInputSubtitle"
-    ) as HTMLInputElement;
-
-    const title = formInput?.value.trim() || "";
-    const subtitle = formInputSubtitle?.value.trim() || "";
-
-    if (!title) {
-      alert("Введіть назву!");
-      return;
-    }
-
-    if (this.modalType === "section") {
+    this.cehModal.open((data: CehData) => {
       this.sections.push({
         id: Date.now(),
-        name: title,
+        name: data.title,
         collapsed: false,
         posts: [],
       });
-    } else if (this.modalType === "post" && this.modalTargetSection !== null) {
-      const section = this.sections.find(
-        (s) => s.id === this.modalTargetSection
-      );
+      this.renderSections();
+    });
+  }
+
+  /**
+   * Відкриває модалку для додавання поста
+   */
+  private openAddPostModal(sectionId: number): void {
+    this.postModal.open((data: PostData) => {
+      const section = this.sections.find((s) => s.id === sectionId);
       if (section) {
         section.posts.push({
           id: Date.now(),
-          title: title,
-          subtitle: subtitle,
+          title: data.title,
+          subtitle: data.subtitle,
           namber: 0
         });
+        this.renderSections();
       }
-    }
-
-    this.closeModal();
-    this.renderSections();
+    });
   }
 
   private renderSections(): void {

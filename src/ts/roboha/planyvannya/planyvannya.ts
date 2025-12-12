@@ -379,7 +379,7 @@ class SchedulerApp {
 
   private async savePositionsToDatabase(): Promise<void> {
     const currentPositions = this.calculateCurrentPositions();
-    console.log("📊 Всі розраховані позиції:", currentPositions);
+    // console.log("📊 Всі розраховані позиції:", currentPositions);
 
     try {
       let successCount = 0;
@@ -394,7 +394,7 @@ class SchedulerApp {
           const foundPostId = this.postTitleToIdMap.get(pos.post_title);
           if (foundPostId) {
             realPostId = foundPostId;
-            console.log(`🔎 Знайдено post_id ${realPostId} для "${pos.post_title}"`);
+            // console.log(`🔎 Знайдено post_id ${realPostId} для "${pos.post_title}"`);
           }
         }
 
@@ -406,16 +406,16 @@ class SchedulerApp {
           if (cleanName) {
             // Нормалізуємо для пошуку (lowercase)
             const normalizedName = cleanName.toLowerCase().trim();
-            console.log(`🔍 Шукаємо слюсаря: "${cleanName}" -> normalized: "${normalizedName}"`);
-            console.log(`📚 Доступні ключі в Map:`, Array.from(this.slyusarNameToIdMap.keys()));
+            // console.log(`🔍 Шукаємо слюсаря: "${cleanName}" -> normalized: "${normalizedName}"`);
+            // console.log(`📚 Доступні ключі в Map:`, Array.from(this.slyusarNameToIdMap.keys()));
 
             const foundSlyusarId = this.slyusarNameToIdMap.get(normalizedName);
             if (foundSlyusarId) {
               realSlyusarId = foundSlyusarId;
-              console.log(`✅ Знайдено існуючого слюсаря ID ${realSlyusarId} для "${cleanName}"`);
+              // console.log(`✅ Знайдено існуючого слюсаря ID ${realSlyusarId} для "${cleanName}"`);
             } else {
               isNewSlyusar = true;
-              console.log(`🆕 Слюсаря "${cleanName}" не знайдено, буде створено нового`);
+              // console.log(`🆕 Слюсаря "${cleanName}" не знайдено, буде створено нового`);
             }
           }
         }
@@ -447,7 +447,7 @@ class SchedulerApp {
               console.error(`❌ Помилка створення слюсаря ${cleanName}:`, error);
               throw error;
             }
-            console.log("✨ Створено нового слюсаря:", data);
+            // console.log("✨ Створено нового слюсаря:", data);
 
             if (data && data.length > 0) {
               this.slyusarNameToIdMap.set(cleanName, data[0].slyusar_id);
@@ -456,7 +456,7 @@ class SchedulerApp {
           }
         } else if (realSlyusarId < 100000) {
           // UPDATE (тільки для реальних ID)
-          console.log(`💾 Оновлюю slyusar_id ${realSlyusarId}:`, updateData);
+          // console.log(`💾 Оновлюю slyusar_id ${realSlyusarId}:`, updateData);
           const { data, error } = await supabase
             .from("slyusars")
             .update(updateData)
@@ -469,20 +469,20 @@ class SchedulerApp {
           }
           if (data && data.length > 0) successCount++;
         } else {
-          console.warn(`⚠️ Пропущено запис з ID ${realSlyusarId} (не знайдено відповідності)`);
+          // console.warn(`⚠️ Пропущено запис з ID ${realSlyusarId} (не знайдено відповідності)`);
         }
       }
 
       // Очищаємо namber для видалених елементів (теж фільтруємо реальні ID)
       const validDeletedIds = this.deletedSlyusarIds.filter(id => id < 100000);
       for (const deletedId of validDeletedIds) {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("slyusars")
           .update({ namber: null, post_sluysar: null })
           .eq("slyusar_id", deletedId)
           .select();
 
-        console.log(`📋 Результат видалення slyusar_id ${deletedId}:`, { data, error });
+        // console.log(`📋 Результат видалення slyusar_id ${deletedId}:`, { data, error });
 
         if (error) {
           console.error(`❌ Помилка очищення namber для slyusar_id ${deletedId}:`, error);
@@ -490,7 +490,7 @@ class SchedulerApp {
         }
       }
 
-      console.log(`✅ Успішно опрацьовано ${successCount} записів`);
+      // console.log(`✅ Успішно опрацьовано ${successCount} записів`);
 
       if (successCount > 0 || validDeletedIds.length > 0) {
         showNotification("Налаштування успішно збережено!", "success");
@@ -498,7 +498,7 @@ class SchedulerApp {
         await this.restoreInitialState();
       } else {
         // Якщо нічого не змінилось в БД, але ми тут - можливо це були лише тимчасові зміни які скасувались
-        console.warn("⚠️ Змін в базі даних не зафіксовано.");
+        // console.warn("⚠️ Змін в базі даних не зафіксовано.");
       }
 
     } catch (error) {

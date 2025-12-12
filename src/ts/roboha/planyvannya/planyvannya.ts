@@ -24,6 +24,13 @@ interface Sluysar {
   category: string;
 }
 
+// Інтерфейс для відстеження позицій
+interface PositionData {
+  slyusar_id: number;
+  original_namber: number;
+  current_namber: number;
+}
+
 class SchedulerApp {
   private sections: Section[] = [];
   private editMode: boolean = false;
@@ -49,6 +56,9 @@ class SchedulerApp {
   private draggedSectionId: number | null = null;
   private draggedPostId: number | null = null;
   private dragPlaceholder: HTMLElement | null = null;
+
+  // Position Tracking - відстеження позицій
+  private initialPositions: PositionData[] = [];
 
   constructor() {
     this.today = new Date();
@@ -219,18 +229,184 @@ class SchedulerApp {
   }
 
   private toggleEditMode(): void {
-    this.editMode = !this.editMode;
+    if (this.editMode) {
+      // Закриваємо режим редагування - перевіряємо чи є зміни
+      this.handleEditModeClose();
+    } else {
+      // Відкриваємо режим редагування - зберігаємо початковий стан
+      this.openEditMode();
+    }
+  }
+
+  private openEditMode(): void {
+    this.editMode = true;
+
+    // Зберігаємо початкові позиції
+    this.saveInitialPositions();
 
     if (this.editModeBtn) {
-      this.editModeBtn.classList.toggle("active", this.editMode);
+      this.editModeBtn.classList.add("active");
     }
 
     if (this.schedulerWrapper) {
-      if (this.editMode) {
-        this.schedulerWrapper.classList.add("edit-mode");
-      } else {
-        this.schedulerWrapper.classList.remove("edit-mode");
+      this.schedulerWrapper.classList.add("edit-mode");
+    }
+  }
+
+  private saveInitialPositions(): void {
+    this.initialPositions = [];
+
+    this.sections.forEach((section, sectionIndex) => {
+      section.posts.forEach((post, postIndex) => {
+        const namber = (sectionIndex + 1) + (postIndex + 1) / 10;
+        this.initialPositions.push({
+          slyusar_id: post.id,
+          original_namber: post.namber,
+          current_namber: namber
+        });
+      });
+    });
+  }
+
+  private calculateCurrentPositions(): PositionData[] {
+    const currentPositions: PositionData[] = [];
+
+    this.sections.forEach((section, sectionIndex) => {
+      section.posts.forEach((post, postIndex) => {
+        const namber = (sectionIndex + 1) + (postIndex + 1) / 10;
+        const initial = this.initialPositions.find(p => p.slyusar_id === post.id);
+        currentPositions.push({
+          slyusar_id: post.id,
+          original_namber: initial?.original_namber ?? post.namber,
+          current_namber: namber
+        });
+      });
+    });
+
+    return currentPositions;
+  }
+
+  private checkForChanges(): boolean {
+    const currentPositions = this.calculateCurrentPositions();
+
+    for (const current of currentPositions) {
+      const initial = this.initialPositions.find(p => p.slyusar_id === current.slyusar_id);
+      if (!initial) return true;
+      if (Math.abs(initial.current_namber - current.current_namber) > 0.001) {
+        return true;
       }
+    }
+
+    return false;
+  }
+
+  private handleEditModeClose(): void {
+    const hasChanges = this.checkForChanges();
+
+    if (hasChanges) {
+      this.showConfirmationDialog();
+    } else {
+      this.closeEditMode();
+    }
+  }
+
+  private showConfirmationDialog(): void {
+    // Створюємо модальне вікно підтвердження
+    const overlay = document.createElement("div");
+    overlay.className = "post-confirm-overlay";
+    overlay.innerHTML = `
+      <div class="post-confirm-modal">
+        <div class="post-confirm-title">Змінити дані налаштування?</div>
+        <div class="post-confirm-buttons">
+          <button class="post-confirm-btn post-confirm-yes">Так</button>
+          <button class="post-confirm-btn post-confirm-no">Ні</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const yesBtn = overlay.querySelector(".post-confirm-yes");
+    const noBtn = overlay.querySelector(".post-confirm-no");
+
+    yesBtn?.addEventListener("click", async () => {
+      overlay.remove();
+      await this.savePositionsToDatabase();
+      this.closeEditMode();
+    });
+
+    noBtn?.addEventListener("click", () => {
+      overlay.remove();
+      // Відновлюємо початковий стан - перезавантажуємо дані з БД
+      this.restoreInitialState();
+    });
+  }
+
+  private async savePositionsToDatabase(): Promise<void> {
+    const currentPositions = this.calculateCurrentPositions();
+
+    try {
+      // Оновлюємо кожну позицію в БД
+      for (const pos of currentPositions) {
+        const { error } = await supabase
+          .from("slyusars")
+          .update({ namber: pos.current_namber })
+          .eq("slyusar_id", pos.slyusar_id);
+
+        if (error) {
+          console.error(`❌ Помилка оновлення slyusar_id ${pos.slyusar_id}:`, error);
+          throw error;
+        }
+      }
+
+      console.log("✅ Позиції успішно збережено в БД");
+      this.showSuccess("Налаштування успішно збережено!");
+    } catch (error) {
+      console.error("❌ Помилка збереження позицій:", error);
+      this.showError("Не вдалося зберегти налаштування. Спробуйте пізніше.");
+    }
+  }
+
+  private showSuccess(message: string): void {
+    const successDiv = document.createElement("div");
+    successDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4CAF50;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+    `;
+    successDiv.textContent = message;
+    document.body.appendChild(successDiv);
+
+    setTimeout(() => {
+      successDiv.style.animation = "slideOut 0.3s ease";
+      setTimeout(() => successDiv.remove(), 300);
+    }, 3000);
+  }
+
+  private async restoreInitialState(): Promise<void> {
+    // Перезавантажуємо дані з БД для відновлення початкового стану
+    await this.loadDataFromDatabase();
+    this.renderSections();
+    this.closeEditMode();
+  }
+
+  private closeEditMode(): void {
+    this.editMode = false;
+    this.initialPositions = [];
+
+    if (this.editModeBtn) {
+      this.editModeBtn.classList.remove("active");
+    }
+
+    if (this.schedulerWrapper) {
+      this.schedulerWrapper.classList.remove("edit-mode");
     }
   }
 

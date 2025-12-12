@@ -357,9 +357,15 @@ class SchedulerApp {
   private async savePositionsToDatabase(): Promise<void> {
     const currentPositions = this.calculateCurrentPositions();
 
+    // Фільтруємо тільки реальні записи з БД (не тимчасові Date.now() id)
+    // Реальні slyusar_id мають бути менше 100000
+    const validPositions = currentPositions.filter(pos => pos.slyusar_id < 100000);
+
+    console.log("📊 Позиції для збереження:", validPositions);
+
     try {
       // Оновлюємо кожну позицію в БД
-      for (const pos of currentPositions) {
+      for (const pos of validPositions) {
         const updateData: { namber: number; post_sluysar?: string } = {
           namber: pos.current_namber
         };
@@ -368,6 +374,8 @@ class SchedulerApp {
         if (pos.post_id && pos.post_id > 0) {
           updateData.post_sluysar = String(pos.post_id);
         }
+
+        console.log(`💾 Оновлюю slyusar_id ${pos.slyusar_id}:`, updateData);
 
         const { error } = await supabase
           .from("slyusars")
@@ -380,8 +388,9 @@ class SchedulerApp {
         }
       }
 
-      // Очищаємо namber для видалених елементів
-      for (const deletedId of this.deletedSlyusarIds) {
+      // Очищаємо namber для видалених елементів (теж фільтруємо)
+      const validDeletedIds = this.deletedSlyusarIds.filter(id => id < 100000);
+      for (const deletedId of validDeletedIds) {
         const { error } = await supabase
           .from("slyusars")
           .update({ namber: null, post_sluysar: null })

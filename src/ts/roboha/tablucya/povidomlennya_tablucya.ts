@@ -11,6 +11,9 @@ export interface ActNotificationPayload {
   dodav_vudaluv: boolean;      // true = додано, false = видалено
   created_at?: string;         // timestamp з БД
   data?: string;               // запасне поле, якщо час прийде сюди
+  pib?: string;                // ✅ ПІБ клієнта з акту
+  auto?: string;               // ✅ Дані автомобіля з акту
+  phone?: string;              // ✅ Телефон клієнта
 }
 
 // ==========================
@@ -318,14 +321,22 @@ export function showRealtimeActNotification(
   toast.setAttribute("data-id", String(dbId));
   toast.setAttribute("data-act-id", String(payload.act_id));
 
+  // ✅ Формуємо рядки для клієнта та автомобіля (якщо є)
+  const pibLine = payload.pib ? `<div class="toast-client-row"><span class="client-label">👤</span><span class="client-value">${payload.pib}</span></div>` : "";
+  const autoLine = payload.auto ? `<div class="toast-auto-row"><span class="auto-label">🚗</span><span class="auto-value">${payload.auto}</span></div>` : "";
+  const phoneText = payload.phone ? `<span class="toast-phone" style="margin-left:8px; font-weight:normal;">📱 ${payload.phone}</span>` : "";
+
   toast.innerHTML = `
     <div class="toast-header-row">
       <div class="header-left">
         <span class="act-id">Акт №${payload.act_id}</span>
         <span class="status-text">${actionText}</span>
+        ${phoneText}
       </div>
       <div class="notification-count-badge">...</div>
     </div>
+    ${pibLine}
+    ${autoLine}
     <div class="toast-meta-row">
       <span class="meta-time-oval">${timeString}</span>
       <span class="user-surname">${payload.changed_by_surname || "Користувач"}</span>

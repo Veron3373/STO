@@ -68,6 +68,9 @@ export async function loadUnseenNotifications(): Promise<ActNotificationPayload[
             // timestamp беремо з колонки "data" (як у твоїй таблиці),
             // але на всякий випадок підтримаємо і created_at, якщо ти її потім додаси
             created_at: row.data ?? row.created_at,
+            pib: row.pib,   // ✅ ПІБ
+            auto: row.auto, // ✅ Авто
+            phone: row.phone, // ✅ Телефон
         }));
     } catch (err) {
         console.error("❌ Виняток при завантаженні повідомлень:", err);

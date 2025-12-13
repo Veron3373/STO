@@ -251,13 +251,26 @@ export class PostModal {
     });
 
     // При фокусі показуємо dropdown
-    input.addEventListener('focus', () => {
+    // При кліку показуємо dropdown
+    input.addEventListener('click', () => {
       const data = this.getCategoryNames();
       const value = input.value.toLowerCase().trim();
 
       if (value.length === 0) {
         this.showDropdown(dropdown, data, input);
       } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
+
+    // При фокусі показуємо dropdown тільки якщо є текст
+    input.addEventListener('focus', () => {
+      const value = input.value.toLowerCase().trim();
+      if (value.length > 0) {
+        const data = this.getCategoryNames();
         const filtered = data.filter(item =>
           item.toLowerCase().includes(value)
         );
@@ -311,7 +324,8 @@ export class PostModal {
     });
 
     // При фокусі показуємо dropdown
-    input.addEventListener('focus', () => {
+    // При кліку показуємо dropdown
+    input.addEventListener('click', () => {
       // Оновлюємо selectedCategoryId на основі поточного значення категорії
       if (categoryInput) {
         this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
@@ -323,6 +337,21 @@ export class PostModal {
       if (value.length === 0) {
         this.showDropdown(dropdown, data, input);
       } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
+
+    // При фокусі показуємо dropdown тільки якщо є текст
+    input.addEventListener('focus', () => {
+      const value = input.value.toLowerCase().trim();
+      if (value.length > 0) {
+        if (categoryInput) {
+          this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
+        }
+        const data = this.getFilteredPostNames();
         const filtered = data.filter(item =>
           item.toLowerCase().includes(value)
         );
@@ -365,13 +394,26 @@ export class PostModal {
     });
 
     // При фокусі показуємо dropdown
-    input.addEventListener('focus', () => {
+    // При кліку показуємо dropdown
+    input.addEventListener('click', () => {
       const data = getDataFn();
       const value = input.value.toLowerCase().trim();
 
       if (value.length === 0) {
         this.showDropdown(dropdown, data, input);
       } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
+
+    // При фокусі показуємо dropdown тільки якщо є текст
+    input.addEventListener('focus', () => {
+      const value = input.value.toLowerCase().trim();
+      if (value.length > 0) {
+        const data = getDataFn();
         const filtered = data.filter(item =>
           item.toLowerCase().includes(value)
         );

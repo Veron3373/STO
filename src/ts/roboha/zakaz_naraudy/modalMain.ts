@@ -890,7 +890,7 @@ function renderModalContent(
       <div class="zakaz_narayd-reason-line">
         <div class="reason-text">
           <strong>Причина звернення:</strong>
-          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${actDetails?.["Причина звернення"] || "—"
+          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Причина звернення"] || "—"
     }</span>
         </div>
         ${!isRestricted && canShowPrintActBtn
@@ -901,7 +901,7 @@ function renderModalContent(
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">
           <strong>Рекомендації:</strong>
-          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr}>${actDetails?.["Рекомендації"] || "—"
+          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Рекомендації"] || "—"
     }</span>
         </div>
         ${!isRestricted && canShowSkladBtn

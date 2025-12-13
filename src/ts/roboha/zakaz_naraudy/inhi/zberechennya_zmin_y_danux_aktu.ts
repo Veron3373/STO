@@ -725,10 +725,8 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
       ? Number(probigCleaned)
       : probigCleaned || 0;
 
-  const newReason = getCellText(document.getElementById(EDITABLE_REASON_ID));
-  const newRecommendations = getCellText(
-    document.getElementById(EDITABLE_RECOMMENDATIONS_ID)
-  );
+  const newReason = (document.getElementById(EDITABLE_REASON_ID) as HTMLElement)?.innerText?.trim() || "";
+  const newRecommendations = (document.getElementById(EDITABLE_RECOMMENDATIONS_ID) as HTMLElement)?.innerText?.trim() || "";
 
   const items = parseTableRows();
   const {

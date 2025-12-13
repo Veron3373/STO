@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Планувальник</title>
+  <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
+  <script type="module" crossorigin src="/STO/assets/supabase-DjCBILTv.js"></script>
+  <script type="module" crossorigin src="/STO/assets/supabaseClient-CpeLsdmr.js"></script>
+  <script type="module" crossorigin src="/STO/assets/pdf-yBvge-Eo.js"></script>
+  <script type="module" crossorigin src="/STO/assets/main-BuzKlCQC.js"></script>
+  <link rel="stylesheet" crossorigin href="/STO/assets/supabaseClient-DIPanYdN.css">
+</head>
+
+<body>
+  <div class="post-planning-container" id="postPlanningContainer">
+    <header class="post-header" id="postHeader">
+      <nav class="post-nav" id="postNav">
+        <a href="https://veron3373.github.io/STO/main.html" class="post-nav-link post-active" id="postNavLinkHome">🛠️←
+          СТО</a>
+
+        <div class="post-header-calendar-nav">
+          <button class="post-today-btn" id="postTodayBtn">Сьогодні</button>
+          <button class="post-nav-arrow" id="headerNavPrev">‹</button>
+          <div class="post-current-date" id="postHeaderDateDisplay"></div>
+          <button class="post-nav-arrow" id="headerNavNext">›</button>
+        </div>
+      </nav>
+    </header>
+
+    <div class="post-main-content">
+
+      <div class="post-scheduler-wrapper" id="postSchedulerWrapper">
+
+        <div class="post-sticky-header">
+          <div class="post-header-corner">
+          </div>
+
+          <div class="post-time-header" id="postTimeHeader">
+            <div class="post-time-cell hour-cell">8</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">9</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">10</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">11</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">12</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">13</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">14</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">15</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">16</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">17</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">18</div>
+            <div class="post-time-cell min-cell">30</div>
+            <div class="post-time-cell hour-cell">19</div>
+            <div class="post-time-cell min-cell">30</div>
+          </div>
+        </div>
+
+        <div class="post-scheduler-body" id="postCalendarGrid">
+          <!-- Секції будуть додані через JS -->
+        </div>
+      </div>
+
+      <aside class="post-mini-calendar" id="postMiniCalendar">
+        <div class="post-year-nav" id="postYearNav">
+          <button id="postYearPrev">‹</button>
+          <span id="postYearDisplay">2025</span>
+          <button id="postYearNext">›</button>
+        </div>
+
+        <div id="postCalendarContainer"></div>
+
+        <div class="post-legend" id="postLegend">
+          <div class="post-legend-item">
+            <div class="post-color-box post-scheduled"></div><span>Запланований</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-no-show"></div><span>Не приїхав</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-in-progress"></div><span>В роботі</span>
+          </div>
+          <div class="post-legend-item">
+            <div class="post-color-box post-repaired"></div><span>Відремонтований</span>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- Модалки створюються динамічно в JS модулях -->
+
+</body>
+
+</html>

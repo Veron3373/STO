@@ -61,6 +61,8 @@ interface ActChangeRecord {
   changed_by_surname: string;
   delit: boolean; // ✅ Додано для позначення видалених повідомлень
   data: string;
+  pib?: string;   // ✅ ПІБ клієнта з поточного акту
+  auto?: string;  // ✅ Дані автомобіля з поточного акту
 }
 
 // КЕШ: Зберігаємо ТІЛЬКИ ЦІНУ (суму перерахуємо від кількості при збереженні)
@@ -608,6 +610,43 @@ async function logActChanges(
     return currentUser;
   };
 
+  // ✅ ОТРИМАННЯ ПІБ КЛІЄНТА ТА АВТОМОБІЛЯ З DOM
+  const getClientAndCarInfo = (): { pib: string; auto: string } => {
+    let pib = "";
+    let auto = "";
+
+    // Шукаємо таблицю "left" де є клієнт
+    const leftTable = document.querySelector("table.zakaz_narayd-table.left");
+    if (leftTable) {
+      const rows = leftTable.querySelectorAll("tr");
+      rows.forEach((row) => {
+        const label = row.querySelector("td:first-child")?.textContent?.trim();
+        const value = row.querySelector("td:last-child")?.textContent?.trim();
+        if (label === "Клієнт" && value) {
+          pib = value;
+        }
+      });
+    }
+
+    // Шукаємо таблицю "right" де є автомобіль
+    const rightTable = document.querySelector("table.zakaz_narayd-table.right");
+    if (rightTable) {
+      const rows = rightTable.querySelectorAll("tr");
+      rows.forEach((row) => {
+        const label = row.querySelector("td:first-child")?.textContent?.trim();
+        const value = row.querySelector("td:last-child")?.textContent?.trim();
+        if (label === "Автомобіль" && value) {
+          auto = value;
+        }
+      });
+    }
+
+    console.log(`📋 Дані акту - Клієнт: "${pib}", Автомобіль: "${auto}"`);
+    return { pib, auto };
+  };
+
+  const { pib, auto } = getClientAndCarInfo();
+
   const records: ActChangeRecord[] = [];
 
   // Додані позиції
@@ -622,7 +661,9 @@ async function logActChanges(
       dodav_vudaluv: true,
       changed_by_surname: getChangeAuthor(item),
       delit: false, // ✅ За замовчуванням FALSE = показувати
-      data: new Date().toISOString(), // ← ДОДАЙТЕ ЦЕЙ РЯДОК
+      data: new Date().toISOString(),
+      pib: pib || undefined,  // ✅ ПІБ клієнта
+      auto: auto || undefined, // ✅ Дані автомобіля
     });
   });
 
@@ -637,7 +678,9 @@ async function logActChanges(
       dodav_vudaluv: false,
       changed_by_surname: getChangeAuthor(item),
       delit: false, // ✅ За замовчуванням FALSE = показувати
-      data: new Date().toISOString(), // ← ДОДАЙТЕ ЦЕЙ РЯДОК
+      data: new Date().toISOString(),
+      pib: pib || undefined,  // ✅ ПІБ клієнта
+      auto: auto || undefined, // ✅ Дані автомобіля
     });
   });
 
@@ -655,7 +698,7 @@ async function logActChanges(
     console.error("❌ Помилка запису змін:", error);
     throw error;
   } else {
-    console.log(`✅ Записано ${records.length} змін в БД`);
+    console.log(`✅ Записано ${records.length} змін в БД (з клієнтом та авто)`);
   }
 }
 

@@ -143,17 +143,17 @@ export class PostModal {
           <div class="post-modal-body">
             <div class="post-form-group post-autocomplete-wrapper">
               <label class="post-form-label" id="postCehFormLabelTitle">Назва цеху</label>
-              <input type="text" class="post-form-input" id="postCehFormInputTitle" placeholder="Наприклад: ЦЕХ 3" autocomplete="off">
+              <input type="text" class="post-form-input" id="postCehFormInputTitle" placeholder="Наприклад: ЦЕХ зварювання" autocomplete="off">
               <div class="post-autocomplete-dropdown" id="postCehDropdown"></div>
             </div>
             <div class="post-form-group post-autocomplete-wrapper">
               <label class="post-form-label" id="postPostFormLabelTitle">Назва поста</label>
-              <input type="text" class="post-form-input" id="postPostFormInputTitle" placeholder="Наприклад: Пост 8" autocomplete="off">
+              <input type="text" class="post-form-input" id="postPostFormInputTitle" placeholder="Наприклад: Пост розвал-сходження" autocomplete="off">
               <div class="post-autocomplete-dropdown" id="postPostNameDropdown"></div>
             </div>
             <div class="post-form-group post-autocomplete-wrapper" id="postPostFormGroupSubtitle" style="display: flex;">
               <label class="post-form-label">Опис (необов'язково)</label>
-              <input type="text" class="post-form-input" id="postPostFormInputSubtitle" placeholder="Наприклад: Пазич С. Ю." autocomplete="off">
+              <input type="text" class="post-form-input" id="postPostFormInputSubtitle" placeholder="Наприклад: Брацлавець Б. С." autocomplete="off">
               <div class="post-autocomplete-dropdown" id="postSlyusarDropdown"></div>
             </div>
           </div>

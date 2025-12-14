@@ -492,7 +492,6 @@ export class PostModal {
           if (this.selectedCategoryId) {
             this.lastValidCategoryId = this.selectedCategoryId; // Запам'ятовуємо останній валідний ID
           }
-          console.log(`🔍 Встановлено selectedCategoryId: ${this.selectedCategoryId} для "${item}"`);
           const postInput = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
           if (postInput) postInput.value = '';
         }
@@ -1073,7 +1072,6 @@ export class PostModal {
 
         if (postInsertError) throw postInsertError;
         postMessage = 'доданий';
-        console.log(`✅ Пост "${postTitle}" додано${categoryId ? ` до категорії ${categoryId}` : ''} з ID ${newPostId}`);
       }
     }
 
@@ -1097,24 +1095,21 @@ export class PostModal {
     const messages: string[] = [];
 
     // Редагування категорії якщо заповнена
-    console.log(`📝 Редагування - cehTitle: "${cehTitle}", selectedCategoryId: ${this.selectedCategoryId}`);
+    // Редагування категорії якщо заповнена
 
     if (cehTitle) {
       // Якщо selectedCategoryId не встановлено - шукаємо по назві
       let categoryId = this.selectedCategoryId;
       if (!categoryId) {
         categoryId = this.findCategoryIdByName(cehTitle);
-        console.log(`🔍 Шукаємо category_id для "${cehTitle}" - знайдено: ${categoryId}`);
       }
 
       // Якщо не знайшли - використовуємо останній валідний
       if (!categoryId && this.lastValidCategoryId) {
         categoryId = this.lastValidCategoryId;
-        console.log(`💾 Використовуємо останній збережений ID: ${categoryId}`);
       }
 
       if (categoryId) {
-        console.log(`✏️ Редагуємо категорію ID ${categoryId} на "${cehTitle}"`);
         const { error: categoryUpdateError } = await supabase
           .from('post_category')
           .update({ category: cehTitle })
@@ -1122,10 +1117,7 @@ export class PostModal {
 
         if (categoryUpdateError) throw categoryUpdateError;
         messages.push('Категорія оновлена');
-        console.log(`✅ Категорія оновлена: ${cehTitle}`);
         this.lastValidCategoryId = categoryId; // Оновлюємо останній валідний
-      } else {
-        console.warn(`⚠️ Не знайдено category_id для "${cehTitle}"!`);
       }
     }
 
@@ -1140,7 +1132,6 @@ export class PostModal {
 
         if (postUpdateError) throw postUpdateError;
         messages.push('Пост оновлено');
-        console.log(`✅ Пост оновлено: ${postTitle}`);
       } else if (this.selectedCategoryId) {
         // Якщо selectedPostId немає, але є selectedCategoryId - оновлюємо перший пост в категорії
         const { data: existingPosts, error: postsError } = await supabase
@@ -1158,7 +1149,6 @@ export class PostModal {
 
           if (postUpdateError) throw postUpdateError;
           messages.push('Пост оновлено');
-          console.log(`✅ Пост оновлено: ${postTitle}`);
         }
       }
     }
@@ -1189,7 +1179,6 @@ export class PostModal {
 
         if (postDeleteError) throw postDeleteError;
         messages.push('Пост видалено');
-        console.log(`✅ Пост видалено: ${postTitle}`);
       } else if (this.selectedCategoryId) {
         // Якщо selectedPostId немає, але є selectedCategoryId - видаляємо перший пост в категорії
         const { data: existingPosts, error: postsError } = await supabase
@@ -1222,7 +1211,6 @@ export class PostModal {
 
       if (categoryDeleteError) throw categoryDeleteError;
       messages.push('Категорія видалена');
-      console.log(`✅ Категорія видалена: ${cehTitle}`);
     }
 
     if (messages.length > 0) {

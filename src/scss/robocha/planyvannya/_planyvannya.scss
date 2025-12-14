@@ -562,6 +562,15 @@ $sidebar-width: 30%;
   cursor: grabbing !important;
 }
 
+.post-section-group.dragging {
+  .post-section-header {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+  }
+}
+
 .post-unified-row.dragging {
   transform: scaleX(0.98); // Зменшення по ширині, висота незмінна
   background: #ffcdd2; // Яскравіший червоний для рядка

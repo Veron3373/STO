@@ -151,6 +151,70 @@ $white: #fff;
   }
 }
 
+// --- DRAG & DROP FIX ---
+// Фіксуємо позицію заголовка секції при перетягуванні
+.post-section {
+  position: relative;
+
+  .post-section-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: inherit;
+    pointer-events: auto;
+
+    // Забороняємо будь-які трансформації заголовка
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: -1;
+      background: inherit;
+    }
+  }
+
+  // При перетягуванні секції заголовок залишається на місці
+  &.dragging {
+    .post-section-header {
+      position: sticky !important;
+      top: 0 !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+  }
+
+  // Контент секції
+  .post-section-content {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Запобігаємо зміщенню при перетягуванні рядків всередині секції
+.post-unified-row {
+  position: relative;
+
+  &.dragging {
+    opacity: 0.5;
+    cursor: move;
+
+    // Заголовок батьківської секції залишається на місці
+    ~.post-section-header {
+      position: sticky !important;
+      top: 0 !important;
+      transform: none !important;
+    }
+  }
+
+  &.drag-over {
+    border-top: 2px solid $primary-blue;
+  }
+}
+
 // --- NEW STYLES FOR LOCK & TOGGLE ---
 
 .post-edit-mode-btn {

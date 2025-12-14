@@ -598,122 +598,13 @@ export class PostModal {
   }
 
 
-  /**
-   * Показує модальне вікно підтвердження
-   */
-  private showConfirmationModal(message: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      // Створюємо модальне вікно
-      const modal = document.createElement('div');
-      modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10002;
-      `;
 
-      const dialog = document.createElement('div');
-      dialog.style.cssText = `
-        background: #2a2a2a;
-        border-radius: 12px;
-        padding: 24px;
-        min-width: 320px;
-        max-width: 400px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      `;
-
-      const messageEl = document.createElement('p');
-      messageEl.textContent = message;
-      messageEl.style.cssText = `
-        color: #fff;
-        font-size: 16px;
-        margin: 0 0 20px 0;
-        text-align: center;
-      `;
-
-      const buttonsContainer = document.createElement('div');
-      buttonsContainer.style.cssText = `
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-      `;
-
-      const yesBtn = document.createElement('button');
-      yesBtn.textContent = 'Так';
-      yesBtn.style.cssText = `
-        background: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 24px;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        font-weight: 500;
-      `;
-
-      const noBtn = document.createElement('button');
-      noBtn.textContent = 'Ні';
-      noBtn.style.cssText = `
-        background: #666;
-        color: white;
-        border: none;
-        padding: 10px 24px;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        font-weight: 500;
-      `;
-
-      yesBtn.addEventListener('click', () => {
-        document.body.removeChild(modal);
-        resolve(true);
-      });
-
-      noBtn.addEventListener('click', () => {
-        document.body.removeChild(modal);
-        resolve(false);
-      });
-
-      buttonsContainer.appendChild(yesBtn);
-      buttonsContainer.appendChild(noBtn);
-      dialog.appendChild(messageEl);
-      dialog.appendChild(buttonsContainer);
-      modal.appendChild(dialog);
-      document.body.appendChild(modal);
-    });
-  }
 
   /**
    * Перемикає режим блокування (редагування)
    */
   private async toggleLockMode(): Promise<void> {
     if (!this.isLocked) {
-      // Закриваємо замок - перевіряємо чи є дані для операції
-      const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
-      const inputTitle = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
-
-      const cehTitle = inputCehTitle?.value.trim() || '';
-      const title = inputTitle?.value.trim() || '';
-
-      // Якщо є дані - питаємо підтвердження
-      if (cehTitle || title) {
-        const actionText = this.currentActionState === 'add' ? 'додати' :
-          this.currentActionState === 'edit' ? 'редагувати' : 'видалити';
-
-        const confirmed = await this.showConfirmationModal(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} дані?`);
-
-        if (confirmed) {
-          // Виконуємо операцію
-          await this.handleDatabaseOperation(cehTitle, title);
-        }
-      }
-
       this.isLocked = true;
     } else {
       // Відкриваємо замок - очищуємо інпути

@@ -239,8 +239,12 @@ $white: #fff;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 150px;
+  min-width: 115px;
+  width: 115px;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: $white;
 
   &.post-mode--add {

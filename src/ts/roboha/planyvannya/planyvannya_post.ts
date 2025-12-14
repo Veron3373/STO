@@ -40,6 +40,7 @@ export class PostModal {
   };
   private activeDropdowns: HTMLElement[] = [];
   private selectedCategoryId: number | null = null;
+  private selectedPostId: number | null = null;
   private isLocked: boolean = true;
   private currentActionState: 'add' | 'edit' | 'delete' = 'add';
 
@@ -98,8 +99,15 @@ export class PostModal {
 
   /**
    * Повертає пости, відфільтровані за обраною категорією
+   * Коли замок відкритий - показує всі пости з БД
    */
   private getFilteredPostNames(): string[] {
+    // Якщо замок відкритий - показуємо всі пости незалежно від категорії
+    if (!this.isLocked) {
+      return this.autocompleteData.postNames.map(p => p.name);
+    }
+
+    // Якщо замок закритий - фільтруємо по категорії
     if (this.selectedCategoryId === null) {
       // Якщо категорія не обрана - повертаємо всі пости
       return this.autocompleteData.postNames.map(p => p.name);
@@ -118,6 +126,15 @@ export class PostModal {
     const category = this.autocompleteData.categories
       .find(c => c.category.toLowerCase() === categoryName.toLowerCase());
     return category ? category.category_id : null;
+  }
+
+  /**
+   * Знаходить post_id за назвою поста
+   */
+  private findPostIdByName(postName: string): number | null {
+    const post = this.autocompleteData.postNames
+      .find(p => p.name.toLowerCase() === postName.toLowerCase());
+    return post ? post.post_id : null;
   }
 
   /**
@@ -479,6 +496,11 @@ export class PostModal {
           if (postInput) postInput.value = '';
         }
 
+        // Якщо це пост - оновлюємо selectedPostId
+        if (input.id === 'postPostFormInputTitle') {
+          this.selectedPostId = this.findPostIdByName(item);
+        }
+
         input.focus();
       });
 
@@ -526,6 +548,12 @@ export class PostModal {
         if (activeOption) {
           input.value = activeOption.textContent || '';
           dropdown.style.display = 'none';
+
+          // Оновлюємо selectedPostId якщо це інпут поста
+          if (input.id === 'postPostFormInputTitle') {
+            this.selectedPostId = this.findPostIdByName(input.value);
+          }
+
           if (onSelect) onSelect();
         }
         break;
@@ -735,6 +763,19 @@ export class PostModal {
     const title = inputTitle?.value.trim() || '';
     const subtitle = inputSubtitle?.value.trim() || '';
 
+    // Якщо замок відкритий - дозволяємо операції з одним полем
+    if (!this.isLocked) {
+      // Перевіряємо що хоча б одне поле заповнене
+      if (!cehTitle && !title) {
+        alert('Заповніть хоча б одне поле (назву цеху або назву поста)!');
+        return;
+      }
+
+      await this.handleDatabaseOperation(cehTitle, title);
+      return;
+    }
+
+    // Якщо замок закритий - обов'язкові обидва поля
     if (!cehTitle) {
       alert('Введіть назву цеху!');
       return;
@@ -742,12 +783,6 @@ export class PostModal {
 
     if (!title) {
       alert('Введіть назву поста!');
-      return;
-    }
-
-    // Якщо замок відкритий - виконуємо операції з БД
-    if (!this.isLocked) {
-      await this.handleDatabaseOperation(cehTitle, title);
       return;
     }
 
@@ -779,7 +814,7 @@ export class PostModal {
           await this.handleEditOperation(cehTitle, postTitle);
           break;
         case 'delete':
-          await this.handleDeleteOperation(cehTitle);
+          await this.handleDeleteOperation(cehTitle, postTitle);
           break;
       }
 
@@ -793,146 +828,208 @@ export class PostModal {
   }
 
   /**
-   * Додає категорію та пост до БД
+   * Додає категорію та/або пост до БД
    */
   private async handleAddOperation(cehTitle: string, postTitle: string): Promise<void> {
-    // Перевіряємо чи категорія вже існує
-    const { data: existingCategory, error: categoryCheckError } = await supabase
-      .from('post_category')
-      .select('category_id, category')
-      .ilike('category', cehTitle)
-      .maybeSingle();
+    let categoryId: number | null = null;
+    let categoryMessage = '';
+    let postMessage = '';
 
-    if (categoryCheckError) throw categoryCheckError;
-
-    let categoryId: number;
-
-    if (existingCategory) {
-      // Категорія вже існує
-      categoryId = existingCategory.category_id;
-      console.log(`ℹ️ Категорія "${cehTitle}" вже існує`);
-    } else {
-      // Додаємо нову категорію
-      const { data: newCategory, error: categoryInsertError } = await supabase
+    // Обробка категорії якщо заповнена
+    if (cehTitle) {
+      // Перевіряємо чи категорія вже існує
+      const { data: existingCategory, error: categoryCheckError } = await supabase
         .from('post_category')
-        .insert({ category: cehTitle })
-        .select('category_id')
-        .single();
+        .select('category_id, category')
+        .ilike('category', cehTitle)
+        .maybeSingle();
 
-      if (categoryInsertError) throw categoryInsertError;
-      categoryId = newCategory.category_id;
-      console.log(`✅ Категорія "${cehTitle}" додана`);
+      if (categoryCheckError) throw categoryCheckError;
+
+      if (existingCategory) {
+        // Категорія вже існує
+        categoryId = existingCategory.category_id;
+        categoryMessage = 'існує';
+        console.log(`ℹ️ Категорія "${cehTitle}" вже існує`);
+      } else {
+        // Додаємо нову категорію
+        const { data: newCategory, error: categoryInsertError } = await supabase
+          .from('post_category')
+          .insert({ category: cehTitle })
+          .select('category_id')
+          .single();
+
+        if (categoryInsertError) throw categoryInsertError;
+        categoryId = newCategory.category_id;
+        categoryMessage = 'додана';
+        console.log(`✅ Категорія "${cehTitle}" додана`);
+      }
     }
 
-    // Перевіряємо чи пост вже існує (нехтуємо емоджі)
-    const postTitleNoEmoji = this.removeEmojis(postTitle);
+    // Обробка поста якщо заповнений
+    if (postTitle) {
+      // Перевіряємо чи пост вже існує (нехтуємо емоджі)
+      const postTitleNoEmoji = this.removeEmojis(postTitle);
 
-    // Отримуємо всі пости з категорії
-    const { data: existingPosts, error: postsError } = await supabase
-      .from('post_name')
-      .select('post_id, name');
-
-    if (postsError) throw postsError;
-
-    // Перевіряємо наявність поста без емоджі
-    const postExists = existingPosts?.some(post => {
-      const existingNameNoEmoji = this.removeEmojis(post.name);
-      return existingNameNoEmoji.toLowerCase() === postTitleNoEmoji.toLowerCase();
-    });
-
-    if (postExists) {
-      alert(`Дані вже існують:\n- Категорія: ${existingCategory ? 'існує' : 'додана'}\n- Пост: існує`);
-    } else {
-      // Додаємо новий пост
-      const { error: postInsertError } = await supabase
+      // Отримуємо всі пости
+      const { data: existingPosts, error: postsError } = await supabase
         .from('post_name')
-        .insert({
-          name: postTitle,
-          category: categoryId
-        });
+        .select('post_id, name');
 
-      if (postInsertError) throw postInsertError;
+      if (postsError) throw postsError;
 
-      alert(`Дані додані ОК:\n- Категорія: ${existingCategory ? 'вже існувала' : 'нова'}\n- Пост: новий`);
-      console.log(`✅ Пост "${postTitle}" додано до категорії ${categoryId}`);
+      // Перевіряємо наявність поста без емоджі
+      const postExists = existingPosts?.some(post => {
+        const existingNameNoEmoji = this.removeEmojis(post.name);
+        return existingNameNoEmoji.toLowerCase() === postTitleNoEmoji.toLowerCase();
+      });
+
+      if (postExists) {
+        postMessage = 'існує';
+      } else {
+        // Додаємо новий пост
+        // Використовуємо categoryId якщо є, інакше null
+        const { error: postInsertError } = await supabase
+          .from('post_name')
+          .insert({
+            name: postTitle,
+            category: categoryId
+          });
+
+        if (postInsertError) throw postInsertError;
+        postMessage = 'доданий';
+        console.log(`✅ Пост "${postTitle}" додано${categoryId ? ` до категорії ${categoryId}` : ''}`);
+      }
+    }
+
+    // Формуємо повідомлення
+    const messages: string[] = [];
+    if (cehTitle) messages.push(`Категорія: ${categoryMessage}`);
+    if (postTitle) messages.push(`Пост: ${postMessage}`);
+
+    const allExist = (categoryMessage === 'існує' || !cehTitle) && (postMessage === 'існує' || !postTitle);
+    if (allExist && (cehTitle || postTitle)) {
+      alert(`Дані вже існують:\n- ${messages.join('\n- ')}`);
+    } else {
+      alert(`Дані оброблені:\n- ${messages.join('\n- ')}`);
     }
   }
 
   /**
-   * Редагує категорію та пост в БД
+   * Редагує категорію та/або пост в БД
    */
   private async handleEditOperation(cehTitle: string, postTitle: string): Promise<void> {
-    // Редагування категорії: шукаємо по selectedCategoryId і оновлюємо category
-    if (this.selectedCategoryId) {
+    const messages: string[] = [];
+
+    // Редагування категорії якщо заповнена
+    if (cehTitle && this.selectedCategoryId) {
       const { error: categoryUpdateError } = await supabase
         .from('post_category')
         .update({ category: cehTitle })
         .eq('category_id', this.selectedCategoryId);
 
       if (categoryUpdateError) throw categoryUpdateError;
+      messages.push('Категорія оновлена');
       console.log(`✅ Категорія оновлена: ${cehTitle}`);
     }
 
-    // Редагування поста: потрібно знайти post_id
-    // Спочатку знаходимо пост за старою назвою в selectedCategoryId
+    // Редагування поста якщо заповнений
+    if (postTitle) {
+      // Використовуємо selectedPostId якщо є
+      if (this.selectedPostId) {
+        const { error: postUpdateError } = await supabase
+          .from('post_name')
+          .update({ name: postTitle })
+          .eq('post_id', this.selectedPostId);
 
-    const { data: existingPosts, error: postsError } = await supabase
-      .from('post_name')
-      .select('post_id, name')
-      .eq('category', this.selectedCategoryId || 0);
+        if (postUpdateError) throw postUpdateError;
+        messages.push('Пост оновлено');
+        console.log(`✅ Пост оновлено: ${postTitle}`);
+      } else if (this.selectedCategoryId) {
+        // Якщо selectedPostId немає, але є selectedCategoryId - оновлюємо перший пост в категорії
+        const { data: existingPosts, error: postsError } = await supabase
+          .from('post_name')
+          .select('post_id, name')
+          .eq('category', this.selectedCategoryId);
 
-    if (postsError) throw postsError;
+        if (postsError) throw postsError;
 
-    // Знаходимо перший пост який відповідає категорії
-    // (можливо треба буде зберігати обраний post_id окремо)
-    if (existingPosts && existingPosts.length > 0) {
-      // Оновлюємо перший знайдений пост в категорії
-      const { error: postUpdateError } = await supabase
-        .from('post_name')
-        .update({ name: postTitle })
-        .eq('post_id', existingPosts[0].post_id);
+        if (existingPosts && existingPosts.length > 0) {
+          const { error: postUpdateError } = await supabase
+            .from('post_name')
+            .update({ name: postTitle })
+            .eq('post_id', existingPosts[0].post_id);
 
-      if (postUpdateError) throw postUpdateError;
-      console.log(`✅ Пост оновлено: ${postTitle}`);
+          if (postUpdateError) throw postUpdateError;
+          messages.push('Пост оновлено');
+          console.log(`✅ Пост оновлено: ${postTitle}`);
+        }
+      }
     }
 
-    alert('Дані відредаговані ОК');
+    if (messages.length > 0) {
+      alert(`Дані відредаговані:\n- ${messages.join('\n- ')}`);
+    } else {
+      alert('Немає даних для редагування');
+    }
   }
 
   /**
-   * Видаляє категорію та пост з БД
+   * Видаляє категорію та/або пост з БД
    */
-  private async handleDeleteOperation(cehTitle: string): Promise<void> {
-    // Видалення поста: шукаємо по category_id (selectedCategoryId)
-    const { data: existingPosts, error: postsError } = await supabase
-      .from('post_name')
-      .select('post_id, name')
-      .eq('category', this.selectedCategoryId || 0);
+  private async handleDeleteOperation(cehTitle: string, postTitle: string): Promise<void> {
+    const messages: string[] = [];
 
-    if (postsError) throw postsError;
+    // Видалення поста якщо заповнений
+    if (postTitle) {
+      // Використовуємо selectedPostId якщо є
+      if (this.selectedPostId) {
+        const { error: postDeleteError } = await supabase
+          .from('post_name')
+          .delete()
+          .eq('post_id', this.selectedPostId);
 
-    if (existingPosts && existingPosts.length > 0) {
-      // Видаляємо перший знайдений пост в категорії
-      const { error: postDeleteError } = await supabase
-        .from('post_name')
-        .delete()
-        .eq('post_id', existingPosts[0].post_id);
+        if (postDeleteError) throw postDeleteError;
+        messages.push('Пост видалено');
+        console.log(`✅ Пост видалено: ${postTitle}`);
+      } else if (this.selectedCategoryId) {
+        // Якщо selectedPostId немає, але є selectedCategoryId - видаляємо перший пост в категорії
+        const { data: existingPosts, error: postsError } = await supabase
+          .from('post_name')
+          .select('post_id, name')
+          .eq('category', this.selectedCategoryId);
 
-      if (postDeleteError) throw postDeleteError;
-      console.log(`✅ Пост видалено: ${existingPosts[0].name}`);
+        if (postsError) throw postsError;
+
+        if (existingPosts && existingPosts.length > 0) {
+          const { error: postDeleteError } = await supabase
+            .from('post_name')
+            .delete()
+            .eq('post_id', existingPosts[0].post_id);
+
+          if (postDeleteError) throw postDeleteError;
+          messages.push('Пост видалено');
+          console.log(`✅ Пост видалено: ${existingPosts[0].name}`);
+        }
+      }
     }
 
-    // Видалення категорії: шукаємо по selectedCategoryId
-    if (this.selectedCategoryId) {
+    // Видалення категорії якщо заповнена
+    if (cehTitle && this.selectedCategoryId) {
       const { error: categoryDeleteError } = await supabase
         .from('post_category')
         .delete()
         .eq('category_id', this.selectedCategoryId);
 
       if (categoryDeleteError) throw categoryDeleteError;
+      messages.push('Категорія видалена');
       console.log(`✅ Категорія видалена: ${cehTitle}`);
     }
 
-    alert('Дані видалені ОК');
+    if (messages.length > 0) {
+      alert(`Дані видалені:\n- ${messages.join('\n- ')}`);
+    } else {
+      alert('Немає даних для видалення');
+    }
   }
 }

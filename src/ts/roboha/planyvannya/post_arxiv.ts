@@ -26,6 +26,11 @@ export class PostArxiv {
     private originalLeft: string = '';
     private dragOffsetX: number = 0;
 
+    // Block drag threshold state
+    private blockDragStartX: number = 0;
+    private blockDragStartY: number = 0;
+    private isBlockDragging: boolean = false;
+
     // Editing block state
     private editingBlock: HTMLElement | null = null;
 
@@ -190,24 +195,9 @@ export class PostArxiv {
         e.stopPropagation(); // Prevent creation selection
 
         this.movingBlock = block;
-        this.originalParent = block.parentElement;
-        this.originalLeft = block.style.left;
-
-        // Calculate offset from block start
-        const rect = block.getBoundingClientRect();
-        this.dragOffsetX = e.clientX - rect.left;
-
-        // Set dragging styles
-        block.classList.add('dragging-active');
-        // We set fixed position to follow mouse freely
-        block.style.width = `${rect.width}px`; // Fix width in pixels during drag
-        block.style.height = `${rect.height}px`; // Fix height in pixels
-        block.style.left = `${rect.left}px`;
-        block.style.top = `${rect.top}px`;
-        block.style.bottom = 'auto'; // Prevent stretching to bottom of screen
-
-        // Move to body to ensure it's on top of everything and position absolute/fixed works relative to viewport
-        document.body.appendChild(block);
+        this.blockDragStartX = e.clientX;
+        this.blockDragStartY = e.clientY;
+        this.isBlockDragging = false; // Not dragging yet, just pressed
 
         document.addEventListener('mousemove', this.onBlockMouseMove);
         document.addEventListener('mouseup', this.onBlockMouseUp);
@@ -215,6 +205,18 @@ export class PostArxiv {
 
     private onBlockMouseMove = (e: MouseEvent): void => {
         if (!this.movingBlock) return;
+
+        // Check threshold if not yet dragging
+        if (!this.isBlockDragging) {
+            const dx = Math.abs(e.clientX - this.blockDragStartX);
+            const dy = Math.abs(e.clientY - this.blockDragStartY);
+
+            if (dx < 5 && dy < 5) return; // Threshold not reached
+
+            // Start dragging now
+            this.isBlockDragging = true;
+            this.startBlockDrag(e); // Initialize drag visuals
+        }
 
         // Move block
         this.movingBlock.style.left = `${e.clientX - this.dragOffsetX}px`;
@@ -263,11 +265,43 @@ export class PostArxiv {
         }
     }
 
+    private startBlockDrag(e: MouseEvent): void {
+        if (!this.movingBlock) return;
+
+        this.originalParent = this.movingBlock.parentElement;
+        this.originalLeft = this.movingBlock.style.left;
+
+        // Calculate offset from block start
+        const rect = this.movingBlock.getBoundingClientRect();
+        this.dragOffsetX = e.clientX - rect.left;
+
+        // Set dragging styles
+        this.movingBlock.classList.add('dragging-active');
+        // We set fixed position to follow mouse freely
+        this.movingBlock.style.width = `${rect.width}px`; // Fix width in pixels during drag
+        this.movingBlock.style.height = `${rect.height}px`; // Fix height in pixels
+        this.movingBlock.style.left = `${rect.left}px`;
+        this.movingBlock.style.top = `${rect.top}px`;
+        this.movingBlock.style.bottom = 'auto'; // Prevent stretching to bottom of screen
+
+        // Move to body to ensure it's on top of everything and position absolute/fixed works relative to viewport
+        document.body.appendChild(this.movingBlock);
+    }
+
     private onBlockMouseUp = (_e: MouseEvent): void => {
         if (!this.movingBlock) return;
 
         document.removeEventListener('mousemove', this.onBlockMouseMove);
         document.removeEventListener('mouseup', this.onBlockMouseUp);
+
+        if (!this.isBlockDragging) {
+            // Needed to cleanup listeners if we just clicked without dragging
+            this.movingBlock = null;
+            this.isBlockDragging = false;
+            return;
+        }
+
+        // Drop Logic (only if we were dragging)
 
         // Check if valid drop
         const isValid = this.movingBlock.classList.contains('post-drag-valid');
@@ -321,6 +355,7 @@ export class PostArxiv {
 
         this.movingBlock = null;
         this.originalParent = null;
+        this.isBlockDragging = false;
     }
 
     private checkOverlap(start: number, end: number, row: HTMLElement): boolean {

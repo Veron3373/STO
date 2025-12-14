@@ -141,7 +141,7 @@ export class PostModal {
             </button>
 
             <div class="post-modal-controls" id="postModalControls">
-              <button id="postModalAddBtn" class="mode-toggle-btn mode--edit" type="button">Додати</button>
+              <button id="postModalAddBtn" class="post-mode-toggle-btn post-mode--edit" type="button">Додати</button>
             </div>
 
             <button class="post-modal-close" id="postPostModalClose">

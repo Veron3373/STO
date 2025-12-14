@@ -209,7 +209,7 @@ $white: #fff;
     }
 }
 
-.post-modal-controls {
+.post-mode-toggle-btn {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -240,7 +240,7 @@ $white: #fff;
         background: rgba(0, 0, 0, 0.05);
     }
 
-    &.mode--edit {
+    &.post-mode--edit {
         color: green;
         border-color: rgba(0, 128, 0, 0.2);
         

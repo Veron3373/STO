@@ -874,17 +874,33 @@ export class PostModal {
         categoryMessage = 'існує';
         console.log(`ℹ️ Категорія "${cehTitle}" вже існує`);
       } else {
-        // Додаємо нову категорію
+        // Спочатку знаходимо максимальний category_id
+        const { data: maxIdData, error: maxIdError } = await supabase
+          .from('post_category')
+          .select('category_id')
+          .order('category_id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (maxIdError) throw maxIdError;
+
+        // Генеруємо новий ID
+        const newId = maxIdData ? maxIdData.category_id + 1 : 1;
+
+        // Додаємо нову категорію з явним ID
         const { data: newCategory, error: categoryInsertError } = await supabase
           .from('post_category')
-          .insert({ category: cehTitle })
+          .insert({
+            category_id: newId,
+            category: cehTitle
+          })
           .select('category_id')
           .single();
 
         if (categoryInsertError) throw categoryInsertError;
         categoryId = newCategory.category_id;
         categoryMessage = 'додана';
-        console.log(`✅ Категорія "${cehTitle}" додана`);
+        console.log(`✅ Категорія "${cehTitle}" додана з ID ${categoryId}`);
       }
     }
 
@@ -909,18 +925,32 @@ export class PostModal {
       if (postExists) {
         postMessage = 'існує';
       } else {
-        // Додаємо новий пост
+        // Знаходимо максимальний post_id
+        const { data: maxPostIdData, error: maxPostIdError } = await supabase
+          .from('post_name')
+          .select('post_id')
+          .order('post_id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (maxPostIdError) throw maxPostIdError;
+
+        // Генеруємо новий ID
+        const newPostId = maxPostIdData ? maxPostIdData.post_id + 1 : 1;
+
+        // Додаємо новий пост з явним ID
         // Використовуємо categoryId якщо є, інакше null
         const { error: postInsertError } = await supabase
           .from('post_name')
           .insert({
+            post_id: newPostId,
             name: postTitle,
             category: categoryId
           });
 
         if (postInsertError) throw postInsertError;
         postMessage = 'доданий';
-        console.log(`✅ Пост "${postTitle}" додано${categoryId ? ` до категорії ${categoryId}` : ''}`);
+        console.log(`✅ Пост "${postTitle}" додано${categoryId ? ` до категорії ${categoryId}` : ''} з ID ${newPostId}`);
       }
     }
 

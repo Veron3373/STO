@@ -1,9 +1,6 @@
-/**
- * Модуль для модалки створення нового поста
- * D:\Alim\Проект\Бодя СТО\stoBraclavecGIT\src\ts\roboha\planyvannya\planyvannya_post.ts
- */
-
-import { supabase } from "../../vxid/supabaseClient";
+import './planyvannya_post.scss';
+import { supabase } from '../../vxid/supabaseClient';
+import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 
 export interface PostData {
   cehTitle: string;
@@ -601,8 +598,40 @@ export class PostModal {
   /**
    * Перемикає режим блокування (редагування)
    */
-  private toggleLockMode(): void {
-    this.isLocked = !this.isLocked;
+  private async toggleLockMode(): Promise<void> {
+    if (!this.isLocked) {
+      // Закриваємо замок - перевіряємо чи є дані для операції
+      const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
+      const inputTitle = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
+
+      const cehTitle = inputCehTitle?.value.trim() || '';
+      const title = inputTitle?.value.trim() || '';
+
+      // Якщо є дані - питаємо підтвердження
+      if (cehTitle || title) {
+        const actionText = this.currentActionState === 'add' ? 'додати' :
+          this.currentActionState === 'edit' ? 'редагувати' : 'видалити';
+
+        const confirmed = confirm(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} дані?`);
+
+        if (confirmed) {
+          // Виконуємо операцію
+          await this.handleDatabaseOperation(cehTitle, title);
+        }
+      }
+
+      this.isLocked = true;
+    } else {
+      // Відкриваємо замок - очищуємо інпути
+      this.isLocked = false;
+
+      const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
+      const inputTitle = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
+
+      if (inputCehTitle) inputCehTitle.value = '';
+      if (inputTitle) inputTitle.value = '';
+    }
+
     this.updateModalState();
   }
 
@@ -784,7 +813,7 @@ export class PostModal {
     if (!this.isLocked) {
       // Перевіряємо що хоча б одне поле заповнене
       if (!cehTitle && !title) {
-        alert('Заповніть хоча б одне поле (назву цеху або назву поста)!');
+        showNotification('Заповніть хоча б одне поле!', 'error');
         return;
       }
 
@@ -794,12 +823,12 @@ export class PostModal {
 
     // Якщо замок закритий - обов'язкові обидва поля
     if (!cehTitle) {
-      alert('Введіть назву цеху!');
+      showNotification('Введіть назву цеху!', 'error');
       return;
     }
 
     if (!title) {
-      alert('Введіть назву поста!');
+      showNotification('Введіть назву поста!', 'error');
       return;
     }
 
@@ -844,8 +873,7 @@ export class PostModal {
 
       // Показуємо більш детальну помилку
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorDetails = (error as any)?.details || (error as any)?.hint || '';
-      alert(`Помилка виконання операції!\n\n${errorMessage}\n${errorDetails}`);
+      showNotification(`Помилка: ${errorMessage}`, 'error');
     }
   }
 
@@ -961,9 +989,9 @@ export class PostModal {
 
     const allExist = (categoryMessage === 'існує' || !cehTitle) && (postMessage === 'існує' || !postTitle);
     if (allExist && (cehTitle || postTitle)) {
-      alert(`Дані вже існують:\n- ${messages.join('\n- ')}`);
+      showNotification('Дані вже існують', 'info');
     } else {
-      alert(`Дані оброблені:\n- ${messages.join('\n- ')}`);
+      showNotification('Збережено', 'success');
     }
   }
 
@@ -1020,19 +1048,21 @@ export class PostModal {
     }
 
     if (messages.length > 0) {
-      alert(`Дані відредаговані:\n- ${messages.join('\n- ')}`);
+      showNotification('Відредаговано', 'success');
     } else {
-      alert('Немає даних для редагування');
+      showNotification('Немає даних для редагування', 'error');
     }
   }
 
   /**
    * Видаляє категорію та/або пост з БД
+   * ПРІОРИТЕТ: Якщо обидва заповнені - видаляємо ТІЛЬКИ ПОСТ
    */
   private async handleDeleteOperation(cehTitle: string, postTitle: string): Promise<void> {
     const messages: string[] = [];
 
-    // Видалення поста якщо заповнений
+    // ПРІОРИТЕТ 1: Видалення поста (якщо заповнений)
+    // Якщо postTitle заповнений - видаляємо ТІЛЬКИ пост, ігноруємо категорію
     if (postTitle) {
       // Використовуємо selectedPostId якщо є
       if (this.selectedPostId) {
@@ -1064,10 +1094,11 @@ export class PostModal {
           console.log(`✅ Пост видалено: ${existingPosts[0].name}`);
         }
       }
-    }
 
-    // Видалення категорії якщо заповнена
-    if (cehTitle && this.selectedCategoryId) {
+      // ВАЖЛИВО: НЕ видаляємо категорію навіть якщо cehTitle заповнений!
+    }
+    // ПРІОРИТЕТ 2: Видалення категорії (ТІЛЬКИ якщо postTitle порожній)
+    else if (cehTitle && this.selectedCategoryId) {
       const { error: categoryDeleteError } = await supabase
         .from('post_category')
         .delete()
@@ -1079,9 +1110,9 @@ export class PostModal {
     }
 
     if (messages.length > 0) {
-      alert(`Дані видалені:\n- ${messages.join('\n- ')}`);
+      showNotification('Видалено', 'success');
     } else {
-      alert('Немає даних для видалення');
+      showNotification('Немає даних для видалення', 'error');
     }
   }
 }

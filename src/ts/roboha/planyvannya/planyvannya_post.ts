@@ -840,7 +840,12 @@ export class PostModal {
       this.close();
     } catch (error) {
       console.error('❌ Помилка операції з БД:', error);
-      alert('Помилка виконання операції!');
+      console.error('❌ Деталі помилки:', JSON.stringify(error, null, 2));
+
+      // Показуємо більш детальну помилку
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = (error as any)?.details || (error as any)?.hint || '';
+      alert(`Помилка виконання операції!\n\n${errorMessage}\n${errorDetails}`);
     }
   }
 

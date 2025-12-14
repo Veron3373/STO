@@ -1095,18 +1095,27 @@ export class PostModal {
     // Редагування категорії якщо заповнена
     console.log(`📝 Редагування - cehTitle: "${cehTitle}", selectedCategoryId: ${this.selectedCategoryId}`);
 
-    if (cehTitle && this.selectedCategoryId) {
-      console.log(`✏️ Редагуємо категорію ID ${this.selectedCategoryId} на "${cehTitle}"`);
-      const { error: categoryUpdateError } = await supabase
-        .from('post_category')
-        .update({ category: cehTitle })
-        .eq('category_id', this.selectedCategoryId);
+    if (cehTitle) {
+      // Якщо selectedCategoryId не встановлено - шукаємо по назві
+      let categoryId = this.selectedCategoryId;
+      if (!categoryId) {
+        categoryId = this.findCategoryIdByName(cehTitle);
+        console.log(`🔍 Шукаємо category_id для "${cehTitle}" - знайдено: ${categoryId}`);
+      }
 
-      if (categoryUpdateError) throw categoryUpdateError;
-      messages.push('Категорія оновлена');
-      console.log(`✅ Категорія оновлена: ${cehTitle}`);
-    } else if (cehTitle && !this.selectedCategoryId) {
-      console.warn(`⚠️ Не можу редагувати категорію - selectedCategoryId не встановлено!`);
+      if (categoryId) {
+        console.log(`✏️ Редагуємо категорію ID ${categoryId} на "${cehTitle}"`);
+        const { error: categoryUpdateError } = await supabase
+          .from('post_category')
+          .update({ category: cehTitle })
+          .eq('category_id', categoryId);
+
+        if (categoryUpdateError) throw categoryUpdateError;
+        messages.push('Категорія оновлена');
+        console.log(`✅ Категорія оновлена: ${cehTitle}`);
+      } else {
+        console.warn(`⚠️ Не знайдено category_id для "${cehTitle}"!`);
+      }
     }
 
     // Редагування поста якщо заповнений

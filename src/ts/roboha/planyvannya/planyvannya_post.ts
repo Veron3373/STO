@@ -362,41 +362,40 @@ export class PostModal {
       }
     });
 
-    // При фокусі показуємо dropdown
     // При кліку показуємо dropdown
-    // input.addEventListener('click', () => {
-    //   // Оновлюємо selectedCategoryId на основі поточного значення категорії
-    //   if (categoryInput) {
-    //     this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
-    //   }
+    input.addEventListener('click', () => {
+      // Оновлюємо selectedCategoryId на основі поточного значення категорії
+      if (categoryInput) {
+        this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
+      }
 
-    //   const data = this.getFilteredPostNames();
-    //   const value = input.value.toLowerCase().trim();
+      const data = this.getFilteredPostNames();
+      const value = input.value.toLowerCase().trim();
 
-    //   if (value.length === 0) {
-    //     this.showDropdown(dropdown, data, input);
-    //   } else {
-    //     const filtered = data.filter(item =>
-    //       item.toLowerCase().includes(value)
-    //     );
-    //     this.showDropdown(dropdown, filtered, input);
-    //   }
-    // });
+      if (value.length === 0) {
+        this.showDropdown(dropdown, data, input);
+      } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
 
-    // При фокусі показуємо dropdown тільки якщо є текст
-    // input.addEventListener('focus', () => {
-    //   const value = input.value.toLowerCase().trim();
-    //   if (value.length > 0) {
-    //     if (categoryInput) {
-    //       this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
-    //     }
-    //     const data = this.getFilteredPostNames();
-    //     const filtered = data.filter(item =>
-    //       item.toLowerCase().includes(value)
-    //     );
-    //     this.showDropdown(dropdown, filtered, input);
-    //   }
-    // });
+    // При фокусі показуємо dropdown якщо є текст
+    input.addEventListener('focus', () => {
+      const value = input.value.toLowerCase().trim();
+      if (value.length > 0) {
+        if (categoryInput) {
+          this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
+        }
+        const data = this.getFilteredPostNames();
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(dropdown, filtered, input);
+      }
+    });
 
     // Навігація клавіатурою
     input.addEventListener('keydown', (e) => {
@@ -656,20 +655,20 @@ export class PostModal {
       }
     }
 
+
     // Оновлення dropdown постів при зміні стану замка
-    // Якщо є текст в інпуті - оновлюємо dropdown
-    if (postInput && postDropdown && postInput.value.trim()) {
+    if (postInput && postDropdown) {
       const value = postInput.value.toLowerCase().trim();
       const data = this.getFilteredPostNames();
 
-      if (value.length === 0) {
-        this.showDropdown(postDropdown, data, postInput);
-      } else {
+      if (value.length > 0) {
         const filtered = data.filter(item =>
           item.toLowerCase().includes(value)
         );
         this.showDropdown(postDropdown, filtered, postInput);
       }
+      // Якщо інпут порожній - не показуємо dropdown автоматично
+      // Він покажеться коли користувач клікне на поле
     }
   }
 

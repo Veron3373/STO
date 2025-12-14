@@ -239,38 +239,40 @@ $white: #fff;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 100px;
+  min-width: 150px;
   text-align: center;
   color: $white;
 
   &.post-mode--add {
-    background: #28a745;
-    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.15);
+    border-color: rgba(40, 167, 69, 0.3);
+    color: #28a745;
 
     &:hover {
-      background: #218838;
-      border-color: #1e7e34;
+      background: rgba(40, 167, 69, 0.25);
+      border-color: rgba(40, 167, 69, 0.4);
     }
   }
 
   &.post-mode--edit {
-    background: #ffc107;
-    border-color: #ffc107;
-    color: #212529;
+    background: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.3);
+    color: #ffc107;
 
     &:hover {
-      background: #e0a800;
-      border-color: #d39e00;
+      background: rgba(255, 193, 7, 0.25);
+      border-color: rgba(255, 193, 7, 0.4);
     }
   }
 
   &.post-mode--delete {
-    background: #dc3545;
-    border-color: #dc3545;
+    background: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: #dc3545;
 
     &:hover {
-      background: #c82333;
-      border-color: #bd2130;
+      background: rgba(220, 53, 69, 0.25);
+      border-color: rgba(220, 53, 69, 0.4);
     }
   }
 }

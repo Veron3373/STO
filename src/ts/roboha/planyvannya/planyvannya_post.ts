@@ -1093,7 +1093,10 @@ export class PostModal {
     const messages: string[] = [];
 
     // Редагування категорії якщо заповнена
+    console.log(`📝 Редагування - cehTitle: "${cehTitle}", selectedCategoryId: ${this.selectedCategoryId}`);
+
     if (cehTitle && this.selectedCategoryId) {
+      console.log(`✏️ Редагуємо категорію ID ${this.selectedCategoryId} на "${cehTitle}"`);
       const { error: categoryUpdateError } = await supabase
         .from('post_category')
         .update({ category: cehTitle })
@@ -1102,6 +1105,8 @@ export class PostModal {
       if (categoryUpdateError) throw categoryUpdateError;
       messages.push('Категорія оновлена');
       console.log(`✅ Категорія оновлена: ${cehTitle}`);
+    } else if (cehTitle && !this.selectedCategoryId) {
+      console.warn(`⚠️ Не можу редагувати категорію - selectedCategoryId не встановлено!`);
     }
 
     // Редагування поста якщо заповнений

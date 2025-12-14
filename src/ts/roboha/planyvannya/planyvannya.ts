@@ -12,6 +12,7 @@ interface Post {
 
 interface Section {
   id: number;
+  realCategoryId: string;
   name: string;
   collapsed: boolean;
   posts: Post[];
@@ -228,6 +229,7 @@ class SchedulerApp {
 
       return {
         id: index + 1,
+        realCategoryId: categoryId,
         name: categoryName,
         collapsed: false,
         posts: items.map(item => ({
@@ -473,6 +475,21 @@ class SchedulerApp {
         }
       }
 
+      // 5. Оновлюємо категорії для постів, якщо вони були переміщені в іншу секцію
+      for (const section of this.sections) {
+        if (!section.realCategoryId) continue;
+
+        for (const post of section.posts) {
+          if (post.postId > 0) {
+            // Оновлюємо категорію поста
+            await supabase
+              .from("post_name")
+              .update({ category: section.realCategoryId })
+              .eq("post_id", post.postId);
+          }
+        }
+      }
+
       // Очищаємо namber для видалених елементів (теж фільтруємо реальні ID)
       const validDeletedIds = this.deletedSlyusarIds.filter(id => id < 100000);
       for (const deletedId of validDeletedIds) {
@@ -693,6 +710,7 @@ class SchedulerApp {
       if (!section) {
         section = {
           id: Date.now(),
+          realCategoryId: "", // TODO: Потрібно якось дізнатись ID нової категорії або створити її
           name: data.cehTitle,
           collapsed: false,
           posts: []
@@ -1013,11 +1031,11 @@ class SchedulerApp {
       this.draggedElement.style.top = `${newTop}px`;
 
       // Знаходимо елемент під курсором для визначення нової позиції
-      this.updatePostPlaceholder(e.clientY, sectionId);
+      this.updatePostPlaceholder(e.clientY);
     };
 
     const onMouseUp = () => {
-      this.finishPostDrag(sectionId);
+      this.finishPostDrag();
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
     };
@@ -1026,14 +1044,30 @@ class SchedulerApp {
     document.addEventListener("mouseup", onMouseUp);
   }
 
-  private updatePostPlaceholder(mouseY: number, sectionId: number): void {
+  private updatePostPlaceholder(mouseY: number): void {
     if (!this.dragPlaceholder || !this.calendarGrid) return;
 
-    // Знаходимо контент секції
-    const sectionContent = this.calendarGrid.querySelector(`.post-section-content[data-section-id="${sectionId}"]`);
-    if (!sectionContent) return;
+    // Знаходимо секцію над якою курсор
+    const sectionGroups = Array.from(this.calendarGrid.querySelectorAll(".post-section-group"));
+    let targetSectionContent: Element | null = null;
+    let fallbackAddBtn: Element | null = null;
 
-    const postRows = Array.from(sectionContent.querySelectorAll(".post-unified-row:not(.dragging)"));
+    for (const group of sectionGroups) {
+      const rect = group.getBoundingClientRect();
+      // Розширюємо зону пошуку трохи вверх і вниз, щоб легше було потрапити
+      if (mouseY >= rect.top - 20 && mouseY <= rect.bottom + 20) {
+        // Якщо знайшли групу, дивимось чи вона не згорнута
+        if (!group.querySelector(".post-toggle-btn.collapsed")) {
+          targetSectionContent = group.querySelector(".post-section-content");
+          fallbackAddBtn = group.querySelector(".post-add-post-btn");
+          break;
+        }
+      }
+    }
+
+    if (!targetSectionContent) return;
+
+    const postRows = Array.from(targetSectionContent.querySelectorAll(".post-unified-row:not(.dragging)"));
 
     for (const row of postRows) {
       const rect = row.getBoundingClientRect();
@@ -1045,25 +1079,33 @@ class SchedulerApp {
       }
     }
 
-    // Якщо курсор нижче всіх постів - ставимо перед кнопкою додавання
-    const addBtn = sectionContent.querySelector(".post-add-post-btn");
-    if (addBtn) {
-      addBtn.parentNode?.insertBefore(this.dragPlaceholder, addBtn);
+    // Якщо курсор нижче всіх постів у цій секції
+    if (fallbackAddBtn) {
+      fallbackAddBtn.parentNode?.insertBefore(this.dragPlaceholder, fallbackAddBtn);
+    } else {
+      targetSectionContent.appendChild(this.dragPlaceholder);
     }
   }
 
-  private finishPostDrag(sectionId: number): void {
-    if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid) return;
+  private finishPostDrag(): void {
+    if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid || !this.draggedSectionId) return;
 
-    const section = this.sections.find(s => s.id === sectionId);
-    if (!section) return;
+    // Знаходимо стару секцію
+    const oldSectionIndex = this.sections.findIndex(s => s.id === this.draggedSectionId);
+    if (oldSectionIndex === -1) return;
+    const oldSection = this.sections[oldSectionIndex];
 
-    // Знаходимо контент секції
-    const sectionContent = this.calendarGrid.querySelector(`.post-section-content[data-section-id="${sectionId}"]`);
-    if (!sectionContent) return;
+    // Знаходимо нову секцію по плейсхолдеру
+    const newSectionContent = this.dragPlaceholder.closest(".post-section-content") as HTMLElement;
+    if (!newSectionContent) return;
 
-    // Визначаємо нову позицію
-    const allElements = Array.from(sectionContent.querySelectorAll(".post-unified-row, .post-drag-placeholder"));
+    const newSectionId = parseInt(newSectionContent.dataset.sectionId || "0");
+    const newSectionIndex = this.sections.findIndex(s => s.id === newSectionId);
+    if (newSectionIndex === -1) return;
+    const newSection = this.sections[newSectionIndex];
+
+    // Визначаємо нову позицію всередині нової секції
+    const allElements = Array.from(newSectionContent.querySelectorAll(".post-unified-row, .post-drag-placeholder"));
 
     let newIndex = 0;
     for (let i = 0; i < allElements.length; i++) {
@@ -1073,11 +1115,13 @@ class SchedulerApp {
       }
     }
 
-    // Переміщуємо пост в масиві
-    const oldIndex = section.posts.findIndex(p => p.id === this.draggedPostId);
-    if (oldIndex !== -1 && newIndex !== oldIndex) {
-      const [movedPost] = section.posts.splice(oldIndex, 1);
-      section.posts.splice(newIndex, 0, movedPost);
+    // Видаляємо зі старої секції
+    const oldPostIndex = oldSection.posts.findIndex(p => p.id === this.draggedPostId);
+    if (oldPostIndex !== -1) {
+      const [movedPost] = oldSection.posts.splice(oldPostIndex, 1);
+
+      // Додаємо в нову секцію
+      newSection.posts.splice(newIndex, 0, movedPost);
     }
 
     // Очищуємо

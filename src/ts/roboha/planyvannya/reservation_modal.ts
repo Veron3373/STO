@@ -245,14 +245,21 @@ export class ReservationModal {
             }));
 
             // Autocomplete logic after loading cars:
-            // If client has only 1 car, auto-fill
             if (this.carsData.length === 1) {
+                // If client has only 1 car, auto-fill
                 this.fillCarFields(this.carsData[0]);
             } else {
-                // Clear car fields to allow selection
+                // If multiple cars, clear fields and let user choose
+                // But we want to show the dropdown immediately if they focus
                 const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
                 const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
-                if (carInput) carInput.value = '';
+                if (carInput) {
+                    carInput.value = '';
+                    carInput.placeholder = `Оберіть авто (${this.carsData.length} знайдено)...`;
+                    // Trigger dropdown logic? 
+                    // Better to let the focus event handle it, or trigger it manually:
+                    // carInput.focus(); // Optional: might be annoying if they just finished phone number
+                }
                 if (numberInput) numberInput.value = '';
                 this.selectedCarId = null;
             }
@@ -336,17 +343,30 @@ export class ReservationModal {
         const dropdown = document.getElementById('postArxivCarDropdown');
         if (!input || !dropdown) return;
 
-        input.addEventListener('input', async () => {
-            const val = input.value.toLowerCase().trim();
-
-            if (this.selectedClientId) {
-                // Filter loaded cars
-                const matches = this.carsData.filter(c => c.model.toLowerCase().includes(val));
+        const showClientCars = (filter: string = '') => {
+            if (this.selectedClientId && this.carsData.length > 0) {
+                const matches = this.carsData.filter(c => c.model.toLowerCase().includes(filter));
                 this.showDropdown(dropdown, matches.map(c => ({
                     text: c.model,
                     subtext: c.number || 'Без номера',
                     onClick: () => this.fillCarFields(c)
                 })));
+            }
+        };
+
+        input.addEventListener('focus', () => {
+            // Show all cars if client selected
+            if (this.selectedClientId) {
+                showClientCars();
+            }
+        });
+
+        input.addEventListener('input', async () => {
+            const val = input.value.toLowerCase().trim();
+
+            if (this.selectedClientId) {
+                // Filter loaded cars
+                showClientCars(val);
             } else {
                 // Global search for cars (if needed, otherwise just let them type)
                 // For now, implementing global search via Supabase if no client selected

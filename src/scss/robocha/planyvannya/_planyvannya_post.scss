@@ -218,11 +218,15 @@ $white: #fff;
     transform: translateX(-10px);
     transition: all 0.3s ease;
     pointer-events: none;
+}
 
+.post-modal-controls {
     &.visible {
-        opacity: 1;
-        transform: translateX(0);
-        pointer-events: all;
+        .post-mode-toggle-btn {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+        }
     }
 }
 
@@ -243,27 +247,27 @@ $white: #fff;
     &.post-mode--add {
         color: #28a745; // Green
         border-color: rgba(40, 167, 69, 0.2);
-        
+
         &:hover {
-             background: rgba(40, 167, 69, 0.1);
+            background: rgba(40, 167, 69, 0.1);
         }
     }
 
     &.post-mode--edit {
         color: #ffc107; // Orange
         border-color: rgba(255, 193, 7, 0.2);
-        
+
         &:hover {
-             background: rgba(255, 193, 7, 0.1);
+            background: rgba(255, 193, 7, 0.1);
         }
     }
 
     &.post-mode--delete {
         color: #dc3545; // Red
         border-color: rgba(220, 53, 69, 0.2);
-        
+
         &:hover {
-             background: rgba(220, 53, 69, 0.1);
+            background: rgba(220, 53, 69, 0.1);
         }
     }
 }

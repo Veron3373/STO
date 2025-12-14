@@ -38,6 +38,7 @@ export class PostModal {
   private activeDropdowns: HTMLElement[] = [];
   private selectedCategoryId: number | null = null;
   private selectedPostId: number | null = null;
+  private lastValidCategoryId: number | null = null; // Запам'ятовуємо останній валідний ID
   private isLocked: boolean = true;
   private currentActionState: 'add' | 'edit' | 'delete' = 'add';
 
@@ -488,6 +489,9 @@ export class PostModal {
         // Якщо це категорія - оновлюємо selectedCategoryId
         if (input.id === 'postCehFormInputTitle') {
           this.selectedCategoryId = this.findCategoryIdByName(item);
+          if (this.selectedCategoryId) {
+            this.lastValidCategoryId = this.selectedCategoryId; // Запам'ятовуємо останній валідний ID
+          }
           console.log(`🔍 Встановлено selectedCategoryId: ${this.selectedCategoryId} для "${item}"`);
           const postInput = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
           if (postInput) postInput.value = '';
@@ -1103,6 +1107,12 @@ export class PostModal {
         console.log(`🔍 Шукаємо category_id для "${cehTitle}" - знайдено: ${categoryId}`);
       }
 
+      // Якщо не знайшли - використовуємо останній валідний
+      if (!categoryId && this.lastValidCategoryId) {
+        categoryId = this.lastValidCategoryId;
+        console.log(`💾 Використовуємо останній збережений ID: ${categoryId}`);
+      }
+
       if (categoryId) {
         console.log(`✏️ Редагуємо категорію ID ${categoryId} на "${cehTitle}"`);
         const { error: categoryUpdateError } = await supabase
@@ -1113,6 +1123,7 @@ export class PostModal {
         if (categoryUpdateError) throw categoryUpdateError;
         messages.push('Категорія оновлена');
         console.log(`✅ Категорія оновлена: ${cehTitle}`);
+        this.lastValidCategoryId = categoryId; // Оновлюємо останній валідний
       } else {
         console.warn(`⚠️ Не знайдено category_id для "${cehTitle}"!`);
       }

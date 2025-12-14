@@ -198,8 +198,10 @@ export class PostArxiv {
         block.classList.add('dragging-active');
         // We set fixed position to follow mouse freely
         block.style.width = `${rect.width}px`; // Fix width in pixels during drag
+        block.style.height = `${rect.height}px`; // Fix height in pixels
         block.style.left = `${rect.left}px`;
         block.style.top = `${rect.top}px`;
+        block.style.bottom = 'auto'; // Prevent stretching to bottom of screen
 
         // Move to body to ensure it's on top of everything and position absolute/fixed works relative to viewport
         document.body.appendChild(block);
@@ -272,7 +274,8 @@ export class PostArxiv {
         this.movingBlock.style.pointerEvents = '';
         this.movingBlock.style.position = 'absolute';
         this.movingBlock.style.top = '4px'; // Reset top to fit in row
-        this.movingBlock.style.bottom = '4px';
+        this.movingBlock.style.bottom = '4px'; // Restore bottom
+        this.movingBlock.style.height = ''; // Reset height to auto/css defined
         this.movingBlock.style.width = ''; // Reset to percent later
 
         if (isValid && track) {

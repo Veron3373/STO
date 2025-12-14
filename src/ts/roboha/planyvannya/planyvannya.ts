@@ -933,6 +933,8 @@ class SchedulerApp {
     const addBtn = this.calendarGrid.querySelector(".post-add-section-btn");
     if (addBtn) {
       addBtn.parentNode?.insertBefore(this.dragPlaceholder, addBtn);
+    } else {
+      this.calendarGrid.appendChild(this.dragPlaceholder);
     }
   }
 

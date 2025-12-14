@@ -177,7 +177,7 @@ export class ReservationModal {
         this.setupClientAutocomplete();
         this.setupPhoneAutocomplete();
         this.setupCarAutocomplete();
-        // this.setupCarNumberAutocomplete(); // Optional
+        this.setupCarNumberAutocomplete();
 
         // Close dropdowns on click outside
         document.addEventListener('click', (e) => {
@@ -368,19 +368,53 @@ export class ReservationModal {
         });
     }
 
-    private showGlobalCarDropdown(dropdown: HTMLElement, rawCars: any[]): void {
-        // Need to fetch client names for these cars to show in subtext? 
-        // Or just show number. Let's start simple.
-        // Ideally we should join with clients, but Supabase JS client simple join:
-        // select(*, clients(*))
+    private setupCarNumberAutocomplete(): void {
+        const input = document.getElementById('postArxivCarNumber') as HTMLInputElement;
+        const dropdown = document.getElementById('postArxivCarNumberDropdown');
+        if (!input || !dropdown) return;
 
-        // Let's assume we mapped them. For now, simple display.
+        input.addEventListener('input', async () => {
+            const val = input.value.toLowerCase().trim();
+
+            if (this.selectedClientId) {
+                // Filter loaded cars
+                const matches = this.carsData.filter(c => c.number.toLowerCase().includes(val));
+                this.showDropdown(dropdown, matches.map(c => ({
+                    text: c.number,
+                    subtext: c.model,
+                    onClick: () => this.fillCarFields(c)
+                })));
+            } else {
+                // Global search
+                if (val.length < 2) {
+                    this.closeAllDropdowns();
+                    return;
+                }
+
+                const { data } = await supabase
+                    .from('cars')
+                    .select('cars_id, client_id, data')
+                    .ilike('data->>Номер авто', `%${val}%`)
+                    .limit(10);
+
+                if (data) {
+                    this.showGlobalCarDropdown(dropdown, data, 'number');
+                }
+            }
+        });
+    }
+
+    private showGlobalCarDropdown(dropdown: HTMLElement, rawCars: any[], primary: 'model' | 'number' = 'model'): void {
         const items = rawCars.map(row => {
             const model = row.data['Авто'] || 'Unknown';
             const number = row.data['Номер авто'] || '';
+
+            const text = primary === 'model' ? model : number;
+            const subtext = primary === 'model' ? (number ? `Номер: ${number}` : '') : model;
+
             return {
-                text: model,
-                subtext: number ? `Номер: ${number}` : '',
+                text: text,
+                subtext: subtext,
                 onClick: async () => {
                     // When global car selected, we need to load client data
                     // 1. Fill car fields
@@ -413,8 +447,7 @@ export class ReservationModal {
                             additionalInfo: clientData.data['Додатковий'] || '',
                             rawData: clientData.data
                         };
-                        this.handleClientSelect(client, false); // false to avoid reloading cars which we might already have or don't need to overwrite immediately
-                        // Actually, handleClientSelect loads cars. That's fine.
+                        this.handleClientSelect(client, false);
                     }
                 }
             };

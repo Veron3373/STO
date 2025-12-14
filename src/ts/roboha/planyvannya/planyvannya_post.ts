@@ -726,7 +726,7 @@ export class PostModal {
   /**
    * Обробляє submit форми
    */
-  private handleSubmit(): void {
+  private async handleSubmit(): Promise<void> {
     const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
     const inputTitle = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
     const inputSubtitle = document.getElementById('postPostFormInputSubtitle') as HTMLInputElement;
@@ -745,10 +745,194 @@ export class PostModal {
       return;
     }
 
+    // Якщо замок відкритий - виконуємо операції з БД
+    if (!this.isLocked) {
+      await this.handleDatabaseOperation(cehTitle, title);
+      return;
+    }
+
+    // Якщо замок закритий - використовуємо callback
     if (this.onSubmitCallback) {
       this.onSubmitCallback({ cehTitle, title, subtitle });
     }
 
     this.close();
+  }
+
+  /**
+   * Видаляє емоджі з тексту
+   */
+  private removeEmojis(text: string): string {
+    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{238C}-\u{2454}\u{20D0}-\u{20FF}\u{FE00}-\u{FE0F}]/gu, '').trim();
+  }
+
+  /**
+   * Виконує операції з БД залежно від action state
+   */
+  private async handleDatabaseOperation(cehTitle: string, postTitle: string): Promise<void> {
+    try {
+      switch (this.currentActionState) {
+        case 'add':
+          await this.handleAddOperation(cehTitle, postTitle);
+          break;
+        case 'edit':
+          await this.handleEditOperation(cehTitle, postTitle);
+          break;
+        case 'delete':
+          await this.handleDeleteOperation(cehTitle);
+          break;
+      }
+
+      // Оновлюємо дані автодоповнення після операції
+      await this.refreshAutocompleteData();
+      this.close();
+    } catch (error) {
+      console.error('❌ Помилка операції з БД:', error);
+      alert('Помилка виконання операції!');
+    }
+  }
+
+  /**
+   * Додає категорію та пост до БД
+   */
+  private async handleAddOperation(cehTitle: string, postTitle: string): Promise<void> {
+    // Перевіряємо чи категорія вже існує
+    const { data: existingCategory, error: categoryCheckError } = await supabase
+      .from('post_category')
+      .select('category_id, category')
+      .ilike('category', cehTitle)
+      .maybeSingle();
+
+    if (categoryCheckError) throw categoryCheckError;
+
+    let categoryId: number;
+
+    if (existingCategory) {
+      // Категорія вже існує
+      categoryId = existingCategory.category_id;
+      console.log(`ℹ️ Категорія "${cehTitle}" вже існує`);
+    } else {
+      // Додаємо нову категорію
+      const { data: newCategory, error: categoryInsertError } = await supabase
+        .from('post_category')
+        .insert({ category: cehTitle })
+        .select('category_id')
+        .single();
+
+      if (categoryInsertError) throw categoryInsertError;
+      categoryId = newCategory.category_id;
+      console.log(`✅ Категорія "${cehTitle}" додана`);
+    }
+
+    // Перевіряємо чи пост вже існує (нехтуємо емоджі)
+    const postTitleNoEmoji = this.removeEmojis(postTitle);
+
+    // Отримуємо всі пости з категорії
+    const { data: existingPosts, error: postsError } = await supabase
+      .from('post_name')
+      .select('post_id, name');
+
+    if (postsError) throw postsError;
+
+    // Перевіряємо наявність поста без емоджі
+    const postExists = existingPosts?.some(post => {
+      const existingNameNoEmoji = this.removeEmojis(post.name);
+      return existingNameNoEmoji.toLowerCase() === postTitleNoEmoji.toLowerCase();
+    });
+
+    if (postExists) {
+      alert(`Дані вже існують:\n- Категорія: ${existingCategory ? 'існує' : 'додана'}\n- Пост: існує`);
+    } else {
+      // Додаємо новий пост
+      const { error: postInsertError } = await supabase
+        .from('post_name')
+        .insert({
+          name: postTitle,
+          category: categoryId
+        });
+
+      if (postInsertError) throw postInsertError;
+
+      alert(`Дані додані ОК:\n- Категорія: ${existingCategory ? 'вже існувала' : 'нова'}\n- Пост: новий`);
+      console.log(`✅ Пост "${postTitle}" додано до категорії ${categoryId}`);
+    }
+  }
+
+  /**
+   * Редагує категорію та пост в БД
+   */
+  private async handleEditOperation(cehTitle: string, postTitle: string): Promise<void> {
+    // Редагування категорії: шукаємо по selectedCategoryId і оновлюємо category
+    if (this.selectedCategoryId) {
+      const { error: categoryUpdateError } = await supabase
+        .from('post_category')
+        .update({ category: cehTitle })
+        .eq('category_id', this.selectedCategoryId);
+
+      if (categoryUpdateError) throw categoryUpdateError;
+      console.log(`✅ Категорія оновлена: ${cehTitle}`);
+    }
+
+    // Редагування поста: потрібно знайти post_id
+    // Спочатку знаходимо пост за старою назвою в selectedCategoryId
+
+    const { data: existingPosts, error: postsError } = await supabase
+      .from('post_name')
+      .select('post_id, name')
+      .eq('category', this.selectedCategoryId || 0);
+
+    if (postsError) throw postsError;
+
+    // Знаходимо перший пост який відповідає категорії
+    // (можливо треба буде зберігати обраний post_id окремо)
+    if (existingPosts && existingPosts.length > 0) {
+      // Оновлюємо перший знайдений пост в категорії
+      const { error: postUpdateError } = await supabase
+        .from('post_name')
+        .update({ name: postTitle })
+        .eq('post_id', existingPosts[0].post_id);
+
+      if (postUpdateError) throw postUpdateError;
+      console.log(`✅ Пост оновлено: ${postTitle}`);
+    }
+
+    alert('Дані відредаговані ОК');
+  }
+
+  /**
+   * Видаляє категорію та пост з БД
+   */
+  private async handleDeleteOperation(cehTitle: string): Promise<void> {
+    // Видалення поста: шукаємо по category_id (selectedCategoryId)
+    const { data: existingPosts, error: postsError } = await supabase
+      .from('post_name')
+      .select('post_id, name')
+      .eq('category', this.selectedCategoryId || 0);
+
+    if (postsError) throw postsError;
+
+    if (existingPosts && existingPosts.length > 0) {
+      // Видаляємо перший знайдений пост в категорії
+      const { error: postDeleteError } = await supabase
+        .from('post_name')
+        .delete()
+        .eq('post_id', existingPosts[0].post_id);
+
+      if (postDeleteError) throw postDeleteError;
+      console.log(`✅ Пост видалено: ${existingPosts[0].name}`);
+    }
+
+    // Видалення категорії: шукаємо по selectedCategoryId
+    if (this.selectedCategoryId) {
+      const { error: categoryDeleteError } = await supabase
+        .from('post_category')
+        .delete()
+        .eq('category_id', this.selectedCategoryId);
+
+      if (categoryDeleteError) throw categoryDeleteError;
+      console.log(`✅ Категорія видалена: ${cehTitle}`);
+    }
+
+    alert('Дані видалені ОК');
   }
 }

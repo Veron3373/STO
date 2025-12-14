@@ -1,6 +1,6 @@
 /**
  * Модуль для модалки створення нового поста
- * planyvannya_post.ts
+ * D:\Alim\Проект\Бодя СТО\stoBraclavecGIT\src\ts\roboha\planyvannya\planyvannya_post.ts
  */
 
 import { supabase } from "../../vxid/supabaseClient";
@@ -41,6 +41,7 @@ export class PostModal {
   private activeDropdowns: HTMLElement[] = [];
   private selectedCategoryId: number | null = null;
   private isLocked: boolean = true;
+  private currentActionState: 'add' | 'edit' | 'delete' = 'add';
 
   constructor() {
     this.createModalHTML();
@@ -203,6 +204,11 @@ export class PostModal {
 
     if (lockBtn) {
       lockBtn.addEventListener('click', () => this.toggleLockMode());
+    }
+
+    const modeBtn = document.getElementById('postModalAddBtn');
+    if (modeBtn) {
+      modeBtn.addEventListener('click', () => this.cycleActionState());
     }
 
     if (this.modalOverlay) {
@@ -586,6 +592,9 @@ export class PostModal {
       if (this.isLocked) {
         lockBtn.classList.remove('active');
         // Закритий замок (active class removed hides open lock)
+        // Reset state when locking
+        this.currentActionState = 'add';
+        this.updateActionStateUI();
       } else {
         lockBtn.classList.add('active');
         // Відкритий замок
@@ -598,6 +607,7 @@ export class PostModal {
         controls.classList.remove('visible');
       } else {
         controls.classList.add('visible');
+        this.updateActionStateUI();
       }
     }
 
@@ -614,6 +624,46 @@ export class PostModal {
         submitBtn.classList.remove('post-btn-primary'); // Remove green
         submitBtn.classList.add('post-btn-blue'); // Add blue
       }
+    }
+  }
+
+  /**
+   * Cycles through action states: add -> edit -> delete -> add
+   */
+  private cycleActionState(): void {
+    if (this.currentActionState === 'add') {
+      this.currentActionState = 'edit';
+    } else if (this.currentActionState === 'edit') {
+      this.currentActionState = 'delete';
+    } else {
+      this.currentActionState = 'add';
+    }
+    this.updateActionStateUI();
+  }
+
+  /**
+   * Updates the UI of the action button based on current state
+   */
+  private updateActionStateUI(): void {
+    const btn = document.getElementById('postModalAddBtn');
+    if (!btn) return;
+
+    // Remove all state classes first
+    btn.classList.remove('post-mode--add', 'post-mode--edit', 'post-mode--delete');
+
+    switch (this.currentActionState) {
+      case 'add':
+        btn.textContent = 'Додати';
+        btn.classList.add('post-mode--add');
+        break;
+      case 'edit':
+        btn.textContent = 'Редагувати';
+        btn.classList.add('post-mode--edit');
+        break;
+      case 'delete':
+        btn.textContent = 'Видалити';
+        btn.classList.add('post-mode--delete');
+        break;
     }
   }
 

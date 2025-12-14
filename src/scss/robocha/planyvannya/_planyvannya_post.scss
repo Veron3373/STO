@@ -240,12 +240,30 @@ $white: #fff;
         background: rgba(0, 0, 0, 0.05);
     }
 
-    &.post-mode--edit {
-        color: green;
-        border-color: rgba(0, 128, 0, 0.2);
+    &.post-mode--add {
+        color: #28a745; // Green
+        border-color: rgba(40, 167, 69, 0.2);
         
         &:hover {
-             background: rgba(0, 128, 0, 0.1);
+             background: rgba(40, 167, 69, 0.1);
+        }
+    }
+
+    &.post-mode--edit {
+        color: #ffc107; // Orange
+        border-color: rgba(255, 193, 7, 0.2);
+        
+        &:hover {
+             background: rgba(255, 193, 7, 0.1);
+        }
+    }
+
+    &.post-mode--delete {
+        color: #dc3545; // Red
+        border-color: rgba(220, 53, 69, 0.2);
+        
+        &:hover {
+             background: rgba(220, 53, 69, 0.1);
         }
     }
 }

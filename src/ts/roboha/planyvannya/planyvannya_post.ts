@@ -488,6 +488,7 @@ export class PostModal {
         // Якщо це категорія - оновлюємо selectedCategoryId
         if (input.id === 'postCehFormInputTitle') {
           this.selectedCategoryId = this.findCategoryIdByName(item);
+          console.log(`🔍 Встановлено selectedCategoryId: ${this.selectedCategoryId} для "${item}"`);
           const postInput = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
           if (postInput) postInput.value = '';
         }

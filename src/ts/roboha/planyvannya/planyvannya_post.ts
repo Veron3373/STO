@@ -40,6 +40,7 @@ export class PostModal {
   };
   private activeDropdowns: HTMLElement[] = [];
   private selectedCategoryId: number | null = null;
+  private isLocked: boolean = true;
 
   constructor() {
     this.createModalHTML();
@@ -133,6 +134,16 @@ export class PostModal {
         <div class="post-modal" id="postPostModal">
           <div class="post-modal-header">
             <h2 class="post-modal-title" id="postPostModalTitle">Новий пост</h2>
+            
+            <button class="post-edit-mode-btn" id="postModalLockBtn" title="Режим редагування">
+              <span class="icon-view">🔒</span>
+              <span class="icon-edit">🔓</span>
+            </button>
+
+            <div class="post-modal-controls" id="postModalControls">
+              <button id="postModalAddBtn" class="mode-toggle-btn mode--edit" type="button">Додати</button>
+            </div>
+
             <button class="post-modal-close" id="postPostModalClose">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -176,6 +187,7 @@ export class PostModal {
     const closeBtn = document.getElementById('postPostModalClose');
     const cancelBtn = document.getElementById('postPostModalCancel');
     const submitBtn = document.getElementById('postPostModalSubmit');
+    const lockBtn = document.getElementById('postModalLockBtn');
 
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.close());
@@ -187,6 +199,10 @@ export class PostModal {
 
     if (submitBtn) {
       submitBtn.addEventListener('click', () => this.handleSubmit());
+    }
+
+    if (lockBtn) {
+      lockBtn.addEventListener('click', () => this.toggleLockMode());
     }
 
     if (this.modalOverlay) {
@@ -325,39 +341,39 @@ export class PostModal {
 
     // При фокусі показуємо dropdown
     // При кліку показуємо dropdown
-    input.addEventListener('click', () => {
-      // Оновлюємо selectedCategoryId на основі поточного значення категорії
-      if (categoryInput) {
-        this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
-      }
+    // input.addEventListener('click', () => {
+    //   // Оновлюємо selectedCategoryId на основі поточного значення категорії
+    //   if (categoryInput) {
+    //     this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
+    //   }
 
-      const data = this.getFilteredPostNames();
-      const value = input.value.toLowerCase().trim();
+    //   const data = this.getFilteredPostNames();
+    //   const value = input.value.toLowerCase().trim();
 
-      if (value.length === 0) {
-        this.showDropdown(dropdown, data, input);
-      } else {
-        const filtered = data.filter(item =>
-          item.toLowerCase().includes(value)
-        );
-        this.showDropdown(dropdown, filtered, input);
-      }
-    });
+    //   if (value.length === 0) {
+    //     this.showDropdown(dropdown, data, input);
+    //   } else {
+    //     const filtered = data.filter(item =>
+    //       item.toLowerCase().includes(value)
+    //     );
+    //     this.showDropdown(dropdown, filtered, input);
+    //   }
+    // });
 
     // При фокусі показуємо dropdown тільки якщо є текст
-    input.addEventListener('focus', () => {
-      const value = input.value.toLowerCase().trim();
-      if (value.length > 0) {
-        if (categoryInput) {
-          this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
-        }
-        const data = this.getFilteredPostNames();
-        const filtered = data.filter(item =>
-          item.toLowerCase().includes(value)
-        );
-        this.showDropdown(dropdown, filtered, input);
-      }
-    });
+    // input.addEventListener('focus', () => {
+    //   const value = input.value.toLowerCase().trim();
+    //   if (value.length > 0) {
+    //     if (categoryInput) {
+    //       this.selectedCategoryId = this.findCategoryIdByName(categoryInput.value.trim());
+    //     }
+    //     const data = this.getFilteredPostNames();
+    //     const filtered = data.filter(item =>
+    //       item.toLowerCase().includes(value)
+    //     );
+    //     this.showDropdown(dropdown, filtered, input);
+    //   }
+    // });
 
     // Навігація клавіатурою
     input.addEventListener('keydown', (e) => {
@@ -547,12 +563,70 @@ export class PostModal {
     await this.loadAutocompleteData();
   }
 
+
+
+  /**
+   * Перемикає режим блокування (редагування)
+   */
+  private toggleLockMode(): void {
+    this.isLocked = !this.isLocked;
+    this.updateModalState();
+  }
+
+  /**
+   * Оновлює стан модалки залежно від isLocked
+   */
+  private updateModalState(): void {
+    const lockBtn = document.getElementById('postModalLockBtn');
+    const controls = document.getElementById('postModalControls');
+    const submitBtn = document.getElementById('postPostModalSubmit');
+
+    // Оновлення кнопки замка
+    if (lockBtn) {
+      if (this.isLocked) {
+        lockBtn.classList.remove('active');
+        // Закритий замок (active class removed hides open lock)
+      } else {
+        lockBtn.classList.add('active');
+        // Відкритий замок
+      }
+    }
+
+    // Оновлення контролів (кнопка Додати)
+    if (controls) {
+      if (this.isLocked) {
+        controls.classList.remove('visible');
+      } else {
+        controls.classList.add('visible');
+      }
+    }
+
+    // Оновлення кнопки Submit
+    if (submitBtn) {
+      if (this.isLocked) {
+        // Locked state: "Створити", standard primary style
+        submitBtn.textContent = 'Створити';
+        submitBtn.classList.remove('post-btn-blue');
+        submitBtn.classList.add('post-btn-primary');
+      } else {
+        // Unlocked state: "ОК", blue style
+        submitBtn.textContent = 'ОК';
+        submitBtn.classList.remove('post-btn-primary'); // Remove green
+        submitBtn.classList.add('post-btn-blue'); // Add blue
+      }
+    }
+  }
+
   /**
    * Відкриває модалку для створення поста
    * @param onSubmit Колбек при успішному створенні
    * @param prefillCehTitle Попередньо заповнена назва цеху (опціонально)
    */
   public open(onSubmit: PostSubmitCallback, prefillCehTitle?: string): void {
+    // Reset lock state on open
+    this.isLocked = true;
+    this.updateModalState();
+
     this.onSubmitCallback = onSubmit;
 
     // Оновлюємо дані автодоповнення при відкритті модалки

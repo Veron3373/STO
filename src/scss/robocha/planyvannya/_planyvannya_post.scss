@@ -150,3 +150,123 @@ $white: #fff;
         background: #dee2e6;
     }
 }
+
+// --- NEW STYLES FOR LOCK & TOGGLE ---
+
+.post-edit-mode-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding: 0;
+    margin-left: 12px;
+
+    span {
+        display: block;
+        line-height: 1;
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+        pointer-events: none;
+    }
+
+    .icon-view {
+        display: block;
+    }
+
+    .icon-edit {
+        display: none;
+    }
+
+    &:hover {
+        transform: scale(1.2) rotate(-5deg);
+        filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.2));
+    }
+
+    &:active {
+        transform: scale(0.9);
+    }
+
+    &.active {
+        .icon-view {
+            display: none;
+        }
+
+        .icon-edit {
+            display: block;
+            animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        &:hover {
+            filter: drop-shadow(0 0 8px rgba(255, 200, 0, 0.5));
+        }
+    }
+}
+
+.post-modal-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: 16px;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+
+    &.visible {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: all;
+    }
+}
+
+.mode-toggle-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    &.mode--edit {
+        color: green;
+        border-color: rgba(0, 128, 0, 0.2);
+        
+        &:hover {
+             background: rgba(0, 128, 0, 0.1);
+        }
+    }
+}
+
+.post-btn-blue {
+    background: #007bff !important;
+    color: #fff !important;
+
+    &:hover {
+        background: #0056b3 !important;
+    }
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

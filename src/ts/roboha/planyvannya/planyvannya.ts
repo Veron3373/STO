@@ -1,5 +1,6 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
+import { PostArxiv } from "./post_arxiv"; // Import new class
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 interface Post {
@@ -87,6 +88,17 @@ class SchedulerApp {
 
     // Ініціалізація модалок
     this.postModal = new PostModal();
+
+    // Initialize PostArxiv
+    // We expect the container to exist because this runs on DOMContentLoaded
+    try {
+      new PostArxiv("postCalendarGrid");
+    } catch (e) {
+      console.error("Failed to initialize PostArxiv:", e);
+      // Fallback or handle error - though strictly TS requires init in constructor if not optional
+      // To satisfy TS strict property init, we should probably assign it. 
+      // If it throws, the app might crash, which is acceptable if critical.
+    }
 
     this.init();
   }

@@ -426,10 +426,10 @@ $sidebar-width: 30%;
 
   .post-row-track {
     flex: 1;
-    display: none;
-    grid-template-columns: repeat(24, 1fr);
+    display: block; // Changed from none to allow interaction
     position: relative;
-    padding: 6px 0;
+    height: 100%;
+    // grid-template-columns: repeat(24, 1fr); // moved to grid class usage if needed, or kept here if we want grid layout
   }
 }
 

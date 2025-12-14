@@ -1,0 +1,169 @@
+// --- STYLES FOR RESERVATION FEATURE ---
+
+// Selection Box (visual feedback during drag)
+.post-reservation-selection {
+    position: absolute;
+    top: 4px; // Small padding from top of row
+    bottom: 4px; // Small padding from bottom of row
+    background-color: rgba(51, 154, 240, 0.4); // Semi-transparent blue
+    border: 1px solid #1c7ed6;
+    border-radius: 4px;
+    pointer-events: none; // Don't interfere with mouse events
+    z-index: 50;
+    display: none; // Hidden by default
+
+    &.active {
+        display: block;
+    }
+}
+
+// Modal Styling (Reusing standard modal styles where possible, but adding specific overrides)
+.post-arxiv-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000; // High z-index to be on top of everything
+    backdrop-filter: blur(2px);
+}
+
+.post-arxiv-modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    animation: postArxivFadeIn 0.2s ease-out;
+
+    .post-arxiv-header {
+        background: #004d26; // Primary blue (green actually based on _planyvannya.scss)
+        color: #fff;
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .post-arxiv-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            padding: 4px;
+
+            &:hover {
+                color: #fff;
+            }
+        }
+    }
+
+    .post-arxiv-body {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .post-arxiv-footer {
+        padding: 16px 24px;
+        background: #f8f9fa;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+}
+
+// Blocks for reservations on the timeline
+.post-reservation-block {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    background-color: #fab005; // Yellow color mentioned in main scss variables
+    border: 1px solid #e67700;
+    border-radius: 4px;
+    z-index: 40;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    // Text inside the block
+    span {
+        font-size: 11px;
+        font-weight: 600;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        padding: 0 4px;
+    }
+
+    &:hover {
+        filter: brightness(1.05);
+    }
+}
+
+// Form elements in modal
+.post-arxiv-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #555;
+    }
+
+    input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+
+        &:focus {
+            outline: none;
+            border-color: #004d26;
+            box-shadow: 0 0 0 2px rgba(0, 77, 38, 0.1);
+        }
+    }
+
+    .post-time-inputs {
+        display: flex;
+        gap: 12px;
+
+        div {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+    }
+}
+
+@keyframes postArxivFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

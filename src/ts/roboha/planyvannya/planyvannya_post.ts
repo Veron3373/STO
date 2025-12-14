@@ -614,6 +614,8 @@ export class PostModal {
     const lockBtn = document.getElementById('postModalLockBtn');
     const controls = document.getElementById('postModalControls');
     const submitBtn = document.getElementById('postPostModalSubmit');
+    const postInput = document.getElementById('postPostFormInputTitle') as HTMLInputElement;
+    const postDropdown = document.getElementById('postPostNameDropdown');
 
     // Оновлення кнопки замка
     if (lockBtn) {
@@ -651,6 +653,22 @@ export class PostModal {
         submitBtn.textContent = 'ОК';
         submitBtn.classList.remove('post-btn-primary'); // Remove green
         submitBtn.classList.add('post-btn-blue'); // Add blue
+      }
+    }
+
+    // Оновлення dropdown постів при зміні стану замка
+    // Якщо є текст в інпуті - оновлюємо dropdown
+    if (postInput && postDropdown && postInput.value.trim()) {
+      const value = postInput.value.toLowerCase().trim();
+      const data = this.getFilteredPostNames();
+
+      if (value.length === 0) {
+        this.showDropdown(postDropdown, data, postInput);
+      } else {
+        const filtered = data.filter(item =>
+          item.toLowerCase().includes(value)
+        );
+        this.showDropdown(postDropdown, filtered, postInput);
       }
     }
   }

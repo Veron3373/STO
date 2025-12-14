@@ -152,6 +152,26 @@
     &:hover {
         filter: brightness(1.05);
     }
+
+    // Dragging state
+    &.dragging-active {
+        position: fixed;
+        z-index: 1000;
+        pointer-events: none; // Important to detect element below
+        opacity: 0.9;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        transform: scale(1.02);
+    }
+
+    &.post-drag-valid {
+        background-color: #40c057 !important; // Green
+        border-color: #2b8a3e !important;
+    }
+
+    &.post-drag-invalid {
+        background-color: #fa5252 !important; // Red
+        border-color: #c92a2a !important;
+    }
 }
 
 // Form elements in modal

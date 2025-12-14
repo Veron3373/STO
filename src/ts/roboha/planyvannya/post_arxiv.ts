@@ -20,6 +20,12 @@ export class PostArxiv {
     private timeSlotsCount: number = 24; // 8:00 to 20:00 is 12 hours * 2 = 24 slots (30 min each)
     private startHour: number = 8;
 
+    // Moving block state
+    private movingBlock: HTMLElement | null = null;
+    private originalParent: HTMLElement | null = null;
+    private originalLeft: string = '';
+    private dragOffsetX: number = 0;
+
     // Modal elements
     private modalOverlay: HTMLElement | null = null;
 
@@ -58,7 +64,10 @@ export class PostArxiv {
     private handleMouseDown(e: MouseEvent): void {
         const target = e.target as HTMLElement;
 
-        // Ignore if clicking on existing reservation block (handled by context menu or other events)
+        // Ignore if clicking on existing reservation block
+        // (If it's a block, handleBlockMouseDown will be triggered by its own listener,
+        // but we need to ensure this handler doesn't interfere.
+        // StopPropagation in block handler will prevent this, but check here too)
         if (target.closest('.post-reservation-block')) return;
 
         const track = target.closest('.post-row-track');
@@ -151,7 +160,7 @@ export class PostArxiv {
 
             // If we have valid ranges, we show the modal for the overall span
             // But we need to be clear about what will happen.
-            // Based on requirements: 
+            // Based on requirements:
             // 1. If drag 10-15 covers 12-13, split into 10-12 and 13-15.
             // 2. If drag 10-13 covers 12-13 partially (ends at 13), truncate to 10-12.
             // Basically, calculateValidRanges should return the free slots within the drag area.
@@ -159,7 +168,7 @@ export class PostArxiv {
             // For display in modal, we show the start of first block and end of last block?
             // Or simply the dragged range, and let user know it might be split?
             // Requirement says: "open modal... 10:00 to 12:00" suggests showing the effective range.
-            // If split, maybe show start of first and end of last? 
+            // If split, maybe show start of first and end of last?
 
             const effectiveStart = validRanges[0].start;
             const effectiveEnd = validRanges[validRanges.length - 1].end;
@@ -171,49 +180,158 @@ export class PostArxiv {
         }
     }
 
-    private calculateValidRanges(start: number, end: number, row: HTMLElement): { start: number, end: number }[] {
-        // Get all existing blocks in this row
-        const existingBlocks = Array.from(row.querySelectorAll('.post-reservation-block')) as HTMLElement[];
-        const busyIntervals: { start: number, end: number }[] = [];
-        // const totalMinutes = 12 * 60; // 720 minutes - unused, removing
+    // --- Block Moving Logic ---
 
-        existingBlocks.forEach(block => {
-            // Calculate minutes from style percentage (approximated back)
-            // or better, store minutes in dataset!
-            // Since we didn't store yet, let's reverse calculate from style.
-            const blockStart = parseInt(block.dataset.start || '0');
-            const blockEnd = parseInt(block.dataset.end || '0');
+    private handleBlockMouseDown(e: MouseEvent, block: HTMLElement): void {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent creation selection
 
-            busyIntervals.push({ start: blockStart, end: blockEnd });
-        });
+        this.movingBlock = block;
+        this.originalParent = block.parentElement;
+        this.originalLeft = block.style.left;
 
-        // Sort intervals
-        busyIntervals.sort((a, b) => a.start - b.start);
+        // Calculate offset from block start
+        const rect = block.getBoundingClientRect();
+        this.dragOffsetX = e.clientX - rect.left;
 
-        // Subtract busy intervals from [start, end]
-        const result: { start: number, end: number }[] = [];
-        let currentStart = start;
+        // Set dragging styles
+        block.classList.add('dragging-active');
+        // We set fixed position to follow mouse freely
+        block.style.width = `${rect.width}px`; // Fix width in pixels during drag
+        block.style.left = `${rect.left}px`;
+        block.style.top = `${rect.top}px`;
 
-        for (const interval of busyIntervals) {
-            if (interval.end <= currentStart) continue; // Block is before us
-            if (interval.start >= end) break; // Block is after us
+        // Move to body to ensure it's on top of everything and position absolute/fixed works relative to viewport
+        document.body.appendChild(block);
 
-            // Overlap detected
-            if (interval.start > currentStart) {
-                // There is a gap before this block
-                result.push({ start: currentStart, end: interval.start });
+        document.addEventListener('mousemove', this.onBlockMouseMove);
+        document.addEventListener('mouseup', this.onBlockMouseUp);
+    }
+
+    private onBlockMouseMove = (e: MouseEvent): void => {
+        if (!this.movingBlock) return;
+
+        // Move block
+        this.movingBlock.style.left = `${e.clientX - this.dragOffsetX}px`;
+        this.movingBlock.style.top = `${e.clientY - (this.movingBlock.offsetHeight / 2)}px`;
+
+        // Check validity
+        this.movingBlock.className = 'post-reservation-block dragging-active'; // Reset classes
+
+        // Hide moving block pointer events temporarily to check what's underneath
+        this.movingBlock.style.pointerEvents = 'none';
+        const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+        this.movingBlock.style.pointerEvents = ''; // Restore pointer events for the block itself
+
+        const track = elemBelow?.closest('.post-row-track') as HTMLElement;
+
+        if (track) {
+            // Calculate potential times
+            const trackRect = track.getBoundingClientRect();
+            const relativeX = (e.clientX - this.dragOffsetX) - trackRect.left;
+
+            // Calculate start time based on position
+            const totalMinutes = 12 * 60;
+            let startMins = Math.round((relativeX / trackRect.width) * totalMinutes);
+
+            // Snap to 30 min (optional, but good for UX)
+            startMins = Math.round(startMins / 30) * 30;
+
+            const duration = parseInt(this.movingBlock.dataset.end || '0') - parseInt(this.movingBlock.dataset.start || '0');
+            const endMins = startMins + duration;
+
+            // Bounds check
+            if (startMins >= 0 && endMins <= totalMinutes) {
+                // Check overlap, EXCLUDING self (which is not in track currently)
+                const overlaps = this.checkOverlap(startMins, endMins, track);
+
+                if (overlaps) {
+                    this.movingBlock.classList.add('post-drag-invalid');
+                } else {
+                    this.movingBlock.classList.add('post-drag-valid');
+                }
+            } else {
+                this.movingBlock.classList.add('post-drag-invalid');
             }
+        } else {
+            this.movingBlock.classList.add('post-drag-invalid');
+        }
+    }
 
-            // Skip the busy block
-            currentStart = Math.max(currentStart, interval.end);
+    private onBlockMouseUp = (_e: MouseEvent): void => {
+        if (!this.movingBlock) return;
+
+        document.removeEventListener('mousemove', this.onBlockMouseMove);
+        document.removeEventListener('mouseup', this.onBlockMouseUp);
+
+        // Check if valid drop
+        const isValid = this.movingBlock.classList.contains('post-drag-valid');
+        const track = document.elementFromPoint(_e.clientX, _e.clientY)?.closest('.post-row-track') as HTMLElement;
+
+        this.movingBlock.classList.remove('dragging-active', 'post-drag-valid', 'post-drag-invalid');
+        this.movingBlock.style.pointerEvents = '';
+        this.movingBlock.style.position = 'absolute';
+        this.movingBlock.style.top = '4px'; // Reset top to fit in row
+        this.movingBlock.style.bottom = '4px';
+        this.movingBlock.style.width = ''; // Reset to percent later
+
+        if (isValid && track) {
+            // Commit move
+            const trackRect = track.getBoundingClientRect();
+            const relativeX = (_e.clientX - this.dragOffsetX) - trackRect.left;
+            const totalMinutes = 12 * 60;
+            let startMins = Math.round((relativeX / trackRect.width) * totalMinutes);
+            startMins = Math.round(startMins / 30) * 30;
+
+            const duration = parseInt(this.movingBlock.dataset.end || '0') - parseInt(this.movingBlock.dataset.start || '0');
+            const endMins = startMins + duration;
+
+            // Update block data
+            this.movingBlock.dataset.start = startMins.toString();
+            this.movingBlock.dataset.end = endMins.toString();
+
+            // Update styles to percent
+            const leftPercent = (startMins / totalMinutes) * 100;
+            const widthPercent = (duration / totalMinutes) * 100;
+
+            this.movingBlock.style.left = `${leftPercent}%`;
+            this.movingBlock.style.width = `${widthPercent}%`;
+
+            track.appendChild(this.movingBlock);
+            showNotification('Запис переміщено', 'success');
+        } else {
+            // Revert
+            if (this.originalParent) {
+                this.originalParent.appendChild(this.movingBlock);
+                this.movingBlock.style.left = this.originalLeft;
+                const duration = parseInt(this.movingBlock.dataset.end || '0') - parseInt(this.movingBlock.dataset.start || '0');
+                const totalMinutes = 12 * 60;
+                const widthPercent = (duration / totalMinutes) * 100;
+                this.movingBlock.style.width = `${widthPercent}%`;
+            } else {
+                this.movingBlock.remove(); // Should not happen
+            }
         }
 
-        // Add remaining part if any
-        if (currentStart < end) {
-            result.push({ start: currentStart, end: end });
-        }
+        this.movingBlock = null;
+        this.originalParent = null;
+    }
 
-        return result;
+    private checkOverlap(start: number, end: number, row: HTMLElement): boolean {
+        const blocks = Array.from(row.querySelectorAll('.post-reservation-block')) as HTMLElement[];
+        for (const block of blocks) {
+            // Skip if it's the element we are moving (though we removed it from DOM, so redundant but safe)
+            if (block === this.movingBlock) continue;
+
+            const bStart = parseInt(block.dataset.start || '0');
+            const bEnd = parseInt(block.dataset.end || '0');
+
+            // Check overlap
+            if (Math.max(start, bStart) < Math.min(end, bEnd)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private resetSelection(): void {
@@ -256,7 +374,7 @@ export class PostArxiv {
                             <label>Дата</label>
                             <input type="date" id="postArxivDate" value="${today}">
                         </div>
-                        
+
                         <div class="post-arxiv-form-group">
                             <label>Час</label>
                             <div class="post-time-inputs">
@@ -372,7 +490,62 @@ export class PostArxiv {
             this.showContextMenu(e, block);
         });
 
+        // Drag start event
+        block.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left click
+                this.handleBlockMouseDown(e, block);
+            }
+        });
+
         row.appendChild(block);
+    }
+
+    private calculateValidRanges(start: number, end: number, row: HTMLElement): { start: number, end: number }[] {
+        // Get all existing blocks in this row
+        const existingBlocks = Array.from(row.querySelectorAll('.post-reservation-block')) as HTMLElement[];
+        const busyIntervals: { start: number, end: number }[] = [];
+        // const totalMinutes = 12 * 60; // 720 minutes - unused, removing
+
+        existingBlocks.forEach(block => {
+            // Skip the block that is currently being moved, as it's not "busy" in its original spot for this calculation
+            if (block === this.movingBlock) return;
+
+            // Calculate minutes from style percentage (approximated back)
+            // or better, store minutes in dataset!
+            // Since we didn't store yet, let's reverse calculate from style.
+            const blockStart = parseInt(block.dataset.start || '0');
+            const blockEnd = parseInt(block.dataset.end || '0');
+
+            busyIntervals.push({ start: blockStart, end: blockEnd });
+        });
+
+        // Sort intervals
+        busyIntervals.sort((a, b) => a.start - b.start);
+
+        // Subtract busy intervals from [start, end]
+        const result: { start: number, end: number }[] = [];
+        let currentStart = start;
+
+        for (const interval of busyIntervals) {
+            if (interval.end <= currentStart) continue; // Block is before us
+            if (interval.start >= end) break; // Block is after us
+
+            // Overlap detected
+            if (interval.start > currentStart) {
+                // There is a gap before this block
+                result.push({ start: currentStart, end: interval.start });
+            }
+
+            // Skip the busy block
+            currentStart = Math.max(currentStart, interval.end);
+        }
+
+        // Add remaining part if any
+        if (currentStart < end) {
+            result.push({ start: currentStart, end: end });
+        }
+
+        return result;
     }
 
     private showContextMenu(e: MouseEvent, block: HTMLElement): void {

@@ -1,6 +1,6 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
-import { PostArxiv } from "./post_arxiv"; // Import new class
+import { PostArxiv } from "./planyvannya_arxiv"; // Import new class
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 interface Post {

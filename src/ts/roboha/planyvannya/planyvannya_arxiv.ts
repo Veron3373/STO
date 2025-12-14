@@ -1,4 +1,4 @@
-import '../../../scss/robocha/planyvannya/_post_arxiv.scss';
+import '../../../scss/robocha/planyvannya/_planyvannya_arxiv.scss';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 
 export interface ReservationData {

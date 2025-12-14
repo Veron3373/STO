@@ -26,6 +26,9 @@ export class PostArxiv {
     private originalLeft: string = '';
     private dragOffsetX: number = 0;
 
+    // Editing block state
+    private editingBlock: HTMLElement | null = null;
+
     // Modal elements
     private modalOverlay: HTMLElement | null = null;
 
@@ -160,7 +163,7 @@ export class PostArxiv {
 
             // If we have valid ranges, we show the modal for the overall span
             // But we need to be clear about what will happen.
-            // Based on requirements:
+            // Based on requirements: 
             // 1. If drag 10-15 covers 12-13, split into 10-12 and 13-15.
             // 2. If drag 10-13 covers 12-13 partially (ends at 13), truncate to 10-12.
             // Basically, calculateValidRanges should return the free slots within the drag area.
@@ -168,7 +171,7 @@ export class PostArxiv {
             // For display in modal, we show the start of first block and end of last block?
             // Or simply the dragged range, and let user know it might be split?
             // Requirement says: "open modal... 10:00 to 12:00" suggests showing the effective range.
-            // If split, maybe show start of first and end of last?
+            // If split, maybe show start of first and end of last? 
 
             const effectiveStart = validRanges[0].start;
             const effectiveEnd = validRanges[validRanges.length - 1].end;
@@ -361,7 +364,7 @@ export class PostArxiv {
 
     // --- Modal Logic ---
 
-    private openModal(startTime: string, endTime: string): void {
+    private openModal(startTime: string, endTime: string, comment: string = ''): void {
         // Current date for default input
         const today = new Date().toISOString().split('T')[0];
 
@@ -377,7 +380,7 @@ export class PostArxiv {
                             <label>Дата</label>
                             <input type="date" id="postArxivDate" value="${today}">
                         </div>
-
+                        
                         <div class="post-arxiv-form-group">
                             <label>Час</label>
                             <div class="post-time-inputs">
@@ -394,7 +397,7 @@ export class PostArxiv {
 
                         <div class="post-arxiv-form-group">
                             <label>Коментар (необов'язково)</label>
-                            <input type="text" id="postArxivComment" placeholder="Введіть коментар...">
+                            <input type="text" id="postArxivComment" placeholder="Введіть коментар..." value="${comment}">
                         </div>
                     </div>
                     <div class="post-arxiv-footer">
@@ -419,6 +422,7 @@ export class PostArxiv {
             this.modalOverlay.remove();
             this.modalOverlay = null;
         }
+        this.editingBlock = null; // Reset editing state
         this.resetSelection();
     }
 
@@ -440,27 +444,33 @@ export class PostArxiv {
             return;
         }
 
-        // Since user might have changed times in modal, let's recalculate valid ranges
-        // based on what they entered vs what is occupied.
-        if (this.activeRow) {
-            const validRanges = this.calculateValidRanges(startMins, endMins, this.activeRow);
+        const targetRow = this.editingBlock ? this.editingBlock.closest('.post-row-track') as HTMLElement : this.activeRow;
+
+        if (targetRow) {
+            // Check overlaps, optionally excluding the block being edited if we are editing
+            const validRanges = this.calculateValidRanges(startMins, endMins, targetRow, this.editingBlock);
 
             if (validRanges.length === 0) {
                 showNotification('Обраний час повністю зайнятий', 'error');
                 return;
             }
 
+            // If we are editing and we found valid ranges (meaning we can save), 
+            // we should remove the OLD block before creating new ones.
+            if (this.editingBlock) {
+                this.editingBlock.remove();
+                this.editingBlock = null;
+            }
+
             // Create a block for each valid range (splitting logic)
             validRanges.forEach(range => {
-                if (this.activeRow) {
-                    this.createReservationBlock(this.activeRow, range.start, range.end, commentInput.value);
-                }
+                this.createReservationBlock(targetRow, range.start, range.end, commentInput.value);
             });
 
             if (validRanges.length > 1) {
                 showNotification(`Створено ${validRanges.length} записи (з урахуванням зайнятого часу)`, 'warning');
             } else {
-                showNotification('Час зарезервовано', 'success');
+                showNotification(this.editingBlock ? 'Запис оновлено' : 'Час зарезервовано', 'success');
             }
         }
 
@@ -481,6 +491,8 @@ export class PostArxiv {
         // Store exact minutes for accurate recalculations later
         block.dataset.start = startMins.toString();
         block.dataset.end = endMins.toString();
+        // Store comment maybe?
+        block.dataset.comment = comment;
 
         const text = document.createElement('span');
         text.textContent = comment || 'Резерв';
@@ -500,18 +512,31 @@ export class PostArxiv {
             }
         });
 
+        // Edit event (double click)
+        block.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.editingBlock = block;
+
+            const startStr = this.minutesToTime(parseInt(block.dataset.start || '0'));
+            const endStr = this.minutesToTime(parseInt(block.dataset.end || '0'));
+            const savedComment = block.dataset.comment || (block.querySelector('span')?.textContent || '');
+
+            this.openModal(startStr, endStr, savedComment === 'Резерв' ? '' : savedComment);
+        });
+
         row.appendChild(block);
     }
 
-    private calculateValidRanges(start: number, end: number, row: HTMLElement): { start: number, end: number }[] {
+    private calculateValidRanges(start: number, end: number, row: HTMLElement, excludeBlock: HTMLElement | null = null): { start: number, end: number }[] {
         // Get all existing blocks in this row
         const existingBlocks = Array.from(row.querySelectorAll('.post-reservation-block')) as HTMLElement[];
         const busyIntervals: { start: number, end: number }[] = [];
         // const totalMinutes = 12 * 60; // 720 minutes - unused, removing
 
         existingBlocks.forEach(block => {
-            // Skip the block that is currently being moved, as it's not "busy" in its original spot for this calculation
-            if (block === this.movingBlock) return;
+            // Skip the block that is currently being moved or edited
+            if (block === this.movingBlock || block === excludeBlock) return;
 
             // Calculate minutes from style percentage (approximated back)
             // or better, store minutes in dataset!

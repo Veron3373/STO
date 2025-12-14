@@ -1,14 +1,10 @@
 import '../../../scss/robocha/planyvannya/_planyvannya_arxiv.scss';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 
-export interface ReservationData {
-    sectionId: string;
-    postId: string;
-    startTime: string; // "HH:MM"
-    endTime: string;   // "HH:MM"
-    date: string;      // "YYYY-MM-DD"
-    comment?: string;
-}
+import { ReservationModal, type ReservationData } from './reservation_modal';
+
+// Removed local ReservationData interface to avoid conflict
+
 
 export class PostArxiv {
     private container: HTMLElement;
@@ -34,8 +30,7 @@ export class PostArxiv {
     // Editing block state
     private editingBlock: HTMLElement | null = null;
 
-    // Modal elements
-    private modalOverlay: HTMLElement | null = null;
+
 
 
     constructor(containerId: string = 'postCalendarGrid') {
@@ -399,80 +394,26 @@ export class PostArxiv {
 
     // --- Modal Logic ---
 
+    // --- Modal Logic ---
+
+    private reservationModal = new ReservationModal();
+
     private openModal(startTime: string, endTime: string, comment: string = ''): void {
-        // Current date for default input
         const today = new Date().toISOString().split('T')[0];
 
-        const modalHTML = `
-            <div class="post-arxiv-modal-overlay">
-                <div class="post-arxiv-modal">
-                    <div class="post-arxiv-header">
-                        <h2>Резервування часу</h2>
-                        <button class="post-arxiv-close">&times;</button>
-                    </div>
-                    <div class="post-arxiv-body">
-                        <div class="post-arxiv-form-group">
-                            <label>Дата</label>
-                            <input type="date" id="postArxivDate" value="${today}">
-                        </div>
-                        
-                        <div class="post-arxiv-form-group">
-                            <label>Час</label>
-                            <div class="post-time-inputs">
-                                <div>
-                                    <label>Початок</label>
-                                    <input type="time" id="postArxivStart" value="${startTime}">
-                                </div>
-                                <div>
-                                    <label>Кінець</label>
-                                    <input type="time" id="postArxivEnd" value="${endTime}">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="post-arxiv-form-group">
-                            <label>Коментар (необов'язково)</label>
-                            <input type="text" id="postArxivComment" placeholder="Введіть коментар..." value="${comment}">
-                        </div>
-                    </div>
-                    <div class="post-arxiv-footer">
-                        <button class="post-btn post-btn-secondary" id="postArxivCancel">Скасувати</button>
-                        <button class="post-btn post-btn-blue" id="postArxivSubmit">ОК</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        this.modalOverlay = document.querySelector('.post-arxiv-modal-overlay');
-
-        // Bind events
-        this.modalOverlay?.querySelector('.post-arxiv-close')?.addEventListener('click', () => this.closeModal());
-        this.modalOverlay?.querySelector('#postArxivCancel')?.addEventListener('click', () => this.closeModal());
-        this.modalOverlay?.querySelector('#postArxivSubmit')?.addEventListener('click', () => this.handleSubmit());
+        this.reservationModal.open(
+            today,
+            startTime,
+            endTime,
+            comment,
+            {}, // existing data if any (TODO: pass if editing)
+            (data: ReservationData) => this.handleModalSubmit(data)
+        );
     }
 
-    private closeModal(): void {
-        if (this.modalOverlay) {
-            this.modalOverlay.remove();
-            this.modalOverlay = null;
-        }
-        this.editingBlock = null; // Reset editing state
-        this.resetSelection();
-    }
-
-    private handleSubmit(): void {
-        const startInput = document.getElementById('postArxivStart') as HTMLInputElement;
-        const endInput = document.getElementById('postArxivEnd') as HTMLInputElement;
-        const commentInput = document.getElementById('postArxivComment') as HTMLInputElement;
-
-        if (!startInput.value || !endInput.value) {
-            showNotification('Будь ласка, вкажіть час', 'error');
-            return;
-        }
-
-        const startMins = this.timeToMinutesFromStart(startInput.value);
-        const endMins = this.timeToMinutesFromStart(endInput.value);
+    private handleModalSubmit(data: ReservationData): void {
+        const startMins = this.timeToMinutesFromStart(data.startTime);
+        const endMins = this.timeToMinutesFromStart(data.endTime);
 
         if (endMins <= startMins) {
             showNotification('Час закінчення має бути пізніше часу початку', 'error');
@@ -499,7 +440,7 @@ export class PostArxiv {
 
             // Create a block for each valid range (splitting logic)
             validRanges.forEach(range => {
-                this.createReservationBlock(targetRow, range.start, range.end, commentInput.value);
+                this.createReservationBlock(targetRow, range.start, range.end, data);
             });
 
             if (validRanges.length > 1) {
@@ -509,10 +450,12 @@ export class PostArxiv {
             }
         }
 
-        this.closeModal();
+        this.reservationModal.close();
+        this.editingBlock = null;
+        this.resetSelection();
     }
 
-    private createReservationBlock(row: HTMLElement, startMins: number, endMins: number, comment: string): void {
+    private createReservationBlock(row: HTMLElement, startMins: number, endMins: number, data: ReservationData | string): void {
         const totalMinutes = 12 * 60; // 12 hours (8 to 20)
 
         // Percentage positions
@@ -523,14 +466,34 @@ export class PostArxiv {
         block.className = 'post-reservation-block';
         block.style.left = `${leftPercent}%`;
         block.style.width = `${widthPercent}%`;
-        // Store exact minutes for accurate recalculations later
+
+        // Store exact minutes
         block.dataset.start = startMins.toString();
         block.dataset.end = endMins.toString();
-        // Store comment maybe?
+
+        let comment = '';
+        if (typeof data === 'string') {
+            comment = data;
+        } else {
+            comment = data.comment;
+            // Store rich data
+            block.dataset.clientName = data.clientName;
+            block.dataset.clientId = data.clientId?.toString() || '';
+            block.dataset.carModel = data.carModel;
+            block.dataset.carNumber = data.carNumber;
+            // ... store other needed fields
+        }
+
         block.dataset.comment = comment;
 
         const text = document.createElement('span');
-        text.textContent = comment || 'Резерв';
+        // Display format: "Client Name (Car Model)" or just comment if simple
+        if (typeof data !== 'string' && data.clientName) {
+            text.textContent = `${data.clientName} (${data.carModel})`;
+        } else {
+            text.textContent = comment || 'Резерв';
+        }
+
         block.appendChild(text);
 
         // Context menu event
@@ -555,8 +518,9 @@ export class PostArxiv {
 
             const startStr = this.minutesToTime(parseInt(block.dataset.start || '0'));
             const endStr = this.minutesToTime(parseInt(block.dataset.end || '0'));
-            const savedComment = block.dataset.comment || (block.querySelector('span')?.textContent || '');
+            const savedComment = block.dataset.comment || '';
 
+            // TODO: Restore full data if available in dataset
             this.openModal(startStr, endStr, savedComment === 'Резерв' ? '' : savedComment);
         });
 

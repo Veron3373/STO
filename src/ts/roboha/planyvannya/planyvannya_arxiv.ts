@@ -166,6 +166,97 @@ export class PostArxiv {
     }
 
     /**
+     * Завантажує записи з post_arxiv тільки для вказаних slyusar_id
+     * Використовується при розгортанні секції
+     */
+    public async loadArxivDataForSlyusars(slyusarIds: number[]): Promise<void> {
+        if (!slyusarIds || slyusarIds.length === 0) return;
+
+        try {
+            // Отримуємо поточну дату з елементу заголовку
+            const currentDate = this.getCurrentDateFromHeader();
+            if (!currentDate) {
+                console.warn('Не вдалося отримати поточну дату');
+                return;
+            }
+
+            // Формуємо діапазон дат для запиту (початок і кінець дня)
+            const startOfDay = `${currentDate}T00:00:00`;
+            const endOfDay = `${currentDate}T23:59:59`;
+
+            // Запит до БД - фільтруємо по slyusar_id
+            const { data: arxivRecords, error } = await supabase
+                .from('post_arxiv')
+                .select(`
+                    post_arxiv_id,
+                    slyusar_id,
+                    name_post,
+                    client_id,
+                    cars_id,
+                    status,
+                    data_on,
+                    data_off,
+                    komentar,
+                    act_id
+                `)
+                .in('slyusar_id', slyusarIds)
+                .gte('data_on', startOfDay)
+                .lte('data_on', endOfDay);
+
+            if (error) {
+                console.error('Помилка завантаження записів:', error);
+                return;
+            }
+
+            if (!arxivRecords || arxivRecords.length === 0) {
+                return;
+            }
+
+            console.log(`Завантажено ${arxivRecords.length} записів для секції`);
+
+            // Збираємо унікальні ID клієнтів та машин
+            const clientIds = [...new Set(arxivRecords.map(r => r.client_id).filter(id => id != null))];
+            const carIds = [...new Set(arxivRecords.map(r => r.cars_id).filter(id => id != null))];
+
+            // Завантажуємо дані клієнтів
+            let clientsMap = new Map<number, any>();
+            if (clientIds.length > 0) {
+                const { data: clientsData } = await supabase
+                    .from('clients')
+                    .select('client_id, data')
+                    .in('client_id', clientIds);
+
+                if (clientsData) {
+                    clientsData.forEach(c => clientsMap.set(c.client_id, c.data));
+                }
+            }
+
+            // Завантажуємо дані машин
+            let carsMap = new Map<number, any>();
+            if (carIds.length > 0) {
+                const { data: carsData } = await supabase
+                    .from('cars')
+                    .select('cars_id, data')
+                    .in('cars_id', carIds);
+
+                if (carsData) {
+                    carsData.forEach(c => carsMap.set(c.cars_id, c.data));
+                }
+            }
+
+            // Відображаємо кожен запис
+            for (const record of arxivRecords) {
+                const clientData = clientsMap.get(record.client_id) || {};
+                const carData = carsMap.get(record.cars_id) || {};
+                this.renderArxivRecord(record, clientData, carData);
+            }
+
+        } catch (err) {
+            console.error('Помилка при завантаженні даних для секції:', err);
+        }
+    }
+
+    /**
      * Отримує дату з заголовку сторінки у форматі YYYY-MM-DD
      */
     private getCurrentDateFromHeader(): string | null {

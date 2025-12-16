@@ -682,7 +682,29 @@ class SchedulerApp {
     const section = this.sections.find((s) => s.id === sectionId);
     if (section) {
       section.collapsed = !section.collapsed;
-      this.renderSections();
+
+      // Знаходимо елемент контенту секції в DOM
+      const sectionContent = document.querySelector(
+        `.post-section-content[data-section-id="${sectionId}"]`
+      ) as HTMLElement;
+
+      if (sectionContent) {
+        // Перемикаємо клас hidden
+        sectionContent.classList.toggle('hidden', section.collapsed);
+
+        // Оновлюємо іконку кнопки toggle
+        const sectionGroup = sectionContent.closest('.post-section-group');
+        const toggleBtn = sectionGroup?.querySelector('.post-toggle-btn');
+        if (toggleBtn) {
+          toggleBtn.textContent = section.collapsed ? '▶' : '▼';
+        }
+
+        // Якщо секція розгортається - завантажуємо блоки для постів цієї секції
+        if (!section.collapsed && this.postArxiv) {
+          const slyusarIds = section.posts.map(post => post.id);
+          this.postArxiv.loadArxivDataForSlyusars(slyusarIds);
+        }
+      }
     }
   }
 

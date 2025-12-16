@@ -46,12 +46,18 @@ interface CarData {
 export class PlanyvannyaModal {
     private modalOverlay: HTMLElement | null = null;
     private onSubmitCallback: ((data: ReservationData) => void) | null = null;
+    private onValidateCallback: ((date: string, start: string, end: string, excludeId?: number) => Promise<{ valid: boolean, message?: string }>) | null = null;
 
     private clientsData: ClientData[] = [];
-    private carsData: CarData[] = []; // Only for currently selected client or search results
+    private carsData: CarData[] = [];
 
     private selectedClientId: number | null = null;
     private selectedCarId: number | null = null;
+
+    // Internal State for Date/Time
+    private currentDate: Date = new Date();
+    private currentStartTime: string = '08:00';
+    private currentEndTime: string = '09:00';
 
     // Дані для post_arxiv
     private slyusarId: number | null = null;
@@ -67,7 +73,81 @@ export class PlanyvannyaModal {
     ];
 
     constructor() {
-        // We don't create HTML here immediately to allow ensuring DOM is ready or just create on open
+        this.injectStyles();
+    }
+
+    private injectStyles(): void {
+        const styleId = 'planyvannya-modal-interactive-styles';
+        if (document.getElementById(styleId)) return;
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .post-arxiv-header-date-container {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                color: white;
+                font-size: 14px;
+                flex-wrap: wrap;
+                margin-top: 5px;
+            }
+            .editable-date-part {
+                position: relative;
+                cursor: pointer;
+                border-bottom: 1px dashed rgba(255,255,255,0.6);
+                padding: 0 2px;
+                transition: all 0.2s;
+            }
+            .editable-date-part:hover {
+                background: rgba(255,255,255,0.1);
+                border-bottom-color: white;
+            }
+            .editable-date-part.error {
+                color: #ffcccc;
+                border-bottom-color: #ffcccc;
+            }
+            .header-dropdown-menu {
+                position: fixed; /* Fixed to avoid overflow issues */
+                background: white;
+                border-radius: 4px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                max-height: 250px;
+                overflow-y: auto;
+                z-index: 10000;
+                min-width: 100px;
+                display: none;
+                color: #333;
+                font-size: 13px;
+            }
+            .header-dropdown-item {
+                padding: 8px 12px;
+                cursor: pointer;
+            }
+            .header-dropdown-item:hover {
+                background: #f5f5f5;
+            }
+            .header-dropdown-item.selected {
+                background: #e3f2fd;
+                color: #1976d2;
+                font-weight: 500;
+            }
+            .validation-error-message {
+                background: #ffebee;
+                color: #c62828;
+                padding: 8px 12px;
+                border-radius: 4px;
+                margin: 10px 0 0 0; /* Changed margin to push down body */
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                border: 1px solid #ffcdd2;
+                width: 100%;
+                box-sizing: border-box;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     public async open(
@@ -76,59 +156,36 @@ export class PlanyvannyaModal {
         endTime: string,
         comment: string = '',
         existingData?: Partial<ReservationData>,
-        onSubmit?: (data: ReservationData) => void
+        onSubmit?: (data: ReservationData) => void,
+        onValidate?: (date: string, start: string, end: string, excludeId?: number) => Promise<{ valid: boolean, message?: string }>
     ): Promise<void> {
         this.onSubmitCallback = onSubmit || null;
+        this.onValidateCallback = onValidate || null;
 
-        // Зберігаємо slyusarId та namePost з existingData
+        // Initialize state
+        this.currentDate = new Date(date);
+        this.currentStartTime = startTime;
+        this.currentEndTime = endTime;
+
         this.slyusarId = existingData?.slyusarId ?? null;
         this.namePost = existingData?.namePost ?? null;
         this.postArxivId = existingData?.postArxivId ?? null;
 
-        this.createModalHTML(date, startTime, endTime, comment);
+        this.createModalHTML(comment);
         this.bindEvents();
+        this.updateHeaderUI(); // Initial render of header parts
+        this.validateCurrentState(); // Initial check
 
         // Initial data load
         await this.loadClientsData();
 
-        // If we have existing data (editing), we might need to pre-fill and load cars
-        // For now, handling the basic case of prepopulating fields from args
         if (existingData) {
-            const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
-            if (nameInput && existingData.clientName) nameInput.value = existingData.clientName;
-
-            const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
-            if (phoneInput && existingData.clientPhone) phoneInput.value = existingData.clientPhone;
-
-            const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
-            if (carInput && existingData.carModel) carInput.value = existingData.carModel;
-
-            const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
-            if (numberInput && existingData.carNumber) numberInput.value = existingData.carNumber;
-
-            if (existingData.status) {
-                const idx = this.statuses.findIndex(s => s.name === existingData.status);
-                if (idx >= 0) {
-                    this.currentStatusIndex = idx;
-                    this.applyStatus();
-                }
-            }
-
-            this.selectedClientId = existingData.clientId || null;
-            this.selectedCarId = existingData.carId || null;
-
-            // Load cars for selected client to enable autocomplete/dropdowns for existing client
-            if (this.selectedClientId) {
-                // Pass true to preserve the currently selected car (filled above)
-                this.loadCarsForClient(this.selectedClientId, true).catch(console.error);
-            }
+            this.prefillData(existingData);
         }
 
         this.modalOverlay = document.getElementById('postArxivModalOverlay');
         if (this.modalOverlay) {
             this.modalOverlay.style.display = 'flex';
-
-            // Focus name input by default if empty
             const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
             if (nameInput && !nameInput.value) {
                 nameInput.focus();
@@ -136,45 +193,62 @@ export class PlanyvannyaModal {
         }
     }
 
-    public close(): void {
-        if (this.modalOverlay) {
-            this.modalOverlay.remove();
-            this.modalOverlay = null;
+    private prefillData(data: Partial<ReservationData>) {
+        const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
+        if (nameInput && data.clientName) nameInput.value = data.clientName;
+
+        const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
+        if (phoneInput && data.clientPhone) phoneInput.value = data.clientPhone;
+
+        const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
+        if (carInput && data.carModel) carInput.value = data.carModel;
+
+        const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
+        if (numberInput && data.carNumber) numberInput.value = data.carNumber;
+
+        if (data.status) {
+            const idx = this.statuses.findIndex(s => s.name === data.status);
+            if (idx >= 0) {
+                this.currentStatusIndex = idx;
+                this.applyStatus();
+            }
         }
-        this.selectedClientId = null;
-        this.selectedCarId = null;
-        this.carsData = [];
-        this.closeAllDropdowns();
+
+        this.selectedClientId = data.clientId || null;
+        this.selectedCarId = data.carId || null;
+
+        if (this.selectedClientId) {
+            this.loadCarsForClient(this.selectedClientId, true).catch(console.error);
+        }
     }
 
-    private createModalHTML(date: string, startTime: string, endTime: string, comment: string): void {
+    private createModalHTML(comment: string): void {
         if (document.getElementById('postArxivModalOverlay')) return;
-
-        // Get formatted date from header element or format the date
-        const headerDateEl = document.getElementById('postHeaderDateDisplay');
-        const displayDate = headerDateEl ? headerDateEl.textContent : this.formatDateUkrainian(date);
-
-        // Format time for display (remove leading zeros for hours)
-        const formatTime = (time: string) => {
-            const [h, m] = time.split(':');
-            return `${parseInt(h, 10)}:${m}`;
-        };
-        const displayTimeRange = `з ${formatTime(startTime)} по ${formatTime(endTime)}`;
 
         const modalHTML = `
       <div class="post-arxiv-modal-overlay" id="postArxivModalOverlay">
         <div class="post-arxiv-modal">
-          <div class="post-arxiv-header" id="postArxivHeader">
-            <div class="post-arxiv-header-row">
-              <h2>Запис</h2>
-              <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
-                <span id="postArxivStatusText">Запланований</span>
-              </button>
-              <button class="post-arxiv-close" id="postArxivClose">×</button>
+            <div class="post-arxiv-header" id="postArxivHeader">
+                <div class="post-arxiv-header-row">
+                    <h2>Запис</h2>
+                    <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
+                        <span id="postArxivStatusText">Запланований</span>
+                    </button>
+                    <button class="post-arxiv-close" id="postArxivClose">×</button>
+                </div>
+                
+                <div class="post-arxiv-header-date-container">
+                    <span id="hDayName" class="editable-date-part" title="Змінити день тижня">---</span>,
+                    <span id="hDay" class="editable-date-part" title="Змінити день">--</span>
+                    <span id="hMonth" class="editable-date-part" title="Змінити місяць">---</span>
+                    <span id="hYear" class="editable-date-part" title="Змінити рік">----</span>
+                    з <span id="hStartTime" class="editable-date-part" title="Змінити час початку">--:--</span>
+                    по <span id="hEndTime" class="editable-date-part" title="Змінити час завершення">--:--</span>
+                </div>
+                <div id="validationErrorMsg" class="validation-error-message" style="display:none;"></div>
             </div>
-            <p class="post-arxiv-header-date">${displayDate} ${displayTimeRange}</p>
-          </div>
-          <div class="post-arxiv-body">
+          
+            <div class="post-arxiv-body">
             
             <!-- ПІБ Клієнта -->
             <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
@@ -206,19 +280,12 @@ export class PlanyvannyaModal {
                 <div class="post-arxiv-autocomplete-dropdown" id="postArxivCarNumberDropdown"></div>
               </div>
             </div>
-
-            <!-- Hidden fields for time -->
-            <input type="hidden" id="postArxivStartTime" value="${startTime}">
-            <input type="hidden" id="postArxivEndTime" value="${endTime}">
-
+            
             <!-- Коментар -->
             <div class="post-arxiv-form-group">
               <label>Коментар <span class="optional">(необов'язково)</span></label>
               <textarea id="postArxivComment" placeholder="Введіть коментар..." rows="1">${comment}</textarea>
             </div>
-
-            <!-- Hidden date field -->
-            <input type="hidden" id="postArxivDate" value="${date}">
           </div>
           <div class="post-arxiv-footer">
             <button class="post-btn post-btn-primary" id="postArxivSubmit">ОК</button>
@@ -230,41 +297,227 @@ export class PlanyvannyaModal {
         document.body.insertAdjacentHTML('beforeend', modalHTML);
     }
 
+    public close(): void {
+        const dropdowns = document.querySelectorAll('.header-dropdown-menu');
+        dropdowns.forEach(d => d.remove());
+
+        if (this.modalOverlay) {
+            this.modalOverlay.remove();
+            this.modalOverlay = null;
+        }
+        this.selectedClientId = null;
+        this.selectedCarId = null;
+        this.carsData = [];
+        this.closeAllDropdowns();
+    }
+
+    private updateHeaderUI(): void {
+        const hDayName = document.getElementById('hDayName');
+        const hDay = document.getElementById('hDay');
+        const hMonth = document.getElementById('hMonth');
+        const hYear = document.getElementById('hYear');
+        const hStartTime = document.getElementById('hStartTime');
+        const hEndTime = document.getElementById('hEndTime');
+
+        if (!hDayName || !hDay || !hMonth || !hYear || !hStartTime || !hEndTime) return;
+
+        const days = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота'];
+        const months = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+            'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+
+        hDayName.textContent = days[this.currentDate.getDay()];
+        hDay.textContent = this.currentDate.getDate().toString();
+        hMonth.textContent = months[this.currentDate.getMonth()];
+        hYear.textContent = this.currentDate.getFullYear().toString();
+
+        const formatTime = (t: string) => {
+            const [h, m] = t.split(':');
+            return `${parseInt(h)}:${m}`;
+        };
+        hStartTime.textContent = formatTime(this.currentStartTime);
+        hEndTime.textContent = formatTime(this.currentEndTime);
+    }
+
+    private async validateCurrentState() {
+        if (!this.onValidateCallback) return;
+
+        const errorEl = document.getElementById('validationErrorMsg');
+        const submitBtn = document.getElementById('postArxivSubmit') as HTMLButtonElement;
+
+        const y = this.currentDate.getFullYear();
+        const m = (this.currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const d = this.currentDate.getDate().toString().padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+
+        const result = await this.onValidateCallback(
+            dateStr,
+            this.currentStartTime,
+            this.currentEndTime,
+            this.postArxivId || undefined
+        );
+
+        if (!result.valid && errorEl) {
+            errorEl.style.display = 'flex';
+            errorEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> ${result.message}`;
+
+            document.querySelectorAll('.editable-date-part').forEach(el => el.classList.add('error'));
+            if (submitBtn) submitBtn.disabled = true;
+        } else {
+            if (errorEl) errorEl.style.display = 'none';
+            document.querySelectorAll('.editable-date-part').forEach(el => el.classList.remove('error'));
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    }
+
     private bindEvents(): void {
         const closeBtn = document.getElementById('postArxivClose');
-        const cancelBtn = document.getElementById('postArxivCancel');
         const submitBtn = document.getElementById('postArxivSubmit');
 
         closeBtn?.addEventListener('click', () => this.close());
-        cancelBtn?.addEventListener('click', () => this.close());
-
-        // Status button handler
         this.setupStatusButton();
-        this.applyStatus(); // Apply initial status
-
-        // New client button handler
-        const newClientBtn = document.getElementById('postArxivNewClientBtn');
-        newClientBtn?.addEventListener('click', () => {
-            // TODO: Implement new client modal or action
-            console.log('New client button clicked');
-        });
-
-        // Comment textarea auto-resize
+        this.applyStatus();
         this.setupCommentAutoResize();
         submitBtn?.addEventListener('click', () => this.handleSubmit());
 
-        // Autocomplete events
         this.setupClientAutocomplete();
         this.setupPhoneAutocomplete();
         this.setupCarAutocomplete();
         this.setupCarNumberAutocomplete();
 
-        // Close dropdowns on click outside
         document.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
             if (!target.closest('.post-arxiv-autocomplete-wrapper')) {
                 this.closeAllDropdowns();
             }
+            if (!target.closest('.header-dropdown-menu') && !target.closest('.editable-date-part')) {
+                document.querySelectorAll('.header-dropdown-menu').forEach(el => el.remove());
+            }
+        });
+
+        this.setupHeaderInteractions();
+    }
+
+    private setupHeaderInteractions(): void {
+        const bindDropdown = (id: string, generator: () => { text: string, value: any, sub?: string }[], onSelect: (val: any) => void) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.header-dropdown-menu').forEach(d => d.remove());
+
+                const options = generator();
+                const dropdown = document.createElement('div');
+                dropdown.className = 'header-dropdown-menu';
+
+                options.forEach(opt => {
+                    const item = document.createElement('div');
+                    item.className = 'header-dropdown-item';
+                    item.textContent = opt.text;
+                    if (opt.sub) {
+                        const sub = document.createElement('span');
+                        sub.style.fontSize = '11px';
+                        sub.style.color = '#888';
+                        sub.style.marginLeft = '5px';
+                        sub.textContent = opt.sub;
+                        item.appendChild(sub);
+                    }
+                    if (String(opt.value) === String(el.textContent)) item.classList.add('selected');
+
+                    item.addEventListener('click', () => {
+                        onSelect(opt.value);
+                        dropdown.remove();
+                        this.updateHeaderUI();
+                        this.validateCurrentState();
+                    });
+                    dropdown.appendChild(item);
+                });
+
+                document.body.appendChild(dropdown);
+
+                const rect = el.getBoundingClientRect();
+                dropdown.style.display = 'block';
+                dropdown.style.left = `${rect.left}px`;
+                dropdown.style.top = `${rect.bottom + 5}px`;
+
+                const dropRect = dropdown.getBoundingClientRect();
+                if (dropRect.right > window.innerWidth) {
+                    dropdown.style.left = `${window.innerWidth - dropRect.width - 10}px`;
+                }
+                if (dropRect.bottom > window.innerHeight) {
+                    dropdown.style.top = `${rect.top - dropRect.height - 5}px`;
+                }
+            });
+        };
+
+        bindDropdown('hDayName', () => {
+            const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота', 'Неділя'];
+            const opts = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(this.currentDate);
+                d.setDate(d.getDate() + i);
+                const dayName = days[d.getDay() === 0 ? 6 : d.getDay() - 1];
+                opts.push({
+                    text: dayName,
+                    value: d.getTime(),
+                    sub: `${d.getDate()}.${d.getMonth() + 1}`
+                });
+            }
+            return opts;
+        }, (ts) => {
+            this.currentDate = new Date(ts);
+        });
+
+        bindDropdown('hDay', () => {
+            const daysInMonth = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0).getDate();
+            const opts = [];
+            for (let i = 1; i <= daysInMonth; i++) opts.push({ text: i.toString(), value: i });
+            return opts;
+        }, (val) => {
+            this.currentDate.setDate(val);
+        });
+
+        bindDropdown('hMonth', () => {
+            const months = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+                'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+            return months.map((m, i) => ({ text: m, value: i }));
+        }, (val) => {
+            this.currentDate.setMonth(val);
+        });
+
+        bindDropdown('hYear', () => {
+            const current = new Date().getFullYear();
+            const opts = [];
+            for (let i = current; i <= current + 2; i++) opts.push({ text: i.toString(), value: i });
+            return opts;
+        }, (val) => {
+            this.currentDate.setFullYear(val);
+        });
+
+        const generateTimes = () => {
+            const times = [];
+            for (let h = 8; h <= 20; h++) {
+                times.push({ text: `${h}:00`, value: `${h.toString().padStart(2, '0')}:00` });
+                if (h !== 20) times.push({ text: `${h}:30`, value: `${h.toString().padStart(2, '0')}:30` });
+            }
+            return times;
+        };
+
+        bindDropdown('hStartTime', generateTimes, (val) => {
+            this.currentStartTime = val;
+            const [sh, sm] = val.split(':').map(Number);
+            const [eh, em] = this.currentEndTime.split(':').map(Number);
+            const startMins = sh * 60 + sm;
+            const endMins = eh * 60 + em;
+            if (startMins >= endMins) {
+                const newEndMins = startMins + 60;
+                const neh = Math.floor(newEndMins / 60);
+                const nem = newEndMins % 60;
+                this.currentEndTime = `${neh.toString().padStart(2, '0')}:${nem.toString().padStart(2, '0')}`;
+            }
+        });
+
+        bindDropdown('hEndTime', generateTimes, (val) => {
+            this.currentEndTime = val;
         });
     }
 
@@ -566,19 +819,7 @@ export class PlanyvannyaModal {
 
     // --- Helpers ---
 
-    private formatDateUkrainian(dateString: string): string {
-        const date = new Date(dateString);
-        const days = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота'];
-        const months = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
-            'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
 
-        const dayOfWeek = days[date.getDay()];
-        const day = date.getDate();
-        const month = months[date.getMonth()];
-        const year = date.getFullYear();
-
-        return `${dayOfWeek}, ${day} ${month} ${year}`;
-    }
 
     private setupStatusButton(): void {
         const statusBtn = document.getElementById('postArxivStatusBtn');
@@ -695,33 +936,24 @@ export class PlanyvannyaModal {
         const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
         const commentInput = document.getElementById('postArxivComment') as HTMLTextAreaElement;
         const statusText = document.getElementById('postArxivStatusText');
-        const headerDateEl = document.querySelector('.post-arxiv-header-date');
 
-        // Validation
         if (!nameInput?.value || !phoneInput?.value || !carInput?.value) {
             showNotification('Будь ласка, заповніть всі обов\'язкові поля', 'error');
             return;
         }
 
-        // Отримуємо статус запису
         const status = statusText?.textContent || 'Запланований';
 
-        // Парсимо дату і час з заголовку: "Середа, 17 грудня 2025 з 11:30 по 18:00"
-        const headerText = headerDateEl?.textContent || '';
-        const parsedDateTime = this.parseDateTimeFromHeader(headerText);
+        // Use internal state
+        const y = this.currentDate.getFullYear();
+        const m = (this.currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const d = this.currentDate.getDate().toString().padStart(2, '0');
+        const dateValue = `${y}-${m}-${d}`;
 
-        if (!parsedDateTime) {
-            showNotification('Помилка парсингу дати', 'error');
-            return;
-        }
-
-        const { dateValue, startTime, endTime } = parsedDateTime;
-
-        // Формуємо дані для callback
         const data: ReservationData = {
             date: dateValue,
-            startTime: startTime,
-            endTime: endTime,
+            startTime: this.currentStartTime,
+            endTime: this.currentEndTime,
             clientId: this.selectedClientId,
             clientName: nameInput.value,
             clientPhone: phoneInput.value,
@@ -730,7 +962,7 @@ export class PlanyvannyaModal {
             carNumber: numberInput?.value || '',
             comment: commentInput?.value || '',
             status: status,
-            postArxivId: this.postArxivId, // Pass the ID if we are editing
+            postArxivId: this.postArxivId,
             slyusarId: this.slyusarId,
             namePost: this.namePost
         };
@@ -739,7 +971,6 @@ export class PlanyvannyaModal {
             this.onSubmitCallback(data);
         }
 
-        // Закриваємо модальне вікно
         this.close();
     }
 
@@ -747,44 +978,5 @@ export class PlanyvannyaModal {
      * Парсить дату і час з заголовку модального вікна
      * Вхідний формат: "Середа, 17 грудня 2025 з 11:30 по 18:00"
      */
-    private parseDateTimeFromHeader(text: string): { dateValue: string; startTime: string; endTime: string } | null {
-        if (!text) return null;
 
-        const months: Record<string, string> = {
-            'січня': '01', 'лютого': '02', 'березня': '03', 'квітня': '04',
-            'травня': '05', 'червня': '06', 'липня': '07', 'серпня': '08',
-            'вересня': '09', 'жовтня': '10', 'листопада': '11', 'грудня': '12'
-        };
-
-        // "Середа, 17 грудня 2025 з 11:30 по 18:00"
-        const dateMatch = text.match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
-        const timeMatch = text.match(/з\s+(\d{1,2}:\d{2})\s+по\s+(\d{1,2}:\d{2})/);
-
-        if (!dateMatch || !timeMatch) {
-            console.error('Не вдалося розпарсити дату/час з:', text);
-            return null;
-        }
-
-        const day = dateMatch[1].padStart(2, '0');
-        const monthName = dateMatch[2].toLowerCase();
-        const year = dateMatch[3];
-        const month = months[monthName];
-
-        if (!month) {
-            console.error('Невідомий місяць:', monthName);
-            return null;
-        }
-
-        // Форматуємо час в HH:MM
-        const formatTime = (t: string): string => {
-            const [h, m] = t.split(':');
-            return `${h.padStart(2, '0')}:${m}`;
-        };
-
-        return {
-            dateValue: `${year}-${month}-${day}`,
-            startTime: formatTime(timeMatch[1]),
-            endTime: formatTime(timeMatch[2])
-        };
-    }
 }

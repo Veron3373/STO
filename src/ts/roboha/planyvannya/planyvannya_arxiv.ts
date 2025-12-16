@@ -865,9 +865,6 @@ export class PostArxiv {
             comment = data.comment || '';
         }
 
-        // Отримуємо slyusarId та postId з активного рядка (якщо це новий запис, а не редагування)
-        // Але якщо редагуємо, ми вже маємо ці дані (або не змінюємо їх)
-
         let slyusarId: number | null = null;
         let namePost: number | null = null;
 
@@ -883,13 +880,18 @@ export class PostArxiv {
         if (!data.slyusarId && slyusarId) data.slyusarId = slyusarId;
         if (!data.namePost && namePost) data.namePost = namePost;
 
+        const effectiveSlyusarId = data.slyusarId;
+
         this.reservationModal.open(
             today,
             startTime,
             endTime,
             comment,
             data,
-            (resultData: ReservationData) => this.handleModalSubmit(resultData)
+            (resultData: ReservationData) => this.handleModalSubmit(resultData),
+            async (date, start, end, excludeId) => {
+                return this.checkAvailabilityInDb(date, start, end, excludeId, effectiveSlyusarId || undefined);
+            }
         );
     }
 
@@ -1029,6 +1031,37 @@ export class PostArxiv {
             }
             return res.post_arxiv_id;
         }
+    }
+
+    private async checkAvailabilityInDb(date: string, startTime: string, endTime: string, excludeId?: number, slyusarId?: number): Promise<{ valid: boolean, message?: string }> {
+        if (!slyusarId) return { valid: false, message: 'Не обрано пост (слюсаря)' };
+
+        const startIso = `${date}T${startTime}:00`;
+        const endIso = `${date}T${endTime}:00`;
+
+        let query = supabase
+            .from('post_arxiv')
+            .select('post_arxiv_id')
+            .eq('slyusar_id', slyusarId)
+            .lt('data_on', endIso)
+            .gt('data_off', startIso);
+
+        if (excludeId) {
+            query = query.neq('post_arxiv_id', excludeId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('Validation check error:', error);
+            return { valid: false, message: 'Помилка перевірки' };
+        }
+
+        if (data && data.length > 0) {
+            return { valid: false, message: 'Цей час вже зайнятий' };
+        }
+
+        return { valid: true };
     }
 
     /**

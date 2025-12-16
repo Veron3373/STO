@@ -33,7 +33,6 @@ export class PostArxiv {
 
 
 
-
     constructor(containerId: string = 'postCalendarGrid') {
         const el = document.getElementById(containerId);
         if (!el) {
@@ -42,6 +41,14 @@ export class PostArxiv {
         this.container = el;
         this.init();
     }
+
+    // Кольори статусів
+    private readonly statusColors: Record<string, string> = {
+        'Запланований': '#e6a700',
+        'В роботі': '#2e7d32',
+        'Відремонтований': '#757575',
+        'Не приїхав': '#e53935'
+    };
 
     private init(): void {
         // We bind to the container and use delegation for row tracks
@@ -57,6 +64,234 @@ export class PostArxiv {
 
         // Create the selection element once and reuse it
         this.createSelectionElement();
+
+        // Примітка: loadArxivDataForCurrentDate() викликається з planyvannya.ts 
+        // після рендерингу секцій слюсарів
+    }
+
+    /**
+     * Очищає всі блоки бронювання з календаря
+     */
+    public clearAllBlocks(): void {
+        const blocks = this.container.querySelectorAll('.post-reservation-block');
+        blocks.forEach(block => block.remove());
+    }
+
+    /**
+     * Завантажує записи з post_arxiv для поточної дати і відображає їх
+     */
+    public async loadArxivDataForCurrentDate(): Promise<void> {
+        try {
+            // Отримуємо поточну дату з елементу заголовку
+            const currentDate = this.getCurrentDateFromHeader();
+            if (!currentDate) {
+                console.warn('Не вдалося отримати поточну дату');
+                return;
+            }
+
+            // Формуємо діапазон дат для запиту (початок і кінець дня)
+            const startOfDay = `${currentDate}T00:00:00`;
+            const endOfDay = `${currentDate}T23:59:59`;
+
+            // Запит до БД
+            const { data: arxivRecords, error } = await supabase
+                .from('post_arxiv')
+                .select(`
+                    post_arxiv_id,
+                    slyusar_id,
+                    name_post,
+                    client_id,
+                    cars_id,
+                    status,
+                    data_on,
+                    data_off,
+                    komentar,
+                    act_id,
+                    clients(data),
+                    cars(data)
+                `)
+                .gte('data_on', startOfDay)
+                .lte('data_on', endOfDay);
+
+            if (error) {
+                console.error('Помилка завантаження записів з post_arxiv:', error);
+                return;
+            }
+
+            if (!arxivRecords || arxivRecords.length === 0) {
+                console.log('Немає записів для цієї дати');
+                return;
+            }
+
+            console.log(`Завантажено ${arxivRecords.length} записів з БД`);
+
+            // Відображаємо кожен запис
+            for (const record of arxivRecords) {
+                this.renderArxivRecord(record);
+            }
+
+        } catch (err) {
+            console.error('Помилка при завантаженні даних:', err);
+        }
+    }
+
+    /**
+     * Отримує дату з заголовку сторінки у форматі YYYY-MM-DD
+     */
+    private getCurrentDateFromHeader(): string | null {
+        const headerEl = document.getElementById('postHeaderDateDisplay');
+        if (!headerEl) return null;
+
+        const text = headerEl.textContent; // "Вівторок, 16 грудня 2025"
+        if (!text) return null;
+
+        // Парсимо українську дату
+        const months: Record<string, string> = {
+            'січня': '01', 'лютого': '02', 'березня': '03', 'квітня': '04',
+            'травня': '05', 'червня': '06', 'липня': '07', 'серпня': '08',
+            'вересня': '09', 'жовтня': '10', 'листопада': '11', 'грудня': '12'
+        };
+
+        // Регулярка для "16 грудня 2025"
+        const match = text.match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
+        if (!match) return null;
+
+        const day = match[1].padStart(2, '0');
+        const monthName = match[2].toLowerCase();
+        const year = match[3];
+        const month = months[monthName];
+
+        if (!month) return null;
+
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Відображає запис з БД на календарі
+     */
+    private renderArxivRecord(record: any): void {
+        // Знаходимо рядок слюсаря по slyusar_id
+        const rowTrack = this.container.querySelector(
+            `.post-row-track[data-slyusar-id="${record.slyusar_id}"]`
+        ) as HTMLElement;
+
+        if (!rowTrack) {
+            console.warn(`Рядок для slyusar_id ${record.slyusar_id} не знайдено`);
+            return;
+        }
+
+        // Парсимо час початку і кінця
+        const dataOn = new Date(record.data_on);
+        const dataOff = new Date(record.data_off);
+
+        // Конвертуємо в хвилини від початку робочого дня (8:00)
+        const startMins = (dataOn.getHours() - this.startHour) * 60 + dataOn.getMinutes();
+        const endMins = (dataOff.getHours() - this.startHour) * 60 + dataOff.getMinutes();
+
+        // Перевіряємо що час в допустимих межах
+        if (startMins < 0 || endMins > 12 * 60) {
+            console.warn('Час запису виходить за межі робочого дня');
+            return;
+        }
+
+        // Отримуємо дані клієнта і авто
+        const clientData = record.clients?.data || {};
+        const carData = record.cars?.data || {};
+
+        const clientName = clientData['ПІБ'] || '';
+        const carModel = carData['Авто'] || '';
+        const carNumber = carData['Номер авто'] || '';
+
+        // Формуємо дані для блоку
+        const reservationData: ReservationData = {
+            date: record.data_on.split('T')[0],
+            startTime: `${dataOn.getHours().toString().padStart(2, '0')}:${dataOn.getMinutes().toString().padStart(2, '0')}`,
+            endTime: `${dataOff.getHours().toString().padStart(2, '0')}:${dataOff.getMinutes().toString().padStart(2, '0')}`,
+            clientId: record.client_id,
+            clientName: clientName,
+            clientPhone: '',
+            carId: record.cars_id,
+            carModel: carModel,
+            carNumber: carNumber,
+            comment: record.komentar || '',
+            status: record.status || 'Запланований',
+            postArxivId: record.post_arxiv_id
+        };
+
+        // Створюємо блок з правильним кольором
+        this.createReservationBlockWithColor(rowTrack, startMins, endMins, reservationData);
+    }
+
+    /**
+     * Створює блок резервації з кольором статусу
+     */
+    private createReservationBlockWithColor(row: HTMLElement, startMins: number, endMins: number, data: ReservationData): void {
+        const totalMinutes = 12 * 60; // 12 hours (8 to 20)
+
+        // Percentage positions
+        const leftPercent = (startMins / totalMinutes) * 100;
+        const widthPercent = ((endMins - startMins) / totalMinutes) * 100;
+
+        const block = document.createElement('div');
+        block.className = 'post-reservation-block';
+        block.style.left = `${leftPercent}%`;
+        block.style.width = `${widthPercent}%`;
+
+        // Встановлюємо колір фону залежно від статусу
+        const statusColor = this.statusColors[data.status] || this.statusColors['Запланований'];
+        block.style.backgroundColor = statusColor;
+
+        // Store exact minutes
+        block.dataset.start = startMins.toString();
+        block.dataset.end = endMins.toString();
+
+        // Store rich data
+        block.dataset.clientName = data.clientName;
+        block.dataset.clientId = data.clientId?.toString() || '';
+        block.dataset.carModel = data.carModel;
+        block.dataset.carNumber = data.carNumber;
+        block.dataset.status = data.status || '';
+        block.dataset.postArxivId = data.postArxivId?.toString() || '';
+        block.dataset.carId = data.carId?.toString() || '';
+        block.dataset.comment = data.comment;
+
+        const text = document.createElement('span');
+        if (data.clientName) {
+            text.textContent = `${data.clientName} (${data.carModel})`;
+        } else {
+            text.textContent = data.comment || 'Резерв';
+        }
+
+        block.appendChild(text);
+
+        // Context menu event
+        block.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.showContextMenu(e, block);
+        });
+
+        // Drag start event
+        block.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left click
+                this.handleBlockMouseDown(e, block);
+            }
+        });
+
+        // Edit event (double click)
+        block.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.editingBlock = block;
+
+            const startStr = this.minutesToTime(parseInt(block.dataset.start || '0'));
+            const endStr = this.minutesToTime(parseInt(block.dataset.end || '0'));
+            const savedComment = block.dataset.comment || '';
+
+            this.openModal(startStr, endStr, savedComment === 'Резерв' ? '' : savedComment);
+        });
+
+        row.appendChild(block);
     }
 
     private createSelectionElement(): void {

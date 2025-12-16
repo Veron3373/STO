@@ -57,6 +57,9 @@ class SchedulerApp {
   // Модалки
   private postModal: PostModal;
 
+  // PostArxiv для управління блоками бронювання
+  private postArxiv: PostArxiv | null = null;
+
   // Drag and Drop
   private draggedElement: HTMLElement | null = null;
   private draggedSectionId: number | null = null;
@@ -92,7 +95,7 @@ class SchedulerApp {
     // Initialize PostArxiv
     // We expect the container to exist because this runs on DOMContentLoaded
     try {
-      new PostArxiv("postCalendarGrid");
+      this.postArxiv = new PostArxiv("postCalendarGrid");
     } catch (e) {
       console.error("Failed to initialize PostArxiv:", e);
       // Fallback or handle error - though strictly TS requires init in constructor if not optional
@@ -136,6 +139,11 @@ class SchedulerApp {
     this.render();
     this.updateTimeMarker();
     setInterval(() => this.updateTimeMarker(), 60000);
+
+    // Завантажуємо дані з post_arxiv після рендерингу секцій
+    if (this.postArxiv) {
+      this.postArxiv.loadArxivDataForCurrentDate();
+    }
   }
 
   private async loadDataFromDatabase(): Promise<void> {
@@ -636,6 +644,7 @@ class SchedulerApp {
     this.viewMonth = this.today.getMonth();
     this.viewYear = this.today.getFullYear();
     this.render();
+    this.reloadArxivData();
   }
 
   private changeDate(delta: number): void {
@@ -643,6 +652,7 @@ class SchedulerApp {
     this.viewMonth = this.selectedDate.getMonth();
     this.viewYear = this.selectedDate.getFullYear();
     this.render();
+    this.reloadArxivData();
   }
 
   private changeMonth(delta: number): void {
@@ -655,6 +665,17 @@ class SchedulerApp {
       this.viewYear++;
     }
     this.render();
+    this.reloadArxivData();
+  }
+
+  /**
+   * Перезавантажує дані бронювань з БД для нової дати
+   */
+  private reloadArxivData(): void {
+    if (this.postArxiv) {
+      this.postArxiv.clearAllBlocks();
+      this.postArxiv.loadArxivDataForCurrentDate();
+    }
   }
 
   private toggleSection(sectionId: number): void {

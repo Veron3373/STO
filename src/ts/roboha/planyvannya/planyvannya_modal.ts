@@ -13,7 +13,12 @@ export interface ReservationData {
     carModel: string;
     carNumber: string;
     comment: string;
+    status: string;
+    slyusarId?: number | null;
+    namePost?: number | null;
+    postArxivId?: number | null;
 }
+
 
 interface ClientData {
     client_id: number;
@@ -618,7 +623,7 @@ export class PlanyvannyaModal {
         dropdowns.forEach(d => (d as HTMLElement).style.display = 'none');
     }
 
-    private handleSubmit(): void {
+    private async handleSubmit(): Promise<void> {
         const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
         const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
         const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
@@ -627,6 +632,7 @@ export class PlanyvannyaModal {
         const startTimeInput = document.getElementById('postArxivStartTime') as HTMLInputElement;
         const endTimeInput = document.getElementById('postArxivEndTime') as HTMLInputElement;
         const commentInput = document.getElementById('postArxivComment') as HTMLTextAreaElement;
+        const statusText = document.getElementById('postArxivStatusText');
 
         // Validation
         if (!nameInput?.value || !phoneInput?.value || !carInput?.value || !dateInput?.value) {
@@ -634,23 +640,69 @@ export class PlanyvannyaModal {
             return;
         }
 
-        const data: ReservationData = {
-            date: dateInput.value,
-            startTime: startTimeInput.value,
-            endTime: endTimeInput.value,
-            clientId: this.selectedClientId,
-            clientName: nameInput.value,
-            clientPhone: phoneInput.value,
-            carId: this.selectedCarId,
-            carModel: carInput.value,
-            carNumber: numberInput?.value || '',
-            comment: commentInput?.value || ''
+        // Отримуємо статус запису
+        const status = statusText?.textContent || 'Запланований';
+
+        // Формуємо timestamp для data_on та data_off
+        const dateValue = dateInput.value; // формат: YYYY-MM-DD
+        const startTime = startTimeInput?.value || '08:00';
+        const endTime = endTimeInput?.value || '20:00';
+
+        // Створюємо ISO timestamp для Supabase
+        const dataOn = `${dateValue}T${startTime}:00`;
+        const dataOff = `${dateValue}T${endTime}:00`;
+
+        // Підготовка даних для збереження в post_arxiv
+        const postArxivData = {
+            status: status,
+            client_id: this.selectedClientId,
+            cars_id: this.selectedCarId,
+            komentar: commentInput?.value || '',
+            data_on: dataOn,
+            data_off: dataOff
         };
 
-        if (this.onSubmitCallback) {
-            this.onSubmitCallback(data);
-        }
+        try {
+            // Зберігаємо в базу даних post_arxiv
+            const { data: insertedData, error } = await supabase
+                .from('post_arxiv')
+                .insert(postArxivData)
+                .select('post_arxiv_id')
+                .single();
 
-        // this.close(); // Let the caller close it if validation passes outside or logic requires it
+            if (error) {
+                console.error('Помилка збереження запису:', error);
+                showNotification('Помилка збереження запису в базу даних', 'error');
+                return;
+            }
+
+            showNotification('Запис успішно створено!', 'success');
+
+            // Формуємо дані для callback
+            const data: ReservationData = {
+                date: dateInput.value,
+                startTime: startTime,
+                endTime: endTime,
+                clientId: this.selectedClientId,
+                clientName: nameInput.value,
+                clientPhone: phoneInput.value,
+                carId: this.selectedCarId,
+                carModel: carInput.value,
+                carNumber: numberInput?.value || '',
+                comment: commentInput?.value || '',
+                status: status,
+                postArxivId: insertedData?.post_arxiv_id || null
+            };
+
+            if (this.onSubmitCallback) {
+                this.onSubmitCallback(data);
+            }
+
+            // Закриваємо модальне вікно після успішного збереження
+            this.close();
+        } catch (err) {
+            console.error('Помилка при збереженні:', err);
+            showNotification('Виникла помилка при збереженні', 'error');
+        }
     }
 }

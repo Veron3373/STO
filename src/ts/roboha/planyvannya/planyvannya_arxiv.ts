@@ -1,5 +1,6 @@
 import '../../../scss/robocha/planyvannya/_planyvannya_arxiv.scss';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
+import { supabase } from '../../vxid/supabaseClient';
 
 import { PlanyvannyaModal, type ReservationData } from './planyvannya_modal';
 
@@ -481,7 +482,9 @@ export class PostArxiv {
             block.dataset.clientId = data.clientId?.toString() || '';
             block.dataset.carModel = data.carModel;
             block.dataset.carNumber = data.carNumber;
-            // ... store other needed fields
+            block.dataset.status = data.status || '';
+            block.dataset.postArxivId = data.postArxivId?.toString() || '';
+            block.dataset.carId = data.carId?.toString() || '';
         }
 
         block.dataset.comment = comment;
@@ -591,7 +594,30 @@ export class PostArxiv {
             Видалити запис
         `;
 
-        deleteItem.addEventListener('click', () => {
+        deleteItem.addEventListener('click', async () => {
+            const postArxivId = block.dataset.postArxivId;
+
+            if (postArxivId) {
+                try {
+                    const { error } = await supabase
+                        .from('post_arxiv')
+                        .delete()
+                        .eq('post_arxiv_id', parseInt(postArxivId));
+
+                    if (error) {
+                        console.error('Помилка видалення запису з БД:', error);
+                        showNotification('Помилка видалення запису', 'error');
+                        this.closeContextMenu();
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Помилка при видаленні:', err);
+                    showNotification('Виникла помилка при видаленні', 'error');
+                    this.closeContextMenu();
+                    return;
+                }
+            }
+
             block.remove();
             this.closeContextMenu();
             showNotification('Запис видалено', 'success');

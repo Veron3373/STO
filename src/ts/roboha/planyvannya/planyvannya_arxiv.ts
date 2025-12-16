@@ -896,6 +896,56 @@ export class PostArxiv {
     }
 
     private async handleModalSubmit(data: ReservationData): Promise<void> {
+        let effectiveSlyusarId = data.slyusarId;
+        if (!effectiveSlyusarId && this.activeRow) {
+            effectiveSlyusarId = parseInt(this.activeRow.dataset.slyusarId || '0');
+        }
+
+        // Exclude current ID if we are editing
+        let excludeId = undefined;
+        if (this.editingBlock && this.editingBlock.dataset.postArxivId) {
+            excludeId = parseInt(this.editingBlock.dataset.postArxivId);
+        }
+
+        const availability = await this.checkAvailabilityInDb(
+            data.date,
+            data.startTime,
+            data.endTime,
+            excludeId,
+            effectiveSlyusarId || undefined
+        );
+
+        if (!availability.valid) {
+            showNotification(availability.message || 'Цей час вже зайнятий (БД)', 'error');
+            return;
+        }
+
+        const currentViewDate = this.getCurrentDateFromHeader();
+        const isSameDate = currentViewDate === data.date;
+
+        if (!isSameDate) {
+            const startMins = this.timeToMinutesFromStart(data.startTime);
+            const endMins = this.timeToMinutesFromStart(data.endTime);
+
+            let successId: number | null = null;
+            if (this.editingBlock && excludeId) {
+                successId = await this.saveReservationToDb(data, startMins, endMins, excludeId);
+            } else {
+                successId = await this.saveReservationToDb(data, startMins, endMins);
+            }
+
+            if (successId) {
+                showNotification(`Запис успішно збережено на ${data.date}`, 'success');
+                if (this.editingBlock) {
+                    this.editingBlock.remove();
+                }
+                this.reservationModal.close();
+                this.editingBlock = null;
+                this.resetSelection();
+            }
+            return;
+        }
+
         const startMins = this.timeToMinutesFromStart(data.startTime);
         const endMins = this.timeToMinutesFromStart(data.endTime);
 
@@ -904,50 +954,38 @@ export class PostArxiv {
             return;
         }
 
-        const targetRow = this.editingBlock ? this.editingBlock.closest('.post-row-track') as HTMLElement : this.activeRow;
+        let targetRow: HTMLElement | null = null;
+        if (effectiveSlyusarId) {
+            targetRow = this.container.querySelector(`.post-row-track[data-slyusar-id="${effectiveSlyusarId}"]`) as HTMLElement;
+        }
+        if (!targetRow && this.activeRow) targetRow = this.activeRow;
 
         if (targetRow) {
-            // Check overlaps, optionally excluding the block being edited if we are editing
             const validRanges = this.calculateValidRanges(startMins, endMins, targetRow, this.editingBlock);
 
             if (validRanges.length === 0) {
-                showNotification('Обраний час повністю зайнятий', 'error');
+                showNotification('Обраний час візуально перекривається', 'error');
                 return;
             }
 
-            // === DATABASE LOGIC ===
-
-            // If we are editing...
             if (this.editingBlock) {
                 const oldPostArxivId = this.editingBlock.dataset.postArxivId;
 
-                // If we have exactly 1 valid range, and the ID exists, we can try to UPDATE the existing record
                 if (validRanges.length === 1 && oldPostArxivId) {
-                    // UPDATE
                     const range = validRanges[0];
                     const successId = await this.saveReservationToDb(data, range.start, range.end, parseInt(oldPostArxivId));
                     if (successId) {
-                        // Update UI
-                        this.editingBlock.remove(); // Remove old DOM, create new one to ensure clean state
-                        const newData = { ...data, postArxivId: successId }; // Ensure data has ID
+                        this.editingBlock.remove();
+                        const newData = { ...data, postArxivId: successId };
                         this.createReservationBlock(targetRow, range.start, range.end, newData);
                         showNotification('Запис оновлено', 'success');
                     }
                 } else {
-                    // SPLIT occurring: DELETE OLD + INSERT NEW(s)
                     if (oldPostArxivId) {
-                        // Delete old record
-                        const { error } = await supabase.from('post_arxiv').delete().eq('post_arxiv_id', parseInt(oldPostArxivId));
-                        if (error) {
-                            console.error('Error deleting old record:', error);
-                            showNotification('Помилка оновлення (не вдалося видалити старий запис)', 'error');
-                            return; // Don't proceed to insert duplicates
-                        }
+                        await supabase.from('post_arxiv').delete().eq('post_arxiv_id', parseInt(oldPostArxivId));
                     }
-
                     this.editingBlock.remove();
 
-                    // Insert new records
                     let successCount = 0;
                     for (const range of validRanges) {
                         const newId = await this.saveReservationToDb(data, range.start, range.end);
@@ -957,31 +995,18 @@ export class PostArxiv {
                             successCount++;
                         }
                     }
-
-                    if (successCount > 0) {
-                        showNotification(`Запис розділено на ${successCount} частини`, 'success');
-                    }
+                    if (successCount > 0) showNotification(`Запис розділено`, 'success');
                 }
                 this.editingBlock = null;
-
             } else {
-                // NEW RESERVATION
-                let successCount = 0;
                 for (const range of validRanges) {
                     const newId = await this.saveReservationToDb(data, range.start, range.end);
                     if (newId) {
                         const checkoutData = { ...data, postArxivId: newId };
                         this.createReservationBlock(targetRow, range.start, range.end, checkoutData);
-                        successCount++;
                     }
                 }
-                if (successCount > 0) {
-                    if (validRanges.length > 1) {
-                        showNotification(`Створено ${validRanges.length} записи (з урахуванням зайнятого часу)`, 'warning');
-                    } else {
-                        // showNotification('Час зарезервовано', 'success');
-                    }
-                }
+                showNotification('Час зарезервовано', 'success');
             }
         }
 
@@ -991,17 +1016,19 @@ export class PostArxiv {
     }
 
     private async saveReservationToDb(data: ReservationData, startMins: number, endMins: number, existingId?: number): Promise<number | null> {
-        // Calculate ISO strings
-        const currentDate = this.getCurrentDateFromHeader();
-        if (!currentDate) return null;
+        const targetDate = data.date;
+        if (!targetDate) {
+            console.error('No date provided for saving');
+            return null;
+        }
 
         const startHour = this.startHour + Math.floor(startMins / 60);
         const startMin = startMins % 60;
         const endHour = this.startHour + Math.floor(endMins / 60);
         const endMin = endMins % 60;
 
-        const dataOn = `${currentDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
-        const dataOff = `${currentDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
+        const dataOn = `${targetDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
+        const dataOff = `${targetDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
 
         const payload = {
             status: data.status,

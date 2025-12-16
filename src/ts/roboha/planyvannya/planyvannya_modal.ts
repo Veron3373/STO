@@ -641,6 +641,7 @@ export class PlanyvannyaModal {
         container.innerHTML = '';
         if (items.length === 0) {
             container.style.display = 'none';
+            container.classList.remove('post-arxiv-autocomplete-dropdown-up');
             return;
         }
 
@@ -668,7 +669,18 @@ export class PlanyvannyaModal {
             container.appendChild(div);
         });
 
+        // Show temporarily to calculate size
         container.style.display = 'block';
+        container.classList.remove('post-arxiv-autocomplete-dropdown-up');
+
+        // Check if it fits
+        const rect = container.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+
+        // If bottom of dropdown is below viewport (or reasonably close to bottom edge)
+        if (rect.bottom > viewportHeight - 10) {
+            container.classList.add('post-arxiv-autocomplete-dropdown-up');
+        }
     }
 
     private closeAllDropdowns(): void {

@@ -215,6 +215,14 @@
           z-index: 1001;
           display: none;
           margin-top: 2px;
+          
+          &.post-arxiv-autocomplete-dropdown-up {
+            top: auto;
+            bottom: 100%;
+            margin-top: 0;
+            margin-bottom: 2px;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+          }
 
           .post-arxiv-autocomplete-option {
             padding: 8px 10px;

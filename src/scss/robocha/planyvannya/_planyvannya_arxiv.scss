@@ -72,6 +72,32 @@
   margin-right: 2px; // Visual gap between blocks
   padding: 2px 4px;
 
+  // Resize Handles
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize; // East-West resize
+    z-index: 55;
+    background-color: transparent;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.5);
+    }
+
+    &.left {
+      left: 0;
+      border-radius: 4px 0 0 4px;
+    }
+
+    &.right {
+      right: 0;
+      border-radius: 0 4px 4px 0;
+    }
+  }
+
   // Контейнер для тексту
   .post-reservation-text {
     display: flex;

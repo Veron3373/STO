@@ -32,6 +32,14 @@ export class PostArxiv {
     // Editing block state
     private editingBlock: HTMLElement | null = null;
 
+    // Resize state
+    private isResizing: boolean = false;
+    private resizeHandleSide: 'left' | 'right' | null = null;
+    private resizingBlock: HTMLElement | null = null;
+    private resizeOriginalStartMins: number = 0;
+    private resizeOriginalEndMins: number = 0;
+    private resizeStartX: number = 0;
+
 
 
     constructor(containerId: string = 'postCalendarGrid') {
@@ -397,6 +405,25 @@ export class PostArxiv {
 
         // Використовуємо renderBlockContent для формування вмісту
         this.renderBlockContent(block, data);
+
+        // Resize handles
+        const leftHandle = document.createElement('div');
+        leftHandle.className = 'resize-handle left';
+        block.appendChild(leftHandle);
+
+        const rightHandle = document.createElement('div');
+        rightHandle.className = 'resize-handle right';
+        block.appendChild(rightHandle);
+
+        // Resize listeners
+        const onResizeStart = (e: MouseEvent, side: 'left' | 'right') => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent block drag
+            this.handleResizeMouseDown(e, block, side);
+        };
+
+        leftHandle.addEventListener('mousedown', (e) => onResizeStart(e, 'left'));
+        rightHandle.addEventListener('mousedown', (e) => onResizeStart(e, 'right'));
 
         // Context menu event
         block.addEventListener('contextmenu', (e) => {
@@ -1021,6 +1048,25 @@ export class PostArxiv {
         // Використовуємо renderBlockContent для формування вмісту
         this.renderBlockContent(block, data);
 
+        // Resize handles
+        const leftHandle = document.createElement('div');
+        leftHandle.className = 'resize-handle left';
+        block.appendChild(leftHandle);
+
+        const rightHandle = document.createElement('div');
+        rightHandle.className = 'resize-handle right';
+        block.appendChild(rightHandle);
+
+        // Resize listeners
+        const onResizeStart = (e: MouseEvent, side: 'left' | 'right') => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent block drag
+            this.handleResizeMouseDown(e, block, side);
+        };
+
+        leftHandle.addEventListener('mousedown', (e) => onResizeStart(e, 'left'));
+        rightHandle.addEventListener('mousedown', (e) => onResizeStart(e, 'right'));
+
         // Context menu event
         block.addEventListener('contextmenu', (e) => {
             e.preventDefault();
@@ -1110,6 +1156,176 @@ export class PostArxiv {
         }
 
         return result;
+    }
+
+    // --- Resize Logic ---
+
+    private handleResizeMouseDown(e: MouseEvent, block: HTMLElement, side: 'left' | 'right'): void {
+        this.isResizing = true;
+        this.resizingBlock = block;
+        this.resizeHandleSide = side;
+        this.resizeStartX = e.clientX;
+
+        // Store original values
+        this.resizeOriginalStartMins = parseInt(block.dataset.start || '0');
+        this.resizeOriginalEndMins = parseInt(block.dataset.end || '0');
+
+        // Disable transitions during resize for responsiveness
+        block.style.transition = 'none';
+
+        document.addEventListener('mousemove', this.onResizeMouseMove);
+        document.addEventListener('mouseup', this.onResizeMouseUp);
+    }
+
+    private onResizeMouseMove = (e: MouseEvent): void => {
+        if (!this.isResizing || !this.resizingBlock || !this.resizeHandleSide) return;
+
+        const deltaX = e.clientX - this.resizeStartX;
+        const track = this.resizingBlock.closest('.post-row-track') as HTMLElement;
+        if (!track) return;
+
+        const trackWidth = track.getBoundingClientRect().width;
+        const totalMinutes = 12 * 60; // 720
+        const deltaMins = (deltaX / trackWidth) * totalMinutes;
+
+        // Round to 30 mins
+        // Actually, for smoothness we might want unbound, but for logic we need steps.
+        // Let's stick to 30 min steps for snapping, or maybe freemove visually and snap on release?
+        // User asked "drag and expand". Better visually smooth, snap logic.
+        // But the grid is 30 mins. It's better to snap to grid.
+
+        let newStart = this.resizeOriginalStartMins;
+        let newEnd = this.resizeOriginalEndMins;
+
+        // Round delta to nearest 30 mins
+        // const snappedDeltaMins = Math.round(deltaMins / 30) * 30; // This might be jumpy
+
+        // Let's try raw calculation then snap
+        if (this.resizeHandleSide === 'left') {
+            const rawNewStart = this.resizeOriginalStartMins + deltaMins;
+            newStart = Math.round(rawNewStart / 30) * 30;
+
+            // Constrain
+            if (newStart < 0) newStart = 0;
+            if (newStart >= newEnd - 30) newStart = newEnd - 30; // Min 30 mins duration
+        } else {
+            const rawNewEnd = this.resizeOriginalEndMins + deltaMins;
+            newEnd = Math.round(rawNewEnd / 30) * 30;
+
+            // Constrain
+            if (newEnd > totalMinutes) newEnd = totalMinutes;
+            if (newEnd <= newStart + 30) newEnd = newStart + 30;
+        }
+
+        // Apply visual update
+        const leftPercent = (newStart / totalMinutes) * 100;
+        const widthPercent = ((newEnd - newStart) / totalMinutes) * 100;
+
+        this.resizingBlock.style.left = `${leftPercent}%`;
+        this.resizingBlock.style.width = `${widthPercent}%`;
+
+        // Update temp dataset for overlap check
+        this.resizingBlock.dataset.tempStart = newStart.toString();
+        this.resizingBlock.dataset.tempEnd = newEnd.toString();
+
+        // Check valid
+        const overlaps = this.checkOverlap(newStart, newEnd, track);
+        if (overlaps) {
+            this.resizingBlock.classList.add('post-drag-invalid');
+        } else {
+            this.resizingBlock.classList.remove('post-drag-invalid');
+        }
+    }
+
+    private onResizeMouseUp = async (_e: MouseEvent): Promise<void> => {
+        if (!this.isResizing || !this.resizingBlock) return;
+
+        document.removeEventListener('mousemove', this.onResizeMouseMove);
+        document.removeEventListener('mouseup', this.onResizeMouseUp);
+
+        // Finalize
+        const start = parseInt(this.resizingBlock.dataset.tempStart || this.resizeOriginalStartMins.toString());
+        const end = parseInt(this.resizingBlock.dataset.tempEnd || this.resizeOriginalEndMins.toString());
+
+        // Restore transition
+        this.resizingBlock.style.transition = '';
+        this.resizingBlock.classList.remove('post-drag-invalid');
+
+        // Check if changed
+        if (start === this.resizeOriginalStartMins && end === this.resizeOriginalEndMins) {
+            this.resetResizeState();
+            return;
+        }
+
+        // Check validity
+        const track = this.resizingBlock.closest('.post-row-track') as HTMLElement;
+        const overlaps = this.checkOverlap(start, end, track);
+
+        if (overlaps) {
+            // Revert
+            const totalMinutes = 12 * 60;
+            const leftPercent = (this.resizeOriginalStartMins / totalMinutes) * 100;
+            const widthPercent = ((this.resizeOriginalEndMins - this.resizeOriginalStartMins) / totalMinutes) * 100;
+            this.resizingBlock.style.left = `${leftPercent}%`;
+            this.resizingBlock.style.width = `${widthPercent}%`;
+            showNotification('Неможливо змінити час: перетин з іншим записом', 'error');
+        } else {
+            // Commit to DB
+            await this.updateReservationTime(this.resizingBlock, start, end);
+        }
+
+        this.resetResizeState();
+    }
+
+    private resetResizeState(): void {
+        this.isResizing = false;
+        this.resizingBlock = null;
+        this.resizeHandleSide = null;
+    }
+
+    private async updateReservationTime(block: HTMLElement, startMins: number, endMins: number): Promise<void> {
+        const postArxivId = block.dataset.postArxivId;
+        const slyusarId = block.dataset.slyusarId;
+
+        if (!postArxivId || !slyusarId) return;
+
+        // Update attributes locally
+        block.dataset.start = startMins.toString();
+        block.dataset.end = endMins.toString();
+        delete block.dataset.tempStart;
+        delete block.dataset.tempEnd;
+
+        try {
+            const currentDate = this.getCurrentDateFromHeader();
+            if (!currentDate) return;
+
+            const startHour = this.startHour + Math.floor(startMins / 60);
+            const startMin = startMins % 60;
+            const endHour = this.startHour + Math.floor(endMins / 60);
+            const endMin = endMins % 60;
+
+            const dataOn = `${currentDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
+            const dataOff = `${currentDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
+
+            const { error } = await supabase
+                .from('post_arxiv')
+                .update({
+                    data_on: dataOn,
+                    data_off: dataOff
+                })
+                .eq('post_arxiv_id', parseInt(postArxivId));
+
+            if (error) {
+                console.error('Update time error:', error);
+                showNotification('Помилка оновлення часу', 'error');
+                // Revert logic could go here but it's complex visually, for now keep UI as is or reload
+            } else {
+                showNotification('Час оновлено', 'success');
+            }
+
+        } catch (err) {
+            console.error('Update time error:', err);
+        }
     }
 
     private showContextMenu(e: MouseEvent, block: HTMLElement): void {

@@ -92,18 +92,25 @@ export class ReservationModal {
     private createModalHTML(date: string, startTime: string, endTime: string, comment: string): void {
         if (document.getElementById('postArxivModalOverlay')) return;
 
+        // Get formatted date from header element or format the date
+        const headerDateEl = document.getElementById('postHeaderDateDisplay');
+        const displayDate = headerDateEl ? headerDateEl.textContent : this.formatDateUkrainian(date);
+
         const modalHTML = `
       <div class="post-arxiv-modal-overlay" id="postArxivModalOverlay">
         <div class="post-arxiv-modal">
           <div class="post-arxiv-header">
-            <h2>Резервування часу</h2>
+            <div class="post-arxiv-header-content">
+              <h2>Резервування часу</h2>
+              <p class="post-arxiv-header-date">${displayDate}</p>
+            </div>
             <button class="post-arxiv-close" id="postArxivClose">×</button>
           </div>
           <div class="post-arxiv-body">
             
             <!-- ПІБ Клієнта -->
             <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
-              <label>ПІБ клієнта <span class="required">*</span></label>
+              <label>ПІБ <span class="required">*</span></label>
               <input type="text" id="postArxivClientName" placeholder="Почніть вводити прізвище..." autocomplete="off">
               <div class="post-arxiv-autocomplete-dropdown" id="postArxivClientDropdown"></div>
             </div>
@@ -115,47 +122,47 @@ export class ReservationModal {
               <div class="post-arxiv-autocomplete-dropdown" id="postArxivPhoneDropdown"></div>
             </div>
             
-            <!-- Автомобіль -->
-            <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
-              <label>Автомобіль <span class="required">*</span></label>
-              <input type="text" id="postArxivCar" placeholder="Почніть вводити марку..." autocomplete="off">
-              <div class="post-arxiv-autocomplete-dropdown" id="postArxivCarDropdown"></div>
+            <!-- Автомобіль + Номер авто -->
+            <div class="post-arxiv-form-row">
+              <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper post-arxiv-car-field">
+                <label>Автомобіль <span class="required">*</span></label>
+                <input type="text" id="postArxivCar" placeholder="Марка..." autocomplete="off">
+                <div class="post-arxiv-autocomplete-dropdown" id="postArxivCarDropdown"></div>
+              </div>
+              <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper post-arxiv-number-field">
+                <label>Номер авто</label>
+                <input type="text" id="postArxivCarNumber" placeholder="АА1234ВВ" autocomplete="off">
+                <div class="post-arxiv-autocomplete-dropdown" id="postArxivCarNumberDropdown"></div>
+              </div>
             </div>
             
-            <!-- Номер авто -->
-            <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
-              <label>Номер авто</label>
-              <input type="text" id="postArxivCarNumber" placeholder="Наприклад: АА1234ВВ" autocomplete="off">
-              <div class="post-arxiv-autocomplete-dropdown" id="postArxivCarNumberDropdown"></div>
-            </div>
-
-            <div class="post-arxiv-form-group">
-              <label>Дата</label>
-              <input type="date" id="postArxivDate" value="${date}">
-            </div>
-            
+            <!-- Час -->
             <div class="post-arxiv-form-group">
               <label>Час</label>
-              <div class="post-time-inputs">
-                <div>
-                  <label>Початок</label>
+              <div class="post-arxiv-time-row">
+                <div class="post-arxiv-time-field">
+                  <span class="post-arxiv-time-label">Початок</span>
                   <input type="time" id="postArxivStart" value="${startTime}">
                 </div>
-                <div>
-                  <label>Кінець</label>
+                <div class="post-arxiv-time-field">
+                  <span class="post-arxiv-time-label">Кінець</span>
                   <input type="time" id="postArxivEnd" value="${endTime}">
                 </div>
               </div>
             </div>
 
+            <!-- Коментар -->
             <div class="post-arxiv-form-group">
-              <label>Коментар (необов'язково)</label>
+              <label>Коментар <span class="optional">(необов'язково)</span></label>
               <input type="text" id="postArxivComment" placeholder="Введіть коментар..." value="${comment}">
             </div>
+
+            <!-- Hidden date field -->
+            <input type="hidden" id="postArxivDate" value="${date}">
           </div>
           <div class="post-arxiv-footer">
             <button class="post-btn post-btn-secondary" id="postArxivCancel">Скасувати</button>
-            <button class="post-btn post-btn-blue" id="postArxivSubmit">ОК</button>
+            <button class="post-btn post-btn-primary" id="postArxivSubmit">ОК</button>
           </div>
         </div>
       </div>
@@ -476,6 +483,20 @@ export class ReservationModal {
     }
 
     // --- Helpers ---
+
+    private formatDateUkrainian(dateString: string): string {
+        const date = new Date(dateString);
+        const days = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота'];
+        const months = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+            'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+
+        const dayOfWeek = days[date.getDay()];
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+
+        return `${dayOfWeek}, ${day} ${month} ${year}`;
+    }
 
     private handleClientSelect(client: ClientData, loadCars: boolean = true): void {
         const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;

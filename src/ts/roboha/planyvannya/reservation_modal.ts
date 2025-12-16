@@ -112,17 +112,13 @@ export class ReservationModal {
               <h2>Резервування часу</h2>
               <p class="post-arxiv-header-date">${displayDate}</p>
             </div>
+            <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
+              <span class="post-arxiv-status-indicator" id="postArxivStatusIndicator"></span>
+              <span id="postArxivStatusText">Запланований</span>
+            </button>
             <button class="post-arxiv-close" id="postArxivClose">×</button>
           </div>
           <div class="post-arxiv-body">
-            
-            <!-- Status Button -->
-            <div class="post-arxiv-status-row">
-              <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
-                <span class="post-arxiv-status-indicator" id="postArxivStatusIndicator"></span>
-                <span id="postArxivStatusText">Запланований</span>
-              </button>
-            </div>
             
             <!-- ПІБ Клієнта -->
             <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">

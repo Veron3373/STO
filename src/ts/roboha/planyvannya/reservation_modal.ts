@@ -104,13 +104,20 @@ export class ReservationModal {
         const headerDateEl = document.getElementById('postHeaderDateDisplay');
         const displayDate = headerDateEl ? headerDateEl.textContent : this.formatDateUkrainian(date);
 
+        // Format time for display (remove leading zeros for hours)
+        const formatTime = (time: string) => {
+            const [h, m] = time.split(':');
+            return `${parseInt(h, 10)}:${m}`;
+        };
+        const displayTimeRange = `з ${formatTime(startTime)} по ${formatTime(endTime)}`;
+
         const modalHTML = `
       <div class="post-arxiv-modal-overlay" id="postArxivModalOverlay">
         <div class="post-arxiv-modal">
           <div class="post-arxiv-header" id="postArxivHeader">
             <div class="post-arxiv-header-content">
               <h2>Резервування часу</h2>
-              <p class="post-arxiv-header-date">${displayDate}</p>
+              <p class="post-arxiv-header-date">${displayDate} ${displayTimeRange}</p>
             </div>
             <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
               <span id="postArxivStatusText">Запланований</span>
@@ -149,39 +156,10 @@ export class ReservationModal {
                 <div class="post-arxiv-autocomplete-dropdown" id="postArxivCarNumberDropdown"></div>
               </div>
             </div>
-            
-            <!-- Час -->
-            <div class="post-arxiv-form-group">
-              <label>Час</label>
-              <div class="post-arxiv-time-row">
-                <div class="post-arxiv-time-field">
-                  <span class="post-arxiv-time-label">Початок</span>
-                  <div class="post-arxiv-time-selects">
-                    <select id="postArxivStartHour">
-                      ${this.generateHourOptions(startTime.split(':')[0])}
-                    </select>
-                    <span class="post-arxiv-time-colon">:</span>
-                    <select id="postArxivStartMinute">
-                      <option value="00" ${startTime.split(':')[1] === '00' ? 'selected' : ''}>00</option>
-                      <option value="30" ${startTime.split(':')[1] === '30' ? 'selected' : ''}>30</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="post-arxiv-time-field">
-                  <span class="post-arxiv-time-label">Кінець</span>
-                  <div class="post-arxiv-time-selects">
-                    <select id="postArxivEndHour">
-                      ${this.generateHourOptions(endTime.split(':')[0])}
-                    </select>
-                    <span class="post-arxiv-time-colon">:</span>
-                    <select id="postArxivEndMinute">
-                      <option value="00" ${endTime.split(':')[1] === '00' ? 'selected' : ''}>00</option>
-                      <option value="30" ${endTime.split(':')[1] === '30' ? 'selected' : ''}>30</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
+
+            <!-- Hidden fields for time -->
+            <input type="hidden" id="postArxivStartTime" value="${startTime}">
+            <input type="hidden" id="postArxivEndTime" value="${endTime}">
 
             <!-- Коментар -->
             <div class="post-arxiv-form-group">
@@ -544,17 +522,6 @@ export class ReservationModal {
         return `${dayOfWeek}, ${day} ${month} ${year}`;
     }
 
-    private generateHourOptions(selectedHour: string): string {
-        let options = '';
-        const selected = parseInt(selectedHour, 10);
-        for (let h = 8; h <= 22; h++) {
-            const hourStr = h.toString().padStart(2, '0');
-            const isSelected = h === selected ? 'selected' : '';
-            options += `<option value="${hourStr}" ${isSelected}>${hourStr}</option>`;
-        }
-        return options;
-    }
-
     private setupStatusButton(): void {
         const statusBtn = document.getElementById('postArxivStatusBtn');
         if (statusBtn) {
@@ -657,10 +624,8 @@ export class ReservationModal {
         const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
         const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
         const dateInput = document.getElementById('postArxivDate') as HTMLInputElement;
-        const startHour = document.getElementById('postArxivStartHour') as HTMLSelectElement;
-        const startMinute = document.getElementById('postArxivStartMinute') as HTMLSelectElement;
-        const endHour = document.getElementById('postArxivEndHour') as HTMLSelectElement;
-        const endMinute = document.getElementById('postArxivEndMinute') as HTMLSelectElement;
+        const startTimeInput = document.getElementById('postArxivStartTime') as HTMLInputElement;
+        const endTimeInput = document.getElementById('postArxivEndTime') as HTMLInputElement;
         const commentInput = document.getElementById('postArxivComment') as HTMLTextAreaElement;
 
         // Validation
@@ -669,13 +634,10 @@ export class ReservationModal {
             return;
         }
 
-        const startTime = `${startHour.value}:${startMinute.value}`;
-        const endTime = `${endHour.value}:${endMinute.value}`;
-
         const data: ReservationData = {
             date: dateInput.value,
-            startTime: startTime,
-            endTime: endTime,
+            startTime: startTimeInput.value,
+            endTime: endTimeInput.value,
             clientId: this.selectedClientId,
             clientName: nameInput.value,
             clientPhone: phoneInput.value,

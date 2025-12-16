@@ -654,8 +654,8 @@ export class PostArxiv {
 
             // Bounds check
             if (startMins >= 0 && endMins <= totalMinutes) {
-                // Check overlap, EXCLUDING self (which is not in track currently)
-                const overlaps = this.checkOverlap(startMins, endMins, track);
+                // Check overlap, EXCLUDING self (which is not in track currently, but to be safe/consistent)
+                const overlaps = this.checkOverlap(startMins, endMins, track, this.movingBlock);
 
                 if (overlaps) {
                     this.movingBlock.classList.add('post-drag-invalid');
@@ -821,22 +821,7 @@ export class PostArxiv {
         this.isBlockDragging = false;
     }
 
-    private checkOverlap(start: number, end: number, row: HTMLElement): boolean {
-        const blocks = Array.from(row.querySelectorAll('.post-reservation-block')) as HTMLElement[];
-        for (const block of blocks) {
-            // Skip if it's the element we are moving (though we removed it from DOM, so redundant but safe)
-            if (block === this.movingBlock) continue;
 
-            const bStart = parseInt(block.dataset.start || '0');
-            const bEnd = parseInt(block.dataset.end || '0');
-
-            // Check overlap
-            if (Math.max(start, bStart) < Math.min(end, bEnd)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     private resetSelection(): void {
         if (this.selectionEl) {
@@ -1110,7 +1095,33 @@ export class PostArxiv {
         row.appendChild(block);
     }
 
+    private checkOverlap(start: number, end: number, track: HTMLElement, excludeBlock: HTMLElement | null = null): boolean {
+        // Get all existing blocks in this row
+        const existingBlocks = Array.from(track.querySelectorAll('.post-reservation-block')) as HTMLElement[];
+
+        for (const block of existingBlocks) {
+            // Skip the block that is currently being moved or edited
+            if (block === this.movingBlock || block === excludeBlock) continue;
+
+            // Skip the block being resized if it is this one (handle case where excludeBlock wasn't passed or check logic)
+            // Ideally excludeBlock handles it.
+
+            const blockStart = parseInt(block.dataset.start || '0');
+            const blockEnd = parseInt(block.dataset.end || '0');
+
+            // Check intersection: (StartA < EndB) and (EndA > StartB)
+            if (start < blockEnd && end > blockStart) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private calculateValidRanges(start: number, end: number, row: HTMLElement, excludeBlock: HTMLElement | null = null): { start: number, end: number }[] {
+        // This function is still used by onMouseUp of drag selection, so keep it but maybe it should use checkOverlap logic too?
+        // Or just leave as is for selection logic.
+        // Actually, checkOverlap is simpler for D&D of blocks.
+
         // Get all existing blocks in this row
         const existingBlocks = Array.from(row.querySelectorAll('.post-reservation-block')) as HTMLElement[];
         const busyIntervals: { start: number, end: number }[] = [];
@@ -1229,7 +1240,7 @@ export class PostArxiv {
         this.resizingBlock.dataset.tempEnd = newEnd.toString();
 
         // Check valid
-        const overlaps = this.checkOverlap(newStart, newEnd, track);
+        const overlaps = this.checkOverlap(newStart, newEnd, track, this.resizingBlock);
         if (overlaps) {
             this.resizingBlock.classList.add('post-drag-invalid');
         } else {
@@ -1259,7 +1270,7 @@ export class PostArxiv {
 
         // Check validity
         const track = this.resizingBlock.closest('.post-row-track') as HTMLElement;
-        const overlaps = this.checkOverlap(start, end, track);
+        const overlaps = this.checkOverlap(start, end, track, this.resizingBlock);
 
         if (overlaps) {
             // Revert

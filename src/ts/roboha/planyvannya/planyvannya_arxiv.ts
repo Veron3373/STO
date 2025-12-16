@@ -215,8 +215,9 @@ export class PostArxiv {
         const dataOff = new Date(record.data_off);
 
         // Конвертуємо в хвилини від початку робочого дня (8:00)
-        const startMins = (dataOn.getHours() - this.startHour) * 60 + dataOn.getMinutes();
-        const endMins = (dataOff.getHours() - this.startHour) * 60 + dataOff.getMinutes();
+        // Використовуємо UTC методи бо в БД зберігається UTC час
+        const startMins = (dataOn.getUTCHours() - this.startHour) * 60 + dataOn.getUTCMinutes();
+        const endMins = (dataOff.getUTCHours() - this.startHour) * 60 + dataOff.getUTCMinutes();
 
         // Перевіряємо що час в допустимих межах
         if (startMins < 0 || endMins > 12 * 60) {
@@ -233,8 +234,8 @@ export class PostArxiv {
         // Формуємо дані для блоку
         const reservationData: ReservationData = {
             date: record.data_on.split('T')[0],
-            startTime: `${dataOn.getHours().toString().padStart(2, '0')}:${dataOn.getMinutes().toString().padStart(2, '0')}`,
-            endTime: `${dataOff.getHours().toString().padStart(2, '0')}:${dataOff.getMinutes().toString().padStart(2, '0')}`,
+            startTime: `${dataOn.getUTCHours().toString().padStart(2, '0')}:${dataOn.getUTCMinutes().toString().padStart(2, '0')}`,
+            endTime: `${dataOff.getUTCHours().toString().padStart(2, '0')}:${dataOff.getUTCMinutes().toString().padStart(2, '0')}`,
             clientId: record.client_id,
             clientName: clientName,
             clientPhone: '',
@@ -598,9 +599,14 @@ export class PostArxiv {
 
             track.appendChild(this.movingBlock);
 
+            // Зберігаємо посилання на блок перед async операцією
+            const movedBlock = this.movingBlock;
+
             // === ОНОВЛЕННЯ БАЗИ ДАНИХ ===
-            const postArxivId = this.movingBlock.dataset.postArxivId;
+            const postArxivId = movedBlock.dataset.postArxivId;
             const newSlyusarId = track.dataset.slyusarId;
+
+            console.log('Переміщення блоку:', { postArxivId, newSlyusarId, startMins, endMins });
 
             if (postArxivId && newSlyusarId) {
                 try {
@@ -617,6 +623,8 @@ export class PostArxiv {
                         const dataOn = `${currentDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
                         const dataOff = `${currentDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
 
+                        console.log('Оновлення БД:', { postArxivId, newSlyusarId, dataOn, dataOff });
+
                         // Оновлюємо запис в БД
                         const { error } = await supabase
                             .from('post_arxiv')
@@ -632,7 +640,10 @@ export class PostArxiv {
                             showNotification('Помилка збереження переміщення', 'error');
                         } else {
                             // Оновлюємо dataset блоку з новим slyusar_id
-                            this.movingBlock.dataset.slyusarId = newSlyusarId;
+                            movedBlock.dataset.slyusarId = newSlyusarId;
+                            // Оновлюємо dataset з новими хвилинами
+                            movedBlock.dataset.start = startMins.toString();
+                            movedBlock.dataset.end = endMins.toString();
                             showNotification('Запис переміщено', 'success');
                         }
                     } else {
@@ -643,6 +654,7 @@ export class PostArxiv {
                     showNotification('Помилка збереження переміщення', 'error');
                 }
             } else {
+                console.warn('Немає postArxivId або newSlyusarId для збереження');
                 showNotification('Запис переміщено', 'success');
             }
         } else {

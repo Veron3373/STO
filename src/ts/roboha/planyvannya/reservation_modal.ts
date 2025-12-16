@@ -1,4 +1,4 @@
-import '../../../scss/robocha/planyvannya/_reservation_modal.scss';
+import '../../../scss/robocha/planyvannya/_planyvannya_modal.scss';
 import { supabase } from '../../vxid/supabaseClient';
 
 export interface ReservationData {
@@ -35,7 +35,7 @@ interface CarData {
     rawData: any;
 }
 
-export class ReservationModal {
+export class PlanyvannyaModal {
     private modalOverlay: HTMLElement | null = null;
     private onSubmitCallback: ((data: ReservationData) => void) | null = null;
 

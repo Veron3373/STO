@@ -1,7 +1,7 @@
 import '../../../scss/robocha/planyvannya/_planyvannya_arxiv.scss';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 
-import { ReservationModal, type ReservationData } from './reservation_modal';
+import { PlanyvannyaModal, type ReservationData } from './planyvannya_modal';
 
 // Removed local ReservationData interface to avoid conflict
 
@@ -396,7 +396,7 @@ export class PostArxiv {
 
     // --- Modal Logic ---
 
-    private reservationModal = new ReservationModal();
+    private reservationModal = new PlanyvannyaModal();
 
     private openModal(startTime: string, endTime: string, comment: string = ''): void {
         const today = new Date().toISOString().split('T')[0];

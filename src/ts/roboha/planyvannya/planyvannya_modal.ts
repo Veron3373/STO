@@ -1,3 +1,5 @@
+//src\ts\roboha\planyvannya\planyvannya_modal.ts
+
 import '../../../scss/robocha/planyvannya/_planyvannya_modal.scss';
 import { supabase } from '../../vxid/supabaseClient';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
@@ -756,7 +758,9 @@ export class PlanyvannyaModal {
                 carNumber: numberInput?.value || '',
                 comment: commentInput?.value || '',
                 status: status,
-                postArxivId: resultPostArxivId || null
+                postArxivId: resultPostArxivId || null,
+                slyusarId: this.slyusarId,
+                namePost: this.namePost
             };
 
             if (this.onSubmitCallback) {

@@ -1,3 +1,4 @@
+//src\ts\roboha\planyvannya\planyvannya_arxiv.ts
 import '../../../scss/robocha/planyvannya/_planyvannya_arxiv.scss';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 import { supabase } from '../../vxid/supabaseClient';
@@ -1001,11 +1002,14 @@ export class PostArxiv {
             // Store rich data
             block.dataset.clientName = data.clientName;
             block.dataset.clientId = data.clientId?.toString() || '';
+            block.dataset.clientPhone = data.clientPhone || '';
             block.dataset.carModel = data.carModel;
             block.dataset.carNumber = data.carNumber;
             block.dataset.status = status;
             block.dataset.postArxivId = data.postArxivId?.toString() || '';
             block.dataset.carId = data.carId?.toString() || '';
+            block.dataset.slyusarId = data.slyusarId?.toString() || '';
+            block.dataset.namePost = data.namePost?.toString() || '';
         }
 
         block.dataset.comment = comment;
@@ -1039,10 +1043,22 @@ export class PostArxiv {
 
             const startStr = this.minutesToTime(parseInt(block.dataset.start || '0'));
             const endStr = this.minutesToTime(parseInt(block.dataset.end || '0'));
-            const savedComment = block.dataset.comment || '';
 
-            // TODO: Restore full data if available in dataset
-            this.openModal(startStr, endStr, savedComment === 'Резерв' ? '' : savedComment);
+            const detailData: Partial<ReservationData> = {
+                clientName: block.dataset.clientName,
+                clientId: parseInt(block.dataset.clientId || '0') || null,
+                clientPhone: block.dataset.clientPhone,
+                carModel: block.dataset.carModel,
+                carNumber: block.dataset.carNumber,
+                carId: parseInt(block.dataset.carId || '0') || null,
+                status: block.dataset.status,
+                comment: block.dataset.comment,
+                postArxivId: parseInt(block.dataset.postArxivId || '0') || null,
+                slyusarId: parseInt(block.dataset.slyusarId || '0') || null,
+                namePost: parseInt(block.dataset.namePost || '0') || null
+            };
+
+            this.openModal(startStr, endStr, detailData);
         });
 
         row.appendChild(block);

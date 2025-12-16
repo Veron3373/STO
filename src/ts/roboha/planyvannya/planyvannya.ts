@@ -1,3 +1,5 @@
+//src\ts\roboha\planyvannya\planyvannya.ts
+
 import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
 import { PostArxiv } from "./planyvannya_arxiv"; // Import new class

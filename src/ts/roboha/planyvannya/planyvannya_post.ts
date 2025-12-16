@@ -1,3 +1,5 @@
+
+//src\ts\roboha\planyvannya\planyvannya_post.ts
 import '../../../scss/robocha/planyvannya/_planyvannya_post.scss';
 import { supabase } from '../../vxid/supabaseClient';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';

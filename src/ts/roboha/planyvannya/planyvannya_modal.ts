@@ -1,5 +1,6 @@
 import '../../../scss/robocha/planyvannya/_planyvannya_modal.scss';
 import { supabase } from '../../vxid/supabaseClient';
+import { showNotification } from '../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 
 export interface ReservationData {
     date: string;
@@ -116,7 +117,7 @@ export class PlanyvannyaModal {
         <div class="post-arxiv-modal">
           <div class="post-arxiv-header" id="postArxivHeader">
             <div class="post-arxiv-header-row">
-              <h2>Резервування часу</h2>
+              <h2>Запис</h2>
               <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
                 <span id="postArxivStatusText">Запланований</span>
               </button>
@@ -629,7 +630,7 @@ export class PlanyvannyaModal {
 
         // Validation
         if (!nameInput?.value || !phoneInput?.value || !carInput?.value || !dateInput?.value) {
-            alert('Будь ласка, заповніть всі обов\'язкові поля');
+            showNotification('Будь ласка, заповніть всі обов\'язкові поля', 'error');
             return;
         }
 

@@ -171,7 +171,6 @@ export class ReservationModal {
             <input type="hidden" id="postArxivDate" value="${date}">
           </div>
           <div class="post-arxiv-footer">
-            <button class="post-btn post-btn-secondary" id="postArxivCancel">Скасувати</button>
             <button class="post-btn post-btn-primary" id="postArxivSubmit">ОК</button>
           </div>
         </div>

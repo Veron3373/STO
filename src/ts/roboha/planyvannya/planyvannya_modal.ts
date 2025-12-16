@@ -1,6 +1,6 @@
 import '../../../scss/robocha/planyvannya/_planyvannya_modal.scss';
 import { supabase } from '../../vxid/supabaseClient';
-import { showNotification } from '../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
+import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 
 export interface ReservationData {
     date: string;

@@ -322,6 +322,20 @@ export class PostArxiv {
         const carModel = carData['Авто'] || '';
         const carNumber = carData['Номер авто'] || '';
 
+        // Extract phone
+        let clientPhone = '';
+        if (clientData) {
+            for (const key in clientData) {
+                if (key.toLowerCase().includes('телефон')) {
+                    const phone = clientData[key];
+                    if (phone && typeof phone === 'string' && phone.trim() !== '') {
+                        clientPhone = phone;
+                        break; // Grab first phone found
+                    }
+                }
+            }
+        }
+
         // Формуємо дані для блоку
         const reservationData: ReservationData = {
             date: record.data_on.split('T')[0],
@@ -329,13 +343,15 @@ export class PostArxiv {
             endTime: `${dataOff.getUTCHours().toString().padStart(2, '0')}:${dataOff.getUTCMinutes().toString().padStart(2, '0')}`,
             clientId: record.client_id,
             clientName: clientName,
-            clientPhone: '',
+            clientPhone: clientPhone,
             carId: record.cars_id,
             carModel: carModel,
             carNumber: carNumber,
             comment: record.komentar || '',
             status: record.status || 'Запланований',
-            postArxivId: record.post_arxiv_id
+            postArxivId: record.post_arxiv_id,
+            slyusarId: record.slyusar_id,
+            namePost: record.name_post
         };
 
         // Створюємо блок з правильним кольором
@@ -368,12 +384,15 @@ export class PostArxiv {
         // Store rich data
         block.dataset.clientName = data.clientName;
         block.dataset.clientId = data.clientId?.toString() || '';
+        block.dataset.clientPhone = data.clientPhone || '';
         block.dataset.carModel = data.carModel;
         block.dataset.carNumber = data.carNumber;
         block.dataset.status = data.status || '';
         block.dataset.postArxivId = data.postArxivId?.toString() || '';
         block.dataset.carId = data.carId?.toString() || '';
         block.dataset.comment = data.comment;
+        block.dataset.slyusarId = data.slyusarId?.toString() || '';
+        block.dataset.namePost = data.namePost?.toString() || '';
 
         // Використовуємо renderBlockContent для формування вмісту
         this.renderBlockContent(block, data);
@@ -400,9 +419,22 @@ export class PostArxiv {
 
             const startStr = this.minutesToTime(parseInt(block.dataset.start || '0'));
             const endStr = this.minutesToTime(parseInt(block.dataset.end || '0'));
-            const savedComment = block.dataset.comment || '';
 
-            this.openModal(startStr, endStr, savedComment === 'Резерв' ? '' : savedComment);
+            const detailData: Partial<ReservationData> = {
+                clientName: block.dataset.clientName,
+                clientId: parseInt(block.dataset.clientId || '0') || null,
+                clientPhone: block.dataset.clientPhone,
+                carModel: block.dataset.carModel,
+                carNumber: block.dataset.carNumber,
+                carId: parseInt(block.dataset.carId || '0') || null,
+                status: block.dataset.status,
+                comment: block.dataset.comment,
+                postArxivId: parseInt(block.dataset.postArxivId || '0') || null,
+                slyusarId: parseInt(block.dataset.slyusarId || '0') || null,
+                namePost: parseInt(block.dataset.namePost || '0') || null
+            };
+
+            this.openModal(startStr, endStr, detailData);
         });
 
         row.appendChild(block);
@@ -806,10 +838,23 @@ export class PostArxiv {
 
     private reservationModal = new PlanyvannyaModal();
 
-    private openModal(startTime: string, endTime: string, comment: string = ''): void {
+    private openModal(startTime: string, endTime: string, existingData: Partial<ReservationData> | string = ''): void {
         const today = new Date().toISOString().split('T')[0];
 
-        // Отримуємо slyusarId та postId з активного рядка
+        // Normalizing arguments
+        let data: Partial<ReservationData> = {};
+        let comment = '';
+
+        if (typeof existingData === 'string') {
+            comment = existingData;
+        } else {
+            data = existingData;
+            comment = data.comment || '';
+        }
+
+        // Отримуємо slyusarId та postId з активного рядка (якщо це новий запис, а не редагування)
+        // Але якщо редагуємо, ми вже маємо ці дані (або не змінюємо їх)
+
         let slyusarId: number | null = null;
         let namePost: number | null = null;
 
@@ -821,13 +866,17 @@ export class PostArxiv {
             if (postIdStr) namePost = parseInt(postIdStr);
         }
 
+        // Merge context data if not present in existingData
+        if (!data.slyusarId && slyusarId) data.slyusarId = slyusarId;
+        if (!data.namePost && namePost) data.namePost = namePost;
+
         this.reservationModal.open(
             today,
             startTime,
             endTime,
             comment,
-            { slyusarId, namePost }, // existing data if any
-            (data: ReservationData) => this.handleModalSubmit(data)
+            data,
+            (resultData: ReservationData) => this.handleModalSubmit(resultData)
         );
     }
 

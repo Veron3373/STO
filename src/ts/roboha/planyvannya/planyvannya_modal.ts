@@ -54,6 +54,7 @@ export class PlanyvannyaModal {
     // Дані для post_arxiv
     private slyusarId: number | null = null;
     private namePost: number | null = null;
+    private postArxivId: number | null = null;
 
     private currentStatusIndex: number = 0;
     private readonly statuses = [
@@ -80,6 +81,7 @@ export class PlanyvannyaModal {
         // Зберігаємо slyusarId та namePost з existingData
         this.slyusarId = existingData?.slyusarId ?? null;
         this.namePost = existingData?.namePost ?? null;
+        this.postArxivId = existingData?.postArxivId ?? null;
 
         this.createModalHTML(date, startTime, endTime, comment);
         this.bindEvents();
@@ -89,14 +91,46 @@ export class PlanyvannyaModal {
 
         // If we have existing data (editing), we might need to pre-fill and load cars
         // For now, handling the basic case of prepopulating fields from args
+        if (existingData) {
+            const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
+            if (nameInput && existingData.clientName) nameInput.value = existingData.clientName;
+
+            const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
+            if (phoneInput && existingData.clientPhone) phoneInput.value = existingData.clientPhone;
+
+            const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
+            if (carInput && existingData.carModel) carInput.value = existingData.carModel;
+
+            const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
+            if (numberInput && existingData.carNumber) numberInput.value = existingData.carNumber;
+
+            if (existingData.status) {
+                const idx = this.statuses.findIndex(s => s.name === existingData.status);
+                if (idx >= 0) {
+                    this.currentStatusIndex = idx;
+                    this.applyStatus();
+                }
+            }
+
+            this.selectedClientId = existingData.clientId || null;
+            this.selectedCarId = existingData.carId || null;
+
+            // Load cars for selected client to enable autocomplete/dropdowns for existing client
+            if (this.selectedClientId) {
+                // await this.loadCarsForClient(this.selectedClientId); // Optional: might be slow, load async
+                this.loadCarsForClient(this.selectedClientId).catch(console.error);
+            }
+        }
 
         this.modalOverlay = document.getElementById('postArxivModalOverlay');
         if (this.modalOverlay) {
             this.modalOverlay.style.display = 'flex';
 
-            // Focus name input by default
-            const nameInput = document.getElementById('postArxivClientName');
-            nameInput?.focus();
+            // Focus name input by default if empty
+            const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
+            if (nameInput && !nameInput.value) {
+                nameInput.focus();
+            }
         }
     }
 
@@ -677,20 +711,37 @@ export class PlanyvannyaModal {
         };
 
         try {
-            // Зберігаємо в базу даних post_arxiv
-            const { data: insertedData, error } = await supabase
-                .from('post_arxiv')
-                .insert(postArxivData)
-                .select('post_arxiv_id')
-                .single();
+            let resultPostArxivId = this.postArxivId;
 
-            if (error) {
-                console.error('Помилка збереження запису:', error);
-                showNotification('Помилка збереження запису в базу даних', 'error');
-                return;
+            if (this.postArxivId) {
+                // UPDATE
+                const { error } = await supabase
+                    .from('post_arxiv')
+                    .update(postArxivData)
+                    .eq('post_arxiv_id', this.postArxivId);
+
+                if (error) {
+                    console.error('Помилка оновлення запису:', error);
+                    showNotification('Помилка оновлення запису в базі даних', 'error');
+                    return;
+                }
+                showNotification('Запис успішно оновлено!', 'success');
+            } else {
+                // INSERT
+                const { data: insertedData, error } = await supabase
+                    .from('post_arxiv')
+                    .insert(postArxivData)
+                    .select('post_arxiv_id')
+                    .single();
+
+                if (error) {
+                    console.error('Помилка збереження запису:', error);
+                    showNotification('Помилка збереження запису в базу даних', 'error');
+                    return;
+                }
+                resultPostArxivId = insertedData?.post_arxiv_id;
+                showNotification('Запис успішно створено!', 'success');
             }
-
-            showNotification('Запис успішно створено!', 'success');
 
             // Формуємо дані для callback
             const data: ReservationData = {
@@ -705,7 +756,7 @@ export class PlanyvannyaModal {
                 carNumber: numberInput?.value || '',
                 comment: commentInput?.value || '',
                 status: status,
-                postArxivId: insertedData?.post_arxiv_id || null
+                postArxivId: resultPostArxivId || null
             };
 
             if (this.onSubmitCallback) {

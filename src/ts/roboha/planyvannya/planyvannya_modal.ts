@@ -717,83 +717,30 @@ export class PlanyvannyaModal {
 
         const { dateValue, startTime, endTime } = parsedDateTime;
 
-        // Створюємо ISO timestamp для Supabase
-        const dataOn = `${dateValue}T${startTime}:00`;
-        const dataOff = `${dateValue}T${endTime}:00`;
-
-        // Підготовка даних для збереження в post_arxiv
-        const postArxivData = {
+        // Формуємо дані для callback
+        const data: ReservationData = {
+            date: dateValue,
+            startTime: startTime,
+            endTime: endTime,
+            clientId: this.selectedClientId,
+            clientName: nameInput.value,
+            clientPhone: phoneInput.value,
+            carId: this.selectedCarId,
+            carModel: carInput.value,
+            carNumber: numberInput?.value || '',
+            comment: commentInput?.value || '',
             status: status,
-            client_id: this.selectedClientId,
-            cars_id: this.selectedCarId,
-            komentar: commentInput?.value || '',
-            data_on: dataOn,
-            data_off: dataOff,
-            slyusar_id: this.slyusarId,
-            name_post: this.namePost
+            postArxivId: this.postArxivId, // Pass the ID if we are editing
+            slyusarId: this.slyusarId,
+            namePost: this.namePost
         };
 
-        try {
-            let resultPostArxivId = this.postArxivId;
-
-            if (this.postArxivId) {
-                // UPDATE
-                const { error } = await supabase
-                    .from('post_arxiv')
-                    .update(postArxivData)
-                    .eq('post_arxiv_id', this.postArxivId);
-
-                if (error) {
-                    console.error('Помилка оновлення запису:', error);
-                    showNotification('Помилка оновлення запису в базі даних', 'error');
-                    return;
-                }
-                showNotification('Запис успішно оновлено!', 'success');
-            } else {
-                // INSERT
-                const { data: insertedData, error } = await supabase
-                    .from('post_arxiv')
-                    .insert(postArxivData)
-                    .select('post_arxiv_id')
-                    .single();
-
-                if (error) {
-                    console.error('Помилка збереження запису:', error);
-                    showNotification('Помилка збереження запису в базу даних', 'error');
-                    return;
-                }
-                resultPostArxivId = insertedData?.post_arxiv_id;
-                showNotification('Запис успішно створено!', 'success');
-            }
-
-            // Формуємо дані для callback
-            const data: ReservationData = {
-                date: dateValue,
-                startTime: startTime,
-                endTime: endTime,
-                clientId: this.selectedClientId,
-                clientName: nameInput.value,
-                clientPhone: phoneInput.value,
-                carId: this.selectedCarId,
-                carModel: carInput.value,
-                carNumber: numberInput?.value || '',
-                comment: commentInput?.value || '',
-                status: status,
-                postArxivId: resultPostArxivId || null,
-                slyusarId: this.slyusarId,
-                namePost: this.namePost
-            };
-
-            if (this.onSubmitCallback) {
-                this.onSubmitCallback(data);
-            }
-
-            // Закриваємо модальне вікно після успішного збереження
-            this.close();
-        } catch (err) {
-            console.error('Помилка при збереженні:', err);
-            showNotification('Виникла помилка при збереженні', 'error');
+        if (this.onSubmitCallback) {
+            this.onSubmitCallback(data);
         }
+
+        // Закриваємо модальне вікно
+        this.close();
     }
 
     /**

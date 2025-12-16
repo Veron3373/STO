@@ -893,7 +893,7 @@ export class PostArxiv {
         );
     }
 
-    private handleModalSubmit(data: ReservationData): void {
+    private async handleModalSubmit(data: ReservationData): Promise<void> {
         const startMins = this.timeToMinutesFromStart(data.startTime);
         const endMins = this.timeToMinutesFromStart(data.endTime);
 
@@ -913,28 +913,122 @@ export class PostArxiv {
                 return;
             }
 
-            // If we are editing and we found valid ranges (meaning we can save), 
-            // we should remove the OLD block before creating new ones.
+            // === DATABASE LOGIC ===
+
+            // If we are editing...
             if (this.editingBlock) {
-                this.editingBlock.remove();
+                const oldPostArxivId = this.editingBlock.dataset.postArxivId;
+
+                // If we have exactly 1 valid range, and the ID exists, we can try to UPDATE the existing record
+                if (validRanges.length === 1 && oldPostArxivId) {
+                    // UPDATE
+                    const range = validRanges[0];
+                    const successId = await this.saveReservationToDb(data, range.start, range.end, parseInt(oldPostArxivId));
+                    if (successId) {
+                        // Update UI
+                        this.editingBlock.remove(); // Remove old DOM, create new one to ensure clean state
+                        const newData = { ...data, postArxivId: successId }; // Ensure data has ID
+                        this.createReservationBlock(targetRow, range.start, range.end, newData);
+                        showNotification('Запис оновлено', 'success');
+                    }
+                } else {
+                    // SPLIT occurring: DELETE OLD + INSERT NEW(s)
+                    if (oldPostArxivId) {
+                        // Delete old record
+                        const { error } = await supabase.from('post_arxiv').delete().eq('post_arxiv_id', parseInt(oldPostArxivId));
+                        if (error) {
+                            console.error('Error deleting old record:', error);
+                            showNotification('Помилка оновлення (не вдалося видалити старий запис)', 'error');
+                            return; // Don't proceed to insert duplicates
+                        }
+                    }
+
+                    this.editingBlock.remove();
+
+                    // Insert new records
+                    let successCount = 0;
+                    for (const range of validRanges) {
+                        const newId = await this.saveReservationToDb(data, range.start, range.end);
+                        if (newId) {
+                            const checkoutData = { ...data, postArxivId: newId };
+                            this.createReservationBlock(targetRow, range.start, range.end, checkoutData);
+                            successCount++;
+                        }
+                    }
+
+                    if (successCount > 0) {
+                        showNotification(`Запис розділено на ${successCount} частини`, 'success');
+                    }
+                }
                 this.editingBlock = null;
-            }
 
-            // Create a block for each valid range (splitting logic)
-            validRanges.forEach(range => {
-                this.createReservationBlock(targetRow, range.start, range.end, data);
-            });
-
-            if (validRanges.length > 1) {
-                showNotification(`Створено ${validRanges.length} записи (з урахуванням зайнятого часу)`, 'warning');
             } else {
-                showNotification(this.editingBlock ? 'Запис оновлено' : 'Час зарезервовано', 'success');
+                // NEW RESERVATION
+                let successCount = 0;
+                for (const range of validRanges) {
+                    const newId = await this.saveReservationToDb(data, range.start, range.end);
+                    if (newId) {
+                        const checkoutData = { ...data, postArxivId: newId };
+                        this.createReservationBlock(targetRow, range.start, range.end, checkoutData);
+                        successCount++;
+                    }
+                }
+                if (successCount > 0) {
+                    if (validRanges.length > 1) {
+                        showNotification(`Створено ${validRanges.length} записи (з урахуванням зайнятого часу)`, 'warning');
+                    } else {
+                        // showNotification('Час зарезервовано', 'success');
+                    }
+                }
             }
         }
 
         this.reservationModal.close();
         this.editingBlock = null;
         this.resetSelection();
+    }
+
+    private async saveReservationToDb(data: ReservationData, startMins: number, endMins: number, existingId?: number): Promise<number | null> {
+        // Calculate ISO strings
+        const currentDate = this.getCurrentDateFromHeader();
+        if (!currentDate) return null;
+
+        const startHour = this.startHour + Math.floor(startMins / 60);
+        const startMin = startMins % 60;
+        const endHour = this.startHour + Math.floor(endMins / 60);
+        const endMin = endMins % 60;
+
+        const dataOn = `${currentDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
+        const dataOff = `${currentDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
+
+        const payload = {
+            status: data.status,
+            client_id: data.clientId,
+            cars_id: data.carId,
+            komentar: data.comment,
+            data_on: dataOn,
+            data_off: dataOff,
+            slyusar_id: data.slyusarId,
+            name_post: data.namePost
+        };
+
+        if (existingId) {
+            const { error } = await supabase.from('post_arxiv').update(payload).eq('post_arxiv_id', existingId);
+            if (error) {
+                console.error('Update error:', error);
+                showNotification('Помилка збереження в БД', 'error');
+                return null;
+            }
+            return existingId;
+        } else {
+            const { data: res, error } = await supabase.from('post_arxiv').insert(payload).select('post_arxiv_id').single();
+            if (error) {
+                console.error('Insert error:', error);
+                showNotification('Помилка збереження в БД', 'error');
+                return null;
+            }
+            return res.post_arxiv_id;
+        }
     }
 
     /**

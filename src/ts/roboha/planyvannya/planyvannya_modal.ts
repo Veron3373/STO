@@ -119,8 +119,8 @@ export class PlanyvannyaModal {
 
             // Load cars for selected client to enable autocomplete/dropdowns for existing client
             if (this.selectedClientId) {
-                // await this.loadCarsForClient(this.selectedClientId); // Optional: might be slow, load async
-                this.loadCarsForClient(this.selectedClientId).catch(console.error);
+                // Pass true to preserve the currently selected car (filled above)
+                this.loadCarsForClient(this.selectedClientId, true).catch(console.error);
             }
         }
 
@@ -303,7 +303,7 @@ export class PlanyvannyaModal {
         return phones;
     }
 
-    private async loadCarsForClient(clientId: number): Promise<void> {
+    private async loadCarsForClient(clientId: number, preserveSelection: boolean = false): Promise<void> {
         try {
             const { data, error } = await supabase
                 .from('cars')
@@ -323,6 +323,15 @@ export class PlanyvannyaModal {
                 fuel: row.data['Пальне'] || '',
                 rawData: row.data
             }));
+
+            // If we are editing (preserveSelection is true) and we have a selected car that exists in the loaded list,
+            // we should NOT clear the fields.
+            if (preserveSelection && this.selectedCarId) {
+                const carExists = this.carsData.find(c => c.cars_id === this.selectedCarId);
+                if (carExists) {
+                    return; // Exit here, keeping the current input values
+                }
+            }
 
             // Autocomplete logic after loading cars:
             if (this.carsData.length === 1) {

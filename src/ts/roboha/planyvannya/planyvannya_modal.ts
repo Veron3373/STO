@@ -636,14 +636,12 @@ export class PlanyvannyaModal {
         const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
         const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
         const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
-        const dateInput = document.getElementById('postArxivDate') as HTMLInputElement;
-        const startTimeInput = document.getElementById('postArxivStartTime') as HTMLInputElement;
-        const endTimeInput = document.getElementById('postArxivEndTime') as HTMLInputElement;
         const commentInput = document.getElementById('postArxivComment') as HTMLTextAreaElement;
         const statusText = document.getElementById('postArxivStatusText');
+        const headerDateEl = document.querySelector('.post-arxiv-header-date');
 
         // Validation
-        if (!nameInput?.value || !phoneInput?.value || !carInput?.value || !dateInput?.value) {
+        if (!nameInput?.value || !phoneInput?.value || !carInput?.value) {
             showNotification('Будь ласка, заповніть всі обов\'язкові поля', 'error');
             return;
         }
@@ -651,10 +649,16 @@ export class PlanyvannyaModal {
         // Отримуємо статус запису
         const status = statusText?.textContent || 'Запланований';
 
-        // Формуємо timestamp для data_on та data_off
-        const dateValue = dateInput.value; // формат: YYYY-MM-DD
-        const startTime = startTimeInput?.value || '08:00';
-        const endTime = endTimeInput?.value || '20:00';
+        // Парсимо дату і час з заголовку: "Середа, 17 грудня 2025 з 11:30 по 18:00"
+        const headerText = headerDateEl?.textContent || '';
+        const parsedDateTime = this.parseDateTimeFromHeader(headerText);
+
+        if (!parsedDateTime) {
+            showNotification('Помилка парсингу дати', 'error');
+            return;
+        }
+
+        const { dateValue, startTime, endTime } = parsedDateTime;
 
         // Створюємо ISO timestamp для Supabase
         const dataOn = `${dateValue}T${startTime}:00`;
@@ -690,7 +694,7 @@ export class PlanyvannyaModal {
 
             // Формуємо дані для callback
             const data: ReservationData = {
-                date: dateInput.value,
+                date: dateValue,
                 startTime: startTime,
                 endTime: endTime,
                 clientId: this.selectedClientId,
@@ -714,5 +718,50 @@ export class PlanyvannyaModal {
             console.error('Помилка при збереженні:', err);
             showNotification('Виникла помилка при збереженні', 'error');
         }
+    }
+
+    /**
+     * Парсить дату і час з заголовку модального вікна
+     * Вхідний формат: "Середа, 17 грудня 2025 з 11:30 по 18:00"
+     */
+    private parseDateTimeFromHeader(text: string): { dateValue: string; startTime: string; endTime: string } | null {
+        if (!text) return null;
+
+        const months: Record<string, string> = {
+            'січня': '01', 'лютого': '02', 'березня': '03', 'квітня': '04',
+            'травня': '05', 'червня': '06', 'липня': '07', 'серпня': '08',
+            'вересня': '09', 'жовтня': '10', 'листопада': '11', 'грудня': '12'
+        };
+
+        // "Середа, 17 грудня 2025 з 11:30 по 18:00"
+        const dateMatch = text.match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
+        const timeMatch = text.match(/з\s+(\d{1,2}:\d{2})\s+по\s+(\d{1,2}:\d{2})/);
+
+        if (!dateMatch || !timeMatch) {
+            console.error('Не вдалося розпарсити дату/час з:', text);
+            return null;
+        }
+
+        const day = dateMatch[1].padStart(2, '0');
+        const monthName = dateMatch[2].toLowerCase();
+        const year = dateMatch[3];
+        const month = months[monthName];
+
+        if (!month) {
+            console.error('Невідомий місяць:', monthName);
+            return null;
+        }
+
+        // Форматуємо час в HH:MM
+        const formatTime = (t: string): string => {
+            const [h, m] = t.split(':');
+            return `${h.padStart(2, '0')}:${m}`;
+        };
+
+        return {
+            dateValue: `${year}-${month}-${day}`,
+            startTime: formatTime(timeMatch[1]),
+            endTime: formatTime(timeMatch[2])
+        };
     }
 }

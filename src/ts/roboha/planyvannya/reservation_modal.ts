@@ -115,14 +115,14 @@ export class ReservationModal {
       <div class="post-arxiv-modal-overlay" id="postArxivModalOverlay">
         <div class="post-arxiv-modal">
           <div class="post-arxiv-header" id="postArxivHeader">
-            <div class="post-arxiv-header-content">
+            <div class="post-arxiv-header-row">
               <h2>Резервування часу</h2>
-              <p class="post-arxiv-header-date">${displayDate} ${displayTimeRange}</p>
+              <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
+                <span id="postArxivStatusText">Запланований</span>
+              </button>
+              <button class="post-arxiv-close" id="postArxivClose">×</button>
             </div>
-            <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
-              <span id="postArxivStatusText">Запланований</span>
-            </button>
-            <button class="post-arxiv-close" id="postArxivClose">×</button>
+            <p class="post-arxiv-header-date">${displayDate} ${displayTimeRange}</p>
           </div>
           <div class="post-arxiv-body">
             

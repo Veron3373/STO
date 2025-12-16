@@ -28,15 +28,14 @@
         padding: 14px 18px;
         background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
         border-radius: 12px 12px 0 0;
 
-        .post-arxiv-header-content {
+        .post-arxiv-header-row {
             display: flex;
-            flex-direction: column;
-            gap: 2px;
-            flex: 1;
+            align-items: center;
+            gap: 12px;
 
             h2 {
                 margin: 0;
@@ -44,14 +43,16 @@
                 font-weight: 600;
                 color: #ffffff;
                 letter-spacing: 0.3px;
+                flex: 1;
             }
+        }
 
-            .post-arxiv-header-date {
-                margin: 0;
-                font-size: 0.85rem;
-                color: rgba(255, 255, 255, 0.9);
-                font-weight: 400;
-            }
+        .post-arxiv-header-date {
+            margin: 0;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 400;
+            white-space: nowrap;
         }
 
         // Status button in header
@@ -69,7 +70,6 @@
             font-weight: 500;
             color: #333;
             transition: all 0.2s;
-            margin: 0 25px;
             white-space: nowrap;
 
             &:hover {

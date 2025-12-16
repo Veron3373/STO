@@ -547,7 +547,7 @@ export class PostArxiv {
         document.body.appendChild(this.movingBlock);
     }
 
-    private onBlockMouseUp = (_e: MouseEvent): void => {
+    private onBlockMouseUp = async (_e: MouseEvent): Promise<void> => {
         if (!this.movingBlock) return;
 
         document.removeEventListener('mousemove', this.onBlockMouseMove);
@@ -597,7 +597,54 @@ export class PostArxiv {
             this.movingBlock.style.width = `${widthPercent}%`;
 
             track.appendChild(this.movingBlock);
-            showNotification('Запис переміщено', 'success');
+
+            // === ОНОВЛЕННЯ БАЗИ ДАНИХ ===
+            const postArxivId = this.movingBlock.dataset.postArxivId;
+            const newSlyusarId = track.dataset.slyusarId;
+
+            if (postArxivId && newSlyusarId) {
+                try {
+                    // Отримуємо поточну дату з заголовку
+                    const currentDate = this.getCurrentDateFromHeader();
+
+                    if (currentDate) {
+                        // Конвертуємо хвилини в час
+                        const startHour = this.startHour + Math.floor(startMins / 60);
+                        const startMin = startMins % 60;
+                        const endHour = this.startHour + Math.floor(endMins / 60);
+                        const endMin = endMins % 60;
+
+                        const dataOn = `${currentDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
+                        const dataOff = `${currentDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
+
+                        // Оновлюємо запис в БД
+                        const { error } = await supabase
+                            .from('post_arxiv')
+                            .update({
+                                slyusar_id: parseInt(newSlyusarId),
+                                data_on: dataOn,
+                                data_off: dataOff
+                            })
+                            .eq('post_arxiv_id', parseInt(postArxivId));
+
+                        if (error) {
+                            console.error('Помилка оновлення запису в БД:', error);
+                            showNotification('Помилка збереження переміщення', 'error');
+                        } else {
+                            // Оновлюємо dataset блоку з новим slyusar_id
+                            this.movingBlock.dataset.slyusarId = newSlyusarId;
+                            showNotification('Запис переміщено', 'success');
+                        }
+                    } else {
+                        showNotification('Запис переміщено (без збереження в БД)', 'warning');
+                    }
+                } catch (err) {
+                    console.error('Помилка при оновленні БД:', err);
+                    showNotification('Помилка збереження переміщення', 'error');
+                }
+            } else {
+                showNotification('Запис переміщено', 'success');
+            }
         } else {
             // Revert
             if (this.originalParent) {

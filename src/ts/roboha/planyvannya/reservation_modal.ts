@@ -113,7 +113,6 @@ export class ReservationModal {
               <p class="post-arxiv-header-date">${displayDate}</p>
             </div>
             <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
-              <span class="post-arxiv-status-indicator" id="postArxivStatusIndicator"></span>
               <span id="postArxivStatusText">Запланований</span>
             </button>
             <button class="post-arxiv-close" id="postArxivClose">×</button>
@@ -124,7 +123,7 @@ export class ReservationModal {
             <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
               <div class="post-arxiv-label-row">
                 <label>ПІБ <span class="required">*</span></label>
-                <button class="post-arxiv-mini-btn" id="postArxivNewClientBtn" title="Новий клієнт">+</button>
+                <button class="post-arxiv-mini-btn" id="postArxivNewClientBtn" title="Створити акт">Створити акт</button>
               </div>
               <input type="text" id="postArxivClientName" placeholder="Почніть вводити прізвище..." autocomplete="off">
               <div class="post-arxiv-autocomplete-dropdown" id="postArxivClientDropdown"></div>
@@ -157,11 +156,11 @@ export class ReservationModal {
               <div class="post-arxiv-time-row">
                 <div class="post-arxiv-time-field" id="postArxivStartField">
                   <span class="post-arxiv-time-label">Початок</span>
-                  <input type="time" id="postArxivStart" value="${startTime}" min="08:00" max="20:00">
+                  <input type="time" id="postArxivStart" value="${startTime}" min="08:00" max="22:00">
                 </div>
                 <div class="post-arxiv-time-field" id="postArxivEndField">
                   <span class="post-arxiv-time-label">Кінець</span>
-                  <input type="time" id="postArxivEnd" value="${endTime}" min="08:00" max="20:00">
+                  <input type="time" id="postArxivEnd" value="${endTime}" min="08:00" max="22:00">
                 </div>
               </div>
             </div>
@@ -545,7 +544,6 @@ export class ReservationModal {
         const status = this.statuses[this.currentStatusIndex];
         const header = document.getElementById('postArxivHeader');
         const statusText = document.getElementById('postArxivStatusText');
-        const statusIndicator = document.getElementById('postArxivStatusIndicator');
 
         if (header) {
             header.style.background = status.headerBg;
@@ -553,10 +551,6 @@ export class ReservationModal {
 
         if (statusText) {
             statusText.textContent = status.name;
-        }
-
-        if (statusIndicator) {
-            statusIndicator.style.backgroundColor = status.color;
         }
     }
 
@@ -588,12 +582,12 @@ export class ReservationModal {
         const [hours, minutes] = value.split(':').map(Number);
         const timeInMinutes = hours * 60 + minutes;
         const minTime = 8 * 60; // 08:00
-        const maxTime = 20 * 60; // 20:00
+        const maxTime = 22 * 60; // 22:00
 
         if (timeInMinutes < minTime) {
             input.value = '08:00';
         } else if (timeInMinutes > maxTime) {
-            input.value = '20:00';
+            input.value = '22:00';
         }
     }
 

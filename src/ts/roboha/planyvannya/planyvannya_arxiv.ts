@@ -93,7 +93,7 @@ export class PostArxiv {
             const startOfDay = `${currentDate}T00:00:00`;
             const endOfDay = `${currentDate}T23:59:59`;
 
-            // Запит до БД
+            // Запит до БД - отримуємо тільки дані з post_arxiv
             const { data: arxivRecords, error } = await supabase
                 .from('post_arxiv')
                 .select(`
@@ -106,9 +106,7 @@ export class PostArxiv {
                     data_on,
                     data_off,
                     komentar,
-                    act_id,
-                    clients(data),
-                    cars(data)
+                    act_id
                 `)
                 .gte('data_on', startOfDay)
                 .lte('data_on', endOfDay);
@@ -125,9 +123,41 @@ export class PostArxiv {
 
             console.log(`Завантажено ${arxivRecords.length} записів з БД`);
 
+            // Збираємо унікальні ID клієнтів та машин для окремих запитів
+            const clientIds = [...new Set(arxivRecords.map(r => r.client_id).filter(id => id != null))];
+            const carIds = [...new Set(arxivRecords.map(r => r.cars_id).filter(id => id != null))];
+
+            // Завантажуємо дані клієнтів
+            let clientsMap = new Map<number, any>();
+            if (clientIds.length > 0) {
+                const { data: clientsData } = await supabase
+                    .from('clients')
+                    .select('client_id, data')
+                    .in('client_id', clientIds);
+
+                if (clientsData) {
+                    clientsData.forEach(c => clientsMap.set(c.client_id, c.data));
+                }
+            }
+
+            // Завантажуємо дані машин
+            let carsMap = new Map<number, any>();
+            if (carIds.length > 0) {
+                const { data: carsData } = await supabase
+                    .from('cars')
+                    .select('cars_id, data')
+                    .in('cars_id', carIds);
+
+                if (carsData) {
+                    carsData.forEach(c => carsMap.set(c.cars_id, c.data));
+                }
+            }
+
             // Відображаємо кожен запис
             for (const record of arxivRecords) {
-                this.renderArxivRecord(record);
+                const clientData = clientsMap.get(record.client_id) || {};
+                const carData = carsMap.get(record.cars_id) || {};
+                this.renderArxivRecord(record, clientData, carData);
             }
 
         } catch (err) {
@@ -169,7 +199,7 @@ export class PostArxiv {
     /**
      * Відображає запис з БД на календарі
      */
-    private renderArxivRecord(record: any): void {
+    private renderArxivRecord(record: any, clientData: any, carData: any): void {
         // Знаходимо рядок слюсаря по slyusar_id
         const rowTrack = this.container.querySelector(
             `.post-row-track[data-slyusar-id="${record.slyusar_id}"]`
@@ -194,9 +224,7 @@ export class PostArxiv {
             return;
         }
 
-        // Отримуємо дані клієнта і авто
-        const clientData = record.clients?.data || {};
-        const carData = record.cars?.data || {};
+        // Використовуємо передані дані клієнта і авто
 
         const clientName = clientData['ПІБ'] || '';
         const carModel = carData['Авто'] || '';

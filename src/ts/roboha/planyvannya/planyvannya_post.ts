@@ -179,7 +179,7 @@ export class PostModal {
               <div class="post-autocomplete-dropdown" id="postPostNameDropdown"></div>
             </div>
             <div class="post-form-group post-autocomplete-wrapper" id="postPostFormGroupSubtitle" style="display: flex;">
-              <label class="post-form-label">Опис (необов'язково)</label>
+              <label class="post-form-label">Опис</label>
               <input type="text" class="post-form-input" id="postPostFormInputSubtitle" placeholder="Наприклад: Брацлавець Б. С." autocomplete="off">
               <div class="post-autocomplete-dropdown" id="postSlyusarDropdown"></div>
             </div>

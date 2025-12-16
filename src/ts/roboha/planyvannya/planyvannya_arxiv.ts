@@ -375,28 +375,8 @@ export class PostArxiv {
         block.dataset.carId = data.carId?.toString() || '';
         block.dataset.comment = data.comment;
 
-        // Створюємо контейнер для тексту
-        const textContainer = document.createElement('div');
-        textContainer.className = 'post-reservation-text';
-
-        if (data.clientName) {
-            const mainText = document.createElement('span');
-            mainText.className = 'post-reservation-main';
-            mainText.textContent = `${data.clientName} (${data.carModel})`;
-            textContainer.appendChild(mainText);
-
-            // Додаємо коментар якщо є
-            if (data.comment) {
-                const commentText = document.createElement('span');
-                commentText.className = 'post-reservation-comment';
-                commentText.textContent = data.comment;
-                textContainer.appendChild(commentText);
-            }
-        } else {
-            textContainer.textContent = data.comment || 'Резерв';
-        }
-
-        block.appendChild(textContainer);
+        // Використовуємо renderBlockContent для формування вмісту
+        this.renderBlockContent(block, data);
 
         // Context menu event
         block.addEventListener('contextmenu', (e) => {
@@ -895,6 +875,56 @@ export class PostArxiv {
         this.resetSelection();
     }
 
+    /**
+     * Формує вміст блоку резервації (текст, іконки і т.д.)
+     */
+    private renderBlockContent(block: HTMLElement, data: ReservationData | string): void {
+        block.innerHTML = ''; // Очищаємо попередній вміст
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'post-reservation-text';
+
+        // Якщо передано об'єкт даних (не просто рядок)
+        if (typeof data !== 'string' && data.clientName) {
+            // Контейнер для ПІБ та Авто (flex row, wrap)
+            const infoRow = document.createElement('div');
+            infoRow.className = 'post-reservation-info-row';
+
+            // ПІБ
+            const mainText = document.createElement('span');
+            mainText.className = 'post-reservation-main';
+            mainText.textContent = data.clientName;
+            infoRow.appendChild(mainText);
+
+            // Авто (якщо є)
+            if (data.carModel) {
+                const subText = document.createElement('span');
+                subText.className = 'post-reservation-sub';
+                subText.textContent = `(${data.carModel})`;
+                infoRow.appendChild(subText);
+            }
+
+            textContainer.appendChild(infoRow);
+
+            // Коментар (якщо є)
+            if (typeof data !== 'string' && data.comment) {
+                const commentText = document.createElement('span');
+                commentText.className = 'post-reservation-comment';
+                commentText.textContent = data.comment;
+                textContainer.appendChild(commentText);
+            }
+        } else {
+            // Простий текст або fall-back
+            const simpleText = typeof data === 'string' ? data : (data.comment || 'Резерв');
+            const mainText = document.createElement('span');
+            mainText.className = 'post-reservation-main';
+            mainText.textContent = simpleText;
+            textContainer.appendChild(mainText);
+        }
+
+        block.appendChild(textContainer);
+    }
+
     private createReservationBlock(row: HTMLElement, startMins: number, endMins: number, data: ReservationData | string): void {
         const totalMinutes = 12 * 60; // 12 hours (8 to 20)
 
@@ -935,29 +965,8 @@ export class PostArxiv {
         const statusColor = this.statusColors[status] || this.statusColors['Запланований'];
         block.style.backgroundColor = statusColor;
 
-        // Створюємо контейнер для тексту
-        const textContainer = document.createElement('div');
-        textContainer.className = 'post-reservation-text';
-
-        // Display format: "Client Name (Car Model)" + comment if exists
-        if (typeof data !== 'string' && data.clientName) {
-            const mainText = document.createElement('span');
-            mainText.className = 'post-reservation-main';
-            mainText.textContent = `${data.clientName} (${data.carModel})`;
-            textContainer.appendChild(mainText);
-
-            // Додаємо коментар якщо є
-            if (comment) {
-                const commentText = document.createElement('span');
-                commentText.className = 'post-reservation-comment';
-                commentText.textContent = comment;
-                textContainer.appendChild(commentText);
-            }
-        } else {
-            textContainer.textContent = comment || 'Резерв';
-        }
-
-        block.appendChild(textContainer);
+        // Використовуємо renderBlockContent для формування вмісту
+        this.renderBlockContent(block, data);
 
         // Context menu event
         block.addEventListener('contextmenu', (e) => {

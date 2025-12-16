@@ -852,7 +852,8 @@ export class PostArxiv {
     private reservationModal = new PlanyvannyaModal();
 
     private openModal(startTime: string, endTime: string, existingData: Partial<ReservationData> | string = ''): void {
-        const today = new Date().toISOString().split('T')[0];
+        const headerDate = this.getCurrentDateFromHeader();
+        const dateToUse = headerDate || new Date().toISOString().split('T')[0];
 
         // Normalizing arguments
         let data: Partial<ReservationData> = {};
@@ -883,7 +884,7 @@ export class PostArxiv {
         const effectiveSlyusarId = data.slyusarId;
 
         this.reservationModal.open(
-            today,
+            dateToUse,
             startTime,
             endTime,
             comment,

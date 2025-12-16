@@ -154,13 +154,31 @@ export class ReservationModal {
             <div class="post-arxiv-form-group">
               <label>Час</label>
               <div class="post-arxiv-time-row">
-                <div class="post-arxiv-time-field" id="postArxivStartField">
+                <div class="post-arxiv-time-field">
                   <span class="post-arxiv-time-label">Початок</span>
-                  <input type="time" id="postArxivStart" value="${startTime}" min="08:00" max="22:00">
+                  <div class="post-arxiv-time-selects">
+                    <select id="postArxivStartHour">
+                      ${this.generateHourOptions(startTime.split(':')[0])}
+                    </select>
+                    <span class="post-arxiv-time-colon">:</span>
+                    <select id="postArxivStartMinute">
+                      <option value="00" ${startTime.split(':')[1] === '00' ? 'selected' : ''}>00</option>
+                      <option value="30" ${startTime.split(':')[1] === '30' ? 'selected' : ''}>30</option>
+                    </select>
+                  </div>
                 </div>
-                <div class="post-arxiv-time-field" id="postArxivEndField">
+                <div class="post-arxiv-time-field">
                   <span class="post-arxiv-time-label">Кінець</span>
-                  <input type="time" id="postArxivEnd" value="${endTime}" min="08:00" max="22:00">
+                  <div class="post-arxiv-time-selects">
+                    <select id="postArxivEndHour">
+                      ${this.generateHourOptions(endTime.split(':')[0])}
+                    </select>
+                    <span class="post-arxiv-time-colon">:</span>
+                    <select id="postArxivEndMinute">
+                      <option value="00" ${endTime.split(':')[1] === '00' ? 'selected' : ''}>00</option>
+                      <option value="30" ${endTime.split(':')[1] === '30' ? 'selected' : ''}>30</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -203,10 +221,6 @@ export class ReservationModal {
             // TODO: Implement new client modal or action
             console.log('New client button clicked');
         });
-
-        // Time field click handlers - open picker when clicking anywhere on the field
-        this.setupTimeFieldClick('postArxivStartField', 'postArxivStart');
-        this.setupTimeFieldClick('postArxivEndField', 'postArxivEnd');
 
         // Comment textarea auto-resize
         this.setupCommentAutoResize();
@@ -530,6 +544,17 @@ export class ReservationModal {
         return `${dayOfWeek}, ${day} ${month} ${year}`;
     }
 
+    private generateHourOptions(selectedHour: string): string {
+        let options = '';
+        const selected = parseInt(selectedHour, 10);
+        for (let h = 8; h <= 22; h++) {
+            const hourStr = h.toString().padStart(2, '0');
+            const isSelected = h === selected ? 'selected' : '';
+            options += `<option value="${hourStr}" ${isSelected}>${hourStr}</option>`;
+        }
+        return options;
+    }
+
     private setupStatusButton(): void {
         const statusBtn = document.getElementById('postArxivStatusBtn');
         if (statusBtn) {
@@ -551,43 +576,6 @@ export class ReservationModal {
 
         if (statusText) {
             statusText.textContent = status.name;
-        }
-    }
-
-    private setupTimeFieldClick(fieldId: string, inputId: string): void {
-        const field = document.getElementById(fieldId);
-        const input = document.getElementById(inputId) as HTMLInputElement;
-
-        if (field && input) {
-            field.style.cursor = 'pointer';
-            field.addEventListener('click', (e) => {
-                // Prevent double-triggering if clicking directly on input
-                if (e.target !== input) {
-                    input.showPicker?.();
-                    input.focus();
-                }
-            });
-
-            // Validate time range on change
-            input.addEventListener('change', () => {
-                this.validateTimeRange(input);
-            });
-        }
-    }
-
-    private validateTimeRange(input: HTMLInputElement): void {
-        const value = input.value;
-        if (!value) return;
-
-        const [hours, minutes] = value.split(':').map(Number);
-        const timeInMinutes = hours * 60 + minutes;
-        const minTime = 8 * 60; // 08:00
-        const maxTime = 22 * 60; // 22:00
-
-        if (timeInMinutes < minTime) {
-            input.value = '08:00';
-        } else if (timeInMinutes > maxTime) {
-            input.value = '22:00';
         }
     }
 
@@ -669,20 +657,25 @@ export class ReservationModal {
         const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
         const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
         const dateInput = document.getElementById('postArxivDate') as HTMLInputElement;
-        const startInput = document.getElementById('postArxivStart') as HTMLInputElement;
-        const endInput = document.getElementById('postArxivEnd') as HTMLInputElement;
-        const commentInput = document.getElementById('postArxivComment') as HTMLInputElement;
+        const startHour = document.getElementById('postArxivStartHour') as HTMLSelectElement;
+        const startMinute = document.getElementById('postArxivStartMinute') as HTMLSelectElement;
+        const endHour = document.getElementById('postArxivEndHour') as HTMLSelectElement;
+        const endMinute = document.getElementById('postArxivEndMinute') as HTMLSelectElement;
+        const commentInput = document.getElementById('postArxivComment') as HTMLTextAreaElement;
 
         // Validation
-        if (!nameInput?.value || !phoneInput?.value || !carInput?.value || !dateInput?.value || !startInput?.value || !endInput?.value) {
+        if (!nameInput?.value || !phoneInput?.value || !carInput?.value || !dateInput?.value) {
             alert('Будь ласка, заповніть всі обов\'язкові поля');
             return;
         }
 
+        const startTime = `${startHour.value}:${startMinute.value}`;
+        const endTime = `${endHour.value}:${endMinute.value}`;
+
         const data: ReservationData = {
             date: dateInput.value,
-            startTime: startInput.value,
-            endTime: endInput.value,
+            startTime: startTime,
+            endTime: endTime,
             clientId: this.selectedClientId,
             clientName: nameInput.value,
             clientPhone: phoneInput.value,

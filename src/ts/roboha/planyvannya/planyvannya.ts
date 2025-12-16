@@ -1291,6 +1291,7 @@ class SchedulerApp {
       span.addEventListener("click", () => {
         this.selectedDate = new Date(year, month, day);
         this.render();
+        this.reloadArxivData();
       });
 
       daysDiv.appendChild(span);

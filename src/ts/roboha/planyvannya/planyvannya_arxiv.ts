@@ -375,14 +375,28 @@ export class PostArxiv {
         block.dataset.carId = data.carId?.toString() || '';
         block.dataset.comment = data.comment;
 
-        const text = document.createElement('span');
+        // Створюємо контейнер для тексту
+        const textContainer = document.createElement('div');
+        textContainer.className = 'post-reservation-text';
+
         if (data.clientName) {
-            text.textContent = `${data.clientName} (${data.carModel})`;
+            const mainText = document.createElement('span');
+            mainText.className = 'post-reservation-main';
+            mainText.textContent = `${data.clientName} (${data.carModel})`;
+            textContainer.appendChild(mainText);
+
+            // Додаємо коментар якщо є
+            if (data.comment) {
+                const commentText = document.createElement('span');
+                commentText.className = 'post-reservation-comment';
+                commentText.textContent = data.comment;
+                textContainer.appendChild(commentText);
+            }
         } else {
-            text.textContent = data.comment || 'Резерв';
+            textContainer.textContent = data.comment || 'Резерв';
         }
 
-        block.appendChild(text);
+        block.appendChild(textContainer);
 
         // Context menu event
         block.addEventListener('contextmenu', (e) => {
@@ -898,31 +912,52 @@ export class PostArxiv {
         block.dataset.end = endMins.toString();
 
         let comment = '';
+        let status = 'Запланований';
+
         if (typeof data === 'string') {
             comment = data;
         } else {
             comment = data.comment;
+            status = data.status || 'Запланований';
             // Store rich data
             block.dataset.clientName = data.clientName;
             block.dataset.clientId = data.clientId?.toString() || '';
             block.dataset.carModel = data.carModel;
             block.dataset.carNumber = data.carNumber;
-            block.dataset.status = data.status || '';
+            block.dataset.status = status;
             block.dataset.postArxivId = data.postArxivId?.toString() || '';
             block.dataset.carId = data.carId?.toString() || '';
         }
 
         block.dataset.comment = comment;
 
-        const text = document.createElement('span');
-        // Display format: "Client Name (Car Model)" or just comment if simple
+        // Встановлюємо колір фону залежно від статусу
+        const statusColor = this.statusColors[status] || this.statusColors['Запланований'];
+        block.style.backgroundColor = statusColor;
+
+        // Створюємо контейнер для тексту
+        const textContainer = document.createElement('div');
+        textContainer.className = 'post-reservation-text';
+
+        // Display format: "Client Name (Car Model)" + comment if exists
         if (typeof data !== 'string' && data.clientName) {
-            text.textContent = `${data.clientName} (${data.carModel})`;
+            const mainText = document.createElement('span');
+            mainText.className = 'post-reservation-main';
+            mainText.textContent = `${data.clientName} (${data.carModel})`;
+            textContainer.appendChild(mainText);
+
+            // Додаємо коментар якщо є
+            if (comment) {
+                const commentText = document.createElement('span');
+                commentText.className = 'post-reservation-comment';
+                commentText.textContent = comment;
+                textContainer.appendChild(commentText);
+            }
         } else {
-            text.textContent = comment || 'Резерв';
+            textContainer.textContent = comment || 'Резерв';
         }
 
-        block.appendChild(text);
+        block.appendChild(textContainer);
 
         // Context menu event
         block.addEventListener('contextmenu', (e) => {

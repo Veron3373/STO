@@ -60,7 +60,7 @@
   top: 4px;
   bottom: 4px;
   background-color: #fab005; // Yellow color mentioned in main scss variables
-  border: 1px solid #e67700;
+  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 4px;
   z-index: 40;
   cursor: pointer;
@@ -70,9 +70,50 @@
   justify-content: center;
   overflow: hidden;
   margin-right: 2px; // Visual gap between blocks
+  padding: 2px 4px;
 
-  // Text inside the block
-  span {
+  // Контейнер для тексту
+  .post-reservation-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    gap: 1px;
+
+    .post-reservation-main {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .post-reservation-comment {
+      font-size: 9px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: center;
+      // Дозволяємо до 2 рядків
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.2;
+    }
+  }
+
+  // Fallback для старого span
+  >span {
     font-size: 11px;
     font-weight: 600;
     color: #fff;

@@ -402,12 +402,24 @@ export class PostArxiv {
     private openModal(startTime: string, endTime: string, comment: string = ''): void {
         const today = new Date().toISOString().split('T')[0];
 
+        // Отримуємо slyusarId та postId з активного рядка
+        let slyusarId: number | null = null;
+        let namePost: number | null = null;
+
+        if (this.activeRow) {
+            const slyusarIdStr = this.activeRow.dataset.slyusarId;
+            const postIdStr = this.activeRow.dataset.postId;
+
+            if (slyusarIdStr) slyusarId = parseInt(slyusarIdStr);
+            if (postIdStr) namePost = parseInt(postIdStr);
+        }
+
         this.reservationModal.open(
             today,
             startTime,
             endTime,
             comment,
-            {}, // existing data if any (TODO: pass if editing)
+            { slyusarId, namePost }, // existing data if any
             (data: ReservationData) => this.handleModalSubmit(data)
         );
     }

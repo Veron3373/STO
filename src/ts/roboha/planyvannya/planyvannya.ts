@@ -872,6 +872,8 @@ class SchedulerApp {
 
         const rowTrack = document.createElement("div");
         rowTrack.className = "post-row-track";
+        rowTrack.dataset.slyusarId = post.id.toString();
+        rowTrack.dataset.postId = post.postId.toString();
 
         row.appendChild(rowLabel);
         row.appendChild(rowTrack);

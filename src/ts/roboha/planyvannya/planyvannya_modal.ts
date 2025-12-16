@@ -51,6 +51,10 @@ export class PlanyvannyaModal {
     private selectedClientId: number | null = null;
     private selectedCarId: number | null = null;
 
+    // Дані для post_arxiv
+    private slyusarId: number | null = null;
+    private namePost: number | null = null;
+
     private currentStatusIndex: number = 0;
     private readonly statuses = [
         { name: 'Запланований', color: '#e6a700', headerBg: 'linear-gradient(135deg, #e6a700 0%, #f0b800 100%)' },
@@ -68,11 +72,15 @@ export class PlanyvannyaModal {
         startTime: string,
         endTime: string,
         comment: string = '',
-        // @ts-ignore
         existingData?: Partial<ReservationData>,
         onSubmit?: (data: ReservationData) => void
     ): Promise<void> {
         this.onSubmitCallback = onSubmit || null;
+
+        // Зберігаємо slyusarId та namePost з existingData
+        this.slyusarId = existingData?.slyusarId ?? null;
+        this.namePost = existingData?.namePost ?? null;
+
         this.createModalHTML(date, startTime, endTime, comment);
         this.bindEvents();
 
@@ -659,7 +667,9 @@ export class PlanyvannyaModal {
             cars_id: this.selectedCarId,
             komentar: commentInput?.value || '',
             data_on: dataOn,
-            data_off: dataOff
+            data_off: dataOff,
+            slyusar_id: this.slyusarId,
+            name_post: this.namePost
         };
 
         try {

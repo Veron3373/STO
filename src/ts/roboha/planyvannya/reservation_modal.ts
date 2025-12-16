@@ -45,6 +45,14 @@ export class ReservationModal {
     private selectedClientId: number | null = null;
     private selectedCarId: number | null = null;
 
+    private currentStatusIndex: number = 0;
+    private readonly statuses = [
+        { name: 'Запланований', color: '#e6a700', headerBg: 'linear-gradient(135deg, #e6a700 0%, #f0b800 100%)' },
+        { name: 'Не приїхав', color: '#e53935', headerBg: 'linear-gradient(135deg, #c62828 0%, #e53935 100%)' },
+        { name: 'В роботі', color: '#2e7d32', headerBg: 'linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)' },
+        { name: 'Відремонтований', color: '#757575', headerBg: 'linear-gradient(135deg, #616161 0%, #757575 100%)' }
+    ];
+
     constructor() {
         // We don't create HTML here immediately to allow ensuring DOM is ready or just create on open
     }
@@ -99,7 +107,7 @@ export class ReservationModal {
         const modalHTML = `
       <div class="post-arxiv-modal-overlay" id="postArxivModalOverlay">
         <div class="post-arxiv-modal">
-          <div class="post-arxiv-header">
+          <div class="post-arxiv-header" id="postArxivHeader">
             <div class="post-arxiv-header-content">
               <h2>Резервування часу</h2>
               <p class="post-arxiv-header-date">${displayDate}</p>
@@ -108,9 +116,20 @@ export class ReservationModal {
           </div>
           <div class="post-arxiv-body">
             
+            <!-- Status Button -->
+            <div class="post-arxiv-status-row">
+              <button class="post-arxiv-status-btn" id="postArxivStatusBtn">
+                <span class="post-arxiv-status-indicator" id="postArxivStatusIndicator"></span>
+                <span id="postArxivStatusText">Запланований</span>
+              </button>
+            </div>
+            
             <!-- ПІБ Клієнта -->
             <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
-              <label>ПІБ <span class="required">*</span></label>
+              <div class="post-arxiv-label-row">
+                <label>ПІБ <span class="required">*</span></label>
+                <button class="post-arxiv-mini-btn" id="postArxivNewClientBtn" title="Новий клієнт">+</button>
+              </div>
               <input type="text" id="postArxivClientName" placeholder="Почніть вводити прізвище..." autocomplete="off">
               <div class="post-arxiv-autocomplete-dropdown" id="postArxivClientDropdown"></div>
             </div>
@@ -178,6 +197,17 @@ export class ReservationModal {
 
         closeBtn?.addEventListener('click', () => this.close());
         cancelBtn?.addEventListener('click', () => this.close());
+
+        // Status button handler
+        this.setupStatusButton();
+        this.applyStatus(); // Apply initial status
+
+        // New client button handler
+        const newClientBtn = document.getElementById('postArxivNewClientBtn');
+        newClientBtn?.addEventListener('click', () => {
+            // TODO: Implement new client modal or action
+            console.log('New client button clicked');
+        });
 
         // Time field click handlers - open picker when clicking anywhere on the field
         this.setupTimeFieldClick('postArxivStartField', 'postArxivStart');
@@ -503,6 +533,35 @@ export class ReservationModal {
         const year = date.getFullYear();
 
         return `${dayOfWeek}, ${day} ${month} ${year}`;
+    }
+
+    private setupStatusButton(): void {
+        const statusBtn = document.getElementById('postArxivStatusBtn');
+        if (statusBtn) {
+            statusBtn.addEventListener('click', () => {
+                this.currentStatusIndex = (this.currentStatusIndex + 1) % this.statuses.length;
+                this.applyStatus();
+            });
+        }
+    }
+
+    private applyStatus(): void {
+        const status = this.statuses[this.currentStatusIndex];
+        const header = document.getElementById('postArxivHeader');
+        const statusText = document.getElementById('postArxivStatusText');
+        const statusIndicator = document.getElementById('postArxivStatusIndicator');
+
+        if (header) {
+            header.style.background = status.headerBg;
+        }
+
+        if (statusText) {
+            statusText.textContent = status.name;
+        }
+
+        if (statusIndicator) {
+            statusIndicator.style.backgroundColor = status.color;
+        }
     }
 
     private setupTimeFieldClick(fieldId: string, inputId: string): void {

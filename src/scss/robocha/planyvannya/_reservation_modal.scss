@@ -75,6 +75,73 @@
         padding: 14px 18px;
         overflow-y: auto;
 
+        // Status button row
+        .post-arxiv-status-row {
+            margin-bottom: 12px;
+
+            .post-arxiv-status-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 14px;
+                border: 1px solid #ddd;
+                border-radius: 20px;
+                background: #fff;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                color: #333;
+                transition: all 0.2s;
+
+                &:hover {
+                    background: #f5f5f5;
+                    border-color: #ccc;
+                }
+
+                .post-arxiv-status-indicator {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 3px;
+                    background-color: #e6a700;
+                }
+            }
+        }
+
+        // Label row with mini button
+        .post-arxiv-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+
+            label {
+                margin-bottom: 0;
+            }
+        }
+
+        // Mini button for adding new items
+        .post-arxiv-mini-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            border: 1px solid #2e7d32;
+            background: #fff;
+            color: #2e7d32;
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+
+            &:hover {
+                background: #2e7d32;
+                color: #fff;
+            }
+        }
+
         .post-arxiv-form-group {
             margin-bottom: 12px;
             display: flex;

@@ -127,6 +127,17 @@
                 width: 100%;
             }
 
+            textarea {
+                resize: none;
+                overflow: hidden;
+                min-height: 36px;
+                max-height: 120px;
+                line-height: 1.4;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+                font-family: inherit;
+            }
+
             &.post-arxiv-autocomplete-wrapper {
                 position: relative;
 

@@ -140,13 +140,13 @@ export class ReservationModal {
             <div class="post-arxiv-form-group">
               <label>Час</label>
               <div class="post-arxiv-time-row">
-                <div class="post-arxiv-time-field">
+                <div class="post-arxiv-time-field" id="postArxivStartField">
                   <span class="post-arxiv-time-label">Початок</span>
-                  <input type="time" id="postArxivStart" value="${startTime}">
+                  <input type="time" id="postArxivStart" value="${startTime}" min="08:00" max="20:00">
                 </div>
-                <div class="post-arxiv-time-field">
+                <div class="post-arxiv-time-field" id="postArxivEndField">
                   <span class="post-arxiv-time-label">Кінець</span>
-                  <input type="time" id="postArxivEnd" value="${endTime}">
+                  <input type="time" id="postArxivEnd" value="${endTime}" min="08:00" max="20:00">
                 </div>
               </div>
             </div>
@@ -154,7 +154,7 @@ export class ReservationModal {
             <!-- Коментар -->
             <div class="post-arxiv-form-group">
               <label>Коментар <span class="optional">(необов'язково)</span></label>
-              <input type="text" id="postArxivComment" placeholder="Введіть коментар..." value="${comment}">
+              <textarea id="postArxivComment" placeholder="Введіть коментар..." rows="1">${comment}</textarea>
             </div>
 
             <!-- Hidden date field -->
@@ -178,6 +178,13 @@ export class ReservationModal {
 
         closeBtn?.addEventListener('click', () => this.close());
         cancelBtn?.addEventListener('click', () => this.close());
+
+        // Time field click handlers - open picker when clicking anywhere on the field
+        this.setupTimeFieldClick('postArxivStartField', 'postArxivStart');
+        this.setupTimeFieldClick('postArxivEndField', 'postArxivEnd');
+
+        // Comment textarea auto-resize
+        this.setupCommentAutoResize();
         submitBtn?.addEventListener('click', () => this.handleSubmit());
 
         // Autocomplete events
@@ -496,6 +503,57 @@ export class ReservationModal {
         const year = date.getFullYear();
 
         return `${dayOfWeek}, ${day} ${month} ${year}`;
+    }
+
+    private setupTimeFieldClick(fieldId: string, inputId: string): void {
+        const field = document.getElementById(fieldId);
+        const input = document.getElementById(inputId) as HTMLInputElement;
+
+        if (field && input) {
+            field.style.cursor = 'pointer';
+            field.addEventListener('click', (e) => {
+                // Prevent double-triggering if clicking directly on input
+                if (e.target !== input) {
+                    input.showPicker?.();
+                    input.focus();
+                }
+            });
+
+            // Validate time range on change
+            input.addEventListener('change', () => {
+                this.validateTimeRange(input);
+            });
+        }
+    }
+
+    private validateTimeRange(input: HTMLInputElement): void {
+        const value = input.value;
+        if (!value) return;
+
+        const [hours, minutes] = value.split(':').map(Number);
+        const timeInMinutes = hours * 60 + minutes;
+        const minTime = 8 * 60; // 08:00
+        const maxTime = 20 * 60; // 20:00
+
+        if (timeInMinutes < minTime) {
+            input.value = '08:00';
+        } else if (timeInMinutes > maxTime) {
+            input.value = '20:00';
+        }
+    }
+
+    private setupCommentAutoResize(): void {
+        const textarea = document.getElementById('postArxivComment') as HTMLTextAreaElement;
+        if (!textarea) return;
+
+        const resize = () => {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        };
+
+        textarea.addEventListener('input', resize);
+        // Initial resize in case of pre-filled content
+        resize();
     }
 
     private handleClientSelect(client: ClientData, loadCars: boolean = true): void {

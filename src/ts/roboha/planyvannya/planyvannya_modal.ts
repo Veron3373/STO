@@ -2,6 +2,13 @@
 
 import '../../../scss/robocha/planyvannya/_planyvannya_modal.scss';
 import { supabase } from '../../vxid/supabaseClient';
+import {
+    showModalCreateSakazNarad,
+    fillClientInfo,
+    fillCarFields,
+    setSelectedIds,
+    setTransferredActComment
+} from "../redahyvatu_klient_machuna/vikno_klient_machuna";
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 
 export interface ReservationData {
@@ -964,27 +971,56 @@ export class PlanyvannyaModal {
         dropdowns.forEach(d => (d as HTMLElement).style.display = 'none');
     }
 
-    private handleCreateAct(): void {
+    private async handleCreateAct(): Promise<void> {
         const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
         const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
         const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
         const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
         const commentInput = document.getElementById('postArxivComment') as HTMLTextAreaElement;
 
-        const dataToTransfer = {
-            clientName: nameInput?.value || '',
-            phone: phoneInput?.value || '',
-            carModel: carInput?.value || '',
-            carNumber: numberInput?.value || '',
-            comment: commentInput?.value || '',
-            clientId: this.selectedClientId,
-            carId: this.selectedCarId
-        };
+        const name = nameInput?.value || '';
+        const phone = phoneInput?.value || '';
+        const carModel = carInput?.value || '';
+        const carNumber = numberInput?.value || '';
+        const comment = commentInput?.value || '';
 
-        sessionStorage.setItem('createActData', JSON.stringify(dataToTransfer));
+        await showModalCreateSakazNarad();
+        setTransferredActComment(comment);
+
+        if (this.selectedClientId) {
+            const clientIdStr = String(this.selectedClientId);
+            await fillClientInfo(clientIdStr);
+
+            let carIdStr: string | null = null;
+            if (this.selectedCarId) {
+                carIdStr = String(this.selectedCarId);
+                const { data: carData } = await supabase
+                    .from('cars')
+                    .select('data')
+                    .eq('cars_id', this.selectedCarId)
+                    .single();
+                if (carData?.data) {
+                    fillCarFields(carData.data);
+                }
+            }
+            setSelectedIds(clientIdStr, carIdStr);
+        } else {
+            const clientInput = document.getElementById('client-input-create-sakaz_narad') as HTMLTextAreaElement;
+            if (clientInput) {
+                clientInput.value = name;
+                clientInput.dispatchEvent(new Event('input'));
+            }
+            const phoneInputElement = document.getElementById('phone-create-sakaz_narad') as HTMLInputElement;
+            if (phoneInputElement) phoneInputElement.value = phone;
+        }
+
+        const carModelInputElement = document.getElementById('car-model-create-sakaz_narad') as HTMLInputElement;
+        const carNumberInputElement = document.getElementById('car-number-input-create-sakaz_narad') as HTMLInputElement;
+
+        if (carModelInputElement && carModel) carModelInputElement.value = carModel;
+        if (carNumberInputElement && carNumber) carNumberInputElement.value = carNumber;
 
         this.close();
-        window.location.href = 'main.html';
     }
 
     private async handleSubmit(): Promise<void> {

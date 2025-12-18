@@ -32,9 +32,9 @@ async function checkAuthOnPageLoad(): Promise<void> {
   // Змінюємо URL
   obfuscateCurrentUrl();
 
-  // Показуємо контент
+  // Показуємо контент (ВИПРАВЛЕНО селектор!)
   const container = document.querySelector(
-    ".Planning-container"
+    ".post-planning-container"
   ) as HTMLElement;
   if (container) {
     container.style.display = "block";

@@ -15,6 +15,37 @@
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self'; script-src 'self' 'unsafe-inline' https://eksifjzzszcqsufwcbsx.supabase.co; connect-src 'self' https://eksifjzzszcqsufwcbsx.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
 
+  <!-- 🔒 БЛОКУЮЧИЙ СКРИПТ: Перевірка авторизації ДО рендерингу -->
+  <script>
+    (async function () {
+      const SUPABASE_URL = 'https://eksifjzzszcqsufwcbsx.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVrc2lmanp6c3pjcXN1ZndjYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc4NTQ5MTcsImV4cCI6MjAzMzQzMDkxN30.1CfRvgpwC_BF3c-TaBJBMIx0EJMv5bSMFVrKzSKF9XY';
+      const ALLOWED_EMAILS = ['veron3373v@gmail.com', 'bsbraclavec@gmail.com'];
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token') ? JSON.parse(localStorage.getItem('supabase.auth.token')).access_token : ''}`
+          }
+        });
+
+        if (!response.ok || response.status === 401) {
+          window.location.replace('https://veron3373.github.io/STO/main.html');
+          return;
+        }
+
+        const { email } = await response.json();
+        if (!email || !ALLOWED_EMAILS.includes(email)) {
+          window.location.replace('https://veron3373.github.io/STO/');
+          return;
+        }
+      } catch (e) {
+        window.location.replace('https://veron3373.github.io/STO/main.html');
+      }
+    })();
+  </script>
+
   <link rel="stylesheet" href="./src/scss/main.scss" />
   <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
   <style>

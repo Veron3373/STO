@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8" />
     <title>Основний</title>
+
+    <!-- 🔒 Перевірка Google сесії -->
+    <script type="module" src="./src/ts/roboha/main_session_guard.ts"></script>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
@@ -83,8 +87,7 @@
 
             <li class="search-container">
                 <span id="searchIcon" class="search-icon" title="Пошук">🔍</span>
-                <input type="text" id="searchInput" class="search-input"
-                    placeholder="Введіть для пошуку" />
+                <input type="text" id="searchInput" class="search-input" placeholder="Введіть для пошуку" />
             </li>
         </div>
         <li class="alim">1.2.0 / © 2025 Алім</li>

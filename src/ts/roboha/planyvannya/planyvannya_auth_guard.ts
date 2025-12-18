@@ -1,40 +1,48 @@
 // src/ts/roboha/planyvannya/planyvannya_auth_guard.ts
-// Захист сторінки planyvannya.html від неавторизованого доступу
+// 🔐 ПОВНИЙ ЗАХИСТ сторінки planyvannya.html
 
 import { supabase } from "../../vxid/supabaseClient";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { isEmailAllowed } from "../../../../constants";
 
-async function checkAuthOnPageLoad(): Promise<void> {
-  console.log("🔒 Перевірка авторизації (Planning)...");
+console.log("🔒 [Планування] Перевірка доступу...");
 
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+async function checkPlanningAccess(): Promise<void> {
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
 
-  if (error || !session) {
-    console.warn("⛔ Доступ заблоковано. Немає сесії.");
-    // НЕ показувати сторінку перед редиректом
-    window.location.replace("https://veron3373.github.io/STO/main.html");
-    return;
+    if (error || !session) {
+      console.warn("⛔ [Планування] Немає Google сесії");
+      alert("Необхідна авторизація");
+      window.location.replace("https://veron3373.github.io/STO/index.html");
+      return;
+    }
+
+    const email = session.user.email;
+
+    if (!isEmailAllowed(email)) {
+      console.warn("⛔ [Планування] Email не в whitelist:", email);
+      alert(`Доступ заборонено для ${email}`);
+      await supabase.auth.signOut();
+      window.location.replace("https://veron3373.github.io/STO/");
+      return;
+    }
+
+    console.log("✅ [Планування] Доступ дозволено:", email);
+
+    // Змінюємо URL
+    obfuscateCurrentUrl();
+
+    // Показуємо сторінку
+    document.body.classList.add("auth-verified");
+  } catch (err) {
+    console.error("❌ [Планування] Помилка перевірки:", err);
+    window.location.replace("https://veron3373.github.io/STO/index.html");
   }
-
-  // ✅ Перевірка email в whitelist
-  if (!isEmailAllowed(session.user.email)) {
-    console.warn("⛔ Email не в whitelist:", session.user.email);
-    await supabase.auth.signOut();
-    window.location.replace("https://veron3373.github.io/STO/");
-    return;
-  }
-
-  console.log("✅ Авторизовано:", session.user.email);
-
-  // Змінюємо URL
-  obfuscateCurrentUrl();
-
-  // Показуємо сторінку
-  document.body.classList.add("auth-verified");
 }
 
-checkAuthOnPageLoad();
+// Запускаємо перевірку
+checkPlanningAccess();

@@ -892,6 +892,48 @@ export class PostArxiv {
             data,
             (resultData: ReservationData) => this.handleModalSubmit(resultData),
             async (date, start, end, excludeId) => {
+                // Перевірка: чи це поточна дата, що відображається
+                const currentViewDate = this.getCurrentDateFromHeader();
+
+                if (currentViewDate === date) {
+                    // Якщо це поточна дата, використовуємо "візуальну" валідацію для підтримки feature "splitting"
+                    // Ми дозволяємо перетин, ЯКЩО є вільне місце (тобто calculateValidRanges поверне > 0 діапазонів)
+
+                    const startMins = this.timeToMinutesFromStart(start);
+                    const endMins = this.timeToMinutesFromStart(end);
+
+                    let targetRow: HTMLElement | null = null;
+                    if (effectiveSlyusarId) {
+                        targetRow = this.container.querySelector(`.post-row-track[data-slyusar-id="${effectiveSlyusarId}"]`) as HTMLElement;
+                    }
+                    if (!targetRow && this.activeRow) targetRow = this.activeRow;
+
+                    if (targetRow) {
+                        // Використовуємо excludeId для знаходження блоку, що редагується, якщо потрібно
+                        // Але тут excludeBlock передається як елемент DOM. 
+                        // Якщо ми редагуємо, this.editingBlock має бути встановлений.
+
+                        // Перевіряємо, чи excludeId співпадає з поточним editingBlock (на випадок конфліктів)
+                        let excludeBlock: HTMLElement | null = null;
+                        if (this.editingBlock && this.editingBlock.dataset.postArxivId === excludeId?.toString()) {
+                            excludeBlock = this.editingBlock;
+                        }
+
+                        const validRanges = this.calculateValidRanges(startMins, endMins, targetRow, excludeBlock);
+
+                        if (validRanges.length === 0) {
+                            return { valid: false, message: 'Цей час повністю зайнятий' };
+                        }
+
+                        // Якщо є вільні діапазони - дозволяємо (handleModalSubmit розіб'є на частини)
+                        return { valid: true };
+                    }
+
+                    // Якщо рядок не знайдено (рідкісний випадок), дозволяємо submit, там буде перевірка
+                    return { valid: true };
+                }
+
+                // Для інших дат - стара перевірка через БД (строга)
                 return this.checkAvailabilityInDb(date, start, end, excludeId, effectiveSlyusarId || undefined);
             }
         );

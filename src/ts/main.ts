@@ -24,3 +24,44 @@ import "./vxid/url_obfuscator";
 import "./roboha/planyvannya/planyvannya";
 import "./roboha/planyvannya/planyvannya_post";
 
+import { showModalCreateSakazNarad, fillClientInfo } from "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const rawData = sessionStorage.getItem('createActData');
+    if (rawData) {
+        let data: any = {};
+        try {
+            data = JSON.parse(rawData);
+        } catch (e) {
+            console.error("Failed to parse createActData", e);
+            sessionStorage.removeItem('createActData');
+            return;
+        }
+
+        // Open the modal
+        await showModalCreateSakazNarad();
+
+        // Populate fields
+        if (data.clientId) {
+            await fillClientInfo(String(data.clientId));
+        } else {
+            const clientInput = document.getElementById('client-input-create-sakaz_narad') as HTMLTextAreaElement;
+            if (clientInput) {
+                clientInput.value = data.clientName || '';
+                // Emit input event to resize if needed (though resize logic might be bound to specific events)
+                clientInput.dispatchEvent(new Event('input'));
+                clientInput.style.height = 'auto';
+                clientInput.style.height = clientInput.scrollHeight + 'px';
+            }
+
+            const phoneInput = document.getElementById('phone-create-sakaz_narad') as HTMLInputElement;
+            if (phoneInput) phoneInput.value = data.phone || '';
+        }
+
+        const carModelInput = document.getElementById('car-model-create-sakaz_narad') as HTMLInputElement;
+        const numberInput = document.getElementById('car-number-input-create-sakaz_narad') as HTMLInputElement;
+
+        if (carModelInput && data.carModel) carModelInput.value = data.carModel;
+        if (numberInput && data.carNumber) numberInput.value = data.carNumber;
+    }
+});

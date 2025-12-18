@@ -62,7 +62,8 @@ function showMessage(message: string, color: string) {
 // Додавання запису до таблиці acts
 async function createActInDatabase(
   clientId: number,
-  carsId: number
+  carsId: number,
+  reason: string = ""
 ): Promise<boolean> {
   try {
     const dateOn = getCurrentDateTimeLocal();
@@ -77,7 +78,7 @@ async function createActInDatabase(
       Приймальник: "",
       Рекомендації: "",
       "Загальна сума": 0,
-      "Причина звернення": "",
+      "Причина звернення": reason,
       "Прибуток за деталі": 0,
       "Прибуток за роботу": 0,
     };
@@ -117,7 +118,7 @@ export function showSaveModalCreate(): Promise<boolean> {
     modal.style.display = "flex";
 
     const confirmBtn = modal.querySelector("#save-confirm-create") as HTMLButtonElement;
-    const cancelBtn  = modal.querySelector("#save-cancel-create")  as HTMLButtonElement;
+    const cancelBtn = modal.querySelector("#save-cancel-create") as HTMLButtonElement;
 
     const cleanup = () => {
       modal!.classList.remove("active");
@@ -137,12 +138,25 @@ export function showSaveModalCreate(): Promise<boolean> {
         confirmBtn.disabled = true;
         confirmBtn.textContent = "Створюємо...";
 
+        let reason = "";
+        const createActDataRaw = sessionStorage.getItem('createActData');
+        if (createActDataRaw) {
+          try {
+            const parsed = JSON.parse(createActDataRaw);
+            // Check if the current client matched the one for whom the comment was intended? 
+            // For now assume yes as the user flow implies immediate creation.
+            if (parsed.comment) reason = parsed.comment;
+          } catch (e) { }
+        }
+
         const success = await createActInDatabase(
           Number(values.client_id),
-          Number(values.cars_id)
+          Number(values.cars_id),
+          reason
         );
 
         if (success) {
+          sessionStorage.removeItem('createActData');
           showMessage("✅ Заказ наряд успішно створено", "#4caf50");
           cleanup();
           resolve(true);
@@ -171,6 +185,6 @@ export function showSaveModalCreate(): Promise<boolean> {
 
     // одноразові слухачі, щоб не плодити дублікати
     confirmBtn.addEventListener("click", onConfirm, { once: true });
-    cancelBtn .addEventListener("click", onCancel , { once: true });
+    cancelBtn.addEventListener("click", onCancel, { once: true });
   });
 }

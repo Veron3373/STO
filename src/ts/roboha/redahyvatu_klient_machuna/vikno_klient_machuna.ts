@@ -48,9 +48,9 @@ export function getModalFormValues() {
   const get = (id: string) =>
     (
       document.getElementById(id) as
-        | HTMLInputElement
-        | HTMLTextAreaElement
-        | null
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | null
     )?.value || "";
   const phoneValue = get(phoneInputId);
   return {
@@ -372,7 +372,7 @@ function setupSimpleAutocomplete(
   );
 }
 
-function fillCarFields(car: any) {
+export function fillCarFields(car: any) {
   (document.getElementById(carEngineInputId) as HTMLInputElement).value =
     car["Обʼєм"] || "";
   (document.getElementById(carFuelInputId) as HTMLInputElement).value =
@@ -398,7 +398,7 @@ async function fetchClientData(clientId: string) {
   return clientData?.data || null;
 }
 
-async function fillClientInfo(clientId: string) {
+export async function fillClientInfo(clientId: string) {
   const clientData = await fetchClientData(clientId);
   if (clientData) {
     // ЗМІНА ТУТ: Приводимо до HTMLTextAreaElement
@@ -608,7 +608,7 @@ function setupEditingAutocompletes() {
   document.getElementById("car-confirm-icons")!.style.display = "flex";
 }
 
-async function showModalCreateSakazNarad() {
+export async function showModalCreateSakazNarad() {
   if (!document.getElementById(savePromptModalId)) {
     document.body.appendChild(createSavePromptModal());
   }
@@ -1106,12 +1106,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // 2. ДОДАНО ПЕРЕВІРКУ АВТОРИЗАЦІЇ
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         console.warn("⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається.");
         // Тут можна викликати вашу функцію показу помилки, якщо вона не викликається автоматично глобально
         // Але головне - ми не йдемо далі:
-        return; 
+        return;
       }
 
       showModalCreateSakazNarad();

@@ -387,12 +387,14 @@ export class PlanyvannyaModal {
     private bindEvents(): void {
         const closeBtn = document.getElementById('postArxivClose');
         const submitBtn = document.getElementById('postArxivSubmit');
+        const createActBtn = document.getElementById('postArxivNewClientBtn');
 
         closeBtn?.addEventListener('click', () => this.close());
         this.setupStatusButton();
         this.applyStatus();
         this.setupCommentAutoResize();
         submitBtn?.addEventListener('click', () => this.handleSubmit());
+        createActBtn?.addEventListener('click', () => this.handleCreateAct());
 
         this.setupClientAutocomplete();
         this.setupPhoneAutocomplete();
@@ -960,6 +962,43 @@ export class PlanyvannyaModal {
     private closeAllDropdowns(): void {
         const dropdowns = document.querySelectorAll('.post-arxiv-autocomplete-dropdown');
         dropdowns.forEach(d => (d as HTMLElement).style.display = 'none');
+    }
+
+    private handleCreateAct(): void {
+        const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
+        const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
+        const carInput = document.getElementById('postArxivCar') as HTMLInputElement;
+        const numberInput = document.getElementById('postArxivCarNumber') as HTMLInputElement;
+        const commentInput = document.getElementById('postArxivComment') as HTMLTextAreaElement;
+
+        const dataToTransfer = {
+            clientName: nameInput?.value || '',
+            phone: phoneInput?.value || '',
+            carModel: carInput?.value || '',
+            carNumber: numberInput?.value || '',
+            comment: commentInput?.value || '',
+            clientId: this.selectedClientId,
+            carId: this.selectedCarId
+        };
+
+        sessionStorage.setItem('createActData', JSON.stringify(dataToTransfer));
+
+        // Construct the URL to go to main.html. 
+        // Assuming main.html is at the root or we can use a relative path.
+        // The user request says: https://veron3373.github.io/STO/main.html
+        // In local development, it might just be /main.html
+
+        const isGithubPages = window.location.hostname.includes('github.io');
+        const basePath = isGithubPages ? '/STO/' : '/';
+
+        // Since we are likely in a hashed file or subdirectory, absolute path is safer
+        // But let's try a simple navigation. If we are currently at /main.html, reloading is fine too.
+        // However, usually plans are on a different page or view.
+        // Let's use window.location.href = 'main.html' if strictly requested, but be careful about paths.
+        // The user strictly asked: https://veron3373.github.io/STO/main.html
+        // I will try to be relative to the current location if possible, or just 'main.html'
+
+        window.location.href = 'main.html';
     }
 
     private async handleSubmit(): Promise<void> {

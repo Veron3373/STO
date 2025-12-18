@@ -2,6 +2,7 @@
 import '../../../scss/robocha/planyvannya/_planyvannya_arxiv.scss';
 import { showNotification } from '../zakaz_naraudy/inhi/vspluvauhe_povidomlenna';
 import { supabase } from '../../vxid/supabaseClient';
+import { userName, userAccessLevel } from '../tablucya/users';
 
 import { PlanyvannyaModal, type ReservationData } from './planyvannya_modal';
 
@@ -1031,7 +1032,7 @@ export class PostArxiv {
         const dataOn = `${targetDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
         const dataOff = `${targetDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
 
-        const payload = {
+        const payload: any = {
             status: data.status,
             client_id: data.clientId,
             cars_id: data.carId,
@@ -1041,6 +1042,11 @@ export class PostArxiv {
             slyusar_id: data.slyusarId,
             name_post: data.namePost
         };
+
+        // Додаємо прізвище користувача тільки при створенні нового запису
+        if (!existingId && userName) {
+            payload.xto_zapusav = userName;
+        }
 
         if (existingId) {
             const { error } = await supabase.from('post_arxiv').update(payload).eq('post_arxiv_id', existingId);
@@ -1515,6 +1521,38 @@ export class PostArxiv {
 
             if (postArxivId) {
                 try {
+                    // Отримуємо інформацію про запис з БД
+                    const { data: recordData, error: fetchError } = await supabase
+                        .from('post_arxiv')
+                        .select('xto_zapusav')
+                        .eq('post_arxiv_id', parseInt(postArxivId))
+                        .single();
+
+                    if (fetchError) {
+                        console.error('Помилка отримання даних запису:', fetchError);
+                        showNotification('Помилка перевірки прав доступу', 'error');
+                        this.closeContextMenu();
+                        return;
+                    }
+
+                    // Перевірка прав доступу
+                    const isAdmin = userAccessLevel === 'Адміністратор';
+                    const recordCreator = recordData?.xto_zapusav;
+
+                    if (!isAdmin) {
+                        // Якщо не адмін, перевіряємо чи співпадає прізвище
+                        if (!recordCreator || recordCreator !== userName) {
+                            const creatorName = recordCreator || 'Невідомий';
+                            showNotification(
+                                `Ви не можете видалити цей запис. Зверніться до ${creatorName}`,
+                                'error'
+                            );
+                            this.closeContextMenu();
+                            return;
+                        }
+                    }
+
+                    // Видаляємо запис
                     const { error } = await supabase
                         .from('post_arxiv')
                         .delete()

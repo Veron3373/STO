@@ -3,34 +3,46 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
+import { isEmailAllowed } from "../../../../constants";
 
 async function checkAuthOnPageLoad(): Promise<void> {
-    console.log("🔒 Перевірка авторизації (Planning)...");
+  console.log("🔒 Перевірка авторизації (Planning)...");
 
-    const {
-        data: { session },
-        error,
-    } = await supabase.auth.getSession();
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
 
-    if (error || !session) {
-        console.warn("⛔ Доступ заблоковано. Немає сесії.");
-        window.location.href = "https://veron3373.github.io/STO/main.html";
-        return;
-    }
+  if (error || !session) {
+    console.warn("⛔ Доступ заблоковано. Немає сесії.");
+    window.location.href = "https://veron3373.github.io/STO/main.html";
+    return;
+  }
 
-    console.log("✅ Авторизовано");
+  // ✅ Перевірка email в whitelist
+  if (!isEmailAllowed(session.user.email)) {
+    console.warn("⛔ Email не в whitelist:", session.user.email);
+    await supabase.auth.signOut();
+    window.location.href = "https://veron3373.github.io/STO/";
+    return;
+  }
 
-    // Змінюємо URL
-    obfuscateCurrentUrl();
+  console.log("✅ Авторизовано:", session.user.email);
 
-    // Показуємо контент
-    const container = document.querySelector(
-        ".Planning-container"
-    ) as HTMLElement;
-    if (container) {
-        container.style.display = "block";
-        // container.style.visibility = "visible"; // Якщо ви використовуєте visibility
-    }
+  // Змінюємо URL
+  obfuscateCurrentUrl();
+
+  // Показуємо контент
+  const container = document.querySelector(
+    ".Planning-container"
+  ) as HTMLElement;
+  if (container) {
+    container.style.display = "block";
+    container.style.visibility = "visible";
+  }
+
+  // Показуємо body
+  document.body.style.visibility = "visible";
 }
 
 checkAuthOnPageLoad();

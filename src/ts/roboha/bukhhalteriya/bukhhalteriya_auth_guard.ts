@@ -2,11 +2,8 @@
 // Захист сторінки bukhhalteriya.html від неавторизованого доступу
 
 import { supabase } from "../../vxid/supabaseClient";
-
-// src/ts/roboha/bukhhalteriya/bukhhalteriya_auth_guard.ts
-
-// 👇 Додай імпорт
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
+import { isEmailAllowed } from "../../../../constants";
 
 async function checkAuthOnPageLoad(): Promise<void> {
   console.log("🔒 Перевірка авторизації...");
@@ -22,7 +19,15 @@ async function checkAuthOnPageLoad(): Promise<void> {
     return;
   }
 
-  console.log("✅ Авторизовано");
+  // ✅ Перевірка email в whitelist
+  if (!isEmailAllowed(session.user.email)) {
+    console.warn("⛔ Email не в whitelist:", session.user.email);
+    await supabase.auth.signOut();
+    window.location.href = "https://veron3373.github.io/STO/";
+    return;
+  }
+
+  console.log("✅ Авторизовано:", session.user.email);
 
   // 👇 ЗАПУСКАЄМО ЗМІНУ URL ТУТ (коли вхід успішний)
   obfuscateCurrentUrl();
@@ -35,6 +40,9 @@ async function checkAuthOnPageLoad(): Promise<void> {
     container.style.display = "block";
     container.style.visibility = "visible";
   }
+
+  // Показуємо body
+  document.body.style.visibility = "visible";
 }
 
 checkAuthOnPageLoad();

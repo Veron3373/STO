@@ -5,8 +5,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Бухгалтерія</title>
+
+  <!-- 🔒 Захист від кешування -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- 🔒 Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://eksifjzzszcqsufwcbsx.supabase.co; connect-src 'self' https://eksifjzzszcqsufwcbsx.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+
   <link rel="stylesheet" href="./src/scss/robocha/bukhhalteriya/_bukhhalteriya.scss" />
   <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
+
+  <!-- 🔒 Сховати body до перевірки авторизації -->
+  <style>
+    body {
+      visibility: hidden !important;
+    }
+  </style>
+
   <script type="module" src="./src/ts/roboha/bukhhalteriya/bukhhalteriya_auth_guard.ts"></script>
 </head>
 

@@ -5,6 +5,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Планувальник</title>
+
+  <!-- 🔒 Захист від кешування -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- 🔒 Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://eksifjzzszcqsufwcbsx.supabase.co; connect-src 'self' https://eksifjzzszcqsufwcbsx.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+
   <link rel="stylesheet" href="./src/scss/main.scss" />
   <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
   <style>
@@ -12,6 +22,8 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
+      visibility: hidden !important;
+      /* 🔒 Сховати до перевірки авторизації */
     }
   </style>
 </head>

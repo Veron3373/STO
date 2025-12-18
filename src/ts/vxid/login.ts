@@ -1,5 +1,6 @@
 // src/js/login.ts
 import { supabase } from "./supabaseClient";
+import { isEmailAllowed } from "../../../constants";
 
 // 🚪 Вхід через Google
 export async function signInWithGoogle() {
@@ -17,30 +18,23 @@ export async function signInWithGoogle() {
   }
 }
 
-// 🔍 Перевірка дозволеного доступу
+// 🔍 Перевірка дозволеного доступу (БЕЗ запиту до БД whitelist)
 supabase.auth.onAuthStateChange(async (_event, session) => {
   const user = session?.user;
 
   if (user) {
     try {
-      const { data: whitelist, error } = await supabase
-        .from("whitelist")
-        .select("email")
-        .eq("email", user.email);
-
-      if (error) {
-        console.error("Помилка при перевірці whitelist:", error);
-        return;
-      }
-
-      if (whitelist && whitelist.length > 0) {
-        window.location.href = "/STO/main.html"; // <-- ключовий момент
+      // Перевіряємо email на клієнті (без запиту до БД)
+      if (isEmailAllowed(user.email)) {
+        console.log("✅ Email дозволено:", user.email);
+        window.location.href = "/STO/main.html";
       } else {
+        console.warn("⛔ Email не в whitelist:", user.email);
         alert("Ваш email не дозволено для входу.");
         await supabase.auth.signOut();
       }
     } catch (err) {
-      console.error("Помилка доступу до whitelist:", err);
+      console.error("Помилка перевірки доступу:", err);
     }
   }
 });

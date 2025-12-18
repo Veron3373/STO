@@ -15,7 +15,8 @@ async function checkAuthOnPageLoad(): Promise<void> {
 
   if (error || !session) {
     console.warn("⛔ Доступ заблоковано. Немає сесії.");
-    window.location.href = "https://veron3373.github.io/STO/main.html";
+    // НЕ показувати сторінку перед редиректом
+    window.location.replace("https://veron3373.github.io/STO/main.html");
     return;
   }
 
@@ -23,7 +24,7 @@ async function checkAuthOnPageLoad(): Promise<void> {
   if (!isEmailAllowed(session.user.email)) {
     console.warn("⛔ Email не в whitelist:", session.user.email);
     await supabase.auth.signOut();
-    window.location.href = "https://veron3373.github.io/STO/";
+    window.location.replace("https://veron3373.github.io/STO/");
     return;
   }
 

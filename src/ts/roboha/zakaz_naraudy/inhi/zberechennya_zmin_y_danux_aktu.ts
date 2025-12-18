@@ -586,10 +586,14 @@ async function logActChanges(
   deleted: ParsedItem[]
 ): Promise<void> {
   // ⚠️ КРИТИЧНО: Перевірка ролі користувача
+  console.log(`🔍 [logActChanges] Перевірка ролі користувача: "${userAccessLevel}"`);
+
   if (userAccessLevel === "Адміністратор") {
     console.log("⏭️ Адміністратор - логування змін пропущено");
     return;
   }
+
+  console.log(`✅ [logActChanges] Користувач НЕ адміністратор - продовжуємо логування`);
 
   // ✅ ФУНКЦІЯ ВИЗНАЧЕННЯ АВТОРА ЗМІН
   const getChangeAuthor = (item: ParsedItem): string => {
@@ -698,16 +702,37 @@ async function logActChanges(
 
   console.log(`📝 [logActChanges] Підготовлено ${records.length} записів для вставки:`, records);
 
+  // 🔍 ДІАГНОСТИКА: Перевіряємо поточного користувача
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) {
+    console.error("❌ Помилка отримання користувача:", userError);
+  } else {
+    console.log(`👤 [logActChanges] Поточний користувач:`, {
+      email: user?.email,
+      id: user?.id,
+      role: user?.role
+    });
+  }
+
   // Запис в БД
-  const { error } = await supabase
+  const { data: insertedData, error } = await supabase
     .from("act_changes_notifications")
-    .insert(records);
+    .insert(records)
+    .select(); // ✅ Додано select() щоб побачити вставлені дані
 
   if (error) {
-    console.error("❌ Помилка запису змін:", error);
+    console.error("❌ ПОМИЛКА ЗАПИСУ ЗМІН:", error);
+    console.error("📋 Деталі помилки:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+    console.error("📝 Записи що не вдалося вставити:", records);
     throw error;
   } else {
     console.log(`✅ Записано ${records.length} змін в БД (з клієнтом та авто)`);
+    console.log(`✅ Вставлені записи:`, insertedData);
   }
 }
 

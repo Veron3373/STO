@@ -31,15 +31,6 @@ async function checkAuthOnPageLoad(): Promise<void> {
 
   // 👇 ЗАПУСКАЄМО ЗМІНУ URL ТУТ (коли вхід успішний)
   obfuscateCurrentUrl();
-
-  // Показуємо контент
-  const container = document.querySelector(
-    ".Bukhhalter-container"
-  ) as HTMLElement;
-  if (container) {
-    container.style.display = "block";
-    container.style.visibility = "visible";
-  }
 }
 
 checkAuthOnPageLoad();

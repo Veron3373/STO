@@ -967,17 +967,17 @@ export class PostArxiv {
             // Обчислюємо вільні діапазони
             const validRanges = this.calculateValidRanges(startMins, endMins, targetRow, this.editingBlock);
 
+            console.log('🔍 Перевірка діапазонів:', {
+                startMins,
+                endMins,
+                validRanges,
+                validRangesCount: validRanges.length,
+                isEditing: !!this.editingBlock
+            });
+
             // Перевірка: чи весь виділений діапазон зайнятий?
             if (validRanges.length === 0) {
-                showNotification('Цей час вже зайнятий', 'error');
-                return;
-            }
-
-            // Перевірка: чи є хоча б одне вільне вікно?
-            const totalFreeTime = validRanges.reduce((sum, range) => sum + (range.end - range.start), 0);
-
-            // Якщо немає жодного вільного часу (весь діапазон зайнятий)
-            if (totalFreeTime === 0) {
+                console.warn('❌ Весь діапазон зайнятий!');
                 showNotification('Цей час вже зайнятий', 'error');
                 return;
             }

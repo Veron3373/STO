@@ -15,47 +15,7 @@
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self'; script-src 'self' 'unsafe-inline' https://eksifjzzszcqsufwcbsx.supabase.co; connect-src 'self' https://eksifjzzszcqsufwcbsx.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
 
-  <style>
-    /* 🔒 ПРИХОВУЄМО сторінку ДО перевірки */
-    body {
-      visibility: hidden !important;
-    }
-  </style>
-
-  <!-- 🔒 БЛОКУЮЧИЙ СКРИПТ: Перевірка Google сесії ДО рендерингу -->
-  <script>
-    (function () {
-      const storageKey = 'sb-eksifjzzszcqsufwcbsx-auth-token';
-      const allowedEmails = ['veron3373v@gmail.com', 'bsbraclavec@gmail.com'];
-
-      const authData = localStorage.getItem(storageKey);
-      if (!authData) {
-        alert('Авторизація відсутня. Перенаправлення на сторінку входу.');
-        window.location.replace('https://veron3373.github.io/STO/index.html');
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(authData);
-        const email = parsed?.user?.email;
-
-        if (!email || !allowedEmails.includes(email)) {
-          alert('Доступ заборонено');
-          window.location.replace('https://veron3373.github.io/STO/');
-          return;
-        }
-
-        // ✅ Email дозволено - показуємо сторінку
-        document.addEventListener('DOMContentLoaded', () => {
-          document.body.style.visibility = 'visible';
-        });
-      } catch (e) {
-        window.location.replace('https://veron3373.github.io/STO/index.html');
-      }
-    })();
-  </script>
-
-  <!-- 🔒 Додаткова перевірка через session guard -->
+  <!-- 🔒 Перевірка Google сесії -->
   <script type="module" src="./src/ts/roboha/planyvannya/planyvannya_session_guard.ts"></script>
 
   <link rel="stylesheet" href="./src/scss/main.scss" />

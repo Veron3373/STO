@@ -983,21 +983,6 @@ export class PlanyvannyaModal {
 
         sessionStorage.setItem('createActData', JSON.stringify(dataToTransfer));
 
-        // Construct the URL to go to main.html. 
-        // Assuming main.html is at the root or we can use a relative path.
-        // The user request says: https://veron3373.github.io/STO/main.html
-        // In local development, it might just be /main.html
-
-        const isGithubPages = window.location.hostname.includes('github.io');
-        const basePath = isGithubPages ? '/STO/' : '/';
-
-        // Since we are likely in a hashed file or subdirectory, absolute path is safer
-        // But let's try a simple navigation. If we are currently at /main.html, reloading is fine too.
-        // However, usually plans are on a different page or view.
-        // Let's use window.location.href = 'main.html' if strictly requested, but be careful about paths.
-        // The user strictly asked: https://veron3373.github.io/STO/main.html
-        // I will try to be relative to the current location if possible, or just 'main.html'
-
         window.location.href = 'main.html';
     }
 

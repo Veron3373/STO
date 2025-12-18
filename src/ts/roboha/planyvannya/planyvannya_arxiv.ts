@@ -1372,6 +1372,8 @@ export class PostArxiv {
             e.stopPropagation();
             this.editingBlock = block;
 
+            console.log('DBLCLICK detected. block.dataset:', { ...block.dataset });
+
             const startStr = this.minutesToTime(parseInt(block.dataset.start || '0'));
             const endStr = this.minutesToTime(parseInt(block.dataset.end || '0'));
 

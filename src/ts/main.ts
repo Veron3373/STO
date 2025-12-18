@@ -24,7 +24,8 @@ import "./vxid/url_obfuscator";
 import "./roboha/planyvannya/planyvannya";
 import "./roboha/planyvannya/planyvannya_post";
 
-import { showModalCreateSakazNarad, fillClientInfo } from "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
+import { showModalCreateSakazNarad, fillClientInfo, fillCarFields } from "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
+import { supabase } from "./vxid/supabaseClient";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const rawData = sessionStorage.getItem('createActData');
@@ -44,6 +45,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Populate fields
         if (data.clientId) {
             await fillClientInfo(String(data.clientId));
+
+            if (data.carId) {
+                const { data: carData } = await supabase
+                    .from('cars')
+                    .select('data')
+                    .eq('cars_id', data.carId)
+                    .single();
+
+                if (carData?.data) {
+                    fillCarFields(carData.data);
+                }
+            }
         } else {
             const clientInput = document.getElementById('client-input-create-sakaz_narad') as HTMLTextAreaElement;
             if (clientInput) {

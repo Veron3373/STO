@@ -40,4 +40,6 @@ async function checkAuthOnPageLoad(): Promise<void> {
     container.style.display = "block";
     container.style.visibility = "visible";
   }
+}
 
+checkAuthOnPageLoad();

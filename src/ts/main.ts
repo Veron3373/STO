@@ -24,7 +24,7 @@ import "./vxid/url_obfuscator";
 import "./roboha/planyvannya/planyvannya";
 import "./roboha/planyvannya/planyvannya_post";
 
-import { showModalCreateSakazNarad, fillClientInfo, fillCarFields, setSelectedIds } from "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
+import { showModalCreateSakazNarad, fillClientInfo, fillCarFields, setSelectedIds, setTransferredActComment } from "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
 import { supabase } from "./vxid/supabaseClient";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         let data: any = {};
         try {
             data = JSON.parse(rawData);
+            setTransferredActComment(data.comment || "");
+            sessionStorage.removeItem('createActData');
         } catch (e) {
             console.error("Failed to parse createActData", e);
             sessionStorage.removeItem('createActData');

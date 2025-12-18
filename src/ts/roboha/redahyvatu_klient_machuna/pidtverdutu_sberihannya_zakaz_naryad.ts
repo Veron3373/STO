@@ -1,7 +1,7 @@
 //src\ts\roboha\redahyvatu_klient_machuna\pidtverdutu_sberihannya_zakaz_naryad.ts
 export const saveModalIdCreate = "save-prompt-modal-create";
 
-import { getModalFormValues } from "./vikno_klient_machuna";
+import { getModalFormValues, transferredActComment, setTransferredActComment } from "./vikno_klient_machuna";
 import { supabase } from "../../vxid/supabaseClient";
 import { loadActsTable } from "../tablucya/tablucya";
 import { modalOverlayId } from "./vikno_klient_machuna";
@@ -138,16 +138,7 @@ export function showSaveModalCreate(): Promise<boolean> {
         confirmBtn.disabled = true;
         confirmBtn.textContent = "Створюємо...";
 
-        let reason = "";
-        const createActDataRaw = sessionStorage.getItem('createActData');
-        if (createActDataRaw) {
-          try {
-            const parsed = JSON.parse(createActDataRaw);
-            // Check if the current client matched the one for whom the comment was intended? 
-            // For now assume yes as the user flow implies immediate creation.
-            if (parsed.comment) reason = parsed.comment;
-          } catch (e) { }
-        }
+        let reason = transferredActComment;
 
         const success = await createActInDatabase(
           Number(values.client_id),
@@ -156,7 +147,7 @@ export function showSaveModalCreate(): Promise<boolean> {
         );
 
         if (success) {
-          sessionStorage.removeItem('createActData');
+          setTransferredActComment("");
           showMessage("✅ Заказ наряд успішно створено", "#4caf50");
           cleanup();
           resolve(true);

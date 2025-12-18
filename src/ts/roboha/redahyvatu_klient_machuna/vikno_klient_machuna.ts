@@ -109,6 +109,9 @@ export function setSelectedIds(cId: string | null, carId: string | null) {
   selectedClientId = cId;
   selectedCarId = carId;
 }
+
+export let transferredActComment: string = "";
+export function setTransferredActComment(val: string) { transferredActComment = val; }
 let currentAutocompletes: { [key: string]: any } = {};
 export let userConfirmation: "no" | "yes" | null = null;
 
@@ -856,7 +859,10 @@ export async function showModalCreateSakazNarad() {
       setupNormalAutocompletes();
     }
   });
-  closeBtn.addEventListener("click", () => modalElement.remove());
+  closeBtn.addEventListener("click", () => {
+    modalElement.remove();
+    setTransferredActComment("");
+  });
   const { data: allClients } = await supabase
     .from("clients")
     .select("client_id, data");

@@ -952,6 +952,16 @@ export class PostArxiv {
         const startMins = this.timeToMinutesFromStart(data.startTime);
         const endMins = this.timeToMinutesFromStart(data.endTime);
 
+        console.log('📌 handleModalSubmit:', {
+            isSameDate,
+            currentViewDate,
+            dataDate: data.date,
+            startMins,
+            endMins,
+            effectiveSlyusarId,
+            hasActiveRow: !!this.activeRow
+        });
+
         if (endMins <= startMins) {
             showNotification('Час закінчення має бути пізніше часу початку', 'error');
             return;
@@ -962,6 +972,11 @@ export class PostArxiv {
             targetRow = this.container.querySelector(`.post-row-track[data-slyusar-id="${effectiveSlyusarId}"]`) as HTMLElement;
         }
         if (!targetRow && this.activeRow) targetRow = this.activeRow;
+
+        console.log('📌 targetRow:', {
+            hasTargetRow: !!targetRow,
+            targetRowSlyusarId: targetRow?.dataset?.slyusarId
+        });
 
         if (targetRow) {
             // Обчислюємо вільні діапазони

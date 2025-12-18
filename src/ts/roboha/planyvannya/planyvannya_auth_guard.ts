@@ -32,7 +32,7 @@ async function checkAuthOnPageLoad(): Promise<void> {
   // Змінюємо URL
   obfuscateCurrentUrl();
 
-  // Показуємо контент (ВИПРАВЛЕНО селектор!)
+  // Показуємо контент
   const container = document.querySelector(
     ".post-planning-container"
   ) as HTMLElement;
@@ -40,9 +40,6 @@ async function checkAuthOnPageLoad(): Promise<void> {
     container.style.display = "block";
     container.style.visibility = "visible";
   }
-
-  // Показуємо body
-  document.body.style.visibility = "visible";
 }
 
 checkAuthOnPageLoad();

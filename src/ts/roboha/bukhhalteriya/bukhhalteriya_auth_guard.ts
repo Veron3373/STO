@@ -41,8 +41,3 @@ async function checkAuthOnPageLoad(): Promise<void> {
     container.style.visibility = "visible";
   }
 
-  // Показуємо body
-  document.body.style.visibility = "visible";
-}
-
-checkAuthOnPageLoad();

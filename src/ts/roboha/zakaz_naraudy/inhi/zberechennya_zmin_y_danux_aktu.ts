@@ -696,6 +696,8 @@ async function logActChanges(
     return;
   }
 
+  console.log(`📝 [logActChanges] Підготовлено ${records.length} записів для вставки:`, records);
+
   // Запис в БД
   const { error } = await supabase
     .from("act_changes_notifications")

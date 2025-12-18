@@ -137,6 +137,7 @@ function subscribeToActNotifications() {
         table: "act_changes_notifications",
       },
       (payload) => {
+        console.log("📡 [Realtime INSERT] Отримано нове повідомлення:", payload.new);
         const newNotification = payload.new;
         if (newNotification && newNotification.act_id) {
           const actId = Number(newNotification.act_id);
@@ -150,11 +151,14 @@ function subscribeToActNotifications() {
           // 3. 👇 ПОКАЗУЄМО КРАСИВЕ ПОВІДОМЛЕННЯ ВНИЗУ СПРАВА 👇
           showRealtimeActNotification({
             act_id: actId,
-            notification_id: newNotification.notification_id, // ✅ ДОДАНО
+            notification_id: newNotification.notification_id,
             changed_by_surname: newNotification.changed_by_surname,
             item_name: newNotification.item_name,
             dodav_vudaluv: newNotification.dodav_vudaluv,
-            created_at: newNotification.created_at, // ✅ ДОДАНО
+            created_at: newNotification.data || newNotification.created_at, // поле timestamp з БД
+            pib: newNotification.pib,         // ✅ ПІБ клієнта
+            auto: newNotification.auto,       // ✅ Автомобіль
+            phone: newNotification.phone,     // ✅ Телефон
           });
         }
       }

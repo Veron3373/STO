@@ -884,6 +884,34 @@ export class PostArxiv {
 
         const effectiveSlyusarId = data.slyusarId;
 
+        // Calculate busy intervals for visual indication in modal
+        const busyIntervals: { start: number, end: number }[] = [];
+        let targetRowForBusy: HTMLElement | null = null;
+
+        const targetSlyusarId = effectiveSlyusarId || (this.activeRow?.dataset.slyusarId ? parseInt(this.activeRow.dataset.slyusarId) : null);
+
+        if (targetSlyusarId) {
+            targetRowForBusy = this.container.querySelector(`.post-row-track[data-slyusar-id="${targetSlyusarId}"]`) as HTMLElement;
+        }
+
+        if (targetRowForBusy) {
+            const blocks = Array.from(targetRowForBusy.querySelectorAll('.post-reservation-block')) as HTMLElement[];
+            blocks.forEach(block => {
+                // Skip if this is the block being edited
+                if (data.postArxivId && block.dataset.postArxivId === data.postArxivId.toString()) return;
+                if (this.editingBlock && block === this.editingBlock) return;
+
+                const startRel = parseInt(block.dataset.start || '0');
+                const endRel = parseInt(block.dataset.end || '0');
+
+                // Convert relative mins (from startHour) to absolute day mins
+                const startAbs = startRel + (this.startHour * 60);
+                const endAbs = endRel + (this.startHour * 60);
+
+                busyIntervals.push({ start: startAbs, end: endAbs });
+            });
+        }
+
         this.reservationModal.open(
             dateToUse,
             startTime,
@@ -935,7 +963,8 @@ export class PostArxiv {
 
                 // Для інших дат - стара перевірка через БД (строга)
                 return this.checkAvailabilityInDb(date, start, end, excludeId, effectiveSlyusarId || undefined);
-            }
+            },
+            busyIntervals
         );
     }
 

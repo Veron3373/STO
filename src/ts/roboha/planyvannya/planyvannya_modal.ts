@@ -132,6 +132,11 @@ export class PlanyvannyaModal {
                 color: #1976d2;
                 font-weight: 500;
             }
+            .header-dropdown-item.booked-time {
+                background-color: #ededed;
+                color: #777;
+                padding-left: 15px; /* origin 12px + 3px */
+            }
             .validation-error-message {
                 background: #ffebee;
                 color: #c62828;
@@ -146,9 +151,17 @@ export class PlanyvannyaModal {
                 width: 100%;
                 box-sizing: border-box;
             }
+            .post-arxiv-autocomplete-dropdown-up {
+                top: auto !important;
+                bottom: 100% !important;
+                margin-bottom: 2px;
+                box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
+            }
         `;
         document.head.appendChild(style);
     }
+
+    private busyIntervals: { start: number, end: number }[] = [];
 
     public async open(
         date: string,
@@ -157,10 +170,12 @@ export class PlanyvannyaModal {
         comment: string = '',
         existingData?: Partial<ReservationData>,
         onSubmit?: (data: ReservationData) => void,
-        onValidate?: (date: string, start: string, end: string, excludeId?: number) => Promise<{ valid: boolean, message?: string }>
+        onValidate?: (date: string, start: string, end: string, excludeId?: number) => Promise<{ valid: boolean, message?: string }>,
+        busyIntervals: { start: number, end: number }[] = []
     ): Promise<void> {
         this.onSubmitCallback = onSubmit || null;
         this.onValidateCallback = onValidate || null;
+        this.busyIntervals = busyIntervals;
 
         // Initialize state
         this.currentDate = new Date(date);
@@ -398,7 +413,7 @@ export class PlanyvannyaModal {
     }
 
     private setupHeaderInteractions(): void {
-        const bindDropdown = (id: string, generator: () => { text: string, value: any, sub?: string }[], onSelect: (val: any) => void) => {
+        const bindDropdown = (id: string, generator: () => { text: string, value: any, sub?: string, isBooked?: boolean }[], onSelect: (val: any) => void) => {
             const el = document.getElementById(id);
             if (!el) return;
             el.addEventListener('click', (e) => {
@@ -413,6 +428,11 @@ export class PlanyvannyaModal {
                     const item = document.createElement('div');
                     item.className = 'header-dropdown-item';
                     item.textContent = opt.text;
+
+                    if (opt.isBooked) {
+                        item.classList.add('booked-time');
+                    }
+
                     if (opt.sub) {
                         const sub = document.createElement('span');
                         sub.style.fontSize = '11px';
@@ -496,8 +516,17 @@ export class PlanyvannyaModal {
         const generateTimes = () => {
             const times = [];
             for (let h = 8; h <= 20; h++) {
-                times.push({ text: `${h}:00`, value: `${h.toString().padStart(2, '0')}:00` });
-                if (h !== 20) times.push({ text: `${h}:30`, value: `${h.toString().padStart(2, '0')}:30` });
+                const t1 = { text: `${h}:00`, value: `${h.toString().padStart(2, '0')}:00` };
+                const m1 = h * 60;
+                const isBooked1 = this.busyIntervals.some(i => m1 >= i.start && m1 < i.end);
+                times.push({ ...t1, isBooked: isBooked1 });
+
+                if (h !== 20) {
+                    const t2 = { text: `${h}:30`, value: `${h.toString().padStart(2, '0')}:30` };
+                    const m2 = h * 60 + 30;
+                    const isBooked2 = this.busyIntervals.some(i => m2 >= i.start && m2 < i.end);
+                    times.push({ ...t2, isBooked: isBooked2 });
+                }
             }
             return times;
         };
@@ -918,8 +947,12 @@ export class PlanyvannyaModal {
         const rect = container.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
 
-        // If bottom of dropdown is below viewport (or reasonably close to bottom edge)
-        if (rect.bottom > viewportHeight - 10) {
+        // Custom logic: Force UP if more than 1 item and it is the Car Dropdown
+        const isCarDropdown = container.id === 'postArxivCarDropdown';
+        const shouldForceUp = isCarDropdown && items.length > 1;
+
+        // If bottom of dropdown is below viewport OR should force up
+        if (rect.bottom > viewportHeight - 10 || shouldForceUp) {
             container.classList.add('post-arxiv-autocomplete-dropdown-up');
         }
     }

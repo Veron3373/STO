@@ -17,6 +17,16 @@
 
   <link rel="stylesheet" href="./src/scss/robocha/bukhhalteriya/_bukhhalteriya.scss" />
   <link rel="icon" type="image/svg+xml" href="/STO/logo.jpg" />
+  <style>
+    body {
+      opacity: 0;
+      transition: opacity 0.15s ease-in;
+    }
+
+    body.auth-verified {
+      opacity: 1;
+    }
+  </style>
 
   <script type="module" src="./src/ts/roboha/bukhhalteriya/bukhhalteriya_auth_guard.ts"></script>
 </head>

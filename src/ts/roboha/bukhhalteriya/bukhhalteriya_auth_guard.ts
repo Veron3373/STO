@@ -31,6 +31,9 @@ async function checkAuthOnPageLoad(): Promise<void> {
 
   // 👇 ЗАПУСКАЄМО ЗМІНУ URL ТУТ (коли вхід успішний)
   obfuscateCurrentUrl();
+
+  // Показуємо сторінку
+  document.body.classList.add("auth-verified");
 }
 
 checkAuthOnPageLoad();

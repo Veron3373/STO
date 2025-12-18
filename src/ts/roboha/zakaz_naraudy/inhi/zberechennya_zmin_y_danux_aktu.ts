@@ -63,7 +63,6 @@ interface ActChangeRecord {
   data: string;
   pib?: string;   // ✅ ПІБ клієнта з поточного акту
   auto?: string;  // ✅ Дані автомобіля з поточного акту
-  phone?: string; // ✅ Телефон клієнта
 }
 
 // КЕШ: Зберігаємо ТІЛЬКИ ЦІНУ (суму перерахуємо від кількості при збереженні)
@@ -616,12 +615,11 @@ async function logActChanges(
   };
 
   // ✅ ОТРИМАННЯ ПІБ КЛІЄНТА ТА АВТОМОБІЛЯ З DOM
-  const getClientAndCarInfo = (): { pib: string; auto: string; phone: string } => {
+  const getClientAndCarInfo = (): { pib: string; auto: string } => {
     let pib = "";
     let auto = "";
-    let phone = "";
 
-    // Шукаємо таблицю "left" де є клієнт і телефон
+    // Шукаємо таблицю "left" де є клієнт
     const leftTable = document.querySelector("table.zakaz_narayd-table.left");
     if (leftTable) {
       const rows = leftTable.querySelectorAll("tr");
@@ -630,9 +628,6 @@ async function logActChanges(
         const value = row.querySelector("td:last-child")?.textContent?.trim();
         if (label === "Клієнт" && value) {
           pib = value;
-        }
-        if (label === "Телефон" && value) {
-          phone = value;
         }
       });
     }
@@ -650,11 +645,11 @@ async function logActChanges(
       });
     }
 
-    console.log(`📋 Дані акту - Клієнт: "${pib}", Автомобіль: "${auto}", Телефон: "${phone}"`);
-    return { pib, auto, phone };
+    console.log(`📋 Дані акту - Клієнт: "${pib}", Автомобіль: "${auto}"`);
+    return { pib, auto };
   };
 
-  const { pib, auto, phone } = getClientAndCarInfo();
+  const { pib, auto } = getClientAndCarInfo();
 
   const records: ActChangeRecord[] = [];
 
@@ -673,7 +668,6 @@ async function logActChanges(
       data: new Date().toISOString(),
       pib: pib || undefined,  // ✅ ПІБ клієнта
       auto: auto || undefined, // ✅ Дані автомобіля
-      phone: phone || undefined, // ✅ Телефон клієнта
     });
   });
 
@@ -691,7 +685,6 @@ async function logActChanges(
       data: new Date().toISOString(),
       pib: pib || undefined,  // ✅ ПІБ клієнта
       auto: auto || undefined, // ✅ Дані автомобіля
-      phone: phone || undefined, // ✅ Телефон клієнта
     });
   });
 

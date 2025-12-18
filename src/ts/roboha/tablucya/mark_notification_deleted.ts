@@ -70,7 +70,6 @@ export async function loadUnseenNotifications(): Promise<ActNotificationPayload[
             created_at: row.data ?? row.created_at,
             pib: row.pib,   // ✅ ПІБ
             auto: row.auto, // ✅ Авто
-            phone: row.phone, // ✅ Телефон
         }));
     } catch (err) {
         console.error("❌ Виняток при завантаженні повідомлень:", err);

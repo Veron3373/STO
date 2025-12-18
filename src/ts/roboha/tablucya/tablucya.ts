@@ -158,7 +158,6 @@ function subscribeToActNotifications() {
             created_at: newNotification.data || newNotification.created_at, // поле timestamp з БД
             pib: newNotification.pib,         // ✅ ПІБ клієнта
             auto: newNotification.auto,       // ✅ Автомобіль
-            phone: newNotification.phone,     // ✅ Телефон
           });
         }
       }

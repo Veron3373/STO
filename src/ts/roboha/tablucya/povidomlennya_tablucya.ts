@@ -13,7 +13,6 @@ export interface ActNotificationPayload {
   data?: string;               // запасне поле, якщо час прийде сюди
   pib?: string;                // ✅ ПІБ клієнта з акту
   auto?: string;               // ✅ Дані автомобіля з акту
-  phone?: string;              // ✅ Телефон клієнта
 }
 
 // ==========================
@@ -324,14 +323,12 @@ export function showRealtimeActNotification(
   // ✅ Формуємо рядки для клієнта та автомобіля (якщо є)
   const pibLine = payload.pib ? `<div class="toast-client-row"><span class="client-label">👤</span><span class="client-value">${payload.pib}</span></div>` : "";
   const autoLine = payload.auto ? `<div class="toast-auto-row"><span class="auto-label">🚗</span><span class="auto-value">${payload.auto}</span></div>` : "";
-  const phoneText = payload.phone ? `<span class="toast-phone" style="margin-left:8px; font-weight:normal;">📱 ${payload.phone}</span>` : "";
 
   toast.innerHTML = `
     <div class="toast-header-row">
       <div class="header-left">
         <span class="act-id">Акт №${payload.act_id}</span>
         <span class="status-text">${actionText}</span>
-        ${phoneText}
       </div>
       <div class="notification-count-badge">...</div>
     </div>

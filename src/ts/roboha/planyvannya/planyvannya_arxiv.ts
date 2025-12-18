@@ -909,23 +909,24 @@ export class PostArxiv {
             excludeId = parseInt(this.editingBlock.dataset.postArxivId);
         }
 
-        const availability = await this.checkAvailabilityInDb(
-            data.date,
-            data.startTime,
-            data.endTime,
-            excludeId,
-            effectiveSlyusarId || undefined
-        );
-
-        if (!availability.valid) {
-            showNotification(availability.message || 'Цей час вже зайнятий (БД)', 'error');
-            return;
-        }
-
         const currentViewDate = this.getCurrentDateFromHeader();
         const isSameDate = currentViewDate === data.date;
 
         if (!isSameDate) {
+            // Для іншої дати перевіряємо доступність в БД
+            const availability = await this.checkAvailabilityInDb(
+                data.date,
+                data.startTime,
+                data.endTime,
+                excludeId,
+                effectiveSlyusarId || undefined
+            );
+
+            if (!availability.valid) {
+                showNotification(availability.message || 'Цей час вже зайнятий', 'error');
+                return;
+            }
+
             const startMins = this.timeToMinutesFromStart(data.startTime);
             const endMins = this.timeToMinutesFromStart(data.endTime);
 
@@ -963,10 +964,21 @@ export class PostArxiv {
         if (!targetRow && this.activeRow) targetRow = this.activeRow;
 
         if (targetRow) {
+            // Обчислюємо вільні діапазони
             const validRanges = this.calculateValidRanges(startMins, endMins, targetRow, this.editingBlock);
 
+            // Перевірка: чи весь виділений діапазон зайнятий?
             if (validRanges.length === 0) {
-                showNotification('Обраний час візуально перекривається', 'error');
+                showNotification('Цей час вже зайнятий', 'error');
+                return;
+            }
+
+            // Перевірка: чи є хоча б одне вільне вікно?
+            const totalFreeTime = validRanges.reduce((sum, range) => sum + (range.end - range.start), 0);
+
+            // Якщо немає жодного вільного часу (весь діапазон зайнятий)
+            if (totalFreeTime === 0) {
+                showNotification('Цей час вже зайнятий', 'error');
                 return;
             }
 
@@ -997,18 +1009,27 @@ export class PostArxiv {
                             successCount++;
                         }
                     }
-                    if (successCount > 0) showNotification(`Запис розділено`, 'success');
+                    if (successCount > 0) {
+                        const msg = successCount > 1 ? `Створено ${successCount} записи` : 'Запис оновлено';
+                        showNotification(msg, 'success');
+                    }
                 }
                 this.editingBlock = null;
             } else {
+                // Створюємо нові записи для всіх вільних діапазонів
+                let successCount = 0;
                 for (const range of validRanges) {
                     const newId = await this.saveReservationToDb(data, range.start, range.end);
                     if (newId) {
                         const checkoutData = { ...data, postArxivId: newId };
                         this.createReservationBlock(targetRow, range.start, range.end, checkoutData);
+                        successCount++;
                     }
                 }
-                showNotification('Час зарезервовано', 'success');
+                if (successCount > 0) {
+                    const msg = successCount > 1 ? `Створено ${successCount} записи` : 'Час зарезервовано';
+                    showNotification(msg, 'success');
+                }
             }
         }
 

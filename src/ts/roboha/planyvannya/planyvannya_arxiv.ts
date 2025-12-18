@@ -361,7 +361,8 @@ export class PostArxiv {
             status: record.status || 'Запланований',
             postArxivId: record.post_arxiv_id,
             slyusarId: record.slyusar_id,
-            namePost: record.name_post
+            namePost: record.name_post,
+            actId: record.act_id // Pass the act_id
         };
 
         // Створюємо блок з правильним кольором
@@ -403,6 +404,7 @@ export class PostArxiv {
         block.dataset.comment = data.comment;
         block.dataset.slyusarId = data.slyusarId?.toString() || '';
         block.dataset.namePost = data.namePost?.toString() || '';
+        block.dataset.actId = data.actId?.toString() || '';
 
         // Використовуємо renderBlockContent для формування вмісту
         this.renderBlockContent(block, data);
@@ -1252,6 +1254,35 @@ export class PostArxiv {
             textContainer.appendChild(mainText);
         }
 
+        // Add Act Button if exists
+        const actId = typeof data === 'string' ? null : (data.actId || null);
+        if (actId) {
+            const actBtnContainer = document.createElement('div');
+            actBtnContainer.style.position = 'absolute';
+            actBtnContainer.style.bottom = '2px';
+            actBtnContainer.style.right = '2px';
+            actBtnContainer.style.zIndex = '5'; // Ensure above text
+
+            const actBtn = document.createElement('button');
+            actBtn.className = 'Bukhhalter-act-btn';
+            actBtn.textContent = `📋 ${actId}`;
+            actBtn.title = `Відкрити акт №${actId}`;
+            actBtn.style.fontSize = '11px';
+            actBtn.style.padding = '1px 4px';
+            actBtn.style.cursor = 'pointer';
+
+            actBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof (window as any).openActModal === 'function') {
+                    (window as any).openActModal(actId);
+                }
+            });
+
+            actBtnContainer.appendChild(actBtn);
+            block.appendChild(actBtnContainer);
+        }
+
         block.appendChild(textContainer);
     }
 
@@ -1290,6 +1321,7 @@ export class PostArxiv {
             block.dataset.carId = data.carId?.toString() || '';
             block.dataset.slyusarId = data.slyusarId?.toString() || '';
             block.dataset.namePost = data.namePost?.toString() || '';
+            block.dataset.actId = data.actId?.toString() || '';
         }
 
         block.dataset.comment = comment;
@@ -1354,7 +1386,8 @@ export class PostArxiv {
                 comment: block.dataset.comment,
                 postArxivId: parseInt(block.dataset.postArxivId || '0') || null,
                 slyusarId: parseInt(block.dataset.slyusarId || '0') || null,
-                namePost: parseInt(block.dataset.namePost || '0') || null
+                namePost: parseInt(block.dataset.namePost || '0') || null,
+                actId: parseInt(block.dataset.actId || '0') || null
             };
 
             this.openModal(startStr, endStr, detailData);

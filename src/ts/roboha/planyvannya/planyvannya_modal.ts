@@ -26,6 +26,7 @@ export interface ReservationData {
     slyusarId?: number | null;
     namePost?: number | null;
     postArxivId?: number | null;
+    actId?: number | null;
 }
 
 
@@ -70,6 +71,7 @@ export class PlanyvannyaModal {
     private slyusarId: number | null = null;
     private namePost: number | null = null;
     private postArxivId: number | null = null;
+    private actId: number | null = null;
 
     private currentStatusIndex: number = 0;
     private readonly statuses = [
@@ -192,6 +194,7 @@ export class PlanyvannyaModal {
         this.slyusarId = existingData?.slyusarId ?? null;
         this.namePost = existingData?.namePost ?? null;
         this.postArxivId = existingData?.postArxivId ?? null;
+        this.actId = existingData?.actId ?? null;
 
         this.createModalHTML(comment);
         this.bindEvents();
@@ -205,6 +208,9 @@ export class PlanyvannyaModal {
             this.prefillData(existingData);
         }
 
+        // Update Act Button State
+        this.updateActButton();
+
         this.modalOverlay = document.getElementById('postArxivModalOverlay');
         if (this.modalOverlay) {
             this.modalOverlay.style.display = 'flex';
@@ -212,6 +218,26 @@ export class PlanyvannyaModal {
             if (nameInput && !nameInput.value) {
                 nameInput.focus();
             }
+        }
+    }
+
+    private updateActButton(): void {
+        const actBtn = document.getElementById('postArxivNewClientBtn');
+        if (!actBtn) return;
+
+        if (this.actId) {
+            actBtn.innerHTML = `📋 ${this.actId}`;
+            actBtn.title = `Відкрити акт №${this.actId}`;
+            actBtn.classList.add('has-act');
+            // Styling could be added via class
+            actBtn.style.background = '#4CAF50';
+            actBtn.style.color = 'white';
+        } else {
+            actBtn.innerHTML = 'Створити акт';
+            actBtn.title = 'Створити акт';
+            actBtn.classList.remove('has-act');
+            actBtn.style.background = '';
+            actBtn.style.color = '';
         }
     }
 
@@ -972,6 +998,15 @@ export class PlanyvannyaModal {
     }
 
     private async handleCreateAct(): Promise<void> {
+        if (this.actId) {
+            if (typeof (window as any).openActModal === 'function') {
+                (window as any).openActModal(this.actId);
+            } else {
+                console.warn('Global function openActModal not found');
+            }
+            return;
+        }
+
         const nameInput = document.getElementById('postArxivClientName') as HTMLInputElement;
         const phoneInput = document.getElementById('postArxivPhone') as HTMLInputElement;
         const carInput = document.getElementById('postArxivCar') as HTMLInputElement;

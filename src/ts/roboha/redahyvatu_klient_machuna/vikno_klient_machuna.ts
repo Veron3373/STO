@@ -105,6 +105,10 @@ const btnCreateId = "btn-create-create-sakaz_narad";
 
 let selectedClientId: string | null = null;
 let selectedCarId: string | null = null;
+export function setSelectedIds(cId: string | null, carId: string | null) {
+  selectedClientId = cId;
+  selectedCarId = carId;
+}
 let currentAutocompletes: { [key: string]: any } = {};
 export let userConfirmation: "no" | "yes" | null = null;
 

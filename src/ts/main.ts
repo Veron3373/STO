@@ -24,7 +24,7 @@ import "./vxid/url_obfuscator";
 import "./roboha/planyvannya/planyvannya";
 import "./roboha/planyvannya/planyvannya_post";
 
-import { showModalCreateSakazNarad, fillClientInfo, fillCarFields } from "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
+import { showModalCreateSakazNarad, fillClientInfo, fillCarFields, setSelectedIds } from "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
 import { supabase } from "./vxid/supabaseClient";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -44,9 +44,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Populate fields
         if (data.clientId) {
-            await fillClientInfo(String(data.clientId));
+            const clientIdStr = String(data.clientId);
+            await fillClientInfo(clientIdStr);
+
+            let carIdStr: string | null = null;
 
             if (data.carId) {
+                carIdStr = String(data.carId);
                 const { data: carData } = await supabase
                     .from('cars')
                     .select('data')
@@ -57,6 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     fillCarFields(carData.data);
                 }
             }
+            // CRITICAL: Set the internal IDs so the system knows what to save
+            setSelectedIds(clientIdStr, carIdStr);
         } else {
             const clientInput = document.getElementById('client-input-create-sakaz_narad') as HTMLTextAreaElement;
             if (clientInput) {

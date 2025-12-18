@@ -983,6 +983,7 @@ export class PlanyvannyaModal {
 
         sessionStorage.setItem('createActData', JSON.stringify(dataToTransfer));
 
+        this.close();
         window.location.href = 'main.html';
     }
 

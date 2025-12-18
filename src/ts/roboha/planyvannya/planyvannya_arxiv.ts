@@ -462,7 +462,8 @@ export class PostArxiv {
                 comment: block.dataset.comment,
                 postArxivId: parseInt(block.dataset.postArxivId || '0') || null,
                 slyusarId: parseInt(block.dataset.slyusarId || '0') || null,
-                namePost: parseInt(block.dataset.namePost || '0') || null
+                namePost: parseInt(block.dataset.namePost || '0') || null,
+                actId: parseInt(block.dataset.actId || '0') || null
             };
 
             this.openModal(startStr, endStr, detailData);
@@ -1371,8 +1372,6 @@ export class PostArxiv {
             e.preventDefault();
             e.stopPropagation();
             this.editingBlock = block;
-
-            console.log('DBLCLICK detected. block.dataset:', { ...block.dataset });
 
             const startStr = this.minutesToTime(parseInt(block.dataset.start || '0'));
             const endStr = this.minutesToTime(parseInt(block.dataset.end || '0'));

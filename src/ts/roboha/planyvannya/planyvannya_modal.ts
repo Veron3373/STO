@@ -196,11 +196,6 @@ export class PlanyvannyaModal {
         this.postArxivId = existingData?.postArxivId ?? null;
         this.actId = existingData?.actId ?? null;
 
-        console.log('PlanyvannyaModal open:', {
-            existingData,
-            actId: this.actId
-        });
-
         this.createModalHTML(comment);
         this.bindEvents();
         this.updateHeaderUI(); // Initial render of header parts
@@ -215,9 +210,6 @@ export class PlanyvannyaModal {
 
         // Update Act Button State
         this.updateActButton();
-        console.log('Act Button Updated. Current actId:', this.actId);
-        const btnCheck = document.getElementById('postArxivNewClientBtn');
-        console.log('Button element:', btnCheck, 'innerHTML:', btnCheck?.innerHTML);
 
         this.modalOverlay = document.getElementById('postArxivModalOverlay');
         if (this.modalOverlay) {

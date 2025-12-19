@@ -1329,6 +1329,7 @@ export class PostArxiv {
       data_off: dataOff,
       slyusar_id: data.slyusarId,
       name_post: data.namePost,
+      act_id: data.actId,
     };
 
     // Додаємо прізвище користувача тільки при створенні нового запису

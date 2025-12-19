@@ -1335,6 +1335,7 @@ export class PlanyvannyaModal {
       postArxivId: this.postArxivId,
       slyusarId: this.slyusarId,
       namePost: this.namePost,
+      actId: this.actId,
     };
 
     if (this.onSubmitCallback) {

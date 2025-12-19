@@ -1411,142 +1411,33 @@ export class PlanyvannyaModal {
     try {
       console.log(`🔎 Пошук актів за запитом: "${query}"`);
 
-      // Крок 1: Шукаємо клієнтів, чиє ПІБ містить запит
-      const { data: matchingClients } = await supabase
-        .from("clients")
-        .select("client_id, data")
-        .ilike("data->>ПІБ", `%${query}%`)
-        .limit(50);
-
-      const clientIdsFromSearch =
-        matchingClients?.map((c) => c.client_id) || [];
-      console.log("👥 Клієнти знайдені за ПІБ:", clientIdsFromSearch);
-
-      // Якщо є знайдені клієнти - шукаємо по act_id АБО по client_id
-      if (clientIdsFromSearch.length > 0) {
-        // Спочатку отримуємо акти по номеру
-        const { data: actsByNumber } = await supabase
-          .from("acts")
-          .select("act_id, client_id")
-          .is("date_off", null)
-          .ilike("act_id", `%${query}%`)
-          .order("act_id", { ascending: false })
-          .limit(20);
-
-        // Потім отримуємо акти по client_id
-        const { data: actsByClient } = await supabase
-          .from("acts")
-          .select("act_id, client_id")
-          .is("date_off", null)
-          .in("client_id", clientIdsFromSearch)
-          .order("act_id", { ascending: false })
-          .limit(20);
-
-        // Об'єднуємо результати без дублікатів
-        const allActs = [...(actsByNumber || []), ...(actsByClient || [])];
-        const uniqueActs = Array.from(
-          new Map(allActs.map((a) => [a.act_id, a])).values()
-        );
-
-        console.log("📊 Знайдено актів:", uniqueActs.length);
-
-        if (uniqueActs.length === 0) {
-          dropdown.innerHTML =
-            '<div class="post-act-no-results">Акти не знайдено</div>';
-          dropdown.style.display = "block";
-          return;
-        }
-
-        // Крок 3: Отримуємо унікальні client_id
-        const clientIds = [
-          ...new Set(
-            uniqueActs.map((a) => a.client_id).filter((id) => id != null)
-          ),
-        ];
-
-        // Крок 4: Завантажуємо дані клієнтів
-        let clientsMap = new Map<number, string>();
-        if (clientIds.length > 0) {
-          const { data: clients } = await supabase
-            .from("clients")
-            .select("client_id, data")
-            .in("client_id", clientIds);
-
-          if (clients) {
-            clients.forEach((c: any) => {
-              const pib = c.data?.["ПІБ"] || "Невідомо";
-              clientsMap.set(c.client_id, pib);
-            });
-          }
-        }
-
-        // Сортуємо: спочатку ті що співпадають по номеру
-        const sortedActs = uniqueActs.sort((a, b) => {
-          const aMatchNumber = String(a.act_id).includes(query);
-          const bMatchNumber = String(b.act_id).includes(query);
-          if (aMatchNumber && !bMatchNumber) return -1;
-          if (!aMatchNumber && bMatchNumber) return 1;
-          return b.act_id - a.act_id;
-        });
-
-        dropdown.innerHTML = sortedActs
-          .map((act: any) => {
-            const clientName = clientsMap.get(act.client_id) || "Невідомо";
-            return `
-              <div class="post-act-option" data-act-id="${act.act_id}">
-                <div class="post-act-option-main">Акт №${act.act_id}</div>
-                <div class="post-act-option-sub">${clientName}</div>
-              </div>
-            `;
-          })
-          .join("");
-
-        dropdown.style.display = "block";
-
-        // Додаємо обробники кліків
-        dropdown.querySelectorAll(".post-act-option").forEach((option) => {
-          option.addEventListener("click", () => {
-            const actId = Number(option.getAttribute("data-act-id"));
-            this.selectAct(actId);
-            document.getElementById("postActModalOverlay")?.remove();
-          });
-        });
-        return;
-      }
-
-      // Якщо клієнтів не знайдено - шукаємо тільки по номеру
-      const { data: acts, error: actsError } = await supabase
+      // Крок 1: Завантажуємо ВСІ відкриті акти (для фільтрації по числовому полю)
+      const { data: allActs, error: actsError } = await supabase
         .from("acts")
         .select("act_id, client_id")
         .is("date_off", null)
-        .ilike("act_id", `%${query}%`)
-        .order("act_id", { ascending: false })
-        .limit(20);
-
-      console.log("📊 Результат пошуку:", { acts, actsError });
+        .order("act_id", { ascending: false });
 
       if (actsError) {
-        console.error("❌ Помилка пошуку актів:", actsError);
+        console.error("❌ Помилка завантаження актів:", actsError);
         dropdown.innerHTML =
-          '<div class="post-act-no-results">Помилка пошуку актів</div>';
+          '<div class="post-act-no-results">Помилка завантаження актів</div>';
         dropdown.style.display = "block";
         return;
       }
 
-      if (!acts || acts.length === 0) {
-        console.log("⚠️ Акти не знайдено");
+      if (!allActs || allActs.length === 0) {
         dropdown.innerHTML =
-          '<div class="post-act-no-results">Акти не знайдено</div>';
+          '<div class="post-act-no-results">Немає відкритих актів</div>';
         dropdown.style.display = "block";
         return;
       }
 
-      // Крок 3: Отримуємо унікальні client_id
+      // Крок 2: Завантажуємо клієнтів для всіх актів
       const clientIds = [
-        ...new Set(acts.map((a) => a.client_id).filter((id) => id != null)),
+        ...new Set(allActs.map((a) => a.client_id).filter((id) => id != null)),
       ];
 
-      // Крок 4: Завантажуємо дані клієнтів
       let clientsMap = new Map<number, string>();
       if (clientIds.length > 0) {
         const { data: clients } = await supabase
@@ -1562,9 +1453,45 @@ export class PlanyvannyaModal {
         }
       }
 
-      console.log(`✅ Знайдено ${acts.length} актів`);
+      // Крок 3: Фільтруємо локально по act_id АБО по ПІБ
+      const queryLower = query.toLowerCase().trim();
+      const filteredActs = allActs.filter((act) => {
+        const actIdStr = String(act.act_id);
+        const clientName = clientsMap.get(act.client_id) || "";
 
-      dropdown.innerHTML = acts
+        // Перевіряємо чи номер акту містить запит
+        const matchesActId = actIdStr.includes(queryLower);
+
+        // Перевіряємо чи ПІБ містить запит
+        const matchesClientName = clientName.toLowerCase().includes(queryLower);
+
+        return matchesActId || matchesClientName;
+      });
+
+      console.log(
+        `📊 Знайдено ${filteredActs.length} актів з ${allActs.length}`
+      );
+
+      if (filteredActs.length === 0) {
+        dropdown.innerHTML =
+          '<div class="post-act-no-results">Акти не знайдено</div>';
+        dropdown.style.display = "block";
+        return;
+      }
+
+      // Сортуємо: спочатку ті що співпадають по номеру
+      const sortedActs = filteredActs.sort((a, b) => {
+        const aMatchNumber = String(a.act_id).includes(queryLower);
+        const bMatchNumber = String(b.act_id).includes(queryLower);
+        if (aMatchNumber && !bMatchNumber) return -1;
+        if (!aMatchNumber && bMatchNumber) return 1;
+        return b.act_id - a.act_id;
+      });
+
+      // Обмежуємо до 30 результатів для відображення
+      const displayActs = sortedActs.slice(0, 30);
+
+      dropdown.innerHTML = displayActs
         .map((act: any) => {
           const clientName = clientsMap.get(act.client_id) || "Невідомо";
           return `

@@ -1387,7 +1387,11 @@ class SchedulerApp {
       for (const record of data || []) {
         const dateOn = new Date(record.data_on);
         const dateOff = new Date(record.data_off);
-        const dateKey = dateOn.toISOString().split("T")[0];
+        // Використовуємо локальну дату замість ISO для уникнення зміщення часового поясу
+        const year = dateOn.getFullYear();
+        const month = String(dateOn.getMonth() + 1).padStart(2, "0");
+        const day = String(dateOn.getDate()).padStart(2, "0");
+        const dateKey = `${year}-${month}-${day}`;
         const postId = (record as any).name_post;
 
         if (!postId) continue;
@@ -1547,7 +1551,11 @@ class SchedulerApp {
       });
 
       // Додаємо індикатор зайнятості
-      const dateKey = current.toISOString().split("T")[0];
+      // Використовуємо локальну дату замість ISO для уникнення зміщення часового поясу
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, "0");
+      const day = String(current.getDate()).padStart(2, "0");
+      const dateKey = `${year}-${month}-${day}`;
       const stats = this.monthOccupancyStats.get(dateKey);
 
       console.log("📅 День:", day, "Дата:", dateKey, "Статистика:", stats);

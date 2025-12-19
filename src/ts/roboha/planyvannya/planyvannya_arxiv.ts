@@ -1505,7 +1505,7 @@ export class PostArxiv {
 
       const actBtn = document.createElement("button");
       actBtn.className = "Bukhhalter-act-btn";
-      actBtn.textContent = `📋 ${actId}`;
+      actBtn.textContent = `${actId}`; //📋
       actBtn.title = `Відкрити акт №${actId}`;
       actBtn.style.fontSize = "11px";
       actBtn.style.padding = "1px 4px";

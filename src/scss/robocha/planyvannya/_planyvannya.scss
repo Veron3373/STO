@@ -488,7 +488,6 @@ $sidebar-width: 30%;
 
 // EDIT MODE
 .post-scheduler-wrapper.edit-mode {
-
   .post-delete-btn,
   .post-post-delete-btn,
   .post-add-post-btn,
@@ -531,7 +530,11 @@ $sidebar-width: 30%;
 
 // DRAG PLACEHOLDERS
 .post-drag-placeholder {
-  background: linear-gradient(135deg, rgba(0, 77, 38, 0.1), rgba(0, 77, 38, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(0, 77, 38, 0.1),
+    rgba(0, 77, 38, 0.05)
+  );
   border: 2px dashed $primary-blue;
   border-radius: 6px;
   transition: height 0.2s ease;
@@ -647,26 +650,55 @@ $sidebar-width: 30%;
       grid-template-columns: repeat(7, 1fr);
       gap: 4px;
 
-      span {
+      .day-container {
+        aspect-ratio: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+
+        .day-occupancy-indicator {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        span {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          pointer-events: none;
+
+          &.post-today {
+            background: $today-bg;
+            color: $white;
+            font-weight: 700;
+            border: none;
+          }
+
+          &.post-selected-date {
+            background: $selected-bg;
+            color: $text-dark;
+            font-weight: 700;
+          }
+        }
+      }
+
+      // Старий span для днів без даних (пусті клітинки)
+      > span:not(.day-container span) {
         aspect-ratio: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        cursor: pointer;
-
-        &.post-today {
-          background: $today-bg;
-          color: $white;
-          font-weight: 700;
-          border: none;
-        }
-
-        &.post-selected-date {
-          background: $selected-bg;
-          color: $text-dark;
-          font-weight: 700;
-        }
       }
     }
   }
@@ -1070,12 +1102,20 @@ $sidebar-width: 30%;
 
   &:hover,
   &.active {
-    background: linear-gradient(135deg, rgba(0, 77, 38, 0.08), rgba(0, 77, 38, 0.04));
+    background: linear-gradient(
+      135deg,
+      rgba(0, 77, 38, 0.08),
+      rgba(0, 77, 38, 0.04)
+    );
     color: $primary-blue;
   }
 
   &.active {
-    background: linear-gradient(135deg, rgba(0, 77, 38, 0.12), rgba(0, 77, 38, 0.06));
+    background: linear-gradient(
+      135deg,
+      rgba(0, 77, 38, 0.12),
+      rgba(0, 77, 38, 0.06)
+    );
     font-weight: 500;
   }
 }

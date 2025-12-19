@@ -40,6 +40,12 @@ interface PositionData {
   post_title?: string; // Для пошуку post_id
 }
 
+interface DayOccupancyStats {
+  date: string;
+  totalMinutes: number; // Загальна кількість хвилин у всіх записах
+  postsCount: number; // Кількість унікальних постів
+}
+
 class SchedulerApp {
   private sections: Section[] = [];
   private editMode: boolean = false;
@@ -75,6 +81,9 @@ class SchedulerApp {
   // Position Tracking - відстеження позицій
   private initialPositions: PositionData[] = [];
   private deletedSlyusarIds: number[] = [];
+
+  // Статистика зайнятості днів
+  private monthOccupancyStats: Map<string, DayOccupancyStats> = new Map();
 
   constructor() {
     this.today = new Date();
@@ -1334,7 +1343,136 @@ class SchedulerApp {
     return months[monthIndex];
   }
 
-  private renderMonth(year: number, month: number): HTMLElement {
+  private async loadMonthOccupancyStats(
+    year: number,
+    month: number
+  ): Promise<void> {
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0);
+
+    const startStr = startDate.toISOString().split("T")[0];
+    const endStr = endDate.toISOString().split("T")[0];
+
+    try {
+      const { data, error } = await supabase
+        .from("post_arxiv")
+        .select("data_on, data_off")
+        .gte("data_on", startStr)
+        .lte("data_on", endStr + "T23:59:59");
+
+      if (error) {
+        console.error("Помилка завантаження статистики:", error);
+        return;
+      }
+
+      const statsMap = new Map<
+        string,
+        { minutes: number; posts: Set<number> }
+      >();
+
+      for (const record of data || []) {
+        const dateOn = new Date(record.data_on);
+        const dateOff = new Date(record.data_off);
+        const dateKey = dateOn.toISOString().split("T")[0];
+
+        const durationMinutes = Math.round(
+          (dateOff.getTime() - dateOn.getTime()) / 60000
+        );
+
+        if (!statsMap.has(dateKey)) {
+          statsMap.set(dateKey, { minutes: 0, posts: new Set() });
+        }
+
+        const stat = statsMap.get(dateKey)!;
+        stat.minutes += durationMinutes;
+        // Для постів можна додати post_id, але зараз просто рахуємо записи
+      }
+
+      this.monthOccupancyStats.clear();
+      for (const [dateKey, stat] of statsMap) {
+        this.monthOccupancyStats.set(dateKey, {
+          date: dateKey,
+          totalMinutes: stat.minutes,
+          postsCount: 1, // Поки що спрощена версія
+        });
+      }
+    } catch (err) {
+      console.error("Помилка при завантаженні статистики зайнятості:", err);
+    }
+  }
+
+  private createOccupancyIndicator(occupancyPercent: number): SVGElement {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "day-occupancy-indicator");
+    svg.setAttribute("width", "24");
+    svg.setAttribute("height", "24");
+    svg.setAttribute("viewBox", "0 0 24 24");
+
+    const centerX = 12;
+    const centerY = 12;
+    const radius = 10;
+    const totalSegments = 12;
+    const anglePerSegment = (2 * Math.PI) / totalSegments;
+
+    // Розраховуємо скільки секторів заливати
+    const filledSegments = Math.round((occupancyPercent / 100) * totalSegments);
+
+    // Кольорова схема залежно від зайнятості
+    let fillColor = "#4caf50"; // Зелений до 50%
+    if (occupancyPercent > 75) {
+      fillColor = "#f44336"; // Червоний понад 75%
+    } else if (occupancyPercent > 50) {
+      fillColor = "#ff9800"; // Помаранчевий 50-75%
+    }
+
+    // Малюємо всі 12 секторів
+    for (let i = 0; i < totalSegments; i++) {
+      const startAngle = i * anglePerSegment - Math.PI / 2; // Починаємо зверху
+      const endAngle = (i + 1) * anglePerSegment - Math.PI / 2;
+
+      // Координати початку та кінця дуги
+      const x1 = centerX + radius * Math.cos(startAngle);
+      const y1 = centerY + radius * Math.sin(startAngle);
+      const x2 = centerX + radius * Math.cos(endAngle);
+      const y2 = centerY + radius * Math.sin(endAngle);
+
+      // Створюємо path для сектора
+      const path = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path"
+      );
+      const pathData = [
+        `M ${centerX} ${centerY}`,
+        `L ${x1} ${y1}`,
+        `A ${radius} ${radius} 0 0 1 ${x2} ${y2}`,
+        "Z",
+      ].join(" ");
+
+      path.setAttribute("d", pathData);
+
+      // Заливаємо тільки потрібну кількість секторів
+      if (i < filledSegments) {
+        path.setAttribute("fill", fillColor);
+        path.setAttribute("opacity", "0.8");
+      } else {
+        path.setAttribute("fill", "#e0e0e0");
+        path.setAttribute("opacity", "0.3");
+      }
+
+      // Додаємо обводку для чіткості
+      path.setAttribute("stroke", "#fff");
+      path.setAttribute("stroke-width", "0.5");
+
+      svg.appendChild(path);
+    }
+
+    return svg;
+  }
+
+  private async renderMonth(year: number, month: number): Promise<HTMLElement> {
+    // Завантажуємо статистику для місяця
+    await this.loadMonthOccupancyStats(year, month);
+
     const monthDiv = document.createElement("div");
     monthDiv.className = "post-month-calendar";
 
@@ -1364,6 +1502,9 @@ class SchedulerApp {
     }
 
     for (let day = 1; day <= lastDay.getDate(); day++) {
+      const dayContainer = document.createElement("div");
+      dayContainer.className = "day-container";
+
       const span = document.createElement("span");
       span.textContent = day.toString();
       const current = new Date(year, month, day);
@@ -1374,20 +1515,38 @@ class SchedulerApp {
         span.className = "post-today";
       }
 
-      span.addEventListener("click", () => {
+      dayContainer.addEventListener("click", () => {
         this.selectedDate = new Date(year, month, day);
         this.render();
         this.reloadArxivData();
       });
 
-      daysDiv.appendChild(span);
+      // Додаємо індикатор зайнятості
+      const dateKey = current.toISOString().split("T")[0];
+      const stats = this.monthOccupancyStats.get(dateKey);
+
+      if (stats) {
+        // Розраховуємо відсоток зайнятості
+        // Припустимо, що робочий день = 12 годин (720 хвилин)
+        const workDayMinutes = 720;
+        const occupancyPercent = Math.min(
+          100,
+          (stats.totalMinutes / workDayMinutes) * 100
+        );
+
+        const indicator = this.createOccupancyIndicator(occupancyPercent);
+        dayContainer.appendChild(indicator);
+      }
+
+      dayContainer.appendChild(span);
+      daysDiv.appendChild(dayContainer);
     }
 
     monthDiv.appendChild(daysDiv);
     return monthDiv;
   }
 
-  private render(): void {
+  private async render(): Promise<void> {
     if (this.headerDateDisplay) {
       this.headerDateDisplay.textContent = this.formatFullDate(
         this.selectedDate
@@ -1404,9 +1563,11 @@ class SchedulerApp {
 
     if (this.calendarContainer) {
       this.calendarContainer.innerHTML = "";
-      this.calendarContainer.appendChild(
-        this.renderMonth(this.viewYear, this.viewMonth)
+      const currentMonth = await this.renderMonth(
+        this.viewYear,
+        this.viewMonth
       );
+      this.calendarContainer.appendChild(currentMonth);
 
       let nextMonth = this.viewMonth + 1;
       let nextYear = this.viewYear;
@@ -1414,7 +1575,8 @@ class SchedulerApp {
         nextMonth = 0;
         nextYear++;
       }
-      this.calendarContainer.appendChild(this.renderMonth(nextYear, nextMonth));
+      const nextMonthElement = await this.renderMonth(nextYear, nextMonth);
+      this.calendarContainer.appendChild(nextMonthElement);
     }
   }
 }

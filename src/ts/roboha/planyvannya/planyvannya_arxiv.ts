@@ -1510,6 +1510,8 @@ export class PostArxiv {
       actBtn.style.fontSize = "11px";
       actBtn.style.padding = "1px 4px";
       actBtn.style.cursor = "pointer";
+      actBtn.style.borderRadius = "50%";
+
 
       actBtn.addEventListener("click", (e) => {
         e.preventDefault();

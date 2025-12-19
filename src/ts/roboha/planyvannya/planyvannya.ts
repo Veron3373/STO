@@ -1552,10 +1552,10 @@ class SchedulerApp {
 
       // Додаємо індикатор зайнятості
       // Використовуємо локальну дату замість ISO для уникнення зміщення часового поясу
-      const year = current.getFullYear();
-      const month = String(current.getMonth() + 1).padStart(2, "0");
-      const day = String(current.getDate()).padStart(2, "0");
-      const dateKey = `${year}-${month}-${day}`;
+      const yearStr = current.getFullYear();
+      const monthStr = String(current.getMonth() + 1).padStart(2, "0");
+      const dayStr = String(current.getDate()).padStart(2, "0");
+      const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
       const stats = this.monthOccupancyStats.get(dateKey);
 
       console.log("📅 День:", day, "Дата:", dateKey, "Статистика:", stats);

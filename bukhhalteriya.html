@@ -773,8 +773,10 @@
     </div>
   </div>
 
-  <script type="module" src="./src/ts/main.ts" defer></script>
+  <!-- XLSX завантажується ПЕРШИМ, без defer/async -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Потім завантажуємо наш модуль -->
+  <script type="module" src="./src/ts/main.ts" defer></script>
 </body>
 
 </html>

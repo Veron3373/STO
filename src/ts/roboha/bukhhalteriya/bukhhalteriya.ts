@@ -422,6 +422,57 @@ function getCurrentDateForFileName(): string {
   return `${day}-${month}-${year}`;
 }
 
+// Динамічне завантаження XLSX (CDN) при потребі
+let xlsxLoadingPromise: Promise<boolean> | null = null;
+function loadXLSXIfNeeded(): Promise<boolean> {
+  if (typeof (window as any).XLSX !== "undefined") return Promise.resolve(true);
+  if (xlsxLoadingPromise) return xlsxLoadingPromise;
+
+  xlsxLoadingPromise = new Promise<boolean>((resolve) => {
+    try {
+      const existing = document.querySelector(
+        'script[src*="cdnjs.cloudflare.com/ajax/libs/xlsx"]'
+      ) as HTMLScriptElement | null;
+
+      if (existing) {
+        // Скрипт вже є, чекаємо завантаження
+        if (typeof (window as any).XLSX !== "undefined") {
+          resolve(true);
+          return;
+        }
+        existing.addEventListener(
+          "load",
+          () => {
+            resolve(typeof (window as any).XLSX !== "undefined");
+          },
+          { once: true }
+        );
+        existing.addEventListener("error", () => resolve(false), {
+          once: true,
+        });
+        return;
+      }
+
+      // Додаємо скрипт динамічно
+      const script = document.createElement("script");
+      script.src =
+        "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      script.async = false;
+      script.onload = () => {
+        setTimeout(() => {
+          resolve(typeof (window as any).XLSX !== "undefined");
+        }, 100);
+      };
+      script.onerror = () => resolve(false);
+      document.head.appendChild(script);
+    } catch {
+      resolve(false);
+    }
+  });
+
+  return xlsxLoadingPromise;
+}
+
 function downloadpodlegleToExcel(): void {
   const filteredData = getFilteredpodlegleData();
 
@@ -432,17 +483,21 @@ function downloadpodlegleToExcel(): void {
 
   // Ensure XLSX is present (attempt dynamic load if missing)
   if (typeof (window as any).XLSX === "undefined") {
+    console.warn("⚠️ XLSX не завантажена, спроба динамічного завантаження...");
+    showNotification("⏳ Завантаження бібліотеки Excel...", "info", 2000);
     // try to load dynamically and continue
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     loadXLSXIfNeeded().then((ok) => {
       if (!ok || typeof (window as any).XLSX === "undefined") {
+        console.error("❌ Не вдалося завантажити XLSX");
         showNotification(
-          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
           5000
         );
         return;
       }
+      console.log("✅ XLSX успішно завантажена");
       downloadpodlegleToExcel();
     });
     return;
@@ -492,16 +547,20 @@ function downloadpodlegleToExcel(): void {
 
 function downloadMagazineToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
+    console.warn("⚠️ XLSX не завантажена, спроба динамічного завантаження...");
+    showNotification("⏳ Завантаження бібліотеки Excel...", "info", 2000);
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     loadXLSXIfNeeded().then((ok) => {
       if (!ok || typeof (window as any).XLSX === "undefined") {
+        console.error("❌ Не вдалося завантажити XLSX");
         showNotification(
-          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
           5000
         );
         return;
       }
+      console.log("✅ XLSX успішно завантажена");
       downloadMagazineToExcel();
     });
     return;
@@ -587,16 +646,20 @@ function downloadMagazineToExcel(): void {
 
 function downloadDetailsToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
+    console.warn("⚠️ XLSX не завантажена, спроба динамічного завантаження...");
+    showNotification("⏳ Завантаження бібліотеки Excel...", "info", 2000);
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     loadXLSXIfNeeded().then((ok) => {
       if (!ok || typeof (window as any).XLSX === "undefined") {
+        console.error("❌ Не вдалося завантажити XLSX");
         showNotification(
-          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
           5000
         );
         return;
       }
+      console.log("✅ XLSX успішно завантажена");
       downloadDetailsToExcel();
     });
     return;
@@ -684,16 +747,20 @@ function downloadDetailsToExcel(): void {
 
 function downloadvutratuToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
+    console.warn("⚠️ XLSX не завантажена, спроба динамічного завантаження...");
+    showNotification("⏳ Завантаження бібліотеки Excel...", "info", 2000);
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     loadXLSXIfNeeded().then((ok) => {
       if (!ok || typeof (window as any).XLSX === "undefined") {
+        console.error("❌ Не вдалося завантажити XLSX");
         showNotification(
-          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
           5000
         );
         return;
       }
+      console.log("✅ XLSX успішно завантажена");
       downloadvutratuToExcel();
     });
     return;
@@ -741,6 +808,11 @@ function downloadvutratuToExcel(): void {
 
 export function downloadToExcel(): void {
   try {
+    console.log(
+      "📥 Експорт в Excel - перевірка наявності XLSX:",
+      typeof (window as any).XLSX
+    );
+
     // ВИПРАВЛЕНО: правильний клас кнопки
     const activeTab = document.querySelector(
       ".Bukhhalter-tab-btn.Bukhhalter-active"
@@ -751,6 +823,8 @@ export function downloadToExcel(): void {
     }
 
     const tabText = activeTab.textContent?.trim() || "";
+    console.log("📊 Активна вкладка:", tabText);
+
     if (tabText.includes("Співробітники") || tabText.includes("Зарплата")) {
       downloadpodlegleToExcel();
     } else if (tabText.includes("Магазин") || tabText.includes("Склад")) {
@@ -1023,37 +1097,3 @@ window.handleRowClick = handleRowClick;
 window.togglePayment = togglePayment;
 // @ts-ignore
 window.runMassPaymentCalculation = runMassPaymentCalculation;
-
-// Динамічне завантаження XLSX (CDN) при потребі
-let xlsxLoadingPromise: Promise<boolean> | null = null;
-function loadXLSXIfNeeded(): Promise<boolean> {
-  if (typeof (window as any).XLSX !== "undefined") return Promise.resolve(true);
-  if (xlsxLoadingPromise) return xlsxLoadingPromise;
-
-  xlsxLoadingPromise = new Promise<boolean>((resolve) => {
-    try {
-      const existing = document.querySelector(
-        'script[src*="cdnjs.cloudflare.com/ajax/libs/xlsx"]'
-      ) as HTMLScriptElement | null;
-      if (existing) {
-        existing.addEventListener("load", () => resolve(true), { once: true });
-        existing.addEventListener("error", () => resolve(false), {
-          once: true,
-        });
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src =
-        "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    } catch {
-      resolve(false);
-    }
-  });
-
-  return xlsxLoadingPromise;
-}

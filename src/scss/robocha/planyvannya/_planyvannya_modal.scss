@@ -403,66 +403,70 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1100;
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(5px);
 }
 
 .post-act-modal {
   background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 380px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  width: 92%;
+  max-width: 420px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
   animation: postModalSlideIn 0.25s ease-out;
-  overflow: hidden;
+  overflow: visible;
 
   .post-act-modal-header {
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+    padding: 18px 22px;
+    background: linear-gradient(135deg, #1565c0 0%, #1e88e5 100%);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-radius: 16px 16px 0 0;
 
     h3 {
       margin: 0;
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-size: 1.25rem;
+      font-weight: 700;
       color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
     .post-act-close {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.2);
       border: none;
-      font-size: 24px;
+      font-size: 22px;
       color: #ffffff;
       cursor: pointer;
-      padding: 4px 10px;
+      padding: 6px 12px;
       line-height: 1;
-      border-radius: 6px;
-      transition: background 0.2s;
+      border-radius: 8px;
+      transition: all 0.2s;
 
       &:hover {
-        background-color: rgba(255, 255, 255, 0.25);
+        background-color: rgba(255, 255, 255, 0.35);
+        transform: scale(1.05);
       }
     }
   }
 
   .post-act-modal-body {
-    padding: 18px 20px;
+    padding: 20px 22px 24px;
 
     .post-act-form-group {
       margin-bottom: 16px;
 
       label {
         display: block;
-        font-size: 0.85rem;
-        color: #555;
-        margin-bottom: 6px;
-        font-weight: 500;
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 8px;
+        font-weight: 600;
       }
 
       .post-act-autocomplete-wrapper {
@@ -470,23 +474,25 @@
 
         input {
           width: 100%;
-          padding: 9px 12px;
-          border: 1.5px solid #ddd;
-          border-radius: 6px;
-          font-size: 13px;
+          padding: 12px 16px;
+          border: 2px solid #e0e0e0;
+          border-radius: 10px;
+          font-size: 15px;
+          font-weight: 500;
           transition: all 0.2s;
           background: #fafafa;
 
           &:focus {
             outline: none;
-            border-color: #2196f3;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+            border-color: #1e88e5;
+            box-shadow: 0 0 0 4px rgba(30, 136, 229, 0.15);
             background: white;
           }
 
           &::placeholder {
-            color: #aaa;
-            font-size: 12.5px;
+            color: #999;
+            font-size: 14px;
+            font-weight: 400;
           }
         }
 
@@ -496,38 +502,39 @@
           left: 0;
           right: 0;
           background: white;
-          border: 1px solid #2196f3;
-          border-radius: 6px;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-          max-height: 250px;
+          border: 2px solid #1e88e5;
+          border-radius: 10px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          // Показуємо 3 елементи (висота ~180px)
+          max-height: 180px;
           overflow-y: auto;
           z-index: 1101;
           display: none;
-          margin-top: 4px;
+          margin-top: 6px;
 
           // Кастомний скролбар
           &::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
           }
 
           &::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 0 6px 6px 0;
+            background: #f5f5f5;
+            border-radius: 0 10px 10px 0;
           }
 
           &::-webkit-scrollbar-thumb {
-            background: #2196f3;
-            border-radius: 3px;
+            background: linear-gradient(180deg, #1e88e5 0%, #1565c0 100%);
+            border-radius: 4px;
 
             &:hover {
-              background: #1976d2;
+              background: linear-gradient(180deg, #1565c0 0%, #0d47a1 100%);
             }
           }
 
           .post-act-option {
-            padding: 10px 14px;
+            padding: 12px 16px;
             cursor: pointer;
-            border-bottom: 1px solid rgba(33, 150, 243, 0.08);
+            border-bottom: 1px solid #e8e8e8;
             transition: all 0.15s;
 
             &:last-child {
@@ -535,20 +542,19 @@
             }
 
             &:hover {
-              background: linear-gradient(90deg, #e3f2fd 0%, #f5f9ff 100%);
-              transform: translateX(2px);
+              background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%);
             }
 
             .post-act-option-main {
-              font-weight: 600;
-              font-size: 14px;
-              color: #1976d2;
-              margin-bottom: 3px;
+              font-weight: 700;
+              font-size: 15px;
+              color: #1565c0;
+              margin-bottom: 4px;
             }
 
             .post-act-option-sub {
-              font-size: 12px;
-              color: #555;
+              font-size: 13px;
+              color: #444;
               font-weight: 500;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -557,10 +563,10 @@
           }
 
           .post-act-no-results {
-            padding: 24px 12px;
+            padding: 28px 16px;
             text-align: center;
-            color: #999;
-            font-size: 13px;
+            color: #888;
+            font-size: 14px;
             font-style: italic;
           }
         }
@@ -570,23 +576,23 @@
     .post-act-actions {
       display: flex;
       justify-content: center;
-      margin-top: 20px;
+      margin-top: 24px;
 
       .post-act-create-btn {
-        padding: 10px 24px;
-        background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
+        padding: 12px 32px;
+        background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
         color: white;
         border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
-        box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+        box-shadow: 0 4px 12px rgba(46, 125, 50, 0.35);
 
         &:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(46, 125, 50, 0.4);
+          box-shadow: 0 6px 16px rgba(46, 125, 50, 0.45);
         }
 
         &:active {

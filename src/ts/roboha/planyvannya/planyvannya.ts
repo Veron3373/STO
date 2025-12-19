@@ -1730,11 +1730,17 @@ class SchedulerApp {
       const span = document.createElement("span");
       span.textContent = day.toString();
       const current = new Date(year, month, day);
+      const dayOfWeek = current.getDay();
 
       if (current.toDateString() === this.selectedDate.toDateString()) {
         span.className = "post-selected-date";
       } else if (current.toDateString() === this.today.toDateString()) {
         span.className = "post-today";
+      }
+
+      // Додаємо клас для вихідних днів (субота = 6, неділя = 0)
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        dayContainer.classList.add("post-weekend");
       }
 
       dayContainer.addEventListener("click", () => {

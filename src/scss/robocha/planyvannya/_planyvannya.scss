@@ -221,6 +221,12 @@ $sidebar-width: 30%;
         border-right: 1px solid $border-dark;
       }
 
+      // Обідня перерва 13:00-13:30 (клітинки 11 та 12: 13:00 та 13:30)
+      &:nth-child(11),
+      &:nth-child(12) {
+        background: #ffe0b2;
+      }
+
       &:last-child {
         border-right: none;
       }
@@ -659,6 +665,10 @@ $sidebar-width: 30%;
         cursor: pointer;
         overflow: hidden;
         border-radius: 50%;
+
+        &.post-weekend {
+          background: #fff3e0;
+        }
 
         .day-occupancy-indicator {
           position: absolute;

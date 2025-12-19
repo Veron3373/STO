@@ -1358,6 +1358,16 @@ export class PlanyvannyaModal {
       dropdown.innerHTML = acts
         .map((act: any) => {
           const clientName = act.clients?.data?.["ПІБ"] || "Невідомо";
+          console.log(`Акт #${act.act_id}: ${clientName}`);
+          return `
+            <div class="post-act-option" data-act-id="${act.act_id}">
+              <div class="post-act-option-main">Акт №${act.act_id}</div>
+              <div class="post-act-option-sub">${clientName}</div>
+            </div>
+          `;
+        })
+        .join("");
+
       dropdown.style.display = "block";
 
       // Додаємо обробники кліків
@@ -1421,6 +1431,13 @@ export class PlanyvannyaModal {
       dropdown.innerHTML = acts
         .map((act: any) => {
           const clientName = act.clients?.data?.["ПІБ"] || "Невідомо";
+          return `
+            <div class="post-act-option" data-act-id="${act.act_id}">
+              <div class="post-act-option-main">Акт №${act.act_id}</div>
+              <div class="post-act-option-sub">${clientName}</div>
+            </div>
+          `;
+        })
         .join("");
 
       dropdown.style.display = "block";

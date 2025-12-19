@@ -1269,6 +1269,9 @@ export class PlanyvannyaModal {
 
     if (!input || !dropdown) return;
 
+    // Завантажуємо всі відкриті акти при відкритті модалки
+    await this.loadOpenActs(dropdown);
+
     let timeoutId: any;
 
     input.addEventListener("input", () => {
@@ -1276,7 +1279,7 @@ export class PlanyvannyaModal {
       const query = input.value.trim();
 
       if (query.length < 1) {
-        dropdown.style.display = "none";
+        this.loadOpenActs(dropdown);
         return;
       }
 
@@ -1288,8 +1291,65 @@ export class PlanyvannyaModal {
     input.addEventListener("focus", () => {
       if (input.value.trim().length >= 1) {
         this.searchActs(input.value.trim(), dropdown);
+      } else {
+        this.loadOpenActs(dropdown);
       }
     });
+  }
+
+  private async loadOpenActs(dropdown: HTMLElement): Promise<void> {
+    try {
+      // Завантажуємо всі відкриті акти (де немає date_off)
+      const { data: acts, error } = await supabase
+        .from("acts")
+        .select("act_id, komentar")
+        .is("date_off", null)
+        .order("act_id", { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error("Помилка завантаження актів:", error);
+        return;
+      }
+
+      if (!acts || acts.length === 0) {
+        dropdown.innerHTML =
+          '<div class="post-act-no-results">Немає відкритих актів</div>';
+        dropdown.style.display = "block";
+        return;
+      }
+
+      dropdown.innerHTML = acts
+        .map((act) => {
+          const comment = act.komentar
+            ? ` - ${act.komentar.substring(0, 40)}...`
+            : "";
+          return `
+            <div class="post-act-option" data-act-id="${act.act_id}">
+              <div class="post-act-option-main">Акт №${act.act_id}</div>
+              ${
+                comment
+                  ? `<div class="post-act-option-sub">${comment}</div>`
+                  : ""
+              }
+            </div>
+          `;
+        })
+        .join("");
+
+      dropdown.style.display = "block";
+
+      // Додаємо обробники кліків
+      dropdown.querySelectorAll(".post-act-option").forEach((option) => {
+        option.addEventListener("click", () => {
+          const actId = Number(option.getAttribute("data-act-id"));
+          this.selectAct(actId);
+          document.getElementById("postActModalOverlay")?.remove();
+        });
+      });
+    } catch (err) {
+      console.error("Помилка при завантаженні актів:", err);
+    }
   }
 
   private async searchActs(
@@ -1297,13 +1357,14 @@ export class PlanyvannyaModal {
     dropdown: HTMLElement
   ): Promise<void> {
     try {
-      // Шукаємо акти за номером
+      // Шукаємо відкриті акти за номером
       const { data: acts, error } = await supabase
-        .from("zakaz_narad")
-        .select("zakaz_narad_id, komentar")
-        .or(`zakaz_narad_id.ilike.%${query}%`)
-        .order("zakaz_narad_id", { ascending: false })
-        .limit(10);
+        .from("acts")
+        .select("act_id, komentar")
+        .is("date_off", null)
+        .ilike("act_id", `%${query}%`)
+        .order("act_id", { ascending: false })
+        .limit(20);
 
       if (error) {
         console.error("Помилка пошуку актів:", error);
@@ -1320,11 +1381,11 @@ export class PlanyvannyaModal {
       dropdown.innerHTML = acts
         .map((act) => {
           const comment = act.komentar
-            ? ` - ${act.komentar.substring(0, 50)}...`
+            ? ` - ${act.komentar.substring(0, 40)}...`
             : "";
           return `
-            <div class="post-act-option" data-act-id="${act.zakaz_narad_id}">
-              <div class="post-act-option-main">Акт №${act.zakaz_narad_id}</div>
+            <div class="post-act-option" data-act-id="${act.act_id}">
+              <div class="post-act-option-main">Акт №${act.act_id}</div>
               ${
                 comment
                   ? `<div class="post-act-option-sub">${comment}</div>`

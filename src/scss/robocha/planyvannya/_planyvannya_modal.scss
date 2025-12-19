@@ -415,7 +415,7 @@
   background: white;
   border-radius: 12px;
   width: 90%;
-  max-width: 450px;
+  max-width: 380px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   animation: postModalSlideIn 0.25s ease-out;
   overflow: hidden;
@@ -496,11 +496,30 @@
           border: 1px solid #2196f3;
           border-radius: 6px;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-          max-height: 200px;
+          max-height: 250px;
           overflow-y: auto;
           z-index: 1101;
           display: none;
           margin-top: 4px;
+
+          // Кастомний скролбар
+          &::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          &::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 0 6px 6px 0;
+          }
+
+          &::-webkit-scrollbar-thumb {
+            background: #2196f3;
+            border-radius: 3px;
+
+            &:hover {
+              background: #1976d2;
+            }
+          }
 
           .post-act-option {
             padding: 10px 12px;
@@ -517,20 +536,23 @@
             }
 
             .post-act-option-main {
-              font-weight: 500;
+              font-weight: 600;
               font-size: 14px;
-              color: #333;
+              color: #1976d2;
             }
 
             .post-act-option-sub {
-              font-size: 12px;
+              font-size: 11px;
               color: #666;
               margin-top: 2px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
             }
           }
 
           .post-act-no-results {
-            padding: 12px;
+            padding: 20px 12px;
             text-align: center;
             color: #999;
             font-size: 13px;

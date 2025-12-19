@@ -395,6 +395,11 @@ export class PlanyvannyaModal {
     this.selectedCarId = null;
     this.carsData = [];
     this.closeAllDropdowns();
+
+    // Оновлюємо індикатори зайнятості при закритті
+    if (typeof (window as any).refreshOccupancyIndicators === "function") {
+      setTimeout(() => (window as any).refreshOccupancyIndicators(), 100);
+    }
   }
 
   private updateHeaderUI(): void {

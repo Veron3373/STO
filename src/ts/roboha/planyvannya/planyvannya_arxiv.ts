@@ -876,6 +876,13 @@ export class PostArxiv {
               movedBlock.dataset.start = startMins.toString();
               movedBlock.dataset.end = endMins.toString();
               showNotification("Запис переміщено", "success");
+
+              // Оновлюємо індикатори зайнятості
+              if (
+                typeof (window as any).refreshOccupancyIndicators === "function"
+              ) {
+                await (window as any).refreshOccupancyIndicators();
+              }
             }
           } else {
             showNotification(
@@ -1347,6 +1354,12 @@ export class PostArxiv {
         showNotification("Помилка збереження в БД", "error");
         return null;
       }
+
+      // Оновлюємо індикатори зайнятості після оновлення
+      if (typeof (window as any).refreshOccupancyIndicators === "function") {
+        setTimeout(() => (window as any).refreshOccupancyIndicators(), 100);
+      }
+
       return existingId;
     } else {
       const { data: res, error } = await supabase
@@ -1359,6 +1372,12 @@ export class PostArxiv {
         showNotification("Помилка збереження в БД", "error");
         return null;
       }
+
+      // Оновлюємо індикатори зайнятості після створення
+      if (typeof (window as any).refreshOccupancyIndicators === "function") {
+        setTimeout(() => (window as any).refreshOccupancyIndicators(), 100);
+      }
+
       return res.post_arxiv_id;
     }
   }

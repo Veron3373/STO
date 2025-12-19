@@ -679,16 +679,19 @@ $sidebar-width: 30%;
           pointer-events: none;
 
           &.post-today {
-            background: $today-bg;
-            color: $white;
+            background: transparent;
+            color: $today-bg;
             font-weight: 700;
-            border: none;
+            border: 1px solid $today-bg;
+            box-sizing: border-box;
           }
 
           &.post-selected-date {
-            background: $selected-bg;
-            color: $text-dark;
+            background: transparent;
+            color: $selected-bg;
             font-weight: 700;
+            border: 1px solid $selected-bg;
+            box-sizing: border-box;
           }
         }
       }

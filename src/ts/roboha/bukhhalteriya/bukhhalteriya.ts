@@ -33,7 +33,7 @@ import {
   canUserSeeSkladButton,
   canUserSeeDetailsButton,
   attemptAutoLogin,
-  userAccessLevel
+  userAccessLevel,
 } from "../tablucya/users";
 
 import {
@@ -430,12 +430,21 @@ function downloadpodlegleToExcel(): void {
     return;
   }
 
+  // Ensure XLSX is present (attempt dynamic load if missing)
   if (typeof (window as any).XLSX === "undefined") {
-    showNotification(
-      "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
-      "error",
-      5000
-    );
+    // try to load dynamically and continue
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    loadXLSXIfNeeded().then((ok) => {
+      if (!ok || typeof (window as any).XLSX === "undefined") {
+        showNotification(
+          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "error",
+          5000
+        );
+        return;
+      }
+      downloadpodlegleToExcel();
+    });
     return;
   }
 
@@ -483,11 +492,18 @@ function downloadpodlegleToExcel(): void {
 
 function downloadMagazineToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
-    showNotification(
-      "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
-      "error",
-      5000
-    );
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    loadXLSXIfNeeded().then((ok) => {
+      if (!ok || typeof (window as any).XLSX === "undefined") {
+        showNotification(
+          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "error",
+          5000
+        );
+        return;
+      }
+      downloadMagazineToExcel();
+    });
     return;
   }
 
@@ -571,11 +587,18 @@ function downloadMagazineToExcel(): void {
 
 function downloadDetailsToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
-    showNotification(
-      "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
-      "error",
-      5000
-    );
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    loadXLSXIfNeeded().then((ok) => {
+      if (!ok || typeof (window as any).XLSX === "undefined") {
+        showNotification(
+          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "error",
+          5000
+        );
+        return;
+      }
+      downloadDetailsToExcel();
+    });
     return;
   }
 
@@ -661,11 +684,18 @@ function downloadDetailsToExcel(): void {
 
 function downloadvutratuToExcel(): void {
   if (typeof (window as any).XLSX === "undefined") {
-    showNotification(
-      "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
-      "error",
-      5000
-    );
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    loadXLSXIfNeeded().then((ok) => {
+      if (!ok || typeof (window as any).XLSX === "undefined") {
+        showNotification(
+          "Бібліотека XLSX не завантажена. Додайте скрипт у HTML файл.",
+          "error",
+          5000
+        );
+        return;
+      }
+      downloadvutratuToExcel();
+    });
     return;
   }
 
@@ -831,7 +861,9 @@ window.addEventListener("load", async function () {
   console.log("🚀 Початок ініціалізації бухгалтерії...");
 
   // [FIX] Контейнер тепер прихований за замовчуванням через CSS (style="display: none; visibility: hidden;")
-  const mainContainer = document.querySelector('.Bukhhalter-container') as HTMLElement;
+  const mainContainer = document.querySelector(
+    ".Bukhhalter-container"
+  ) as HTMLElement;
 
   try {
     // 1. Авторизація та визначення ролі
@@ -884,7 +916,9 @@ window.addEventListener("load", async function () {
     initializeDateInputs();
 
     // 5. 🎯 АВТО-КЛІК АБО БЛОКУВАННЯ
-    const allTabButtons = document.querySelectorAll<HTMLElement>(".Bukhhalter-tab-btn");
+    const allTabButtons = document.querySelectorAll<HTMLElement>(
+      ".Bukhhalter-tab-btn"
+    );
     let firstVisibleTab: HTMLElement | null = null;
 
     for (let i = 0; i < allTabButtons.length; i++) {
@@ -901,8 +935,8 @@ window.addEventListener("load", async function () {
 
       // [FIX] Якщо є доступні вкладки, показуємо ВЕСЬ контейнер
       if (mainContainer) {
-        mainContainer.style.display = '';
-        mainContainer.style.visibility = 'visible';
+        mainContainer.style.display = "";
+        mainContainer.style.visibility = "visible";
       }
 
       firstVisibleTab.click();
@@ -910,23 +944,24 @@ window.addEventListener("load", async function () {
       // 6. Додаткова ініціалізація перемикачів (тільки якщо доступ дозволено)
       console.log("🔧 Ініціалізація перемикачів фільтрації...");
       setTimeout(() => {
-        if (typeof (window as any).initMagazineDateFilterToggle === "function") (window as any).initMagazineDateFilterToggle();
-        if (typeof (window as any).initPodlegleDateFilterToggle === "function") (window as any).initPodlegleDateFilterToggle();
-        if (typeof (window as any).initDetailsDateFilterToggle === "function") (window as any).initDetailsDateFilterToggle();
-        if (typeof (window as any).initvutratuDateFilterToggle === "function") (window as any).initvutratuDateFilterToggle();
+        if (typeof (window as any).initMagazineDateFilterToggle === "function")
+          (window as any).initMagazineDateFilterToggle();
+        if (typeof (window as any).initPodlegleDateFilterToggle === "function")
+          (window as any).initPodlegleDateFilterToggle();
+        if (typeof (window as any).initDetailsDateFilterToggle === "function")
+          (window as any).initDetailsDateFilterToggle();
+        if (typeof (window as any).initvutratuDateFilterToggle === "function")
+          (window as any).initvutratuDateFilterToggle();
       }, 200);
-
     } else {
-
-
       // Очищаємо основний контейнер, щоб приховати інтерфейс (хоча він і так прихований, але для надійності)
       if (mainContainer) {
-        mainContainer.innerHTML = '';
+        mainContainer.innerHTML = "";
       }
 
       // Створюємо повноекранне повідомлення
-      const accessDeniedOverlay = document.createElement('div');
-      accessDeniedOverlay.id = 'access-denied-overlay';
+      const accessDeniedOverlay = document.createElement("div");
+      accessDeniedOverlay.id = "access-denied-overlay";
       accessDeniedOverlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: #f8f9fa; display: flex; flex-direction: column;
@@ -953,7 +988,6 @@ window.addEventListener("load", async function () {
 
       document.body.appendChild(accessDeniedOverlay);
     }
-
   } catch (error) {
     console.error("❌ Помилка ініціалізації:", error);
   }
@@ -989,3 +1023,37 @@ window.handleRowClick = handleRowClick;
 window.togglePayment = togglePayment;
 // @ts-ignore
 window.runMassPaymentCalculation = runMassPaymentCalculation;
+
+// Динамічне завантаження XLSX (CDN) при потребі
+let xlsxLoadingPromise: Promise<boolean> | null = null;
+function loadXLSXIfNeeded(): Promise<boolean> {
+  if (typeof (window as any).XLSX !== "undefined") return Promise.resolve(true);
+  if (xlsxLoadingPromise) return xlsxLoadingPromise;
+
+  xlsxLoadingPromise = new Promise<boolean>((resolve) => {
+    try {
+      const existing = document.querySelector(
+        'script[src*="cdnjs.cloudflare.com/ajax/libs/xlsx"]'
+      ) as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener("load", () => resolve(true), { once: true });
+        existing.addEventListener("error", () => resolve(false), {
+          once: true,
+        });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src =
+        "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    } catch {
+      resolve(false);
+    }
+  });
+
+  return xlsxLoadingPromise;
+}

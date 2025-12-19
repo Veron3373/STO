@@ -210,12 +210,12 @@
           border: 1px solid #388e3c;
           border-radius: 6px;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-          max-height: 180px;
+          max-height: 135px;
           overflow-y: auto;
           z-index: 1001;
           display: none;
           margin-top: 2px;
-          
+
           &.post-arxiv-autocomplete-dropdown-up {
             top: auto;
             bottom: 100%;

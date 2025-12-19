@@ -675,22 +675,22 @@ $sidebar-width: 30%;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: calc(100% + 6px);
-          height: calc(100% + 6px);
+          width: 100%;
+          height: 100%;
           border-radius: 50%;
           pointer-events: none;
 
           &.post-today {
             background: transparent;
             color: #005fff;
-            border: 2px solid #005fff;
+            border: 3px solid #005fff;
             box-sizing: border-box;
           }
 
           &.post-selected-date {
             background: transparent;
             color: #0d8212;
-            border: 2px solid #0d8212;
+            border: 3px solid #0d8212;
             box-sizing: border-box;
           }
         }

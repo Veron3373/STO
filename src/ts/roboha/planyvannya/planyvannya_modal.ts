@@ -1257,6 +1257,26 @@ export class PlanyvannyaModal {
         this.handleCreateNewAct();
       });
 
+    // Закриття dropdown при кліку поза ним
+    document.addEventListener(
+      "click",
+      (e) => {
+        const dropdown = document.getElementById("postActDropdown");
+        const input = document.getElementById("postActSearchInput");
+        const target = e.target as HTMLElement;
+
+        if (
+          dropdown &&
+          input &&
+          !input.contains(target) &&
+          !dropdown.contains(target)
+        ) {
+          dropdown.style.display = "none";
+        }
+      },
+      { once: false }
+    );
+
     // Налаштовуємо автокомпліт для актів
     this.setupActAutocomplete();
   }
@@ -1299,10 +1319,17 @@ export class PlanyvannyaModal {
 
   private async loadOpenActs(dropdown: HTMLElement): Promise<void> {
     try {
-      // Завантажуємо всі відкриті акти (де немає date_off)
+      // Завантажуємо всі відкриті акти (де немає date_off) з даними клієнта
       const { data: acts, error } = await supabase
         .from("acts")
-        .select("act_id, komentar")
+        .select(
+          `
+          act_id,
+          komentar,
+          client_id,
+          clients!inner(name)
+        `
+        )
         .is("date_off", null)
         .order("act_id", { ascending: false })
         .limit(50);
@@ -1320,18 +1347,12 @@ export class PlanyvannyaModal {
       }
 
       dropdown.innerHTML = acts
-        .map((act) => {
-          const comment = act.komentar
-            ? ` - ${act.komentar.substring(0, 40)}...`
-            : "";
+        .map((act: any) => {
+          const clientName = act.clients?.name || "Невідомо";
           return `
             <div class="post-act-option" data-act-id="${act.act_id}">
               <div class="post-act-option-main">Акт №${act.act_id}</div>
-              ${
-                comment
-                  ? `<div class="post-act-option-sub">${comment}</div>`
-                  : ""
-              }
+              <div class="post-act-option-sub">${clientName}</div>
             </div>
           `;
         })
@@ -1357,12 +1378,19 @@ export class PlanyvannyaModal {
     dropdown: HTMLElement
   ): Promise<void> {
     try {
-      // Шукаємо відкриті акти за номером
+      // Шукаємо відкриті акти за номером з даними клієнта
       const { data: acts, error } = await supabase
         .from("acts")
-        .select("act_id, komentar")
+        .select(
+          `
+          act_id,
+          komentar,
+          client_id,
+          clients!inner(name)
+        `
+        )
         .is("date_off", null)
-        .ilike("act_id", `%${query}%`)
+        .or(`act_id.ilike.%${query}%,clients.name.ilike.%${query}%`)
         .order("act_id", { ascending: false })
         .limit(20);
 
@@ -1379,18 +1407,12 @@ export class PlanyvannyaModal {
       }
 
       dropdown.innerHTML = acts
-        .map((act) => {
-          const comment = act.komentar
-            ? ` - ${act.komentar.substring(0, 40)}...`
-            : "";
+        .map((act: any) => {
+          const clientName = act.clients?.name || "Невідомо";
           return `
             <div class="post-act-option" data-act-id="${act.act_id}">
               <div class="post-act-option-main">Акт №${act.act_id}</div>
-              ${
-                comment
-                  ? `<div class="post-act-option-sub">${comment}</div>`
-                  : ""
-              }
+              <div class="post-act-option-sub">${clientName}</div>
             </div>
           `;
         })

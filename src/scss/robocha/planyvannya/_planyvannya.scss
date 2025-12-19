@@ -682,15 +682,15 @@ $sidebar-width: 30%;
             background: transparent;
             color: $today-bg;
             font-weight: 700;
-            border: 4px solid $today-bg;
+            border: 2px solid $today-bg;
             box-sizing: border-box;
           }
 
           &.post-selected-date {
             background: transparent;
-            color: $today-bg;
+            color: #2e7d32;
             font-weight: 700;
-            border: 4px solid $today-bg;
+            border: 2px solid #2e7d32;
             box-sizing: border-box;
           }
         }

@@ -13,7 +13,10 @@
 
   <!-- 🔒 Content Security Policy -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://eksifjzzszcqsufwcbsx.supabase.co; connect-src 'self' https://eksifjzzszcqsufwcbsx.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://eksifjzzszcqsufwcbsx.supabase.co https://cdnjs.cloudflare.com; connect-src 'self' https://eksifjzzszcqsufwcbsx.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+
+  <!-- 📊 XLSX бібліотека - завантажується ПЕРШОЮ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <!-- 🔒 Перевірка Google сесії -->
   <script type="module" src="./src/ts/roboha/bukhhalteriya/bukhhalteriya_session_guard.ts"></script>
@@ -773,10 +776,8 @@
     </div>
   </div>
 
-  <!-- XLSX завантажується ПЕРШИМ, без defer/async -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- Потім завантажуємо наш модуль -->
-  <script type="module" src="./src/ts/main.ts" defer></script>
+  <!-- Основний модуль додатку -->
+  <script type="module" src="./src/ts/main.ts"></script>
 </body>
 
 </html>

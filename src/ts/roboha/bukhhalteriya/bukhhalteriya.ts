@@ -425,47 +425,76 @@ function getCurrentDateForFileName(): string {
 // Динамічне завантаження XLSX (CDN) при потребі
 let xlsxLoadingPromise: Promise<boolean> | null = null;
 function loadXLSXIfNeeded(): Promise<boolean> {
-  if (typeof (window as any).XLSX !== "undefined") return Promise.resolve(true);
+  // Перевіряємо чи бібліотека вже завантажена
+  if (typeof (window as any).XLSX !== "undefined") {
+    console.log("✅ XLSX вже доступна");
+    return Promise.resolve(true);
+  }
+
+  // Якщо вже йде завантаження - повертаємо існуючий Promise
   if (xlsxLoadingPromise) return xlsxLoadingPromise;
+
+  console.log("🔄 Початок завантаження XLSX...");
 
   xlsxLoadingPromise = new Promise<boolean>((resolve) => {
     try {
+      // Перевіряємо чи скрипт вже в DOM
       const existing = document.querySelector(
         'script[src*="cdnjs.cloudflare.com/ajax/libs/xlsx"]'
       ) as HTMLScriptElement | null;
 
       if (existing) {
-        // Скрипт вже є, чекаємо завантаження
-        if (typeof (window as any).XLSX !== "undefined") {
-          resolve(true);
-          return;
-        }
-        existing.addEventListener(
-          "load",
-          () => {
-            resolve(typeof (window as any).XLSX !== "undefined");
-          },
-          { once: true }
-        );
-        existing.addEventListener("error", () => resolve(false), {
-          once: true,
-        });
+        console.log("📜 Скрипт XLSX знайдено в DOM");
+
+        // Скрипт є, але бібліотека ще не завантажилась - чекаємо
+        let attempts = 0;
+        const maxAttempts = 50; // 5 секунд (50 * 100ms)
+
+        const checkInterval = setInterval(() => {
+          attempts++;
+
+          if (typeof (window as any).XLSX !== "undefined") {
+            console.log("✅ XLSX завантажена після очікування");
+            clearInterval(checkInterval);
+            resolve(true);
+            return;
+          }
+
+          if (attempts >= maxAttempts) {
+            console.error("❌ Таймаут очікування XLSX");
+            clearInterval(checkInterval);
+            resolve(false);
+          }
+        }, 100);
+
         return;
       }
 
-      // Додаємо скрипт динамічно
+      // Скрипта немає - додаємо його динамічно
+      console.log("➕ Додавання нового скрипта XLSX");
       const script = document.createElement("script");
       script.src =
         "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
       script.async = false;
       script.onload = () => {
+        console.log("📥 Скрипт XLSX завантажено");
         setTimeout(() => {
-          resolve(typeof (window as any).XLSX !== "undefined");
+          const loaded = typeof (window as any).XLSX !== "undefined";
+          console.log(
+            loaded
+              ? "✅ XLSX доступна"
+              : "❌ XLSX недоступна після завантаження"
+          );
+          resolve(loaded);
         }, 100);
       };
-      script.onerror = () => resolve(false);
+      script.onerror = () => {
+        console.error("❌ Помилка завантаження скрипта XLSX");
+        resolve(false);
+      };
       document.head.appendChild(script);
-    } catch {
+    } catch (error) {
+      console.error("❌ Виняток при завантаженні XLSX:", error);
       resolve(false);
     }
   });
@@ -933,6 +962,13 @@ function initializeDateInputs(): void {
 
 window.addEventListener("load", async function () {
   console.log("🚀 Початок ініціалізації бухгалтерії...");
+
+  // Перевірка наявності XLSX
+  if (typeof (window as any).XLSX !== "undefined") {
+    console.log("✅ Бібліотека XLSX завантажена успішно");
+  } else {
+    console.warn("⚠️ Бібліотека XLSX НЕ завантажена при ініціалізації");
+  }
 
   // [FIX] Контейнер тепер прихований за замовчуванням через CSS (style="display: none; visibility: hidden;")
   const mainContainer = document.querySelector(

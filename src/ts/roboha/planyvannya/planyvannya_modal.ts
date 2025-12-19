@@ -1327,9 +1327,8 @@ export class PlanyvannyaModal {
         .select(
           `
           act_id,
-          komentar,
           client_id,
-          clients(name)
+          clients(data)
         `
         )
         .is("date_off", null)
@@ -1358,17 +1357,7 @@ export class PlanyvannyaModal {
 
       dropdown.innerHTML = acts
         .map((act: any) => {
-          const clientName = act.clients?.name || "Невідомо";
-          console.log(`Акт #${act.act_id}: ${clientName}`);
-          return `
-            <div class="post-act-option" data-act-id="${act.act_id}">
-              <div class="post-act-option-main">Акт №${act.act_id}</div>
-              <div class="post-act-option-sub">${clientName}</div>
-            </div>
-          `;
-        })
-        .join("");
-
+          const clientName = act.clients?.data?.["ПІБ"] || "Невідомо";
       dropdown.style.display = "block";
 
       // Додаємо обробники кліків
@@ -1394,19 +1383,18 @@ export class PlanyvannyaModal {
     try {
       console.log(`🔎 Пошук актів за запитом: "${query}"`);
 
-      // Шукаємо відкриті акти за номером з даними клієнта
+      // Шукаємо відкриті акти за номером
       const { data: acts, error } = await supabase
         .from("acts")
         .select(
           `
           act_id,
-          komentar,
           client_id,
-          clients(name)
+          clients(data)
         `
         )
         .is("date_off", null)
-        .or(`act_id.ilike.%${query}%,clients.name.ilike.%${query}%`)
+        .ilike("act_id", `%${query}%`)
         .order("act_id", { ascending: false })
         .limit(20);
 
@@ -1432,14 +1420,7 @@ export class PlanyvannyaModal {
 
       dropdown.innerHTML = acts
         .map((act: any) => {
-          const clientName = act.clients?.name || "Невідомо";
-          return `
-            <div class="post-act-option" data-act-id="${act.act_id}">
-              <div class="post-act-option-main">Акт №${act.act_id}</div>
-              <div class="post-act-option-sub">${clientName}</div>
-            </div>
-          `;
-        })
+          const clientName = act.clients?.data?.["ПІБ"] || "Невідомо";
         .join("");
 
       dropdown.style.display = "block";

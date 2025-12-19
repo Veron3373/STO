@@ -1321,24 +1321,18 @@ export class PlanyvannyaModal {
     try {
       console.log("🔍 Завантаження відкритих актів...");
 
-      // Завантажуємо всі відкриті акти (де немає date_off) з даними клієнта
-      const { data: acts, error } = await supabase
+      // Крок 1: Завантажуємо всі відкриті акти (де немає date_off)
+      const { data: acts, error: actsError } = await supabase
         .from("acts")
-        .select(
-          `
-          act_id,
-          client_id,
-          clients(data)
-        `
-        )
+        .select("act_id, client_id")
         .is("date_off", null)
         .order("act_id", { ascending: false })
         .limit(50);
 
-      console.log("📊 Результат запиту:", { acts, error });
+      console.log("📊 Результат запиту актів:", { acts, actsError });
 
-      if (error) {
-        console.error("❌ Помилка завантаження актів:", error);
+      if (actsError) {
+        console.error("❌ Помилка завантаження актів:", actsError);
         dropdown.innerHTML =
           '<div class="post-act-no-results">Помилка завантаження актів</div>';
         dropdown.style.display = "block";
@@ -1353,11 +1347,35 @@ export class PlanyvannyaModal {
         return;
       }
 
+      // Крок 2: Отримуємо унікальні client_id
+      const clientIds = [
+        ...new Set(acts.map((a) => a.client_id).filter((id) => id != null)),
+      ];
+      console.log("👥 Унікальні client_id:", clientIds);
+
+      // Крок 3: Завантажуємо дані клієнтів
+      let clientsMap = new Map<number, string>();
+      if (clientIds.length > 0) {
+        const { data: clients, error: clientsError } = await supabase
+          .from("clients")
+          .select("client_id, data")
+          .in("client_id", clientIds);
+
+        console.log("📊 Результат запиту клієнтів:", { clients, clientsError });
+
+        if (clients) {
+          clients.forEach((c: any) => {
+            const pib = c.data?.["ПІБ"] || "Невідомо";
+            clientsMap.set(c.client_id, pib);
+          });
+        }
+      }
+
       console.log(`✅ Знайдено ${acts.length} актів`);
 
       dropdown.innerHTML = acts
         .map((act: any) => {
-          const clientName = act.clients?.data?.["ПІБ"] || "Невідомо";
+          const clientName = clientsMap.get(act.client_id) || "Невідомо";
           console.log(`Акт #${act.act_id}: ${clientName}`);
           return `
             <div class="post-act-option" data-act-id="${act.act_id}">
@@ -1393,25 +1411,19 @@ export class PlanyvannyaModal {
     try {
       console.log(`🔎 Пошук актів за запитом: "${query}"`);
 
-      // Шукаємо відкриті акти за номером
-      const { data: acts, error } = await supabase
+      // Крок 1: Шукаємо відкриті акти за номером
+      const { data: acts, error: actsError } = await supabase
         .from("acts")
-        .select(
-          `
-          act_id,
-          client_id,
-          clients(data)
-        `
-        )
+        .select("act_id, client_id")
         .is("date_off", null)
         .ilike("act_id", `%${query}%`)
         .order("act_id", { ascending: false })
         .limit(20);
 
-      console.log("📊 Результат пошуку:", { acts, error });
+      console.log("📊 Результат пошуку:", { acts, actsError });
 
-      if (error) {
-        console.error("❌ Помилка пошуку актів:", error);
+      if (actsError) {
+        console.error("❌ Помилка пошуку актів:", actsError);
         dropdown.innerHTML =
           '<div class="post-act-no-results">Помилка пошуку актів</div>';
         dropdown.style.display = "block";
@@ -1426,11 +1438,32 @@ export class PlanyvannyaModal {
         return;
       }
 
+      // Крок 2: Отримуємо унікальні client_id
+      const clientIds = [
+        ...new Set(acts.map((a) => a.client_id).filter((id) => id != null)),
+      ];
+
+      // Крок 3: Завантажуємо дані клієнтів
+      let clientsMap = new Map<number, string>();
+      if (clientIds.length > 0) {
+        const { data: clients } = await supabase
+          .from("clients")
+          .select("client_id, data")
+          .in("client_id", clientIds);
+
+        if (clients) {
+          clients.forEach((c: any) => {
+            const pib = c.data?.["ПІБ"] || "Невідомо";
+            clientsMap.set(c.client_id, pib);
+          });
+        }
+      }
+
       console.log(`✅ Знайдено ${acts.length} актів`);
 
       dropdown.innerHTML = acts
         .map((act: any) => {
-          const clientName = act.clients?.data?.["ПІБ"] || "Невідомо";
+          const clientName = clientsMap.get(act.client_id) || "Невідомо";
           return `
             <div class="post-act-option" data-act-id="${act.act_id}">
               <div class="post-act-option-main">Акт №${act.act_id}</div>

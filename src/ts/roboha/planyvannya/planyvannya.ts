@@ -1553,8 +1553,9 @@ class SchedulerApp {
       console.log("📅 День:", day, "Дата:", dateKey, "Статистика:", stats);
 
       if (stats && stats.totalPosts > 0) {
-        // Рахуємо скільки постів завантажені на 100% (робочий день = 12 годин = 720 хв)
+        // Рахуємо загальну зайнятість (робочий день = 12 годин = 720 хв)
         const workDayMinutes = 720;
+        let totalMinutes = 0;
         let fullyOccupiedPosts = 0;
 
         console.log("🔢 Всього постів:", stats.totalPosts);
@@ -1565,17 +1566,23 @@ class SchedulerApp {
 
         for (const [, minutes] of stats.postOccupancy) {
           console.log("⏱️ Хвилин для поста:", minutes);
+          totalMinutes += minutes;
           if (minutes >= workDayMinutes) {
             fullyOccupiedPosts++;
           }
         }
 
-        // Відсоток = (кількість завантажених постів) / (всього постів) * 100
-        const occupancyPercent = (fullyOccupiedPosts / stats.totalPosts) * 100;
+        // Загальна зайнятість = сума хвилин всіх постів / (кількість постів * робочий день) * 100
+        const maxMinutes = stats.totalPosts * workDayMinutes;
+        const occupancyPercent = (totalMinutes / maxMinutes) * 100;
         const isFullyOccupied = fullyOccupiedPosts === stats.totalPosts;
 
+        console.log("⏱️ Всього хвилин:", totalMinutes, "з", maxMinutes);
         console.log("✅ Повністю завантажені пости:", fullyOccupiedPosts);
-        console.log("📈 Відсоток зайнятості:", occupancyPercent);
+        console.log(
+          "📈 Відсоток зайнятості:",
+          occupancyPercent.toFixed(1) + "%"
+        );
 
         if (occupancyPercent > 0) {
           const indicator = this.createOccupancyIndicator(

@@ -1885,6 +1885,10 @@ export class PostArxiv {
         // Revert logic could go here but it's complex visually, for now keep UI as is or reload
       } else {
         showNotification("Час оновлено", "success");
+        // Оновлюємо індикатори зайнятості
+        if (typeof (window as any).refreshOccupancyIndicators === "function") {
+          (window as any).refreshOccupancyIndicators();
+        }
       }
     } catch (err) {
       console.error("Update time error:", err);
@@ -1966,6 +1970,11 @@ export class PostArxiv {
       block.remove();
       this.closeContextMenu();
       showNotification("Запис видалено", "success");
+
+      // Оновлюємо індикатори зайнятості
+      if (typeof (window as any).refreshOccupancyIndicators === "function") {
+        (window as any).refreshOccupancyIndicators();
+      }
     });
 
     menu.appendChild(deleteItem);

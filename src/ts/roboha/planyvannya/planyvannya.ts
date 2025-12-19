@@ -1425,6 +1425,103 @@ class SchedulerApp {
     }
   }
 
+  // Метод для оновлення індикаторів без повного рендерингу
+  public async refreshOccupancyIndicators(): Promise<void> {
+    // Перезавантажуємо статистику для поточного і наступного місяця
+    const currentYear = this.selectedDate.getFullYear();
+    const currentMonth = this.selectedDate.getMonth();
+
+    await this.loadMonthOccupancyStats(currentYear, currentMonth);
+
+    // Якщо є наступний місяць в календарі
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    await this.loadMonthOccupancyStats(nextYear, nextMonth);
+
+    // Оновлюємо індикатори на всіх днях
+    const allDayContainers = document.querySelectorAll(".day-container");
+    allDayContainers.forEach((container) => {
+      // Видаляємо старий індикатор
+      const oldIndicator = container.querySelector(".day-occupancy-indicator");
+      if (oldIndicator) {
+        oldIndicator.remove();
+      }
+
+      // Отримуємо дату дня
+      const span = container.querySelector("span");
+      if (!span || !span.textContent) return;
+
+      const dayNumber = parseInt(span.textContent);
+      if (isNaN(dayNumber)) return;
+
+      // Визначаємо дату контейнера
+      const monthElement = container.closest(".post-month-calendar");
+      if (!monthElement) return;
+
+      const h3 = monthElement.querySelector("h3");
+      if (!h3 || !h3.textContent) return;
+
+      const monthName = h3.textContent;
+      const monthIndex = this.getMonthIndexByName(monthName);
+      if (monthIndex === -1) return;
+
+      const year = this.selectedDate.getFullYear();
+      const month = monthIndex;
+      const current = new Date(year, month, dayNumber);
+
+      // Формуємо ключ дати
+      const yearStr = current.getFullYear();
+      const monthStr = String(current.getMonth() + 1).padStart(2, "0");
+      const dayStr = String(current.getDate()).padStart(2, "0");
+      const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
+
+      const stats = this.monthOccupancyStats.get(dateKey);
+
+      if (stats && stats.totalPosts > 0) {
+        const workDayMinutes = 720;
+        let totalMinutes = 0;
+        let fullyOccupiedPosts = 0;
+
+        for (const [, minutes] of stats.postOccupancy) {
+          totalMinutes += minutes;
+          if (minutes >= workDayMinutes) {
+            fullyOccupiedPosts++;
+          }
+        }
+
+        const maxMinutes = stats.totalPosts * workDayMinutes;
+        const occupancyPercent = (totalMinutes / maxMinutes) * 100;
+        const isFullyOccupied = fullyOccupiedPosts === stats.totalPosts;
+
+        if (occupancyPercent > 0) {
+          const indicator = this.createOccupancyIndicator(
+            occupancyPercent,
+            isFullyOccupied
+          );
+          container.insertBefore(indicator, span);
+        }
+      }
+    });
+  }
+
+  private getMonthIndexByName(monthName: string): number {
+    const months = [
+      "Січень",
+      "Лютий",
+      "Березень",
+      "Квітень",
+      "Травень",
+      "Червень",
+      "Липень",
+      "Серпень",
+      "Вересень",
+      "Жовтень",
+      "Листопад",
+      "Грудень",
+    ];
+    return months.indexOf(monthName);
+  }
+
   private createOccupancyIndicator(
     occupancyPercent: number,
     isFullyOccupied: boolean
@@ -1659,6 +1756,16 @@ document.addEventListener("DOMContentLoaded", () => {
 (window as any).refreshPlannerCalendar = async () => {
   if (schedulerAppInstance && schedulerAppInstance["postArxiv"]) {
     await schedulerAppInstance["postArxiv"].loadArxivDataForCurrentDate();
+    // Оновлюємо індикатори зайнятості
+    await schedulerAppInstance.refreshOccupancyIndicators();
     console.log("✅ Календар планувальника оновлено");
+  }
+};
+
+// Глобальна функція для швидкого оновлення тільки індикаторів
+(window as any).refreshOccupancyIndicators = async () => {
+  if (schedulerAppInstance) {
+    await schedulerAppInstance.refreshOccupancyIndicators();
+    console.log("✅ Індикатори зайнятості оновлено");
   }
 };

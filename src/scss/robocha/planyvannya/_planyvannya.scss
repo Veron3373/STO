@@ -685,6 +685,8 @@ $sidebar-width: 30%;
             color: #005fff;
             border: 3px solid #005fff;
             box-sizing: border-box;
+            font-size: 12px;
+            font-weight: 700;
           }
 
           &.post-selected-date {
@@ -692,6 +694,8 @@ $sidebar-width: 30%;
             color: #0d8212;
             border: 3px solid #0d8212;
             box-sizing: border-box;
+            font-size: 12px;
+            font-weight: 700;
           }
         }
       }

@@ -42,8 +42,8 @@ interface PositionData {
 
 interface DayOccupancyStats {
   date: string;
-  totalMinutes: number; // Загальна кількість хвилин у всіх записах
-  postsCount: number; // Кількість унікальних постів
+  postOccupancy: Map<number, number>; // post_id -> хвилини завантаження
+  totalPosts: number; // Загальна кількість всіх постів
 }
 
 class SchedulerApp {
@@ -1356,7 +1356,7 @@ class SchedulerApp {
     try {
       const { data, error } = await supabase
         .from("post_arxiv")
-        .select("data_on, data_off")
+        .select("data_on, data_off, name_post")
         .gte("data_on", startStr)
         .lte("data_on", endStr + "T23:59:59");
 
@@ -1365,35 +1365,42 @@ class SchedulerApp {
         return;
       }
 
-      const statsMap = new Map<
-        string,
-        { minutes: number; posts: Set<number> }
-      >();
+      // Рахуємо загальну кількість постів з усіх цехів
+      let totalPosts = 0;
+      for (const section of this.sections) {
+        totalPosts += section.posts.length;
+      }
+
+      // Групуємо по датах і постах
+      const statsMap = new Map<string, Map<number, number>>();
 
       for (const record of data || []) {
         const dateOn = new Date(record.data_on);
         const dateOff = new Date(record.data_off);
         const dateKey = dateOn.toISOString().split("T")[0];
+        const postId = (record as any).name_post;
+
+        if (!postId) continue;
 
         const durationMinutes = Math.round(
           (dateOff.getTime() - dateOn.getTime()) / 60000
         );
 
         if (!statsMap.has(dateKey)) {
-          statsMap.set(dateKey, { minutes: 0, posts: new Set() });
+          statsMap.set(dateKey, new Map());
         }
 
-        const stat = statsMap.get(dateKey)!;
-        stat.minutes += durationMinutes;
-        // Для постів можна додати post_id, але зараз просто рахуємо записи
+        const dayStats = statsMap.get(dateKey)!;
+        const currentMinutes = dayStats.get(postId) || 0;
+        dayStats.set(postId, currentMinutes + durationMinutes);
       }
 
       this.monthOccupancyStats.clear();
-      for (const [dateKey, stat] of statsMap) {
+      for (const [dateKey, postOccupancy] of statsMap) {
         this.monthOccupancyStats.set(dateKey, {
           date: dateKey,
-          totalMinutes: stat.minutes,
-          postsCount: 1, // Поки що спрощена версія
+          postOccupancy,
+          totalPosts,
         });
       }
     } catch (err) {
@@ -1401,7 +1408,10 @@ class SchedulerApp {
     }
   }
 
-  private createOccupancyIndicator(occupancyPercent: number): SVGElement {
+  private createOccupancyIndicator(
+    occupancyPercent: number,
+    isFullyOccupied: boolean
+  ): SVGElement {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "day-occupancy-indicator");
     svg.setAttribute("width", "24");
@@ -1411,32 +1421,45 @@ class SchedulerApp {
     const centerX = 12;
     const centerY = 12;
     const radius = 10;
-    const totalSegments = 12;
-    const anglePerSegment = (2 * Math.PI) / totalSegments;
 
-    // Розраховуємо скільки секторів заливати
-    const filledSegments = Math.round((occupancyPercent / 100) * totalSegments);
+    // Фоновий круг
+    const bgCircle = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "circle"
+    );
+    bgCircle.setAttribute("cx", centerX.toString());
+    bgCircle.setAttribute("cy", centerY.toString());
+    bgCircle.setAttribute("r", radius.toString());
+    bgCircle.setAttribute("fill", "#e0e0e0");
+    bgCircle.setAttribute("opacity", "0.2");
+    svg.appendChild(bgCircle);
 
-    // Кольорова схема залежно від зайнятості
-    let fillColor = "#4caf50"; // Зелений до 50%
-    if (occupancyPercent > 75) {
-      fillColor = "#f44336"; // Червоний понад 75%
-    } else if (occupancyPercent > 50) {
-      fillColor = "#ff9800"; // Помаранчевий 50-75%
-    }
+    if (occupancyPercent > 0) {
+      // Кольорова схема
+      let fillColor = "#4caf50"; // Зелений
+      if (isFullyOccupied) {
+        fillColor = "#f44336"; // Червоний - всі пости завантажені
+      } else if (occupancyPercent > 66) {
+        fillColor = "#ff9800"; // Помаранчевий
+      }
 
-    // Малюємо всі 12 секторів
-    for (let i = 0; i < totalSegments; i++) {
-      const startAngle = i * anglePerSegment - Math.PI / 2; // Починаємо зверху
-      const endAngle = (i + 1) * anglePerSegment - Math.PI / 2;
+      // Розраховуємо кут для заливки (0% = 0°, 100% = 360°)
+      const angle = (occupancyPercent / 100) * 360;
+      const angleRad = (angle * Math.PI) / 180;
 
-      // Координати початку та кінця дуги
+      // Координати кінцевої точки дуги (починаємо зверху, тобто -90°)
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + angleRad;
+
       const x1 = centerX + radius * Math.cos(startAngle);
       const y1 = centerY + radius * Math.sin(startAngle);
       const x2 = centerX + radius * Math.cos(endAngle);
       const y2 = centerY + radius * Math.sin(endAngle);
 
-      // Створюємо path для сектора
+      // Визначаємо чи дуга більша за 180°
+      const largeArcFlag = angle > 180 ? 1 : 0;
+
+      // Створюємо path для плавної заливки
       const path = document.createElementNS(
         "http://www.w3.org/2000/svg",
         "path"
@@ -1444,24 +1467,13 @@ class SchedulerApp {
       const pathData = [
         `M ${centerX} ${centerY}`,
         `L ${x1} ${y1}`,
-        `A ${radius} ${radius} 0 0 1 ${x2} ${y2}`,
+        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
         "Z",
       ].join(" ");
 
       path.setAttribute("d", pathData);
-
-      // Заливаємо тільки потрібну кількість секторів
-      if (i < filledSegments) {
-        path.setAttribute("fill", fillColor);
-        path.setAttribute("opacity", "0.8");
-      } else {
-        path.setAttribute("fill", "#e0e0e0");
-        path.setAttribute("opacity", "0.3");
-      }
-
-      // Додаємо обводку для чіткості
-      path.setAttribute("stroke", "#fff");
-      path.setAttribute("stroke-width", "0.5");
+      path.setAttribute("fill", fillColor);
+      path.setAttribute("opacity", "0.8");
 
       svg.appendChild(path);
     }
@@ -1525,17 +1537,28 @@ class SchedulerApp {
       const dateKey = current.toISOString().split("T")[0];
       const stats = this.monthOccupancyStats.get(dateKey);
 
-      if (stats) {
-        // Розраховуємо відсоток зайнятості
-        // Припустимо, що робочий день = 12 годин (720 хвилин)
+      if (stats && stats.totalPosts > 0) {
+        // Рахуємо скільки постів завантажені на 100% (робочий день = 12 годин = 720 хв)
         const workDayMinutes = 720;
-        const occupancyPercent = Math.min(
-          100,
-          (stats.totalMinutes / workDayMinutes) * 100
-        );
+        let fullyOccupiedPosts = 0;
 
-        const indicator = this.createOccupancyIndicator(occupancyPercent);
-        dayContainer.appendChild(indicator);
+        for (const [, minutes] of stats.postOccupancy) {
+          if (minutes >= workDayMinutes) {
+            fullyOccupiedPosts++;
+          }
+        }
+
+        // Відсоток = (кількість завантажених постів) / (всього постів) * 100
+        const occupancyPercent = (fullyOccupiedPosts / stats.totalPosts) * 100;
+        const isFullyOccupied = fullyOccupiedPosts === stats.totalPosts;
+
+        if (occupancyPercent > 0) {
+          const indicator = this.createOccupancyIndicator(
+            occupancyPercent,
+            isFullyOccupied
+          );
+          dayContainer.appendChild(indicator);
+        }
       }
 
       dayContainer.appendChild(span);

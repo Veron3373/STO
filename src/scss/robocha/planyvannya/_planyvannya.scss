@@ -657,6 +657,8 @@ $sidebar-width: 30%;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        overflow: hidden;
+        border-radius: 50%;
 
         .day-occupancy-indicator {
           position: absolute;

@@ -275,6 +275,12 @@ $sidebar-width: 30%;
       border-right: 1px solid $border-dark;
     }
 
+    // Обідня перерва 13:00-13:30 (клітинки 11 та 12)
+    &:nth-child(11),
+    &:nth-child(12) {
+      background: #ffe0b2;
+    }
+
     &:last-child {
       border-right: none;
     }

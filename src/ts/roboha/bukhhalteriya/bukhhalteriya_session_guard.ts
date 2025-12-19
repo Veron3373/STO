@@ -15,7 +15,6 @@ async function checkGoogleSession() {
 
     if (error || !session) {
       console.warn("⛔ [Бухгалтерія] Немає Google сесії");
-      alert("Авторизація відсутня. Перенаправлення на сторінку входу.");
       window.location.replace("https://veron3373.github.io/STO/index.html");
       return;
     }

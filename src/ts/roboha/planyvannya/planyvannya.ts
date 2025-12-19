@@ -1425,6 +1425,102 @@ class SchedulerApp {
     }
   }
 
+  // Метод для оновлення індикаторів конкретних дат
+  public async refreshOccupancyIndicatorsForDates(
+    dates: string[]
+  ): Promise<void> {
+    console.log("🔄 Оновлення індикаторів для дат:", dates);
+
+    // Збираємо унікальні місяці які треба перезавантажити
+    const monthsToLoad = new Set<string>();
+    dates.forEach((dateStr) => {
+      const date = new Date(dateStr);
+      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      monthsToLoad.add(key);
+    });
+
+    // Завантажуємо статистику для всіх потрібних місяців
+    for (const monthKey of monthsToLoad) {
+      const [year, month] = monthKey.split("-").map(Number);
+      await this.loadMonthOccupancyStats(year, month);
+    }
+
+    // Оновлюємо індикатори тільки для вказаних дат
+    dates.forEach((dateStr) => {
+      const targetDate = new Date(dateStr);
+      const targetDay = targetDate.getDate();
+      const targetMonth = targetDate.getMonth();
+      const targetYear = targetDate.getFullYear();
+
+      // Шукаємо контейнер цього дня
+      const allDayContainers = document.querySelectorAll(".day-container");
+      allDayContainers.forEach((container) => {
+        const span = container.querySelector("span");
+        if (!span || !span.textContent) return;
+
+        const dayNumber = parseInt(span.textContent);
+        if (isNaN(dayNumber) || dayNumber !== targetDay) return;
+
+        // Перевіряємо чи це той самий місяць
+        const monthElement = container.closest(".post-month-calendar");
+        if (!monthElement) return;
+
+        const h3 = monthElement.querySelector("h3");
+        if (!h3 || !h3.textContent) return;
+
+        const monthName = h3.textContent;
+        const monthIndex = this.getMonthIndexByName(monthName);
+        if (monthIndex !== targetMonth) return;
+
+        // Видаляємо старий індикатор
+        const oldIndicator = container.querySelector(
+          ".day-occupancy-indicator"
+        );
+        if (oldIndicator) {
+          oldIndicator.remove();
+        }
+
+        // Формуємо ключ дати
+        const yearStr = targetYear;
+        const monthStr = String(targetMonth + 1).padStart(2, "0");
+        const dayStr = String(targetDay).padStart(2, "0");
+        const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
+
+        const stats = this.monthOccupancyStats.get(dateKey);
+
+        if (stats && stats.totalPosts > 0) {
+          const workDayMinutes = 720;
+          let totalMinutes = 0;
+          let fullyOccupiedPosts = 0;
+
+          for (const [, minutes] of stats.postOccupancy) {
+            totalMinutes += minutes;
+            if (minutes >= workDayMinutes) {
+              fullyOccupiedPosts++;
+            }
+          }
+
+          const maxMinutes = stats.totalPosts * workDayMinutes;
+          const occupancyPercent = (totalMinutes / maxMinutes) * 100;
+          const isFullyOccupied = fullyOccupiedPosts === stats.totalPosts;
+
+          if (occupancyPercent > 0) {
+            const indicator = this.createOccupancyIndicator(
+              occupancyPercent,
+              isFullyOccupied
+            );
+            container.insertBefore(indicator, span);
+            console.log(
+              `✅ Оновлено індикатор для ${dateKey}: ${occupancyPercent.toFixed(
+                1
+              )}%`
+            );
+          }
+        }
+      });
+    });
+  }
+
   // Метод для оновлення індикаторів без повного рендерингу
   public async refreshOccupancyIndicators(): Promise<void> {
     // Перезавантажуємо статистику для поточного і наступного місяця
@@ -1768,4 +1864,81 @@ document.addEventListener("DOMContentLoaded", () => {
     await schedulerAppInstance.refreshOccupancyIndicators();
     console.log("✅ Індикатори зайнятості оновлено");
   }
+};
+
+// Глобальна функція для оновлення індикаторів конкретних дат
+(window as any).refreshOccupancyIndicatorsForDates = async (
+  dates: string[]
+) => {
+  if (schedulerAppInstance) {
+    await schedulerAppInstance.refreshOccupancyIndicatorsForDates(dates);
+    console.log("✅ Індикатори зайнятості оновлено для дат:", dates);
+  }
+};
+
+// Допоміжна функція для парсингу дати з DOM елементів
+(window as any).parseCurrentDate = (): string | null => {
+  // Спробуємо з postHeaderDateDisplay
+  const headerDate = document.getElementById("postHeaderDateDisplay");
+  if (headerDate && headerDate.textContent) {
+    const match = headerDate.textContent.match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
+    if (match) {
+      const day = match[1].padStart(2, "0");
+      const monthName = match[2];
+      const year = match[3];
+
+      const months: Record<string, string> = {
+        січня: "01",
+        лютого: "02",
+        березня: "03",
+        квітня: "04",
+        травня: "05",
+        червня: "06",
+        липня: "07",
+        серпня: "08",
+        вересня: "09",
+        жовтня: "10",
+        листопада: "11",
+        грудня: "12",
+      };
+
+      const month = months[monthName.toLowerCase()];
+      if (month) {
+        return `${year}-${month}-${day}`;
+      }
+    }
+  }
+
+  // Спробуємо з модального вікна
+  const hDay = document.getElementById("hDay");
+  const hMonth = document.getElementById("hMonth");
+  const hYear = document.getElementById("hYear");
+
+  if (hDay && hMonth && hYear) {
+    const day = hDay.textContent?.trim().padStart(2, "0");
+    const monthName = hMonth.textContent?.trim();
+    const year = hYear.textContent?.trim();
+
+    const months: Record<string, string> = {
+      січня: "01",
+      лютого: "02",
+      березня: "03",
+      квітня: "04",
+      травня: "05",
+      червня: "06",
+      липня: "07",
+      серпня: "08",
+      вересня: "09",
+      жовтня: "10",
+      листопада: "11",
+      грудня: "12",
+    };
+
+    const month = monthName ? months[monthName.toLowerCase()] : null;
+    if (day && month && year) {
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return null;
 };

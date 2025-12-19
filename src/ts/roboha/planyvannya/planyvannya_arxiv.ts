@@ -877,11 +877,16 @@ export class PostArxiv {
               movedBlock.dataset.end = endMins.toString();
               showNotification("Запис переміщено", "success");
 
-              // Оновлюємо індикатори зайнятості
+              // Оновлюємо індикатори зайнятості для поточної дати
+              const currentDate = (window as any).parseCurrentDate?.();
               if (
-                typeof (window as any).refreshOccupancyIndicators === "function"
+                currentDate &&
+                typeof (window as any).refreshOccupancyIndicatorsForDates ===
+                  "function"
               ) {
-                await (window as any).refreshOccupancyIndicators();
+                await (window as any).refreshOccupancyIndicatorsForDates([
+                  currentDate,
+                ]);
               }
             }
           } else {
@@ -1355,9 +1360,18 @@ export class PostArxiv {
         return null;
       }
 
-      // Оновлюємо індикатори зайнятості після оновлення
-      if (typeof (window as any).refreshOccupancyIndicators === "function") {
-        setTimeout(() => (window as any).refreshOccupancyIndicators(), 100);
+      // Оновлюємо індикатори зайнятості для дати що була змінена
+      const dateFromPayload = payload.data_on.split("T")[0];
+      if (
+        typeof (window as any).refreshOccupancyIndicatorsForDates === "function"
+      ) {
+        setTimeout(
+          () =>
+            (window as any).refreshOccupancyIndicatorsForDates([
+              dateFromPayload,
+            ]),
+          100
+        );
       }
 
       return existingId;
@@ -1373,9 +1387,18 @@ export class PostArxiv {
         return null;
       }
 
-      // Оновлюємо індикатори зайнятості після створення
-      if (typeof (window as any).refreshOccupancyIndicators === "function") {
-        setTimeout(() => (window as any).refreshOccupancyIndicators(), 100);
+      // Оновлюємо індикатори зайнятості для дати що була створена
+      const dateFromPayload = payload.data_on.split("T")[0];
+      if (
+        typeof (window as any).refreshOccupancyIndicatorsForDates === "function"
+      ) {
+        setTimeout(
+          () =>
+            (window as any).refreshOccupancyIndicatorsForDates([
+              dateFromPayload,
+            ]),
+          100
+        );
       }
 
       return res.post_arxiv_id;
@@ -1904,9 +1927,18 @@ export class PostArxiv {
         // Revert logic could go here but it's complex visually, for now keep UI as is or reload
       } else {
         showNotification("Час оновлено", "success");
-        // Оновлюємо індикатори зайнятості
-        if (typeof (window as any).refreshOccupancyIndicators === "function") {
-          (window as any).refreshOccupancyIndicators();
+        // Оновлюємо індикатори зайнятості для поточної дати
+        const currentDate = (window as any).parseCurrentDate?.();
+        if (
+          currentDate &&
+          typeof (window as any).refreshOccupancyIndicatorsForDates ===
+            "function"
+        ) {
+          setTimeout(
+            () =>
+              (window as any).refreshOccupancyIndicatorsForDates([currentDate]),
+            100
+          );
         }
       }
     } catch (err) {

@@ -396,9 +396,16 @@ export class PlanyvannyaModal {
     this.carsData = [];
     this.closeAllDropdowns();
 
-    // Оновлюємо індикатори зайнятості при закритті
-    if (typeof (window as any).refreshOccupancyIndicators === "function") {
-      setTimeout(() => (window as any).refreshOccupancyIndicators(), 100);
+    // Оновлюємо індикатори зайнятості при закритті для дати з модалки
+    const currentDate = (window as any).parseCurrentDate?.();
+    if (
+      currentDate &&
+      typeof (window as any).refreshOccupancyIndicatorsForDates === "function"
+    ) {
+      setTimeout(
+        () => (window as any).refreshOccupancyIndicatorsForDates([currentDate]),
+        100
+      );
     }
   }
 

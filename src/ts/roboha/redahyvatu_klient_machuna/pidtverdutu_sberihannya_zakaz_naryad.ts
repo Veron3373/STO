@@ -1,7 +1,11 @@
 //src\ts\roboha\redahyvatu_klient_machuna\pidtverdutu_sberihannya_zakaz_naryad.ts
 export const saveModalIdCreate = "save-prompt-modal-create";
 
-import { getModalFormValues, transferredActComment, setTransferredActComment } from "./vikno_klient_machuna";
+import {
+  getModalFormValues,
+  transferredActComment,
+  setTransferredActComment,
+} from "./vikno_klient_machuna";
 import { supabase } from "../../vxid/supabaseClient";
 import { loadActsTable } from "../tablucya/tablucya";
 import { modalOverlayId } from "./vikno_klient_machuna";
@@ -60,11 +64,12 @@ function showMessage(message: string, color: string) {
 }
 
 // Додавання запису до таблиці acts
-async function createActInDatabase(
+export async function createActInDatabase(
   clientId: number,
   carsId: number,
-  reason: string = ""
-): Promise<boolean> {
+  reason: string = "",
+  postArxivId?: number
+): Promise<number | null> {
   try {
     const dateOn = getCurrentDateTimeLocal();
 
@@ -82,33 +87,59 @@ async function createActInDatabase(
       "Прибуток за деталі": 0,
       "Прибуток за роботу": 0,
     };
-    const { error } = await supabase.from("acts").insert([
-      {
-        date_on: dateOn,
-        client_id: clientId,
-        cars_id: carsId,
-        data: actData,
-        avans: 0,
-      },
-    ]);
+    const { data: newAct, error } = await supabase
+      .from("acts")
+      .insert([
+        {
+          date_on: dateOn,
+          client_id: clientId,
+          cars_id: carsId,
+          data: actData,
+          avans: 0,
+        },
+      ])
+      .select("act_id")
+      .single();
 
-    if (error) {
-      console.error("❌ Помилка: новий акт не створено", error.message);
-      return false;
+    if (error || !newAct) {
+      console.error("❌ Помилка: новий акт не створено", error?.message);
+      return null;
     }
 
-    console.log("✅ Акт створено о", dateOn);
-    return true;
+    console.log("✅ Акт створено о", dateOn, "з ID:", newAct.act_id);
+
+    // Якщо передано postArxivId, зберігаємо act_id в post_arxiv
+    if (postArxivId) {
+      const { error: updateError } = await supabase
+        .from("post_arxiv")
+        .update({ act_id: newAct.act_id })
+        .eq("post_arxiv_id", postArxivId);
+
+      if (updateError) {
+        console.error(
+          "❌ Помилка: не вдалося оновити post_arxiv з act_id",
+          updateError.message
+        );
+      } else {
+        console.log("✅ act_id збережено в post_arxiv:", postArxivId);
+      }
+    }
+
+    return newAct.act_id;
   } catch (error: any) {
     console.error("❌ Помилка при створенні акту в Supabase:", error.message);
-    return false;
+    return null;
   }
 }
 
 // Основна логіка створення заказ-наряду
-export function showSaveModalCreate(): Promise<boolean> {
+export function showSaveModalCreate(
+  postArxivId?: number
+): Promise<number | null> {
   return new Promise((resolve) => {
-    let modal = document.getElementById(saveModalIdCreate) as HTMLDivElement | null;
+    let modal = document.getElementById(
+      saveModalIdCreate
+    ) as HTMLDivElement | null;
     if (!modal) {
       modal = createSaveModalCreate();
       document.body.appendChild(modal);
@@ -117,8 +148,12 @@ export function showSaveModalCreate(): Promise<boolean> {
     modal.classList.add("active");
     modal.style.display = "flex";
 
-    const confirmBtn = modal.querySelector("#save-confirm-create") as HTMLButtonElement;
-    const cancelBtn = modal.querySelector("#save-cancel-create") as HTMLButtonElement;
+    const confirmBtn = modal.querySelector(
+      "#save-confirm-create"
+    ) as HTMLButtonElement;
+    const cancelBtn = modal.querySelector(
+      "#save-cancel-create"
+    ) as HTMLButtonElement;
 
     const cleanup = () => {
       modal!.classList.remove("active");
@@ -132,7 +167,7 @@ export function showSaveModalCreate(): Promise<boolean> {
         if (!values.client_id || !values.cars_id) {
           showMessage("❌ Не вистачає ID клієнта або авто", "#f44336");
           cleanup();
-          return resolve(false);
+          return resolve(null);
         }
 
         confirmBtn.disabled = true;
@@ -140,24 +175,25 @@ export function showSaveModalCreate(): Promise<boolean> {
 
         let reason = transferredActComment;
 
-        const success = await createActInDatabase(
+        const actId = await createActInDatabase(
           Number(values.client_id),
           Number(values.cars_id),
-          reason
+          reason,
+          postArxivId
         );
 
-        if (success) {
+        if (actId) {
           setTransferredActComment("");
           showMessage("✅ Заказ наряд успішно створено", "#4caf50");
           cleanup();
-          resolve(true);
+          resolve(actId);
           await loadActsTable();
           document.getElementById(modalOverlayId)?.remove();
         } else {
           showMessage("❌ Помилка при створенні заказ наряду", "#f44336");
           confirmBtn.disabled = false;
           confirmBtn.textContent = "Так";
-          resolve(false);
+          resolve(null);
         }
       } catch (err: any) {
         console.error("🚨 Внутрішня помилка у onConfirm:", err?.message || err);
@@ -165,13 +201,13 @@ export function showSaveModalCreate(): Promise<boolean> {
         confirmBtn.disabled = false;
         confirmBtn.textContent = "Так";
         cleanup();
-        resolve(false);
+        resolve(null);
       }
     };
 
     const onCancel = () => {
       cleanup();
-      resolve(false);
+      resolve(null);
     };
 
     // одноразові слухачі, щоб не плодити дублікати

@@ -11,7 +11,8 @@
     "deploy": "tsc -b && vite build && gh-pages -d dist --no-history",
     "deploy1": "git status -sb && git add -A && (git commit -m \"опис\" || echo No changes to commit) && git push origin main && npm run deploy",
     "deploy2": "git status -sb && git add src dist package.json constants.ts && git push --force-with-lease origin main && npm run deploy",
-    "quick": "git add -A && git commit -m \"$(date +'%Y-%m-%d %H:%M') - швидке збереження\" && git push && npm run deploy"
+    "quick": "git add -A && git commit -m \"$(date +'%Y-%m-%d %H:%M') - швидке збереження\" && git push && npm run deploy",
+    "q": "git add -A && git commit -m \"$(date +'%Y-%m-%d %H:%M')\" && git push && npm run deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

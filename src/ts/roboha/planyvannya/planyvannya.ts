@@ -101,7 +101,7 @@ class SchedulerApp {
     } catch (e) {
       console.error("Failed to initialize PostArxiv:", e);
       // Fallback or handle error - though strictly TS requires init in constructor if not optional
-      // To satisfy TS strict property init, we should probably assign it. 
+      // To satisfy TS strict property init, we should probably assign it.
       // If it throws, the app might crash, which is acceptable if critical.
     }
 
@@ -203,12 +203,17 @@ class SchedulerApp {
 
       // Створюємо Map для перетворення category_id -> category name
       const categoryMap = new Map<string, string>(
-        categoriesData.map((cat: any) => [String(cat.category_id), cat.category])
+        categoriesData.map((cat: any) => [
+          String(cat.category_id),
+          cat.category,
+        ])
       );
 
       // Трансформація даних - фільтруємо записи з пустим namber
       const slyusars: Sluysar[] = slyusarsData
-        .filter((item: any) => item.namber !== null && item.namber !== undefined)
+        .filter(
+          (item: any) => item.namber !== null && item.namber !== undefined
+        )
         .map((item: any) => {
           const post = postsMap.get(parseInt(item.post_sluysar));
           if (!post) return null;
@@ -219,7 +224,7 @@ class SchedulerApp {
             namber: item.namber,
             post_name: post.name as string,
             post_id: post.post_id as number,
-            category: String(post.category)
+            category: String(post.category),
           };
         })
         .filter((item: Sluysar | null): item is Sluysar => item !== null);
@@ -231,7 +236,10 @@ class SchedulerApp {
     }
   }
 
-  private transformDataToSections(data: Sluysar[], categoryMap: Map<string, string>): void {
+  private transformDataToSections(
+    data: Sluysar[],
+    categoryMap: Map<string, string>
+  ): void {
     // Групування за category
     const grouped = data.reduce((acc, item) => {
       if (!acc[item.category]) {
@@ -242,32 +250,34 @@ class SchedulerApp {
     }, {} as Record<string, Sluysar[]>);
 
     // Створення секцій
-    this.sections = Object.entries(grouped).map(([categoryId, items], index) => {
-      // Сортування за namber всередині категорії
-      items.sort((a, b) => a.namber - b.namber);
+    this.sections = Object.entries(grouped).map(
+      ([categoryId, items], index) => {
+        // Сортування за namber всередині категорії
+        items.sort((a, b) => a.namber - b.namber);
 
-      // Отримуємо назву категорії з Map, якщо немає - використовуємо ID
-      const categoryName = categoryMap.get(categoryId) || categoryId;
+        // Отримуємо назву категорії з Map, якщо немає - використовуємо ID
+        const categoryName = categoryMap.get(categoryId) || categoryId;
 
-      return {
-        id: index + 1,
-        realCategoryId: categoryId,
-        name: categoryName,
-        collapsed: false,
-        posts: items.map(item => ({
-          id: item.slyusar_id,
-          postId: item.post_id,
-          title: item.post_name,
-          subtitle: item.sluysar_name,
-          namber: item.namber
-        }))
-      };
-    });
+        return {
+          id: index + 1,
+          realCategoryId: categoryId,
+          name: categoryName,
+          collapsed: false,
+          posts: items.map((item) => ({
+            id: item.slyusar_id,
+            postId: item.post_id,
+            title: item.post_name,
+            subtitle: item.sluysar_name,
+            namber: item.namber,
+          })),
+        };
+      }
+    );
 
     // Сортування секцій за мінімальним namber у кожній секції
     this.sections.sort((a, b) => {
-      const minA = Math.min(...a.posts.map(p => p.namber));
-      const minB = Math.min(...b.posts.map(p => p.namber));
+      const minA = Math.min(...a.posts.map((p) => p.namber));
+      const minB = Math.min(...b.posts.map((p) => p.namber));
       return minA - minB;
     });
   }
@@ -307,12 +317,12 @@ class SchedulerApp {
 
     this.sections.forEach((section, sectionIndex) => {
       section.posts.forEach((post, postIndex) => {
-        const namber = (sectionIndex + 1) + (postIndex + 1) / 10;
+        const namber = sectionIndex + 1 + (postIndex + 1) / 10;
         this.initialPositions.push({
           slyusar_id: post.id,
           post_id: post.postId,
           original_namber: post.namber,
-          current_namber: namber
+          current_namber: namber,
         });
       });
     });
@@ -323,15 +333,17 @@ class SchedulerApp {
 
     this.sections.forEach((section, sectionIndex) => {
       section.posts.forEach((post, postIndex) => {
-        const namber = (sectionIndex + 1) + (postIndex + 1) / 10;
-        const initial = this.initialPositions.find(p => p.slyusar_id === post.id);
+        const namber = sectionIndex + 1 + (postIndex + 1) / 10;
+        const initial = this.initialPositions.find(
+          (p) => p.slyusar_id === post.id
+        );
         currentPositions.push({
           slyusar_id: post.id,
           post_id: post.postId,
           original_namber: initial?.original_namber ?? post.namber,
           current_namber: namber,
           slyusar_name: post.subtitle,
-          post_title: post.title
+          post_title: post.title,
         });
       });
     });
@@ -348,7 +360,9 @@ class SchedulerApp {
     const currentPositions = this.calculateCurrentPositions();
 
     for (const current of currentPositions) {
-      const initial = this.initialPositions.find(p => p.slyusar_id === current.slyusar_id);
+      const initial = this.initialPositions.find(
+        (p) => p.slyusar_id === current.slyusar_id
+      );
       if (!initial) return true;
       if (Math.abs(initial.current_namber - current.current_namber) > 0.001) {
         return true;
@@ -446,7 +460,7 @@ class SchedulerApp {
 
         // 3. Підготовка даних для запису
         const updateData: any = {
-          namber: pos.current_namber
+          namber: pos.current_namber,
         };
 
         if (realPostId && realPostId > 0) {
@@ -461,14 +475,17 @@ class SchedulerApp {
             const { data, error } = await supabase
               .from("slyusars")
               .insert({
-                data: { "Name": cleanName, "Опис": {}, "Доступ": "Слюсар" },
+                data: { Name: cleanName, Опис: {}, Доступ: "Слюсар" },
                 namber: pos.current_namber,
-                post_sluysar: realPostId > 0 ? String(realPostId) : null
+                post_sluysar: realPostId > 0 ? String(realPostId) : null,
               })
               .select();
 
             if (error) {
-              console.error(`❌ Помилка створення слюсаря ${cleanName}:`, error);
+              console.error(
+                `❌ Помилка створення слюсаря ${cleanName}:`,
+                error
+              );
               throw error;
             }
             // console.log("✨ Створено нового слюсаря:", data);
@@ -488,7 +505,10 @@ class SchedulerApp {
             .select();
 
           if (error) {
-            console.error(`❌ Помилка оновлення slyusar_id ${realSlyusarId}:`, error);
+            console.error(
+              `❌ Помилка оновлення slyusar_id ${realSlyusarId}:`,
+              error
+            );
             throw error;
           }
           if (data && data.length > 0) successCount++;
@@ -513,7 +533,9 @@ class SchedulerApp {
       }
 
       // Очищаємо namber для видалених елементів (теж фільтруємо реальні ID)
-      const validDeletedIds = this.deletedSlyusarIds.filter(id => id < 100000);
+      const validDeletedIds = this.deletedSlyusarIds.filter(
+        (id) => id < 100000
+      );
       for (const deletedId of validDeletedIds) {
         const { error } = await supabase
           .from("slyusars")
@@ -524,7 +546,10 @@ class SchedulerApp {
         // console.log(`📋 Результат видалення slyusar_id ${deletedId}:`, { data, error });
 
         if (error) {
-          console.error(`❌ Помилка очищення namber для slyusar_id ${deletedId}:`, error);
+          console.error(
+            `❌ Помилка очищення namber для slyusar_id ${deletedId}:`,
+            error
+          );
           throw error;
         }
       }
@@ -539,7 +564,6 @@ class SchedulerApp {
         // Якщо нічого не змінилось в БД, але ми тут - можливо це були лише тимчасові зміни які скасувались
         // console.warn("⚠️ Змін в базі даних не зафіксовано.");
       }
-
     } catch (error) {
       console.error("❌ Помилка збереження позицій:", error);
       this.showError("Не вдалося зберегти налаштування. Спробуйте пізніше.");
@@ -573,7 +597,10 @@ class SchedulerApp {
       if (!storedData) return null;
       return JSON.parse(storedData);
     } catch (error) {
-      console.error("❌ Помилка при читанні даних користувача з localStorage:", error);
+      console.error(
+        "❌ Помилка при читанні даних користувача з localStorage:",
+        error
+      );
       return null;
     }
   }
@@ -692,18 +719,18 @@ class SchedulerApp {
 
       if (sectionContent) {
         // Перемикаємо клас hidden
-        sectionContent.classList.toggle('hidden', section.collapsed);
+        sectionContent.classList.toggle("hidden", section.collapsed);
 
         // Оновлюємо іконку кнопки toggle
-        const sectionGroup = sectionContent.closest('.post-section-group');
-        const toggleBtn = sectionGroup?.querySelector('.post-toggle-btn');
+        const sectionGroup = sectionContent.closest(".post-section-group");
+        const toggleBtn = sectionGroup?.querySelector(".post-toggle-btn");
         if (toggleBtn) {
-          toggleBtn.textContent = section.collapsed ? '▶' : '▼';
+          toggleBtn.textContent = section.collapsed ? "▶" : "▼";
         }
 
         // Якщо секція розгортається - завантажуємо блоки для постів цієї секції
         if (!section.collapsed && this.postArxiv) {
-          const slyusarIds = section.posts.map(post => post.id);
+          const slyusarIds = section.posts.map((post) => post.id);
           this.postArxiv.loadArxivDataForSlyusars(slyusarIds);
         }
       }
@@ -749,7 +776,10 @@ class SchedulerApp {
         this.renderSections();
 
         // Показуємо повідомлення
-        showNotification(`Видалено пост: ${postTitle} - ${postSubtitle}`, "warning");
+        showNotification(
+          `Видалено пост: ${postTitle} - ${postSubtitle}`,
+          "warning"
+        );
       }
     }
   }
@@ -770,7 +800,7 @@ class SchedulerApp {
           realCategoryId: "", // TODO: Потрібно якось дізнатись ID нової категорії або створити її
           name: data.cehTitle,
           collapsed: false,
-          posts: []
+          posts: [],
         };
         this.sections.push(section);
       }
@@ -781,7 +811,7 @@ class SchedulerApp {
         postId: 0, // Буде заповнено пізніше
         title: data.title,
         subtitle: data.subtitle,
-        namber: 0
+        namber: 0,
       });
 
       this.renderSections();
@@ -849,7 +879,11 @@ class SchedulerApp {
 
         // Не починати drag якщо клікнуто на кнопках
         const target = e.target as HTMLElement;
-        if (target.closest('.post-delete-btn') || target.closest('.post-toggle-btn')) return;
+        if (
+          target.closest(".post-delete-btn") ||
+          target.closest(".post-toggle-btn")
+        )
+          return;
 
         e.preventDefault();
         this.startSectionDrag(e, sectionGroup, section.id);
@@ -859,7 +893,7 @@ class SchedulerApp {
       sectionHeader.addEventListener("click", (e) => {
         if (this.editMode) return;
         const target = e.target as HTMLElement;
-        if (target.closest('.post-delete-btn')) return;
+        if (target.closest(".post-delete-btn")) return;
         this.toggleSection(section.id);
       });
 
@@ -909,7 +943,7 @@ class SchedulerApp {
 
           // Не починати drag якщо клікнуто на кнопці видалення
           const target = e.target as HTMLElement;
-          if (target.closest('.post-post-delete-btn')) return;
+          if (target.closest(".post-post-delete-btn")) return;
 
           e.preventDefault();
           this.startPostDrag(e, row, section.id, post.id);
@@ -947,13 +981,18 @@ class SchedulerApp {
   }
 
   // ============== DRAG AND DROP ДЛЯ СЕКЦІЙ ==============
-  private startSectionDrag(_e: MouseEvent, element: HTMLElement, sectionId: number): void {
+  private startSectionDrag(
+    _e: MouseEvent,
+    element: HTMLElement,
+    sectionId: number
+  ): void {
     this.draggedElement = element;
     this.draggedSectionId = sectionId;
 
     // Створюємо плейсхолдер
     this.dragPlaceholder = document.createElement("div");
-    this.dragPlaceholder.className = "post-drag-placeholder post-section-placeholder";
+    this.dragPlaceholder.className =
+      "post-drag-placeholder post-section-placeholder";
     this.dragPlaceholder.style.height = `${element.offsetHeight}px`;
 
     // Додаємо клас для перетягування
@@ -994,7 +1033,9 @@ class SchedulerApp {
   private updateSectionPlaceholder(mouseY: number): void {
     if (!this.dragPlaceholder || !this.calendarGrid) return;
 
-    const sectionGroups = Array.from(this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging)"));
+    const sectionGroups = Array.from(
+      this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging)")
+    );
 
     for (const group of sectionGroups) {
       const rect = group.getBoundingClientRect();
@@ -1016,22 +1057,32 @@ class SchedulerApp {
   }
 
   private finishSectionDrag(): void {
-    if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid) return;
+    if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid)
+      return;
 
     // Визначаємо нову позицію
-    const sectionGroups = Array.from(this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging), .post-drag-placeholder"));
+    const sectionGroups = Array.from(
+      this.calendarGrid.querySelectorAll(
+        ".post-section-group:not(.dragging), .post-drag-placeholder"
+      )
+    );
 
     // Знаходимо реальний індекс
     let newIndex = 0;
     for (let i = 0; i < sectionGroups.length; i++) {
       if (sectionGroups[i] === this.dragPlaceholder) break;
-      if (!sectionGroups[i].classList.contains("dragging") && !sectionGroups[i].classList.contains("post-drag-placeholder")) {
+      if (
+        !sectionGroups[i].classList.contains("dragging") &&
+        !sectionGroups[i].classList.contains("post-drag-placeholder")
+      ) {
         newIndex++;
       }
     }
 
     // Переміщуємо секцію в масиві
-    const oldIndex = this.sections.findIndex(s => s.id === this.draggedSectionId);
+    const oldIndex = this.sections.findIndex(
+      (s) => s.id === this.draggedSectionId
+    );
     if (oldIndex !== -1 && newIndex !== oldIndex) {
       const [movedSection] = this.sections.splice(oldIndex, 1);
       // Коригуємо індекс, якщо переміщуємо вниз
@@ -1058,14 +1109,20 @@ class SchedulerApp {
   }
 
   // ============== DRAG AND DROP ДЛЯ ПОСТІВ ==============
-  private startPostDrag(_e: MouseEvent, element: HTMLElement, sectionId: number, postId: number): void {
+  private startPostDrag(
+    _e: MouseEvent,
+    element: HTMLElement,
+    sectionId: number,
+    postId: number
+  ): void {
     this.draggedElement = element;
     this.draggedSectionId = sectionId;
     this.draggedPostId = postId;
 
     // Створюємо плейсхолдер
     this.dragPlaceholder = document.createElement("div");
-    this.dragPlaceholder.className = "post-drag-placeholder post-post-placeholder";
+    this.dragPlaceholder.className =
+      "post-drag-placeholder post-post-placeholder";
     this.dragPlaceholder.style.height = `${element.offsetHeight}px`;
 
     // Додаємо клас для перетягування
@@ -1107,7 +1164,9 @@ class SchedulerApp {
     if (!this.dragPlaceholder || !this.calendarGrid) return;
 
     // Знаходимо секцію над якою курсор
-    const sectionGroups = Array.from(this.calendarGrid.querySelectorAll(".post-section-group"));
+    const sectionGroups = Array.from(
+      this.calendarGrid.querySelectorAll(".post-section-group")
+    );
     let targetSectionContent: Element | null = null;
     let fallbackAddBtn: Element | null = null;
 
@@ -1126,7 +1185,9 @@ class SchedulerApp {
 
     if (!targetSectionContent) return;
 
-    const postRows = Array.from(targetSectionContent.querySelectorAll(".post-unified-row:not(.dragging)"));
+    const postRows = Array.from(
+      targetSectionContent.querySelectorAll(".post-unified-row:not(.dragging)")
+    );
 
     for (const row of postRows) {
       const rect = row.getBoundingClientRect();
@@ -1140,42 +1201,66 @@ class SchedulerApp {
 
     // Якщо курсор нижче всіх постів у цій секції
     if (fallbackAddBtn) {
-      fallbackAddBtn.parentNode?.insertBefore(this.dragPlaceholder, fallbackAddBtn);
+      fallbackAddBtn.parentNode?.insertBefore(
+        this.dragPlaceholder,
+        fallbackAddBtn
+      );
     } else {
       targetSectionContent.appendChild(this.dragPlaceholder);
     }
   }
 
   private finishPostDrag(): void {
-    if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid || !this.draggedSectionId) return;
+    if (
+      !this.draggedElement ||
+      !this.dragPlaceholder ||
+      !this.calendarGrid ||
+      !this.draggedSectionId
+    )
+      return;
 
     // Знаходимо стару секцію
-    const oldSectionIndex = this.sections.findIndex(s => s.id === this.draggedSectionId);
+    const oldSectionIndex = this.sections.findIndex(
+      (s) => s.id === this.draggedSectionId
+    );
     if (oldSectionIndex === -1) return;
     const oldSection = this.sections[oldSectionIndex];
 
     // Знаходимо нову секцію по плейсхолдеру
-    const newSectionContent = this.dragPlaceholder.closest(".post-section-content") as HTMLElement;
+    const newSectionContent = this.dragPlaceholder.closest(
+      ".post-section-content"
+    ) as HTMLElement;
     if (!newSectionContent) return;
 
     const newSectionId = parseInt(newSectionContent.dataset.sectionId || "0");
-    const newSectionIndex = this.sections.findIndex(s => s.id === newSectionId);
+    const newSectionIndex = this.sections.findIndex(
+      (s) => s.id === newSectionId
+    );
     if (newSectionIndex === -1) return;
     const newSection = this.sections[newSectionIndex];
 
     // Визначаємо нову позицію всередині нової секції
-    const allElements = Array.from(newSectionContent.querySelectorAll(".post-unified-row, .post-drag-placeholder"));
+    const allElements = Array.from(
+      newSectionContent.querySelectorAll(
+        ".post-unified-row, .post-drag-placeholder"
+      )
+    );
 
     let newIndex = 0;
     for (let i = 0; i < allElements.length; i++) {
       if (allElements[i] === this.dragPlaceholder) break;
-      if (!allElements[i].classList.contains("dragging") && !allElements[i].classList.contains("post-drag-placeholder")) {
+      if (
+        !allElements[i].classList.contains("dragging") &&
+        !allElements[i].classList.contains("post-drag-placeholder")
+      ) {
         newIndex++;
       }
     }
 
     // Видаляємо зі старої секції
-    const oldPostIndex = oldSection.posts.findIndex(p => p.id === this.draggedPostId);
+    const oldPostIndex = oldSection.posts.findIndex(
+      (p) => p.id === this.draggedPostId
+    );
     if (oldPostIndex !== -1) {
       const [movedPost] = oldSection.posts.splice(oldPostIndex, 1);
 
@@ -1226,8 +1311,9 @@ class SchedulerApp {
       "листопада",
       "грудня",
     ];
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]
-      } ${date.getFullYear()}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${
+      months[date.getMonth()]
+    } ${date.getFullYear()}`;
   }
 
   private getMonthName(monthIndex: number): string {
@@ -1333,6 +1419,16 @@ class SchedulerApp {
   }
 }
 
+let schedulerAppInstance: SchedulerApp | null = null;
+
 document.addEventListener("DOMContentLoaded", () => {
-  new SchedulerApp();
+  schedulerAppInstance = new SchedulerApp();
 });
+
+// Глобальна функція для оновлення календаря після створення акту
+(window as any).refreshPlannerCalendar = async () => {
+  if (schedulerAppInstance && schedulerAppInstance["postArxiv"]) {
+    await schedulerAppInstance["postArxiv"].loadArxivDataForCurrentDate();
+    console.log("✅ Календар планувальника оновлено");
+  }
+};

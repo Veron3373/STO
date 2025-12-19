@@ -1353,6 +1353,9 @@ class SchedulerApp {
     const startStr = startDate.toISOString().split("T")[0];
     const endStr = endDate.toISOString().split("T")[0];
 
+    console.log('🗓️ Завантаження статистики за місяць:', year, month);
+    console.log('📅 Період:', startStr, '-', endStr);
+
     try {
       const { data, error } = await supabase
         .from("post_arxiv")
@@ -1365,11 +1368,18 @@ class SchedulerApp {
         return;
       }
 
+      console.log('📦 Завантажено записів:', data?.length || 0);
+      if (data && data.length > 0) {
+        console.log('🔍 Перший запис:', data[0]);
+      }
+
       // Рахуємо загальну кількість постів з усіх цехів
       let totalPosts = 0;
       for (const section of this.sections) {
         totalPosts += section.posts.length;
       }
+
+      console.log('🏭 Всього постів в системі:', totalPosts);
 
       // Групуємо по датах і постах
       const statsMap = new Map<string, Map<number, number>>();
@@ -1394,6 +1404,9 @@ class SchedulerApp {
         const currentMinutes = dayStats.get(postId) || 0;
         dayStats.set(postId, currentMinutes + durationMinutes);
       }
+
+      console.log('📊 Згруповано даних по датах:', statsMap.size);
+      console.log('🗓️ Дати зі статистикою:', Array.from(statsMap.keys()));
 
       this.monthOccupancyStats.clear();
       for (const [dateKey, postOccupancy] of statsMap) {
@@ -1537,12 +1550,18 @@ class SchedulerApp {
       const dateKey = current.toISOString().split("T")[0];
       const stats = this.monthOccupancyStats.get(dateKey);
 
+      console.log('📅 День:', day, 'Дата:', dateKey, 'Статистика:', stats);
+
       if (stats && stats.totalPosts > 0) {
         // Рахуємо скільки постів завантажені на 100% (робочий день = 12 годин = 720 хв)
         const workDayMinutes = 720;
         let fullyOccupiedPosts = 0;
 
+        console.log('🔢 Всього постів:', stats.totalPosts);
+        console.log('📊 Завантаження постів:', Array.from(stats.postOccupancy.entries()));
+
         for (const [, minutes] of stats.postOccupancy) {
+          console.log('⏱️ Хвилин для поста:', minutes);
           if (minutes >= workDayMinutes) {
             fullyOccupiedPosts++;
           }
@@ -1552,12 +1571,21 @@ class SchedulerApp {
         const occupancyPercent = (fullyOccupiedPosts / stats.totalPosts) * 100;
         const isFullyOccupied = fullyOccupiedPosts === stats.totalPosts;
 
+        console.log('✅ Повністю завантажені пости:', fullyOccupiedPosts);
+        console.log('📈 Відсоток зайнятості:', occupancyPercent);
+
         if (occupancyPercent > 0) {
           const indicator = this.createOccupancyIndicator(
             occupancyPercent,
             isFullyOccupied
           );
           dayContainer.appendChild(indicator);
+          console.log('🎨 Індикатор додано');
+        } else {
+          console.log('⚠️ Відсоток 0, індикатор не додається');
+        }
+      } else {
+        console.log('❌ Немає статистики або постів для цієї дати');
         }
       }
 

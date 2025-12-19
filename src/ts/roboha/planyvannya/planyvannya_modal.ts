@@ -1422,14 +1422,6 @@ export class PlanyvannyaModal {
         matchingClients?.map((c) => c.client_id) || [];
       console.log("👥 Клієнти знайдені за ПІБ:", clientIdsFromSearch);
 
-      // Крок 2: Шукаємо відкриті акти за номером АБО за client_id знайдених клієнтів
-      let actsQuery = supabase
-        .from("acts")
-        .select("act_id, client_id")
-        .is("date_off", null)
-        .order("act_id", { ascending: false })
-        .limit(30);
-
       // Якщо є знайдені клієнти - шукаємо по act_id АБО по client_id
       if (clientIdsFromSearch.length > 0) {
         // Спочатку отримуємо акти по номеру

@@ -395,3 +395,176 @@
     transform: translateY(0) scale(1);
   }
 }
+
+// --- МОДАЛКА ВИБОРУ АКТУ ---
+.post-act-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+  backdrop-filter: blur(3px);
+}
+
+.post-act-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: postModalSlideIn 0.25s ease-out;
+  overflow: hidden;
+
+  .post-act-modal-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .post-act-close {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      font-size: 24px;
+      color: #ffffff;
+      cursor: pointer;
+      padding: 4px 10px;
+      line-height: 1;
+      border-radius: 6px;
+      transition: background 0.2s;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.25);
+      }
+    }
+  }
+
+  .post-act-modal-body {
+    padding: 20px;
+
+    .post-act-form-group {
+      margin-bottom: 20px;
+
+      label {
+        display: block;
+        font-size: 0.9rem;
+        color: #555;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .post-act-autocomplete-wrapper {
+        position: relative;
+
+        input {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 14px;
+          transition: all 0.2s;
+
+          &:focus {
+            outline: none;
+            border-color: #2196f3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
+          }
+
+          &::placeholder {
+            color: #aaa;
+          }
+        }
+
+        .post-act-autocomplete-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #2196f3;
+          border-radius: 6px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+          max-height: 200px;
+          overflow-y: auto;
+          z-index: 1101;
+          display: none;
+          margin-top: 4px;
+
+          .post-act-option {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(33, 150, 243, 0.1);
+            transition: background 0.15s;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            &:hover {
+              background: #e3f2fd;
+            }
+
+            .post-act-option-main {
+              font-weight: 500;
+              font-size: 14px;
+              color: #333;
+            }
+
+            .post-act-option-sub {
+              font-size: 12px;
+              color: #666;
+              margin-top: 2px;
+            }
+          }
+
+          .post-act-no-results {
+            padding: 12px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+          }
+        }
+      }
+    }
+
+    .post-act-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+
+      .post-act-create-btn {
+        padding: 10px 24px;
+        background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(46, 125, 50, 0.4);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+  }
+}

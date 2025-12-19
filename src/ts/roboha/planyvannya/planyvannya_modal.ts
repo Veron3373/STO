@@ -1207,6 +1207,156 @@ export class PlanyvannyaModal {
       return;
     }
 
+    // Відкриваємо модалку вибору акту
+    this.showActSelectionModal();
+  }
+
+  private showActSelectionModal(): void {
+    const modalHTML = `
+      <div class="post-act-modal-overlay" id="postActModalOverlay">
+        <div class="post-act-modal">
+          <div class="post-act-modal-header">
+            <h3>Вибір акту</h3>
+            <button class="post-act-close" id="postActClose">×</button>
+          </div>
+          <div class="post-act-modal-body">
+            <div class="post-act-form-group">
+              <label>Оберіть існуючий акт або створіть новий</label>
+              <div class="post-act-autocomplete-wrapper">
+                <input type="text" id="postActSearchInput" placeholder="Введіть номер акту..." autocomplete="off">
+                <div class="post-act-autocomplete-dropdown" id="postActDropdown"></div>
+              </div>
+            </div>
+            <div class="post-act-actions">
+              <button class="post-act-create-btn" id="postActCreateNewBtn">Створити новий акт</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+    // Прив'язуємо події
+    document.getElementById("postActClose")?.addEventListener("click", () => {
+      document.getElementById("postActModalOverlay")?.remove();
+    });
+
+    document
+      .getElementById("postActModalOverlay")
+      ?.addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) {
+          document.getElementById("postActModalOverlay")?.remove();
+        }
+      });
+
+    document
+      .getElementById("postActCreateNewBtn")
+      ?.addEventListener("click", () => {
+        document.getElementById("postActModalOverlay")?.remove();
+        this.handleCreateNewAct();
+      });
+
+    // Налаштовуємо автокомпліт для актів
+    this.setupActAutocomplete();
+  }
+
+  private async setupActAutocomplete(): Promise<void> {
+    const input = document.getElementById(
+      "postActSearchInput"
+    ) as HTMLInputElement;
+    const dropdown = document.getElementById("postActDropdown") as HTMLElement;
+
+    if (!input || !dropdown) return;
+
+    let timeoutId: any;
+
+    input.addEventListener("input", () => {
+      clearTimeout(timeoutId);
+      const query = input.value.trim();
+
+      if (query.length < 1) {
+        dropdown.style.display = "none";
+        return;
+      }
+
+      timeoutId = setTimeout(async () => {
+        await this.searchActs(query, dropdown);
+      }, 300);
+    });
+
+    input.addEventListener("focus", () => {
+      if (input.value.trim().length >= 1) {
+        this.searchActs(input.value.trim(), dropdown);
+      }
+    });
+  }
+
+  private async searchActs(
+    query: string,
+    dropdown: HTMLElement
+  ): Promise<void> {
+    try {
+      // Шукаємо акти за номером
+      const { data: acts, error } = await supabase
+        .from("zakaz_narad")
+        .select("zakaz_narad_id, komentar")
+        .or(`zakaz_narad_id.ilike.%${query}%`)
+        .order("zakaz_narad_id", { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error("Помилка пошуку актів:", error);
+        return;
+      }
+
+      if (!acts || acts.length === 0) {
+        dropdown.innerHTML =
+          '<div class="post-act-no-results">Акти не знайдено</div>';
+        dropdown.style.display = "block";
+        return;
+      }
+
+      dropdown.innerHTML = acts
+        .map((act) => {
+          const comment = act.komentar
+            ? ` - ${act.komentar.substring(0, 50)}...`
+            : "";
+          return `
+            <div class="post-act-option" data-act-id="${act.zakaz_narad_id}">
+              <div class="post-act-option-main">Акт №${act.zakaz_narad_id}</div>
+              ${
+                comment
+                  ? `<div class="post-act-option-sub">${comment}</div>`
+                  : ""
+              }
+            </div>
+          `;
+        })
+        .join("");
+
+      dropdown.style.display = "block";
+
+      // Додаємо обробники кліків
+      dropdown.querySelectorAll(".post-act-option").forEach((option) => {
+        option.addEventListener("click", () => {
+          const actId = Number(option.getAttribute("data-act-id"));
+          this.selectAct(actId);
+          document.getElementById("postActModalOverlay")?.remove();
+        });
+      });
+    } catch (err) {
+      console.error("Помилка при пошуку актів:", err);
+    }
+  }
+
+  private selectAct(actId: number): void {
+    this.actId = actId;
+    this.updateActButton();
+    showNotification(`Акт №${actId} вибрано`, "success");
+  }
+
+  private async handleCreateNewAct(): Promise<void> {
     const nameInput = document.getElementById(
       "postArxivClientName"
     ) as HTMLInputElement;

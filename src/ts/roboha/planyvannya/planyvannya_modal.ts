@@ -1319,6 +1319,8 @@ export class PlanyvannyaModal {
 
   private async loadOpenActs(dropdown: HTMLElement): Promise<void> {
     try {
+      console.log("🔍 Завантаження відкритих актів...");
+
       // Завантажуємо всі відкриті акти (де немає date_off) з даними клієнта
       const { data: acts, error } = await supabase
         .from("acts")
@@ -1327,28 +1329,37 @@ export class PlanyvannyaModal {
           act_id,
           komentar,
           client_id,
-          clients!inner(name)
+          clients(name)
         `
         )
         .is("date_off", null)
         .order("act_id", { ascending: false })
         .limit(50);
 
+      console.log("📊 Результат запиту:", { acts, error });
+
       if (error) {
-        console.error("Помилка завантаження актів:", error);
+        console.error("❌ Помилка завантаження актів:", error);
+        dropdown.innerHTML =
+          '<div class="post-act-no-results">Помилка завантаження актів</div>';
+        dropdown.style.display = "block";
         return;
       }
 
       if (!acts || acts.length === 0) {
+        console.log("⚠️ Немає відкритих актів");
         dropdown.innerHTML =
           '<div class="post-act-no-results">Немає відкритих актів</div>';
         dropdown.style.display = "block";
         return;
       }
 
+      console.log(`✅ Знайдено ${acts.length} актів`);
+
       dropdown.innerHTML = acts
         .map((act: any) => {
           const clientName = act.clients?.name || "Невідомо";
+          console.log(`Акт #${act.act_id}: ${clientName}`);
           return `
             <div class="post-act-option" data-act-id="${act.act_id}">
               <div class="post-act-option-main">Акт №${act.act_id}</div>
@@ -1369,7 +1380,10 @@ export class PlanyvannyaModal {
         });
       });
     } catch (err) {
-      console.error("Помилка при завантаженні актів:", err);
+      console.error("💥 Критична помилка при завантаженні актів:", err);
+      dropdown.innerHTML =
+        '<div class="post-act-no-results">Критична помилка завантаження</div>';
+      dropdown.style.display = "block";
     }
   }
 
@@ -1378,6 +1392,8 @@ export class PlanyvannyaModal {
     dropdown: HTMLElement
   ): Promise<void> {
     try {
+      console.log(`🔎 Пошук актів за запитом: "${query}"`);
+
       // Шукаємо відкриті акти за номером з даними клієнта
       const { data: acts, error } = await supabase
         .from("acts")
@@ -1386,7 +1402,7 @@ export class PlanyvannyaModal {
           act_id,
           komentar,
           client_id,
-          clients!inner(name)
+          clients(name)
         `
         )
         .is("date_off", null)
@@ -1394,17 +1410,25 @@ export class PlanyvannyaModal {
         .order("act_id", { ascending: false })
         .limit(20);
 
+      console.log("📊 Результат пошуку:", { acts, error });
+
       if (error) {
-        console.error("Помилка пошуку актів:", error);
+        console.error("❌ Помилка пошуку актів:", error);
+        dropdown.innerHTML =
+          '<div class="post-act-no-results">Помилка пошуку актів</div>';
+        dropdown.style.display = "block";
         return;
       }
 
       if (!acts || acts.length === 0) {
+        console.log("⚠️ Акти не знайдено");
         dropdown.innerHTML =
           '<div class="post-act-no-results">Акти не знайдено</div>';
         dropdown.style.display = "block";
         return;
       }
+
+      console.log(`✅ Знайдено ${acts.length} актів`);
 
       dropdown.innerHTML = acts
         .map((act: any) => {
@@ -1429,7 +1453,10 @@ export class PlanyvannyaModal {
         });
       });
     } catch (err) {
-      console.error("Помилка при пошуку актів:", err);
+      console.error("💥 Критична помилка при пошуку актів:", err);
+      dropdown.innerHTML =
+        '<div class="post-act-no-results">Критична помилка пошуку</div>';
+      dropdown.style.display = "block";
     }
   }
 

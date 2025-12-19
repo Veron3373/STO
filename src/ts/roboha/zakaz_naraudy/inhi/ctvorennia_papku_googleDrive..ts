@@ -12,7 +12,6 @@ const CLIENT_ID =
   "467665595953-63b13ucmm8ssbm2vfjjr41e3nqt6f11a.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
-
 const ALLOWED_ORIGINS = [
   "https://veron3373.github.io",
   "http://localhost:3000",
@@ -330,7 +329,9 @@ export async function findAndRestoreFolderLink(
         actInfo.year && actInfo.year !== "—" && actInfo.year !== "0000"
           ? cleanNameComponent(actInfo.year)
           : null,
-        actInfo.phone && actInfo.phone !== "—" && actInfo.phone !== "Без_телефону"
+        actInfo.phone &&
+        actInfo.phone !== "—" &&
+        actInfo.phone !== "Без_телефону"
           ? cleanNameComponent(actInfo.phone)
           : null,
       ].filter(Boolean) as string[];
@@ -449,6 +450,7 @@ async function getActFullInfo(actId: number): Promise<{
 }
 
 // ✅ Надійний апдейт з нормалізацією JSON та retry логікою
+// 🔒 Захист від гонки умов при одночасному доступі з різних пристроїв
 async function updateActPhotoLinkWithRetry(
   actId: number,
   driveUrl: string,
@@ -475,10 +477,22 @@ async function updateActPhotoLinkWithRetry(
       const actData: Record<string, any> =
         parsed && typeof parsed === "object" ? parsed : currentAct.data ?? {};
 
-      // Записуємо масив з одним лінком (з запасом на майбутнє — можна додавати інші)
-      actData["Фото"] = Array.isArray(actData["Фото"])
-        ? [driveUrl, ...actData["Фото"].filter(Boolean)]
-        : [driveUrl];
+      // 🔒 Перевіряємо чи посилання вже є (захист від дублювання)
+      const existingPhotos = Array.isArray(actData["Фото"])
+        ? actData["Фото"]
+        : [];
+
+      if (existingPhotos.includes(driveUrl)) {
+        console.log("ℹ️ Посилання вже існує в БД, пропускаємо оновлення");
+        updatePhotoSection(existingPhotos, false);
+        return; // ✅ Вже є, нічого не робимо
+      }
+
+      // Додаємо нове посилання БЕЗ дублікатів
+      const uniquePhotos = [driveUrl, ...existingPhotos.filter(Boolean)];
+      actData["Фото"] = [...new Set(uniquePhotos)]; // Унікальні значення
+
+      console.log(`💾 Записуємо в БД:`, actData["Фото"]);
 
       const { data: updatedRow, error: updateError } = await supabase
         .from("acts")
@@ -497,28 +511,25 @@ async function updateActPhotoLinkWithRetry(
         : [];
 
       if (!savedLinks.includes(driveUrl)) {
-        throw new Error("Посилання не збереглося в БД");
+        throw new Error("Посилання не збереглося в БД після оновлення");
       }
 
-      console.log("✅ Шлях успішно записаний в БД");
+      console.log("✅ Шлях успішно записаний в БД:", savedLinks);
 
       // Локально перемикаємо UI в режим "відкрити"
       updatePhotoSection(savedLinks, false);
 
-      // Із БД підтягнемо ще раз, щоб синхронізувати стан
-      await refreshPhotoData(actId);
+      // Із БД підтягнемо ще раз, щоб синхронізувати стан (на всякий випадок)
+      setTimeout(() => refreshPhotoData(actId), 500);
 
       return; // ✅ Успіх!
     } catch (error) {
       lastError = handleError(error);
-      console.error(
-        `❌ Спроба ${attempt} невдала:`,
-        lastError.message
-      );
+      console.error(`❌ Спроба ${attempt} невдала:`, lastError.message);
 
       if (attempt < maxRetries) {
-        console.log(`⏳ Очікування 1 секунда перед наступною спробою...`);
-        await sleep(1000);
+        console.log(`⏳ Очікування 2 секунди перед наступною спробою...`);
+        await sleep(2000); // Збільшено затримку для уникнення конфліктів
       }
     }
   }
@@ -604,26 +615,25 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 
       // Якщо посилання вже є — відкриваємо його
       if (hasLink) {
-        // 🍎 Fallback для iOS - показуємо кнопку замість window.open
+        console.log("📂 [iOS Debug] Відкриваємо існуючу папку:", links[0]);
+
+        // 🍎 Для iOS використовуємо прямий редірект (більш надійно)
         if (isIOS()) {
-          const link = document.createElement("a");
-          link.href = links[0];
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = "Відкрити папку Google Drive";
-          link.style.cssText =
-            "display: inline-block; padding: 8px 16px; background: #4285f4; " +
-            "color: white; text-decoration: none; border-radius: 4px; margin: 10px;";
+          console.log(
+            "📱 [iOS] Використовуємо window.location.href для переходу"
+          );
 
-          photoCell.innerHTML = "";
-          photoCell.appendChild(link);
+          // Показуємо повідомлення
+          showNotification("Відкриваємо папку Google Drive...", "info");
 
-          // Автоматично переходимо
+          // Прямий перехід (найнадійніший метод для iOS)
           setTimeout(() => {
             window.location.href = links[0];
-          }, 100);
+          }, 300);
         } else {
-          window.open(links[0], "_blank");
+          // Для desktop - звичайне нове вікно
+          console.log("💻 [Desktop] Відкриваємо в новому вікні");
+          window.open(links[0], "_blank", "noopener,noreferrer");
         }
         return;
       }
@@ -641,24 +651,41 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       isCreatingFolder = true;
       photoCell.style.pointerEvents = "none";
 
-      // ⚡️ КРИТИЧНО ДЛЯ iOS: Спочатку ініціалізуємо API та авторизуємось!
-      // Це має бути ПЕРШОЮ асинхронною дією після кліку (або майже першою)
-      console.log("📱 [iOS Debug] Ініціалізація Google API (перед запитами до БД)...");
-      showNotification(
-        isIOS() ? "Авторизація Google (може відкритись popup)..." : "Ініціалізація Google API...",
-        "info"
-      );
+      // ⚡️ КРИТИЧНО ДЛЯ iOS: Ініціалізуємо API ОДРАЗУ після кліку (до БД запитів)!
+      // Safari блокує popup якщо між кліком і OAuth проходить >1сек
+      console.log("📱 [iOS Debug] Перевірка авторизації Google API...");
 
-      try {
-        await initGoogleApi();
-        console.log("✅ [iOS Debug] Google API ініціалізовано успішно");
-      } catch (apiError) {
-        console.error("❌ [iOS Debug] Помилка ініціалізації API:", apiError);
-        showNotification(
-          `Помилка авторизації Google: ${apiError instanceof Error ? apiError.message : "Невідома помилка"}. ${isIOS() ? "Спробуйте дозволити popup-вікна в налаштуваннях Safari." : ""}`,
-          "error"
+      // Якщо токен відсутній - запитуємо НЕГАЙНО (поки клік свіжий)
+      if (!accessToken) {
+        console.log(
+          "📱 [iOS Debug] Токен відсутній, запускаємо авторизацію ЗАРАЗ..."
         );
-        throw apiError;
+        showNotification(
+          isIOS()
+            ? "🔐 Авторизація Google (дозвольте popup)..."
+            : "Ініціалізація Google API...",
+          "info"
+        );
+
+        try {
+          await initGoogleApi();
+          console.log("✅ [iOS Debug] Google API авторизовано успішно");
+        } catch (apiError) {
+          console.error("❌ [iOS Debug] Помилка авторизації API:", apiError);
+          showNotification(
+            `❌ Помилка авторизації Google: ${
+              apiError instanceof Error ? apiError.message : "Невідома помилка"
+            }. ${
+              isIOS()
+                ? "\n💡 Підказка: Safari блокує popup-вікна. Увімкніть їх: Налаштування Safari → Popup-вікна → Дозволити для цього сайту"
+                : ""
+            }`,
+            "error"
+          );
+          throw apiError;
+        }
+      } else {
+        console.log("✅ [iOS Debug] Токен вже є, пропускаємо авторизацію");
       }
 
       // Тільки після авторизації робимо запити до БД
@@ -670,7 +697,10 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       const existingUrl = await findAndRestoreFolderLink(actId, actInfo);
 
       if (existingUrl) {
-        showNotification("Знайдено існуючу папку! Посилання відновлено.", "success");
+        showNotification(
+          "Знайдено існуючу папку! Посилання відновлено.",
+          "success"
+        );
         return;
       }
 
@@ -687,11 +717,21 @@ export function addGoogleDriveHandler(isActClosed = false): void {
         errorMessage = err.message;
 
         // Спеціальні підказки для типових помилок
-        if (errorMessage.includes("popup") || errorMessage.includes("blocked")) {
-          errorMessage += " (iOS Safari блокує popup-вікна - перевірте налаштування)";
-        } else if (errorMessage.includes("token") || errorMessage.includes("auth")) {
+        if (
+          errorMessage.includes("popup") ||
+          errorMessage.includes("blocked")
+        ) {
+          errorMessage +=
+            " (iOS Safari блокує popup-вікна - перевірте налаштування)";
+        } else if (
+          errorMessage.includes("token") ||
+          errorMessage.includes("auth")
+        ) {
           errorMessage += " (Проблема з авторизацією Google)";
-        } else if (errorMessage.includes("network") || errorMessage.includes("failed to fetch")) {
+        } else if (
+          errorMessage.includes("network") ||
+          errorMessage.includes("failed to fetch")
+        ) {
           errorMessage += " (Проблема з мережею)";
         }
       }
@@ -713,6 +753,8 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 /** Підтягує свіжі дані з БД і оновлює розмітку блоку “Фото”. */
 export async function refreshPhotoData(actId: number): Promise<void> {
   try {
+    console.log(`🔄 [Refresh] Оновлення даних фото для акту ${actId}...`);
+
     const { data: act, error } = await supabase
       .from("acts")
       .select("data, date_off")
@@ -720,19 +762,28 @@ export async function refreshPhotoData(actId: number): Promise<void> {
       .single();
 
     if (error || !act) {
-      console.error("Помилка при оновленні даних фото:", error);
+      console.error("❌ [Refresh] Помилка при оновленні даних фото:", error);
       return;
     }
 
     const actData = safeParseJSON(act.data) || {};
     const photoLinks: string[] = Array.isArray(actData?.["Фото"])
-      ? actData["Фото"]
+      ? actData["Фото"].filter(Boolean) // Фільтруємо порожні значення
       : [];
+
+    console.log(
+      `📊 [Refresh] Знайдено ${photoLinks.length} посилань:`,
+      photoLinks
+    );
 
     const isActClosed = !!act.date_off;
     updatePhotoSection(photoLinks, isActClosed);
+
+    console.log(
+      `✅ [Refresh] UI оновлено, акт ${isActClosed ? "закритий" : "відкритий"}`
+    );
   } catch (error) {
-    console.error("Помилка при оновленні фото:", error);
+    console.error("❌ [Refresh] Критична помилка при оновленні фото:", error);
   }
 }
 
@@ -807,10 +858,7 @@ export async function createDriveFolderStructure({
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : "Невідома помилка";
     console.error("❌ Помилка створення структури папок:", e);
-    showNotification(
-      `Не вдалося створити/знайти папку: ${errorMsg}`,
-      "error"
-    );
+    showNotification(`Не вдалося створити/знайти папку: ${errorMsg}`, "error");
     throw e; // Пробрасываем ошибку дальше
   }
 }

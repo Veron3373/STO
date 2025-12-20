@@ -56,11 +56,11 @@ export class PlanyvannyaModal {
   private onSubmitCallback: ((data: ReservationData) => void) | null = null;
   private onValidateCallback:
     | ((
-        date: string,
-        start: string,
-        end: string,
-        excludeId?: number
-      ) => Promise<{ valid: boolean; message?: string }>)
+      date: string,
+      start: string,
+      end: string,
+      excludeId?: number
+    ) => Promise<{ valid: boolean; message?: string }>)
     | null = null;
 
   private clientsData: ClientData[] = [];
@@ -305,6 +305,12 @@ export class PlanyvannyaModal {
 
     if (this.selectedClientId) {
       this.loadCarsForClient(this.selectedClientId, true).catch(console.error);
+
+      // Завантажуємо відкриті акти клієнта
+      const actDropdown = document.getElementById("postArxivActSearchMiniDropdown");
+      if (actDropdown) {
+        this.loadClientOpenActs(actDropdown).catch(console.error);
+      }
     }
   }
 
@@ -340,10 +346,14 @@ export class PlanyvannyaModal {
             <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
               <div class="post-arxiv-label-row">
                 <label>ПІБ <span class="required">*</span></label>
-                <button class="post-arxiv-mini-btn" id="postArxivNewClientBtn" title="Створити акт">Створити акт</button>
+                <div class="post-arxiv-act-search-group">
+                  <input type="text" id="postArxivActSearchMini" placeholder="№ акту..." autocomplete="off" class="post-arxiv-act-search-mini">
+                  <button class="post-arxiv-mini-btn" id="postArxivNewClientBtn" title="Створити акт">Створити акт</button>
+                </div>
               </div>
               <input type="text" id="postArxivClientName" placeholder="Почніть вводити прізвище..." autocomplete="off">
               <div class="post-arxiv-autocomplete-dropdown" id="postArxivClientDropdown"></div>
+              <div class="post-arxiv-autocomplete-dropdown" id="postArxivActSearchMiniDropdown"></div>
             </div>
             
             <!-- Телефон -->
@@ -506,6 +516,7 @@ export class PlanyvannyaModal {
     submitBtn?.addEventListener("click", () => this.handleSubmit());
     createActBtn?.addEventListener("click", () => this.handleCreateAct());
 
+    this.setupActSearchMini();
     this.setupClientAutocomplete();
     this.setupPhoneAutocomplete();
     this.setupCarAutocomplete();
@@ -857,6 +868,18 @@ export class PlanyvannyaModal {
       const val = input.value.toLowerCase().trim();
       this.selectedClientId = null; // Reset selection on edit
 
+      // Очищаємо міні-пошук актів при зміні клієнта
+      const actSearchInput = document.getElementById(
+        "postArxivActSearchMini"
+      ) as HTMLInputElement;
+      if (actSearchInput) {
+        actSearchInput.value = "";
+      }
+      const actSearchDropdown = document.getElementById("postArxivActSearchMiniDropdown");
+      if (actSearchDropdown) {
+        actSearchDropdown.style.display = "none";
+      }
+
       if (val.length < 1) {
         this.closeAllDropdowns();
         return;
@@ -1134,6 +1157,12 @@ export class PlanyvannyaModal {
       this.loadCarsForClient(client.client_id);
     }
 
+    // Завантажуємо відкриті акти клієнта
+    const actDropdown = document.getElementById("postArxivActSearchMiniDropdown");
+    if (actDropdown) {
+      this.loadClientOpenActs(actDropdown);
+    }
+
     this.closeAllDropdowns();
   }
 
@@ -1196,6 +1225,180 @@ export class PlanyvannyaModal {
     );
     dropdowns.forEach((d) => ((d as HTMLElement).style.display = "none"));
   }
+
+  // --- Міні-пошук актів клієнта ---
+  private setupActSearchMini(): void {
+    const input = document.getElementById(
+      "postArxivActSearchMini"
+    ) as HTMLInputElement;
+    const dropdown = document.getElementById("postArxivActSearchMiniDropdown");
+    if (!input || !dropdown) return;
+
+    let timeoutId: any;
+
+    input.addEventListener("input", () => {
+      clearTimeout(timeoutId);
+      const query = input.value.trim();
+
+      if (query.length < 1) {
+        dropdown.style.display = "none";
+        return;
+      }
+
+      timeoutId = setTimeout(() => {
+        this.searchClientOpenActs(query, dropdown);
+      }, 300);
+    });
+
+    input.addEventListener("focus", () => {
+      if (this.selectedClientId && !input.value.trim()) {
+        this.loadClientOpenActs(dropdown);
+      } else if (input.value.trim()) {
+        this.searchClientOpenActs(input.value.trim(), dropdown);
+      }
+    });
+  }
+
+  private async loadClientOpenActs(dropdown: HTMLElement): Promise<void> {
+    if (!this.selectedClientId) {
+      dropdown.innerHTML =
+        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Оберіть клієнта</div></div>';
+      dropdown.style.display = "block";
+      return;
+    }
+
+    try {
+      const { data: acts, error } = await supabase
+        .from("acts")
+        .select("act_id")
+        .eq("client_id", this.selectedClientId)
+        .is("date_off", null)
+        .order("act_id", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      if (!acts || acts.length === 0) {
+        dropdown.innerHTML =
+          '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Немає відкритих актів</div></div>';
+        dropdown.style.display = "block";
+        return;
+      }
+
+      dropdown.innerHTML = acts
+        .map(
+          (act: any) => `
+          <div class="post-arxiv-autocomplete-option" data-act-id="${act.act_id}">
+            <div class="post-arxiv-autocomplete-option-main">Акт №${act.act_id}</div>
+          </div>
+        `
+        )
+        .join("");
+
+      dropdown.style.display = "block";
+
+      // Додаємо обробники кліків
+      dropdown.querySelectorAll(".post-arxiv-autocomplete-option").forEach((option) => {
+        option.addEventListener("click", () => {
+          const actId = Number(option.getAttribute("data-act-id"));
+          this.selectActFromMini(actId);
+          dropdown.style.display = "none";
+        });
+      });
+    } catch (err) {
+      console.error("Error loading client open acts:", err);
+      dropdown.innerHTML =
+        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Помилка завантаження</div></div>';
+      dropdown.style.display = "block";
+    }
+  }
+
+  private async searchClientOpenActs(
+    query: string,
+    dropdown: HTMLElement
+  ): Promise<void> {
+    if (!this.selectedClientId) {
+      dropdown.innerHTML =
+        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Оберіть клієнта</div></div>';
+      dropdown.style.display = "block";
+      return;
+    }
+
+    try {
+      const { data: acts, error } = await supabase
+        .from("acts")
+        .select("act_id")
+        .eq("client_id", this.selectedClientId)
+        .is("date_off", null)
+        .order("act_id", { ascending: false });
+
+      if (error) throw error;
+
+      if (!acts || acts.length === 0) {
+        dropdown.innerHTML =
+          '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Немає відкритих актів</div></div>';
+        dropdown.style.display = "block";
+        return;
+      }
+
+      // Фільтруємо локально по act_id
+      const queryLower = query.toLowerCase().trim();
+      const filteredActs = acts.filter((act) =>
+        String(act.act_id).includes(queryLower)
+      );
+
+      if (filteredActs.length === 0) {
+        dropdown.innerHTML =
+          '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Акти не знайдено</div></div>';
+        dropdown.style.display = "block";
+        return;
+      }
+
+      dropdown.innerHTML = filteredActs
+        .slice(0, 10)
+        .map(
+          (act: any) => `
+          <div class="post-arxiv-autocomplete-option" data-act-id="${act.act_id}">
+            <div class="post-arxiv-autocomplete-option-main">Акт №${act.act_id}</div>
+          </div>
+        `
+        )
+        .join("");
+
+      dropdown.style.display = "block";
+
+      // Додаємо обробники кліків
+      dropdown.querySelectorAll(".post-arxiv-autocomplete-option").forEach((option) => {
+        option.addEventListener("click", () => {
+          const actId = Number(option.getAttribute("data-act-id"));
+          this.selectActFromMini(actId);
+          dropdown.style.display = "none";
+        });
+      });
+    } catch (err) {
+      console.error("Error searching client open acts:", err);
+      dropdown.innerHTML =
+        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Помилка пошуку</div></div>';
+      dropdown.style.display = "block";
+    }
+  }
+
+  private selectActFromMini(actId: number): void {
+    const input = document.getElementById(
+      "postArxivActSearchMini"
+    ) as HTMLInputElement;
+    if (input) {
+      input.value = String(actId);
+    }
+
+    // Відкриваємо акт
+    if (typeof (window as any).openActModal === "function") {
+      (window as any).openActModal(actId);
+    } else {
+      console.warn("Global function openActModal not found");
+    }
+  }
+
 
   private async handleCreateAct(): Promise<void> {
     if (this.actId) {

@@ -518,6 +518,19 @@ export class PlanyvannyaModal {
     this.setupCarAutocomplete();
     this.setupCarNumberAutocomplete();
 
+    // Закриття dropdown актів при кліку поза ним
+    document.addEventListener("click", (e) => {
+      const dropdown = document.getElementById("postArxivActsDropdown");
+      const target = e.target as HTMLElement;
+
+      if (dropdown && dropdown.style.display === "block") {
+        // Перевіряємо чи клік був поза dropdown
+        if (!dropdown.contains(target)) {
+          dropdown.style.display = "none";
+          this.clearAutoHideTimeout();
+        }
+      }
+    });
     document.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
       if (!target.closest(".post-arxiv-autocomplete-wrapper")) {
@@ -1223,6 +1236,9 @@ export class PlanyvannyaModal {
   }
 
   // --- Автоматичний показ актів клієнта ---
+  private autoHideTimeout: any = null;
+  private isDropdownHovered: boolean = false;
+
   private async showClientActs(autoHideAfterMs?: number): Promise<void> {
     const dropdown = document.getElementById("postArxivActsDropdown");
     if (!dropdown || !this.selectedClientId) {
@@ -1286,18 +1302,44 @@ export class PlanyvannyaModal {
           const actId = Number(option.getAttribute("data-act-id"));
           this.selectClientAct(actId);
           dropdown.style.display = "none";
+          this.clearAutoHideTimeout();
         });
       });
 
-      // Якщо вказано автоматичне приховання - ховаємо через вказаний час
-      if (autoHideAfterMs && autoHideAfterMs > 0) {
-        setTimeout(() => {
+      // Обробники для hover
+      dropdown.onmouseenter = () => {
+        this.isDropdownHovered = true;
+        this.clearAutoHideTimeout();
+      };
+
+      dropdown.onmouseleave = () => {
+        this.isDropdownHovered = false;
+        // Якщо був таймер автоприховування - ховаємо відразу
+        if (autoHideAfterMs && autoHideAfterMs > 0) {
           dropdown.style.display = "none";
+        }
+      };
+
+      // Якщо вказано автоматичне приховання
+      if (autoHideAfterMs && autoHideAfterMs > 0) {
+        this.clearAutoHideTimeout();
+        this.autoHideTimeout = setTimeout(() => {
+          // Ховаємо тільки якщо немає ховера
+          if (!this.isDropdownHovered) {
+            dropdown.style.display = "none";
+          }
         }, autoHideAfterMs);
       }
     } catch (err) {
       console.error("Error loading client acts:", err);
       dropdown.style.display = "none";
+    }
+  }
+
+  private clearAutoHideTimeout(): void {
+    if (this.autoHideTimeout) {
+      clearTimeout(this.autoHideTimeout);
+      this.autoHideTimeout = null;
     }
   }
 

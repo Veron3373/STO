@@ -308,7 +308,9 @@ export class PlanyvannyaModal {
       this.loadCarsForClient(this.selectedClientId, true).catch(console.error);
 
       // Завантажуємо відкриті акти клієнта
-      this.showClientActs().catch(console.error);
+      // Якщо акт вже вибраний (є actId) - показуємо на 3 секунди
+      const autoHideTime = this.actId ? 3000 : undefined;
+      this.showClientActs(autoHideTime).catch(console.error);
     }
   }
 
@@ -1221,7 +1223,7 @@ export class PlanyvannyaModal {
   }
 
   // --- Автоматичний показ актів клієнта ---
-  private async showClientActs(): Promise<void> {
+  private async showClientActs(autoHideAfterMs?: number): Promise<void> {
     const dropdown = document.getElementById("postArxivActsDropdown");
     if (!dropdown || !this.selectedClientId) {
       if (dropdown) dropdown.style.display = "none";
@@ -1286,6 +1288,13 @@ export class PlanyvannyaModal {
           dropdown.style.display = "none";
         });
       });
+
+      // Якщо вказано автоматичне приховання - ховаємо через вказаний час
+      if (autoHideAfterMs && autoHideAfterMs > 0) {
+        setTimeout(() => {
+          dropdown.style.display = "none";
+        }, autoHideAfterMs);
+      }
     } catch (err) {
       console.error("Error loading client acts:", err);
       dropdown.style.display = "none";

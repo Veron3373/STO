@@ -1229,9 +1229,10 @@ export class PlanyvannyaModal {
     }
 
     try {
+      // Завантажуємо акти з cars_id
       const { data: acts, error } = await supabase
         .from("acts")
-        .select("act_id")
+        .select("act_id, cars_id")
         .eq("client_id", this.selectedClientId)
         .is("date_off", null)
         .order("act_id", { ascending: false })
@@ -1244,13 +1245,34 @@ export class PlanyvannyaModal {
         return;
       }
 
+      // Завантажуємо дані про машини
+      const carsIds = [...new Set(acts.map((a) => a.cars_id).filter((id) => id != null))];
+      let carsMap = new Map<number, string>();
+
+      if (carsIds.length > 0) {
+        const { data: cars } = await supabase
+          .from("cars")
+          .select("cars_id, data")
+          .in("cars_id", carsIds);
+
+        if (cars) {
+          cars.forEach((c: any) => {
+            const carModel = c.data?.["Авто"] || "Невідома машина";
+            carsMap.set(c.cars_id, carModel);
+          });
+        }
+      }
+
       dropdown.innerHTML = acts
         .map(
-          (act: any) => `
+          (act: any) => {
+            const carModel = act.cars_id ? carsMap.get(act.cars_id) || "" : "";
+            return `
           <div class="post-arxiv-autocomplete-option" data-act-id="${act.act_id}">
-            <div class="post-arxiv-autocomplete-option-main">Акт №${act.act_id}</div>
+            <div class="post-arxiv-autocomplete-option-main">Акт №${act.act_id}${carModel ? ` - ${carModel}` : ""}</div>
           </div>
-        `
+        `;
+          }
         )
         .join("");
 

@@ -681,15 +681,34 @@ class SchedulerApp {
     this.selectedDate = new Date(this.today);
     this.viewMonth = this.today.getMonth();
     this.viewYear = this.today.getFullYear();
-    this.render();
-    this.reloadArxivData();
+
+    // Якщо поточний місяць відображається - просто оновлюємо підсвічування
+    if (this.isMonthVisible(this.viewMonth, this.viewYear)) {
+      this.updateDateSelection();
+      this.reloadArxivData();
+    } else {
+      // Якщо потрібно показати інший місяць - рендеримо повністю
+      this.render();
+      this.reloadArxivData();
+    }
   }
 
   private changeDate(delta: number): void {
+    const oldMonth = this.selectedDate.getMonth();
+    const oldYear = this.selectedDate.getFullYear();
+
     this.selectedDate.setDate(this.selectedDate.getDate() + delta);
     this.viewMonth = this.selectedDate.getMonth();
     this.viewYear = this.selectedDate.getFullYear();
-    this.render();
+
+    // Якщо місяць змінився - потрібен повний рендеринг
+    if (oldMonth !== this.selectedDate.getMonth() || oldYear !== this.selectedDate.getFullYear()) {
+      this.render();
+    } else {
+      // Той самий місяць - просто оновлюємо підсвічування
+      this.updateDateSelection();
+    }
+
     this.reloadArxivData();
   }
 
@@ -704,6 +723,124 @@ class SchedulerApp {
     }
     this.render();
     this.reloadArxivData();
+  }
+
+  /**
+   * Перевіряє чи відображається вказаний місяць у міні-календарі
+   */
+  private isMonthVisible(month: number, year: number): boolean {
+    const currentMonth = this.viewMonth;
+    const currentYear = this.viewYear;
+
+    // Поточний місяць
+    if (month === currentMonth && year === currentYear) return true;
+
+    // Наступний місяць
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    if (month === nextMonth && year === nextYear) return true;
+
+    return false;
+  }
+
+  /**
+   * Оновлює підсвічування вибраної дати без повного рендерингу
+   */
+  private updateDateSelection(): void {
+    // Оновлюємо текст дати в header
+    if (this.headerDateDisplay) {
+      this.headerDateDisplay.textContent = this.formatFullDate(
+        this.selectedDate
+      );
+    }
+
+    // Видаляємо клас з усіх дат
+    const allDates = document.querySelectorAll(".day-container span");
+    allDates.forEach((span) => {
+      span.classList.remove("post-selected-date");
+      // Відновлюємо клас сьогоднішньої дати якщо потрібно
+      const dayContainer = span.parentElement;
+      if (dayContainer instanceof HTMLElement) {
+        const monthElement = dayContainer.closest(".post-month-calendar");
+        if (monthElement) {
+          const h3 = monthElement.querySelector("h3");
+          if (h3 && h3.textContent) {
+            const monthName = h3.textContent;
+            const monthIndex = this.getMonthIndexByName(monthName);
+            if (monthIndex !== -1) {
+              const dayNumber = parseInt(span.textContent || "0");
+              if (!isNaN(dayNumber)) {
+                const date = new Date(this.viewYear, monthIndex, dayNumber);
+                if (date.toDateString() === this.today.toDateString()) {
+                  span.classList.add("post-today");
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Додаємо клас до вибраної дати
+    const selectedDay = this.selectedDate.getDate();
+    const selectedMonth = this.selectedDate.getMonth();
+    const selectedYear = this.selectedDate.getFullYear();
+
+    allDates.forEach((span) => {
+      if (!span.textContent) return;
+      const dayNumber = parseInt(span.textContent);
+      if (isNaN(dayNumber)) return;
+
+      // Визначаємо до якого місяця належить цей день
+      const dayContainer = span.parentElement;
+      if (dayContainer instanceof HTMLElement) {
+        const monthElement = dayContainer.closest(".post-month-calendar");
+        if (monthElement) {
+          const h3 = monthElement.querySelector("h3");
+          if (h3 && h3.textContent) {
+            const monthName = h3.textContent;
+            const monthIndex = this.getMonthIndexByName(monthName);
+            if (monthIndex !== -1) {
+              // Визначаємо рік (поточний або наступний)
+              let year = this.viewYear;
+              if (this.viewMonth === 11 && monthIndex === 0) {
+                year = this.viewYear + 1;
+              }
+
+              if (
+                dayNumber === selectedDay &&
+                monthIndex === selectedMonth &&
+                year === selectedYear
+              ) {
+                span.classList.add("post-selected-date");
+                span.classList.remove("post-today");
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Отримує індекс місяця за назвою
+   */
+  private getMonthIndexByName(monthName: string): number {
+    const months = [
+      "Січень",
+      "Лютий",
+      "Березень",
+      "Квітень",
+      "Травень",
+      "Червень",
+      "Липень",
+      "Серпень",
+      "Вересень",
+      "Жовтень",
+      "Листопад",
+      "Грудень",
+    ];
+    return months.indexOf(monthName);
   }
 
   /**
@@ -1320,9 +1457,8 @@ class SchedulerApp {
       "листопада",
       "грудня",
     ];
-    return `${days[date.getDay()]}, ${date.getDate()} ${
-      months[date.getMonth()]
-    } ${date.getFullYear()}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]
+      } ${date.getFullYear()}`;
   }
 
   private getMonthName(monthIndex: number): string {
@@ -1600,23 +1736,6 @@ class SchedulerApp {
     });
   }
 
-  private getMonthIndexByName(monthName: string): number {
-    const months = [
-      "Січень",
-      "Лютий",
-      "Березень",
-      "Квітень",
-      "Травень",
-      "Червень",
-      "Липень",
-      "Серпень",
-      "Вересень",
-      "Жовтень",
-      "Листопад",
-      "Грудень",
-    ];
-    return months.indexOf(monthName);
-  }
 
   private createOccupancyIndicator(
     occupancyPercent: number,
@@ -1745,7 +1864,9 @@ class SchedulerApp {
 
       dayContainer.addEventListener("click", () => {
         this.selectedDate = new Date(year, month, day);
-        this.render();
+        this.viewMonth = this.selectedDate.getMonth();
+        this.viewYear = this.selectedDate.getFullYear();
+        this.updateDateSelection();
         this.reloadArxivData();
       });
 

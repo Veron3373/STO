@@ -303,14 +303,12 @@ export class PlanyvannyaModal {
     this.selectedClientId = data.clientId || null;
     this.selectedCarId = data.carId || null;
 
+
     if (this.selectedClientId) {
       this.loadCarsForClient(this.selectedClientId, true).catch(console.error);
 
       // Завантажуємо відкриті акти клієнта
-      const actDropdown = document.getElementById("postArxivActSearchMiniDropdown");
-      if (actDropdown) {
-        this.loadClientOpenActs(actDropdown).catch(console.error);
-      }
+      this.showClientActs().catch(console.error);
     }
   }
 
@@ -346,14 +344,11 @@ export class PlanyvannyaModal {
             <div class="post-arxiv-form-group post-arxiv-autocomplete-wrapper">
               <div class="post-arxiv-label-row">
                 <label>ПІБ <span class="required">*</span></label>
-                <div class="post-arxiv-act-search-group">
-                  <input type="text" id="postArxivActSearchMini" placeholder="№ акту..." autocomplete="off" class="post-arxiv-act-search-mini">
-                  <button class="post-arxiv-mini-btn" id="postArxivNewClientBtn" title="Створити акт">Створити акт</button>
-                </div>
+                <button class="post-arxiv-mini-btn" id="postArxivNewClientBtn" title="Створити акт">Створити акт</button>
               </div>
               <input type="text" id="postArxivClientName" placeholder="Почніть вводити прізвище..." autocomplete="off">
               <div class="post-arxiv-autocomplete-dropdown" id="postArxivClientDropdown"></div>
-              <div class="post-arxiv-autocomplete-dropdown" id="postArxivActSearchMiniDropdown"></div>
+              <div class="post-arxiv-autocomplete-dropdown post-arxiv-acts-dropdown" id="postArxivActsDropdown"></div>
             </div>
             
             <!-- Телефон -->
@@ -516,7 +511,6 @@ export class PlanyvannyaModal {
     submitBtn?.addEventListener("click", () => this.handleSubmit());
     createActBtn?.addEventListener("click", () => this.handleCreateAct());
 
-    this.setupActSearchMini();
     this.setupClientAutocomplete();
     this.setupPhoneAutocomplete();
     this.setupCarAutocomplete();
@@ -868,17 +862,20 @@ export class PlanyvannyaModal {
       const val = input.value.toLowerCase().trim();
       this.selectedClientId = null; // Reset selection on edit
 
-      // Очищаємо міні-пошук актів при зміні клієнта
-      const actSearchInput = document.getElementById(
-        "postArxivActSearchMini"
-      ) as HTMLInputElement;
-      if (actSearchInput) {
-        actSearchInput.value = "";
+      // Очищаємо dropdown актів при зміні клієнта
+      const actsDropdown = document.getElementById("postArxivActsDropdown");
+      if (actsDropdown) {
+        actsDropdown.style.display = "none";
       }
-      const actSearchDropdown = document.getElementById("postArxivActSearchMiniDropdown");
-      if (actSearchDropdown) {
-        actSearchDropdown.style.display = "none";
+      // Скидаємо кнопку до початкового стану
+      const actBtn = document.getElementById("postArxivNewClientBtn") as HTMLButtonElement;
+      if (actBtn) {
+        actBtn.innerHTML = "Створити акт";
+        actBtn.title = "Створити акт";
+        actBtn.style.background = "";
+        actBtn.style.color = "";
       }
+      this.actId = null;
 
       if (val.length < 1) {
         this.closeAllDropdowns();
@@ -1158,10 +1155,7 @@ export class PlanyvannyaModal {
     }
 
     // Завантажуємо відкриті акти клієнта
-    const actDropdown = document.getElementById("postArxivActSearchMiniDropdown");
-    if (actDropdown) {
-      this.loadClientOpenActs(actDropdown);
-    }
+    this.showClientActs().catch(console.error);
 
     this.closeAllDropdowns();
   }
@@ -1226,44 +1220,11 @@ export class PlanyvannyaModal {
     dropdowns.forEach((d) => ((d as HTMLElement).style.display = "none"));
   }
 
-  // --- Міні-пошук актів клієнта ---
-  private setupActSearchMini(): void {
-    const input = document.getElementById(
-      "postArxivActSearchMini"
-    ) as HTMLInputElement;
-    const dropdown = document.getElementById("postArxivActSearchMiniDropdown");
-    if (!input || !dropdown) return;
-
-    let timeoutId: any;
-
-    input.addEventListener("input", () => {
-      clearTimeout(timeoutId);
-      const query = input.value.trim();
-
-      if (query.length < 1) {
-        dropdown.style.display = "none";
-        return;
-      }
-
-      timeoutId = setTimeout(() => {
-        this.searchClientOpenActs(query, dropdown);
-      }, 300);
-    });
-
-    input.addEventListener("focus", () => {
-      if (this.selectedClientId && !input.value.trim()) {
-        this.loadClientOpenActs(dropdown);
-      } else if (input.value.trim()) {
-        this.searchClientOpenActs(input.value.trim(), dropdown);
-      }
-    });
-  }
-
-  private async loadClientOpenActs(dropdown: HTMLElement): Promise<void> {
-    if (!this.selectedClientId) {
-      dropdown.innerHTML =
-        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Оберіть клієнта</div></div>';
-      dropdown.style.display = "block";
+  // --- Автоматичний показ актів клієнта ---
+  private async showClientActs(): Promise<void> {
+    const dropdown = document.getElementById("postArxivActsDropdown");
+    if (!dropdown || !this.selectedClientId) {
+      if (dropdown) dropdown.style.display = "none";
       return;
     }
 
@@ -1279,9 +1240,7 @@ export class PlanyvannyaModal {
       if (error) throw error;
 
       if (!acts || acts.length === 0) {
-        dropdown.innerHTML =
-          '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Немає відкритих актів</div></div>';
-        dropdown.style.display = "block";
+        dropdown.style.display = "none";
         return;
       }
 
@@ -1301,107 +1260,35 @@ export class PlanyvannyaModal {
       dropdown.querySelectorAll(".post-arxiv-autocomplete-option").forEach((option) => {
         option.addEventListener("click", () => {
           const actId = Number(option.getAttribute("data-act-id"));
-          this.selectActFromMini(actId);
+          this.selectClientAct(actId);
           dropdown.style.display = "none";
         });
       });
     } catch (err) {
-      console.error("Error loading client open acts:", err);
-      dropdown.innerHTML =
-        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Помилка завантаження</div></div>';
-      dropdown.style.display = "block";
+      console.error("Error loading client acts:", err);
+      dropdown.style.display = "none";
     }
   }
 
-  private async searchClientOpenActs(
-    query: string,
-    dropdown: HTMLElement
-  ): Promise<void> {
-    if (!this.selectedClientId) {
-      dropdown.innerHTML =
-        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Оберіть клієнта</div></div>';
-      dropdown.style.display = "block";
-      return;
-    }
+  private selectClientAct(actId: number): void {
+    // Зберігаємо вибраний акт
+    this.actId = actId;
 
-    try {
-      const { data: acts, error } = await supabase
-        .from("acts")
-        .select("act_id")
-        .eq("client_id", this.selectedClientId)
-        .is("date_off", null)
-        .order("act_id", { ascending: false });
-
-      if (error) throw error;
-
-      if (!acts || acts.length === 0) {
-        dropdown.innerHTML =
-          '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Немає відкритих актів</div></div>';
-        dropdown.style.display = "block";
-        return;
-      }
-
-      // Фільтруємо локально по act_id
-      const queryLower = query.toLowerCase().trim();
-      const filteredActs = acts.filter((act) =>
-        String(act.act_id).includes(queryLower)
-      );
-
-      if (filteredActs.length === 0) {
-        dropdown.innerHTML =
-          '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Акти не знайдено</div></div>';
-        dropdown.style.display = "block";
-        return;
-      }
-
-      dropdown.innerHTML = filteredActs
-        .slice(0, 10)
-        .map(
-          (act: any) => `
-          <div class="post-arxiv-autocomplete-option" data-act-id="${act.act_id}">
-            <div class="post-arxiv-autocomplete-option-main">Акт №${act.act_id}</div>
-          </div>
-        `
-        )
-        .join("");
-
-      dropdown.style.display = "block";
-
-      // Додаємо обробники кліків
-      dropdown.querySelectorAll(".post-arxiv-autocomplete-option").forEach((option) => {
-        option.addEventListener("click", () => {
-          const actId = Number(option.getAttribute("data-act-id"));
-          this.selectActFromMini(actId);
-          dropdown.style.display = "none";
-        });
-      });
-    } catch (err) {
-      console.error("Error searching client open acts:", err);
-      dropdown.innerHTML =
-        '<div class="post-arxiv-autocomplete-option"><div class="post-arxiv-autocomplete-option-main">Помилка пошуку</div></div>';
-      dropdown.style.display = "block";
+    // Оновлюємо кнопку
+    const actBtn = document.getElementById("postArxivNewClientBtn") as HTMLButtonElement;
+    if (actBtn) {
+      actBtn.innerHTML = `📋 ${actId}`;
+      actBtn.title = `Відкрити акт №${actId}`;
+      actBtn.style.background = "#4CAF50";
+      actBtn.style.color = "white";
     }
   }
 
-  private selectActFromMini(actId: number): void {
-    const input = document.getElementById(
-      "postArxivActSearchMini"
-    ) as HTMLInputElement;
-    if (input) {
-      input.value = String(actId);
-    }
-
-    // Відкриваємо акт
-    if (typeof (window as any).openActModal === "function") {
-      (window as any).openActModal(actId);
-    } else {
-      console.warn("Global function openActModal not found");
-    }
-  }
 
 
   private async handleCreateAct(): Promise<void> {
     if (this.actId) {
+      // Якщо акт вже вибраний - відкриваємо його
       if (typeof (window as any).openActModal === "function") {
         (window as any).openActModal(this.actId);
       } else {
@@ -1410,325 +1297,10 @@ export class PlanyvannyaModal {
       return;
     }
 
-    // Відкриваємо модалку вибору акту
-    this.showActSelectionModal();
+    // Якщо акту немає - відкриваємо модалку створення акту з перенесенням даних
+    this.handleCreateNewAct();
   }
 
-  private showActSelectionModal(): void {
-    const modalHTML = `
-      <div class="post-act-modal-overlay" id="postActModalOverlay">
-        <div class="post-act-modal">
-          <div class="post-act-modal-header">
-            <h3>Вибір акту</h3>
-            <button class="post-act-close" id="postActClose">×</button>
-          </div>
-          <div class="post-act-modal-body">
-            <div class="post-act-form-group">
-              <label>Оберіть існуючий акт або створіть новий</label>
-              <div class="post-act-autocomplete-wrapper">
-                <input type="text" id="postActSearchInput" placeholder="Введіть номер акту..." autocomplete="off">
-                <div class="post-act-autocomplete-dropdown" id="postActDropdown"></div>
-              </div>
-            </div>
-            <div class="post-act-actions">
-              <button class="post-act-create-btn" id="postActCreateNewBtn">Створити новий акт</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML("beforeend", modalHTML);
-
-    // Прив'язуємо події
-    document.getElementById("postActClose")?.addEventListener("click", () => {
-      document.getElementById("postActModalOverlay")?.remove();
-    });
-
-    document
-      .getElementById("postActModalOverlay")
-      ?.addEventListener("click", (e) => {
-        if (e.target === e.currentTarget) {
-          document.getElementById("postActModalOverlay")?.remove();
-        }
-      });
-
-    document
-      .getElementById("postActCreateNewBtn")
-      ?.addEventListener("click", () => {
-        document.getElementById("postActModalOverlay")?.remove();
-        this.handleCreateNewAct();
-      });
-
-    // Закриття dropdown при кліку поза ним
-    document.addEventListener(
-      "click",
-      (e) => {
-        const dropdown = document.getElementById("postActDropdown");
-        const input = document.getElementById("postActSearchInput");
-        const target = e.target as HTMLElement;
-
-        if (
-          dropdown &&
-          input &&
-          !input.contains(target) &&
-          !dropdown.contains(target)
-        ) {
-          dropdown.style.display = "none";
-        }
-      },
-      { once: false }
-    );
-
-    // Налаштовуємо автокомпліт для актів
-    this.setupActAutocomplete();
-  }
-
-  private async setupActAutocomplete(): Promise<void> {
-    const input = document.getElementById(
-      "postActSearchInput"
-    ) as HTMLInputElement;
-    const dropdown = document.getElementById("postActDropdown") as HTMLElement;
-
-    if (!input || !dropdown) return;
-
-    // Завантажуємо всі відкриті акти при відкритті модалки
-    await this.loadOpenActs(dropdown);
-
-    let timeoutId: any;
-
-    input.addEventListener("input", () => {
-      clearTimeout(timeoutId);
-      const query = input.value.trim();
-
-      if (query.length < 1) {
-        this.loadOpenActs(dropdown);
-        return;
-      }
-
-      timeoutId = setTimeout(async () => {
-        await this.searchActs(query, dropdown);
-      }, 300);
-    });
-
-    input.addEventListener("focus", () => {
-      if (input.value.trim().length >= 1) {
-        this.searchActs(input.value.trim(), dropdown);
-      } else {
-        this.loadOpenActs(dropdown);
-      }
-    });
-  }
-
-  private async loadOpenActs(dropdown: HTMLElement): Promise<void> {
-    try {
-      console.log("🔍 Завантаження відкритих актів...");
-
-      // Крок 1: Завантажуємо всі відкриті акти (де немає date_off)
-      const { data: acts, error: actsError } = await supabase
-        .from("acts")
-        .select("act_id, client_id")
-        .is("date_off", null)
-        .order("act_id", { ascending: false })
-        .limit(50);
-
-      console.log("📊 Результат запиту актів:", { acts, actsError });
-
-      if (actsError) {
-        console.error("❌ Помилка завантаження актів:", actsError);
-        dropdown.innerHTML =
-          '<div class="post-act-no-results">Помилка завантаження актів</div>';
-        dropdown.style.display = "block";
-        return;
-      }
-
-      if (!acts || acts.length === 0) {
-        console.log("⚠️ Немає відкритих актів");
-        dropdown.innerHTML =
-          '<div class="post-act-no-results">Немає відкритих актів</div>';
-        dropdown.style.display = "block";
-        return;
-      }
-
-      // Крок 2: Отримуємо унікальні client_id
-      const clientIds = [
-        ...new Set(acts.map((a) => a.client_id).filter((id) => id != null)),
-      ];
-      console.log("👥 Унікальні client_id:", clientIds);
-
-      // Крок 3: Завантажуємо дані клієнтів
-      let clientsMap = new Map<number, string>();
-      if (clientIds.length > 0) {
-        const { data: clients, error: clientsError } = await supabase
-          .from("clients")
-          .select("client_id, data")
-          .in("client_id", clientIds);
-
-        console.log("📊 Результат запиту клієнтів:", { clients, clientsError });
-
-        if (clients) {
-          clients.forEach((c: any) => {
-            const pib = c.data?.["ПІБ"] || "Невідомо";
-            clientsMap.set(c.client_id, pib);
-          });
-        }
-      }
-
-      console.log(`✅ Знайдено ${acts.length} актів`);
-
-      dropdown.innerHTML = acts
-        .map((act: any) => {
-          const clientName = clientsMap.get(act.client_id) || "Невідомо";
-          console.log(`Акт #${act.act_id}: ${clientName}`);
-          return `
-            <div class="post-act-option" data-act-id="${act.act_id}">
-              <div class="post-act-option-main">Акт №${act.act_id}</div>
-              <div class="post-act-option-sub">${clientName}</div>
-            </div>
-          `;
-        })
-        .join("");
-
-      dropdown.style.display = "block";
-
-      // Додаємо обробники кліків
-      dropdown.querySelectorAll(".post-act-option").forEach((option) => {
-        option.addEventListener("click", () => {
-          const actId = Number(option.getAttribute("data-act-id"));
-          this.selectAct(actId);
-          document.getElementById("postActModalOverlay")?.remove();
-        });
-      });
-    } catch (err) {
-      console.error("💥 Критична помилка при завантаженні актів:", err);
-      dropdown.innerHTML =
-        '<div class="post-act-no-results">Критична помилка завантаження</div>';
-      dropdown.style.display = "block";
-    }
-  }
-
-  private async searchActs(
-    query: string,
-    dropdown: HTMLElement
-  ): Promise<void> {
-    try {
-      console.log(`🔎 Пошук актів за запитом: "${query}"`);
-
-      // Крок 1: Завантажуємо ВСІ відкриті акти (для фільтрації по числовому полю)
-      const { data: allActs, error: actsError } = await supabase
-        .from("acts")
-        .select("act_id, client_id")
-        .is("date_off", null)
-        .order("act_id", { ascending: false });
-
-      if (actsError) {
-        console.error("❌ Помилка завантаження актів:", actsError);
-        dropdown.innerHTML =
-          '<div class="post-act-no-results">Помилка завантаження актів</div>';
-        dropdown.style.display = "block";
-        return;
-      }
-
-      if (!allActs || allActs.length === 0) {
-        dropdown.innerHTML =
-          '<div class="post-act-no-results">Немає відкритих актів</div>';
-        dropdown.style.display = "block";
-        return;
-      }
-
-      // Крок 2: Завантажуємо клієнтів для всіх актів
-      const clientIds = [
-        ...new Set(allActs.map((a) => a.client_id).filter((id) => id != null)),
-      ];
-
-      let clientsMap = new Map<number, string>();
-      if (clientIds.length > 0) {
-        const { data: clients } = await supabase
-          .from("clients")
-          .select("client_id, data")
-          .in("client_id", clientIds);
-
-        if (clients) {
-          clients.forEach((c: any) => {
-            const pib = c.data?.["ПІБ"] || "Невідомо";
-            clientsMap.set(c.client_id, pib);
-          });
-        }
-      }
-
-      // Крок 3: Фільтруємо локально по act_id АБО по ПІБ
-      const queryLower = query.toLowerCase().trim();
-      const filteredActs = allActs.filter((act) => {
-        const actIdStr = String(act.act_id);
-        const clientName = clientsMap.get(act.client_id) || "";
-
-        // Перевіряємо чи номер акту містить запит
-        const matchesActId = actIdStr.includes(queryLower);
-
-        // Перевіряємо чи ПІБ містить запит
-        const matchesClientName = clientName.toLowerCase().includes(queryLower);
-
-        return matchesActId || matchesClientName;
-      });
-
-      console.log(
-        `📊 Знайдено ${filteredActs.length} актів з ${allActs.length}`
-      );
-
-      if (filteredActs.length === 0) {
-        dropdown.innerHTML =
-          '<div class="post-act-no-results">Акти не знайдено</div>';
-        dropdown.style.display = "block";
-        return;
-      }
-
-      // Сортуємо: спочатку ті що співпадають по номеру
-      const sortedActs = filteredActs.sort((a, b) => {
-        const aMatchNumber = String(a.act_id).includes(queryLower);
-        const bMatchNumber = String(b.act_id).includes(queryLower);
-        if (aMatchNumber && !bMatchNumber) return -1;
-        if (!aMatchNumber && bMatchNumber) return 1;
-        return b.act_id - a.act_id;
-      });
-
-      // Обмежуємо до 30 результатів для відображення
-      const displayActs = sortedActs.slice(0, 30);
-
-      dropdown.innerHTML = displayActs
-        .map((act: any) => {
-          const clientName = clientsMap.get(act.client_id) || "Невідомо";
-          return `
-            <div class="post-act-option" data-act-id="${act.act_id}">
-              <div class="post-act-option-main">Акт №${act.act_id}</div>
-              <div class="post-act-option-sub">${clientName}</div>
-            </div>
-          `;
-        })
-        .join("");
-
-      dropdown.style.display = "block";
-
-      // Додаємо обробники кліків
-      dropdown.querySelectorAll(".post-act-option").forEach((option) => {
-        option.addEventListener("click", () => {
-          const actId = Number(option.getAttribute("data-act-id"));
-          this.selectAct(actId);
-          document.getElementById("postActModalOverlay")?.remove();
-        });
-      });
-    } catch (err) {
-      console.error("💥 Критична помилка при пошуку актів:", err);
-      dropdown.innerHTML =
-        '<div class="post-act-no-results">Критична помилка пошуку</div>';
-      dropdown.style.display = "block";
-    }
-  }
-
-  private selectAct(actId: number): void {
-    this.actId = actId;
-    this.updateActButton();
-    showNotification(`Акт №${actId} вибрано`, "success");
-  }
 
   private async handleCreateNewAct(): Promise<void> {
     const nameInput = document.getElementById(

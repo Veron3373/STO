@@ -754,6 +754,9 @@ class SchedulerApp {
       );
     }
 
+    // Оновлюємо візуалізацію минулого/майбутнього часу
+    this.updateTimeMarker();
+
     // Видаляємо клас з усіх дат
     const allDates = document.querySelectorAll(".day-container span");
     allDates.forEach((span) => {

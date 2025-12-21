@@ -1081,11 +1081,11 @@ export function updatevutratuTable(): void {
 
       amountCell.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-          <span style="color: ${detailsColor}; font-size: 0.95em; font-weight: 500;">
-            ${detailsSign}${formatNumber(expense.detailsAmount)}
-          </span>
           <span style="color: ${workColor}; font-size: 0.95em; font-weight: 500;">
             ${workSign}${formatNumber(expense.workAmount)}
+          </span>
+          <span style="color: ${detailsColor}; font-size: 0.95em; font-weight: 500;">
+            ${detailsSign}${formatNumber(expense.detailsAmount)}
           </span>
         </div>
       `;

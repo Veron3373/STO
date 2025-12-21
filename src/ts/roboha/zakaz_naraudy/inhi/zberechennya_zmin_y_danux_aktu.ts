@@ -61,14 +61,54 @@ interface ActChangeRecord {
   changed_by_surname: string;
   delit: boolean; // ✅ Додано для позначення видалених повідомлень
   data: string;
-  pib?: string;   // ✅ ПІБ клієнта з поточного акту
-  auto?: string;  // ✅ Дані автомобіля з поточного акту
+  pib?: string; // ✅ ПІБ клієнта з поточного акту
+  auto?: string; // ✅ Дані автомобіля з поточного акту
 }
 
 // КЕШ: Зберігаємо ТІЛЬКИ ЦІНУ (суму перерахуємо від кількості при збереженні)
 const hiddenColumnsCache = new Map<string, number>();
 
+// КЕШ: Закупівельні ціни зі складу для обчислення маржі
+const purchasePricesCache = new Map<number, number>();
+
 /* =============================== УТИЛІТИ =============================== */
+
+/**
+ * Завантажує закупівельні ціни зі складу для обчислення маржі
+ */
+async function loadPurchasePrices(): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("sclad")
+      .select("sclad_id, price");
+
+    if (error) {
+      console.error("⚠️ Помилка завантаження цін зі складу:", error);
+      return;
+    }
+
+    purchasePricesCache.clear();
+    data?.forEach((item) => {
+      const scladId = Number(item.sclad_id);
+      const price = Number(item.price) || 0;
+      if (!isNaN(scladId)) {
+        purchasePricesCache.set(scladId, price);
+      }
+    });
+
+    console.log(`✅ Завантажено ${purchasePricesCache.size} закупівельних цін`);
+  } catch (err) {
+    console.error("⚠️ Помилка при завантаженні цін:", err);
+  }
+}
+
+/**
+ * Отримує закупівельну ціну за sclad_id
+ */
+function getPurchasePrice(scladId: number | null): number | undefined {
+  if (!scladId) return undefined;
+  return purchasePricesCache.get(scladId);
+}
 
 const cleanText = (s?: string | null): string =>
   (s ?? "").replace(/\u00A0/g, " ").trim();
@@ -391,6 +431,7 @@ function processItems(items: ParsedItem[]) {
   let totalDetailsSum = 0;
   let totalWorksSum = 0;
   let totalWorksProfit = 0;
+  let totalDetailsMargin = 0;
 
   items.forEach((item) => {
     const {
@@ -435,6 +476,12 @@ function processItems(items: ParsedItem[]) {
         });
       }
     } else {
+      // Обчислюємо маржу для деталі
+      const purchasePrice = getPurchasePrice(sclad_id);
+      const margin = purchasePrice ? (price - purchasePrice) * quantity : 0;
+
+      totalDetailsMargin += margin;
+
       details.push({
         ...itemBase,
         Деталь: name,
@@ -468,6 +515,7 @@ function processItems(items: ParsedItem[]) {
     totalWorksSum,
     grandTotalSum: totalDetailsSum + totalWorksSum,
     totalWorksProfit,
+    totalDetailsMargin,
   };
 }
 
@@ -585,14 +633,18 @@ async function logActChanges(
   deleted: ParsedItem[]
 ): Promise<void> {
   // ⚠️ КРИТИЧНО: Перевірка ролі користувача
-  console.log(`🔍 [logActChanges] Перевірка ролі користувача: "${userAccessLevel}"`);
+  console.log(
+    `🔍 [logActChanges] Перевірка ролі користувача: "${userAccessLevel}"`
+  );
 
   if (userAccessLevel === "Адміністратор") {
     console.log("⏭️ Адміністратор - логування змін пропущено");
     return;
   }
 
-  console.log(`✅ [logActChanges] Користувач НЕ адміністратор - продовжуємо логування`);
+  console.log(
+    `✅ [logActChanges] Користувач НЕ адміністратор - продовжуємо логування`
+  );
 
   // ✅ ФУНКЦІЯ ВИЗНАЧЕННЯ АВТОРА ЗМІН
   const getChangeAuthor = (item: ParsedItem): string => {
@@ -666,7 +718,7 @@ async function logActChanges(
       changed_by_surname: getChangeAuthor(item),
       delit: false, // ✅ За замовчуванням FALSE = показувати
       data: new Date().toISOString(),
-      pib: pib || undefined,  // ✅ ПІБ клієнта
+      pib: pib || undefined, // ✅ ПІБ клієнта
       auto: auto || undefined, // ✅ Дані автомобіля
     });
   });
@@ -683,7 +735,7 @@ async function logActChanges(
       changed_by_surname: getChangeAuthor(item),
       delit: false, // ✅ За замовчуванням FALSE = показувати
       data: new Date().toISOString(),
-      pib: pib || undefined,  // ✅ ПІБ клієнта
+      pib: pib || undefined, // ✅ ПІБ клієнта
       auto: auto || undefined, // ✅ Дані автомобіля
     });
   });
@@ -693,17 +745,23 @@ async function logActChanges(
     return;
   }
 
-  console.log(`📝 [logActChanges] Підготовлено ${records.length} записів для вставки:`, records);
+  console.log(
+    `📝 [logActChanges] Підготовлено ${records.length} записів для вставки:`,
+    records
+  );
 
   // 🔍 ДІАГНОСТИКА: Перевіряємо поточного користувача
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
   if (userError) {
     console.error("❌ Помилка отримання користувача:", userError);
   } else {
     console.log(`👤 [logActChanges] Поточний користувач:`, {
       email: user?.email,
       id: user?.id,
-      role: user?.role
+      role: user?.role,
     });
   }
 
@@ -719,7 +777,7 @@ async function logActChanges(
       code: error.code,
       message: error.message,
       details: error.details,
-      hint: error.hint
+      hint: error.hint,
     });
     console.error("📝 Записи що не вдалося вставити:", records);
     throw error;
@@ -736,6 +794,9 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     throw new Error("Неможливо редагувати закритий акт");
   }
 
+  // Завантажуємо закупівельні ціни перед обробкою
+  await loadPurchasePrices();
+
   const probigText = cleanText(
     document.getElementById(EDITABLE_PROBIG_ID)?.textContent
   );
@@ -745,8 +806,14 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
       ? Number(probigCleaned)
       : probigCleaned || 0;
 
-  const newReason = (document.getElementById(EDITABLE_REASON_ID) as HTMLElement)?.innerText?.trim() || "";
-  const newRecommendations = (document.getElementById(EDITABLE_RECOMMENDATIONS_ID) as HTMLElement)?.innerText?.trim() || "";
+  const newReason =
+    (
+      document.getElementById(EDITABLE_REASON_ID) as HTMLElement
+    )?.innerText?.trim() || "";
+  const newRecommendations =
+    (
+      document.getElementById(EDITABLE_RECOMMENDATIONS_ID) as HTMLElement
+    )?.innerText?.trim() || "";
 
   const items = parseTableRows();
   const {
@@ -759,6 +826,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     totalWorksSum,
     grandTotalSum,
     totalWorksProfit,
+    totalDetailsMargin,
   } = processItems(items);
 
   const avansInput = document.getElementById(
@@ -779,11 +847,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "За роботу": totalWorksSum,
     "Загальна сума": grandTotalSum,
     Аванс: avansValue,
-    "Прибуток за деталі":
-      originalActData &&
-        typeof originalActData["Прибуток за деталі"] === "number"
-        ? originalActData["Прибуток за деталі"]
-        : 0,
+    "Прибуток за деталі": Number((totalDetailsMargin || 0).toFixed(2)),
     "Прибуток за роботу": Number((totalWorksProfit || 0).toFixed(2)),
   };
 

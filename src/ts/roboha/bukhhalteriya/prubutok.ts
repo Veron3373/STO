@@ -464,26 +464,23 @@ function calculateDetailsMarginFromAct(actData: ActData): number {
   return Number(totalMargin.toFixed(2));
 }
 
-// Обчислює прибуток робіт на основі збереженого поля "Прибуток" в кожній роботі
+// Обчислює прибуток робіт: Загальна сума робіт - Загальна зарплата
+// Прибуток може бути від'ємним якщо зарплати більше ніж сума робіт
 function calculateWorkProfitFromAct(actData: ActData): number {
   const works = actData.Роботи || [];
-  let totalProfit = 0;
+  let totalSum = 0;
+  let totalSalary = 0;
 
   for (const work of works) {
-    // Використовуємо вже обчислене поле "Прибуток" яке збережене при збереженні акту
-    // Прибуток = Сума - Зарплата слюсаря
-    if (work.Прибуток !== undefined) {
-      totalProfit += Number(work.Прибуток) || 0;
-    } else {
-      // Fallback для старих актів без поля Прибуток
-      const sum = (Number(work.Кількість) || 0) * (Number(work.Ціна) || 0);
-      const salary = Number(work.Зарплата) || 0;
-      const profit = Math.max(0, sum - salary);
-      totalProfit += profit;
-    }
+    const sum = (Number(work.Кількість) || 0) * (Number(work.Ціна) || 0);
+    const salary = Number(work.Зарплата) || 0;
+    totalSum += sum;
+    totalSalary += salary;
   }
 
-  return Number(totalProfit.toFixed(2));
+  // Прибуток = Сума всіх робіт - Сума всіх зарплат
+  const profit = totalSum - totalSalary;
+  return Number(profit.toFixed(2));
 }
 
 async function getClientData(clientId: number): Promise<string> {

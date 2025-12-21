@@ -385,7 +385,89 @@ interface ActData {
   "Прибуток за роботу"?: number;
   client_id?: number;
   cars_id?: number;
+  Деталі?: Array<{
+    Деталь?: string;
+    Кількість?: number;
+    Ціна?: number;
+    sclad_id?: number;
+  }>;
+  Роботи?: Array<{
+    Робота?: string;
+    Кількість?: number;
+    Ціна?: number;
+    Зарплата?: number;
+    Прибуток?: number;
+  }>;
   [key: string]: any;
+}
+
+// Кеш закупівельних цін зі складу
+let purchasePricesCache: Map<number, number> = new Map();
+
+// Завантажує закупівельні ціни зі складу
+async function loadPurchasePricesForProfit(): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("sclad")
+      .select("sclad_id, price");
+
+    if (error) {
+      console.error("⚠️ Помилка завантаження цін зі складу:", error);
+      return;
+    }
+
+    purchasePricesCache.clear();
+    data?.forEach((item) => {
+      const scladId = Number(item.sclad_id);
+      const price = Number(item.price) || 0;
+      if (!isNaN(scladId)) {
+        purchasePricesCache.set(scladId, price);
+      }
+    });
+
+    console.log(
+      `✅ Завантажено ${purchasePricesCache.size} закупівельних цін для прибутку`
+    );
+  } catch (err) {
+    console.error("⚠️ Помилка при завантаженні закупівельних цін:", err);
+  }
+}
+
+// Обчислює маржу деталей динамічно на основі деталей в акті
+function calculateDetailsMarginFromAct(actData: ActData): number {
+  const details = actData.Деталі || [];
+  let totalMargin = 0;
+
+  for (const det of details) {
+    const scladId = det.sclad_id;
+    const quantity = Number(det.Кількість) || 0;
+    const salePrice = Number(det.Ціна) || 0;
+
+    if (scladId) {
+      const purchasePrice = purchasePricesCache.get(scladId);
+      if (purchasePrice !== undefined) {
+        const margin = (salePrice - purchasePrice) * quantity;
+        totalMargin += margin;
+      }
+    }
+  }
+
+  return Number(totalMargin.toFixed(2));
+}
+
+// Обчислює маржу робіт динамічно на основі робіт в акті
+function calculateWorkProfitFromAct(actData: ActData): number {
+  const works = actData.Роботи || [];
+  let totalProfit = 0;
+
+  for (const work of works) {
+    const sum = (Number(work.Кількість) || 0) * (Number(work.Ціна) || 0);
+    const salary = Number(work.Зарплата) || 0;
+    const profit = Math.max(0, sum - salary);
+    totalProfit += profit;
+  }
+
+  return Number(totalProfit.toFixed(2));
 }
 
 async function getClientData(clientId: number): Promise<string> {
@@ -629,6 +711,9 @@ async function loadvutratuFromDatabase(): Promise<void> {
 
     // Додаємо дані з acts
     if (actsDataRaw && Array.isArray(actsDataRaw)) {
+      // Завантажуємо закупівельні ціни для обчислення маржі деталей
+      await loadPurchasePricesForProfit();
+
       for (const actItem of actsDataRaw) {
         let actData: ActData = {};
 
@@ -644,8 +729,9 @@ async function loadvutratuFromDatabase(): Promise<void> {
           actData = actItem.data;
         }
 
-        const detailsAmount = Number(actData["Прибуток за деталі"] || 0);
-        const workAmount = Number(actData["Прибуток за роботу"] || 0);
+        // Обчислюємо маржу динамічно на основі деталей та робіт
+        const detailsAmount = calculateDetailsMarginFromAct(actData);
+        const workAmount = calculateWorkProfitFromAct(actData);
         const totalAmount = detailsAmount + workAmount;
 
         const clientId = actItem.client_id;
@@ -1081,11 +1167,11 @@ export function updatevutratuTable(): void {
 
       amountCell.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-          <span style="color: ${workColor}; font-size: 0.95em; font-weight: 500;">
-            ${workSign}${formatNumber(expense.workAmount)}
-          </span>
           <span style="color: ${detailsColor}; font-size: 0.95em; font-weight: 500;">
             ${detailsSign}${formatNumber(expense.detailsAmount)}
+          </span>
+          <span style="color: ${workColor}; font-size: 0.95em; font-weight: 500;">
+            ${workSign}${formatNumber(expense.workAmount)}
           </span>
         </div>
       `;

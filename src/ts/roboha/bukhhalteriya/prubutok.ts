@@ -442,15 +442,23 @@ function calculateDetailsMarginFromAct(actData: ActData): number {
     const scladId = det.sclad_id;
     const quantity = Number(det.Кількість) || 0;
     const salePrice = Number(det.Ціна) || 0;
+    const sum = salePrice * quantity;
 
     if (scladId) {
+      // Є sclad_id - обчислюємо маржу як різницю між ціною продажу і закупівельною ціною
       const purchasePrice = purchasePricesCache.get(scladId);
       if (purchasePrice !== undefined) {
         const margin = (salePrice - purchasePrice) * quantity;
         totalMargin += margin;
+      } else {
+        // sclad_id є, але закупівельна ціна не знайдена - вважаємо маржу = 0
+        totalMargin += 0;
       }
+    } else {
+      // Немає sclad_id - деталь без закупівельної ціни
+      // Маржа = вся сума (вважаємо закупівельна ціна = 0)
+      totalMargin += sum;
     }
-    // Якщо немає sclad_id - деталь без закупівельної ціни, маржа = 0
   }
 
   return Number(totalMargin.toFixed(2));

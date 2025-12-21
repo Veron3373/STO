@@ -450,21 +450,29 @@ function calculateDetailsMarginFromAct(actData: ActData): number {
         totalMargin += margin;
       }
     }
+    // Якщо немає sclad_id - деталь без закупівельної ціни, маржа = 0
   }
 
   return Number(totalMargin.toFixed(2));
 }
 
-// Обчислює маржу робіт динамічно на основі робіт в акті
+// Обчислює прибуток робіт на основі збереженого поля "Прибуток" в кожній роботі
 function calculateWorkProfitFromAct(actData: ActData): number {
   const works = actData.Роботи || [];
   let totalProfit = 0;
 
   for (const work of works) {
-    const sum = (Number(work.Кількість) || 0) * (Number(work.Ціна) || 0);
-    const salary = Number(work.Зарплата) || 0;
-    const profit = Math.max(0, sum - salary);
-    totalProfit += profit;
+    // Використовуємо вже обчислене поле "Прибуток" яке збережене при збереженні акту
+    // Прибуток = Сума - Зарплата слюсаря
+    if (work.Прибуток !== undefined) {
+      totalProfit += Number(work.Прибуток) || 0;
+    } else {
+      // Fallback для старих актів без поля Прибуток
+      const sum = (Number(work.Кількість) || 0) * (Number(work.Ціна) || 0);
+      const salary = Number(work.Зарплата) || 0;
+      const profit = Math.max(0, sum - salary);
+      totalProfit += profit;
+    }
   }
 
   return Number(totalProfit.toFixed(2));

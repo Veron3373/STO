@@ -65,8 +65,9 @@ interface ActChangeRecord {
   auto?: string; // ✅ Дані автомобіля з поточного акту
 }
 
-// КЕШ: Зберігаємо ТІЛЬКИ ЦІНУ (суму перерахуємо від кількості при збереженні)
-const hiddenColumnsCache = new Map<string, number>();
+// КЕШ: Зберігаємо ПОВНІ ДАНІ РЯДКІВ (для всіх ролей з прихованими колонками)
+// Ключ: "type:name" (наприклад, "detail:Масляний фільтр")
+const fullRowDataCache = new Map<string, ParsedItem>();
 
 // КЕШ: Закупівельні ціни зі складу для обчислення маржі
 const purchasePricesCache = new Map<number, number>();
@@ -129,16 +130,13 @@ const validateActId = (actId: number): void => {
 };
 
 /**
- * Зберігає ціни з об'єкта даних (JSON) у тимчасовий кеш.
- * Це потрібно для Слюсаря, у якого ціни приховані в HTML.
+ * Зберігає ПОВНІ дані рядків у тимчасовий кеш.
+ * Це потрібно для ВСІХ ролей з прихованими колонками (Слюсар, Приймальник, Складовщик, Запчастист).
  */
 export function cacheHiddenColumnsData(actDetails: any): void {
-  hiddenColumnsCache.clear();
+  fullRowDataCache.clear();
 
-  // Якщо користувач не Слюсар, можна не кешувати (але для надійності залишимо)
-  if (userAccessLevel !== "Слюсар") return;
-
-  console.log("💾 Кешування прихованих цін для Слюсаря...");
+  console.log("💾 Кешування повних даних рядків...");
 
   const details = Array.isArray(actDetails?.["Деталі"])
     ? actDetails["Деталі"]
@@ -147,21 +145,47 @@ export function cacheHiddenColumnsData(actDetails: any): void {
     ? actDetails["Роботи"]
     : [];
 
-  // Кешуємо ціни деталей
+  // Кешуємо деталі
   details.forEach((d: any) => {
     const name = d["Деталь"]?.trim();
-    const price = Number(d["Ціна"]) || 0;
-    if (name) hiddenColumnsCache.set(name, price);
+    if (!name) return;
+
+    const cacheKey = `detail:${name}`;
+    fullRowDataCache.set(cacheKey, {
+      type: "detail",
+      name,
+      price: Number(d["Ціна"]) || 0,
+      sum: Number(d["Сума"]) || 0,
+      catalog: d["Каталог"] || "",
+      quantity: Number(d["Кількість"]) || 0,
+      slyusarSum: 0,
+      pibMagazin: d["Магазин"] || "",
+      sclad_id: d["sclad_id"] || null,
+      slyusar_id: null,
+    });
   });
 
-  // Кешуємо ціни робіт
+  // Кешуємо роботи
   works.forEach((w: any) => {
     const name = w["Робота"]?.trim();
-    const price = Number(w["Ціна"]) || 0;
-    if (name) hiddenColumnsCache.set(name, price);
+    if (!name) return;
+
+    const cacheKey = `work:${name}`;
+    fullRowDataCache.set(cacheKey, {
+      type: "work",
+      name,
+      price: Number(w["Ціна"]) || 0,
+      sum: Number(w["Сума"]) || 0,
+      catalog: w["Каталог"] || "",
+      quantity: Number(w["Кількість"]) || 0,
+      slyusarSum: Number(w["Зарплата"]) || 0,
+      pibMagazin: w["Слюсар"] || "",
+      sclad_id: null,
+      slyusar_id: w["slyusar_id"] || null,
+    });
   });
 
-  console.log(`📦 Закешовано цін для ${hiddenColumnsCache.size} позицій.`);
+  console.log(`📦 Закешовано ${fullRowDataCache.size} позицій.`);
 }
 
 /* =============================== РОБОТА З ТАБЛИЦЕЮ =============================== */
@@ -200,8 +224,6 @@ function readTableNewNumbers(): Map<number, number> {
 }
 
 export function parseTableRows(): ParsedItem[] {
-  const isRestricted = userAccessLevel === "Слюсар";
-
   console.log(`📊 Збір даних таблиці. Рівень доступу: ${userAccessLevel}`);
 
   const tableRows = document.querySelectorAll(
@@ -214,54 +236,77 @@ export function parseTableRows(): ParsedItem[] {
     const name = getCellText(nameCell);
     if (!name) return;
 
+    // Визначаємо тип рядка
+    const typeFromCell = nameCell.getAttribute("data-type");
+    const type =
+      typeFromCell === "works" || globalCache.works.includes(name)
+        ? "work"
+        : "detail";
+
+    // Створюємо ключ для кешу
+    const cacheKey = `${type}:${name}`;
+    const cachedData = fullRowDataCache.get(cacheKey);
+
+    // Отримуємо посилання на всі комірки
     const quantityCell = row.querySelector(
       '[data-name="id_count"]'
     ) as HTMLElement;
     const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
-
-    const pibMagazinCell = globalCache.settings.showPibMagazin
-      ? (row.querySelector('[data-name="pib_magazin"]') as HTMLElement)
-      : null;
-    const catalogCell = globalCache.settings.showCatalog
-      ? (row.querySelector('[data-name="catalog"]') as HTMLElement)
-      : null;
+    const pibMagazinCell = row.querySelector(
+      '[data-name="pib_magazin"]'
+    ) as HTMLElement;
+    const catalogCell = row.querySelector(
+      '[data-name="catalog"]'
+    ) as HTMLElement;
     const slyusarSumCell = row.querySelector(
       '[data-name="slyusar_sum"]'
     ) as HTMLElement;
 
-    // 1. Кількість беремо завжди з таблиці (користувач міг її змінити)
+    // 1. Кількість завжди беремо з DOM (користувач міг її змінити)
     const quantity = parseNum(quantityCell?.textContent);
 
+    // 2. Перевіряємо видимість колонок та беремо дані
     let price = 0;
     let sum = 0;
+    let pibMagazin = "";
+    let catalog = "";
+    let slyusarSum = 0;
 
-    // 2. Логіка отримання ЦІНИ та СУМИ
-    if (isRestricted) {
-      // === ЛОГІКА ДЛЯ СЛЮСАРЯ ===
-      // Шукаємо ціну в кеші за назвою
-      const cachedPrice = hiddenColumnsCache.get(name);
-
-      if (cachedPrice !== undefined) {
-        price = cachedPrice;
-        sum = price * quantity; // Перераховуємо суму
-        // console.log(`✅ (Слюсар) Відновлено ціну для "${name}": ${price}, Сума: ${sum}`);
-      } else {
-        // Якщо це новий рядок, якого не було в базі - ціна 0 (це нормально)
-        price = 0;
-        sum = 0;
-        console.log(`⚠️ (Слюсар) Новий рядок, ціна 0: "${name}"`);
-      }
-    } else {
-      // === ЛОГІКА ДЛЯ АДМІНА/ІНШИХ ===
-      // Беремо значення прямо з таблиці
-      price = parseNum(priceCell?.textContent);
-      sum = parseNum(sumCell?.textContent);
+    // Ціна: якщо видима - з DOM, якщо прихована - з кешу
+    if (priceCell && priceCell.offsetParent !== null) {
+      price = parseNum(priceCell.textContent);
+    } else if (cachedData) {
+      price = cachedData.price;
     }
 
-    const pibMagazin = getCellText(pibMagazinCell);
-    const catalog = getCellText(catalogCell);
-    const slyusarSum = parseNum(slyusarSumCell?.textContent);
+    // Сума: якщо видима - з DOM, якщо прихована - з кешу
+    if (sumCell && sumCell.offsetParent !== null) {
+      sum = parseNum(sumCell.textContent);
+    } else if (cachedData) {
+      sum = cachedData.sum;
+    }
+
+    // ПІБ_Магазин: якщо видимий - з DOM, якщо прихований - з кешу
+    if (pibMagazinCell && pibMagazinCell.offsetParent !== null) {
+      pibMagazin = getCellText(pibMagazinCell);
+    } else if (cachedData) {
+      pibMagazin = cachedData.pibMagazin;
+    }
+
+    // Каталог: якщо видимий - з DOM, якщо прихований - з кешу
+    if (catalogCell && catalogCell.offsetParent !== null) {
+      catalog = getCellText(catalogCell);
+    } else if (cachedData) {
+      catalog = cachedData.catalog;
+    }
+
+    // Зарплата: якщо видима - з DOM, якщо прихована - з кешу
+    if (slyusarSumCell && slyusarSumCell.offsetParent !== null) {
+      slyusarSum = parseNum(slyusarSumCell.textContent);
+    } else if (cachedData) {
+      slyusarSum = cachedData.slyusarSum || 0;
+    }
 
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
     const sclad_id = scladIdAttr ? Number(scladIdAttr) : null;
@@ -269,13 +314,7 @@ export function parseTableRows(): ParsedItem[] {
       ? Number(nameCell.getAttribute("data-slyusar-id"))
       : null;
 
-    const typeFromCell = nameCell.getAttribute("data-type");
-    const type =
-      typeFromCell === "works" || globalCache.works.includes(name)
-        ? "work"
-        : "detail";
-
-    items.push({
+    const item: ParsedItem = {
       type,
       name,
       quantity,
@@ -286,9 +325,15 @@ export function parseTableRows(): ParsedItem[] {
       sclad_id,
       slyusar_id,
       slyusarSum,
-    });
+    };
+
+    items.push(item);
+
+    // Оновлюємо кеш актуальними даними
+    fullRowDataCache.set(cacheKey, item);
   });
 
+  console.log(`✅ Зібрано ${items.length} позицій з таблиці`);
   return items;
 }
 

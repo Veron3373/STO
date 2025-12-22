@@ -593,7 +593,7 @@ function showNoAccessNotification(): void {
   }, 3000);
 }
 
-function applyAccessRestrictionsToNewRow(): void {
+async function applyAccessRestrictionsToNewRow(): Promise<void> {
   const table = document.querySelector(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} table`
   );
@@ -602,20 +602,20 @@ function applyAccessRestrictionsToNewRow(): void {
   const lastRow = table.querySelector("tbody tr:last-child");
   if (!lastRow) return;
 
-  const cells = lastRow.querySelectorAll("td");
-  cells.forEach((cell) => {
-    const dataName = cell.getAttribute("data-name");
+  // Перевіряємо чи користувач може бачити колонки ціни/суми
+  const canSeePriceCols = await canUserSeePriceColumns();
 
-    // Ціна / Сума — як раніше ховаємо для слюсаря (якщо тобі ще потрібно)
-    if (dataName === "price" || dataName === "sum") {
-      cell.classList.add("hidden");
-    }
-
-    // Зар-та ховаємо ТІЛЬКИ якщо в налаштуваннях вимкнена
-    if (dataName === "slyusar_sum" && !globalCache.settings.showZarplata) {
-      cell.classList.add("hidden");
-    }
+  // Застосовуємо видимість до всіх колонок ціни/суми в останньому рядку
+  const priceCells = lastRow.querySelectorAll<HTMLElement>('[data-col="price"], [data-col="sum"]');
+  priceCells.forEach((cell) => {
+    cell.style.display = canSeePriceCols ? "" : "none";
   });
+
+  // Перевіряємо видимість колонки зарплати
+  const slyusarSumCell = lastRow.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+  if (slyusarSumCell && !globalCache.settings.showZarplata) {
+    slyusarSumCell.style.display = "none";
+  }
 }
 
 /**
@@ -993,11 +993,10 @@ async function addModalHandlers(
     initializeActWarnings(ACT_ITEMS_TABLE_CONTAINER_ID, actId);
 
     const addRowButton = document.getElementById("add-row-button");
-    addRowButton?.addEventListener("click", () => {
+    addRowButton?.addEventListener("click", async () => {
       addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
-      if (userAccessLevel === "Слюсар") {
-        applyAccessRestrictionsToNewRow();
-      }
+      // Застосовуємо обмеження доступу для ВСІХ ролей
+      await applyAccessRestrictionsToNewRow();
     });
   }
 

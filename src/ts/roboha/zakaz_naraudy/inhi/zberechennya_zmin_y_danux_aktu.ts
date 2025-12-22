@@ -619,7 +619,7 @@ function convertActItemsToParsedItems(items: ActItem[]): ParsedItem[] {
     catalog: item.catalog || "",
     sclad_id: item.sclad_id ?? null,
     slyusar_id: item.slyusar_id ?? null,
-    slyusarSum: 0, // ActItem не має цього поля, використовуємо 0
+    slyusarSum: item.slyusarSum || 0, // ✅ Використовуємо slyusarSum з ActItem
   }));
 }
 
@@ -632,6 +632,9 @@ function compareActChanges(
 ): { added: ParsedItem[]; deleted: ParsedItem[] } {
   // Конвертуємо ActItem[] в ParsedItem[] для порівняння
   const initialParsed = convertActItemsToParsedItems(initialItems);
+
+  console.log(`🔍 [compareActChanges] Початкові елементи (${initialParsed.length}):`, initialParsed);
+  console.log(`🔍 [compareActChanges] Поточні елементи (${currentItems.length}):`, currentItems);
 
   // Створюємо унікальний ключ для кожної позиції (тип + назва)
   const createKey = (item: ParsedItem) => `${item.type}:${item.name}`;
@@ -654,6 +657,7 @@ function compareActChanges(
     const key = createKey(item);
     if (!initialMap.has(key)) {
       added.push(item);
+      console.log(`➕ [compareActChanges] Додано: ${key}`, item);
     }
   });
 
@@ -663,8 +667,11 @@ function compareActChanges(
     const key = createKey(item);
     if (!currentMap.has(key)) {
       deleted.push(item);
+      console.log(`➖ [compareActChanges] Видалено: ${key}`, item);
     }
   });
+
+  console.log(`📊 [compareActChanges] Результат: додано ${added.length}, видалено ${deleted.length}`);
 
   return { added, deleted };
 }

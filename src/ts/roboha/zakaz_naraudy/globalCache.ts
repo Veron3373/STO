@@ -84,6 +84,7 @@ export interface ActItem {
   person_or_store: string;
   sclad_id?: number | null;
   slyusar_id?: number | null;
+  slyusarSum?: number; // ✅ Додано для зарплати слюсаря
 }
 
 export interface GlobalDataCache {

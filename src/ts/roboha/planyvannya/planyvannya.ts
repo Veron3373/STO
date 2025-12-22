@@ -1769,45 +1769,59 @@ class SchedulerApp {
     if (occupancyPercent > 0) {
       // Кольорова схема
       let fillColor = "#4caf50"; // Зелений
-      if (isFullyOccupied) {
+      if (isFullyOccupied || occupancyPercent >= 99.9) {
         fillColor = "#f44336"; // Червоний - всі пости завантажені
       } else if (occupancyPercent > 66) {
         fillColor = "#ff9800"; // Помаранчевий
       }
 
-      // Розраховуємо кут для заливки (0% = 0°, 100% = 360°)
-      const angle = (occupancyPercent / 100) * 360;
-      const angleRad = (angle * Math.PI) / 180;
+      // Якщо 100% (або майже), малюємо повне коло замість шляху, бо path зникає при 360 градусах
+      if (occupancyPercent >= 99.9) {
+        const fullCircle = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle"
+        );
+        fullCircle.setAttribute("cx", centerX.toString());
+        fullCircle.setAttribute("cy", centerY.toString());
+        fullCircle.setAttribute("r", radius.toString());
+        fullCircle.setAttribute("fill", fillColor);
+        fullCircle.setAttribute("opacity", "0.8");
+        svg.appendChild(fullCircle);
+      } else {
+        // Розраховуємо кут для заливки (0% = 0°, 100% = 360°)
+        const angle = (occupancyPercent / 100) * 360;
+        const angleRad = (angle * Math.PI) / 180;
 
-      // Координати кінцевої точки дуги (починаємо зверху, тобто -90°)
-      const startAngle = -Math.PI / 2;
-      const endAngle = startAngle + angleRad;
+        // Координати кінцевої точки дуги (починаємо зверху, тобто -90°)
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + angleRad;
 
-      const x1 = centerX + radius * Math.cos(startAngle);
-      const y1 = centerY + radius * Math.sin(startAngle);
-      const x2 = centerX + radius * Math.cos(endAngle);
-      const y2 = centerY + radius * Math.sin(endAngle);
+        const x1 = centerX + radius * Math.cos(startAngle);
+        const y1 = centerY + radius * Math.sin(startAngle);
+        const x2 = centerX + radius * Math.cos(endAngle);
+        const y2 = centerY + radius * Math.sin(endAngle);
 
-      // Визначаємо чи дуга більша за 180°
-      const largeArcFlag = angle > 180 ? 1 : 0;
+        // Визначаємо чи дуга більша за 180°
+        const largeArcFlag = angle > 180 ? 1 : 0;
 
-      // Створюємо path для плавної заливки
-      const path = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "path"
-      );
-      const pathData = [
-        `M ${centerX} ${centerY}`,
-        `L ${x1} ${y1}`,
-        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-        "Z",
-      ].join(" ");
+        // Створюємо path для плавної заливки
+        const path = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "path"
+        );
+        const pathData = [
+          `M ${centerX} ${centerY}`,
+          `L ${x1} ${y1}`,
+          `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+          "Z",
+        ].join(" ");
 
-      path.setAttribute("d", pathData);
-      path.setAttribute("fill", fillColor);
-      path.setAttribute("opacity", "0.8");
+        path.setAttribute("d", pathData);
+        path.setAttribute("fill", fillColor);
+        path.setAttribute("opacity", "0.8");
 
-      svg.appendChild(path);
+        svg.appendChild(path);
+      }
     }
 
     return svg;

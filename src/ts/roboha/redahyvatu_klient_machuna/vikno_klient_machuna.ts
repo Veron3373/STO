@@ -70,13 +70,7 @@ export function getModalFormValues() {
   };
 }
 
-function resetFormState() {
-  selectedClientId = null;
-  selectedCarId = null;
-  userConfirmation = null;
-  const confirmOverlay = document.getElementById(savePromptModalId);
-  if (confirmOverlay) confirmOverlay.classList.remove("active");
-}
+
 
 export const modalOverlayId = "custom-modal-create-sakaz_narad";
 const modalClass = "modal-content-create-sakaz_narad";
@@ -863,33 +857,44 @@ export async function showModalCreateSakazNarad() {
     modalElement.remove();
     setTransferredActComment("");
   });
-  const { data: allClients } = await supabase
-    .from("clients")
-    .select("client_id, data");
-  const clientOptions =
-    allClients
-      ?.map((c) => ({
-        id: c.client_id,
-        fullName: c.data?.["ПІБ"] || "",
-        phone: c.data?.["Телефон"] || "",
-        data: c.data || {},
-      }))
-      .filter((c) => c.fullName)
-      .sort((a, b) => a.fullName.localeCompare(b.fullName)) || [];
-  const { data: allCars } = await supabase
-    .from("cars")
-    .select("cars_id, client_id, data");
-  const allCarItems =
-    allCars
-      ?.map((c) => ({
-        ...(c.data || {}),
-        id: c.cars_id,
-        client_id: c.client_id,
-      }))
-      .filter((c) => c["Номер авто"] || c["Авто"])
-      .sort((a, b) =>
-        (a["Авто"] || "").toString().localeCompare((b["Авто"] || "").toString())
-      ) || [];
+  let clientOptions: any[] = [];
+  let allCarItems: any[] = [];
+
+  const fetchData = async () => {
+    await loadUniqueData();
+    const { data: allClients } = await supabase
+      .from("clients")
+      .select("client_id, data");
+    clientOptions =
+      allClients
+        ?.map((c) => ({
+          id: c.client_id,
+          fullName: c.data?.["ПІБ"] || "",
+          phone: c.data?.["Телефон"] || "",
+          data: c.data || {},
+        }))
+        .filter((c) => c.fullName)
+        .sort((a, b) => a.fullName.localeCompare(b.fullName)) || [];
+
+    const { data: allCars } = await supabase
+      .from("cars")
+      .select("cars_id, client_id, data");
+    allCarItems =
+      allCars
+        ?.map((c) => ({
+          ...(c.data || {}),
+          id: c.cars_id,
+          client_id: c.client_id,
+        }))
+        .filter((c) => c["Номер авто"] || c["Авто"])
+        .sort((a, b) =>
+          (a["Авто"] || "").toString().localeCompare(
+            (b["Авто"] || "").toString()
+          )
+        ) || [];
+  };
+
+  await fetchData();
   const getCarsForClient = (clientId: string) => {
     return allCarItems.filter((cars) => cars.client_id === clientId);
   };
@@ -937,10 +942,14 @@ export async function showModalCreateSakazNarad() {
     }
     const confirmed = await showSavePromptModal();
     if (!confirmed) return;
-    await saveClientAndCarToDatabase();
+    const result = await saveClientAndCarToDatabase();
+    if (result && typeof result === "object") {
+      if (result.clientId) selectedClientId = result.clientId;
+      if (result.carId) selectedCarId = result.carId;
+    }
     await loadActsTable();
-    document.getElementById(modalOverlayId)?.remove();
-    resetFormState();
+    await fetchData();
+    setupNormalAutocompletes();
   });
   const btnCreate = document.getElementById(btnCreateId);
   if (btnCreate) {

@@ -1512,7 +1512,6 @@ export class PostArxiv {
       actBtn.style.cursor = "pointer";
       actBtn.style.borderRadius = "50%";
 
-
       actBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2024,9 +2023,17 @@ export class PostArxiv {
       this.closeContextMenu();
       showNotification("Запис видалено", "success");
 
-      // Оновлюємо індикатори зайнятості
-      if (typeof (window as any).refreshOccupancyIndicators === "function") {
-        (window as any).refreshOccupancyIndicators();
+      // Оновлюємо індикатори зайнятості для поточної дати
+      const currentDate = (window as any).parseCurrentDate?.();
+      if (
+        currentDate &&
+        typeof (window as any).refreshOccupancyIndicatorsForDates === "function"
+      ) {
+        setTimeout(
+          () =>
+            (window as any).refreshOccupancyIndicatorsForDates([currentDate]),
+          100
+        );
       }
     });
 

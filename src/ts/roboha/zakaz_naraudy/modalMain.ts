@@ -1137,11 +1137,30 @@ function handleInputChange(event: Event): void {
         if (row && pibMagCell) {
           if (type === "works") {
             const userName = getUserNameFromLocalStorage();
-            if (userName) {
-              // ⬇️ КРИТИЧНО: Встановлюємо ім'я ЗАВЖДИ для робіт
+            const userLevel = getUserAccessLevelFromLocalStorage();
+
+            if (userName && userLevel === "Слюсар") {
+              // ⬇️ КРИТИЧНО: Встановлюємо ім'я ЗАВЖДИ для робіт (тільки якщо Слюсар)
               pibMagCell.textContent = userName;
               pibMagCell.setAttribute("data-type", "slyusars");
               void calculateRowSum(row);
+            } else {
+              // Якщо не слюсар - не заповнюємо автоматично (або очищаємо, якщо треба)
+              // Але тут ми не очищаємо примусово, якщо вже щось є? 
+              // Логіка: "keep it clean". 
+              // Якщо це ручне введення, можливо користувач сам щось ввів?
+              // Але функція expandName могла змінити текст. 
+              // Давайте дотримуватись "explicitly cleared/kept empty".
+              // Якщо pibMagCell вже мав значення, чи треба його терти?
+              // Раніше він не тер if (userName) else ...? 
+              // Раніше else не було.
+
+              // Якщо користувач (Адмін) вибрав роботу, поле слюсаря має бути пустим?
+              // Так.
+              if (!pibMagCell.textContent?.trim()) {
+                // Тільки якщо порожнє - залишаємо порожнім (і ставимо slyusars щоб був випадаючий список слюсарів)
+                pibMagCell.setAttribute("data-type", "slyusars");
+              }
             }
           } else {
             // Для деталей очищуємо, якщо порожньо
@@ -1206,6 +1225,24 @@ export function getUserNameFromLocalStorage(): string | null {
   } catch (error) {
     console.warn(
       "Помилка при отриманні імені користувача з localStorage:",
+      error
+    );
+    return null;
+  }
+}
+
+/** Отримує рівень доступу користувача з localStorage */
+export function getUserAccessLevelFromLocalStorage(): string | null {
+  try {
+    const USER_DATA_KEY = "userAuthData";
+    const storedData = localStorage.getItem(USER_DATA_KEY);
+    if (!storedData) return null;
+
+    const userData = JSON.parse(storedData);
+    return userData?.["Доступ"] || null;
+  } catch (error) {
+    console.warn(
+      "Помилка при отриманні рівня доступу з localStorage:",
       error
     );
     return null;

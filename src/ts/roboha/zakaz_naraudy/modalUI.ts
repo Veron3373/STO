@@ -511,9 +511,14 @@ function createRowHtml(
 
   return `
     <tr>
-      <td class="row-index">${index + 1}</td>
+      <td class="row-index">${item?.type === "work"
+      ? `🛠️ ${index + 1}`
+      : item?.type === "detail"
+        ? `⚙️ ${index + 1}`
+        : `${index + 1}`
+    }</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none;">${item?.name || ""
+        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${item?.name || ""
     }</div>
         ${showDeleteBtn
       ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`

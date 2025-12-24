@@ -264,6 +264,9 @@ function ensureAutocompleteStyles() {
     .autocomplete-item.neutral { color: #888; }
     .autocomplete-item.positive { color: #2e7d32; }
     .editable-autocomplete { transition: box-shadow 120ms ease; }
+    /* Styles for Catalog specific items */
+    .autocomplete-item.item-work-cat { color: #2e7d32; } /* Green */
+    .autocomplete-item.item-detail-cat { color: #1565c0; } /* Blue */
   `;
   const tag = document.createElement("style");
   tag.id = "autocomplete-styles";
@@ -441,7 +444,8 @@ function closeAutocompleteList() {
   stopAutoFollow();
   if (currentAutocompleteInput) {
     currentAutocompleteInput.classList.remove("ac-open");
-    // Only return focus if it wasn't lost to another document element
+    // Ensure we don't clear content if it was a valid selection, but here we just close list.
+    // Logic for returning focus is below.
     if (document.activeElement && document.activeElement.closest('.autocomplete-list')) {
       currentAutocompleteInput.focus();
     }
@@ -474,11 +478,15 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
     if (itemType === "detail") li.classList.add("item-detail");
     if (itemType === "work") li.classList.add("item-work");
+    // Special classes for Catalog dropdown colors
+    if (itemType === "work") li.classList.add("item-work-cat");
+    if (itemType === "detail") li.classList.add("item-detail-cat");
+
     li.tabIndex = 0;
     li.dataset.value = value;
     if (sclad_id !== undefined) li.dataset.scladId = String(sclad_id);
     if (fullName) li.dataset.fullName = fullName;
-    if (itemType) li.dataset.itemType = itemType; // ← ДОДАЙТЕ ЦЕЙ РЯДОК
+    if (itemType) li.dataset.itemType = itemType;
 
     const m = label.match(/К-ть:\s*(-?\d+)/);
     if (m) {
@@ -526,32 +534,48 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         | undefined;
 
       const dataName = target.getAttribute("data-name");
+      const row = target.closest("tr")!;
+      const indexCell = row.querySelector(".row-index");
+
       if (dataName === "catalog") {
         target.textContent = chosenValue;
-        if (chosenScladId !== undefined) {
-          applyCatalogSelectionById(target, chosenScladId, chosenFullName);
-        } else if (chosenItemType === "work" && chosenFullName) {
-          // Logic for selecting a Work ID
-          const row = target.closest("tr")!;
-          const nameCell = row.querySelector(
-            '[data-name="name"]'
-          ) as HTMLElement | null;
-          if (nameCell) {
-            setCellText(nameCell, shortenName(chosenFullName));
-            nameCell.setAttribute("data-type", "works");
 
-            // Trigger input on name to update pib_magazin type logic
-            nameCell.dispatchEvent(new Event("input", { bubbles: true }));
+        if (chosenItemType === "work") {
+          // Case: Work selected in Catalog
+          if (chosenFullName) {
+            const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+            if (nameCell) {
+              setCellText(nameCell, shortenName(chosenFullName));
+              nameCell.setAttribute("data-type", "works");
+              nameCell.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+          }
+          // Update # to 🛠️
+          if (indexCell) {
+            const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+            indexCell.textContent = `🛠️ ${num}`;
           }
 
-          // Also set pib_magazin to slyusars
-          const pibMagCell = row.querySelector(
-            '[data-name="pib_magazin"]'
-          ) as HTMLElement | null;
-          if (pibMagCell) {
-            pibMagCell.setAttribute("data-type", "slyusars");
+          // Set pib_magazin to slyusars
+          const pibMagCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement | null;
+          if (pibMagCell) pibMagCell.setAttribute("data-type", "slyusars");
+
+        } else {
+          // Case: Detail selected in Catalog (via sclad_id or just type)
+          if (chosenScladId !== undefined) {
+            applyCatalogSelectionById(target, chosenScladId, chosenFullName);
           }
+          // Update # to ⚙️
+          if (indexCell) {
+            const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+            indexCell.textContent = `⚙️ ${num}`;
+          }
+
+          // Set type to details if not set by applyCatalogSelection
+          const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+          if (nameCell) nameCell.setAttribute("data-type", "details");
         }
+
       } else if (dataName === "name") {
         // Suppress next focusin/input trigger
         _suppressAutocomplete = true;
@@ -560,15 +584,21 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         const shortenedText = shortenName(fullText);
         target.textContent = shortenedText;
 
+        // Determine Type
         const rawItemType =
           chosenItemType ||
           (globalCache.details.includes(fullText) ? "detail" : "work");
 
         const typeToSet = rawItemType === "detail" ? "details" : "works";
-
         target.setAttribute("data-type", typeToSet);
 
-        const row = target.closest("tr")!;
+        // Update # Emoji
+        if (indexCell) {
+          const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+          const icon = typeToSet === "works" ? "🛠️" : "⚙️";
+          indexCell.textContent = `${icon} ${num}`;
+        }
+
         const pibMagCell = row.querySelector(
           '[data-name="pib_magazin"]'
         ) as HTMLElement | null;
@@ -579,43 +609,35 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
             typeToSet === "details" ? "shops" : "slyusars"
           );
 
-          // ⬇️ ДОДАНО: Підтягуємо ім'я слюсаря для робіт
           if (typeToSet === "works") {
+            // Auto-fill Mechanic Name
             const userName = getUserNameFromLocalStorage();
             const userLevel = getUserAccessLevelFromLocalStorage();
 
             if (userName && userLevel === "Слюсар") {
               pibMagCell.textContent = userName;
-              console.log(`✅ Встановлено слюсаря з localStorage: ${userName}`);
             } else {
               pibMagCell.textContent = "";
             }
 
-            // ⬇️ NEW: Auto-fill Catalog with Work ID
+            // Auto-fill Catalog with Work ID
             const workObj = globalCache.worksWithId.find(w => w.name === fullText);
             if (workObj) {
-              const catalogCell = row.querySelector(
-                '[data-name="catalog"]'
-              ) as HTMLElement | null;
+              const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
               if (catalogCell) {
                 setCellText(catalogCell, workObj.work_id);
               }
             }
           } else {
+            // If Detail selected via Name
             pibMagCell.textContent = "";
           }
         }
 
-        // позначаємо, що ця зміна прийшла з автодоповнення
         (target as any)._fromAutocomplete = true;
-
-        // poзначаємо, що ця зміна прийшла з автодоповнення
-        (target as any)._fromAutocomplete = true;
-
         target.dispatchEvent(new Event("input", { bubbles: true }));
         target.focus();
 
-        // Clear suppression after a short timeout to allow normal editing later
         setTimeout(() => { _suppressAutocomplete = false; }, 200);
       } else {
         target.textContent = chosenValue;
@@ -983,36 +1005,63 @@ export function setupAutocompleteForEditableCells(
         '[data-name="name"]'
       ) as HTMLElement | null;
 
-      // Check for Work Mode conditions
-      const nameText = (nameCell?.textContent || "").toLowerCase();
-      const isWorkRow =
-        nameCell?.getAttribute("data-type") === "works" ||
-        nameText.includes("деталь") ||
-        (row.querySelector('.row-index')?.textContent?.includes('🛠️') ?? false);
+      /* Mixed Search Logic for Catalog: Works (Green) + Sclad (Blue) */
 
-      if (isWorkRow) {
-        // WORK ID LOOKUP MODE
-        if (query.length >= 1) { // User said "at least one symbol"
-          const matchedWorks = globalCache.worksWithId.filter(w =>
-            w.work_id.toLowerCase().startsWith(query)
-          ).slice(0, 50);
+      const query = currTextRaw.toLowerCase();
 
-          suggestions = matchedWorks.map(w => ({
-            label: `${w.work_id} - ${w.name}`,
-            value: w.work_id,
-            fullName: w.name,
-            itemType: "work"
-          }));
+      if (query.length >= 1) {
+        // 1. Search Works (IDs)
+        const matchedWorks = globalCache.worksWithId.filter(w =>
+          w.work_id.toLowerCase().startsWith(query)
+        ).slice(0, 20);
+
+        const workSuggestions: Suggest[] = matchedWorks.map(w => ({
+          label: `${w.work_id} - ${w.name}`,
+          value: w.work_id,
+          fullName: w.name,
+          itemType: "work" // Will be Green
+        }));
+
+        // 2. Search Sclad (Legacy/Parts) - Blue
+        await ensureSkladLoaded();
+
+        let matchedParts: typeof globalCache.skladParts = [];
+
+        // Filter logic for parts:
+        const selectedName = (nameCell?.textContent || "").trim();
+        if (selectedName && nameCell?.getAttribute("data-type") === "details") {
+          const items = findScladItemsByName(selectedName);
+          matchedParts = items.filter(p => p.part_number.toLowerCase().startsWith(query));
         } else {
-          suggestions = [];
+          matchedParts = globalCache.skladParts.filter(p => p.part_number.toLowerCase().startsWith(query));
         }
+        matchedParts = matchedParts.slice(0, 20);
 
-        if (suggestions.length) renderAutocompleteList(target, suggestions);
-        else closeAutocompleteList();
+        const partSuggestions: Suggest[] = matchedParts.map(p => {
+          const qty = Number(p.quantity) || 0;
+          const qtyHtml = qty < 0 ? `<span class="neg">${qty}</span>` : `${qty}`;
+          const priceRounded = formatUA(Math.round(p.price));
+          return {
+            value: p.part_number,
+            sclad_id: p.sclad_id,
+            label: `${p.part_number} · К-ть: ${qty} по ${priceRounded}`,
+            labelHtml: `${p.part_number} · К-ть: ${qtyHtml} по ${priceRounded}`,
+            fullName: p.name,
+            itemType: "detail" // Will be Blue
+          };
+        });
 
-        removeCatalogInfo();
-        return; // Skip Sklad logic
+        suggestions = [...workSuggestions, ...partSuggestions];
       }
+
+      if (suggestions.length) {
+        renderAutocompleteList(target, suggestions);
+        removeCatalogInfo();
+        return;
+      }
+
+      if (suggestions.length === 0) closeAutocompleteList();
+
 
       // START STANDARD SKLAD LOGIC (if not work row)
 
@@ -1205,6 +1254,59 @@ export function setupAutocompleteForEditableCells(
           }
           if (catalogCell && pn && !findScladItemByPart(pn)) {
             catalogCell.removeAttribute("data-sclad-id");
+          }
+        }
+      }, 0);
+    }
+
+    if (
+      target &&
+      target.classList.contains("editable-autocomplete") &&
+      target.getAttribute("data-name") === "name"
+    ) {
+      setTimeout(() => {
+        const row = target.closest("tr");
+        const nameText = (target.textContent || "").trim();
+
+        if (row && nameText) {
+          const indexCell = row.querySelector(".row-index");
+          const currentType = target.getAttribute("data-type");
+
+          // Check exact matches if type is not set or we want to double check
+          const isDetail = globalCache.details.includes(nameText);
+          const isWork = globalCache.works.includes(nameText);
+
+          let finalType = currentType;
+
+          if (isDetail) finalType = "details";
+          else if (isWork) finalType = "works";
+          else if (!currentType || currentType === "") {
+            // Fallback for custom text -> Work
+            finalType = "works";
+          }
+
+          if (finalType !== currentType) {
+            target.setAttribute("data-type", finalType || "works");
+          }
+
+          // Update Emoji based on final type (or default to work if custom)
+          if (indexCell) {
+            const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+            const icon = finalType === "details" ? "⚙️" : "🛠️";
+            // Only update if it doesn't have the icon yet? Or always force it
+            if (!indexCell.textContent?.includes(icon)) {
+              indexCell.textContent = `${icon} ${num}`;
+            }
+          }
+
+          // Update pib_magazin type
+          const pibMagCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement | null;
+          if (pibMagCell) {
+            const targetPibType = (finalType === "details") ? "shops" : "slyusars";
+            if (pibMagCell.getAttribute("data-type") !== targetPibType) {
+              pibMagCell.setAttribute("data-type", targetPibType);
+              // Clear if type switched? Maybe safer to leave content if user typed it.
+            }
           }
         }
       }, 0);

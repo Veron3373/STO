@@ -111,19 +111,19 @@ async function addCarToDatabase(clientId: string, carData: any): Promise<string 
 
 // Головна функція збереження (працює відповідно до ❌ ➕ 🔁)
 export async function saveClientAndCarToDatabase(): Promise<{
-  clientId: string | null;
-  carId: string | null;
-} | void> {
+  client_id: string | null;
+  cars_id: string | null;
+}> {
   const values = getModalFormValues();
   if (!values.fullName || !values.phone) {
     console.error("❌ Обов'язкові поля (ПІБ, Телефон) не заповнені");
-    return;
+    return { client_id: null, cars_id: null };
   }
 
   // ❌ Видалення автомобіля
   if (userConfirmation === "no" && values.cars_id) {
     await deleteCarFromDatabase(values.cars_id);
-    return { clientId: values.client_id, carId: null };
+    return { client_id: values.client_id || null, cars_id: null };
   }
 
   // ➕ Створення нового автомобіля або зв'язування з існуючим клієнтом
@@ -136,14 +136,14 @@ export async function saveClientAndCarToDatabase(): Promise<{
 
     if (fetchError) {
       console.error("❌ Помилка при пошуку клієнта:", fetchError.message);
-      return;
+      return { client_id: null, cars_id: null };
     }
 
     let finalClientId: string | null = null;
     let finalCarId: string | null = null;
 
     if (existingClients && existingClients.length > 0) {
-      // Беремо першого співпадаючого клієнта (можна додати додаткову логіку для вибору, наприклад, за телефоном)
+      // Беремо першого співпадаючого клієнта
       const existingClient = existingClients[0];
       finalClientId = existingClient.client_id;
       finalCarId = await addCarToDatabase(finalClientId!, values);
@@ -151,6 +151,7 @@ export async function saveClientAndCarToDatabase(): Promise<{
       console.log(
         `✅ Автомобіль додано до існуючого клієнта (ID: ${finalClientId})`
       );
+      return { client_id: finalClientId, cars_id: finalCarId };
     } else {
       // Якщо клієнта немає, створюємо нового
       const { data: insertedClient, error: insertClientError } = await supabase
@@ -171,15 +172,17 @@ export async function saveClientAndCarToDatabase(): Promise<{
           "❌ Не вдалося створити клієнта:",
           insertClientError?.message
         );
-        return;
+        return { client_id: null, cars_id: null };
       }
+
       finalClientId = insertedClient.client_id;
       finalCarId = await addCarToDatabase(finalClientId!, values);
+
       console.log(
         `✅ Створено нового клієнта (ID: ${finalClientId}) та додано автомобіль`
       );
+      return { client_id: finalClientId, cars_id: finalCarId };
     }
-    return { clientId: finalClientId, carId: finalCarId };
   }
 
   // 🔁 Оновлення клієнта і автомобіля
@@ -224,8 +227,9 @@ export async function saveClientAndCarToDatabase(): Promise<{
         console.log("✅ Авто оновлено");
       }
     }
-    return { clientId: values.client_id, carId: values.cars_id };
+    return { client_id: values.client_id, cars_id: values.cars_id || null };
   }
 
   console.warn("⚠️ Незрозумілий стан або не вистачає ID. Дані не збережено.");
+  return { client_id: null, cars_id: null };
 }

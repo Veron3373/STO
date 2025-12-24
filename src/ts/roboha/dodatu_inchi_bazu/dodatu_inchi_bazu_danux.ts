@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const { data, error } = await supabase
           .from("works")
           .select("work_id, data")
-          .order("id", { ascending: true })
+          .order("work_id", { ascending: true })
           .limit(10000);
 
         if (error) throw error;

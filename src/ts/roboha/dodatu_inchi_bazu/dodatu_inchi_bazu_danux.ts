@@ -218,32 +218,98 @@ document.addEventListener("DOMContentLoaded", () => {
   if (exportWorksBtnRef) {
     exportWorksBtnRef.addEventListener("click", async () => {
       try {
-        const { data, error } = await supabase
-          .from("works")
-          .select("work_id, data")
-          .order("work_id", { ascending: true })
-          .limit(10000);
+        let allData: any[] = [];
+        let from = 0;
+        const step = 1000;
+        let keepFetching = true;
 
-        if (error) throw error;
-        if (!data || data.length === 0) {
+        // 1. Fetch ALL data using pagination
+        while (keepFetching) {
+          const { data, error } = await supabase
+            .from("works")
+            .select("work_id, data")
+            .order("work_id", { ascending: true })
+            .range(from, from + step - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < step) {
+              keepFetching = false;
+            } else {
+              from += step;
+            }
+          } else {
+            keepFetching = false;
+          }
+        }
+
+        if (allData.length === 0) {
           alert("Немає даних для експорту");
           return;
         }
 
-        let csvContent = "\uFEFF";
-        csvContent += "№;Опис\n";
+        // 2. Generate HTML-based Excel (.xls)
+        let tableRows = "";
+        allData.forEach((row) => {
+          const id = row.work_id || "";
+          // Escape HTML special chars in data to prevent broken layout
+          const rawData = String(row.data || "");
+          const desc = rawData
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
 
-        data.forEach((row: any) => {
-          const id = row.work_id ? String(row.work_id).replace(/"/g, '""') : "";
-          const desc = row.data ? String(row.data).replace(/"/g, '""') : "";
-          csvContent += `"${id}";"${desc}"\n`;
+          tableRows += `<tr><td>${id}</td><td>${desc}</td></tr>`;
         });
 
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const excelTemplate = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="UTF-8">
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Works</x:Name>
+                    <x:WorksheetOptions>
+                      <x:DisplayGridlines/>
+                    </x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <style>
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #000000; padding: 5px; text-align: left; vertical-align: top; }
+            </style>
+          </head>
+          <body>
+            <table>
+              <thead>
+                <tr>
+                  <th style="background-color: #f0f0f0; font-weight: bold;">№</th>
+                  <th style="background-color: #f0f0f0; font-weight: bold;">Опис</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+          </body>
+          </html>
+        `;
+
+        const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", "works_export.csv");
+        link.setAttribute("download", "robots_base.xls"); // Saving as .xls
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

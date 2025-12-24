@@ -89,6 +89,7 @@ export interface ActItem {
 
 export interface GlobalDataCache {
   works: string[];
+  worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
   slyusars: Array<{ Name: string;[k: string]: any }>;
   shops: Array<{ Name: string;[k: string]: any }>;
@@ -119,6 +120,7 @@ export interface GlobalDataCache {
 
 export const globalCache: GlobalDataCache = {
   works: [],
+  worksWithId: [],
   details: [],
   slyusars: [],
   shops: [],
@@ -190,7 +192,7 @@ export async function loadGlobalData(): Promise<void> {
       { data: shopsData },
       { data: skladRows, error: skladErr },
     ] = await Promise.all([
-      supabase.from("works").select("data"),
+      supabase.from("works").select("work_id, data"),
       supabase.from("details").select("data"),
       supabase.from("slyusars").select("data"),
       supabase.from("shops").select("data"),
@@ -215,14 +217,14 @@ export async function loadGlobalData(): Promise<void> {
       console.warn("⚠️ Не вдалося отримати sclad:", skladErr.message);
 
     // ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
-    globalCache.works =
-      worksData
-        ?.map((r: any) => {
-          // r.data - це просто текстовий рядок
-          const text = String(r.data || "").trim();
-          return text;
-        })
-        .filter(Boolean) || [];
+    // ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
+    globalCache.worksWithId =
+      worksData?.map((r: any) => ({
+        work_id: String(r.work_id || ""),
+        name: String(r.data || "").trim(),
+      })) || [];
+
+    globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
 
     globalCache.details =
       detailsData

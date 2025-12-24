@@ -528,8 +528,30 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
       const dataName = target.getAttribute("data-name");
       if (dataName === "catalog") {
         target.textContent = chosenValue;
-        if (chosenScladId !== undefined)
+        if (chosenScladId !== undefined) {
           applyCatalogSelectionById(target, chosenScladId, chosenFullName);
+        } else if (chosenItemType === "work" && chosenFullName) {
+          // Logic for selecting a Work ID
+          const row = target.closest("tr")!;
+          const nameCell = row.querySelector(
+            '[data-name="name"]'
+          ) as HTMLElement | null;
+          if (nameCell) {
+            setCellText(nameCell, shortenName(chosenFullName));
+            nameCell.setAttribute("data-type", "works");
+
+            // Trigger input on name to update pib_magazin type logic
+            nameCell.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+
+          // Also set pib_magazin to slyusars
+          const pibMagCell = row.querySelector(
+            '[data-name="pib_magazin"]'
+          ) as HTMLElement | null;
+          if (pibMagCell) {
+            pibMagCell.setAttribute("data-type", "slyusars");
+          }
+        }
       } else if (dataName === "name") {
         // Suppress next focusin/input trigger
         _suppressAutocomplete = true;
@@ -567,6 +589,17 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
               console.log(`✅ Встановлено слюсаря з localStorage: ${userName}`);
             } else {
               pibMagCell.textContent = "";
+            }
+
+            // ⬇️ NEW: Auto-fill Catalog with Work ID
+            const workObj = globalCache.worksWithId.find(w => w.name === fullText);
+            if (workObj) {
+              const catalogCell = row.querySelector(
+                '[data-name="catalog"]'
+              ) as HTMLElement | null;
+              if (catalogCell) {
+                setCellText(catalogCell, workObj.work_id);
+              }
             }
           } else {
             pibMagCell.textContent = "";
@@ -950,6 +983,39 @@ export function setupAutocompleteForEditableCells(
       const nameCell = row?.querySelector(
         '[data-name="name"]'
       ) as HTMLElement | null;
+
+      // Check for Work Mode conditions
+      const nameText = (nameCell?.textContent || "").toLowerCase();
+      const isWorkRow =
+        nameCell?.getAttribute("data-type") === "works" ||
+        nameText.includes("деталь") ||
+        (row.querySelector('.row-index')?.textContent?.includes('🛠️') ?? false);
+
+      if (isWorkRow) {
+        // WORK ID LOOKUP MODE
+        if (query.length >= 1) { // User said "at least one symbol"
+          const matchedWorks = globalCache.worksWithId.filter(w =>
+            w.work_id.toLowerCase().startsWith(query)
+          ).slice(0, 50);
+
+          suggestions = matchedWorks.map(w => ({
+            label: `${w.work_id} - ${w.name}`,
+            value: w.work_id,
+            fullName: w.name,
+            itemType: "work"
+          }));
+        } else {
+          suggestions = [];
+        }
+
+        if (suggestions.length) renderAutocompleteList(target, suggestions);
+        else closeAutocompleteList();
+
+        removeCatalogInfo();
+        return; // Skip Sklad logic
+      }
+
+      // START STANDARD SKLAD LOGIC (if not work row)
 
       const prevText: string = (target as any)._prevCatalogText ?? currTextRaw;
       (target as any)._prevCatalogText = currTextRaw;

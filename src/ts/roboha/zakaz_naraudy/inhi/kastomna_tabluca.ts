@@ -366,7 +366,7 @@ function getRowSum(row: HTMLElement) {
 function recalcRowSum(row: HTMLElement) {
   const sumEl = row.querySelector('[data-name="sum"]') as HTMLElement | null;
   const sum = getRowSum(row);
-  if (sumEl) sumEl.textContent = formatUA(sum);
+  if (sumEl) sumEl.textContent = sum === 0 ? "" : formatUA(sum);
 
   if (!globalCache.isActClosed) {
     updatePriceWarningForRow(row);

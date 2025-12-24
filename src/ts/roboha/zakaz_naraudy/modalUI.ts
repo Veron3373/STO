@@ -390,7 +390,7 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
   const sumCell = row.querySelector(
     '[data-name="sum"]'
   ) as HTMLTableCellElement;
-  if (sumCell) sumCell.textContent = formatNumberWithSpaces(Math.round(sum));
+  if (sumCell) sumCell.textContent = sum === 0 ? "" : formatNumberWithSpaces(Math.round(sum));
 
   if (globalCache.settings.showZarplata) {
     await updateSlyusarSalaryInRow(row);
@@ -478,12 +478,13 @@ function createRowHtml(
     }">${pibMagazinValue}</td>`
     : "";
 
+  /* ===== ЗМІНИ: відображення пустоти замість 0 ===== */
   const priceValue =
-    item && typeof item.price === "number"
+    item && typeof item.price === "number" && item.price !== 0
       ? formatNumberWithSpaces(Math.round(item.price))
       : "";
   const sumValue =
-    item && typeof item.sum === "number"
+    item && typeof item.sum === "number" && item.sum !== 0
       ? formatNumberWithSpaces(Math.round(item.sum))
       : "";
 
@@ -526,7 +527,7 @@ function createRowHtml(
     }
       </td>
       ${catalogCellHTML}
-      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${item ? formatNumberWithSpaces(item.quantity) : ""
+      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
     }</td>
       ${priceCellHTML}
       ${sumCellHTML}

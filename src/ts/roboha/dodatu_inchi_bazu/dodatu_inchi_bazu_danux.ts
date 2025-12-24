@@ -122,6 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div id="sclad-form" class="hidden-all_other_bases"></div>
           <div class="yes-no-buttons-all_other_bases">
             <button id="import-excel-btn" class="batch-btn-Excel import-Excel hidden-all_other_bases" style="margin-right: 10px;">📊 Імпорт з Excel</button>
+            <button id="export-works-excel-btn" class="batch-btn-Excel export-Excel hidden-all_other_bases" style="margin-right: 10px;">📤 Вивантажити роботи</button>
             <button class="yes-button-all_other_bases">Ок</button>
           </div>
         </div>
@@ -200,6 +201,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // Функція для показу/приховування кнопки експорту робіт
+  const toggleExportWorksButton = (show: boolean) => {
+    const exportBtn = document.getElementById("export-works-excel-btn");
+    if (exportBtn) {
+      if (show) {
+        exportBtn.classList.remove("hidden-all_other_bases");
+      } else {
+        exportBtn.classList.add("hidden-all_other_bases");
+      }
+    }
+  };
+
+  // Обробник експорту робіт
+  const exportWorksBtnRef = modal_all_other_bases.querySelector("#export-works-excel-btn");
+  if (exportWorksBtnRef) {
+    exportWorksBtnRef.addEventListener("click", async () => {
+      try {
+        const { data, error } = await supabase
+          .from("works")
+          .select("work_id, data")
+          .order("id", { ascending: true })
+          .limit(10000);
+
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          alert("Немає даних для експорту");
+          return;
+        }
+
+        let csvContent = "\uFEFF";
+        csvContent += "№;Опис\n";
+
+        data.forEach((row: any) => {
+          const id = row.work_id ? String(row.work_id).replace(/"/g, '""') : "";
+          const desc = row.data ? String(row.data).replace(/"/g, '""') : "";
+          csvContent += `"${id}";"${desc}"\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "works_export.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+      } catch (error: any) {
+        console.error("Помилка експорту:", error);
+        alert("Помилка при експорті: " + error.message);
+      }
+    });
+  }
+
   toggleButtons.forEach((button) => {
     button.classList.add("inactive-all_other_bases");
     button.addEventListener("click", async () => {
@@ -224,6 +280,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Показуємо/ховаємо кнопку імпорту залежно від таблиці
       toggleImportButton(buttonText === "Склад");
+      // Показуємо/ховаємо кнопку експорту робіт
+      toggleExportWorksButton(buttonText === "Робота");
 
       // За замовчуванням — показати глобальний пошук, а форму "Склад" сховати
       const scladForm = document.getElementById("sclad-form");

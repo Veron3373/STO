@@ -771,18 +771,26 @@ function buildCatalogSuggestions(
 ): Suggest[] {
   const pr = (prefix || "").trim().toLowerCase();
   if (pr.length < CATALOG_SUGGEST_MIN) return [];
+  // Filter by Part Number OR Name
   const filtered = items.filter((p) =>
-    p.part_number.toLowerCase().startsWith(pr)
+    p.part_number.toLowerCase().includes(pr) ||
+    (p.name && p.name.toLowerCase().includes(pr))
   );
   return filtered.map((p) => {
     const qty = Number(p.quantity) || 0;
-    const qtyHtml = qty < 0 ? `<span class="neg">${qty}</span>` : `${qty}`;
+    // Format: 11111 3333 - Name (Blue) ... (Qt: 8, 150) (Green)
+    // We'll trust the CSS classes for general color, but override with inline styles for multi-color
     const priceRounded = formatUA(Math.round(p.price));
+
+    // Construct Label HTML matching the photo
+    // Name/Number in Blue (#1565c0), Info in Green (#2e7d32, bold)
+    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+
     return {
       value: p.part_number,
       sclad_id: p.sclad_id,
-      label: `${p.part_number} · К-ть: ${qty} по ${priceRounded}`,
-      labelHtml: `${p.part_number} · К-ть: ${qtyHtml} по ${priceRounded}`,
+      label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
+      labelHtml: labelHtml,
       fullName: p.name,
     };
   });
@@ -793,17 +801,22 @@ function buildCatalogSuggestionsNoMin(
 ): Suggest[] {
   const pr = (prefix || "").trim().toLowerCase();
   const filtered = pr
-    ? items.filter((p) => p.part_number.toLowerCase().startsWith(pr))
+    ? items.filter((p) =>
+      p.part_number.toLowerCase().includes(pr) ||
+      (p.name && p.name.toLowerCase().includes(pr))
+    )
     : items;
   return filtered.map((p) => {
     const qty = Number(p.quantity) || 0;
-    const qtyHtml = qty < 0 ? `<span class="neg">${qty}</span>` : `${qty}`;
     const priceRounded = formatUA(Math.round(p.price));
+
+    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+
     return {
       value: p.part_number,
       sclad_id: p.sclad_id,
-      label: `${p.part_number} · К-ть: ${qty} по ${priceRounded}`,
-      labelHtml: `${p.part_number} · К-ть: ${qtyHtml} по ${priceRounded}`,
+      label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
+      labelHtml: labelHtml,
       fullName: p.name,
     };
   });
@@ -813,13 +826,15 @@ function buildCatalogSuggestionsAll(
 ): Suggest[] {
   return items.map((p) => {
     const qty = Number(p.quantity) || 0;
-    const qtyHtml = qty < 0 ? `<span class="neg">${qty}</span>` : `${qty}`;
     const priceRounded = formatUA(Math.round(p.price));
+
+    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+
     return {
       value: p.part_number,
       sclad_id: p.sclad_id,
-      label: `${p.part_number} · К-ть: ${qty} по ${priceRounded}`,
-      labelHtml: `${p.part_number} · К-ть: ${qtyHtml} по ${priceRounded}`,
+      label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
+      labelHtml: labelHtml,
       fullName: p.name,
     };
   });
@@ -1012,7 +1027,8 @@ export function setupAutocompleteForEditableCells(
       if (query.length >= 1) {
         // 1. Search Works (IDs)
         const matchedWorks = globalCache.worksWithId.filter(w =>
-          w.work_id.toLowerCase().startsWith(query)
+          w.work_id.toLowerCase().includes(query) ||
+          (w.name && w.name.toLowerCase().includes(query))
         ).slice(0, 20);
 
         const workSuggestions: Suggest[] = matchedWorks.map(w => ({
@@ -1031,21 +1047,29 @@ export function setupAutocompleteForEditableCells(
         const selectedName = (nameCell?.textContent || "").trim();
         if (selectedName && nameCell?.getAttribute("data-type") === "details") {
           const items = findScladItemsByName(selectedName);
-          matchedParts = items.filter(p => p.part_number.toLowerCase().startsWith(query));
+          matchedParts = items.filter(p =>
+            p.part_number.toLowerCase().includes(query) ||
+            p.name.toLowerCase().includes(query)
+          );
         } else {
-          matchedParts = globalCache.skladParts.filter(p => p.part_number.toLowerCase().startsWith(query));
+          matchedParts = globalCache.skladParts.filter(p =>
+            p.part_number.toLowerCase().includes(query) ||
+            p.name.toLowerCase().includes(query)
+          );
         }
         matchedParts = matchedParts.slice(0, 20);
 
         const partSuggestions: Suggest[] = matchedParts.map(p => {
           const qty = Number(p.quantity) || 0;
-          const qtyHtml = qty < 0 ? `<span class="neg">${qty}</span>` : `${qty}`;
           const priceRounded = formatUA(Math.round(p.price));
+
+          const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+
           return {
             value: p.part_number,
             sclad_id: p.sclad_id,
-            label: `${p.part_number} · К-ть: ${qty} по ${priceRounded}`,
-            labelHtml: `${p.part_number} · К-ть: ${qtyHtml} по ${priceRounded}`,
+            label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
+            labelHtml: labelHtml,
             fullName: p.name,
             itemType: "detail" // Will be Blue
           };

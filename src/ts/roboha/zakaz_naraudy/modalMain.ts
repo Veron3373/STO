@@ -987,7 +987,11 @@ async function addModalHandlers(
   if (!isClosed) {
     setupAutocompleteForEditableCells(
       ACT_ITEMS_TABLE_CONTAINER_ID,
-      globalCache
+      globalCache,
+      () => {
+        addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
+        void applyAccessRestrictionsToNewRow();
+      }
     );
 
     initializeActWarnings(ACT_ITEMS_TABLE_CONTAINER_ID, actId);

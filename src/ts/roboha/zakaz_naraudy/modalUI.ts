@@ -756,9 +756,15 @@ export function addNewRow(containerId: string): void {
   );
   tableBody.insertAdjacentHTML("beforeend", newRowHTML);
 
-  if (!globalCache.isActClosed) {
-    setupAutocompleteForEditableCells(containerId, globalCache);
+  // Focus the new row's Name input
+  const lastRow = tableBody.lastElementChild as HTMLElement;
+  if (lastRow) {
+    const nameInput = lastRow.querySelector('[data-name="name"]') as HTMLElement;
+    if (nameInput) {
+      nameInput.focus();
+    }
   }
+
   updateCalculatedSumsInFooter();
 }
 

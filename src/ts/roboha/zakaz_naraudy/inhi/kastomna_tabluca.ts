@@ -439,8 +439,13 @@ let currentAutocompleteList: HTMLElement | null = null;
 function closeAutocompleteList() {
   document.querySelector(".autocomplete-list")?.remove();
   stopAutoFollow();
-  if (currentAutocompleteInput)
+  if (currentAutocompleteInput) {
     currentAutocompleteInput.classList.remove("ac-open");
+    // Only return focus if it wasn't lost to another document element
+    if (document.activeElement && document.activeElement.closest('.autocomplete-list')) {
+      currentAutocompleteInput.focus();
+    }
+  }
   currentAutocompleteList = null;
   currentAutocompleteInput = null;
 }
@@ -484,6 +489,30 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
     }
     if (labelHtml) li.innerHTML = labelHtml;
     else li.textContent = label;
+
+    li.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        // Trigger click logic
+        li.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        closeAutocompleteList();
+        target.focus();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = li.nextElementSibling as HTMLElement;
+        if (next) next.focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = li.previousElementSibling as HTMLElement;
+        if (prev) {
+          prev.focus();
+        } else {
+          target.focus();
+        }
+      }
+    });
 
     li.addEventListener("mousedown", (e) => {
       e.preventDefault();
@@ -733,13 +762,59 @@ function buildCatalogSuggestionsAll(
 
 export function setupAutocompleteForEditableCells(
   containerId: string,
-  cache: typeof globalCache
+  cache: typeof globalCache,
+  onEnterCallback?: () => void
 ) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const showCatalog = globalCache.settings.showCatalog;
   const showPibMagazin = globalCache.settings.showPibMagazin;
+
+  container.addEventListener("keydown", (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.classList.contains("editable-autocomplete")) return;
+
+    if (e.key === "Enter") {
+      if (currentAutocompleteList) {
+        // If list is open, let the user select via Arrow/Enter logic in the list
+        // Or if focus is still in input, maybe Enter should select the first item?
+        // Currently focus remains in input mostly.
+        // If user pressed ArrowDown, focus moved to list.
+
+        // If focus is in input and list is open:
+        if (document.activeElement === target) {
+          e.preventDefault();
+          // Option: Select first item automatically?
+          // Or just move focus?
+          // Let's select the first item if available
+          const first = currentAutocompleteList.querySelector('.autocomplete-item') as HTMLElement;
+          if (first) {
+            first.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+          }
+        }
+      } else {
+        // List closed, Enter adds new row
+        if (onEnterCallback) {
+          e.preventDefault();
+          onEnterCallback();
+        }
+      }
+    } else if (e.key === "ArrowDown") {
+      if (currentAutocompleteList) {
+        e.preventDefault();
+        const first = currentAutocompleteList.querySelector('.autocomplete-item') as HTMLElement;
+        if (first) first.focus();
+      } else {
+        // Maybe trigger autocomplete?
+      }
+    } else if (e.key === "Escape") {
+      if (currentAutocompleteList) {
+        e.preventDefault();
+        closeAutocompleteList();
+      }
+    }
+  });
 
   container.addEventListener("focusin", async (e) => {
     const target = e.target as HTMLElement;

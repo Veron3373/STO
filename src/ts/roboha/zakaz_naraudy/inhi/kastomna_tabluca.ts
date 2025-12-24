@@ -531,6 +531,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         if (chosenScladId !== undefined)
           applyCatalogSelectionById(target, chosenScladId, chosenFullName);
       } else if (dataName === "name") {
+        // Suppress next focusin/input trigger
+        _suppressAutocomplete = true;
+
         const fullText = chosenFullName || label;
         const shortenedText = shortenName(fullText);
         target.textContent = shortenedText;
@@ -573,8 +576,14 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         // позначаємо, що ця зміна прийшла з автодоповнення
         (target as any)._fromAutocomplete = true;
 
+        // poзначаємо, що ця зміна прийшла з автодоповнення
+        (target as any)._fromAutocomplete = true;
+
         target.dispatchEvent(new Event("input", { bubbles: true }));
         target.focus();
+
+        // Clear suppression after a short timeout to allow normal editing later
+        setTimeout(() => { _suppressAutocomplete = false; }, 200);
       } else {
         target.textContent = chosenValue;
         target.dispatchEvent(new Event("input", { bubbles: true }));
@@ -697,6 +706,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   startAutoFollow(target, list, reposition);
 }
 
+// Global flag to suppress opening autocomplete immediately after selection
+let _suppressAutocomplete = false;
+
 /* ===== генератори підказок ===== */
 function buildCatalogSuggestions(
   items: typeof globalCache.skladParts,
@@ -784,10 +796,11 @@ export function setupAutocompleteForEditableCells(
 
         // If focus is in input and list is open:
         if (document.activeElement === target) {
+          // If the list contains exactly one item and it matches the current text, it's effectively "selected" already?
+          // No, user might want to confirm it.
+          // Check if selecting it changes anything.
+
           e.preventDefault();
-          // Option: Select first item automatically?
-          // Or just move focus?
-          // Let's select the first item if available
           const first = currentAutocompleteList.querySelector('.autocomplete-item') as HTMLElement;
           if (first) {
             first.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
@@ -817,6 +830,8 @@ export function setupAutocompleteForEditableCells(
   });
 
   container.addEventListener("focusin", async (e) => {
+    if (_suppressAutocomplete) return; // Skip if just selected
+
     const target = e.target as HTMLElement;
     if (
       !target.classList.contains("editable-autocomplete") ||
@@ -908,6 +923,10 @@ export function setupAutocompleteForEditableCells(
   });
 
   container.addEventListener("input", async (e) => {
+    if (_suppressAutocomplete) {
+      _suppressAutocomplete = false;
+      return;
+    }
     const target = e.target as HTMLElement;
     if (
       !target.classList.contains("editable-autocomplete") ||

@@ -957,7 +957,6 @@ export function setupAutocompleteForEditableCells(
 
   container.addEventListener("input", async (e) => {
     if (_suppressAutocomplete) {
-      _suppressAutocomplete = false;
       return;
     }
     const target = e.target as HTMLElement;

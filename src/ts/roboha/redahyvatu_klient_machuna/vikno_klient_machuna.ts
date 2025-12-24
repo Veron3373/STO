@@ -944,8 +944,8 @@ export async function showModalCreateSakazNarad() {
     if (!confirmed) return;
     const result = await saveClientAndCarToDatabase();
     if (result && typeof result === "object") {
-      if (result.clientId) selectedClientId = result.clientId;
-      if (result.carId) selectedCarId = result.carId;
+      if (result.client_id) selectedClientId = result.client_id;
+      if (result.cars_id) selectedCarId = result.cars_id;
     }
     await loadActsTable();
     await fetchData();

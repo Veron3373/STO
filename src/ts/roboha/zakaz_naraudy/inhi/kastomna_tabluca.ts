@@ -810,7 +810,12 @@ function buildCatalogSuggestionsNoMin(
     const qty = Number(p.quantity) || 0;
     const priceRounded = formatUA(Math.round(p.price));
 
-    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+    let colorStyle = "color: #2e7d32"; // default green
+    if (qty === 0) colorStyle = "color: #888"; // grey
+    else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+    else colorStyle = "color: #1565c0"; // blue
+
+    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
 
     return {
       value: p.part_number,
@@ -828,7 +833,12 @@ function buildCatalogSuggestionsAll(
     const qty = Number(p.quantity) || 0;
     const priceRounded = formatUA(Math.round(p.price));
 
-    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+    let colorStyle = "color: #2e7d32"; // default green
+    if (qty === 0) colorStyle = "color: #888"; // grey
+    else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+    else colorStyle = "color: #1565c0"; // blue
+
+    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
 
     return {
       value: p.part_number,
@@ -1063,7 +1073,12 @@ export function setupAutocompleteForEditableCells(
           const qty = Number(p.quantity) || 0;
           const priceRounded = formatUA(Math.round(p.price));
 
-          const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+          let colorStyle = "color: #2e7d32"; // default green
+          if (qty === 0) colorStyle = "color: #888"; // grey
+          else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+          else colorStyle = "color: #1565c0"; // blue
+
+          const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
 
           return {
             value: p.part_number,
@@ -1075,7 +1090,7 @@ export function setupAutocompleteForEditableCells(
           };
         });
 
-        suggestions = [...workSuggestions, ...partSuggestions];
+        suggestions = [...partSuggestions, ...workSuggestions];
       }
 
       if (suggestions.length) {

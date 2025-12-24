@@ -454,7 +454,7 @@ function createRowHtml(
 ): string {
   const isActClosed = globalCache.isActClosed;
   const isEditable = !isActClosed;
-  const isRestricted = userAccessLevel === "Слюсар";
+
 
   const dataTypeForName =
     item?.type === "detail" ? "details" : item?.type === "work" ? "works" : "";
@@ -490,8 +490,7 @@ function createRowHtml(
 
   // ⚡ ВАЖЛИВО: завжди створюємо комірки "Ціна" і "Сума",
   // а показ/приховування робимо через JS (togglePriceColumnsVisibility)
-  const priceCellHTML = `<td data-col="price" contenteditable="${isEditable && !isRestricted
-    }" class="text-right editable-autocomplete price-cell" data-name="price">${priceValue}</td>`;
+  const priceCellHTML = `<td data-col="price" contenteditable="${isEditable}" class="text-right editable-autocomplete price-cell" data-name="price">${priceValue}</td>`;
 
   const sumCellHTML = `<td data-col="sum" class="text-right" data-name="sum">${sumValue}</td>`;
 

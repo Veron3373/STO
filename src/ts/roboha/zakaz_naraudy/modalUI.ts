@@ -802,25 +802,32 @@ export function updateCalculatedSumsInFooter(): void {
         const isInWorks = works.has(name);
         const isInDetails = details.has(name);
 
-        // ВИПРАВЛЕНА ЛОГІКА:
-        if (isInDetails && !isInWorks) {
-          type = "details";
-        } else if (isInWorks && !isInDetails) {
-          type = "works";
+        // If name is present, try to deduce type
+        if (name.length > 0) {
+          if (isInDetails && !isInWorks) {
+            type = "details";
+          } else if (isInWorks && !isInDetails) {
+            type = "works";
+          } else {
+            type = "works"; // default to works if ambiguous but has name
+          }
+          nameCell.setAttribute("data-type", type);
         } else {
-          type = "works"; // за замовчуванням
+          // Name is empty -> Neutral. Do not set type.
+          type = null;
         }
-
-        nameCell.setAttribute("data-type", type);
       }
 
-      // ВИПРАВЛЕНО: works → 🛠️ totalWorksSum, details → ⚙️ totalDetailsSum
+      // Update Icons only if type is known
       if (type === "works") {
         sums.totalWorksSum += sum;
         iconCell.textContent = `🛠️ ${index + 1}`;
-      } else {
+      } else if (type === "details") {
         sums.totalDetailsSum += sum;
         iconCell.textContent = `⚙️ ${index + 1}`;
+      } else {
+        // Neutral
+        iconCell.textContent = `${index + 1}`;
       }
 
       return sums;

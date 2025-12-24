@@ -103,8 +103,11 @@ function initDeleteRowHandler(): void {
                 '[data-name="name"]'
               ) as HTMLElement;
               const type = nameCell?.getAttribute("data-type");
-              const icon = type === "works" ? "🛠️" : "⚙️";
-              indexCell.textContent = `${icon} ${idx + 1}`;
+              let icon = "";
+              if (type === "works") icon = "🛠️";
+              else if (type === "details") icon = "⚙️";
+
+              indexCell.textContent = `${icon} ${idx + 1}`.trim();
             }
           });
         }

@@ -446,15 +446,28 @@ async function loadReceipterSalaries(): Promise<void> {
 
     const { data, error } = await supabase
       .from("slyusars")
-      .select("data")
-      .eq("post_slyusar", "Приймальник");
+      .select("data, Доступ, Name")
+      .eq("Доступ", "Приймальник");
+
+    console.log("🔍 Результат запиту приймальника:", { data, error });
 
     if (error || !data || data.length === 0) {
       console.log("⚠️ Приймальник не знайдений у базі");
+      console.log("Спробуємо отримати всіх слюсарів для діагностики:");
+
+      const { data: allData } = await supabase
+        .from("slyusars")
+        .select("Доступ, Name");
+      console.log("Всі слюсарі:", allData);
       return;
     }
 
-    const receipterRecord = data[0];
+    const receipterRecord = data[0] as any;
+    console.log(
+      "📋 Знайдено приймальника:",
+      receipterRecord.Name || receipterRecord["Доступ"]
+    );
+
     let slyusarData: any = {};
 
     if (typeof receipterRecord.data === "string") {
@@ -471,9 +484,13 @@ async function loadReceipterSalaries(): Promise<void> {
     const history = slyusarData?.Історія || {};
     let totalActs = 0;
 
+    console.log("📚 Історія приймальника (ключі дат):", Object.keys(history));
+
     // Проходимо всю історію і заповнюємо кеш
     for (const dateKey in history) {
       const records = history[dateKey] || [];
+      console.log(`📅 Дата ${dateKey}: ${records.length} записів`);
+
       for (const record of records) {
         const actId = record.Акт;
         if (actId) {
@@ -483,6 +500,13 @@ async function loadReceipterSalaries(): Promise<void> {
           };
           receipterSalaryCache.set(actId, salary);
           totalActs++;
+
+          // Логуємо перші 3 акти детально
+          if (totalActs <= 3) {
+            console.log(
+              `  📦 Акт ${actId}: Запчастини=${salary.salaryParts}, Робота=${salary.salaryWork}`
+            );
+          }
         }
       }
     }

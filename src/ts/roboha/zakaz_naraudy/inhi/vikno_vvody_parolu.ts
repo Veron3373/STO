@@ -2,9 +2,10 @@
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { reopenActAndClearSlyusars } from "./save_work";
 import { refreshActsTable } from "../../tablucya/tablucya";
-import { supabase } from "../../../vxid/supabaseClient"; // Додаємо імпорт supabase
+import { supabase } from "../../../vxid/supabaseClient";
+import { getSavedUserDataFromLocalStorage } from "../../tablucya/users"; // Додаємо імпорт для отримання даних поточного користувача
+
 export const viknoVvodyParoluId = "vikno_vvody_parolu-modal";
-const TARGET_USER_NAME = "Брацлавець Б. С."; // Ім'я користувача для пошуку
 /** Створення DOM елемента модалки */
 export function createViknoVvodyParolu(): HTMLDivElement {
   const overlay = document.createElement("div");
@@ -33,94 +34,58 @@ function ensureModalMounted(): HTMLElement {
   }
   return el;
 }
-/** Функція для отримання пароля з бази даних */
-async function getPasswordFromDatabase(): Promise<string | number | null> {
-  try {
-    console.log("🔍 Шукаємо користувача:", TARGET_USER_NAME);
-
-    // Спочатку спробуємо через JSON запит
-    const { data: singleData, error: singleError } = await supabase
-      .from("slyusars")
-      .select("data")
-      .eq("data->>Name", TARGET_USER_NAME)
-      .single();
-    console.log("📊 Результат JSON запиту:", { singleData, singleError });
-    if (
-      !singleError &&
-      singleData &&
-      singleData.data &&
-      singleData.data.Пароль !== undefined
-    ) {
-      console.log(
-        "✅ Знайдено через JSON запит. Пароль:",
-        singleData.data.Пароль,
-        "Тип:",
-        typeof singleData.data.Пароль
-      );
-      return singleData.data.Пароль;
-    }
-    // Якщо JSON запит не спрацював, отримуємо всі записи і шукаємо вручну
-    console.log("🔄 JSON запит не спрацював, шукаємо вручну...");
-
-    const { data: allData, error: allError } = await supabase
-      .from("slyusars")
-      .select("slyusar_id, data");
-    if (allError) {
-      console.error("❌ Помилка при запиті всіх slyusars:", allError.message);
-      return null;
-    }
-    console.log("📋 Всі записи slyusars:", allData);
-    // Шукаємо потрібного користувача вручну
-    for (const record of allData || []) {
-      console.log("🔍 Перевіряємо запис:", record);
-
-      if (record.data && record.data.Name) {
-        console.log("👤 Ім'я в записі:", `"${record.data.Name}"`);
-        console.log("🎯 Шукане ім'я:", `"${TARGET_USER_NAME}"`);
-        console.log("📏 Співпадають:", record.data.Name === TARGET_USER_NAME);
-
-        if (record.data.Name === TARGET_USER_NAME) {
-          console.log("✅ Знайшли користувача! Повні дані:", record.data);
-
-          if (record.data.Пароль !== undefined) {
-            return record.data.Пароль;
-          } else {
-            console.warn("⚠️ Поле 'Пароль' не знайдено в data");
-            return null;
-          }
-        }
-      }
-    }
-    console.warn(
-      `⚠️ Користувач ${TARGET_USER_NAME} не знайдений серед записів`
-    );
-    return null;
-  } catch (e) {
-    console.error("💥 Виняток при отриманні пароля з БД:", e);
-    return null;
-  }
-}
-/** Функція для перевірки пароля */
+/** Функція для перевірки пароля поточного користувача */
 async function verifyPassword(enteredPassword: string): Promise<boolean> {
   console.log("🔐 Почато перевірку пароля. Введено:", enteredPassword);
 
-  const dbPassword = await getPasswordFromDatabase();
+  // Отримуємо дані поточного користувача з localStorage
+  const currentUser = getSavedUserDataFromLocalStorage();
 
-  if (dbPassword === null) {
-    console.error("❌ Не вдалося отримати пароль з бази даних");
+  if (!currentUser) {
+    console.error(
+      "❌ Не вдалося отримати дані поточного користувача з localStorage"
+    );
+    showNotification("❌ Помилка: користувач не авторизований", "error", 3000);
     return false;
   }
-  // Порівнюємо введений пароль з паролем з БД
-  // Перетворюємо обидва значення в рядки для порівняння
+
+  console.log("👤 Поточний користувач:", currentUser.name);
+
+  // Отримуємо пароль поточного користувача
+  const userPassword = currentUser.password;
+
+  if (!userPassword) {
+    console.error("❌ Пароль користувача не знайдено");
+    showNotification(
+      "❌ Помилка: пароль користувача не знайдено",
+      "error",
+      3000
+    );
+    return false;
+  }
+
+  // Порівнюємо введений пароль з паролем з localStorage
   const enteredStr = enteredPassword.toString().trim();
-  const dbPasswordStr = dbPassword.toString().trim();
+  const userPasswordStr = userPassword.toString().trim();
 
   console.log("🔍 Порівняння паролів:");
+  console.log(" Користувач:", currentUser.name);
   console.log(" Введений:", `"${enteredStr}"`, "Довжина:", enteredStr.length);
-  console.log(" З БД:", `"${dbPasswordStr}"`, "Довжина:", dbPasswordStr.length);
-  console.log(" Співпадають:", enteredStr === dbPasswordStr);
+  console.log(
+    " З localStorage:",
+    `"${userPasswordStr}"`,
+    "Довжина:",
+    userPasswordStr.length
+  );
+  console.log(" Співпадають:", enteredStr === userPasswordStr);
 
-  return enteredStr === dbPasswordStr;
+  if (enteredStr === userPasswordStr) {
+    console.log("✅ Пароль вірний!");
+    return true;
+  } else {
+    console.log("❌ Пароль невірний!");
+    return false;
+  }
 }
 /**
  * Показ модалки та безпосереднє ВІДКРИТТЯ АКТУ:

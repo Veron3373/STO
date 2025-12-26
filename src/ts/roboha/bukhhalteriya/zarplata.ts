@@ -1016,11 +1016,6 @@ export function updatepodlegleTable(): void {
         )}</div>
       `;
 
-      // Стиль для дати закриття
-      const closeDateStyle = item.isClosed
-        ? "color: #155724; font-weight: 600;" // Зелений
-        : "color: #dc3545; font-weight: 600;"; // Червоний
-
       return `
                 <tr class="${rowClass} ${paidClass}" style="background-color: ${rowBackgroundColor};" onclick="handleRowClick(${index})">
                     <td>
@@ -1034,7 +1029,7 @@ export function updatepodlegleTable(): void {
                         </button>
                     </td>
                     <td>${formatDate(item.dateOpen)}</td>
-                    <td style="${closeDateStyle}">${formatDate(item.dateClose) || "-"}</td>
+                    <td>${formatDate(item.dateClose) || "-"}</td>
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"

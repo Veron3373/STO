@@ -981,6 +981,11 @@ export function updatepodlegleTable(): void {
       // 1. Клас для СТАТУСУ АКТУ (isClosed)
       const rowClass = item.isClosed ? "closed-row" : "open-row";
 
+      // 1. Колір фону рядка (Закритий -> Зелений, Відкритий -> Червоний)
+      const rowBackgroundColor = item.isClosed
+        ? "rgba(212, 237, 218, 0.6)" // Зеленуватий
+        : "rgba(248, 215, 218, 0.6)"; // Червонуватий
+
       // 2. Клас для КОЛЬОРУ РЯДКА (залежить ТІЛЬКИ від isClosed, як ви просили)
       //    (Червоний, якщо NULL (відкритий), Зелений, якщо НЕ NULL (закритий))
       const paidClass = item.isClosed ? "paid-row" : "unpaid-row";
@@ -1012,7 +1017,7 @@ export function updatepodlegleTable(): void {
       `;
 
       return `
-                <tr class="${rowClass} ${paidClass}" onclick="handleRowClick(${index})">
+                <tr class="${rowClass} ${paidClass}" style="background-color: ${rowBackgroundColor};" onclick="handleRowClick(${index})">
                     <td>
                              <button class="Bukhhalter-payment-btn ${buttonPaidClass}"
                                 onclick="event.stopPropagation(); togglepodleglePaymentWithConfirmation(${originalIndex})" 
@@ -1040,7 +1045,7 @@ export function updatepodlegleTable(): void {
                     <td>${item.work || "-"}</td>
                     <td>${item.quantity || "-"}</td>
                     <td>${item.price ? formatNumber(item.price) : "-"}</td>
-                    <td style="padding: 8px;">
+                    <td style="padding: 8px; min-width: 160px; white-space: nowrap;">
                       ${totalHtml}
                     </td>
                     <td><button class="Bukhhalter-delete-btn" onclick="event.stopPropagation(); deleteRecord('podlegle', ${originalIndex})">🗑️</button></td>

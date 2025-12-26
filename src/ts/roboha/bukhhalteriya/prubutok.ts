@@ -433,8 +433,64 @@ async function loadPurchasePricesForProfit(): Promise<void> {
   }
 }
 
+// Отримує зарплату приймальника для конкретного акту
+async function getReceipterSalaryForAct(actId: number): Promise<{
+  salaryParts: number;
+  salaryWork: number;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from("slyusars")
+      .select("data")
+      .eq("Доступ", "Приймальник")
+      .single();
+
+    if (error || !data) {
+      return { salaryParts: 0, salaryWork: 0 };
+    }
+
+    let slyusarData: any = {};
+    if (typeof data.data === "string") {
+      try {
+        slyusarData = JSON.parse(data.data);
+      } catch (e) {
+        return { salaryParts: 0, salaryWork: 0 };
+      }
+    } else {
+      slyusarData = data.data;
+    }
+
+    const history = slyusarData?.Історія || {};
+
+    // Шукаємо запис по всіх датах
+    for (const dateKey in history) {
+      const records = history[dateKey] || [];
+      for (const record of records) {
+        if (record.Акт === actId) {
+          return {
+            salaryParts: Number(record.ЗарплатаЗапчастин) || 0,
+            salaryWork: Number(record.ЗарплатаРоботи) || 0,
+          };
+        }
+      }
+    }
+
+    return { salaryParts: 0, salaryWork: 0 };
+  } catch (err) {
+    console.error(
+      `⚠️ Помилка отримання зарплати приймальника для акту ${actId}:`,
+      err
+    );
+    return { salaryParts: 0, salaryWork: 0 };
+  }
+}
+
 // Обчислює маржу деталей динамічно на основі деталей в акті
-function calculateDetailsMarginFromAct(actData: ActData): number {
+// Враховує зарплату приймальника за деталі
+async function calculateDetailsMarginFromAct(
+  actData: ActData,
+  actId: number
+): Promise<number> {
   const details = actData.Деталі || [];
   let totalMargin = 0;
 
@@ -461,12 +517,19 @@ function calculateDetailsMarginFromAct(actData: ActData): number {
     }
   }
 
+  // Віднімаємо зарплату приймальника за деталі
+  const receipterSalary = await getReceipterSalaryForAct(actId);
+  totalMargin -= receipterSalary.salaryParts;
+
   return Number(totalMargin.toFixed(2));
 }
 
-// Обчислює прибуток робіт: Загальна сума робіт - Загальна зарплата
+// Обчислює прибуток робіт: Загальна сума робіт - Загальна зарплата слюсаря - Зарплата приймальника
 // Прибуток може бути від'ємним якщо зарплати більше ніж сума робіт
-function calculateWorkProfitFromAct(actData: ActData): number {
+async function calculateWorkProfitFromAct(
+  actData: ActData,
+  actId: number
+): Promise<number> {
   const works = actData.Роботи || [];
   let totalSum = 0;
   let totalSalary = 0;
@@ -478,7 +541,11 @@ function calculateWorkProfitFromAct(actData: ActData): number {
     totalSalary += salary;
   }
 
-  // Прибуток = Сума всіх робіт - Сума всіх зарплат
+  // Віднімаємо зарплату приймальника за роботу
+  const receipterSalary = await getReceipterSalaryForAct(actId);
+  totalSalary += receipterSalary.salaryWork;
+
+  // Прибуток = Сума всіх робіт - Сума всіх зарплат (слюсаря + приймальника)
   const profit = totalSum - totalSalary;
   return Number(profit.toFixed(2));
 }
@@ -743,8 +810,15 @@ async function loadvutratuFromDatabase(): Promise<void> {
         }
 
         // Обчислюємо маржу динамічно на основі деталей та робіт
-        const detailsAmount = calculateDetailsMarginFromAct(actData);
-        const workAmount = calculateWorkProfitFromAct(actData);
+        // Враховуємо зарплату приймальника
+        const detailsAmount = await calculateDetailsMarginFromAct(
+          actData,
+          actItem.act_id
+        );
+        const workAmount = await calculateWorkProfitFromAct(
+          actData,
+          actItem.act_id
+        );
         const totalAmount = detailsAmount + workAmount;
 
         const clientId = actItem.client_id;

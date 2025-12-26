@@ -320,24 +320,32 @@ async function syncSlyusarsHistoryForAct(params: {
       `📊 Знайдено ${slyusarsData.length} записів у таблиці slyusars`
     );
 
-    // Визначаємо первинний ключ
+    // Спочатку виводимо всі доступні ключі для діагностики
+    const availableKeys = Object.keys(slyusarsData[0] || {});
+    console.log("🔑 Доступні ключі в таблиці slyusars:", availableKeys);
+
+    // Визначаємо первинний ключ - перевіряємо всі можливі варіанти
     const primaryKeyCandidates = [
+      "slyusar_id",
       "id",
       "slyusars_id",
       "uid",
       "pk",
-      "slyusar_id",
     ];
-    const detectPrimaryKey = (row: any): string | null => {
-      if (!row) return null;
-      for (const k of primaryKeyCandidates) if (k in row) return k;
-      return null;
-    };
-    const primaryKey = detectPrimaryKey(slyusarsData[0]);
+
+    let primaryKey: string | null = null;
+    for (const candidate of primaryKeyCandidates) {
+      if (availableKeys.includes(candidate)) {
+        primaryKey = candidate;
+        console.log(`✅ Знайдено первинний ключ: "${primaryKey}"`);
+        break;
+      }
+    }
 
     if (!primaryKey) {
-      console.warn("Не вдалося визначити первинний ключ для slyusars");
-      console.log("Доступні ключі:", Object.keys(slyusarsData[0] || {}));
+      console.error("❌ Не вдалося визначити первинний ключ для slyusars");
+      console.error("💡 Доступні ключі:", availableKeys);
+      console.error("💡 Шукали:", primaryKeyCandidates);
       return;
     }
 

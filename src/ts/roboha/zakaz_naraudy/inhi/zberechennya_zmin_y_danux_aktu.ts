@@ -933,7 +933,7 @@ async function syncPruimalnikHistory(
   if (scladIdsToFetch.length > 0) {
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
-      .select("sclad_id, cyna_vxidna")
+      .select("sclad_id, price")
       .in("sclad_id", scladIdsToFetch);
 
     console.log("📦 Відповідь від sclad:", { scladItems, scladError });
@@ -946,11 +946,11 @@ async function syncPruimalnikHistory(
       scladItems.forEach(item => {
         // Парсимо ціну (якщо рядок "938,00" або число 938)
         let val = 0;
-        if (typeof item.cyna_vxidna === "number") {
-          val = item.cyna_vxidna;
+        if (typeof item.price === "number") {
+          val = item.price;
         } else {
           // Якщо рядок або щось інше
-          val = parseFloat(String(item.cyna_vxidna).replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
+          val = parseFloat(String(item.price).replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
         }
         priceMap.set(item.sclad_id, val);
       });

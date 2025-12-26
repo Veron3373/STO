@@ -433,88 +433,90 @@ async function loadPurchasePricesForProfit(): Promise<void> {
   }
 }
 
-// Кеш для зарплат приймальника
+// Кеш для зарплат приймальника - Map<actId, {salaryParts, salaryWork}>
 const receipterSalaryCache = new Map<
   number,
   { salaryParts: number; salaryWork: number }
 >();
 
-// Отримує зарплату приймальника для конкретного акту
-async function getReceipterSalaryForAct(actId: number): Promise<{
-  salaryParts: number;
-  salaryWork: number;
-}> {
-  // Перевіряємо кеш
-  if (receipterSalaryCache.has(actId)) {
-    return receipterSalaryCache.get(actId)!;
-  }
+// Завантажує ВСЮ історію приймальника один раз
+async function loadReceipterSalaries(): Promise<void> {
   try {
+    receipterSalaryCache.clear();
+
     const { data, error } = await supabase
       .from("slyusars")
       .select("data")
       .eq("post_slyusar", "Приймальник");
 
     if (error || !data || data.length === 0) {
-      console.log(`⚠️ Приймальник не знайдений для акту ${actId}`);
-      return { salaryParts: 0, salaryWork: 0 };
+      console.log("⚠️ Приймальник не знайдений у базі");
+      return;
     }
 
-    // Беремо першого приймальника (може бути кілька записів)
     const receipterRecord = data[0];
-
     let slyusarData: any = {};
+
     if (typeof receipterRecord.data === "string") {
       try {
         slyusarData = JSON.parse(receipterRecord.data);
       } catch (e) {
-        return { salaryParts: 0, salaryWork: 0 };
+        console.error("❌ Помилка парсингу даних приймальника");
+        return;
       }
     } else {
       slyusarData = receipterRecord.data;
     }
 
     const history = slyusarData?.Історія || {};
+    let totalActs = 0;
 
-    // Шукаємо запис по всіх датах
+    // Проходимо всю історію і заповнюємо кеш
     for (const dateKey in history) {
       const records = history[dateKey] || [];
       for (const record of records) {
-        if (record.Акт === actId) {
+        const actId = record.Акт;
+        if (actId) {
           const salary = {
             salaryParts: Number(record.ЗарплатаЗапчастин) || 0,
             salaryWork: Number(record.ЗарплатаРоботи) || 0,
           };
-          console.log(
-            `✅ Акт ${actId}: Зарплата приймальника - Деталі: ${salary.salaryParts}, Робота: ${salary.salaryWork}`
-          );
-          // Зберігаємо в кеш
           receipterSalaryCache.set(actId, salary);
-          return salary;
+          totalActs++;
         }
       }
     }
 
-    console.log(
-      `⚠️ Запис для акту ${actId} не знайдено в історії приймальника`
-    );
-    const defaultSalary = { salaryParts: 0, salaryWork: 0 };
-    receipterSalaryCache.set(actId, defaultSalary);
-    return defaultSalary;
+    console.log(`✅ Завантажено зарплати приймальника для ${totalActs} актів`);
   } catch (err) {
-    console.error(
-      `⚠️ Помилка отримання зарплати приймальника для акту ${actId}:`,
-      err
-    );
-    return { salaryParts: 0, salaryWork: 0 };
+    console.error("❌ Помилка завантаження зарплат приймальника:", err);
   }
+}
+
+// Отримує зарплату приймальника для конкретного акту (з кешу)
+function getReceipterSalaryForAct(actId: number): {
+  salaryParts: number;
+  salaryWork: number;
+} {
+  const salary = receipterSalaryCache.get(actId);
+
+  if (salary) {
+    console.log(
+      `💰 Акт ${actId}: Приймальник - Деталі: ${salary.salaryParts}, Робота: ${salary.salaryWork}`
+    );
+    return salary;
+  }
+
+  console.log(`⚠️ Акт ${actId}: Зарплата приймальника не знайдена`);
+  return { salaryParts: 0, salaryWork: 0 };
 }
 
 // Обчислює маржу деталей динамічно на основі деталей в акті
 // Враховує зарплату приймальника за деталі
-async function calculateDetailsMarginFromAct(
+function calculateDetailsMarginFromAct(
   actData: ActData,
   actId: number
-): Promise<number> {
+): number {
   const details = actData.Деталі || [];
   let totalMargin = 0;
 
@@ -542,7 +544,7 @@ async function calculateDetailsMarginFromAct(
   }
 
   // Віднімаємо зарплату приймальника за деталі
-  const receipterSalary = await getReceipterSalaryForAct(actId);
+  const receipterSalary = getReceipterSalaryForAct(actId);
   console.log(
     `📊 Акт ${actId}: Маржа деталей до віднімання: ${totalMargin}, Зарплата приймальника (деталі): ${receipterSalary.salaryParts}`
   );
@@ -556,10 +558,7 @@ async function calculateDetailsMarginFromAct(
 
 // Обчислює прибуток робіт: Загальна сума робіт - Загальна зарплата слюсаря - Зарплата приймальника
 // Прибуток може бути від'ємним якщо зарплати більше ніж сума робіт
-async function calculateWorkProfitFromAct(
-  actData: ActData,
-  actId: number
-): Promise<number> {
+function calculateWorkProfitFromAct(actData: ActData, actId: number): number {
   const works = actData.Роботи || [];
   let totalSum = 0;
   let totalSalary = 0;
@@ -572,7 +571,7 @@ async function calculateWorkProfitFromAct(
   }
 
   // Віднімаємо зарплату приймальника за роботу
-  const receipterSalary = await getReceipterSalaryForAct(actId);
+  const receipterSalary = getReceipterSalaryForAct(actId);
   console.log(
     `📊 Акт ${actId}: Прибуток робіт до віднімання: ${
       totalSum - totalSalary
@@ -833,6 +832,8 @@ async function loadvutratuFromDatabase(): Promise<void> {
     if (actsDataRaw && Array.isArray(actsDataRaw)) {
       // Завантажуємо закупівельні ціни для обчислення маржі деталей
       await loadPurchasePricesForProfit();
+      // Завантажуємо зарплати приймальника один раз
+      await loadReceipterSalaries();
 
       for (const actItem of actsDataRaw) {
         let actData: ActData = {};
@@ -850,15 +851,12 @@ async function loadvutratuFromDatabase(): Promise<void> {
         }
 
         // Обчислюємо маржу динамічно на основі деталей та робіт
-        // Враховуємо зарплату приймальника
-        const detailsAmount = await calculateDetailsMarginFromAct(
+        // Враховуємо зарплату приймальника (тепер синхронно)
+        const detailsAmount = calculateDetailsMarginFromAct(
           actData,
           actItem.act_id
         );
-        const workAmount = await calculateWorkProfitFromAct(
-          actData,
-          actItem.act_id
-        );
+        const workAmount = calculateWorkProfitFromAct(actData, actItem.act_id);
         const totalAmount = detailsAmount + workAmount;
 
         const clientId = actItem.client_id;

@@ -1014,6 +1014,68 @@ async function syncPruimalnikHistory(
     salaryParts
   });
 
+  // --- ВИДАЛЕННЯ АКТУ З ІНШИХ ПРИЙМАЛЬНИКІВ ---
+  console.log(`🧹 Очищення акту #${actId} з історії інших Приймальників...`);
+
+  // Отримуємо всіх Приймальників
+  const { data: allReceivers, error: receiversError } = await supabase
+    .from("slyusars")
+    .select("slyusar_id, data")
+    .neq("slyusar_id", userData.slyusar_id); // Виключаємо поточного користувача
+
+  if (receiversError) {
+    console.error("❌ Помилка отримання списку Приймальників:", receiversError);
+  } else if (allReceivers && allReceivers.length > 0) {
+    for (const receiver of allReceivers) {
+      const receiverData = typeof receiver.data === "string"
+        ? JSON.parse(receiver.data)
+        : receiver.data;
+
+      // Перевіряємо, чи це Приймальник
+      if (receiverData.Доступ !== "Приймальник") continue;
+
+      let receiverHistory = receiverData.Історія || {};
+      let wasModified = false;
+
+      // Шукаємо і видаляємо акт з історії
+      for (const dateKey of Object.keys(receiverHistory)) {
+        const dailyActs = receiverHistory[dateKey];
+        if (Array.isArray(dailyActs)) {
+          const idx = dailyActs.findIndex((item: any) => String(item.Акт) === String(actId));
+          if (idx !== -1) {
+            console.log(`🗑️ Видалено акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`);
+            dailyActs.splice(idx, 1);
+
+            // Якщо масив порожній, видаляємо дату
+            if (dailyActs.length === 0) {
+              delete receiverHistory[dateKey];
+            }
+
+            wasModified = true;
+            break;
+          }
+        }
+      }
+
+      // Оновлюємо в БД, якщо були зміни
+      if (wasModified) {
+        receiverData.Історія = receiverHistory;
+        const { error: updateError } = await supabase
+          .from("slyusars")
+          .update({ data: receiverData })
+          .eq("slyusar_id", receiver.slyusar_id);
+
+        if (updateError) {
+          console.error(`❌ Помилка оновлення історії для "${receiverData.Name}":`, updateError);
+        } else {
+          console.log(`✅ Історію "${receiverData.Name}" оновлено`);
+        }
+      }
+    }
+  }
+
+  console.log(`✅ Очищення завершено. Зберігаємо акт для "${currentUserName}"`);
+
   let history = slyusarData.Історія || {};
   let actFound = false;
   let foundDateKey = "";

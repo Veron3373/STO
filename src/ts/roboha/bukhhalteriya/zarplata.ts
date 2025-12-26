@@ -1249,12 +1249,12 @@ export function searchDataInDatabase(
 
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              <div style="color: #28a745;">⚙️: ${formatNumber(sumParts)}</div>
-              <div style="color: #dc3545;">⚙️: ${formatNumber(
+              <div style="color: #28a745;">⚙️ ${formatNumber(sumParts)}</div>
+              <div style="color: #dc3545;">⚙️ ${formatNumber(
                 -salaryParts
               )}</div>
-              <div style="color: #28a745;">🛠️: ${formatNumber(sumWork)}</div>
-              <div style="color: #dc3545;">🛠️: ${formatNumber(
+              <div style="color: #28a745;">🛠️ ${formatNumber(sumWork)}</div>
+              <div style="color: #dc3545;">🛠️ ${formatNumber(
                 -salaryWork
               )}</div>
             </div>`;

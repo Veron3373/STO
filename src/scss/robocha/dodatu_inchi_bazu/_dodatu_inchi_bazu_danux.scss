@@ -279,6 +279,25 @@
   line-height: 1.5;
 }
 
+/* ====== Контейнер для процентів (50/50) ====== */
+.slusar-percent-container {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.slusar-percent-half {
+  flex: 1;
+  min-width: 0;
+}
+
+.slusar-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+
 /* ====== Textarea як інпут ====== */
 .textarea-all_other_bases {
   width: 100%;
@@ -337,7 +356,7 @@
 .contragent-act-record-button {
   //flex: 0 0 150px;           // Фіксована ширина 200px
   //width: 200px;
-  padding: 8px 12px;         // Зменшена висота
+  padding: 8px 12px; // Зменшена висота
   background: linear-gradient(135deg, #ffd54f, #ff6f00);
   color: white;
   border: none;

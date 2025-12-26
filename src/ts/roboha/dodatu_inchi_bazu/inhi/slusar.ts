@@ -207,6 +207,10 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
   const percentInput = document.getElementById(
     "slusar-percent"
   ) as HTMLInputElement;
+  const percentPartsInput = document.getElementById(
+    "slusar-percent-parts"
+  ) as HTMLInputElement;
+
   if (passwordInput && data?.Пароль !== undefined) {
     passwordInput.value = String(data.Пароль);
   }
@@ -223,6 +227,9 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
   if (percentInput && data?.ПроцентРоботи !== undefined) {
     percentInput.value = String(data.ПроцентРоботи);
   }
+  if (percentPartsInput && data?.ПроцентЗапчастин !== undefined) {
+    percentPartsInput.value = String(data.ПроцентЗапчастин);
+  }
 };
 
 // Функція для очищення додаткових інпутів
@@ -236,12 +243,17 @@ const clearSlusarInputs = () => {
   const percentInput = document.getElementById(
     "slusar-percent"
   ) as HTMLInputElement;
+  const percentPartsInput = document.getElementById(
+    "slusar-percent-parts"
+  ) as HTMLInputElement;
+
   if (passwordInput) passwordInput.value = "";
   if (accessSelect) {
     accessSelect.value = "Слюсар";
     accessSelect.disabled = false;
   }
   if (percentInput) percentInput.value = "50";
+  if (percentPartsInput) percentPartsInput.value = "50";
 };
 
 const createCustomDropdown = (
@@ -393,9 +405,15 @@ const createSlusarAdditionalInputs = async () => {
         <option value="Складовщик">Складовщик</option>                              
       </select>
     </div>
-    <div class="slusar-input-group">
-      <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
-      <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
+    <div class="slusar-percent-container">
+      <div class="slusar-input-group slusar-percent-half">
+        <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
+        <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
+      </div>
+      <div class="slusar-input-group slusar-percent-half">
+        <label for="slusar-percent-parts" class="label-all_other_bases">Процент з запчастин:</label>
+        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
+      </div>
     </div>
     <div class="slusar-stats-container">
       <div class="employee-stats-label">Статистика співробітників:</div>
@@ -468,7 +486,11 @@ export const getSlusarAdditionalData = () => {
   const percentInput = document.getElementById(
     "slusar-percent"
   ) as HTMLInputElement;
-  // Валідація відсотка
+  const percentPartsInput = document.getElementById(
+    "slusar-percent-parts"
+  ) as HTMLInputElement;
+
+  // Валідація відсотка роботи
   let percentValue = 50; // Значення за замовчуванням
   if (percentInput && percentInput.value) {
     percentValue = Number(percentInput.value);
@@ -479,15 +501,30 @@ export const getSlusarAdditionalData = () => {
       percentValue = 100;
     }
   }
+
+  // Валідація відсотка запчастин
+  let percentPartsValue = 50; // Значення за замовчуванням
+  if (percentPartsInput && percentPartsInput.value) {
+    percentPartsValue = Number(percentPartsInput.value);
+    // Перевірка меж
+    if (isNaN(percentPartsValue) || percentPartsValue < 0) {
+      percentPartsValue = 0;
+    } else if (percentPartsValue > 100) {
+      percentPartsValue = 100;
+    }
+  }
+
   console.log("getSlusarAdditionalData викликано:", {
     password: passwordInput?.value ? Number(passwordInput.value) : 1111,
     access: accessSelect?.value || "Слюсар",
     percent: percentValue,
+    percentParts: percentPartsValue,
   });
   return {
     password: passwordInput?.value ? Number(passwordInput.value) : 1111,
     access: accessSelect?.value || "Слюсар",
     percent: percentValue,
+    percentParts: percentPartsValue,
   };
 };
 

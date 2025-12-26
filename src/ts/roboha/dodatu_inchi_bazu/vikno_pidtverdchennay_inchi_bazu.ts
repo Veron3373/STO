@@ -217,6 +217,7 @@ async function handleEdit(
             ? currentData.Історія
             : {},
         ПроцентРоботи: additionalData.percent,
+        ПроцентЗапчастин: additionalData.percentParts,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
@@ -368,6 +369,7 @@ async function handleAdd(
         Опис: {},
         Історія: {},
         ПроцентРоботи: additionalData.percent,
+        ПроцентЗапчастин: additionalData.percentParts,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };

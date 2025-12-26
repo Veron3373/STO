@@ -223,12 +223,26 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
       accessSelect.value = data.Доступ;
       accessSelect.disabled = false;
     }
+    // Оновлюємо видимість інпутів відповідно до ролі
+    updatePercentInputsVisibility(accessSelect.value);
   }
   if (percentInput && data?.ПроцентРоботи !== undefined) {
     percentInput.value = String(data.ПроцентРоботи);
   }
   if (percentPartsInput && data?.ПроцентЗапчастин !== undefined) {
     percentPartsInput.value = String(data.ПроцентЗапчастин);
+  }
+};
+
+// Функція для керування видимістю інпутів
+const updatePercentInputsVisibility = (role: string) => {
+  const partsWrapper = document.getElementById("slusar-percent-parts-wrapper");
+  if (partsWrapper) {
+    if (role === "Приймальник") {
+      partsWrapper.classList.remove("hidden-all_other_bases");
+    } else {
+      partsWrapper.classList.add("hidden-all_other_bases");
+    }
   }
 };
 
@@ -251,6 +265,8 @@ const clearSlusarInputs = () => {
   if (accessSelect) {
     accessSelect.value = "Слюсар";
     accessSelect.disabled = false;
+    // Скидаємо видимість (для Слюсаря поле запчастин приховане)
+    updatePercentInputsVisibility("Слюсар");
   }
   if (percentInput) percentInput.value = "50";
   if (percentPartsInput) percentPartsInput.value = "50";
@@ -410,7 +426,7 @@ const createSlusarAdditionalInputs = async () => {
         <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
         <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
       </div>
-      <div class="slusar-input-group slusar-percent-half">
+      <div class="slusar-input-group slusar-percent-half hidden-all_other_bases" id="slusar-percent-parts-wrapper">
         <label for="slusar-percent-parts" class="label-all_other_bases">Процент з запчастин:</label>
         <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
       </div>
@@ -425,6 +441,17 @@ const createSlusarAdditionalInputs = async () => {
   );
   if (yesNoButtons) {
     rightContent.insertBefore(additionalInputsContainer, yesNoButtons);
+  }
+
+  // Додаємо обробник зміни ролі
+  const accessSelect = document.getElementById("slusar-access") as HTMLSelectElement;
+  if (accessSelect) {
+    accessSelect.addEventListener("change", (e) => {
+      const target = e.target as HTMLSelectElement;
+      updatePercentInputsVisibility(target.value);
+    });
+    // Ініціалізація початкового стану (за замовчуванням Слюсар - приховано)
+    updatePercentInputsVisibility(accessSelect.value);
   }
 
   // Завантажуємо статистику після створення контейнера
@@ -542,6 +569,9 @@ export const initYesButtonHandler = () => {
       const percentInput = document.getElementById(
         "slusar-percent"
       ) as HTMLInputElement;
+      const percentPartsInput = document.getElementById(
+        "slusar-percent-parts"
+      ) as HTMLInputElement;
       const searchInput = document.getElementById(
         "search-input-all_other_bases"
       ) as HTMLInputElement;
@@ -551,10 +581,21 @@ export const initYesButtonHandler = () => {
       const name = searchInput.value.trim();
       const percentValue = Number(percentInput.value);
 
+      let percentPartsValue = 50;
+      if (percentPartsInput && percentPartsInput.value) {
+        percentPartsValue = Number(percentPartsInput.value);
+      }
+
       // Валідація відсотка
       if (isNaN(percentValue) || percentValue < 0 || percentValue > 100) {
         console.error("Невалідне значення проценту роботи:", percentValue);
         return;
+      }
+
+      if (isNaN(percentPartsValue) || percentPartsValue < 0 || percentPartsValue > 100) {
+        console.error("Невалідне значення проценту запчастин:", percentPartsValue);
+        // Можна продовжити зі значеняям за замовчуванням або повернути помилку
+        percentPartsValue = 50;
       }
 
       try {
@@ -572,10 +613,11 @@ export const initYesButtonHandler = () => {
 
         let currentData = typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
 
-        // Оновлюємо ПроцентРоботи
+        // Оновлюємо ПроцентРоботи та ПроцентЗапчастин
         currentData = {
           ...currentData,
           ПроцентРоботи: percentValue,
+          ПроцентЗапчастин: percentPartsValue,
         };
 
         // Оновлюємо запис у базі даних
@@ -585,11 +627,11 @@ export const initYesButtonHandler = () => {
           .eq("slyusar_id", rows.slyusar_id);
 
         if (updateError) {
-          console.error("Помилка при оновленні проценту роботи:", updateError);
+          console.error("Помилка при оновленні процентів:", updateError);
           return;
         }
 
-        console.log(`Успішно оновлено ПроцентРоботи для ${name}: ${percentValue}`);
+        console.log(`Успішно оновлено проценти для ${name}: Робота=${percentValue}, Запчастини=${percentPartsValue}`);
       } catch (error) {
         console.error("Помилка при обробці даних слюсаря:", error);
       }

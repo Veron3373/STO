@@ -928,7 +928,15 @@ async function syncPruimalnikHistory(
       // Створюємо мапу цін: id -> price
       const priceMap = new Map<number, number>();
       scladItems.forEach(item => {
-        priceMap.set(item.sclad_id, Number(item.cyna_vxidna) || 0);
+        // Парсимо ціну (якщо рядок "938,00" або число 938)
+        let val = 0;
+        if (typeof item.cyna_vxidna === "number") {
+          val = item.cyna_vxidna;
+        } else {
+          // Якщо рядок або щось інше
+          val = parseFloat(String(item.cyna_vxidna).replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
+        }
+        priceMap.set(item.sclad_id, val);
       });
 
       // Рахуємо суму закупки
@@ -936,11 +944,9 @@ async function syncPruimalnikHistory(
         if (part.scladId && priceMap.has(part.scladId)) {
           const buyPrice = priceMap.get(part.scladId) || 0;
           partsTotalBuy += buyPrice * part.qty;
+          console.log(`🛒 Деталь ID=${part.scladId}: Qty=${part.qty}, BuyPrice=${buyPrice}, TotalBuy=${buyPrice * part.qty}`);
         } else {
-          // Якщо немає ID або ціни, вважаємо вхідну ціну 0 (весь продаж - прибуток)? 
-          // Або навпаки? За логікою користувача ми віднімаємо базу.
-          // Якщо ціни немає - віднімати 0.
-          console.log(`ℹ️ Не знайдено вхідну ціну для sclad_id=${part.scladId}, беремо 0`);
+          console.log(`ℹ️ Не знайдено вхідну ціну для sclad_id=${part.scladId}, беремо 0 (Вхідна ціна не враховується)`);
         }
       });
     }

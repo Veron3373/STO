@@ -238,3 +238,9 @@ label {
 .confirm-button.no:hover {
   color: darkred;
 }
+
+#car-number-input-create-sakaz_narad::placeholder,
+#car-code-create-sakaz_narad::placeholder,
+#car-vin-create-sakaz_narad::placeholder {
+  text-transform: none;
+}

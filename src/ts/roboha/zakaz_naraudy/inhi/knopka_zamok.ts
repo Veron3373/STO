@@ -290,6 +290,122 @@ async function syncShopsHistoryForAct(params: {
   }
 }
 
+/** Синхронізувати у slyusars.data.Історія для 1 акту (оновлення ДатаЗакриття) */
+async function syncSlyusarsHistoryForAct(params: {
+  actId: number;
+  dateKey: string;
+  dateClose: string | null;
+}): Promise<void> {
+  try {
+    // Отримуємо всіх приймальників з таблиці slyusars
+    const { data: slyusarsData, error: fetchError } = await supabase
+      .from("slyusars")
+      .select("*");
+
+    if (fetchError) {
+      console.warn("Не вдалося отримати дані з slyusars:", fetchError.message);
+      return;
+    }
+
+    if (!slyusarsData || slyusarsData.length === 0) {
+      console.log("Немає даних у таблиці slyusars");
+      return;
+    }
+
+    // Визначаємо первинний ключ
+    const primaryKeyCandidates = ["id", "slyusars_id", "uid", "pk"];
+    const detectPrimaryKey = (row: any): string | null => {
+      if (!row) return null;
+      for (const k of primaryKeyCandidates) if (k in row) return k;
+      return null;
+    };
+    const primaryKey = detectPrimaryKey(slyusarsData[0]);
+
+    if (!primaryKey) {
+      console.warn("Не вдалося визначити первинний ключ для slyusars");
+      return;
+    }
+
+    let updatedCount = 0;
+
+    // Проходимо по всіх приймальниках
+    for (const slyusarRow of slyusarsData) {
+      let slyusarData: any = {};
+
+      // Парсимо JSON дані
+      if (typeof slyusarRow.data === "string") {
+        try {
+          slyusarData = JSON.parse(slyusarRow.data);
+        } catch (e) {
+          console.warn(`Не вдалося розпарсити дані для запису ${slyusarRow[primaryKey]}`);
+          continue;
+        }
+      } else if (typeof slyusarRow.data === "object" && slyusarRow.data !== null) {
+        slyusarData = slyusarRow.data;
+      } else {
+        continue;
+      }
+
+      // Перевіряємо чи це приймальник
+      const access = slyusarData["Доступ"] || "";
+      if (access.toLowerCase().normalize("NFKC").trim() !== "приймальник") {
+        continue;
+      }
+
+      // Перевіряємо наявність історії
+      if (!slyusarData["Історія"] || typeof slyusarData["Історія"] !== "object") {
+        continue;
+      }
+
+      const history = slyusarData["Історія"];
+
+      // Шукаємо акт у історії за dateKey
+      if (!history[params.dateKey] || !Array.isArray(history[params.dateKey])) {
+        continue;
+      }
+
+      const dayBucket = history[params.dateKey];
+      let actFound = false;
+
+      // Шукаємо запис з потрібним актом
+      for (const actEntry of dayBucket) {
+        if (Number(actEntry?.["Акт"]) === Number(params.actId)) {
+          // Оновлюємо дату закриття
+          actEntry["ДатаЗакриття"] = params.dateClose;
+          actFound = true;
+          break;
+        }
+      }
+
+      if (actFound) {
+        // Зберігаємо оновлені дані назад у базу
+        const { error: updateError } = await supabase
+          .from("slyusars")
+          .update({ data: slyusarData })
+          .eq(primaryKey, slyusarRow[primaryKey]);
+
+        if (updateError) {
+          console.error(
+            `Помилка оновлення slyusars#${slyusarRow[primaryKey]}:`,
+            updateError.message
+          );
+        } else {
+          updatedCount++;
+          console.log(
+            `✅ Оновлено ДатаЗакриття для акту ${params.actId} у приймальника ${slyusarData["Name"]}`
+          );
+        }
+      }
+    }
+
+    if (updatedCount > 0) {
+      console.log(`✅ Оновлено ${updatedCount} записів у slyusars для акту ${params.actId}`);
+    }
+  } catch (err) {
+    console.error("Помилка синхронізації slyusars:", err);
+  }
+}
+
 const FULL_ACCESS_ALIASES = [
   "адміністратор",
   "адміністатор",
@@ -411,6 +527,8 @@ export function initStatusLockDelegation(): void {
           if (detailRows.length) {
             await syncShopsHistoryForAct({ actId, dateKey, detailRows });
           }
+          // Оновлюємо дату закриття в історії приймальників (null при відкритті)
+          await syncSlyusarsHistoryForAct({ actId, dateKey, dateClose: null });
         } else {
           showNotification(
             "Не вдалось визначити дату відкриття акту — Історія в shops не оновлена",
@@ -499,13 +617,16 @@ export function initStatusLockDelegation(): void {
         if (actError)
           throw new Error("Не вдалося закрити акт: " + actError.message);
 
-        const { date_on } = await fetchActDates(actId);
+        const { date_on, date_off } = await fetchActDates(actId);
         const dateKey = toISODateOnly(date_on);
+        const dateClose = toISODateOnly(date_off);
         if (dateKey) {
           const detailRows = collectDetailRowsFromDom();
           if (detailRows.length) {
             await syncShopsHistoryForAct({ actId, dateKey, detailRows });
           }
+          // Оновлюємо дату закриття в історії приймальників
+          await syncSlyusarsHistoryForAct({ actId, dateKey, dateClose });
         } else {
           showNotification(
             "Не вдалось визначити дату відкриття акту — Історія в shops не оновлена",

@@ -433,11 +433,21 @@ async function loadPurchasePricesForProfit(): Promise<void> {
   }
 }
 
+// Кеш для зарплат приймальника
+const receipterSalaryCache = new Map<
+  number,
+  { salaryParts: number; salaryWork: number }
+>();
+
 // Отримує зарплату приймальника для конкретного акту
 async function getReceipterSalaryForAct(actId: number): Promise<{
   salaryParts: number;
   salaryWork: number;
 }> {
+  // Перевіряємо кеш
+  if (receipterSalaryCache.has(actId)) {
+    return receipterSalaryCache.get(actId)!;
+  }
   try {
     const { data, error } = await supabase
       .from("slyusars")
@@ -475,9 +485,10 @@ async function getReceipterSalaryForAct(actId: number): Promise<{
             salaryWork: Number(record.ЗарплатаРоботи) || 0,
           };
           console.log(
-            `✅ Знайдено зарплату приймальника для акту ${actId}:`,
-            salary
+            `✅ Акт ${actId}: Зарплата приймальника - Деталі: ${salary.salaryParts}, Робота: ${salary.salaryWork}`
           );
+          // Зберігаємо в кеш
+          receipterSalaryCache.set(actId, salary);
           return salary;
         }
       }
@@ -486,7 +497,9 @@ async function getReceipterSalaryForAct(actId: number): Promise<{
     console.log(
       `⚠️ Запис для акту ${actId} не знайдено в історії приймальника`
     );
-    return { salaryParts: 0, salaryWork: 0 };
+    const defaultSalary = { salaryParts: 0, salaryWork: 0 };
+    receipterSalaryCache.set(actId, defaultSalary);
+    return defaultSalary;
   } catch (err) {
     console.error(
       `⚠️ Помилка отримання зарплати приймальника для акту ${actId}:`,
@@ -530,7 +543,13 @@ async function calculateDetailsMarginFromAct(
 
   // Віднімаємо зарплату приймальника за деталі
   const receipterSalary = await getReceipterSalaryForAct(actId);
+  console.log(
+    `📊 Акт ${actId}: Маржа деталей до віднімання: ${totalMargin}, Зарплата приймальника (деталі): ${receipterSalary.salaryParts}`
+  );
   totalMargin -= receipterSalary.salaryParts;
+  console.log(
+    `📊 Акт ${actId}: Маржа деталей після віднімання: ${totalMargin}`
+  );
 
   return Number(totalMargin.toFixed(2));
 }
@@ -554,10 +573,18 @@ async function calculateWorkProfitFromAct(
 
   // Віднімаємо зарплату приймальника за роботу
   const receipterSalary = await getReceipterSalaryForAct(actId);
+  console.log(
+    `📊 Акт ${actId}: Прибуток робіт до віднімання: ${
+      totalSum - totalSalary
+    }, Зарплата слюсаря: ${totalSalary}, Зарплата приймальника (робота): ${
+      receipterSalary.salaryWork
+    }`
+  );
   totalSalary += receipterSalary.salaryWork;
 
   // Прибуток = Сума всіх робіт - Сума всіх зарплат (слюсаря + приймальника)
   const profit = totalSum - totalSalary;
+  console.log(`📊 Акт ${actId}: Прибуток робіт після віднімання: ${profit}`);
   return Number(profit.toFixed(2));
 }
 
@@ -780,6 +807,8 @@ async function loadvutratuFromDatabase(): Promise<void> {
     }
 
     vutratuData = [];
+    // Очищаємо кеш зарплат приймальника
+    receipterSalaryCache.clear();
 
     // Додаємо дані з vutratu
     if (vutratuDataRaw && Array.isArray(vutratuDataRaw)) {

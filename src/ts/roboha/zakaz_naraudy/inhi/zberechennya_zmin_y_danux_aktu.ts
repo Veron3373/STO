@@ -837,10 +837,13 @@ function getClientAndCarInfo(): { pib: string; auto: string } {
 /**
  * Синхронізує історію акту для Приймальника
  */
+/**
+ * Синхронізує історію акту для Приймальника з новою логікою розрахунку
+ */
 async function syncPruimalnikHistory(
   actId: number,
-  totalWorksSum: number,
-  totalDetailsSum: number
+  _totalWorksSumIgnored: number,
+  _totalDetailsSumIgnored: number
 ): Promise<void> {
   // 1. Перевірка ролі (тільки Приймальник)
   if (userAccessLevel !== "Приймальник") return;
@@ -853,7 +856,105 @@ async function syncPruimalnikHistory(
 
   console.log(`🔍 syncPruimalnikHistory: Обробка для "${currentUserName}"`);
 
-  // 2. Отримуємо дані приймальника з БД
+  // --- ЗБІР ДАНИХ З DOM ---
+  const tableBody = document.querySelector<HTMLTableSectionElement>(
+    "#act-items-table-container tbody"
+  );
+
+  if (!tableBody) {
+    console.error("❌ syncPruimalnikHistory: Таблиця не знайдена");
+    return;
+  }
+
+  let worksTotalSale = 0;
+  let worksTotalSlusarSalary = 0;
+
+  let partsTotalSale = 0;
+  // Масив для деталей: { scladId, qty, totalSale }
+  const partsList: { scladId: number | null; qty: number; sale: number }[] = [];
+
+  const rows = Array.from(tableBody.querySelectorAll("tr"));
+
+  // Хелпер
+  const parseNum = (str: string | null | undefined) => {
+    if (!str) return 0;
+    return parseFloat(str.replace(/[^\d.-]/g, "")) || 0;
+  };
+
+  rows.forEach((row) => {
+    const nameCell = row.querySelector('[data-name="name"]');
+    const dataType = nameCell?.getAttribute("data-type");
+
+    const sumCell = row.querySelector('[data-name="sum"]');
+    const sumValue = parseNum(sumCell?.textContent);
+
+    // РОБОТА
+    if (dataType === "works") {
+      const slusarSumCell = row.querySelector('[data-name="slyusar_sum"]');
+      const slusarSalary = parseNum(slusarSumCell?.textContent);
+
+      worksTotalSale += sumValue;
+      worksTotalSlusarSalary += slusarSalary;
+    }
+    // ДЕТАЛІ
+    else if (dataType === "details") {
+      const catalogCell = row.querySelector('[data-name="catalog"]');
+      const scladIdStr = catalogCell?.getAttribute("data-sclad-id");
+      const scladId = scladIdStr ? parseInt(scladIdStr) : null;
+
+      const qtyCell = row.querySelector('[data-name="id_count"]');
+      const qty = parseNum(qtyCell?.textContent);
+
+      partsTotalSale += sumValue;
+      partsList.push({ scladId, qty, sale: sumValue });
+    }
+  });
+
+  // --- ОТРИМАННЯ ВХІДНИХ ЦІН ---
+  let partsTotalBuy = 0;
+  const scladIdsToFetch = partsList
+    .map(p => p.scladId)
+    .filter((id): id is number => id !== null && !isNaN(id));
+
+  if (scladIdsToFetch.length > 0) {
+    const { data: scladItems, error: scladError } = await supabase
+      .from("sclad")
+      .select("sclad_id, cyna_vxidna")
+      .in("sclad_id", scladIdsToFetch);
+
+    if (scladError) {
+      console.error("❌ syncPruimalnikHistory: Помилка отримання цін sclad:", scladError);
+    } else if (scladItems) {
+      // Створюємо мапу цін: id -> price
+      const priceMap = new Map<number, number>();
+      scladItems.forEach(item => {
+        priceMap.set(item.sclad_id, Number(item.cyna_vxidna) || 0);
+      });
+
+      // Рахуємо суму закупки
+      partsList.forEach(part => {
+        if (part.scladId && priceMap.has(part.scladId)) {
+          const buyPrice = priceMap.get(part.scladId) || 0;
+          partsTotalBuy += buyPrice * part.qty;
+        } else {
+          // Якщо немає ID або ціни, вважаємо вхідну ціну 0 (весь продаж - прибуток)? 
+          // Або навпаки? За логікою користувача ми віднімаємо базу.
+          // Якщо ціни немає - віднімати 0.
+          console.log(`ℹ️ Не знайдено вхідну ціну для sclad_id=${part.scladId}, беремо 0`);
+        }
+      });
+    }
+  }
+
+  // --- РОЗРАХУНОК БАЗ ТА ЗАРПЛАТ ---
+
+  // 1. Робота: (Сума Продажу - Зарплата Слюсаря)
+  const baseWorkProfit = worksTotalSale - worksTotalSlusarSalary;
+
+  // 2. Запчастини: (Сума Продажу - Сума Закупки)
+  const basePartsProfit = partsTotalSale - partsTotalBuy;
+
+  // --- ОТРИМАННЯ ДАНИХ ПРИЙМАЛЬНИКА З БД ---
   const { data: userData, error } = await supabase
     .from("slyusars")
     .select("*")
@@ -877,8 +978,19 @@ async function syncPruimalnikHistory(
   const percentWork = Number(slyusarData.ПроцентРоботи) || 0;
   const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
 
-  const salaryWork = Math.round(totalWorksSum * (percentWork / 100));
-  const salaryParts = Math.round(totalDetailsSum * (percentParts / 100));
+  const salaryWork = Math.round(baseWorkProfit * (percentWork / 100));
+  const salaryParts = Math.round(basePartsProfit * (percentParts / 100));
+
+  console.log("📊 Розрахунок ЗП Приймальника:", {
+    worksTotalSale,
+    worksTotalSlusarSalary,
+    baseWorkProfit,
+    salaryWork,
+    partsTotalSale,
+    partsTotalBuy,
+    basePartsProfit,
+    salaryParts
+  });
 
   let history = slyusarData.Історія || {};
   let actFound = false;
@@ -901,20 +1013,14 @@ async function syncPruimalnikHistory(
 
   const { pib, auto } = getClientAndCarInfo();
 
-  // Якщо акт закритий - ставимо дату, інакше порожньо (або не змінюємо якщо вже є)
-  // В даному контексті ми лише зберігаємо зміни, тому про дату закриття не знаємо точно,
-  // хіба що globalCache.isActClosed (але тоді ми б не редагували).
-  // Тому дату закриття не чіпаємо, або залишаємо як була.
-
   const actRecordUpdate = {
     "Акт": String(actId),
     "Клієнт": pib,
     "Автомобіль": auto,
-    "СуммаРоботи": totalWorksSum,
-    "СуммаЗапчастин": totalDetailsSum,
+    "СуммаРоботи": baseWorkProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
+    "СуммаЗапчастин": basePartsProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
     "ЗарплатаРоботи": salaryWork,
     "ЗарплатаЗапчастин": salaryParts,
-    // "ДатаЗакриття" - не оновлюємо тут, бо це лише Save Changes у відкритому акті
   };
 
   if (actFound) {
@@ -927,7 +1033,6 @@ async function syncPruimalnikHistory(
     if (!history[today]) {
       history[today] = [];
     }
-    // Для нового запису теж не ставимо дату закриття, поки не закриють
     history[today].push(actRecordUpdate);
   }
 

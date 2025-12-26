@@ -1248,7 +1248,7 @@ export function searchDataInDatabase(
           const margin = totalSum - totalSalary;
 
           const customHtml = `
-            <div style="font-size: 0.85em; line-height: 1.2;">
+            <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
               <div style="color: #28a745;">⚙️: ${formatNumber(sumParts)}</div>
               <div style="color: #dc3545;">⚙️: ${formatNumber(
                 -salaryParts

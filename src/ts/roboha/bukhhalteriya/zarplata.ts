@@ -1016,6 +1016,11 @@ export function updatepodlegleTable(): void {
         )}</div>
       `;
 
+      // Стиль для дати закриття
+      const closeDateStyle = item.isClosed
+        ? "color: #155724; font-weight: 600;" // Зелений
+        : "color: #dc3545; font-weight: 600;"; // Червоний
+
       return `
                 <tr class="${rowClass} ${paidClass}" style="background-color: ${rowBackgroundColor};" onclick="handleRowClick(${index})">
                     <td>
@@ -1029,7 +1034,7 @@ export function updatepodlegleTable(): void {
                         </button>
                     </td>
                     <td>${formatDate(item.dateOpen)}</td>
-                    <td>${formatDate(item.dateClose)}</td>
+                    <td style="${closeDateStyle}">${formatDate(item.dateClose) || "-"}</td>
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
@@ -1045,7 +1050,7 @@ export function updatepodlegleTable(): void {
                     <td>${item.work || "-"}</td>
                     <td>${item.quantity || "-"}</td>
                     <td>${item.price ? formatNumber(item.price) : "-"}</td>
-                    <td style="padding: 8px; min-width: 160px; white-space: nowrap;">
+                    <td style="padding: 8px; min-width: 220px; white-space: nowrap;">
                       ${totalHtml}
                     </td>
                     <td><button class="Bukhhalter-delete-btn" onclick="event.stopPropagation(); deleteRecord('podlegle', ${originalIndex})">🗑️</button></td>
@@ -1170,7 +1175,7 @@ export function searchDataInDatabase(
                 total: totalPrice,
                 salary,
                 margin: totalPrice - salary,
-                isClosed: record.ДатаЗакриття !== null,
+                isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО: надійна перевірка на існування
                 isPaid: true,
                 paymentDate: payDmy,
               });
@@ -1200,7 +1205,7 @@ export function searchDataInDatabase(
                 total: totalPrice,
                 salary,
                 margin: totalPrice - salary,
-                isClosed: record.ДатаЗакриття !== null,
+                isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО
                 isPaid: !!entry.Розраховано,
                 paymentDate: entry.Розраховано || "",
               });
@@ -1257,7 +1262,7 @@ export function searchDataInDatabase(
             total: totalSum,
             salary: totalSalary,
             margin: margin,
-            isClosed: record.ДатаЗакриття !== null,
+            isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО
             isPaid: isPaid,
             paymentDate: payDate,
             customHtmlTotal: customHtml

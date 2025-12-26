@@ -59,11 +59,11 @@ export function getModalFormValues() {
     fullName: get(clientInputId),
     phone: phoneValue,
     carModel: get(carModelInputId),
-    carCode: get(carCodeInputId),
-    carNumber: get(carNumberInputId),
+    carCode: get(carCodeInputId).toUpperCase(),
+    carNumber: get(carNumberInputId).toUpperCase(),
     engine: get(carEngineInputId),
     fuel: get(carFuelInputId),
-    vin: get(carVinInputId),
+    vin: get(carVinInputId).toUpperCase(),
     income: get(carIncomeInputId),
     extra: get(extraInputId),
     year: get(carYearInputId),
@@ -179,7 +179,7 @@ function createInputFields(): string {
       </div>
       <div class="field-create-sakaz_narad car-code-input-group">
         <label for="${carNumberInputId}">Номер авто</label>
-        <input type="text" id="${carNumberInputId}" class="input-create-sakaz_narad" placeholder="Номер авто" autocomplete="off" />
+        <input type="text" id="${carNumberInputId}" class="input-create-sakaz_narad" placeholder="Номер авто" autocomplete="off" style="text-transform: uppercase;" />
         <ul id="${carNumberListId}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
       <div class="field-create-sakaz_narad year-input-group">
@@ -195,7 +195,7 @@ function createInputFields(): string {
       </div>
       <div class="field-create-sakaz_narad car-code-input-group">
         <label for="${carCodeInputId}">Код ДВЗ</label>
-        <input type="text" id="${carCodeInputId}" class="input-create-sakaz_narad" readonly />
+        <input type="text" id="${carCodeInputId}" class="input-create-sakaz_narad" readonly style="text-transform: uppercase;" />
         <ul id="${carCodeListId}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
       <div class="field-create-sakaz_narad">
@@ -206,7 +206,7 @@ function createInputFields(): string {
     <div class="field-row-create-sakaz_narad">
       <div class="field-create-sakaz_narad">
         <label for="${carVinInputId}">VIN-код</label>
-        <input type="text" id="${carVinInputId}" class="input-create-sakaz_narad" readonly />
+        <input type="text" id="${carVinInputId}" class="input-create-sakaz_narad" readonly style="text-transform: uppercase;" />
         <ul id="${carVinListId}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
       <div class="field-create-sakaz_narad">
@@ -681,6 +681,23 @@ export async function showModalCreateSakazNarad() {
   // Додаємо слухач для clientInput, щоб він розширювався під час ручного введення
   // (хоча setupAutocomplete це теж робить, але для безпеки)
   clientInput.addEventListener("input", () => autoResizeTextarea(clientInput));
+
+  const forceUppercase = (id: string) => {
+    const el = document.getElementById(id) as HTMLInputElement;
+    if (el) {
+      el.addEventListener("input", () => {
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        el.value = el.value.toUpperCase();
+        if (start !== null && end !== null) {
+          el.setSelectionRange(start, end);
+        }
+      });
+    }
+  };
+  forceUppercase(carNumberInputId);
+  forceUppercase(carVinInputId);
+  forceUppercase(carCodeInputId);
 
   const editableFieldsInitially = [
     clientInput,

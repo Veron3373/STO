@@ -405,11 +405,14 @@ async function syncSlyusarsHistoryForAct(params: {
 
     if (updatedCount > 0) {
       console.log(`✅ Оновлено ${updatedCount} записів у slyusars для акту ${params.actId}`);
+      showNotification(`✅ Історія приймальника оновлена (${updatedCount})`, "success", 2000);
     } else {
       console.warn(`⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`);
+      // showNotification(`⚠️ Акт ${params.actId} не знайдено у приймальників`, "info");
     }
   } catch (err) {
     console.error("Помилка синхронізації slyusars:", err);
+    showNotification("❌ Помилка синхронізації історії приймальника", "error");
   }
 }
 
@@ -624,9 +627,11 @@ export function initStatusLockDelegation(): void {
         if (actError)
           throw new Error("Не вдалося закрити акт: " + actError.message);
 
-        const { date_on, date_off } = await fetchActDates(actId);
+        // Используем то же время, что и для записи в БД, чтобы избежать рассинхрона
+        const { date_on } = await fetchActDates(actId);
         const dateKey = toISODateOnly(date_on);
-        const dateClose = toISODateOnly(date_off);
+        const dateClose = toISODateOnly(currentDateTime); // Генеруємо напряму з currentDateTime
+
         if (dateKey) {
           const detailRows = collectDetailRowsFromDom();
           if (detailRows.length) {

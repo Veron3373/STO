@@ -1247,16 +1247,16 @@ export function searchDataInDatabase(
           const totalSalary = salaryWork + salaryParts;
           const margin = totalSum - totalSalary;
 
+          // Чистий прибуток = сума - зарплата
+          const netProfitParts = sumParts - salaryParts;
+          const netProfitWork = sumWork - salaryWork;
+
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              <div style="color: #28a745;">⚙️ ${formatNumber(sumParts)}</div>
-              <div style="color: #dc3545;">⚙️ ${formatNumber(
-                -salaryParts
-              )}</div>
-              <div style="color: #28a745;">🛠️ ${formatNumber(sumWork)}</div>
-              <div style="color: #dc3545;">🛠️ ${formatNumber(
-                -salaryWork
-              )}</div>
+              ${salaryParts !== 0 ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>` : ''}
+              ${netProfitParts !== 0 ? `<div style="color: #28a745;">⚙️ +${formatNumber(netProfitParts)}</div>` : ''}
+              ${salaryWork !== 0 ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>` : ''}
+              ${netProfitWork !== 0 ? `<div style="color: #28a745;">🛠️ +${formatNumber(netProfitWork)}</div>` : ''}
             </div>`;
 
           podlegleData.push({

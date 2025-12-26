@@ -442,22 +442,25 @@ async function getReceipterSalaryForAct(actId: number): Promise<{
     const { data, error } = await supabase
       .from("slyusars")
       .select("data")
-      .eq("Доступ", "Приймальник")
-      .single();
+      .eq("post_slyusar", "Приймальник");
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
+      console.log(`⚠️ Приймальник не знайдений для акту ${actId}`);
       return { salaryParts: 0, salaryWork: 0 };
     }
 
+    // Беремо першого приймальника (може бути кілька записів)
+    const receipterRecord = data[0];
+
     let slyusarData: any = {};
-    if (typeof data.data === "string") {
+    if (typeof receipterRecord.data === "string") {
       try {
-        slyusarData = JSON.parse(data.data);
+        slyusarData = JSON.parse(receipterRecord.data);
       } catch (e) {
         return { salaryParts: 0, salaryWork: 0 };
       }
     } else {
-      slyusarData = data.data;
+      slyusarData = receipterRecord.data;
     }
 
     const history = slyusarData?.Історія || {};
@@ -467,14 +470,22 @@ async function getReceipterSalaryForAct(actId: number): Promise<{
       const records = history[dateKey] || [];
       for (const record of records) {
         if (record.Акт === actId) {
-          return {
+          const salary = {
             salaryParts: Number(record.ЗарплатаЗапчастин) || 0,
             salaryWork: Number(record.ЗарплатаРоботи) || 0,
           };
+          console.log(
+            `✅ Знайдено зарплату приймальника для акту ${actId}:`,
+            salary
+          );
+          return salary;
         }
       }
     }
 
+    console.log(
+      `⚠️ Запис для акту ${actId} не знайдено в історії приймальника`
+    );
     return { salaryParts: 0, salaryWork: 0 };
   } catch (err) {
     console.error(

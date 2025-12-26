@@ -712,15 +712,12 @@ body {
 .magazine-money,
 .poAktam-money,
 .vutratu-data,
-.vutratu-diya {
+.vutratu-diya,
+.vutratu-money {
   min-width: var(--col-money);
   width: var(--col-money);
 }
 
-.vutratu-money {
-  min-width: var(--col-money-vutratu);
-  width: var(--col-money-vutratu);
-}
 
 .pidlehli-robota,
 .poAktam-enuvannya {

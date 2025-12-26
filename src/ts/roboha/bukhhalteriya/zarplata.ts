@@ -1886,13 +1886,12 @@ export async function runMassPaymentCalculation(): Promise<void> {
           (a) => a.Акт === record.act
         );
         if (actRecord) {
-          // ✅ ВИПРАВЛЕНО: Шукаємо тільки по РОБОТІ
-          const workEntry = actRecord.Записи.find(
-            (e) => e.Робота === record.work && !e.Розраховано
-          );
-
-          if (workEntry) {
-            workEntry.Розраховано = currentDate;
+          // 1. ЛОГІКА ДЛЯ ПРИЙМАЛЬНИКА (якщо є суми і немає Записів)
+          if (
+            actRecord.СуммаРоботи !== undefined &&
+            (!actRecord.Записи || actRecord.Записи.length === 0)
+          ) {
+            actRecord.Розраховано = currentDate;
             updatedCount++;
 
             // Оновлюємо локальний масив
@@ -1901,20 +1900,48 @@ export async function runMassPaymentCalculation(): Promise<void> {
                 item.dateOpen === record.dateOpen &&
                 item.name === record.name &&
                 item.act === record.act &&
-                item.work === record.work &&
-                !item.isPaid
+                !item.isPaid // work може бути "-" або пустим, тому не перевіряємо його строго, або перевіряємо як є
             );
 
             if (originalIndex !== -1) {
               podlegleData[originalIndex].isPaid = true;
               podlegleData[originalIndex].paymentDate = currentDate;
             }
-          } else {
-            console.warn(
-              "❌ Не знайдено workEntry для масового розрахунку:",
-              record
+          }
+          // 2. ЛОГІКА ДЛЯ СЛЮСАРЯ (шукаємо в масиві Записи)
+          else if (actRecord.Записи) {
+            // ✅ ВИПРАВЛЕНО: Шукаємо тільки по РОБОТІ
+            const workEntry = actRecord.Записи.find(
+              (e) => e.Робота === record.work && !e.Розраховано
             );
-            errorCount++;
+
+            if (workEntry) {
+              workEntry.Розраховано = currentDate;
+              updatedCount++;
+
+              // Оновлюємо локальний масив
+              const originalIndex = podlegleData.findIndex(
+                (item) =>
+                  item.dateOpen === record.dateOpen &&
+                  item.name === record.name &&
+                  item.act === record.act &&
+                  item.work === record.work &&
+                  !item.isPaid
+              );
+
+              if (originalIndex !== -1) {
+                podlegleData[originalIndex].isPaid = true;
+                podlegleData[originalIndex].paymentDate = currentDate;
+              }
+            } else {
+              // Для слюсарів це ворнінг, але для приймальників ми вже обробили вище
+              // Тому тут else блок безпечний
+              console.warn(
+                "❌ Не знайдено workEntry для масового розрахунку:",
+                record
+              );
+              errorCount++;
+            }
           }
         }
       }

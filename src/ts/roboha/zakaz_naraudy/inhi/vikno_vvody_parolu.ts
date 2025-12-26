@@ -2,7 +2,6 @@
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { reopenActAndClearSlyusars } from "./save_work";
 import { refreshActsTable } from "../../tablucya/tablucya";
-import { supabase } from "../../../vxid/supabaseClient";
 import { getSavedUserDataFromLocalStorage } from "../../tablucya/users"; // Додаємо імпорт для отримання даних поточного користувача
 
 export const viknoVvodyParoluId = "vikno_vvody_parolu-modal";

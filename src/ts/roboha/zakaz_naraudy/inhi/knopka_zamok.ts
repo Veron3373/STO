@@ -297,7 +297,9 @@ async function syncSlyusarsHistoryForAct(params: {
   dateClose: string | null;
 }): Promise<void> {
   try {
-    console.log(`🔍 Синхронізація slyusars для акту ${params.actId}, дата закриття: ${params.dateClose}`);
+    console.log(
+      `🔍 Синхронізація slyusars для акту ${params.actId}, дата закриття: ${params.dateClose}`
+    );
 
     // Отримуємо всіх приймальників з таблиці slyusars
     const { data: slyusarsData, error: fetchError } = await supabase
@@ -314,8 +316,18 @@ async function syncSlyusarsHistoryForAct(params: {
       return;
     }
 
+    console.log(
+      `📊 Знайдено ${slyusarsData.length} записів у таблиці slyusars`
+    );
+
     // Визначаємо первинний ключ
-    const primaryKeyCandidates = ["id", "slyusars_id", "uid", "pk"];
+    const primaryKeyCandidates = [
+      "id",
+      "slyusars_id",
+      "uid",
+      "pk",
+      "slyusar_id",
+    ];
     const detectPrimaryKey = (row: any): string | null => {
       if (!row) return null;
       for (const k of primaryKeyCandidates) if (k in row) return k;
@@ -325,10 +337,14 @@ async function syncSlyusarsHistoryForAct(params: {
 
     if (!primaryKey) {
       console.warn("Не вдалося визначити первинний ключ для slyusars");
+      console.log("Доступні ключі:", Object.keys(slyusarsData[0] || {}));
       return;
     }
 
+    console.log(`🔑 Використовується первинний ключ: ${primaryKey}`);
+
     let updatedCount = 0;
+    let receiverCount = 0;
 
     // Проходимо по всіх приймальниках
     for (const slyusarRow of slyusarsData) {
@@ -339,42 +355,85 @@ async function syncSlyusarsHistoryForAct(params: {
         try {
           slyusarData = JSON.parse(slyusarRow.data);
         } catch (e) {
-          console.warn(`Не вдалося розпарсити дані для запису ${slyusarRow[primaryKey]}`);
+          console.warn(
+            `⚠️ Не вдалося розпарсити дані для запису ${slyusarRow[primaryKey]}`
+          );
           continue;
         }
-      } else if (typeof slyusarRow.data === "object" && slyusarRow.data !== null) {
+      } else if (
+        typeof slyusarRow.data === "object" &&
+        slyusarRow.data !== null
+      ) {
         slyusarData = slyusarRow.data;
       } else {
+        console.warn(`⚠️ Невалідні дані для запису ${slyusarRow[primaryKey]}`);
         continue;
       }
 
       // Перевіряємо чи це приймальник
       const access = slyusarData["Доступ"] || "";
-      if (access.toLowerCase().normalize("NFKC").trim() !== "приймальник") {
+      const normalizedAccess = access.toLowerCase().normalize("NFKC").trim();
+
+      if (normalizedAccess !== "приймальник") {
+        console.log(
+          `⏭️ Пропускаємо ${
+            slyusarData["Name"] || "Невідомий"
+          } - роль: ${access}`
+        );
         continue;
       }
 
+      receiverCount++;
+      console.log(`👤 Знайдено приймальника: ${slyusarData["Name"]}`);
+
       // Перевіряємо наявність історії
-      if (!slyusarData["Історія"] || typeof slyusarData["Історія"] !== "object") {
+      if (
+        !slyusarData["Історія"] ||
+        typeof slyusarData["Історія"] !== "object"
+      ) {
+        console.log(`⚠️ У приймальника ${slyusarData["Name"]} немає історії`);
         continue;
       }
 
       const history = slyusarData["Історія"];
+      const historyDates = Object.keys(history);
+      console.log(
+        `📅 Дати в історії ${slyusarData["Name"]}: ${historyDates.join(", ")}`
+      );
+
       let actFound = false;
+      let foundInDate = "";
 
       // Шукаємо акт по ВСІХ датах в історії (не тільки по dateKey)
       for (const dateKey in history) {
-        if (!Array.isArray(history[dateKey])) continue;
+        if (!Array.isArray(history[dateKey])) {
+          console.log(`⚠️ Історія за датою ${dateKey} не є масивом`);
+          continue;
+        }
 
         const dayBucket = history[dateKey];
+        console.log(
+          `🔍 Перевіряємо дату ${dateKey} - актів: ${dayBucket.length}`
+        );
 
         // Шукаємо запис з потрібним актом
         for (const actEntry of dayBucket) {
-          if (Number(actEntry?.["Акт"]) === Number(params.actId)) {
+          const actNumber = actEntry?.["Акт"];
+          console.log(
+            `  📋 Перевіряємо акт: ${actNumber} (шукаємо ${params.actId})`
+          );
+
+          if (Number(actNumber) === Number(params.actId)) {
             // Оновлюємо дату закриття
-            console.log(`✅ Знайдено акт ${params.actId} у приймальника ${slyusarData["Name"]} за датою ${dateKey}`);
+            console.log(
+              `✅ Знайдено акт ${params.actId} у приймальника ${slyusarData["Name"]} за датою ${dateKey}`
+            );
+            console.log(`   Поточна ДатаЗакриття: ${actEntry["ДатаЗакриття"]}`);
+            console.log(`   Нова ДатаЗакриття: ${params.dateClose}`);
+
             actEntry["ДатаЗакриття"] = params.dateClose;
             actFound = true;
+            foundInDate = dateKey;
             break;
           }
         }
@@ -383,6 +442,8 @@ async function syncSlyusarsHistoryForAct(params: {
       }
 
       if (actFound) {
+        console.log(`💾 Зберігаємо зміни для ${slyusarData["Name"]}`);
+
         // Зберігаємо оновлені дані назад у базу
         const { error: updateError } = await supabase
           .from("slyusars")
@@ -391,27 +452,47 @@ async function syncSlyusarsHistoryForAct(params: {
 
         if (updateError) {
           console.error(
-            `Помилка оновлення slyusars#${slyusarRow[primaryKey]}:`,
+            `❌ Помилка оновлення slyusars#${slyusarRow[primaryKey]}:`,
             updateError.message
           );
         } else {
           updatedCount++;
           console.log(
-            `✅ Оновлено ДатаЗакриття для акту ${params.actId} у приймальника ${slyusarData["Name"]}`
+            `✅ Оновлено ДатаЗакриття="${params.dateClose}" для акту ${params.actId} у приймальника ${slyusarData["Name"]} (дата: ${foundInDate})`
           );
         }
+      } else {
+        console.log(
+          `⚠️ Акт ${params.actId} не знайдено в історії приймальника ${slyusarData["Name"]}`
+        );
       }
     }
 
+    console.log(
+      `📊 Підсумок: знайдено ${receiverCount} приймальників, оновлено ${updatedCount}`
+    );
+
     if (updatedCount > 0) {
-      console.log(`✅ Оновлено ${updatedCount} записів у slyusars для акту ${params.actId}`);
-      showNotification(`✅ Історія приймальника оновлена (${updatedCount})`, "success", 2000);
+      console.log(
+        `✅ Оновлено ${updatedCount} записів у slyusars для акту ${params.actId}`
+      );
+      showNotification(
+        `✅ Історія приймальника оновлена (${updatedCount})`,
+        "success",
+        2000
+      );
     } else {
-      console.warn(`⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`);
-      // showNotification(`⚠️ Акт ${params.actId} не знайдено у приймальників`, "info");
+      console.warn(
+        `⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`
+      );
+      showNotification(
+        `⚠️ Акт ${params.actId} не знайдено у приймальників`,
+        "info",
+        3000
+      );
     }
   } catch (err) {
-    console.error("Помилка синхронізації slyusars:", err);
+    console.error("❌ Помилка синхронізації slyusars:", err);
     showNotification("❌ Помилка синхронізації історії приймальника", "error");
   }
 }

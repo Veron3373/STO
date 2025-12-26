@@ -217,8 +217,8 @@ class WorkSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -243,8 +243,9 @@ class WorkSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -873,7 +874,8 @@ export function createNameSelect(): void {
 
       if (hasDataForAllEmployees) {
         console.log(
-          `🔄 Автоматичне фільтрування по співробітнику: ${selectedName || "всі"
+          `🔄 Автоматичне фільтрування по співробітнику: ${
+            selectedName || "всі"
           }`
         );
 
@@ -886,7 +888,7 @@ export function createNameSelect(): void {
 
       refreshWorkDropdownOptions();
     });
-  } catch (error) { }
+  } catch (error) {}
 }
 
 export function getFilteredpodlegleData(): PodlegleRecord[] {
@@ -948,15 +950,16 @@ export function updatePodlegleDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
       <span>Сумма <strong style="color: #333;">💰 ${formatNumber(
-    totalRevenue
-  )}</strong> грн</span>
+        totalRevenue
+      )}</strong> грн</span>
       <span style="color: #666;">-</span>
       <span><strong style="color: #8B0000;">💶 ${formatNumber(
-    totalSalary
-  )}</strong> грн</span>
+        totalSalary
+      )}</strong> грн</span>
       <span style="color: #666;">=</span>
-      <span><strong style="color: ${totalMargin >= 0 ? "#006400 " : "#8B0000"
-    };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
+      <span><strong style="color: ${
+        totalMargin >= 0 ? "#006400 " : "#8B0000"
+      };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
     </div>
   `;
 }
@@ -1012,8 +1015,8 @@ export function updatepodlegleTable(): void {
           item.salary
         )}</div>
         <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
-          item.margin
-        )}</div>
+            item.margin
+          )}</div>
       `;
 
       return `
@@ -1021,10 +1024,11 @@ export function updatepodlegleTable(): void {
                     <td>
                              <button class="Bukhhalter-payment-btn ${buttonPaidClass}"
                                 onclick="event.stopPropagation(); togglepodleglePaymentWithConfirmation(${originalIndex})" 
-                                title="${item.isPaid
-          ? `Розраховано ${item.paymentDate || ""}`
-          : "Не розраховано"
-        }">
+                                title="${
+                                  item.isPaid
+                                    ? `Розраховано ${item.paymentDate || ""}`
+                                    : "Не розраховано"
+                                }">
                             ${paymentButtonText}
                         </button>
                     </td>
@@ -1033,8 +1037,9 @@ export function updatepodlegleTable(): void {
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
-                             onclick="event.stopPropagation(); openActModal(${Number(item.act) || 0
-        })"
+                             onclick="event.stopPropagation(); openActModal(${
+                               Number(item.act) || 0
+                             })"
                              title="Відкрити акт №${item.act}">
                        📋 ${item.act || "-"}
                      </button>
@@ -1145,9 +1150,12 @@ export function searchDataInDatabase(
 
     Object.keys(slyusar.Історія).forEach((openDmy) => {
       slyusar.Історія[openDmy].forEach((record) => {
-
         // 1. ЛОГІКА ДЛЯ СЛЮСАРІВ (з масивом Записи)
-        if (record.Записи && Array.isArray(record.Записи) && record.Записи.length > 0) {
+        if (
+          record.Записи &&
+          Array.isArray(record.Записи) &&
+          record.Записи.length > 0
+        ) {
           if (podlegleDateFilterMode === "paid") {
             record.Записи.forEach((entry) => {
               if (entry.Кількість === 0) return;
@@ -1220,7 +1228,10 @@ export function searchDataInDatabase(
           }
           // Фільтр "open/close"
           else {
-            const targetDmy = podlegleDateFilterMode === "close" ? record.ДатаЗакриття || "" : openDmy;
+            const targetDmy =
+              podlegleDateFilterMode === "close"
+                ? record.ДатаЗакриття || ""
+                : openDmy;
             if (!targetDmy) return;
             // Якщо close-mode і дата закриття пуста - пропускаємо
             if (podlegleDateFilterMode === "close" && !targetDmy) return;
@@ -1238,10 +1249,14 @@ export function searchDataInDatabase(
 
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2;">
-              <div style="color: #28a745;">🛠️: ${formatNumber(sumWork)}</div>
-              <div style="color: #dc3545;">🛠️: ${formatNumber(-salaryWork)}</div>
               <div style="color: #28a745;">⚙️: ${formatNumber(sumParts)}</div>
-              <div style="color: #dc3545;">⚙️: ${formatNumber(-salaryParts)}</div>
+              <div style="color: #dc3545;">⚙️: ${formatNumber(
+                -salaryParts
+              )}</div>
+              <div style="color: #28a745;">🛠️: ${formatNumber(sumWork)}</div>
+              <div style="color: #dc3545;">🛠️: ${formatNumber(
+                -salaryWork
+              )}</div>
             </div>`;
 
           podlegleData.push({
@@ -1260,7 +1275,7 @@ export function searchDataInDatabase(
             isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО
             isPaid: isPaid,
             paymentDate: payDate,
-            customHtmlTotal: customHtml
+            customHtmlTotal: customHtml,
           });
         }
       });
@@ -1285,12 +1300,24 @@ export function searchDataInDatabase(
     const actB = parseInt(b.act) || 0;
     if (actA !== actB) return actB - actA;
 
-    const ka = podlegleDateFilterMode === "paid" ? toIsoDate(a.paymentDate || a.dateOpen) : toIsoDate(a.dateOpen);
-    const kb = podlegleDateFilterMode === "paid" ? toIsoDate(b.paymentDate || b.dateOpen) : toIsoDate(b.dateOpen);
+    const ka =
+      podlegleDateFilterMode === "paid"
+        ? toIsoDate(a.paymentDate || a.dateOpen)
+        : toIsoDate(a.dateOpen);
+    const kb =
+      podlegleDateFilterMode === "paid"
+        ? toIsoDate(b.paymentDate || b.dateOpen)
+        : toIsoDate(b.dateOpen);
     return kb.localeCompare(ka);
   });
 
-  notificationHelperInSearch(podlegleData.length, selectedName, dateOpen, dateClose, workInput);
+  notificationHelperInSearch(
+    podlegleData.length,
+    selectedName,
+    dateOpen,
+    dateClose,
+    workInput
+  );
 
   allPodlegleData = [...podlegleData];
   hasPodlegleDataLoaded = true;
@@ -1300,23 +1327,35 @@ export function searchDataInDatabase(
 }
 
 // Helper to keep notifications clean
-function notificationHelperInSearch(count: number, name: string, dOpen: string, dClose: string, wInput: string) {
+function notificationHelperInSearch(
+  count: number,
+  name: string,
+  dOpen: string,
+  dClose: string,
+  wInput: string
+) {
   const modeLabels = {
     open: "відкриття",
     close: "закриття",
     paid: "розрахунку" as const,
   };
   let dateFilterMessage = "";
-  if (!dOpen && !dClose) dateFilterMessage = ` (всі дати ${modeLabels[podlegleDateFilterMode]})`;
-  else if (dOpen && !dClose) dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dOpen} до сьогодні)`;
-  else if (!dOpen && dClose) dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: до ${dClose} включно)`;
-  else dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dOpen} до ${dClose})`;
+  if (!dOpen && !dClose)
+    dateFilterMessage = ` (всі дати ${modeLabels[podlegleDateFilterMode]})`;
+  else if (dOpen && !dClose)
+    dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dOpen} до сьогодні)`;
+  else if (!dOpen && dClose)
+    dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: до ${dClose} включно)`;
+  else
+    dateFilterMessage = ` (${modeLabels[podlegleDateFilterMode]}: з ${dOpen} до ${dClose})`;
 
   if (wInput) dateFilterMessage += ` | робота: "${wInput}"`;
   const filterMessage = name ? ` для ${name}` : "";
 
   showNotification(
-    count > 0 ? `✅ Знайдено ${count} записів${filterMessage}${dateFilterMessage}` : `ℹ️ Записів не знайдено${filterMessage}${dateFilterMessage}`,
+    count > 0
+      ? `✅ Знайдено ${count} записів${filterMessage}${dateFilterMessage}`
+      : `ℹ️ Записів не знайдено${filterMessage}${dateFilterMessage}`,
     count > 0 ? "success" : "info"
   );
 }
@@ -1417,16 +1456,16 @@ export function filterPodlegleData(): void {
       podlegleDateFilterMode === "paid"
         ? "розрахунку"
         : podlegleDateFilterMode === "close"
-          ? "закриття"
-          : "відкриття";
+        ? "закриття"
+        : "відкриття";
     const datePart =
       !dateOpen && !dateClose
         ? ""
         : dateOpen && !dateClose
-          ? ` (з ${dateOpen} до сьогодні)`
-          : !dateOpen && dateClose
-            ? ` (до ${dateClose} включно)`
-            : ` (з ${dateOpen} до ${dateClose})`;
+        ? ` (з ${dateOpen} до сьогодні)`
+        : !dateOpen && dateClose
+        ? ` (до ${dateClose} включно)`
+        : ` (з ${dateOpen} до ${dateClose})`;
 
     const workPart = workInput ? ` | робота: "${workInput}"` : "";
     const namePart = selectedName ? ` для ${selectedName}` : "";
@@ -1772,7 +1811,10 @@ export function togglepodleglePayment(index: number): void {
   }
 
   if (!slyusar.Історія[record.dateOpen]) {
-    showNotification(`⚠️ Дата ${record.dateOpen} не знайдена в історії`, "error");
+    showNotification(
+      `⚠️ Дата ${record.dateOpen} не знайдена в історії`,
+      "error"
+    );
     return;
   }
 
@@ -1789,7 +1831,10 @@ export function togglepodleglePayment(index: number): void {
   let statusMsg = "";
 
   // ВАРІАНТ 1: ПРИЙМАЛЬНИК (якщо є суми і немає Записів)
-  if (actRecord.СуммаРоботи !== undefined && (!actRecord.Записи || actRecord.Записи.length === 0)) {
+  if (
+    actRecord.СуммаРоботи !== undefined &&
+    (!actRecord.Записи || actRecord.Записи.length === 0)
+  ) {
     if (!record.isPaid) {
       actRecord.Розраховано = currentDate;
       record.isPaid = true;
@@ -1812,21 +1857,26 @@ export function togglepodleglePayment(index: number): void {
       );
 
       if (!workEntry) {
-        showNotification(`⚠️ Робота "${record.work}" не знайдена або вже оплачена`, "error");
+        showNotification(
+          `⚠️ Робота "${record.work}" не знайдена або вже оплачена`,
+          "error"
+        );
         return;
       }
       workEntry.Розраховано = currentDate;
       record.isPaid = true;
       record.paymentDate = currentDate;
       statusMsg = `💰 Розрахунок встановлено на ${currentDate}`;
-
     } else {
       workEntry = actRecord.Записи!.find(
         (e) => e.Робота === record.work && e.Розраховано === record.paymentDate
       );
 
       if (!workEntry) {
-        showNotification(`⚠️ Оплачена робота "${record.work}" не знайдена`, "error");
+        showNotification(
+          `⚠️ Оплачена робота "${record.work}" не знайдена`,
+          "error"
+        );
         return;
       }
       delete workEntry.Розраховано;

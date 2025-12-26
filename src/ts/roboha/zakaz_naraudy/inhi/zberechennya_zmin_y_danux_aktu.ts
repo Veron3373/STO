@@ -719,40 +719,6 @@ async function logActChanges(
   };
 
   // ✅ ОТРИМАННЯ ПІБ КЛІЄНТА ТА АВТОМОБІЛЯ З DOM
-  const getClientAndCarInfo = (): { pib: string; auto: string } => {
-    let pib = "";
-    let auto = "";
-
-    // Шукаємо таблицю "left" де є клієнт
-    const leftTable = document.querySelector("table.zakaz_narayd-table.left");
-    if (leftTable) {
-      const rows = leftTable.querySelectorAll("tr");
-      rows.forEach((row) => {
-        const label = row.querySelector("td:first-child")?.textContent?.trim();
-        const value = row.querySelector("td:last-child")?.textContent?.trim();
-        if (label === "Клієнт" && value) {
-          pib = value;
-        }
-      });
-    }
-
-    // Шукаємо таблицю "right" де є автомобіль
-    const rightTable = document.querySelector("table.zakaz_narayd-table.right");
-    if (rightTable) {
-      const rows = rightTable.querySelectorAll("tr");
-      rows.forEach((row) => {
-        const label = row.querySelector("td:first-child")?.textContent?.trim();
-        const value = row.querySelector("td:last-child")?.textContent?.trim();
-        if (label === "Автомобіль" && value) {
-          auto = value;
-        }
-      });
-    }
-
-    console.log(`📋 Дані акту - Клієнт: "${pib}", Автомобіль: "${auto}"`);
-    return { pib, auto };
-  };
-
   const { pib, auto } = getClientAndCarInfo();
 
   const records: ActChangeRecord[] = [];
@@ -839,6 +805,147 @@ async function logActChanges(
   }
 }
 
+/**
+ * Отримує ПІБ клієнта та Авто з DOM
+ */
+function getClientAndCarInfo(): { pib: string; auto: string } {
+  let pib = "";
+  let auto = "";
+
+  const leftTable = document.querySelector("table.zakaz_narayd-table.left");
+  if (leftTable) {
+    const rows = leftTable.querySelectorAll("tr");
+    rows.forEach((row) => {
+      const label = row.querySelector("td:first-child")?.textContent?.trim();
+      const value = row.querySelector("td:last-child")?.textContent?.trim();
+      if (label === "Клієнт" && value) pib = value;
+    });
+  }
+
+  const rightTable = document.querySelector("table.zakaz_narayd-table.right");
+  if (rightTable) {
+    const rows = rightTable.querySelectorAll("tr");
+    rows.forEach((row) => {
+      const label = row.querySelector("td:first-child")?.textContent?.trim();
+      const value = row.querySelector("td:last-child")?.textContent?.trim();
+      if (label === "Автомобіль" && value) auto = value;
+    });
+  }
+  return { pib, auto };
+}
+
+/**
+ * Синхронізує історію акту для Приймальника
+ */
+async function syncPruimalnikHistory(
+  actId: number,
+  totalWorksSum: number,
+  totalDetailsSum: number
+): Promise<void> {
+  // 1. Перевірка ролі (тільки Приймальник)
+  if (userAccessLevel !== "Приймальник") return;
+
+  const currentUserName = userName;
+  if (!currentUserName) {
+    console.warn("⚠️ syncPruimalnikHistory: Неможливо визначити ім'я користувача");
+    return;
+  }
+
+  console.log(`🔍 syncPruimalnikHistory: Обробка для "${currentUserName}"`);
+
+  // 2. Отримуємо дані приймальника з БД
+  const { data: userData, error } = await supabase
+    .from("slyusars")
+    .select("*")
+    .eq("data->>Name", currentUserName)
+    .single();
+
+  if (error || !userData) {
+    console.error("❌ syncPruimalnikHistory: Помилка пошуку приймальника:", error);
+    return;
+  }
+
+  const slyusarData =
+    typeof userData.data === "string" ? JSON.parse(userData.data) : userData.data;
+
+  // Додаткова перевірка ролі в базі
+  if (slyusarData.Доступ !== "Приймальник") {
+    console.warn("⚠️ syncPruimalnikHistory: Користувач не є Приймальником в базі");
+    return;
+  }
+
+  const percentWork = Number(slyusarData.ПроцентРоботи) || 0;
+  const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
+
+  const salaryWork = Math.round(totalWorksSum * (percentWork / 100));
+  const salaryParts = Math.round(totalDetailsSum * (percentParts / 100));
+
+  let history = slyusarData.Історія || {};
+  let actFound = false;
+  let foundDateKey = "";
+  let foundIndex = -1;
+
+  // 3. Шукаємо існуючий запис акту в історії
+  for (const dateKey of Object.keys(history)) {
+    const dailyActs = history[dateKey];
+    if (Array.isArray(dailyActs)) {
+      const idx = dailyActs.findIndex((item: any) => String(item.Акт) === String(actId));
+      if (idx !== -1) {
+        actFound = true;
+        foundDateKey = dateKey;
+        foundIndex = idx;
+        break;
+      }
+    }
+  }
+
+  const { pib, auto } = getClientAndCarInfo();
+
+  // Якщо акт закритий - ставимо дату, інакше порожньо (або не змінюємо якщо вже є)
+  // В даному контексті ми лише зберігаємо зміни, тому про дату закриття не знаємо точно,
+  // хіба що globalCache.isActClosed (але тоді ми б не редагували).
+  // Тому дату закриття не чіпаємо, або залишаємо як була.
+
+  const actRecordUpdate = {
+    "Акт": String(actId),
+    "Клієнт": pib,
+    "Автомобіль": auto,
+    "СуммаРоботи": totalWorksSum,
+    "СуммаЗапчастин": totalDetailsSum,
+    "ЗарплатаРоботи": salaryWork,
+    "ЗарплатаЗапчастин": salaryParts,
+    // "ДатаЗакриття" - не оновлюємо тут, бо це лише Save Changes у відкритому акті
+  };
+
+  if (actFound) {
+    console.log(`📝 syncPruimalnikHistory: Оновлення існуючого запису акту #${actId}`);
+    const oldRecord = history[foundDateKey][foundIndex];
+    history[foundDateKey][foundIndex] = { ...oldRecord, ...actRecordUpdate };
+  } else {
+    console.log(`➕ syncPruimalnikHistory: Створення нового запису акту #${actId}`);
+    const today = new Date().toISOString().split("T")[0];
+    if (!history[today]) {
+      history[today] = [];
+    }
+    // Для нового запису теж не ставимо дату закриття, поки не закриють
+    history[today].push(actRecordUpdate);
+  }
+
+  // 4. Зберігаємо оновлену історію в БД
+  slyusarData.Історія = history;
+
+  const { error: updateError } = await supabase
+    .from("slyusars")
+    .update({ data: slyusarData })
+    .eq("slyusar_id", userData.slyusar_id);
+
+  if (updateError) {
+    console.error("❌ syncPruimalnikHistory: Помилка оновлення історії:", updateError);
+  } else {
+    console.log("✅ syncPruimalnikHistory: Історія успішно оновлена");
+  }
+}
+
 /* =============================== ЗБЕРЕЖЕННЯ АКТУ =============================== */
 
 async function saveActData(actId: number, originalActData: any): Promise<void> {
@@ -922,6 +1029,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   await applyScladDeltas(deltas);
   await syncShopsOnActSave(actId, detailRowsForShops);
   await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
+  await syncPruimalnikHistory(actId, totalWorksSum, totalDetailsSum); // ✅ Нова синхронізація для приймальника
 
   // ===== ЛОГУВАННЯ ЗМІН =====
   try {

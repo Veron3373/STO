@@ -297,6 +297,8 @@ async function syncSlyusarsHistoryForAct(params: {
   dateClose: string | null;
 }): Promise<void> {
   try {
+    console.log(`🔍 Синхронізація slyusars для акту ${params.actId}, дата закриття: ${params.dateClose}`);
+
     // Отримуємо всіх приймальників з таблиці slyusars
     const { data: slyusarsData, error: fetchError } = await supabase
       .from("slyusars")
@@ -358,23 +360,26 @@ async function syncSlyusarsHistoryForAct(params: {
       }
 
       const history = slyusarData["Історія"];
-
-      // Шукаємо акт у історії за dateKey
-      if (!history[params.dateKey] || !Array.isArray(history[params.dateKey])) {
-        continue;
-      }
-
-      const dayBucket = history[params.dateKey];
       let actFound = false;
 
-      // Шукаємо запис з потрібним актом
-      for (const actEntry of dayBucket) {
-        if (Number(actEntry?.["Акт"]) === Number(params.actId)) {
-          // Оновлюємо дату закриття
-          actEntry["ДатаЗакриття"] = params.dateClose;
-          actFound = true;
-          break;
+      // Шукаємо акт по ВСІХ датах в історії (не тільки по dateKey)
+      for (const dateKey in history) {
+        if (!Array.isArray(history[dateKey])) continue;
+
+        const dayBucket = history[dateKey];
+
+        // Шукаємо запис з потрібним актом
+        for (const actEntry of dayBucket) {
+          if (Number(actEntry?.["Акт"]) === Number(params.actId)) {
+            // Оновлюємо дату закриття
+            console.log(`✅ Знайдено акт ${params.actId} у приймальника ${slyusarData["Name"]} за датою ${dateKey}`);
+            actEntry["ДатаЗакриття"] = params.dateClose;
+            actFound = true;
+            break;
+          }
         }
+
+        if (actFound) break; // Якщо знайшли - виходимо з циклу по датах
       }
 
       if (actFound) {
@@ -400,6 +405,8 @@ async function syncSlyusarsHistoryForAct(params: {
 
     if (updatedCount > 0) {
       console.log(`✅ Оновлено ${updatedCount} записів у slyusars для акту ${params.actId}`);
+    } else {
+      console.warn(`⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`);
     }
   } catch (err) {
     console.error("Помилка синхронізації slyusars:", err);

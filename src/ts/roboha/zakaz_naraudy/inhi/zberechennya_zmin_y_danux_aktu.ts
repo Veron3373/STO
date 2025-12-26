@@ -895,6 +895,8 @@ async function syncPruimalnikHistory(
 
       worksTotalSale += sumValue;
       worksTotalSlusarSalary += slusarSalary;
+
+      console.log(`🛠️ Робота: Sale=${sumValue}, Salary=${slusarSalary}`);
     }
     // ДЕТАЛІ
     else if (dataType === "details") {
@@ -907,7 +909,17 @@ async function syncPruimalnikHistory(
 
       partsTotalSale += sumValue;
       partsList.push({ scladId, qty, sale: sumValue });
+
+      console.log(`⚙️ Деталь: scladId=${scladId}, Qty=${qty}, Sale=${sumValue}`);
     }
+  });
+
+  console.log("📊 Підсумки збору даних:", {
+    worksTotalSale,
+    worksTotalSlusarSalary,
+    partsTotalSale,
+    partsListLength: partsList.length,
+    partsList
   });
 
   // --- ОТРИМАННЯ ВХІДНИХ ЦІН ---
@@ -916,11 +928,15 @@ async function syncPruimalnikHistory(
     .map(p => p.scladId)
     .filter((id): id is number => id !== null && !isNaN(id));
 
+  console.log("🔍 ID для запиту до sclad:", scladIdsToFetch);
+
   if (scladIdsToFetch.length > 0) {
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
       .select("sclad_id, cyna_vxidna")
       .in("sclad_id", scladIdsToFetch);
+
+    console.log("📦 Відповідь від sclad:", { scladItems, scladError });
 
     if (scladError) {
       console.error("❌ syncPruimalnikHistory: Помилка отримання цін sclad:", scladError);

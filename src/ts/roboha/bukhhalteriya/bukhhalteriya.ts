@@ -543,9 +543,9 @@ function downloadpodlegleToExcel(): void {
     Клієнт: item.client || "",
     Автомобіль: item.automobile || "",
     Робота: item.work || "",
-    Кількість: item.quantity || 0,
-    Ціна: item.price || 0,
-    Сума: item.total || 0,
+    Кількість: String(item.quantity || 0),
+    Ціна: String(item.price || 0),
+    Сума: String(item.total || 0),
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -803,15 +803,37 @@ function downloadvutratuToExcel(): void {
     return;
   }
 
-  const excelData = filteredData.map((item) => ({
-    Розраховано: item.isPaid ? item.paymentDate || "Так" : "Ні",
-    Дата: formatDate(item.date),
-    Категорія: item.category,
-    Опис: item.description,
-    Сума: item.amount,
-    "Спосіб оплати": item.paymentMethod,
-    Примітки: item.notes || "",
-  }));
+  const excelData = filteredData.map((item) => {
+    // Визначаємо чи це акт
+    const isFromAct = item.category === "💰 Прибуток";
+
+    // Формуємо об'єкт для експорту
+    const row: any = {
+      Розраховано: item.isPaid ? item.paymentDate || "Так" : "Ні",
+      Дата: formatDate(item.date),
+      Категорія: item.category,
+      Опис: item.description,
+    };
+
+    // Для актів експортуємо деталі та роботу окремо
+    if (isFromAct && item.detailsAmount !== undefined && item.workAmount !== undefined) {
+      // Експортуємо як текст зі знаками
+      const detailsSign = item.detailsAmount > 0 ? "+" : "";
+      const workSign = item.workAmount > 0 ? "+" : "";
+
+      row["⚙️ Деталі"] = item.detailsAmount !== 0 ? `${detailsSign}${item.detailsAmount}` : "0";
+      row["🛠️ Робота"] = item.workAmount !== 0 ? `${workSign}${item.workAmount}` : "0";
+    } else {
+      // Для звичайних витрат експортуємо суму зі знаком
+      const sign = item.amount > 0 ? "+" : "";
+      row["Сума"] = `${sign}${item.amount}`;
+    }
+
+    row["Спосіб оплати"] = item.paymentMethod;
+    row["Примітки"] = item.notes || "";
+
+    return row;
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   const workbook = XLSX.utils.book_new();

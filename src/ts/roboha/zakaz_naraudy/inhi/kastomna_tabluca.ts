@@ -408,8 +408,8 @@ function showCatalogInfo(target: HTMLElement, sclad_id: number) {
     qty < 0
       ? `<span class="neg">${qty}</span>`
       : qty === 0
-        ? `<span class="neutral">${qty}</span>`
-        : `<span class="positive">${qty}</span>`;
+      ? `<span class="neutral">${qty}</span>`
+      : `<span class="positive">${qty}</span>`;
 
   const box = document.createElement("div");
   box.className = "catalog-info-popover";
@@ -446,7 +446,10 @@ function closeAutocompleteList() {
     currentAutocompleteInput.classList.remove("ac-open");
     // Ensure we don't clear content if it was a valid selection, but here we just close list.
     // Logic for returning focus is below.
-    if (document.activeElement && document.activeElement.closest('.autocomplete-list')) {
+    if (
+      document.activeElement &&
+      document.activeElement.closest(".autocomplete-list")
+    ) {
       currentAutocompleteInput.focus();
     }
   }
@@ -543,7 +546,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         if (chosenItemType === "work") {
           // Case: Work selected in Catalog
           if (chosenFullName) {
-            const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+            const nameCell = row.querySelector(
+              '[data-name="name"]'
+            ) as HTMLElement | null;
             if (nameCell) {
               setCellText(nameCell, shortenName(chosenFullName));
               nameCell.setAttribute("data-type", "works");
@@ -552,14 +557,17 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
           }
           // Update # to 🛠️
           if (indexCell) {
-            const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+            const num =
+              indexCell.textContent?.replace(/\D/g, "") ||
+              (row as HTMLTableRowElement).sectionRowIndex + 1;
             indexCell.textContent = `🛠️ ${num}`;
           }
 
           // Set pib_magazin to slyusars
-          const pibMagCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement | null;
+          const pibMagCell = row.querySelector(
+            '[data-name="pib_magazin"]'
+          ) as HTMLElement | null;
           if (pibMagCell) pibMagCell.setAttribute("data-type", "slyusars");
-
         } else {
           // Case: Detail selected in Catalog (via sclad_id or just type)
           if (chosenScladId !== undefined) {
@@ -567,15 +575,18 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
           }
           // Update # to ⚙️
           if (indexCell) {
-            const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+            const num =
+              indexCell.textContent?.replace(/\D/g, "") ||
+              (row as HTMLTableRowElement).sectionRowIndex + 1;
             indexCell.textContent = `⚙️ ${num}`;
           }
 
           // Set type to details if not set by applyCatalogSelection
-          const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+          const nameCell = row.querySelector(
+            '[data-name="name"]'
+          ) as HTMLElement;
           if (nameCell) nameCell.setAttribute("data-type", "details");
         }
-
       } else if (dataName === "name") {
         // Suppress next focusin/input trigger
         _suppressAutocomplete = true;
@@ -594,7 +605,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
         // Update # Emoji
         if (indexCell) {
-          const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+          const num =
+            indexCell.textContent?.replace(/\D/g, "") ||
+            (row as HTMLTableRowElement).sectionRowIndex + 1;
           const icon = typeToSet === "works" ? "🛠️" : "⚙️";
           indexCell.textContent = `${icon} ${num}`;
         }
@@ -621,9 +634,13 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
             }
 
             // Auto-fill Catalog with Work ID
-            const workObj = globalCache.worksWithId.find(w => w.name === fullText);
+            const workObj = globalCache.worksWithId.find(
+              (w) => w.name === fullText
+            );
             if (workObj) {
-              const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
+              const catalogCell = row.querySelector(
+                '[data-name="catalog"]'
+              ) as HTMLElement | null;
               if (catalogCell) {
                 setCellText(catalogCell, workObj.work_id);
               }
@@ -638,7 +655,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         target.dispatchEvent(new Event("input", { bubbles: true }));
         target.focus();
 
-        setTimeout(() => { _suppressAutocomplete = false; }, 200);
+        setTimeout(() => {
+          _suppressAutocomplete = false;
+        }, 200);
       } else {
         target.textContent = chosenValue;
         target.dispatchEvent(new Event("input", { bubbles: true }));
@@ -772,9 +791,10 @@ function buildCatalogSuggestions(
   const pr = (prefix || "").trim().toLowerCase();
   if (pr.length < CATALOG_SUGGEST_MIN) return [];
   // Filter by Part Number OR Name
-  const filtered = items.filter((p) =>
-    p.part_number.toLowerCase().includes(pr) ||
-    (p.name && p.name.toLowerCase().includes(pr))
+  const filtered = items.filter(
+    (p) =>
+      p.part_number.toLowerCase().includes(pr) ||
+      (p.name && p.name.toLowerCase().includes(pr))
   );
   return filtered.map((p) => {
     const qty = Number(p.quantity) || 0;
@@ -801,10 +821,11 @@ function buildCatalogSuggestionsNoMin(
 ): Suggest[] {
   const pr = (prefix || "").trim().toLowerCase();
   const filtered = pr
-    ? items.filter((p) =>
-      p.part_number.toLowerCase().includes(pr) ||
-      (p.name && p.name.toLowerCase().includes(pr))
-    )
+    ? items.filter(
+        (p) =>
+          p.part_number.toLowerCase().includes(pr) ||
+          (p.name && p.name.toLowerCase().includes(pr))
+      )
     : items;
   return filtered.map((p) => {
     const qty = Number(p.quantity) || 0;
@@ -881,7 +902,9 @@ export function setupAutocompleteForEditableCells(
           // Check if selecting it changes anything.
 
           e.preventDefault();
-          const first = currentAutocompleteList.querySelector('.autocomplete-item') as HTMLElement;
+          const first = currentAutocompleteList.querySelector(
+            ".autocomplete-item"
+          ) as HTMLElement;
           if (first) {
             first.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
           }
@@ -896,7 +919,9 @@ export function setupAutocompleteForEditableCells(
     } else if (e.key === "ArrowDown") {
       if (currentAutocompleteList) {
         e.preventDefault();
-        const first = currentAutocompleteList.querySelector('.autocomplete-item') as HTMLElement;
+        const first = currentAutocompleteList.querySelector(
+          ".autocomplete-item"
+        ) as HTMLElement;
         if (first) first.focus();
       } else {
         // Maybe trigger autocomplete?
@@ -1035,61 +1060,125 @@ export function setupAutocompleteForEditableCells(
       const query = currTextRaw.toLowerCase();
 
       if (query.length >= 1) {
-        // 1. Search Works (IDs)
-        const matchedWorks = globalCache.worksWithId.filter(w =>
-          w.work_id.toLowerCase().includes(query) ||
-          (w.name && w.name.toLowerCase().includes(query))
-        ).slice(0, 20);
-
-        const workSuggestions: Suggest[] = matchedWorks.map(w => ({
-          label: `${w.work_id} - ${w.name}`,
-          value: w.work_id,
-          fullName: w.name,
-          itemType: "work" // Will be Green
-        }));
-
-        // 2. Search Sclad (Legacy/Parts) - Blue
-        await ensureSkladLoaded();
-
-        let matchedParts: typeof globalCache.skladParts = [];
-
-        // Filter logic for parts:
+        // Визначаємо тип рядка з поля "Найменування"
         const selectedName = (nameCell?.textContent || "").trim();
-        if (selectedName && nameCell?.getAttribute("data-type") === "details") {
-          const items = findScladItemsByName(selectedName);
-          matchedParts = items.filter(p =>
-            p.part_number.toLowerCase().includes(query) ||
-            p.name.toLowerCase().includes(query)
-          );
+        const nameType = nameCell?.getAttribute("data-type") || ""; // "details" або "works"
+
+        let workSuggestions: Suggest[] = [];
+        let partSuggestions: Suggest[] = [];
+
+        // 1. Якщо чітко визначено РОБОТА - показуємо ТІЛЬКИ роботи
+        if (nameType === "works") {
+          const matchedWorks = globalCache.worksWithId
+            .filter(
+              (w) =>
+                w.work_id.toLowerCase().includes(query) ||
+                (w.name && w.name.toLowerCase().includes(query))
+            )
+            .slice(0, 20);
+
+          workSuggestions = matchedWorks.map((w) => ({
+            label: `${w.work_id} - ${w.name}`,
+            value: w.work_id,
+            fullName: w.name,
+            itemType: "work", // Will be Green
+          }));
+
+          // 2. Якщо чітко визначено ДЕТАЛІ - показуємо ТІЛЬКИ деталі
+        } else if (nameType === "details") {
+          await ensureSkladLoaded();
+
+          let matchedParts: typeof globalCache.skladParts = [];
+
+          if (selectedName) {
+            const items = findScladItemsByName(selectedName);
+            matchedParts = items.filter(
+              (p) =>
+                p.part_number.toLowerCase().includes(query) ||
+                p.name.toLowerCase().includes(query)
+            );
+          } else {
+            matchedParts = globalCache.skladParts.filter(
+              (p) =>
+                p.part_number.toLowerCase().includes(query) ||
+                p.name.toLowerCase().includes(query)
+            );
+          }
+          matchedParts = matchedParts.slice(0, 20);
+
+          partSuggestions = matchedParts.map((p) => {
+            const qty = Number(p.quantity) || 0;
+            const priceRounded = formatUA(Math.round(p.price));
+
+            let colorStyle = "color: #2e7d32"; // default green
+            if (qty === 0) colorStyle = "color: #888"; // grey
+            else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+            else colorStyle = "color: #1565c0"; // blue
+
+            const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+
+            return {
+              value: p.part_number,
+              sclad_id: p.sclad_id,
+              label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
+              labelHtml: labelHtml,
+              fullName: p.name,
+              itemType: "detail", // Will be Blue
+            };
+          });
+
+          // 3. Якщо НЕ визначено тип - показуємо ВСЕ (деталі зверху, роботи знизу)
         } else {
-          matchedParts = globalCache.skladParts.filter(p =>
-            p.part_number.toLowerCase().includes(query) ||
-            p.name.toLowerCase().includes(query)
-          );
+          await ensureSkladLoaded();
+
+          // Деталі
+          let matchedParts = globalCache.skladParts
+            .filter(
+              (p) =>
+                p.part_number.toLowerCase().includes(query) ||
+                p.name.toLowerCase().includes(query)
+            )
+            .slice(0, 20);
+
+          partSuggestions = matchedParts.map((p) => {
+            const qty = Number(p.quantity) || 0;
+            const priceRounded = formatUA(Math.round(p.price));
+
+            let colorStyle = "color: #2e7d32"; // default green
+            if (qty === 0) colorStyle = "color: #888"; // grey
+            else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+            else colorStyle = "color: #1565c0"; // blue
+
+            const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+
+            return {
+              value: p.part_number,
+              sclad_id: p.sclad_id,
+              label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
+              labelHtml: labelHtml,
+              fullName: p.name,
+              itemType: "detail", // Will be Blue
+            };
+          });
+
+          // Роботи
+          const matchedWorks = globalCache.worksWithId
+            .filter(
+              (w) =>
+                w.work_id.toLowerCase().includes(query) ||
+                (w.name && w.name.toLowerCase().includes(query))
+            )
+            .slice(0, 20);
+
+          workSuggestions = matchedWorks.map((w) => ({
+            label: `${w.work_id} - ${w.name}`,
+            value: w.work_id,
+            fullName: w.name,
+            itemType: "work", // Will be Green
+          }));
         }
-        matchedParts = matchedParts.slice(0, 20);
 
-        const partSuggestions: Suggest[] = matchedParts.map(p => {
-          const qty = Number(p.quantity) || 0;
-          const priceRounded = formatUA(Math.round(p.price));
-
-          let colorStyle = "color: #2e7d32"; // default green
-          if (qty === 0) colorStyle = "color: #888"; // grey
-          else if (qty < 0) colorStyle = "color: #e40b0b"; // red
-          else colorStyle = "color: #1565c0"; // blue
-
-          const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
-
-          return {
-            value: p.part_number,
-            sclad_id: p.sclad_id,
-            label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
-            labelHtml: labelHtml,
-            fullName: p.name,
-            itemType: "detail" // Will be Blue
-          };
-        });
-
+        // Комбінуємо: спочатку деталі, потім роботи
         suggestions = [...partSuggestions, ...workSuggestions];
       }
 
@@ -1100,7 +1189,6 @@ export function setupAutocompleteForEditableCells(
       }
 
       if (suggestions.length === 0) closeAutocompleteList();
-
 
       // START STANDARD SKLAD LOGIC (if not work row)
 
@@ -1330,7 +1418,9 @@ export function setupAutocompleteForEditableCells(
 
           // Update Emoji based on final type (or default to work if custom)
           if (indexCell) {
-            const num = indexCell.textContent?.replace(/\D/g, '') || (row as HTMLTableRowElement).sectionRowIndex + 1;
+            const num =
+              indexCell.textContent?.replace(/\D/g, "") ||
+              (row as HTMLTableRowElement).sectionRowIndex + 1;
             const icon = finalType === "details" ? "⚙️" : "🛠️";
             // Only update if it doesn't have the icon yet? Or always force it
             if (!indexCell.textContent?.includes(icon)) {
@@ -1339,9 +1429,12 @@ export function setupAutocompleteForEditableCells(
           }
 
           // Update pib_magazin type
-          const pibMagCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement | null;
+          const pibMagCell = row.querySelector(
+            '[data-name="pib_magazin"]'
+          ) as HTMLElement | null;
           if (pibMagCell) {
-            const targetPibType = (finalType === "details") ? "shops" : "slyusars";
+            const targetPibType =
+              finalType === "details" ? "shops" : "slyusars";
             if (pibMagCell.getAttribute("data-type") !== targetPibType) {
               pibMagCell.setAttribute("data-type", targetPibType);
               // Clear if type switched? Maybe safer to leave content if user typed it.
@@ -1477,11 +1570,11 @@ function updatePibMagazinDataType(pibMagazinCell: HTMLElement): string {
   const explicitType = nameCell?.getAttribute("data-type");
   if (explicitType === "details") {
     pibMagazinCell.setAttribute("data-type", "shops");
-    return "shops";      // деталь → магазини
+    return "shops"; // деталь → магазини
   }
   if (explicitType === "works") {
     pibMagazinCell.setAttribute("data-type", "slyusars");
-    return "slyusars";   // робота → слюсарі
+    return "slyusars"; // робота → слюсарі
   }
 
   // 2. Якщо назва пуста – дефолтно слюсар
@@ -1509,11 +1602,11 @@ function updatePibMagazinDataType(pibMagazinCell: HTMLElement): string {
   let targetType: "shops" | "slyusars";
 
   if (isInDetails && !isInWorks) {
-    targetType = "shops";     // ДЕТАЛЬ → МАГАЗИН
+    targetType = "shops"; // ДЕТАЛЬ → МАГАЗИН
   } else if (isInWorks && !isInDetails) {
-    targetType = "slyusars";  // РОБОТА → СЛЮСАР
+    targetType = "slyusars"; // РОБОТА → СЛЮСАР
   } else {
-    targetType = "slyusars";  // за замовчуванням слюсар
+    targetType = "slyusars"; // за замовчуванням слюсар
   }
 
   pibMagazinCell.setAttribute("data-type", targetType);

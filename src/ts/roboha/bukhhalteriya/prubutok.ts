@@ -441,71 +441,78 @@ const receipterSalaryCache = new Map<
 
 // Завантажує ВСЮ історію приймальника один раз
 // Завантажує ВСЮ історію приймальника (з усіх знайдених записів)
+// Завантажує ВСЮ історію приймальника (з усіх знайдених записів)
 async function loadReceipterSalaries(): Promise<void> {
   try {
     receipterSalaryCache.clear();
 
+    // ЗАЗВИЧАЙ "Приймальник", але краще завантажити всіх і перевірити JSON, 
+    // щоб точно не пропустити нікого, хто має історію приймальника.
     const { data: rawData, error } = await supabase
       .from("slyusars")
-      .select("data, Доступ, Name")
-      .eq("Доступ", "Приймальник");
+      .select("data, Доступ, Name");
 
     const data = rawData as any[];
 
-    console.log("🔍 Результат запиту приймальників:", { count: data?.length, error });
-
     if (error || !data || data.length === 0) {
-      console.log("⚠️ Приймальників не знайдено у базі");
+      console.log("⚠️ Користувачів (slyusars) не знайдено у базі");
       return;
     }
 
     let totalActs = 0;
 
-    // Проходимо по ВСІХ знайдених приймальниках
-    for (const receipterRecord of data) {
-      const name = receipterRecord.Name || "Без імені";
-      console.log(`👤 Обробка даних приймальника: ${name}`);
-
+    // Проходимо по ВСІХ користувачах
+    for (const userRecord of data) {
+      const name = userRecord.Name || "Без імені";
       let slyusarData: any = {};
 
-      if (typeof receipterRecord.data === "string") {
+      if (typeof userRecord.data === "string") {
         try {
-          slyusarData = JSON.parse(receipterRecord.data);
+          slyusarData = JSON.parse(userRecord.data);
         } catch (e) {
           console.error(`❌ Помилка парсингу даних для ${name}`);
           continue;
         }
       } else {
-        slyusarData = receipterRecord.data;
+        slyusarData = userRecord.data;
       }
 
-      const history = slyusarData?.Історія || {};
+      // Перевіряємо, чи є це приймальник (по колонці або по JSON)
+      const roleInDb = userRecord.Доступ;
+      const roleInJson = slyusarData?.["Доступ"];
 
-      // Проходимо історію цього приймальника
+
+
+      // Навіть якщо не "Приймальник", перевіримо наявність історії з зарплатами
+      const history = slyusarData?.Історія || {};
+      const hasHistory = Object.keys(history).length > 0;
+
+      if (!hasHistory) continue;
+
+      // Проходимо історію
       for (const dateKey in history) {
         const records = history[dateKey] || [];
 
         for (const record of records) {
           const actId = Number(record.Акт);
           if (actId) {
-            // Якщо для цього акту вже є запис (від іншого приймальника?), додаємо? 
-            // Або перезаписуємо? Зазвичай акт розраховує один приймальник.
-            // Якщо кілька записів, сумуємо (на випадок часткових виплат, хоча це рідкість)
+            // Перевіряємо чи є поля зарплати приймальника
+            const salaryParts = Number(record.ЗарплатаЗапчастин) || 0;
+            const salaryWork = Number(record.ЗарплатаРоботи) || 0;
 
-            const existing = receipterSalaryCache.get(actId) || { salaryParts: 0, salaryWork: 0 };
+            if (salaryParts > 0 || salaryWork > 0) {
+              const existing = receipterSalaryCache.get(actId) || { salaryParts: 0, salaryWork: 0 };
 
-            const newParts = Number(record.ЗарплатаЗапчастин) || 0;
-            const newWork = Number(record.ЗарплатаРоботи) || 0;
+              const salary = {
+                salaryParts: existing.salaryParts + salaryParts,
+                salaryWork: existing.salaryWork + salaryWork,
+              };
 
-            const salary = {
-              salaryParts: existing.salaryParts + newParts,
-              salaryWork: existing.salaryWork + newWork,
-            };
+              receipterSalaryCache.set(actId, salary);
 
-            receipterSalaryCache.set(actId, salary);
-
-            if (actId === 430) {
-              console.log(`🎯 ЗНАЙДЕНО АКТ 430 у ${name}: Parts=${newParts}, Work=${newWork}`);
+              if (actId === 430) {
+                console.log(`🎯 ЗНАЙДЕНО АКТ 430 у ${name} (${roleInDb}/${roleInJson}): Parts=${salaryParts}, Work=${salaryWork}`);
+              }
             }
           }
         }
@@ -514,14 +521,6 @@ async function loadReceipterSalaries(): Promise<void> {
 
     totalActs = receipterSalaryCache.size;
     console.log(`✅ Завантажено зарплати приймальника для ${totalActs} унікальних актів`);
-
-    // Перевірка конкретно 430 в кеші
-    if (receipterSalaryCache.has(430)) {
-      const s = receipterSalaryCache.get(430);
-      console.log(`✅ В КЕШІ є Акт 430: Parts=${s?.salaryParts}, Work=${s?.salaryWork}`);
-    } else {
-      console.log("❌ В КЕШІ НЕМАЄ Акту 430 після обробки всіх даних");
-    }
 
   } catch (err) {
     console.error("❌ Помилка завантаження зарплат приймальника:", err);

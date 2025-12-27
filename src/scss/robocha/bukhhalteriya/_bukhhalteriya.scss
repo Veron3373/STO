@@ -42,7 +42,6 @@ body {
 
   /* Ширини колонок */
   --col-rozrahovano: 81px;
-  --col-money: 90px;
   --col-robota: 180px;
   --col-avto: 130px;
   --col-kilkist: 57px;
@@ -711,12 +710,15 @@ body {
 .magazine-money,
 .poAktam-money,
 .vutratu-data,
-.vutratu-diya,
-.vutratu-money {
+.vutratu-diya {
   min-width: var(--col-money);
   width: var(--col-money);
 }
 
+.vutratu-money {
+  min-width: var(--col-money);
+  width: var(--col-money);
+}
 
 .pidlehli-robota,
 .poAktam-enuvannya {

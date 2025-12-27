@@ -806,7 +806,21 @@ function renderModalContent(
       sclad_id: showCatalog ? null : null,
       slyusar_id: item["slyusar_id"] || null,
     })),
-  ];
+  ].filter((item) => item.name.trim() !== "");
+
+  if (allItems.length === 0) {
+    allItems.push({
+      type: undefined,
+      name: "",
+      quantity: 0,
+      price: 0,
+      sum: 0,
+      person_or_store: "",
+      catalog: "",
+      sclad_id: null,
+      slyusar_id: null,
+    });
+  }
 
   globalCache.initialActItems = allItems;
 

@@ -22,7 +22,6 @@ import {
 } from "../modalMain";
 
 /* ====================== настройки ====================== */
-const CATALOG_SUGGEST_MIN = 3;
 const LIVE_WARNINGS = false;
 const NAME_AUTOCOMPLETE_MIN_CHARS = 3; // мінімум символів для пошуку
 const NAME_AUTOCOMPLETE_MAX_RESULTS = 50; // максимум результатів
@@ -783,94 +782,6 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 // Global flag to suppress opening autocomplete immediately after selection
 let _suppressAutocomplete = false;
 
-/* ===== генератори підказок ===== */
-function buildCatalogSuggestions(
-  items: typeof globalCache.skladParts,
-  prefix: string
-): Suggest[] {
-  const pr = (prefix || "").trim().toLowerCase();
-  if (pr.length < CATALOG_SUGGEST_MIN) return [];
-  // Filter by Part Number OR Name
-  const filtered = items.filter(
-    (p) =>
-      p.part_number.toLowerCase().includes(pr) ||
-      (p.name && p.name.toLowerCase().includes(pr))
-  );
-  return filtered.map((p) => {
-    const qty = Number(p.quantity) || 0;
-    // Format: 11111 3333 - Name (Blue) ... (Qt: 8, 150) (Green)
-    // We'll trust the CSS classes for general color, but override with inline styles for multi-color
-    const priceRounded = formatUA(Math.round(p.price));
-
-    // Construct Label HTML matching the photo
-    // Name/Number in Blue (#1565c0), Info in Green (#2e7d32, bold)
-    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="color: #2e7d32; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
-
-    return {
-      value: p.part_number,
-      sclad_id: p.sclad_id,
-      label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
-      labelHtml: labelHtml,
-      fullName: p.name,
-    };
-  });
-}
-function buildCatalogSuggestionsNoMin(
-  items: typeof globalCache.skladParts,
-  prefix: string
-): Suggest[] {
-  const pr = (prefix || "").trim().toLowerCase();
-  const filtered = pr
-    ? items.filter(
-        (p) =>
-          p.part_number.toLowerCase().includes(pr) ||
-          (p.name && p.name.toLowerCase().includes(pr))
-      )
-    : items;
-  return filtered.map((p) => {
-    const qty = Number(p.quantity) || 0;
-    const priceRounded = formatUA(Math.round(p.price));
-
-    let colorStyle = "color: #2e7d32"; // default green
-    if (qty === 0) colorStyle = "color: #888"; // grey
-    else if (qty < 0) colorStyle = "color: #e40b0b"; // red
-    else colorStyle = "color: #1565c0"; // blue
-
-    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
-
-    return {
-      value: p.part_number,
-      sclad_id: p.sclad_id,
-      label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
-      labelHtml: labelHtml,
-      fullName: p.name,
-    };
-  });
-}
-function buildCatalogSuggestionsAll(
-  items: typeof globalCache.skladParts
-): Suggest[] {
-  return items.map((p) => {
-    const qty = Number(p.quantity) || 0;
-    const priceRounded = formatUA(Math.round(p.price));
-
-    let colorStyle = "color: #2e7d32"; // default green
-    if (qty === 0) colorStyle = "color: #888"; // grey
-    else if (qty < 0) colorStyle = "color: #e40b0b"; // red
-    else colorStyle = "color: #1565c0"; // blue
-
-    const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
-
-    return {
-      value: p.part_number,
-      sclad_id: p.sclad_id,
-      label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
-      labelHtml: labelHtml,
-      fullName: p.name,
-    };
-  });
-}
-
 /* ====================== public API ====================== */
 
 export function setupAutocompleteForEditableCells(
@@ -963,7 +874,28 @@ export function setupAutocompleteForEditableCells(
       if (selectedName && !initial) {
         const matches = findScladItemsByName(selectedName);
         if (matches.length > 0) {
-          renderAutocompleteList(target, buildCatalogSuggestionsAll(matches));
+          // Генеруємо підказки з усіх знайдених деталей
+          const suggestions = matches.map((p) => {
+            const qty = Number(p.quantity) || 0;
+            const priceRounded = formatUA(Math.round(p.price));
+
+            let colorStyle = "color: #2e7d32"; // default green
+            if (qty === 0) colorStyle = "color: #888"; // grey
+            else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+            else colorStyle = "color: #1565c0"; // blue
+
+            const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+
+            return {
+              value: p.part_number,
+              sclad_id: p.sclad_id,
+              label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded})`,
+              labelHtml: labelHtml,
+              fullName: p.name,
+              itemType: "detail" as const,
+            };
+          });
+          renderAutocompleteList(target, suggestions);
         } else {
           closeAutocompleteList();
         }

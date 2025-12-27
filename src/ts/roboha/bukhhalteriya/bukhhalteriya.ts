@@ -10,7 +10,6 @@ import {
   clearvutratuForm,
   calculatevutratuTotalSum,
   runMassPaymentCalculationForvutratu,
-  getFilteredvutratuData,
 } from "./prubutok";
 
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
@@ -753,7 +752,7 @@ function downloadDetailsToExcel(): void {
       return cell.textContent?.trim() || "";
     };
 
-    const priceCell = cells[8];
+    const priceCell = cells[9];
     let salePrice = "-";
     let purchasePrice = "-";
 
@@ -768,17 +767,18 @@ function downloadDetailsToExcel(): void {
     }
 
     return {
-      "Дата відкриття": getTextContent(0),
-      "Дата закриття": getTextContent(1),
-      "Акт №": getTextContent(2),
-      Автомобіль: getTextContent(3),
-      Магазин: getTextContent(4),
-      Найменування: getTextContent(5),
-      Каталог: getTextContent(6),
-      Кількість: getTextContent(7),
+      Розраховано: getTextContent(0),
+      "Дата відкриття": getTextContent(1),
+      "Дата закриття": getTextContent(2),
+      "Акт №": getTextContent(3),
+      Автомобіль: getTextContent(4),
+      Магазин: getTextContent(5),
+      Найменування: getTextContent(6),
+      Каталог: getTextContent(7),
+      Кількість: getTextContent(8),
       "Закупівельна ціна": purchasePrice,
       "Продажна ціна": salePrice,
-      Сума: getTextContent(9),
+      Сума: getTextContent(10),
     };
   });
 
@@ -830,43 +830,51 @@ function downloadvutratuToExcel(): void {
   }
 
   const XLSX = (window as any).XLSX;
-  const filteredData = getFilteredvutratuData();
 
-  if (filteredData.length === 0) {
+  // Читаємо дані безпосередньо з HTML таблиці
+  const tbody = document.querySelector(
+    "#vutratu-table-container .Bukhhalter-data-table tbody"
+  ) as HTMLTableSectionElement | null;
+
+  if (!tbody) {
+    showNotification("Таблиця витрат не знайдена", "error");
+    return;
+  }
+
+  const rows = tbody.querySelectorAll("tr:not(.Bukhhalter-no-data)");
+
+  if (rows.length === 0) {
     showNotification("Немає витрат для експорту", "warning");
     return;
   }
 
-  const excelData = filteredData.map((item) => {
-    // Визначаємо чи це акт
-    const isFromAct = item.category === "💰 Прибуток";
+  const excelData = Array.from(rows).map((row) => {
+    const cells = row.querySelectorAll("td");
 
-    // Формуємо об'єкт для експорту
-    const row: any = {
-      Розраховано: item.isPaid ? item.paymentDate || "Так" : "Ні",
-      Дата: formatDate(item.date),
-      Категорія: item.category,
-      Опис: item.description,
+    const getTextContent = (index: number): string => {
+      const cell = cells[index];
+      if (!cell) return "";
+
+      // Видаляємо кнопки та емодзі
+      if (cell.querySelector("button")) {
+        const text = cell.textContent || "";
+        return text.replace(/🗑️|📋|💾|💲|🧑‍💻|📅/g, "").trim();
+      }
+
+      return cell.textContent?.trim() || "";
     };
 
-    // Для актів експортуємо деталі та роботу окремо
-    if (isFromAct && item.detailsAmount !== undefined && item.workAmount !== undefined) {
-      // Експортуємо як текст зі знаками
-      const detailsSign = item.detailsAmount > 0 ? "+" : "";
-      const workSign = item.workAmount > 0 ? "+" : "";
-
-      row["⚙️ Деталі"] = item.detailsAmount !== 0 ? `${detailsSign}${item.detailsAmount}` : "0";
-      row["🛠️ Робота"] = item.workAmount !== 0 ? `${workSign}${item.workAmount}` : "0";
-    } else {
-      // Для звичайних витрат експортуємо суму зі знаком
-      const sign = item.amount > 0 ? "+" : "";
-      row["Сума"] = `${sign}${item.amount}`;
-    }
-
-    row["Спосіб оплати"] = item.paymentMethod;
-    row["Примітки"] = item.notes || "";
-
-    return row;
+    return {
+      Розраховано: getTextContent(0),
+      "Дата відкриття": getTextContent(1),
+      "Дата закриття": getTextContent(2),
+      Категорія: getTextContent(3),
+      "Акт №": getTextContent(4),
+      Опис: getTextContent(5),
+      Сума: getTextContent(6),
+      "Спосіб оплати": getTextContent(7),
+      Примітки: getTextContent(8),
+    };
   });
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -876,9 +884,11 @@ function downloadvutratuToExcel(): void {
   worksheet["!cols"] = [
     { wch: 15 },
     { wch: 12 },
-    { wch: 20 },
-    { wch: 30 },
     { wch: 12 },
+    { wch: 20 },
+    { wch: 10 },
+    { wch: 30 },
+    { wch: 15 },
     { wch: 20 },
     { wch: 30 },
   ];

@@ -446,25 +446,32 @@ async function loadReceipterSalaries(): Promise<void> {
   try {
     receipterSalaryCache.clear();
 
-    // ЗАЗВИЧАЙ "Приймальник", але краще завантажити всіх і перевірити JSON, 
-    // щоб точно не пропустити нікого, хто має історію приймальника.
+    // Завантажуємо ВСІ колонки, щоб уникнути проблем із проекцією
     const { data: rawData, error } = await supabase
       .from("slyusars")
-      .select("data, Доступ, Name");
+      .select("*");
+
+    if (error) {
+      console.error("❌ Помилка завантаження slyusars:", error);
+      showNotification(`❌ Помилка доступу до слюсарів: ${error.message}`, "error");
+      return;
+    }
 
     const data = rawData as any[];
-
-    if (error || !data || data.length === 0) {
+    if (!data || data.length === 0) {
       console.log("⚠️ Користувачів (slyusars) не знайдено у базі");
       return;
     }
 
-    let totalActs = 0;
+    let debugFound430 = false;
 
     // Проходимо по ВСІХ користувачах
     for (const userRecord of data) {
       const name = userRecord.Name || "Без імені";
       let slyusarData: any = {};
+
+      // Надійна обробка data
+      if (!userRecord.data) continue;
 
       if (typeof userRecord.data === "string") {
         try {
@@ -477,41 +484,33 @@ async function loadReceipterSalaries(): Promise<void> {
         slyusarData = userRecord.data;
       }
 
-      // Перевіряємо, чи є це приймальник (по колонці або по JSON)
-      const roleInDb = userRecord.Доступ;
-      const roleInJson = slyusarData?.["Доступ"];
-
-
-
-      // Навіть якщо не "Приймальник", перевіримо наявність історії з зарплатами
       const history = slyusarData?.Історія || {};
-      const hasHistory = Object.keys(history).length > 0;
-
-      if (!hasHistory) continue;
+      if (Object.keys(history).length === 0) continue;
 
       // Проходимо історію
       for (const dateKey in history) {
         const records = history[dateKey] || [];
+        if (!Array.isArray(records)) continue;
 
         for (const record of records) {
-          const actId = Number(record.Акт);
-          if (actId) {
-            // Перевіряємо чи є поля зарплати приймальника
+          // Приводимо до числа надійно
+          const actId = Number(record?.Акт);
+
+          if (!isNaN(actId) && actId > 0) {
             const salaryParts = Number(record.ЗарплатаЗапчастин) || 0;
             const salaryWork = Number(record.ЗарплатаРоботи) || 0;
 
             if (salaryParts > 0 || salaryWork > 0) {
               const existing = receipterSalaryCache.get(actId) || { salaryParts: 0, salaryWork: 0 };
 
-              const salary = {
+              receipterSalaryCache.set(actId, {
                 salaryParts: existing.salaryParts + salaryParts,
                 salaryWork: existing.salaryWork + salaryWork,
-              };
-
-              receipterSalaryCache.set(actId, salary);
+              });
 
               if (actId === 430) {
-                console.log(`🎯 ЗНАЙДЕНО АКТ 430 у ${name} (${roleInDb}/${roleInJson}): Parts=${salaryParts}, Work=${salaryWork}`);
+                console.log(`🎯 [DEBUG] ЗНАЙДЕНО АКТ 430 у ${name}: Parts=${salaryParts}, Work=${salaryWork}`);
+                debugFound430 = true;
               }
             }
           }
@@ -519,11 +518,21 @@ async function loadReceipterSalaries(): Promise<void> {
       }
     }
 
-    totalActs = receipterSalaryCache.size;
-    console.log(`✅ Завантажено зарплати приймальника для ${totalActs} унікальних актів`);
+    console.log(`✅ Завантажено зарплати приймальника для ${receipterSalaryCache.size} актів`);
 
-  } catch (err) {
-    console.error("❌ Помилка завантаження зарплат приймальника:", err);
+    if (debugFound430) {
+      console.log("✅ Дані по акту 430 успішно завантажено в кеш");
+      // Покажемо юзеру, що дані знайшлися (через таймаут щоб не перекрити інші повідомлення)
+      setTimeout(() => {
+        showNotification("✅ Дані приймальника для Акту 430 ЗНАЙДЕНО!", "success", 4000);
+      }, 500);
+    } else {
+      console.log("❌ Дані по акту 430 НЕ знайдено в жодній історії");
+    }
+
+  } catch (err: any) {
+    console.error("❌ Критична помилка завантаження зарплат приймальника:", err);
+    showNotification(`❌ Помилка обробки: ${err.message}`, "error");
   }
 }
 

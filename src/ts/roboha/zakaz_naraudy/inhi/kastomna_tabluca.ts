@@ -1182,74 +1182,12 @@ export function setupAutocompleteForEditableCells(
         suggestions = [...partSuggestions, ...workSuggestions];
       }
 
+      // Відображаємо підказки або закриваємо список
       if (suggestions.length) {
         renderAutocompleteList(target, suggestions);
-        removeCatalogInfo();
-        return;
-      }
-
-      if (suggestions.length === 0) closeAutocompleteList();
-
-      // START STANDARD SKLAD LOGIC (if not work row)
-
-      const prevText: string = (target as any)._prevCatalogText ?? currTextRaw;
-      (target as any)._prevCatalogText = currTextRaw;
-      const deleted = currTextRaw.length < prevText.length;
-
-      if (deleted) {
-        target.removeAttribute("data-sclad-id");
-
-        const row = target.closest("tr") as HTMLTableRowElement;
-        if (!row) return;
-
-        const nameCell = row.querySelector(
-          '[data-name="name"]'
-        ) as HTMLElement | null;
-        const qtyCell = row.querySelector(
-          '[data-name="id_count"]'
-        ) as HTMLElement | null;
-        const priceCell = row.querySelector(
-          '[data-name="price"]'
-        ) as HTMLElement | null;
-
-        if (nameCell) setCellText(nameCell, "");
-        if (qtyCell) setCellText(qtyCell, "");
-        if (priceCell) setCellText(priceCell, "");
-
-        const typeFromCell = nameCell?.getAttribute("data-type");
-
-        if (typeFromCell === "works") {
-          import("../modalUI")
-            .then(async ({ calculateRowSum }) => {
-              await calculateRowSum(row);
-            })
-            .catch((err) => {
-              console.error(
-                "Помилка при розрахунку суми після видалення каталогу:",
-                err
-              );
-            });
-        } else {
-          recalcRowSum(row);
-        }
-
-        const allItems = globalCache.skladParts;
-        suggestions =
-          query.length === 0
-            ? buildCatalogSuggestionsAll(allItems)
-            : buildCatalogSuggestionsNoMin(allItems, query);
       } else {
-        const selectedName = nameCell?.textContent?.trim() || "";
-        if (query.length >= CATALOG_SUGGEST_MIN) {
-          const items = selectedName
-            ? findScladItemsByName(selectedName)
-            : globalCache.skladParts;
-          suggestions = buildCatalogSuggestions(items, query);
-        } else {
-          suggestions = [];
-        }
+        closeAutocompleteList();
       }
-
       removeCatalogInfo();
     } else if (dataName === "name") {
       // ← НОВИЙ КОД: використовуємо нову функцію з кешуванням

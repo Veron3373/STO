@@ -1105,6 +1105,7 @@ async function syncPruimalnikHistory(
     "СуммаЗапчастин": basePartsProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
     "ЗарплатаРоботи": salaryWork,
     "ЗарплатаЗапчастин": salaryParts,
+    "ДатаЗакриття": null, // Буде заповнено при закритті акту
   };
 
   if (actFound) {

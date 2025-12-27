@@ -532,30 +532,55 @@ function downloadpodlegleToExcel(): void {
     return;
   }
 
-  const XLSX = (window as any).XLSX;
+  // Читаємо дані безпосередньо з HTML таблиці
+  const tbody = document.querySelector(
+    "#podlegle-table-container .Bukhhalter-data-table tbody"
+  ) as HTMLTableSectionElement | null;
 
-  const excelData = filteredData.map((item) => {
-    // Функція для форматування числа зі знаком
-    const formatWithSign = (value: number): string => {
-      if (value === 0) return "0";
-      const sign = value > 0 ? "+" : "";
-      return `${sign}${value}`;
+  if (!tbody) {
+    showNotification("Таблиця підлеглих не знайдена", "error");
+    return;
+  }
+
+  const rows = tbody.querySelectorAll("tr:not(.Bukhhalter-no-data)");
+
+  if (rows.length === 0) {
+    showNotification("Немає даних для експорту", "warning");
+    return;
+  }
+
+  const excelData = Array.from(rows).map((row) => {
+    const cells = row.querySelectorAll("td");
+
+    const getTextContent = (index: number): string => {
+      const cell = cells[index];
+      if (!cell) return "";
+
+      // Видаляємо кнопки та емодзі
+      if (cell.querySelector("button")) {
+        const text = cell.textContent || "";
+        return text.replace(/🗑️|📋|💾/g, "").trim();
+      }
+
+      return cell.textContent?.trim() || "";
     };
 
     return {
-      Розраховано: item.isPaid ? item.paymentDate || "Так" : "Ні",
-      "Дата відкриття": formatDate(item.dateOpen),
-      "Дата закриття": formatDate(item.dateClose),
-      ПІБ: item.name || "",
-      "Акт №": item.act || "",
-      Клієнт: item.client || "",
-      Автомобіль: item.automobile || "",
-      Робота: item.work || "",
-      Кількість: formatWithSign(item.quantity || 0),
-      Ціна: formatWithSign(item.price || 0),
-      Сума: formatWithSign(item.total || 0),
+      Розраховано: getTextContent(0),
+      "Дата відкриття": getTextContent(1),
+      "Дата закриття": getTextContent(2),
+      ПІБ: getTextContent(3),
+      "Акт №": getTextContent(4),
+      Клієнт: getTextContent(5),
+      Автомобіль: getTextContent(6),
+      Робота: getTextContent(7),
+      Кількість: getTextContent(8),
+      Ціна: getTextContent(9),
+      Сума: getTextContent(10),
     };
   });
+
+  const XLSX = (window as any).XLSX;
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   const workbook = XLSX.utils.book_new();
@@ -578,7 +603,7 @@ function downloadpodlegleToExcel(): void {
   const fileName = `Дані_підлеглих_${getCurrentDateForFileName()}.xlsx`;
   XLSX.writeFile(workbook, fileName);
   showNotification(
-    `Експортовано ${filteredData.length} записів підлеглих`,
+    `Експортовано ${excelData.length} записів підлеглих`,
     "success"
   );
 }

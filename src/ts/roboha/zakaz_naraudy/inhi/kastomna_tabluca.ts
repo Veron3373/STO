@@ -407,8 +407,8 @@ function showCatalogInfo(target: HTMLElement, sclad_id: number) {
     qty < 0
       ? `<span class="neg">${qty}</span>`
       : qty === 0
-      ? `<span class="neutral">${qty}</span>`
-      : `<span class="positive">${qty}</span>`;
+        ? `<span class="neutral">${qty}</span>`
+        : `<span class="positive">${qty}</span>`;
 
   const box = document.createElement("div");
   box.className = "catalog-info-popover";
@@ -993,7 +993,7 @@ export function setupAutocompleteForEditableCells(
 
       if (query.length >= 1) {
         // Визначаємо тип рядка з поля "Найменування"
-        const selectedName = (nameCell?.textContent || "").trim();
+
         const nameType = nameCell?.getAttribute("data-type") || ""; // "details" або "works"
 
         let workSuggestions: Suggest[] = [];
@@ -1020,22 +1020,12 @@ export function setupAutocompleteForEditableCells(
         } else if (nameType === "details") {
           await ensureSkladLoaded();
 
-          let matchedParts: typeof globalCache.skladParts = [];
-
-          if (selectedName) {
-            const items = findScladItemsByName(selectedName);
-            matchedParts = items.filter(
-              (p) =>
-                p.part_number.toLowerCase().includes(query) ||
-                p.name.toLowerCase().includes(query)
-            );
-          } else {
-            matchedParts = globalCache.skladParts.filter(
-              (p) =>
-                p.part_number.toLowerCase().includes(query) ||
-                p.name.toLowerCase().includes(query)
-            );
-          }
+          // Видалено перевірку if (selectedName), щоб шукати по всіх деталях, навіть якщо назва вже введена
+          let matchedParts = globalCache.skladParts.filter(
+            (p) =>
+              p.part_number.toLowerCase().includes(query) ||
+              p.name.toLowerCase().includes(query)
+          );
           matchedParts = matchedParts.slice(0, 20);
 
           partSuggestions = matchedParts.map((p) => {

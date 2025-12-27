@@ -534,19 +534,28 @@ function downloadpodlegleToExcel(): void {
 
   const XLSX = (window as any).XLSX;
 
-  const excelData = filteredData.map((item) => ({
-    Розраховано: item.isPaid ? item.paymentDate || "Так" : "Ні",
-    "Дата відкриття": formatDate(item.dateOpen),
-    "Дата закриття": formatDate(item.dateClose),
-    ПІБ: item.name || "",
-    "Акт №": item.act || "",
-    Клієнт: item.client || "",
-    Автомобіль: item.automobile || "",
-    Робота: item.work || "",
-    Кількість: String(item.quantity || 0),
-    Ціна: String(item.price || 0),
-    Сума: String(item.total || 0),
-  }));
+  const excelData = filteredData.map((item) => {
+    // Функція для форматування числа зі знаком
+    const formatWithSign = (value: number): string => {
+      if (value === 0) return "0";
+      const sign = value > 0 ? "+" : "";
+      return `${sign}${value}`;
+    };
+
+    return {
+      Розраховано: item.isPaid ? item.paymentDate || "Так" : "Ні",
+      "Дата відкриття": formatDate(item.dateOpen),
+      "Дата закриття": formatDate(item.dateClose),
+      ПІБ: item.name || "",
+      "Акт №": item.act || "",
+      Клієнт: item.client || "",
+      Автомобіль: item.automobile || "",
+      Робота: item.work || "",
+      Кількість: formatWithSign(item.quantity || 0),
+      Ціна: formatWithSign(item.price || 0),
+      Сума: formatWithSign(item.total || 0),
+    };
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   const workbook = XLSX.utils.book_new();

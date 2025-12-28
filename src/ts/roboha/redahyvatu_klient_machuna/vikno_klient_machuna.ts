@@ -321,7 +321,9 @@ function setupAutocomplete(
     filtered.forEach((i) => {
       const li = document.createElement("li");
       li.textContent = labelFn(i);
-      li.addEventListener("click", () => {
+      li.addEventListener("mousedown", (e) => {
+        // Prevent input blur if needed, though usually mousedown happens before blur
+        e.preventDefault();
         input.value = labelFn(i);
         list.innerHTML = "";
         onSelect(i);
@@ -338,7 +340,9 @@ function setupAutocomplete(
     items.forEach((i) => {
       const li = document.createElement("li");
       li.textContent = labelFn(i);
-      li.addEventListener("click", () => {
+      li.addEventListener("mousedown", (e) => {
+        // Prevent input blur if needed, though usually mousedown happens before blur
+        e.preventDefault();
         input.value = labelFn(i);
         list.innerHTML = "";
         onSelect(i);

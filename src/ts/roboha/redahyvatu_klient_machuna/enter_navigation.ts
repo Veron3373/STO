@@ -2,33 +2,64 @@
 
 /**
  * Налаштовує навігацію між полями вводу за допомогою клавіші Enter
+ * Підтримує динамічні елементи (input, textarea, select)
  * @param fieldIds - Масив ID полів в порядку навігації
  */
 export function setupEnterNavigation(fieldIds: string[]) {
-    fieldIds.forEach((fieldId, index) => {
-        const field = document.getElementById(fieldId) as HTMLInputElement | HTMLTextAreaElement | null;
-        if (!field) return;
+    // Використовуємо делегування подій на рівні документа
+    // щоб підтримувати динамічно замінювані елементи (input → select)
 
-        field.addEventListener("keydown", (e: Event) => {
-            if (!(e instanceof KeyboardEvent)) return;
-            if (e.key === "Enter") {
-                e.preventDefault();
+    const handleKeyDown = (e: Event) => {
+        if (!(e instanceof KeyboardEvent)) return;
+        if (e.key !== "Enter") return;
 
-                // Знаходимо наступне поле
-                const nextIndex = index + 1;
-                if (nextIndex < fieldIds.length) {
-                    const nextField = document.getElementById(fieldIds[nextIndex]) as HTMLInputElement | HTMLTextAreaElement | null;
-                    if (nextField) {
-                        nextField.focus();
-                        // Встановлюємо курсор в кінець
-                        if (nextField instanceof HTMLInputElement) {
-                            nextField.setSelectionRange(nextField.value.length, nextField.value.length);
-                        } else if (nextField instanceof HTMLTextAreaElement) {
-                            nextField.setSelectionRange(nextField.value.length, nextField.value.length);
-                        }
-                    }
+        const target = e.target as HTMLElement;
+        if (!target || !target.id) return;
+
+        // Знаходимо індекс поточного поля
+        const currentIndex = fieldIds.indexOf(target.id);
+        if (currentIndex === -1) return;
+
+        // Для select елементів - перевіряємо, чи список відкритий
+        if (target instanceof HTMLSelectElement) {
+            // Якщо натиснули Enter на select, закриваємо його і переходимо далі
+            e.preventDefault();
+            target.blur(); // Закриваємо випадаючий список
+
+            // Невелика затримка, щоб select встиг закритися
+            setTimeout(() => {
+                moveToNextField(currentIndex);
+            }, 50);
+            return;
+        }
+
+        // Для input і textarea - просто переходимо далі
+        e.preventDefault();
+        moveToNextField(currentIndex);
+    };
+
+    const moveToNextField = (currentIndex: number) => {
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < fieldIds.length) {
+            const nextField = document.getElementById(fieldIds[nextIndex]) as
+                HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+
+            if (nextField) {
+                nextField.focus();
+
+                // Встановлюємо курсор в кінець для input/textarea
+                if (nextField instanceof HTMLInputElement || nextField instanceof HTMLTextAreaElement) {
+                    nextField.setSelectionRange(nextField.value.length, nextField.value.length);
                 }
             }
-        });
-    });
+        }
+    };
+
+    // Додаємо один обробник на весь документ
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Повертаємо функцію для видалення обробника (якщо потрібно)
+    return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+    };
 }

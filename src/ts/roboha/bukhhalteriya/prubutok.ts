@@ -1158,7 +1158,7 @@ export function filtervutratuData(): void {
     // Фільтр по способу оплати
     if (paymentMethod && expense.paymentMethod !== paymentMethod) return false;
 
-    // Фільтр по розрахунку (0-оплачено, 1-не оплачено, 2-всі)
+    // Фільтр по розрахунку (0-оплачено, 1-Несплочено, 2-всі)
     if (paymentToggle === "0" && !expense.isPaid) return false;
     if (paymentToggle === "1" && expense.isPaid) return false;
 

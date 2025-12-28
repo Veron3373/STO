@@ -107,7 +107,7 @@ async function loadDetailsFromDB(): Promise<string[]> {
 
       offset += batchSize;
       hasMore = data.length === batchSize;
-      
+
       console.log(`Завантажено ${names.length} деталей...`);
     } else {
       hasMore = false;
@@ -120,7 +120,7 @@ async function loadDetailsFromDB(): Promise<string[]> {
   }
 
   console.log(`Завершено завантаження ${names.length} деталей з БД`);
-  
+
   return Array.from(new Set(names)).sort();
 }
 
@@ -139,14 +139,14 @@ export async function renderScladForm() {
       ${field("sclad_shop", "Магазин", "text", '<div id="sclad_shop_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
       ${field("sclad_detail_catno", "Каталожний номер деталі", "text", '<div id="sclad_part_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
       ${field("sclad_detail", "Деталь", "text", '<div id="sclad_detail_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
-      ${field("sclad_qty_in", "Кількість надходженя", "number")}
+      ${field("sclad_qty_in", "Кількість надходження", "number")}
       ${field("sclad_price", "Ціна", "number")}
       ${field("sclad_invoice_no", "Рахунок №")}
       ${selectField("sclad_unit", "Одиниця виміру", [
-        ["штук", "штук"],
-        ["літр", "літр"],
-        ["комплект", "комплект"],
-      ])}
+    ["штук", "штук"],
+    ["літр", "літр"],
+    ["комплект", "комплект"],
+  ])}
     </div>
   `;
   host.classList.remove("hidden-all_other_bases");
@@ -166,7 +166,7 @@ export async function renderScladForm() {
     const openPicker = () => {
       try {
         (dateInput as any).showPicker?.();
-      } catch {}
+      } catch { }
     };
     dateInput.dataset.pickerBound = "1";
     dateInput.addEventListener("click", openPicker);
@@ -333,7 +333,7 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
   // Завантаження даних при введенні >= 3 символів
   const loadAndFilter = async (query: string) => {
     const trimmedQuery = query.trim();
-    
+
     // Якщо менше 3 символів - очищаємо
     if (trimmedQuery.length < 3) {
       detailsCache = [];
@@ -343,15 +343,15 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
     }
 
     // Перевірка чи потрібно перезавантажувати дані
-    const needsReload = trimmedQuery.length < lastDetailQuery.length || 
-                        !lastDetailQuery || 
-                        !trimmedQuery.startsWith(lastDetailQuery.substring(0, 3));
+    const needsReload = trimmedQuery.length < lastDetailQuery.length ||
+      !lastDetailQuery ||
+      !trimmedQuery.startsWith(lastDetailQuery.substring(0, 3));
 
     if (needsReload) {
       // Завантажуємо ВСІ дані з бази (з пагінацією)
       console.log("Завантаження ВСІХ деталей з БД...");
       const allDetails = await loadDetailsFromDB();
-      
+
       // Завантажуємо ID для ВСІХ деталей (також з пагінацією)
       nameToId = new Map();
       let offset = 0;
@@ -369,14 +369,14 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
             const nm = r?.data ? String(r.data).trim() : "";
             if (nm) nameToId.set(nm, Number(r.detail_id));
           });
-          
+
           offset += batchSize;
           hasMore = data.length === batchSize;
         } else {
           hasMore = false;
         }
       }
-      
+
       detailsCache = allDetails;
       lastDetailQuery = trimmedQuery;
       console.log(`Завантажено і закешовано ${detailsCache.length} деталей`);

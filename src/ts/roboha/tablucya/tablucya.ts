@@ -893,16 +893,47 @@ export async function refreshActsTable(): Promise<void> {
   );
 }
 
+
+function resizeInput(input: HTMLInputElement): void {
+  const tempSpan = document.createElement("span");
+  tempSpan.style.visibility = "hidden";
+  tempSpan.style.position = "absolute";
+  tempSpan.style.whiteSpace = "pre";
+
+  const computedStyle = window.getComputedStyle(input);
+  tempSpan.style.font = computedStyle.font;
+  tempSpan.style.fontSize = computedStyle.fontSize;
+  tempSpan.style.fontWeight = computedStyle.fontWeight;
+  tempSpan.style.fontFamily = computedStyle.fontFamily;
+  tempSpan.style.letterSpacing = computedStyle.letterSpacing;
+
+  tempSpan.textContent = input.value || input.placeholder || " ";
+  document.body.appendChild(tempSpan);
+
+  const width = tempSpan.offsetWidth;
+  document.body.removeChild(tempSpan);
+
+  input.style.width = `${width + 30}px`;
+}
+
 function watchDateRangeChanges(): void {
   const dateRangePicker = document.getElementById(
     "dateRangePicker"
   ) as HTMLInputElement;
   if (!dateRangePicker) return;
+
+  // Початкове налаштування ширини
+  resizeInput(dateRangePicker);
+
   let lastValue = dateRangePicker.value;
   const observer = new MutationObserver(() => {
     const currentValue = dateRangePicker.value;
     if (currentValue !== lastValue) {
       lastValue = currentValue;
+
+      // Оновлюємо ширину при зміні значення
+      resizeInput(dateRangePicker);
+
       const searchInput = document.getElementById(
         "searchInput"
       ) as HTMLInputElement;
@@ -910,12 +941,18 @@ function watchDateRangeChanges(): void {
       loadActsTable(undefined, undefined, undefined, currentSearchTerm);
     }
   });
+
   observer.observe(dateRangePicker, {
     attributes: true,
     childList: true,
     characterData: true,
     subtree: true,
   });
+
+  // Додаткові слухачі подій для кращої реактивності
+  dateRangePicker.addEventListener("input", () => resizeInput(dateRangePicker));
+  dateRangePicker.addEventListener("change", () => resizeInput(dateRangePicker));
+
   window.addEventListener("beforeunload", () => observer.disconnect());
 }
 

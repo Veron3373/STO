@@ -330,8 +330,8 @@ export async function findAndRestoreFolderLink(
           ? cleanNameComponent(actInfo.year)
           : null,
         actInfo.phone &&
-        actInfo.phone !== "—" &&
-        actInfo.phone !== "Без_телефону"
+          actInfo.phone !== "—" &&
+          actInfo.phone !== "Без_телефону"
           ? cleanNameComponent(actInfo.phone)
           : null,
       ].filter(Boolean) as string[];
@@ -520,7 +520,8 @@ async function updateActPhotoLinkWithRetry(
       updatePhotoSection(savedLinks, false);
 
       // Із БД підтягнемо ще раз, щоб синхронізувати стан (на всякий випадок)
-      setTimeout(() => refreshPhotoData(actId), 500);
+      // Із БД підтягнемо ще раз, щоб синхронізувати стан (на всякий випадок)
+      // setTimeout(() => refreshPhotoData(actId), 500); // ВИДАЛЕНО: Викликає race condition (UI блимає червоним)
 
       return; // ✅ Успіх!
     } catch (error) {
@@ -559,6 +560,13 @@ export function updatePhotoSection(
   const hasLink =
     Array.isArray(photoLinks) && photoLinks.length > 0 && !!photoLinks[0];
 
+  photoCell.setAttribute("data-has-link", hasLink ? "true" : "false");
+  if (hasLink) {
+    photoCell.setAttribute("data-link-url", photoLinks[0]);
+  } else {
+    photoCell.removeAttribute("data-link-url");
+  }
+
   photoCell.innerHTML = hasLink
     ? `<span style="color:green; text-decoration: underline;">Відкрити архів фото</span>`
     : `<span style="color:red; text-decoration: underline;">Створити фото</span>`;
@@ -588,6 +596,23 @@ export function addGoogleDriveHandler(isActClosed = false): void {
     e.preventDefault();
 
     if (isCreatingFolder) return; // 🚫 захист від мульти-кліків
+
+    // ⚡️ КРИТИЧНО ДЛЯ iOS: Перевіряємо UI стан синхронно
+    // Якщо кнопка "Створити" (червона), то ми ймовірно будемо викликати Auth
+    // Auth мусить бути викликаний ОДРАЗУ ж в обробнику кліку, до будь-яких await
+    const cell = e.currentTarget as HTMLElement;
+    const isCreateMode = cell.getAttribute("data-has-link") !== "true";
+
+    if (isCreateMode && !accessToken) {
+      console.log("📱 [iOS Debug] Pre-flight Auth check (Create Mode detected)...");
+      try {
+        await initGoogleApi();
+      } catch (authErr) {
+        console.error("❌ Auth cancelled/failed:", authErr);
+        // Не продовжуємо, якщо юзер скасував логін, бо далі все одно буде помилка
+        return;
+      }
+    }
 
     const modal = document.getElementById("zakaz_narayd-custom-modal");
     const actIdStr = modal?.getAttribute("data-act-id");
@@ -651,41 +676,9 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       isCreatingFolder = true;
       photoCell.style.pointerEvents = "none";
 
-      // ⚡️ КРИТИЧНО ДЛЯ iOS: Ініціалізуємо API ОДРАЗУ після кліку (до БД запитів)!
-      // Safari блокує popup якщо між кліком і OAuth проходить >1сек
-      console.log("📱 [iOS Debug] Перевірка авторизації Google API...");
-
-      // Якщо токен відсутній - запитуємо НЕГАЙНО (поки клік свіжий)
+      // (Auth double-check, хоча ми вже зробили це вище)
       if (!accessToken) {
-        console.log(
-          "📱 [iOS Debug] Токен відсутній, запускаємо авторизацію ЗАРАЗ..."
-        );
-        showNotification(
-          isIOS()
-            ? "🔐 Авторизація Google (дозвольте popup)..."
-            : "Ініціалізація Google API...",
-          "info"
-        );
-
-        try {
-          await initGoogleApi();
-          console.log("✅ [iOS Debug] Google API авторизовано успішно");
-        } catch (apiError) {
-          console.error("❌ [iOS Debug] Помилка авторизації API:", apiError);
-          showNotification(
-            `❌ Помилка авторизації Google: ${
-              apiError instanceof Error ? apiError.message : "Невідома помилка"
-            }. ${
-              isIOS()
-                ? "\n💡 Підказка: Safari блокує popup-вікна. Увімкніть їх: Налаштування Safari → Popup-вікна → Дозволити для цього сайту"
-                : ""
-            }`,
-            "error"
-          );
-          throw apiError;
-        }
-      } else {
-        console.log("✅ [iOS Debug] Токен вже є, пропускаємо авторизацію");
+        await initGoogleApi();
       }
 
       // Тільки після авторизації робимо запити до БД

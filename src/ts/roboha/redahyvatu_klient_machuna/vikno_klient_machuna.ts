@@ -174,7 +174,7 @@ function createInputFields(): string {
     <div class="car-field-inline">
       <div class="field-create-sakaz_narad car-input-group">
         <label for="${carModelInputId}">Автомобіль</label>
-        <input type="text" id="${carModelInputId}" class="input-create-sakaz_narad" placeholder="Автомобіль" />
+        <input type="text" id="${carModelInputId}" class="input-create-sakaz_narad" placeholder="Автомобіль" autocomplete="off" />
         <ul id="${carModelListId}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
       <div class="field-create-sakaz_narad car-code-input-group">
@@ -184,39 +184,39 @@ function createInputFields(): string {
       </div>
       <div class="field-create-sakaz_narad year-input-group">
         <label for="${carYearInputId}">Рік</label>
-        <input type="text" id="${carYearInputId}" class="input-create-sakaz_narad" readonly />
+        <input type="text" id="${carYearInputId}" class="input-create-sakaz_narad" readonly autocomplete="off" />
       </div>
     </div>
     <div class="field-row-create-sakaz_narad">
       <div class="field-create-sakaz_narad">
         <label for="${carEngineInputId}">Обʼєм</label>
-        <input type="text" id="${carEngineInputId}" class="input-create-sakaz_narad" readonly />
+        <input type="text" id="${carEngineInputId}" class="input-create-sakaz_narad" readonly autocomplete="off" />
         <ul id="${carEngineListId}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
       <div class="field-create-sakaz_narad car-code-input-group">
         <label for="${carCodeInputId}">Код ДВЗ</label>
-        <input type="text" id="${carCodeInputId}" class="input-create-sakaz_narad" readonly style="text-transform: uppercase;" />
+        <input type="text" id="${carCodeInputId}" class="input-create-sakaz_narad" readonly style="text-transform: uppercase;" autocomplete="off" />
         <ul id="${carCodeListId}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
       <div class="field-create-sakaz_narad">
         <label for="${carFuelInputId}">Пальне</label>
-        <input type="text" id="${carFuelInputId}" class="input-create-sakaz_narad" readonly />
+        <input type="text" id="${carFuelInputId}" class="input-create-sakaz_narad" readonly autocomplete="off" />
       </div>
     </div>
     <div class="field-row-create-sakaz_narad">
       <div class="field-create-sakaz_narad">
         <label for="${carVinInputId}">VIN-код</label>
-        <input type="text" id="${carVinInputId}" class="input-create-sakaz_narad" readonly style="text-transform: uppercase;" />
+        <input type="text" id="${carVinInputId}" class="input-create-sakaz_narad" readonly style="text-transform: uppercase;" autocomplete="off" />
         <ul id="${carVinListId}" class="suggestions-list-create-sakaz_narad"></ul>
       </div>
       <div class="field-create-sakaz_narad">
         <label for="${carIncomeInputId}">Джерело</label>
-        <input type="text" id="${carIncomeInputId}" class="input-create-sakaz_narad" readonly />
+        <input type="text" id="${carIncomeInputId}" class="input-create-sakaz_narad" readonly autocomplete="off" />
       </div>
     </div>
     <div class="field-create-sakaz_narad">
       <label for="${extraInputId}">Додатково</label>
-      <input type="text" id="${extraInputId}" class="input-create-sakaz_narad" readonly />
+      <input type="text" id="${extraInputId}" class="input-create-sakaz_narad" readonly autocomplete="off" />
     </div>
   `;
 }

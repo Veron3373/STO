@@ -276,9 +276,8 @@ function showConfirmModal(count: number): Promise<boolean> {
     if (!modal) return resolve(false);
     const message = modal.querySelector(".confirm-message-Excel");
     if (message) {
-      message.textContent = `Завантажити ${count} ${
-        count === 1 ? "запис" : count < 5 ? "записи" : "записів"
-      } в базу даних?`;
+      message.textContent = `Завантажити ${count} ${count === 1 ? "запис" : count < 5 ? "записи" : "записів"
+        } в базу даних?`;
     }
     modal.classList.remove("hidden-all_other_bases");
     const yesBtn = document.getElementById("confirm-yes-Excel");
@@ -314,7 +313,7 @@ function createBatchImportModal() {
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
           <strong>Дата ┃ Магазин ┃ Каталожний номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
         </p>
-        <textarea id="batch-textarea-Excel" class="batch-textarea-Excel" placeholder="Вставте дані з Excel сюди (з табуляцією між колонками)..."></textarea>
+        <textarea id="batch-textarea-Excel" class="batch-textarea-Excel" placeholder="Вставте дані з Excel сюди (з табуляцією між колонками)..." autocomplete="off"></textarea>
         <div id="batch-table-container-Excel" class="batch-table-container-Excel hidden-all_other_bases">
           <table id="batch-table-Excel" class="batch-table-Excel">
             <thead>
@@ -526,11 +525,10 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
   const finalWidth = Math.min(Math.max(maxContentWidth, rect.width, 200), 500);
   list.style.maxHeight = `${listHeight}px`;
   list.style.width = `${finalWidth}px`;
-  list.style.top = `${
-    useAbove
+  list.style.top = `${useAbove
       ? scrollY + rect.top - listHeight - gap
       : scrollY + rect.bottom + gap
-  }px`;
+    }px`;
   list.style.left = `${scrollX + rect.left}px`;
 }
 function showDropdownList(input: HTMLElement, options: string[]) {
@@ -651,10 +649,10 @@ function renderBatchTable(data: any[]) {
       row.status === "Готовий"
         ? "ready-Excel"
         : row.status.includes("Помилка")
-        ? "error-Excel"
-        : row.status.includes("Успішно")
-        ? "success-Excel"
-        : "";
+          ? "error-Excel"
+          : row.status.includes("Успішно")
+            ? "success-Excel"
+            : "";
     const getWidth = (col: string) => widths.get(col) || 100;
     const shopTdClass = row.shop && !row.shopValid ? "invalid-shop" : "";
     const detailTdClass =
@@ -664,8 +662,8 @@ function renderBatchTable(data: any[]) {
       row.actNo && !row.actValid
         ? "invalid-act"
         : row.actClosed
-        ? "closed-act"
-        : "";
+          ? "closed-act"
+          : "";
     tr.innerHTML = `
       <td style="width:${getWidth("date")}px;min-width:${getWidth(
       "date"
@@ -750,11 +748,10 @@ function renderBatchTable(data: any[]) {
       "status"
     )}px;min-width:${getWidth("status")}px;max-width:${getWidth("status")}px;">
         <span class="status-text-Excel">${row.status}</span>
-        ${
-          row.status !== "✅ Успішно"
-            ? `<button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>`
-            : ""
-        }
+        ${row.status !== "✅ Успішно"
+        ? `<button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>`
+        : ""
+      }
       </td>
     `;
     tbody.appendChild(tr);
@@ -1260,8 +1257,7 @@ async function uploadBatchData(data: any[]) {
 
   if (errorCount === 0) {
     showNotification(
-      `Успішно завантажено ${successCount} ${
-        successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
+      `Успішно завантажено ${successCount} ${successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
       }`,
       "success",
       4000
@@ -1384,8 +1380,7 @@ export async function initBatchImport() {
           .getElementById("batch-upload-btn-Excel")
           ?.classList.remove("hidden-all_other_bases");
         showNotification(
-          `Розпарсовано ${data.length} ${
-            data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
+          `Розпарсовано ${data.length} ${data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
           }`,
           "success"
         );

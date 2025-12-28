@@ -573,6 +573,7 @@ export function generateTableHTML(
         class="editable-avans-input sum-value"
         value="0"
         placeholder="0"
+        autocomplete="off"
       />
       <span class="sum-currency">грн</span>
     </p>

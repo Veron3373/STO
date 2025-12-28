@@ -377,7 +377,7 @@ export class PlanyvannyaModal {
             <!-- Коментар -->
             <div class="post-arxiv-form-group">
               <label>Коментар <span class="optional">(необов'язково)</span></label>
-              <textarea id="postArxivComment" placeholder="Введіть коментар..." rows="1">${comment}</textarea>
+              <textarea id="postArxivComment" placeholder="Введіть коментар..." rows="1" autocomplete="off">${comment}</textarea>
             </div>
           </div>
           <div class="post-arxiv-footer">

@@ -10,6 +10,7 @@ import {
   showSavePromptModal,
   savePromptModalId,
 } from "./pidtverdutu_sberihannya_PIB_avto";
+import { setupEnterNavigation } from "./enter_navigation";
 
 // Функція для форматування телефонного номера
 function formatPhoneNumber(value: string): string {
@@ -698,6 +699,22 @@ export async function showModalCreateSakazNarad() {
   forceUppercase(carNumberInputId);
   forceUppercase(carVinInputId);
   forceUppercase(carCodeInputId);
+
+  // --- НАЛАШТУВАННЯ НАВІГАЦІЇ ENTER-ОМ ---
+  const navigationFieldIds = [
+    clientInputId,        // ПІБ
+    phoneInputId,         // Номер телефону
+    carModelInputId,      // Автомобіль
+    carNumberInputId,     // Номер авто
+    carYearInputId,       // Рік
+    carEngineInputId,     // Обʼєм
+    carCodeInputId,       // Код ДВЗ
+    carFuelInputId,       // Пальне
+    carVinInputId,        // VIN-код
+    carIncomeInputId,     // Джерело
+    extraInputId,         // Додатково
+  ];
+  setupEnterNavigation(navigationFieldIds);
 
   const editableFieldsInitially = [
     clientInput,

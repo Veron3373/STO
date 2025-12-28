@@ -240,9 +240,9 @@ const updatePasswordVisibility = (role: string) => {
   const passwordInput = document.getElementById("slusar-password") as HTMLInputElement;
   if (passwordInput) {
     if (role === "Адміністратор") {
-      passwordInput.type = "password";
-    } else {
       passwordInput.type = "text";
+    } else {
+      passwordInput.type = "password";
     }
   }
 };

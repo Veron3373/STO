@@ -624,7 +624,12 @@ export async function handleDhereloContragent() {
         });
       });
 
-      option.addEventListener("click", () => fillFormWithContragent(item));
+      const onSelect = (e?: Event) => {
+        if (e && e.type === "mousedown") e.preventDefault();
+        fillFormWithContragent(item);
+      };
+      option.addEventListener("mousedown", onSelect);
+      option.addEventListener("click", onSelect);
       receiverDropdown.appendChild(option);
     });
     receiverDropdown.classList.remove("hidden-all_other_bases");

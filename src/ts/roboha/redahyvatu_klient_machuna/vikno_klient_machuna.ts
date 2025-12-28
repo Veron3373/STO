@@ -321,9 +321,8 @@ function setupAutocomplete(
     filtered.forEach((i) => {
       const li = document.createElement("li");
       li.textContent = labelFn(i);
-      li.addEventListener("mousedown", (e) => {
-        // Prevent input blur if needed, though usually mousedown happens before blur
-        e.preventDefault();
+      const onSelectHandler = (e: Event) => {
+        if (e.type === "mousedown") e.preventDefault();
         input.value = labelFn(i);
         list.innerHTML = "";
         onSelect(i);
@@ -331,7 +330,9 @@ function setupAutocomplete(
         if (input instanceof HTMLTextAreaElement) {
           autoResizeTextarea(input);
         }
-      });
+      };
+      li.addEventListener("mousedown", onSelectHandler);
+      li.addEventListener("click", onSelectHandler);
       list.appendChild(li);
     });
   }
@@ -340,9 +341,8 @@ function setupAutocomplete(
     items.forEach((i) => {
       const li = document.createElement("li");
       li.textContent = labelFn(i);
-      li.addEventListener("mousedown", (e) => {
-        // Prevent input blur if needed, though usually mousedown happens before blur
-        e.preventDefault();
+      const onSelectHandler = (e: Event) => {
+        if (e.type === "mousedown") e.preventDefault();
         input.value = labelFn(i);
         list.innerHTML = "";
         onSelect(i);
@@ -350,7 +350,9 @@ function setupAutocomplete(
         if (input instanceof HTMLTextAreaElement) {
           autoResizeTextarea(input);
         }
-      });
+      };
+      li.addEventListener("mousedown", onSelectHandler);
+      li.addEventListener("click", onSelectHandler);
       list.appendChild(li);
     });
   }

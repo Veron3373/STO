@@ -17,11 +17,15 @@ export function wireGlobalAutocomplete(items: string[]) {
       const el = document.createElement("div");
       el.className = "custom-dropdown-item";
       el.textContent = v;
-      el.addEventListener("click", () => {
+      const onSelect = (e?: Event) => {
+        if (e && e.type === "mousedown") e.preventDefault();
         input.value = v;               // просто підставляємо значення
         dd.classList.add("hidden-all_other_bases");
         input.dispatchEvent(new Event("change"));
-      });
+      };
+
+      el.addEventListener("mousedown", onSelect);
+      el.addEventListener("click", onSelect);
       dd.appendChild(el);
     }
     dd.classList.remove("hidden-all_other_bases");

@@ -285,7 +285,8 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
         });
       };
 
-      item.onclick = () => {
+      const onSelect = (e?: Event) => {
+        if (e && e.type === "mousedown") e.preventDefault();
         input.value = val;
         setBaseOnce();
         if (!shopEditState.baseShopId) shopEditState.baseShopId = nameToId.get(val) ?? null;
@@ -293,6 +294,8 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
         dd.classList.add("hidden-all_other_bases");
         snapshotToAllBd();
       };
+      item.addEventListener("mousedown", onSelect);
+      item.addEventListener("click", onSelect);
       dd.appendChild(item);
     });
 
@@ -360,7 +363,8 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
         });
       };
 
-      item.onclick = () => {
+      const onSelect = (e?: Event) => {
+        if (e && e.type === "mousedown") e.preventDefault();
         input.value = val;
         setBaseOnce();
         if (!detailEditState.baseDetailId) detailEditState.baseDetailId = nameToId.get(val) ?? null;
@@ -368,6 +372,8 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
         dd.classList.add("hidden-all_other_bases");
         snapshotToAllBd();
       };
+      item.addEventListener("mousedown", onSelect);
+      item.addEventListener("click", onSelect);
       dd.appendChild(item);
     });
 
@@ -551,7 +557,12 @@ async function wireLinkedAutocomplete() {
         if (!item.classList.contains("selected")) item.style.backgroundColor = "white";
       };
       item.dataset.scladId = r.sclad_id;
-      item.onclick = () => onSelect(r);
+      const onSelectHandler = (e: Event) => {
+        if (e.type === "mousedown") e.preventDefault();
+        onSelect(r);
+      };
+      item.addEventListener("mousedown", onSelectHandler);
+      item.addEventListener("click", onSelectHandler);
       dd.appendChild(item);
     });
 

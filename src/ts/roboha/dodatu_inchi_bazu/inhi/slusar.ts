@@ -358,11 +358,14 @@ const createCustomDropdown = (
         });
       };
 
-      item.addEventListener("click", () => {
+      const onSelect = (e?: Event) => {
+        if (e && e.type === "mousedown") e.preventDefault();
         inputElement.value = val;
         dropdown.classList.add("hidden-all_other_bases");
         updateAllBdFromInput(val, true);
-      });
+      };
+      item.addEventListener("mousedown", onSelect);
+      item.addEventListener("click", onSelect);
       dropdown.appendChild(item);
     });
     dropdown.classList.remove("hidden-all_other_bases");

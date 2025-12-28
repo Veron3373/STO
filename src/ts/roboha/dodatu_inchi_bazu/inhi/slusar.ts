@@ -5,6 +5,7 @@ import {
 } from "../dodatu_inchi_bazu_danux";
 import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 import { setupDropdownKeyboard } from "./sharedAutocomplete";
+import { userAccessLevel } from "../../tablucya/users";
 
 let currentLoadedData: any[] = [];
 let currentConfig: {
@@ -51,7 +52,7 @@ const checkSlusarDuplicate = async (name: string): Promise<boolean> => {
         const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
         const nm = normalizeName(d?.Name ?? "");
         if (nm && nm === needle) return true;
-      } catch { }
+      } catch {}
     }
     return false;
   } catch (error) {
@@ -122,8 +123,8 @@ const updateAllBdFromInput = async (
               ? { [deepPath[0]]: extractNestedValue(dataFieldValue, deepPath) }
               : typeof dataFieldValue === "object" &&
                 !Array.isArray(dataFieldValue)
-                ? dataFieldValue
-                : { [field]: dataFieldValue },
+              ? dataFieldValue
+              : { [field]: dataFieldValue },
         };
         updateAllBd(JSON.stringify(result, null, 2));
         return;
@@ -238,15 +239,23 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
 };
 
 // Функція для керування видимістю пароля
-const updatePasswordVisibility = (role: string) => {
-  const passwordInput = document.getElementById("slusar-password") as HTMLInputElement;
-  if (passwordInput) {
-    if (role === "Адміністратор") {
+const updatePasswordVisibility = (selectedRole: string) => {
+  const passwordInput = document.getElementById(
+    "slusar-password"
+  ) as HTMLInputElement;
+  if (!passwordInput) return;
+
+  // Завжди за замовчуванням приховуємо пароль
+  passwordInput.type = "password";
+
+  // Якщо поточний користувач - Адміністратор
+  if (userAccessLevel === "Адміністратор") {
+    // Показуємо пароль тільки для НЕ адміністраторів
+    if (selectedRole !== "Адміністратор") {
       passwordInput.type = "text";
-    } else {
-      passwordInput.type = "password";
     }
   }
+  // Для всіх інших користувачів - пароль завжди прихований
 };
 
 // Функція для керування видимістю інпутів
@@ -301,7 +310,9 @@ const createCustomDropdown = (
   if (!dropdown || !inputElement) return;
 
   // Cleanup previous listeners if any
-  const extendedInput = inputElement as HTMLInputElement & { _dropdownCleanup?: () => void };
+  const extendedInput = inputElement as HTMLInputElement & {
+    _dropdownCleanup?: () => void;
+  };
   if (extendedInput._dropdownCleanup) {
     extendedInput._dropdownCleanup();
     extendedInput._dropdownCleanup = undefined;
@@ -358,7 +369,7 @@ const createCustomDropdown = (
       item.onmouseenter = () => {
         item.classList.add("selected");
         item.style.backgroundColor = "#e3f2fd";
-        Array.from(dropdown.children).forEach(child => {
+        Array.from(dropdown.children).forEach((child) => {
           if (child !== item) {
             child.classList.remove("selected");
             (child as HTMLElement).style.backgroundColor = "white";
@@ -435,7 +446,8 @@ const fetchAndDisplayEmployeeStats = async () => {
 
     rows.forEach((row) => {
       try {
-        const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+        const data =
+          typeof row.data === "string" ? JSON.parse(row.data) : row.data;
         const accessLevel = data?.Доступ || "Невідомо";
 
         if (accessLevelCounts[accessLevel]) {
@@ -476,7 +488,7 @@ const createSlusarAdditionalInputs = async () => {
   additionalInputsContainer.innerHTML = `
     <div class="slusar-input-group">
       <label for="slusar-password" class="label-all_other_bases">Пароль:</label>
-      <input type="number" id="slusar-password" class="input-all_other_bases" placeholder="Введіть пароль" autocomplete="off">
+      <input type="password" id="slusar-password" class="input-all_other_bases" placeholder="Введіть пароль" autocomplete="new-password">
     </div>
     <div class="slusar-input-group">
       <label for="slusar-access" class="label-all_other_bases">Доступ:</label>
@@ -511,7 +523,9 @@ const createSlusarAdditionalInputs = async () => {
   }
 
   // Додаємо обробник зміни ролі
-  const accessSelect = document.getElementById("slusar-access") as HTMLSelectElement;
+  const accessSelect = document.getElementById(
+    "slusar-access"
+  ) as HTMLSelectElement;
   if (accessSelect) {
     accessSelect.addEventListener("change", (e) => {
       const target = e.target as HTMLSelectElement;
@@ -670,8 +684,15 @@ export const initYesButtonHandler = () => {
         return;
       }
 
-      if (isNaN(percentPartsValue) || percentPartsValue < 0 || percentPartsValue > 100) {
-        console.error("Невалідне значення проценту запчастин:", percentPartsValue);
+      if (
+        isNaN(percentPartsValue) ||
+        percentPartsValue < 0 ||
+        percentPartsValue > 100
+      ) {
+        console.error(
+          "Невалідне значення проценту запчастин:",
+          percentPartsValue
+        );
         // Можна продовжити зі значеняям за замовчуванням або повернути помилку
         percentPartsValue = 50;
       }
@@ -689,7 +710,8 @@ export const initYesButtonHandler = () => {
           return;
         }
 
-        let currentData = typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
+        let currentData =
+          typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
 
         // Оновлюємо ПроцентРоботи та ПроцентЗапчастин
         currentData = {
@@ -709,7 +731,9 @@ export const initYesButtonHandler = () => {
           return;
         }
 
-        console.log(`Успішно оновлено проценти для ${name}: Робота=${percentValue}, Запчастини=${percentPartsValue}`);
+        console.log(
+          `Успішно оновлено проценти для ${name}: Робота=${percentValue}, Запчастини=${percentPartsValue}`
+        );
       } catch (error) {
         console.error("Помилка при обробці даних слюсаря:", error);
       }

@@ -300,7 +300,14 @@ const createCustomDropdown = (
   ) as HTMLDivElement;
   if (!dropdown || !inputElement) return;
 
-  // Setup keyboard navigation
+  // Cleanup previous listeners if any
+  const extendedInput = inputElement as HTMLInputElement & { _dropdownCleanup?: () => void };
+  if (extendedInput._dropdownCleanup) {
+    extendedInput._dropdownCleanup();
+    extendedInput._dropdownCleanup = undefined;
+  }
+
+  // Setup keyboard navigation (only once)
   setupDropdownKeyboard(inputElement, dropdown);
 
   currentLoadedData = data;
@@ -333,6 +340,7 @@ const createCustomDropdown = (
     })
     .filter((val): val is string => typeof val === "string" && val.length > 0);
   const uniqueValues = [...new Set(values)].sort();
+
   const renderSuggestions = (filter: string) => {
     dropdown.innerHTML = "";
     const filtered = uniqueValues.filter((val) =>
@@ -370,18 +378,42 @@ const createCustomDropdown = (
     });
     dropdown.classList.remove("hidden-all_other_bases");
   };
-  inputElement.addEventListener("input", () => {
+
+  // Event Handlers
+  const onInput = () => {
     renderSuggestions(inputElement.value.trim());
     updateAllBdFromInput(inputElement.value.trim(), false);
-  });
-  inputElement.addEventListener("focus", () => {
+  };
+
+  const onFocus = () => {
     renderSuggestions(inputElement.value.trim());
-  });
-  document.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target as Node) && e.target !== inputElement) {
+  };
+
+  const onClick = (e: Event) => {
+    e.stopPropagation(); // Prevents document click from closing the dropdown immediately
+    renderSuggestions(inputElement.value.trim());
+  };
+
+  const onDocClick = (e: Event) => {
+    if (!dropdown.contains(e.target as Node)) {
       dropdown.classList.add("hidden-all_other_bases");
     }
-  });
+  };
+
+  // Attach Listeners
+  inputElement.addEventListener("input", onInput);
+  inputElement.addEventListener("focus", onFocus);
+  inputElement.addEventListener("click", onClick);
+  document.addEventListener("click", onDocClick);
+
+  // Store cleanup function
+  extendedInput._dropdownCleanup = () => {
+    inputElement.removeEventListener("input", onInput);
+    inputElement.removeEventListener("focus", onFocus);
+    inputElement.removeEventListener("click", onClick);
+    document.removeEventListener("click", onDocClick);
+  };
+
   const rect = inputElement.getBoundingClientRect();
   dropdown.style.minWidth = `${rect.width}px`;
 };
@@ -444,7 +476,7 @@ const createSlusarAdditionalInputs = async () => {
   additionalInputsContainer.innerHTML = `
     <div class="slusar-input-group">
       <label for="slusar-password" class="label-all_other_bases">Пароль:</label>
-      <input type="number" id="slusar-password" class="input-all_other_bases" placeholder="Введіть пароль">
+      <input type="number" id="slusar-password" class="input-all_other_bases" placeholder="Введіть пароль" autocomplete="off">
     </div>
     <div class="slusar-input-group">
       <label for="slusar-access" class="label-all_other_bases">Доступ:</label>

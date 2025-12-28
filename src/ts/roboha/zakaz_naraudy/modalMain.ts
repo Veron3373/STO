@@ -150,8 +150,10 @@ async function getRoleSettingBool(
       return true;
     }
 
-    const safeData: Record<string, unknown> =
-      (data ?? {}) as unknown as Record<string, unknown>;
+    const safeData: Record<string, unknown> = (data ?? {}) as unknown as Record<
+      string,
+      unknown
+    >;
     const value = safeData[columnName];
 
     if (typeof value === "boolean") return value;
@@ -391,6 +393,7 @@ export async function showModal(actId: number): Promise<void> {
 
     globalCache.currentActId = actId;
     globalCache.isActClosed = !!act.date_off;
+    globalCache.currentActDateOn = act.date_on || null;
 
     const [clientData, carData] = await Promise.all([
       fetchClientData(act.client_id),
@@ -609,13 +612,17 @@ async function applyAccessRestrictionsToNewRow(): Promise<void> {
   const canSeePriceCols = await canUserSeePriceColumns();
 
   // Застосовуємо видимість до всіх колонок ціни/суми в останньому рядку
-  const priceCells = lastRow.querySelectorAll<HTMLElement>('[data-col="price"], [data-col="sum"]');
+  const priceCells = lastRow.querySelectorAll<HTMLElement>(
+    '[data-col="price"], [data-col="sum"]'
+  );
   priceCells.forEach((cell) => {
     cell.style.display = canSeePriceCols ? "" : "none";
   });
 
   // Перевіряємо видимість колонки зарплати
-  const slyusarSumCell = lastRow.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+  const slyusarSumCell = lastRow.querySelector(
+    '[data-name="slyusar_sum"]'
+  ) as HTMLElement;
   if (slyusarSumCell && !globalCache.settings.showZarplata) {
     slyusarSumCell.style.display = "none";
   }
@@ -740,8 +747,9 @@ function handleLoadError(error: any): void {
     "error"
   );
   if (body) {
-    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${error?.message || "Перевірте підключення."
-      }</p>`;
+    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${
+      error?.message || "Перевірте підключення."
+    }</p>`;
   }
 }
 
@@ -839,92 +847,101 @@ function renderModalContent(
         ${createTableRow("Акт №", `<span id="act-number">${act.act_id}</span>`)}
         ${createTableRow("Клієнт", clientInfo.fio)}
         ${createTableRow(
-    "Телефон",
-    `<span style="color: blue;">${clientInfo.phone}</span>`
-  )}
+          "Телефон",
+          `<span style="color: blue;">${clientInfo.phone}</span>`
+        )}
         ${createTableRow("Примітка:", clientInfo.note)}
         ${createTableRow("Фото", photoCellHtml)}
       </table>
       <table class="zakaz_narayd-table right">
         ${createTableRow(
-    isClosed ? "Закритий" : "Відкритий",
-    `
+          isClosed ? "Закритий" : "Відкритий",
+          `
           <div class="status-row">
             <div class="status-dates">
-              ${isClosed
-      ? `<span class="red">${formatDate(
-        act.date_off
-      )}</span> | <span class="green">${formatDate(
-        act.date_on
-      )}</span>`
-      : `<span class="green">${formatDate(act.date_on) || "-"
-      }</span>`
-    }
+              ${
+                isClosed
+                  ? `<span class="red">${formatDate(
+                      act.date_off
+                    )}</span> | <span class="green">${formatDate(
+                      act.date_on
+                    )}</span>`
+                  : `<span class="green">${
+                      formatDate(act.date_on) || "-"
+                    }</span>`
+              }
             </div>
-            ${showLockButton
-      ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id
-      }">
+            ${
+              showLockButton
+                ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${
+                    act.act_id
+                  }">
                    ${isClosed ? "🔒" : "🗝️"}
                    </button>`
-      : ""
-    }
+                : ""
+            }
 
           </div>
         `
-  )}
+        )}
         ${createTableRow(
-    "Автомобіль",
-    `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
-      carInfo.nomer || ""
-    ).trim()}`.trim() || "—"
-  )}
+          "Автомобіль",
+          `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
+            carInfo.nomer || ""
+          ).trim()}`.trim() || "—"
+        )}
         ${createTableRow(
-    "Vincode",
-    `
+          "Vincode",
+          `
           <div class="status-row">
             <span>${carInfo.vin}</span>
             <div class="status-icons">
-              ${!isRestricted && canShowCreateActBtn
-      ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
-      : ""
-    }
+              ${
+                !isRestricted && canShowCreateActBtn
+                  ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+                  : ""
+              }
             </div>
           </div>
           `
-  )}
+        )}
         ${createTableRow("Двигун", carInfo.engine)}
         ${createTableRow(
-    "Пробіг",
-    `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
-      actDetails?.["Пробіг"],
-      0,
-      0
-    )}</span>`
-  )}
+          "Пробіг",
+          `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
+            actDetails?.["Пробіг"],
+            0,
+            0
+          )}</span>`
+        )}
       </table>
     </div>
     <div class="reason-container">
       <div class="zakaz_narayd-reason-line">
         <div class="reason-text">
           <strong>Причина звернення:</strong>
-          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Причина звернення"] || "—"
-    }</span>
+          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
+    actDetails?.["Причина звернення"] || "—"
+  }</span>
         </div>
-        ${!isRestricted && canShowPrintActBtn
-      ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
-      : ""
-    }
+        ${
+          !isRestricted && canShowPrintActBtn
+            ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+            : ""
+        }
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">
           <strong>Рекомендації:</strong>
-          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Рекомендації"] || "—"
-    }</span>
+          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
+    actDetails?.["Рекомендації"] || "—"
+  }</span>
         </div>
-        ${!isRestricted && canShowSkladBtn
-      ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
-      : ""
-    }
+        ${
+          !isRestricted && canShowSkladBtn
+            ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
+            : ""
+        }
       </div>
     </div>
     ${generateTableHTML(
@@ -1167,13 +1184,13 @@ function handleInputChange(event: Event): void {
               void calculateRowSum(row);
             } else {
               // Якщо не слюсар - не заповнюємо автоматично (або очищаємо, якщо треба)
-              // Але тут ми не очищаємо примусово, якщо вже щось є? 
-              // Логіка: "keep it clean". 
+              // Але тут ми не очищаємо примусово, якщо вже щось є?
+              // Логіка: "keep it clean".
               // Якщо це ручне введення, можливо користувач сам щось ввів?
-              // Але функція expandName могла змінити текст. 
+              // Але функція expandName могла змінити текст.
               // Давайте дотримуватись "explicitly cleared/kept empty".
               // Якщо pibMagCell вже мав значення, чи треба його терти?
-              // Раніше він не тер if (userName) else ...? 
+              // Раніше він не тер if (userName) else ...?
               // Раніше else не було.
 
               // Якщо користувач (Адмін) вибрав роботу, поле слюсаря має бути пустим?
@@ -1262,10 +1279,7 @@ export function getUserAccessLevelFromLocalStorage(): string | null {
     const userData = JSON.parse(storedData);
     return userData?.["Доступ"] || null;
   } catch (error) {
-    console.warn(
-      "Помилка при отриманні рівня доступу з localStorage:",
-      error
-    );
+    console.warn("Помилка при отриманні рівня доступу з localStorage:", error);
     return null;
   }
 }

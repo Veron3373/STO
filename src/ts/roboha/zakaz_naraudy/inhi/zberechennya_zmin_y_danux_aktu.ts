@@ -633,8 +633,14 @@ function compareActChanges(
   // Конвертуємо ActItem[] в ParsedItem[] для порівняння
   const initialParsed = convertActItemsToParsedItems(initialItems);
 
-  console.log(`🔍 [compareActChanges] Початкові елементи (${initialParsed.length}):`, initialParsed);
-  console.log(`🔍 [compareActChanges] Поточні елементи (${currentItems.length}):`, currentItems);
+  console.log(
+    `🔍 [compareActChanges] Початкові елементи (${initialParsed.length}):`,
+    initialParsed
+  );
+  console.log(
+    `🔍 [compareActChanges] Поточні елементи (${currentItems.length}):`,
+    currentItems
+  );
 
   // Створюємо унікальний ключ для кожної позиції (тип + назва)
   const createKey = (item: ParsedItem) => `${item.type}:${item.name}`;
@@ -671,7 +677,9 @@ function compareActChanges(
     }
   });
 
-  console.log(`📊 [compareActChanges] Результат: додано ${added.length}, видалено ${deleted.length}`);
+  console.log(
+    `📊 [compareActChanges] Результат: додано ${added.length}, видалено ${deleted.length}`
+  );
 
   return { added, deleted };
 }
@@ -843,14 +851,17 @@ function getClientAndCarInfo(): { pib: string; auto: string } {
 async function syncPruimalnikHistory(
   actId: number,
   _totalWorksSumIgnored: number,
-  _totalDetailsSumIgnored: number
+  _totalDetailsSumIgnored: number,
+  actDateOn: string | null = null
 ): Promise<void> {
   // 1. Перевірка ролі (тільки Приймальник)
   if (userAccessLevel !== "Приймальник") return;
 
   const currentUserName = userName;
   if (!currentUserName) {
-    console.warn("⚠️ syncPruimalnikHistory: Неможливо визначити ім'я користувача");
+    console.warn(
+      "⚠️ syncPruimalnikHistory: Неможливо визначити ім'я користувача"
+    );
     return;
   }
 
@@ -910,7 +921,9 @@ async function syncPruimalnikHistory(
       partsTotalSale += sumValue;
       partsList.push({ scladId, qty, sale: sumValue });
 
-      console.log(`⚙️ Деталь: scladId=${scladId}, Qty=${qty}, Sale=${sumValue}`);
+      console.log(
+        `⚙️ Деталь: scladId=${scladId}, Qty=${qty}, Sale=${sumValue}`
+      );
     }
   });
 
@@ -919,13 +932,13 @@ async function syncPruimalnikHistory(
     worksTotalSlusarSalary,
     partsTotalSale,
     partsListLength: partsList.length,
-    partsList
+    partsList,
   });
 
   // --- ОТРИМАННЯ ВХІДНИХ ЦІН ---
   let partsTotalBuy = 0;
   const scladIdsToFetch = partsList
-    .map(p => p.scladId)
+    .map((p) => p.scladId)
     .filter((id): id is number => id !== null && !isNaN(id));
 
   console.log("🔍 ID для запиту до sclad:", scladIdsToFetch);
@@ -939,30 +952,44 @@ async function syncPruimalnikHistory(
     console.log("📦 Відповідь від sclad:", { scladItems, scladError });
 
     if (scladError) {
-      console.error("❌ syncPruimalnikHistory: Помилка отримання цін sclad:", scladError);
+      console.error(
+        "❌ syncPruimalnikHistory: Помилка отримання цін sclad:",
+        scladError
+      );
     } else if (scladItems) {
       // Створюємо мапу цін: id -> price
       const priceMap = new Map<number, number>();
-      scladItems.forEach(item => {
+      scladItems.forEach((item) => {
         // Парсимо ціну (якщо рядок "938,00" або число 938)
         let val = 0;
         if (typeof item.price === "number") {
           val = item.price;
         } else {
           // Якщо рядок або щось інше
-          val = parseFloat(String(item.price).replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
+          val =
+            parseFloat(
+              String(item.price)
+                .replace(",", ".")
+                .replace(/[^\d.-]/g, "")
+            ) || 0;
         }
         priceMap.set(item.sclad_id, val);
       });
 
       // Рахуємо суму закупки
-      partsList.forEach(part => {
+      partsList.forEach((part) => {
         if (part.scladId && priceMap.has(part.scladId)) {
           const buyPrice = priceMap.get(part.scladId) || 0;
           partsTotalBuy += buyPrice * part.qty;
-          console.log(`🛒 Деталь ID=${part.scladId}: Qty=${part.qty}, BuyPrice=${buyPrice}, TotalBuy=${buyPrice * part.qty}`);
+          console.log(
+            `🛒 Деталь ID=${part.scladId}: Qty=${
+              part.qty
+            }, BuyPrice=${buyPrice}, TotalBuy=${buyPrice * part.qty}`
+          );
         } else {
-          console.log(`ℹ️ Не знайдено вхідну ціну для sclad_id=${part.scladId}, беремо 0 (Вхідна ціна не враховується)`);
+          console.log(
+            `ℹ️ Не знайдено вхідну ціну для sclad_id=${part.scladId}, беремо 0 (Вхідна ціна не враховується)`
+          );
         }
       });
     }
@@ -984,16 +1011,23 @@ async function syncPruimalnikHistory(
     .single();
 
   if (error || !userData) {
-    console.error("❌ syncPruimalnikHistory: Помилка пошуку приймальника:", error);
+    console.error(
+      "❌ syncPruimalnikHistory: Помилка пошуку приймальника:",
+      error
+    );
     return;
   }
 
   const slyusarData =
-    typeof userData.data === "string" ? JSON.parse(userData.data) : userData.data;
+    typeof userData.data === "string"
+      ? JSON.parse(userData.data)
+      : userData.data;
 
   // Додаткова перевірка ролі в базі
   if (slyusarData.Доступ !== "Приймальник") {
-    console.warn("⚠️ syncPruimalnikHistory: Користувач не є Приймальником в базі");
+    console.warn(
+      "⚠️ syncPruimalnikHistory: Користувач не є Приймальником в базі"
+    );
     return;
   }
 
@@ -1011,7 +1045,7 @@ async function syncPruimalnikHistory(
     partsTotalSale,
     partsTotalBuy,
     basePartsProfit,
-    salaryParts
+    salaryParts,
   });
 
   // --- ВИДАЛЕННЯ АКТУ З ІНШИХ ПРИЙМАЛЬНИКІВ ---
@@ -1027,9 +1061,10 @@ async function syncPruimalnikHistory(
     console.error("❌ Помилка отримання списку Приймальників:", receiversError);
   } else if (allReceivers && allReceivers.length > 0) {
     for (const receiver of allReceivers) {
-      const receiverData = typeof receiver.data === "string"
-        ? JSON.parse(receiver.data)
-        : receiver.data;
+      const receiverData =
+        typeof receiver.data === "string"
+          ? JSON.parse(receiver.data)
+          : receiver.data;
 
       // Перевіряємо, чи це Приймальник
       if (receiverData.Доступ !== "Приймальник") continue;
@@ -1041,9 +1076,13 @@ async function syncPruimalnikHistory(
       for (const dateKey of Object.keys(receiverHistory)) {
         const dailyActs = receiverHistory[dateKey];
         if (Array.isArray(dailyActs)) {
-          const idx = dailyActs.findIndex((item: any) => String(item.Акт) === String(actId));
+          const idx = dailyActs.findIndex(
+            (item: any) => String(item.Акт) === String(actId)
+          );
           if (idx !== -1) {
-            console.log(`🗑️ Видалено акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`);
+            console.log(
+              `🗑️ Видалено акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`
+            );
             dailyActs.splice(idx, 1);
 
             // Якщо масив порожній, видаляємо дату
@@ -1066,7 +1105,10 @@ async function syncPruimalnikHistory(
           .eq("slyusar_id", receiver.slyusar_id);
 
         if (updateError) {
-          console.error(`❌ Помилка оновлення історії для "${receiverData.Name}":`, updateError);
+          console.error(
+            `❌ Помилка оновлення історії для "${receiverData.Name}":`,
+            updateError
+          );
         } else {
           console.log(`✅ Історію "${receiverData.Name}" оновлено`);
         }
@@ -1085,7 +1127,9 @@ async function syncPruimalnikHistory(
   for (const dateKey of Object.keys(history)) {
     const dailyActs = history[dateKey];
     if (Array.isArray(dailyActs)) {
-      const idx = dailyActs.findIndex((item: any) => String(item.Акт) === String(actId));
+      const idx = dailyActs.findIndex(
+        (item: any) => String(item.Акт) === String(actId)
+      );
       if (idx !== -1) {
         actFound = true;
         foundDateKey = dateKey;
@@ -1098,27 +1142,34 @@ async function syncPruimalnikHistory(
   const { pib, auto } = getClientAndCarInfo();
 
   const actRecordUpdate = {
-    "Акт": String(actId),
-    "Клієнт": pib,
-    "Автомобіль": auto,
-    "СуммаРоботи": baseWorkProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
-    "СуммаЗапчастин": basePartsProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
-    "ЗарплатаРоботи": salaryWork,
-    "ЗарплатаЗапчастин": salaryParts,
-    "ДатаЗакриття": null, // Буде заповнено при закритті акту
+    Акт: String(actId),
+    Клієнт: pib,
+    Автомобіль: auto,
+    СуммаРоботи: baseWorkProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
+    СуммаЗапчастин: basePartsProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
+    ЗарплатаРоботи: salaryWork,
+    ЗарплатаЗапчастин: salaryParts,
+    ДатаЗакриття: null, // Буде заповнено при закритті акту
   };
 
   if (actFound) {
-    console.log(`📝 syncPruimalnikHistory: Оновлення існуючого запису акту #${actId}`);
+    console.log(
+      `📝 syncPruimalnikHistory: Оновлення існуючого запису акту #${actId}`
+    );
     const oldRecord = history[foundDateKey][foundIndex];
     history[foundDateKey][foundIndex] = { ...oldRecord, ...actRecordUpdate };
   } else {
-    console.log(`➕ syncPruimalnikHistory: Створення нового запису акту #${actId}`);
-    const today = new Date().toISOString().split("T")[0];
-    if (!history[today]) {
-      history[today] = [];
+    console.log(
+      `➕ syncPruimalnikHistory: Створення нового запису акту #${actId}`
+    );
+    // Використовуємо дату створення акту, а не поточну дату
+    const actDate = actDateOn
+      ? actDateOn.split("T")[0]
+      : new Date().toISOString().split("T")[0];
+    if (!history[actDate]) {
+      history[actDate] = [];
     }
-    history[today].push(actRecordUpdate);
+    history[actDate].push(actRecordUpdate);
   }
 
   // 4. Зберігаємо оновлену історію в БД
@@ -1130,7 +1181,10 @@ async function syncPruimalnikHistory(
     .eq("slyusar_id", userData.slyusar_id);
 
   if (updateError) {
-    console.error("❌ syncPruimalnikHistory: Помилка оновлення історії:", updateError);
+    console.error(
+      "❌ syncPruimalnikHistory: Помилка оновлення історії:",
+      updateError
+    );
   } else {
     console.log("✅ syncPruimalnikHistory: Історія успішно оновлена");
   }
@@ -1219,7 +1273,12 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   await applyScladDeltas(deltas);
   await syncShopsOnActSave(actId, detailRowsForShops);
   await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
-  await syncPruimalnikHistory(actId, totalWorksSum, totalDetailsSum); // ✅ Нова синхронізація для приймальника
+  await syncPruimalnikHistory(
+    actId,
+    totalWorksSum,
+    totalDetailsSum,
+    globalCache.currentActDateOn
+  ); // ✅ Нова синхронізація для приймальника
 
   // ===== ЛОГУВАННЯ ЗМІН =====
   try {

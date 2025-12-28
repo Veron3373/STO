@@ -407,8 +407,8 @@ function showCatalogInfo(target: HTMLElement, sclad_id: number) {
     qty < 0
       ? `<span class="neg">${qty}</span>`
       : qty === 0
-        ? `<span class="neutral">${qty}</span>`
-        : `<span class="positive">${qty}</span>`;
+      ? `<span class="neutral">${qty}</span>`
+      : `<span class="positive">${qty}</span>`;
 
   const box = document.createElement("div");
   box.className = "catalog-info-popover";
@@ -926,7 +926,7 @@ export function setupAutocompleteForEditableCells(
         suggestions = filtered.map((x) => ({ label: x, value: x }));
       } else if (t === "slyusars") {
         const allowedSlyusars = globalCache.slyusars
-          .filter((s) => s.Доступ === "Слюсар" || s.Доступ === "Адміністратор")
+          .filter((s) => s.Доступ === "Слюсар")
           .map((s) => s.Name)
           .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
         const filtered = query
@@ -946,7 +946,7 @@ export function setupAutocompleteForEditableCells(
     } else if (target.getAttribute("data-type") === "slyusars") {
       const query = target.textContent?.trim().toLowerCase() || "";
       const allowedSlyusars = globalCache.slyusars
-        .filter((s) => s.Доступ === "Слюсар" || s.Доступ === "Адміністратор")
+        .filter((s) => s.Доступ === "Слюсар")
         .map((s) => s.Name)
         .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
       const filtered = query
@@ -1124,9 +1124,7 @@ export function setupAutocompleteForEditableCells(
         const currentText = pibMagCell.textContent?.trim() || "";
         if (t === "slyusars") {
           const allowedSlyusarNames = globalCache.slyusars
-            .filter(
-              (s) => s.Доступ === "Слюсар" || s.Доступ === "Адміністратор"
-            )
+            .filter((s) => s.Доступ === "Слюсар")
             .map((s) => s.Name.toLowerCase());
           if (!allowedSlyusarNames.includes(currentText.toLowerCase())) {
             pibMagCell.textContent = "";
@@ -1152,7 +1150,7 @@ export function setupAutocompleteForEditableCells(
           .map((x) => ({ label: x, value: x }));
       } else if (t === "slyusars") {
         const allowedSlyusars = globalCache.slyusars
-          .filter((s) => s.Доступ === "Слюсар" || s.Доступ === "Адміністратор")
+          .filter((s) => s.Доступ === "Слюсар")
           .map((s) => s.Name)
           .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
         suggestions = allowedSlyusars
@@ -1167,7 +1165,7 @@ export function setupAutocompleteForEditableCells(
         .map((x) => ({ label: x, value: x }));
     } else if (target.getAttribute("data-type") === "slyusars") {
       const allowedSlyusars = globalCache.slyusars
-        .filter((s) => s.Доступ === "Слюсар" || s.Доступ === "Адміністратор")
+        .filter((s) => s.Доступ === "Слюсар")
         .map((s) => s.Name)
         .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
       suggestions = allowedSlyusars

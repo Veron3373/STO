@@ -91,17 +91,18 @@ export interface GlobalDataCache {
   works: string[];
   worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
-  slyusars: Array<{ Name: string;[k: string]: any }>;
-  shops: Array<{ Name: string;[k: string]: any }>;
+  slyusars: Array<{ Name: string; [k: string]: any }>;
+  shops: Array<{ Name: string; [k: string]: any }>;
   settings: {
     showPibMagazin: boolean;
     showCatalog: boolean;
-    showZarplata: boolean;  // ← ДОДАНО
-    showSMS: boolean;        // ← ДОДАНО
+    showZarplata: boolean; // ← ДОДАНО
+    showSMS: boolean; // ← ДОДАНО
     preferredLanguage: "uk" | "en"; // ← ДОДАНО: мова інтерфейсу
   };
   isActClosed: boolean;
   currentActId: number | null;
+  currentActDateOn: string | null;
   skladParts: Array<{
     sclad_id: number;
     part_number: string;
@@ -127,12 +128,13 @@ export const globalCache: GlobalDataCache = {
   settings: {
     showPibMagazin: true,
     showCatalog: true,
-    showZarplata: true,  // ← ДОДАНО
-    showSMS: false,      // ← ДОДАНО
-    preferredLanguage: "uk" // ← ДОДАНО: типово українська
+    showZarplata: true, // ← ДОДАНО
+    showSMS: false, // ← ДОДАНО
+    preferredLanguage: "uk", // ← ДОДАНО: типово українська
   },
   isActClosed: false,
   currentActId: null,
+  currentActDateOn: null,
   skladParts: [],
   skladLite: [],
   oldNumbers: new Map<number, number>(),
@@ -172,8 +174,9 @@ function dedupeSklad<
   const seen = new Set<string>();
   const out: T[] = [];
   for (const r of rows) {
-    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${r.quantity
-      }`;
+    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${
+      r.quantity
+    }`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -224,7 +227,9 @@ export async function loadGlobalData(): Promise<void> {
         name: String(r.data || "").trim(),
       })) || [];
 
-    globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+    globalCache.works = globalCache.worksWithId
+      .map((w) => w.name)
+      .filter(Boolean);
 
     globalCache.details =
       detailsData
@@ -235,7 +240,9 @@ export async function loadGlobalData(): Promise<void> {
         })
         .filter(Boolean) || [];
 
-    console.log(`✅ Завантажено - Робіт: ${globalCache.works.length}, Деталей: ${globalCache.details.length}`);
+    console.log(
+      `✅ Завантажено - Робіт: ${globalCache.works.length}, Деталей: ${globalCache.details.length}`
+    );
 
     // слюсарі: нормально парсимо, як і раніше
     globalCache.slyusars =
@@ -247,7 +254,7 @@ export async function loadGlobalData(): Promise<void> {
         .filter(Boolean) || [];
 
     // магазини: ТЕПЕР витягуємо Name і з об'єктів, і з подвійно-JSON-рядків, і з «просто рядка»
-    const shopsParsed: Array<{ Name: string;[k: string]: any }> = [];
+    const shopsParsed: Array<{ Name: string; [k: string]: any }> = [];
     for (const row of shopsData || []) {
       let raw = row?.data;
 
@@ -278,10 +285,8 @@ export async function loadGlobalData(): Promise<void> {
       showCatalog: !!settingCatalog?.data,
       showZarplata: !!settingZarplata?.data,
       showSMS: !!settingSMS?.data,
-      preferredLanguage: (settingLanguage?.data === "en" ? "en" : "uk"),
+      preferredLanguage: settingLanguage?.data === "en" ? "en" : "uk",
     };
-
-
 
     // склад: також нормалізуємо поле shop (shops)
     const mapped =

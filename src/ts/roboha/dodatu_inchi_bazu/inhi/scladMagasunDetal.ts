@@ -2,6 +2,7 @@
 import { supabase } from "../../../vxid/supabaseClient";
 import { updateAllBd, CRUD } from "../dodatu_inchi_bazu_danux";
 import { initBatchImport } from "./batchImportSclad";
+import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 
 /** ====== СТАН МАГАЗИН ====== */
 export type ShopEditState = {
@@ -186,6 +187,18 @@ export async function renderScladForm() {
   snapshotToAllBd();
 
   initBatchImport();
+
+  // Налаштування навігації Enter між полями
+  setupEnterNavigationForFields([
+    "sclad_date",
+    "sclad_shop",
+    "sclad_detail_catno",
+    "sclad_detail",
+    "sclad_qty_in",
+    "sclad_price",
+    "sclad_invoice_no",
+    "sclad_unit",
+  ]);
 }
 
 /* ---------- helpers ---------- */

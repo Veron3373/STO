@@ -1,6 +1,7 @@
 // src\ts\roboha\dodatu_inchi_bazu\inhi\contragent.ts
 import { supabase } from "../../../vxid/supabaseClient";
 import { updateAllBd, all_bd, CRUD } from "../dodatu_inchi_bazu_danux";
+import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 
 export interface ContragentRecord {
   faktura_id: number;
@@ -415,7 +416,7 @@ function removeActButton() {
   if (actButton) {
     actButton.remove();
     console.log("✅ Act button removed");
-    
+
     // ✅ ВИПРАВЛЕННЯ: Повертаємо стандартне вирівнювання для кнопки "Ok"
     const buttonsDiv = document.querySelector(".yes-no-buttons-all_other_bases") as HTMLElement;
     if (buttonsDiv) {
@@ -427,7 +428,7 @@ function removeActButton() {
 // ✅ НАЛАШТУВАННЯ АВТОМАТИЧНОГО ПРИХОВУВАННЯ КНОПКИ
 function setupActButtonAutoHide() {
   const otherButtons = document.querySelectorAll('.toggle-button-all_other_bases');
-  
+
   otherButtons.forEach((btn) => {
     const buttonText = btn.textContent?.trim();
     // Приховуємо кнопку при переключенні на будь-який інший розділ
@@ -697,6 +698,14 @@ export async function handleDhereloContragent() {
 
   // ✅ Налаштовуємо автоматичне приховування кнопки
   setupActButtonAutoHide();
+
+  // Налаштування навігації Enter між полями
+  setupEnterNavigationForFields([
+    "contragent-receiver",
+    "contragent-name",
+    "contragent-note",
+    "contragent-date",
+  ]);
 }
 
 export function clearContragentForm() {

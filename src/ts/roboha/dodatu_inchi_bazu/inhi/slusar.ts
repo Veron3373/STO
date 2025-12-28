@@ -3,6 +3,7 @@ import {
   updateAllBd,
   updateTableNameDisplay,
 } from "../dodatu_inchi_bazu_danux";
+import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 
 let currentLoadedData: any[] = [];
 let currentConfig: {
@@ -472,6 +473,15 @@ const createSlusarAdditionalInputs = async () => {
 
   // Завантажуємо статистику після створення контейнера
   await fetchAndDisplayEmployeeStats();
+
+  // Налаштування навігації Enter між полями
+  setupEnterNavigationForFields([
+    "search-input-all_other_bases",
+    "slusar-password",
+    "slusar-access",
+    "slusar-percent",
+    "slusar-percent-parts",
+  ]);
 };
 
 // Функція для видалення додаткових інпутів

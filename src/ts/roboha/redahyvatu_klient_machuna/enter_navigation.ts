@@ -63,3 +63,51 @@ export function setupEnterNavigation(fieldIds: string[]) {
         document.removeEventListener("keydown", handleKeyDown);
     };
 }
+
+/**
+ * Налаштовує навігацію Enter для модальних вікон (Склад, Співробітники, Контрагент)
+ * @param fieldIds - Масив ID полів в порядку навігації
+ */
+export function setupEnterNavigationForFields(fieldIds: string[]) {
+    const handleKeyDown = (e: Event) => {
+        if (!(e instanceof KeyboardEvent)) return;
+        if (e.key !== "Enter") return;
+
+        const target = e.target as HTMLElement;
+        if (!target || !target.id) return;
+
+        const currentIndex = fieldIds.indexOf(target.id);
+        if (currentIndex === -1) return;
+
+        if (target instanceof HTMLSelectElement) {
+            e.preventDefault();
+            target.blur();
+            setTimeout(() => moveToNextField(currentIndex), 50);
+            return;
+        }
+
+        e.preventDefault();
+        moveToNextField(currentIndex);
+    };
+
+    const moveToNextField = (currentIndex: number) => {
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < fieldIds.length) {
+            const nextField = document.getElementById(fieldIds[nextIndex]) as
+                HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+
+            if (nextField) {
+                nextField.focus();
+                if (nextField instanceof HTMLInputElement || nextField instanceof HTMLTextAreaElement) {
+                    nextField.setSelectionRange(nextField.value.length, nextField.value.length);
+                }
+            }
+        }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+    };
+}

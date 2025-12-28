@@ -225,12 +225,25 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
     }
     // Оновлюємо видимість інпутів відповідно до ролі
     updatePercentInputsVisibility(accessSelect.value);
+    updatePasswordVisibility(accessSelect.value);
   }
   if (percentInput && data?.ПроцентРоботи !== undefined) {
     percentInput.value = String(data.ПроцентРоботи);
   }
   if (percentPartsInput && data?.ПроцентЗапчастин !== undefined) {
     percentPartsInput.value = String(data.ПроцентЗапчастин);
+  }
+};
+
+// Функція для керування видимістю пароля
+const updatePasswordVisibility = (role: string) => {
+  const passwordInput = document.getElementById("slusar-password") as HTMLInputElement;
+  if (passwordInput) {
+    if (role === "Адміністратор") {
+      passwordInput.type = "password";
+    } else {
+      passwordInput.type = "text";
+    }
   }
 };
 
@@ -267,6 +280,7 @@ const clearSlusarInputs = () => {
     accessSelect.disabled = false;
     // Скидаємо видимість (для Слюсаря поле запчастин приховане)
     updatePercentInputsVisibility("Слюсар");
+    updatePasswordVisibility("Слюсар");
   }
   if (percentInput) percentInput.value = "50";
   if (percentPartsInput) percentPartsInput.value = "50";
@@ -449,9 +463,11 @@ const createSlusarAdditionalInputs = async () => {
     accessSelect.addEventListener("change", (e) => {
       const target = e.target as HTMLSelectElement;
       updatePercentInputsVisibility(target.value);
+      updatePasswordVisibility(target.value);
     });
     // Ініціалізація початкового стану (за замовчуванням Слюсар - приховано)
     updatePercentInputsVisibility(accessSelect.value);
+    updatePasswordVisibility(accessSelect.value);
   }
 
   // Завантажуємо статистику після створення контейнера

@@ -4,7 +4,7 @@
  */
 export function wireGlobalAutocomplete(items: string[]) {
   const input = document.getElementById("search-input-all_other_bases") as HTMLInputElement | null;
-  const dd    = document.getElementById("custom-dropdown-all_other_bases") as HTMLDivElement | null;
+  const dd = document.getElementById("custom-dropdown-all_other_bases") as HTMLDivElement | null;
   if (!input || !dd) return;
 
   const render = (q: string) => {
@@ -34,4 +34,64 @@ export function wireGlobalAutocomplete(items: string[]) {
       dd.classList.add("hidden-all_other_bases");
     }
   });
+}
+
+/**
+ * Adds keyboard navigation (ArrowUp, ArrowDown, Enter) to a custom dropdown.
+ * Requires dropdown items to have class 'custom-dropdown-item'.
+ * Selected item gets class 'selected'.
+ */
+export function setupDropdownKeyboard(
+  input: HTMLInputElement | HTMLTextAreaElement,
+  dropdown: HTMLElement
+) {
+  if (input.dataset.keyboardNavBound === "true") return;
+
+  input.addEventListener("keydown", (evt: Event) => {
+    const e = evt as KeyboardEvent;
+    if (dropdown.classList.contains("hidden-all_other_bases")) return;
+
+    const items = dropdown.querySelectorAll(".custom-dropdown-item");
+    if (!items.length) return;
+
+    let idx = -1;
+    items.forEach((it, i) => {
+      if (it.classList.contains("selected")) idx = i;
+    });
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextIdx = idx < items.length - 1 ? idx + 1 : 0;
+      highlightItem(items, nextIdx);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevIdx = idx > 0 ? idx - 1 : items.length - 1;
+      highlightItem(items, prevIdx);
+    } else if (e.key === "Enter") {
+      if (idx >= 0) {
+        // We DON'T prevent default here because we want the event to bubble up
+        // to setupEnterNavigationForFields (document listener) to move focus next.
+        // But we DO want to select the item.
+        (items[idx] as HTMLElement).click();
+      }
+    } else if (e.key === "Escape") {
+      dropdown.classList.add("hidden-all_other_bases");
+    }
+  });
+
+  input.dataset.keyboardNavBound = "true";
+
+  function highlightItem(items: NodeListOf<Element>, index: number) {
+    items.forEach((item, i) => {
+      const el = item as HTMLElement;
+      if (i === index) {
+        item.classList.add("selected");
+        el.style.backgroundColor = "#e3f2fd";
+        item.scrollIntoView({ block: "nearest" });
+      } else {
+        item.classList.remove("selected");
+        el.style.backgroundColor = "white"; // Reset background
+      }
+    });
+  }
 }

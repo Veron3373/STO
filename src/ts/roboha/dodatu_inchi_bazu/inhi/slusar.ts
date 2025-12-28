@@ -4,6 +4,7 @@ import {
   updateTableNameDisplay,
 } from "../dodatu_inchi_bazu_danux";
 import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
+import { setupDropdownKeyboard } from "./sharedAutocomplete";
 
 let currentLoadedData: any[] = [];
 let currentConfig: {
@@ -298,6 +299,10 @@ const createCustomDropdown = (
     "custom-dropdown-all_other_bases"
   ) as HTMLDivElement;
   if (!dropdown || !inputElement) return;
+
+  // Setup keyboard navigation
+  setupDropdownKeyboard(inputElement, dropdown);
+
   currentLoadedData = data;
   const values = data
     .map((item) => {
@@ -341,6 +346,18 @@ const createCustomDropdown = (
       const item = document.createElement("div");
       item.className = "custom-dropdown-item";
       item.textContent = val;
+
+      item.onmouseenter = () => {
+        item.classList.add("selected");
+        item.style.backgroundColor = "#e3f2fd";
+        Array.from(dropdown.children).forEach(child => {
+          if (child !== item) {
+            child.classList.remove("selected");
+            (child as HTMLElement).style.backgroundColor = "white";
+          }
+        });
+      };
+
       item.addEventListener("click", () => {
         inputElement.value = val;
         dropdown.classList.add("hidden-all_other_bases");

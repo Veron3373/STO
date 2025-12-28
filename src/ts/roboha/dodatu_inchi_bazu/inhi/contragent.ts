@@ -2,6 +2,7 @@
 import { supabase } from "../../../vxid/supabaseClient";
 import { updateAllBd, all_bd, CRUD } from "../dodatu_inchi_bazu_danux";
 import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
+import { setupDropdownKeyboard } from "./sharedAutocomplete";
 
 export interface ContragentRecord {
   faktura_id: number;
@@ -518,6 +519,9 @@ export async function handleDhereloContragent() {
   receiverWrapper.appendChild(receiverInput);
   receiverWrapper.appendChild(receiverDropdown);
 
+  // Setup keyboard navigation
+  setupDropdownKeyboard(receiverInput, receiverDropdown);
+
   // ЗАТВЕРДЖУЮ
   const { wrapper: nameWrapper, textarea: nameInput } = createTextarea(
     "contragent-name",
@@ -603,13 +607,23 @@ export async function handleDhereloContragent() {
 
     filtered.forEach(item => {
       const option = document.createElement("div");
-      option.className = "contragent-dropdown-item";
+      option.className = "contragent-dropdown-item custom-dropdown-item";
       option.style.cssText = `
         padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;
       `;
       option.textContent = item.oderjyvach;
-      option.addEventListener("mouseenter", () => option.style.background = "#f0f0f0");
-      option.addEventListener("mouseleave", () => option.style.background = "white");
+
+      option.addEventListener("mouseenter", () => {
+        option.classList.add("selected");
+        option.style.background = "#e3f2fd";
+        Array.from(receiverDropdown.children).forEach(child => {
+          if (child !== option) {
+            child.classList.remove("selected");
+            (child as HTMLElement).style.background = "white";
+          }
+        });
+      });
+
       option.addEventListener("click", () => fillFormWithContragent(item));
       receiverDropdown.appendChild(option);
     });

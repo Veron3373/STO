@@ -220,11 +220,16 @@ function selectField(id: string, label: string, options: Array<[string, string]>
     </div>`;
 }
 
+import { setupDropdownKeyboard } from "./sharedAutocomplete";
+
 /* ==== автопідказка магазин ==== */
 async function wireShopAutocomplete(inputId: string, dropdownId: string) {
   const input = document.getElementById(inputId) as HTMLInputElement | null;
   const dd = document.getElementById(dropdownId) as HTMLDivElement | null;
   if (!input || !dd) return;
+
+  // Setup keyboard navigation
+  setupDropdownKeyboard(input, dd);
 
   const { data: rows, error } = await supabase.from("shops").select("shop_id,data");
   if (error) return console.error("Помилка shops:", error);
@@ -268,6 +273,18 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
       const item = document.createElement("div");
       item.className = "custom-dropdown-item";
       item.textContent = val;
+
+      item.onmouseenter = () => {
+        item.classList.add("selected");
+        item.style.backgroundColor = "#e3f2fd";
+        Array.from(dd.children).forEach(child => {
+          if (child !== item) {
+            child.classList.remove("selected");
+            (child as HTMLElement).style.backgroundColor = "white";
+          }
+        });
+      };
+
       item.onclick = () => {
         input.value = val;
         setBaseOnce();
@@ -305,6 +322,9 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
   const dd = document.getElementById(dropdownId) as HTMLDivElement | null;
   if (!input || !dd) return;
 
+  // Setup keyboard navigation
+  setupDropdownKeyboard(input, dd);
+
   let nameToId = new Map<string, number>();
 
   const setBaseOnce = () => {
@@ -328,6 +348,18 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
       const item = document.createElement("div");
       item.className = "custom-dropdown-item";
       item.textContent = val;
+
+      item.onmouseenter = () => {
+        item.classList.add("selected");
+        item.style.backgroundColor = "#e3f2fd";
+        Array.from(dd.children).forEach(child => {
+          if (child !== item) {
+            child.classList.remove("selected");
+            (child as HTMLElement).style.backgroundColor = "white";
+          }
+        });
+      };
+
       item.onclick = () => {
         input.value = val;
         setBaseOnce();
@@ -476,6 +508,9 @@ async function wireLinkedAutocomplete() {
   const input = document.getElementById("sclad_detail_catno") as HTMLInputElement | null;
   const dd = document.getElementById("sclad_part_dd") as HTMLDivElement | null;
   if (!input || !dd) return;
+
+  // Setup keyboard navigation
+  setupDropdownKeyboard(input, dd);
 
   const { data, error } = await supabase
     .from("sclad")

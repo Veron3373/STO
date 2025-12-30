@@ -401,59 +401,23 @@ interface ActData {
   [key: string]: any;
 }
 
-// Кеш закупівельних цін зі складу
-let purchasePricesCache: Map<number, number> = new Map();
-
-// Завантажує закупівельні ціни зі складу
-async function loadPurchasePricesForProfit(): Promise<void> {
-  try {
-    const { data, error } = await supabase
-      .from("sclad")
-      .select("sclad_id, price");
-
-    if (error) {
-      console.error("⚠️ Помилка завантаження цін зі складу:", error);
-      return;
-    }
-
-    purchasePricesCache.clear();
-    data?.forEach((item) => {
-      const scladId = Number(item.sclad_id);
-      const price = Number(item.price) || 0;
-      if (!isNaN(scladId)) {
-        purchasePricesCache.set(scladId, price);
-      }
-    });
-
-    console.log(
-      `✅ Завантажено ${purchasePricesCache.size} закупівельних цін для прибутку`
-    );
-  } catch (err) {
-    console.error("⚠️ Помилка при завантаженні закупівельних цін:", err);
-  }
-}
-
 // Кеш для зарплат приймальника - Map<actId, {salaryParts, salaryWork}>
 const receipterSalaryCache = new Map<
   number,
   { salaryParts: number; salaryWork: number }
 >();
 
-// Завантажує ВСЮ історію приймальника один раз
-// Завантажує ВСЮ історію приймальника (з усіх знайдених записів)
-// Завантажує ВСЮ історію приймальника (з усіх знайдених записів)
+// Завантажує історію приймальника для розрахунку його зарплати
 async function loadReceipterSalaries(): Promise<void> {
   try {
     receipterSalaryCache.clear();
 
-    // Завантажуємо ВСІ колонки, щоб уникнути проблем із проекцією
     const { data: rawData, error } = await supabase
       .from("slyusars")
       .select("*");
 
     if (error) {
       console.error("❌ Помилка завантаження slyusars:", error);
-      showNotification(`❌ Помилка доступу до слюсарів: ${error.message}`, "error");
       return;
     }
 
@@ -463,21 +427,16 @@ async function loadReceipterSalaries(): Promise<void> {
       return;
     }
 
-    let debugFound430 = false;
-
     // Проходимо по ВСІХ користувачах
     for (const userRecord of data) {
-      const name = userRecord.Name || "Без імені";
       let slyusarData: any = {};
 
-      // Надійна обробка data
       if (!userRecord.data) continue;
 
       if (typeof userRecord.data === "string") {
         try {
           slyusarData = JSON.parse(userRecord.data);
         } catch (e) {
-          console.error(`❌ Помилка парсингу даних для ${name}`);
           continue;
         }
       } else {
@@ -493,7 +452,6 @@ async function loadReceipterSalaries(): Promise<void> {
         if (!Array.isArray(records)) continue;
 
         for (const record of records) {
-          // Приводимо до числа надійно
           const actId = Number(record?.Акт);
 
           if (!isNaN(actId) && actId > 0) {
@@ -501,16 +459,21 @@ async function loadReceipterSalaries(): Promise<void> {
             const salaryWork = Number(record.ЗарплатаРоботи) || 0;
 
             if (salaryParts > 0 || salaryWork > 0) {
-              const existing = receipterSalaryCache.get(actId) || { salaryParts: 0, salaryWork: 0 };
+              const existing = receipterSalaryCache.get(actId) || {
+                salaryParts: 0,
+                salaryWork: 0,
+              };
 
               receipterSalaryCache.set(actId, {
                 salaryParts: existing.salaryParts + salaryParts,
                 salaryWork: existing.salaryWork + salaryWork,
               });
 
-              if (actId === 430) {
-                console.log(`🎯 [DEBUG] ЗНАЙДЕНО АКТ 430 у ${name}: Parts=${salaryParts}, Work=${salaryWork}`);
-                debugFound430 = true;
+              // Додаткове логування для дебагу
+              if (actId === 34) {
+                console.log(
+                  `🔍 [DEBUG] Акт 34: СуммаРоботи=${record.СуммаРоботи}, ЗарплатаРоботи=${salaryWork}, СуммаЗапчастин=${record.СуммаЗапчастин}, ЗарплатаЗапчастин=${salaryParts}`
+                );
               }
             }
           }
@@ -518,21 +481,11 @@ async function loadReceipterSalaries(): Promise<void> {
       }
     }
 
-    console.log(`✅ Завантажено зарплати приймальника для ${receipterSalaryCache.size} актів`);
-
-    if (debugFound430) {
-      console.log("✅ Дані по акту 430 успішно завантажено в кеш");
-      // Покажемо юзеру, що дані знайшлися (через таймаут щоб не перекрити інші повідомлення)
-      setTimeout(() => {
-        showNotification("✅ Дані приймальника для Акту 430 ЗНАЙДЕНО!", "success", 4000);
-      }, 500);
-    } else {
-      console.log("❌ Дані по акту 430 НЕ знайдено в жодній історії");
-    }
-
+    console.log(
+      `✅ Завантажено зарплати приймальника для ${receipterSalaryCache.size} актів`
+    );
   } catch (err: any) {
-    console.error("❌ Критична помилка завантаження зарплат приймальника:", err);
-    showNotification(`❌ Помилка обробки: ${err.message}`, "error");
+    console.error("❌ Помилка завантаження зарплат приймальника:", err);
   }
 }
 
@@ -550,81 +503,41 @@ function getReceipterSalaryForAct(actId: number): {
     return salary;
   }
 
-  console.log(`⚠️ Акт ${actId}: Зарплата приймальника не знайдена`);
   return { salaryParts: 0, salaryWork: 0 };
 }
 
-// Обчислює маржу деталей динамічно на основі деталей в акті
-// Враховує зарплату приймальника за деталі
+// Використовує збережене значення "Прибуток за деталі" з акту
+// Віднімає зарплату приймальника щоб показати чистий прибуток компанії
 function calculateDetailsMarginFromAct(
   actData: ActData,
   actId: number
 ): number {
-  const details = actData.Деталі || [];
-  let totalMargin = 0;
+  // Використовуємо збережене значення з акту (вже враховано закупівельні ціни і розраховано маржу)
+  let totalMargin = Number(actData["Прибуток за деталі"]) || 0;
 
-  for (const det of details) {
-    const scladId = Number(det.sclad_id);
-    const quantity = Number(det.Кількість) || 0;
-    const salePrice = Number(det.Ціна) || 0;
-    const sum = salePrice * quantity;
-
-    if (scladId) {
-      // Є sclad_id - обчислюємо маржу як різницю між ціною продажу і закупівельною ціною
-      const purchasePrice = purchasePricesCache.get(scladId);
-      if (purchasePrice !== undefined) {
-        const margin = (salePrice - purchasePrice) * quantity;
-        totalMargin += margin;
-      } else {
-        // sclad_id є, але закупівельна ціна не знайдена - вважаємо маржу = 0
-        totalMargin += 0;
-      }
-    } else {
-      // Немає sclad_id - деталь без закупівельної ціни
-      // Маржа = вся сума (вважаємо закупівельна ціна = 0)
-      totalMargin += sum;
-    }
-  }
-
-  // Віднімаємо зарплату приймальника за деталі
+  // Віднімаємо зарплату приймальника щоб показати чистий прибуток компанії
   const receipterSalary = getReceipterSalaryForAct(actId);
-  console.log(
-    `📊 Акт ${actId}: Маржа деталей до віднімання: ${totalMargin}, Зарплата приймальника (деталі): ${receipterSalary.salaryParts}`
-  );
   totalMargin -= receipterSalary.salaryParts;
   console.log(
-    `📊 Акт ${actId}: Маржа деталей після віднімання: ${totalMargin}`
+    `📊 Акт ${actId}: Маржа деталей (збережена: ${actData["Прибуток за деталі"]}) після відрахування зарплати приймальника (${receipterSalary.salaryParts}): ${totalMargin}`
   );
 
   return Number(totalMargin.toFixed(2));
 }
 
-// Обчислює прибуток робіт: Загальна сума робіт - Загальна зарплата слюсаря - Зарплата приймальника
-// Прибуток може бути від'ємним якщо зарплати більше ніж сума робіт
+// Використовує збережене значення "Прибуток за роботу" з акту
+// Віднімає зарплату приймальника щоб показати чистий прибуток компанії
 function calculateWorkProfitFromAct(actData: ActData, actId: number): number {
-  const works = actData.Роботи || [];
-  let totalSum = 0;
-  let totalSalary = 0;
+  // Використовуємо збережене значення з акту (вже враховано зарплату слюсаря)
+  let profit = Number(actData["Прибуток за роботу"]) || 0;
 
-  for (const work of works) {
-    const sum = (Number(work.Кількість) || 0) * (Number(work.Ціна) || 0);
-    const salary = Number(work.Зарплата) || 0;
-    totalSum += sum;
-    totalSalary += salary;
-  }
-
-  // Віднімаємо зарплату приймальника за роботу
+  // Віднімаємо зарплату приймальника щоб показати чистий прибуток компанії
   const receipterSalary = getReceipterSalaryForAct(actId);
-  console.log(
-    `📊 Акт ${actId}: Прибуток робіт до віднімання: ${totalSum - totalSalary
-    }, Зарплата слюсаря: ${totalSalary}, Зарплата приймальника (робота): ${receipterSalary.salaryWork
-    }`
-  );
-  totalSalary += receipterSalary.salaryWork;
+  profit -= receipterSalary.salaryWork;
 
-  // Прибуток = Сума всіх робіт - Сума всіх зарплат (слюсаря + приймальника)
-  const profit = totalSum - totalSalary;
-  console.log(`📊 Акт ${actId}: Прибуток робіт після віднімання: ${profit}`);
+  console.log(
+    `📊 Акт ${actId}: Прибуток робіт (збережений: ${actData["Прибуток за роботу"]}) після відрахування зарплати приймальника (${receipterSalary.salaryWork}): ${profit}`
+  );
   return Number(profit.toFixed(2));
 }
 
@@ -784,7 +697,8 @@ async function loadvutratuFromDatabase(): Promise<void> {
       .select(
         "vutratu_id,dataOnn,dataOff,kategoria,act,opys_vytraty,suma,sposob_oplaty,prymitky,xto_zapusav"
       )
-      .lt("suma", 0);
+      .lt("suma", 0)
+      .is("act", null); // Виключаємо записи з номером акту (щоб уникнути дублювання)
 
     // Застосовуємо фільтр по датах залежно від режиму
     if (vutratuDateFilterMode === "open") {
@@ -871,9 +785,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
 
     // Додаємо дані з acts
     if (actsDataRaw && Array.isArray(actsDataRaw)) {
-      // Завантажуємо закупівельні ціни для обчислення маржі деталей
-      await loadPurchasePricesForProfit();
-      // Завантажуємо зарплати приймальника один раз
+      // Завантажуємо зарплати приймальника для розрахунку чистого прибутку
       await loadReceipterSalaries();
 
       for (const actItem of actsDataRaw) {
@@ -1214,8 +1126,8 @@ export function updatevutratuTable(): void {
     row.className = isOpenAct
       ? "open-row"
       : isNegative
-        ? "negative-row"
-        : "positive-row";
+      ? "negative-row"
+      : "positive-row";
 
     // 💰 Розраховано - показуємо дату витрати або розрахунку акту
     const paymentCell = row.insertCell();
@@ -1291,8 +1203,9 @@ export function updatevutratuTable(): void {
     if (isFromAct && expense.actNumber) {
       actCell.innerHTML = `
         <button class="Bukhhalter-act-btn"
-                onclick="event.stopPropagation(); openActModal(${Number(expense.actNumber) || 0
-        })"
+                onclick="event.stopPropagation(); openActModal(${
+                  Number(expense.actNumber) || 0
+                })"
                 title="Відкрити акт №${expense.actNumber}">
           📋 ${expense.actNumber}
         </button>
@@ -1319,14 +1232,14 @@ export function updatevutratuTable(): void {
         expense.detailsAmount > 0
           ? "#28a745"
           : expense.detailsAmount < 0
-            ? "#dc3545"
-            : "#999";
+          ? "#dc3545"
+          : "#999";
       const workColor =
         expense.workAmount > 0
           ? "#28a745"
           : expense.workAmount < 0
-            ? "#dc3545"
-            : "#999";
+          ? "#dc3545"
+          : "#999";
       const detailsSign = expense.detailsAmount > 0 ? "+" : "";
       const workSign = expense.workAmount > 0 ? "+" : "";
 
@@ -1349,8 +1262,8 @@ export function updatevutratuTable(): void {
         expense.amount > 0
           ? "#28a745"
           : expense.amount < 0
-            ? "#dc3545"
-            : "#999";
+          ? "#dc3545"
+          : "#999";
       const sign = expense.amount > 0 ? "+" : "";
       amountCell.innerHTML = `<span style="color: ${color}; font-size: 0.95em; font-weight: 500;">${sign}${formatNumber(
         expense.amount
@@ -1431,15 +1344,16 @@ export function updatevutratuDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
       <span>Сумма <strong style="color: #070707ff;">💰 ${formatNumber(
-    positiveSum
-  )}</strong> грн</span>
+        positiveSum
+      )}</strong> грн</span>
       <span style="color: #666;">-</span>
       <span><strong style="color: #8B0000;">💶 ${formatNumber(
-    negativeSum
-  )}</strong> грн</span>
+        negativeSum
+      )}</strong> грн</span>
       <span style="color: #666;">=</span>
-      <span><strong style="color: ${totalAll >= 0 ? "#006400" : "#8B0000"
-    };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
+      <span><strong style="color: ${
+        totalAll >= 0 ? "#006400" : "#8B0000"
+      };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
     </div>
   `;
 }

@@ -1048,6 +1048,16 @@ async function syncPruimalnikHistory(
     salaryParts,
   });
 
+  // ДЕБАГ для акту 34
+  if (actId === 34) {
+    console.log(`🔍 [DEBUG] Акт 34 - ЗБЕРЕЖЕННЯ В ІСТОРІЮ:`, {
+      baseWorkProfit,
+      salaryWork,
+      basePartsProfit,
+      salaryParts,
+    });
+  }
+
   // --- ВИДАЛЕННЯ АКТУ З ІНШИХ ПРИЙМАЛЬНИКІВ ---
   console.log(`🧹 Очищення акту #${actId} з історії інших Приймальників...`);
 

@@ -196,6 +196,148 @@ function collectDetailRowsFromDom(): Array<{
   return rows;
 }
 
+/** Зібрати з DOM рядки робіт (🛠️) з модального вікна */
+function collectWorkRowsFromDom(): Array<{
+  slyusarName: string;
+  Найменування: string;
+  Кількість: number;
+  Ціна: number;
+  Зарплата: number;
+}> {
+  const rows: Array<{
+    slyusarName: string;
+    Найменування: string;
+    Кількість: number;
+    Ціна: number;
+    Зарплата: number;
+  }> = [];
+
+  const tableRows = document.querySelectorAll(
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+  );
+  tableRows.forEach((tr) => {
+    const nameCell = tr.querySelector(
+      '[data-name="name"]'
+    ) as HTMLElement | null;
+    if (!nameCell) return;
+
+    let type = nameCell.getAttribute("data-type");
+    const name = cleanText(nameCell.textContent);
+    if (!name) return;
+
+    if (!type || (type !== "details" && type !== "works")) {
+      const isInWorks = new Set(globalCache.works).has(name);
+      const isInDetails = new Set(globalCache.details).has(name);
+      type = isInWorks && !isInDetails ? "works" : "details";
+      nameCell.setAttribute("data-type", type);
+    }
+    if (type !== "works") return;
+
+    const qtyCell = tr.querySelector(
+      '[data-name="id_count"]'
+    ) as HTMLElement | null;
+    const priceCell = tr.querySelector(
+      '[data-name="price"]'
+    ) as HTMLElement | null;
+    const slyusarSumCell = tr.querySelector(
+      '[data-name="slyusar_sum"]'
+    ) as HTMLElement | null;
+    const pibMagazinCell = tr.querySelector(
+      '[data-name="pib_magazin"]'
+    ) as HTMLElement | null;
+
+    const Кількість = parseNum(qtyCell?.textContent);
+    const Ціна = parseNum(priceCell?.textContent);
+    const Зарплата = parseNum(slyusarSumCell?.textContent);
+    const slyusarName = cleanText(pibMagazinCell?.textContent);
+
+    if (!slyusarName) return;
+    rows.push({
+      slyusarName,
+      Найменування: name,
+      Кількість,
+      Ціна,
+      Зарплата,
+    });
+  });
+
+  return rows;
+}
+
+/** Валідація таблиці перед закриттям акту */
+function validateActTableBeforeClosing(): {
+  isValid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  const detailRows = collectDetailRowsFromDom();
+  const workRows = collectWorkRowsFromDom();
+
+  // Перевірка робіт (🛠️)
+  for (const row of workRows) {
+    const rowName = `"${row.Найменування}"`;
+
+    if (!row.Кількість || row.Кількість === 0) {
+      errors.push(`Робота ${rowName}: К-ть - не порожній і не дорівнює 0`);
+    }
+
+    if (!row.Ціна || row.Ціна === 0) {
+      errors.push(`Робота ${rowName}: Ціна - не порожня і не дорівнює 0`);
+    }
+
+    // Сума розраховується як Кількість * Ціна
+    const sum = row.Кількість * row.Ціна;
+    if (!sum || sum === 0) {
+      errors.push(`Робота ${rowName}: Сума - не порожня і не дорівнює 0`);
+    }
+
+    // Перевірка Зарплати тільки якщо стовпець відображається
+    const slyusarSumCell = document.querySelector(
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="slyusar_sum"]`
+    );
+    if (slyusarSumCell && slyusarSumCell.offsetParent !== null) {
+      if (!row.Зарплата || row.Зарплата === 0) {
+        errors.push(`Робота ${rowName}: Зар-та - не порожня і не дорівнює 0`);
+      }
+    }
+
+    // Перевірка ПІБ (Слюсара) тільки якщо стовпець відображається
+    const pibMagazinCell = document.querySelector(
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="pib_magazin"]`
+    );
+    if (pibMagazinCell && pibMagazinCell.offsetParent !== null) {
+      if (!row.slyusarName || row.slyusarName.trim() === "") {
+        errors.push(`Робота ${rowName}: ПІБ (Слюсар) - не порожній`);
+      }
+    }
+  }
+
+  // Перевірка деталей (⚙️)
+  for (const row of detailRows) {
+    const rowName = `"${row.Найменування}"`;
+
+    if (!row.Кількість || row.Кількість === 0) {
+      errors.push(`Деталь ${rowName}: К-ть - не порожній і не дорівнює 0`);
+    }
+
+    if (!row.Ціна || row.Ціна === 0) {
+      errors.push(`Деталь ${rowName}: Ціна - не порожня і не дорівнює 0`);
+    }
+
+    // Сума розраховується як Кількість * Ціна
+    const sum = row.Кількість * row.Ціна;
+    if (!sum || sum === 0) {
+      errors.push(`Деталь ${rowName}: Сума - не порожня і не дорівнює 0`);
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
 /** Синхронізувати у shops.data.Історія для 1 акту (групування по магазинах) */
 async function syncShopsHistoryForAct(params: {
   actId: number;
@@ -670,13 +812,32 @@ export function initStatusLockDelegation(): void {
           }
         }
 
-        // 2️⃣ Автозбереження перед закриттям
+        // 2️⃣ Валідація всіх полів таблиці перед закриттям
+        const validationResult = validateActTableBeforeClosing();
+        if (!validationResult.isValid) {
+          showNotification(
+            "❌ Закриття відмінено, заповність всі поля таблиці",
+            "error",
+            5000
+          );
+          console.warn(
+            "Помилки валідації таблиці перед закриттям:",
+            validationResult.errors
+          );
+          validationResult.errors.forEach((err) => {
+            console.warn(`  • ${err}`);
+          });
+          btn.disabled = false;
+          return;
+        }
+
+        // 3️⃣ Автозбереження перед закриттям
         console.log("Автоматичне збереження перед закриттям...");
         (
           document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLButtonElement
         )?.click();
 
-        // 3️⃣ Вікно підтвердження закриття (як в адміна, з попередженнями)
+        // 4️⃣ Вікно підтвердження закриття (як в адміна, з попередженнями)
         const confirmed = await showViknoPidtverdchennayZakruttiaAkty(actId);
         if (!confirmed) {
           showNotification("Скасовано закриття акту", "warning");
@@ -686,6 +847,7 @@ export function initStatusLockDelegation(): void {
 
         showNotification("Закриття акту...", "info");
 
+        // 5️⃣ Оновлюємо дати в БД та історію
         const { data: scladRows, error: scladError } = await supabase
           .from("sclad")
           .select("sclad_id")

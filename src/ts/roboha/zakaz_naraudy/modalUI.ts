@@ -390,7 +390,9 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
   const sumCell = row.querySelector(
     '[data-name="sum"]'
   ) as HTMLTableCellElement;
-  if (sumCell) sumCell.textContent = sum === 0 ? "" : formatNumberWithSpaces(Math.round(sum));
+  if (sumCell)
+    sumCell.textContent =
+      sum === 0 ? "" : formatNumberWithSpaces(Math.round(sum));
 
   if (globalCache.settings.showZarplata) {
     await updateSlyusarSalaryInRow(row);
@@ -455,7 +457,6 @@ function createRowHtml(
   const isActClosed = globalCache.isActClosed;
   const isEditable = !isActClosed;
 
-
   const dataTypeForName =
     item?.type === "detail" ? "details" : item?.type === "work" ? "works" : "";
   const pibMagazinType = item?.type === "detail" ? "shops" : "slyusars";
@@ -474,8 +475,9 @@ function createRowHtml(
     : "";
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${item ? pibMagazinType : ""
-    }">${pibMagazinValue}</td>`
+    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${
+        item ? pibMagazinType : ""
+      }">${pibMagazinValue}</td>`
     : "";
 
   /* ===== ЗМІНИ: відображення пустоти замість 0 ===== */
@@ -511,23 +513,27 @@ function createRowHtml(
 
   return `
     <tr>
-      <td class="row-index">${item?.type === "work"
-      ? `🛠️ ${index + 1}`
-      : item?.type === "detail"
-        ? `⚙️ ${index + 1}`
-        : `${index + 1}`
-    }</td>
+      <td class="row-index">${
+        item?.type === "work"
+          ? `🛠️ ${index + 1}`
+          : item?.type === "detail"
+          ? `⚙️ ${index + 1}`
+          : `${index + 1}`
+      }</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${item?.name || ""
-    }</div>
-        ${showDeleteBtn
-      ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
-      : ""
-    }
+        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${
+    item?.name || ""
+  }</div>
+        ${
+          showDeleteBtn
+            ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
+            : ""
+        }
       </td>
       ${catalogCellHTML}
-      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
-    }</td>
+      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
+    item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
+  }</td>
       ${priceCellHTML}
       ${sumCellHTML}
       ${zarplataCellHTML}
@@ -555,10 +561,11 @@ export function generateTableHTML(
   const actItemsHtml =
     allItems.length > 0
       ? allItems
-        .map((item, index) =>
-          createRowHtml(item, index, showPibMagazin, showCatalog, canAddRow) // <--- ПЕРЕДАЄМО canAddRow
-        )
-        .join("")
+          .map(
+            (item, index) =>
+              createRowHtml(item, index, showPibMagazin, showCatalog, canAddRow) // <--- ПЕРЕДАЄМО canAddRow
+          )
+          .join("")
       : createRowHtml(null, 0, showPibMagazin, showCatalog, canAddRow); // <--- ПЕРЕДАЄМО canAddRow
 
   const sumsFooter = isRestricted
@@ -578,22 +585,23 @@ export function generateTableHTML(
       <span class="sum-currency">грн</span>
     </p>
       <p><strong>За роботу:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-works-sum">${formatNumberWithSpaces(
-      0
-    )}</span> грн</p>
+        0
+      )}</span> грн</p>
       <p><strong>За деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-sum">${formatNumberWithSpaces(
-      0
-    )}</span> грн</p>
+        0
+      )}</span> грн</p>
       <p id="overall-sum-line"><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
-      0
-    )}</span> грн<span id="avans-subtract-display" class="avans-subtract-display" style="display: none;"></span><span id="final-sum-display" class="final-sum-display" style="display: none;"></span></p>
+        0
+      )}</span> грн<span id="avans-subtract-display" class="avans-subtract-display" style="display: none;"></span><span id="final-sum-display" class="final-sum-display" style="display: none;"></span></p>
     </div>`;
 
   const buttons =
     globalCache.isActClosed || !canAddRow
       ? ""
       : `
-    <div class="zakaz_narayd-buttons-container${isRestricted ? " obmesheniy" : ""
-      }">
+    <div class="zakaz_narayd-buttons-container${
+      isRestricted ? " obmesheniy" : ""
+    }">
       <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
       <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
     </div>`;
@@ -718,7 +726,9 @@ export async function toggleAddRowButtonVisibility(): Promise<void> {
       if (saveButton) {
         saveButton.style.display = "none";
       }
-      console.log("🚫 Кнопки 'Додати рядок' та 'Зберегти зміни' приховано (немає прав доступу)");
+      console.log(
+        "🚫 Кнопки 'Додати рядок' та 'Зберегти зміни' приховано (немає прав доступу)"
+      );
     } else {
       // Показуємо обидві кнопки
       if (addRowButton) {
@@ -765,7 +775,9 @@ export function addNewRow(containerId: string): void {
   // Focus the new row's Name input
   const lastRow = tableBody.lastElementChild as HTMLElement;
   if (lastRow) {
-    const nameInput = lastRow.querySelector('[data-name="name"]') as HTMLElement;
+    const nameInput = lastRow.querySelector(
+      '[data-name="name"]'
+    ) as HTMLElement;
     if (nameInput) {
       nameInput.focus();
     }
@@ -899,8 +911,9 @@ export function createTableRow(
   value: string,
   className: string = ""
 ): string {
-  return `<tr><td>${label}</td><td${className ? ` class="${className}"` : ""
-    }>${value}</td></tr>`;
+  return `<tr><td>${label}</td><td${
+    className ? ` class="${className}"` : ""
+  }>${value}</td></tr>`;
 }
 
 export function createModal(): void {
@@ -923,6 +936,11 @@ export function createModal(): void {
   closeBtn?.addEventListener("click", () => {
     newModalOverlay.classList.add("hidden");
     globalCache.currentActId = null;
+    // ✅ Очищуємо приймальника з localStorage при закритті модального вікна
+    localStorage.removeItem("current_act_pruimalnyk");
+    console.log(
+      "🗑️ Очищено приймальника з localStorage при закритті модального вікна"
+    );
   });
 }
 

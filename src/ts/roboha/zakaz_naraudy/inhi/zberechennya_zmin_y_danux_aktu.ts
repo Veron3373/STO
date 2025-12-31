@@ -67,6 +67,7 @@ interface ActChangeRecord {
   data: string;
   pib?: string; // ✅ ПІБ клієнта з поточного акту
   auto?: string; // ✅ Дані автомобіля з поточного акту
+  pruimalnyk?: string; // ✅ ПІБ приймальника з таблиці acts
 }
 
 // КЕШ: Зберігаємо ПОВНІ ДАНІ РЯДКІВ (для всіх ролей з прихованими колонками)
@@ -733,6 +734,11 @@ async function logActChanges(
   // ✅ ОТРИМАННЯ ПІБ КЛІЄНТА ТА АВТОМОБІЛЯ З DOM
   const { pib, auto } = getClientAndCarInfo();
 
+  // ✅ ОТРИМАННЯ ПРИЙМАЛЬНИКА З localStorage
+  const pruimalnyk =
+    localStorage.getItem("current_act_pruimalnyk") || undefined;
+  console.log(`📋 [logActChanges] Приймальник з localStorage: "${pruimalnyk}"`);
+
   const records: ActChangeRecord[] = [];
 
   // Додані позиції
@@ -750,6 +756,7 @@ async function logActChanges(
       data: new Date().toISOString(),
       pib: pib || undefined, // ✅ ПІБ клієнта
       auto: auto || undefined, // ✅ Дані автомобіля
+      pruimalnyk: pruimalnyk, // ✅ ПІБ приймальника з acts
     });
   });
 
@@ -767,6 +774,7 @@ async function logActChanges(
       data: new Date().toISOString(),
       pib: pib || undefined, // ✅ ПІБ клієнта
       auto: auto || undefined, // ✅ Дані автомобіля
+      pruimalnyk: pruimalnyk, // ✅ ПІБ приймальника з acts
     });
   });
 

@@ -395,6 +395,17 @@ export async function showModal(actId: number): Promise<void> {
     globalCache.isActClosed = !!act.date_off;
     globalCache.currentActDateOn = act.date_on || null;
 
+    // ✅ Зберігаємо приймальника в localStorage для використання при логуванні змін
+    if (act.pruimalnyk) {
+      localStorage.setItem("current_act_pruimalnyk", act.pruimalnyk);
+      console.log(
+        `✅ Збережено приймальника в localStorage: "${act.pruimalnyk}"`
+      );
+    } else {
+      localStorage.removeItem("current_act_pruimalnyk");
+      console.log(`ℹ️ Приймальник не вказано в акті ${actId}`);
+    }
+
     const [clientData, carData] = await Promise.all([
       fetchClientData(act.client_id),
       fetchCarData(act.cars_id),

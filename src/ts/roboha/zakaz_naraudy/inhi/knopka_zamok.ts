@@ -826,7 +826,7 @@ export function initStatusLockDelegation(): void {
         const validationResult = validateActTableBeforeClosing();
         if (!validationResult.isValid) {
           showNotification(
-            "❌ Закриття відмінено, заповність всі поля таблиці",
+            "❌ Закриття відмінено, заповніть всі поля таблиці",
             "error",
             5000
           );

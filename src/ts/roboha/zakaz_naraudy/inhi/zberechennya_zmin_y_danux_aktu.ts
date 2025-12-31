@@ -17,7 +17,11 @@ import { refreshActsTable } from "../../tablucya/tablucya";
 import { refreshQtyWarningsIn } from "./kastomna_tabluca";
 import { syncShopsOnActSave } from "./save_shops";
 import { syncSlyusarsOnActSave } from "./save_work";
-import { userAccessLevel, userName } from "../../tablucya/users";
+import {
+  userAccessLevel,
+  userName,
+  getSavedUserDataFromLocalStorage,
+} from "../../tablucya/users";
 
 /* =============================== ТИПИ І ІНТЕРФЕЙСИ =============================== */
 
@@ -1202,6 +1206,51 @@ async function syncPruimalnikHistory(
 
 /* =============================== ЗБЕРЕЖЕННЯ АКТУ =============================== */
 
+/**
+ * Записує інформацію про приймальника в таблицю acts
+ * @param actId - ID акту
+ * @param isNewAct - чи це створення нового акту (true) чи оновлення (false)
+ */
+async function savePruimalnykToActs(
+  actId: number,
+  isNewAct: boolean
+): Promise<void> {
+  try {
+    const userData = getSavedUserDataFromLocalStorage?.();
+    if (!userData || !userData.name) {
+      console.warn("⚠️ Не вдалося отримати дані користувача з localStorage");
+      return;
+    }
+
+    const updateData: any = {};
+
+    if (isNewAct) {
+      // При створенні нового акту записуємо приймальника
+      updateData.pruimalnyk = userData.name;
+    } else {
+      // При оновленні записуємо приймальника в той же стовпець (перезаписуємо)
+      updateData.pruimalnyk = userData.name;
+    }
+
+    const { error } = await supabase
+      .from("acts")
+      .update(updateData)
+      .eq("act_id", actId);
+
+    if (error) {
+      console.error(
+        `❌ Помилка при записуванні приймальника: ${error.message}`
+      );
+    } else {
+      console.log(
+        `✅ Приймальник "${userData.name}" успішно записаний в акт ${actId}`
+      );
+    }
+  } catch (err: any) {
+    console.error("❌ Помилка savePruimalnykToActs:", err?.message || err);
+  }
+}
+
 async function saveActData(actId: number, originalActData: any): Promise<void> {
   if (globalCache.isActClosed) {
     throw new Error("Неможливо редагувати закритий акт");
@@ -1278,6 +1327,9 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   if (updateError) {
     throw new Error(`Не вдалося оновити акт: ${updateError.message}`);
   }
+
+  // ✅ Записуємо інформацію про приймальника
+  await savePruimalnykToActs(actId, false);
 
   await updateScladActNumbers(actId, newScladIds);
   await applyScladDeltas(deltas);

@@ -460,8 +460,11 @@ export async function showModal(actId: number): Promise<void> {
     await refreshPhotoData(actId);
     applyAccessRestrictions();
 
-    // 🔽 Підсвічування змін для Адміністратора
-    if (userAccessLevel === "Адміністратор") {
+    // 🔽 Підсвічування змін для Адміністратора та Приймальника
+    if (
+      userAccessLevel === "Адміністратор" ||
+      userAccessLevel === "Приймальник"
+    ) {
       await checkAndHighlightChanges(actId);
       // Видаляємо повідомлення з UI для цього акту
       removeNotificationsForAct(actId);

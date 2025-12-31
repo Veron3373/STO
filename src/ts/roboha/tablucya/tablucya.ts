@@ -256,8 +256,10 @@ function highlightRowInDom(actId: number) {
 /**
  * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці та повідомлення в UI, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
  */
-function clearNotificationVisualOnly(actId: number) {
-  if (userAccessLevel !== "Адміністратор") return;
+export function clearNotificationVisualOnly(actId: number) {
+  // ✅ Працює для Адміністратора та Приймальника
+  if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
+    return;
 
   if (modifiedActIdsGlobal.has(actId)) {
     modifiedActIdsGlobal.delete(actId);

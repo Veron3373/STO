@@ -454,10 +454,24 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
       await highlightDeletedItems(deleted);
     }
 
-    // Видаляємо оброблені записи з БД
-    await deleteProcessedChanges(actId);
+    // ✅ ТІЛЬКИ ДЛЯ ПРИЙМАЛЬНИКА: видаляємо записи та знімаємо підсвітку
+    if (userAccessLevel === "Приймальник") {
+      await deleteProcessedChanges(actId);
 
-    console.log(`✅ Підсвічування завершено успішно`);
+      // Знімаємо синю підсвітку з акту в таблиці
+      const { clearNotificationVisualOnly } = await import(
+        "../../tablucya/tablucya"
+      );
+      clearNotificationVisualOnly(actId);
+
+      console.log(
+        `✅ Підсвічування завершено, записи видалено, синя ручка знята`
+      );
+    } else {
+      console.log(
+        `✅ Підсвічування завершено (Адміністратор - записи НЕ видалено)`
+      );
+    }
   } catch (error) {
     console.error("❌ Помилка при підсвічуванні змін:", error);
     // Не блокуємо відкриття акту через помилку підсвічування

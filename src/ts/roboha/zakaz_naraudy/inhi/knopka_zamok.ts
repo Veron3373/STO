@@ -182,7 +182,7 @@ function collectDetailRowsFromDom(): Array<{
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
     const sclad_id = scladIdAttr ? Number(scladIdAttr) : null;
 
-    if (!shopName) return;
+    // Добавляємо рядок незалежно від наявності магазину для валідації
     rows.push({
       shopName,
       sclad_id,
@@ -251,7 +251,7 @@ function collectWorkRowsFromDom(): Array<{
     const Зарплата = parseNum(slyusarSumCell?.textContent);
     const slyusarName = cleanText(pibMagazinCell?.textContent);
 
-    if (!slyusarName) return;
+    // Добавляємо рядок незалежно від наявності слюсара для валідації
     rows.push({
       slyusarName,
       Найменування: name,
@@ -329,6 +329,16 @@ function validateActTableBeforeClosing(): {
     const sum = row.Кількість * row.Ціна;
     if (!sum || sum === 0) {
       errors.push(`Деталь ${rowName}: Сума - не порожня і не дорівнює 0`);
+    }
+
+    // Перевірка ПІБ_Магазину тільки якщо стовпець відображається
+    const pibMagazinCell = document.querySelector(
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="pib_magazin"]`
+    ) as HTMLElement | null;
+    if (pibMagazinCell && pibMagazinCell.offsetParent !== null) {
+      if (!row.shopName || row.shopName.trim() === "") {
+        errors.push(`Деталь ${rowName}: ПІБ_Магазин - не порожній`);
+      }
     }
   }
 

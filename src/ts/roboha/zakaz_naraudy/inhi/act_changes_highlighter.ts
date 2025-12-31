@@ -389,7 +389,6 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
     `🗑️ Видалено оброблені записи для акту #${actId} (${userAccessLevel}: ${currentUserName})`
   );
 }
-}
 
 /* =============================== ГОЛОВНА ФУНКЦІЯ =============================== */
 

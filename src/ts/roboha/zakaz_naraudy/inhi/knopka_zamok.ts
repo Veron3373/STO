@@ -295,7 +295,7 @@ function validateActTableBeforeClosing(): {
     // Перевірка Зарплати тільки якщо стовпець відображається
     const slyusarSumCell = document.querySelector(
       `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="slyusar_sum"]`
-    );
+    ) as HTMLElement | null;
     if (slyusarSumCell && slyusarSumCell.offsetParent !== null) {
       if (!row.Зарплата || row.Зарплата === 0) {
         errors.push(`Робота ${rowName}: Зар-та - не порожня і не дорівнює 0`);
@@ -305,7 +305,7 @@ function validateActTableBeforeClosing(): {
     // Перевірка ПІБ (Слюсара) тільки якщо стовпець відображається
     const pibMagazinCell = document.querySelector(
       `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="pib_magazin"]`
-    );
+    ) as HTMLElement | null;
     if (pibMagazinCell && pibMagazinCell.offsetParent !== null) {
       if (!row.slyusarName || row.slyusarName.trim() === "") {
         errors.push(`Робота ${rowName}: ПІБ (Слюсар) - не порожній`);

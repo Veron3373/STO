@@ -1008,19 +1008,21 @@ async function syncPruimalnikHistory(
   const basePartsProfit = partsTotalSale - partsTotalBuy;
 
   // --- ОТРИМАННЯ ДАНИХ ПРИЙМАЛЬНИКА З БД ---
-  const { data: userData, error } = await supabase
+  const { data: userDataArray, error } = await supabase
     .from("slyusars")
     .select("*")
-    .eq("data->>Name", currentUserName)
-    .single();
+    .eq("data->>Name", currentUserName);
 
-  if (error || !userData) {
+  if (error || !userDataArray || userDataArray.length === 0) {
     console.error(
       "❌ syncPruimalnikHistory: Помилка пошуку приймальника:",
       error
     );
     return;
   }
+
+  // Якщо кількох користувачів з однаковим іменем, беремо першого
+  const userData = userDataArray[0];
 
   const slyusarData =
     typeof userData.data === "string"
@@ -1208,6 +1210,7 @@ async function syncPruimalnikHistory(
 
 /**
  * Записує інформацію про приймальника в таблицю acts
+ * ТІЛЬКИ для користувачів з рівнем доступу "Приймальник"
  * @param actId - ID акту
  * @param isNewAct - чи це створення нового акту (true) чи оновлення (false)
  */
@@ -1216,6 +1219,14 @@ async function savePruimalnykToActs(
   isNewAct: boolean
 ): Promise<void> {
   try {
+    // ✅ Перевірка рівня доступу - записуємо ТІЛЬКИ для Приймальника
+    if (userAccessLevel !== "Приймальник") {
+      console.log(
+        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" - pruimalnyk не перезаписується`
+      );
+      return;
+    }
+
     const userData = getSavedUserDataFromLocalStorage?.();
     if (!userData || !userData.name) {
       console.warn("⚠️ Не вдалося отримати дані користувача з localStorage");

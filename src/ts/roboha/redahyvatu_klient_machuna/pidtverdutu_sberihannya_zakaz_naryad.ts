@@ -9,7 +9,11 @@ import {
 import { supabase } from "../../vxid/supabaseClient";
 import { loadActsTable } from "../tablucya/tablucya";
 import { modalOverlayId } from "./vikno_klient_machuna";
-import { getSavedUserDataFromLocalStorage } from "../tablucya/users";
+import {
+  getSavedUserDataFromLocalStorage,
+  userAccessLevel,
+  userName,
+} from "../tablucya/users";
 
 // Створення окремої модалки
 export function createSaveModalCreate(): HTMLDivElement {
@@ -110,22 +114,29 @@ export async function createActInDatabase(
     console.log("✅ Акт створено о", dateOn, "з ID:", newAct.act_id);
 
     // ✅ Записуємо інформацію про приймальника при створенні нового акту
-    const userData = getSavedUserDataFromLocalStorage?.();
-    if (userData && userData.name) {
-      const { error: updateError } = await supabase
-        .from("acts")
-        .update({ pruimalnyk: userData.name })
-        .eq("act_id", newAct.act_id);
+    // ТІЛЬКИ якщо користувач має рівень доступу "Приймальник"
+    if (userAccessLevel === "Приймальник") {
+      const userData = getSavedUserDataFromLocalStorage?.();
+      if (userData && userData.name) {
+        const { error: updateError } = await supabase
+          .from("acts")
+          .update({ pruimalnyk: userData.name })
+          .eq("act_id", newAct.act_id);
 
-      if (updateError) {
-        console.warn(
-          `⚠️ Помилка при записуванні приймальника: ${updateError.message}`
-        );
-      } else {
-        console.log(
-          `✅ Приймальник "${userData.name}" успішно записаний в новий акт ${newAct.act_id}`
-        );
+        if (updateError) {
+          console.warn(
+            `⚠️ Помилка при записуванні приймальника: ${updateError.message}`
+          );
+        } else {
+          console.log(
+            `✅ Приймальник "${userData.name}" успішно записаний в новий акт ${newAct.act_id}`
+          );
+        }
       }
+    } else {
+      console.log(
+        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" - pruimalnyk не записується при створенні акту`
+      );
     }
 
     // Якщо передано postArxivId, зберігаємо act_id в post_arxiv

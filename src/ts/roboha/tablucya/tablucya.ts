@@ -1041,7 +1041,7 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 📥 ЗАВАНТАЖУЄМО ІСНУЮЧІ ПОВІДОМЛЕННЯ З БД
     console.log(`🔍 [initializeActsSystem] accessLevel = "${accessLevel}"`);
-    if (accessLevel === "Адміністратор") {
+    if (accessLevel === "Адміністратор" || accessLevel === "Приймальник") {
       console.log(
         "📥 [initializeActsSystem] Викликаємо loadAndShowExistingNotifications..."
       );

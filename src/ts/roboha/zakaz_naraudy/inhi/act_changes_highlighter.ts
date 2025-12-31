@@ -352,17 +352,62 @@ async function loadChangesForAct(actId: number): Promise<{
  * Видаляє оброблені записи з БД
  */
 async function deleteProcessedChanges(actId: number): Promise<void> {
-  const { error } = await supabase
-    .from("act_changes_notifications")
-    .delete()
-    .eq("act_id", actId);
+  // ✅ Для Адміністратора - видаляємо ВСІ записи для акту
+  if (userAccessLevel === "Адміністратор") {
+    const { error } = await supabase
+      .from("act_changes_notifications")
+      .delete()
+      .eq("act_id", actId);
 
-  if (error) {
-    console.error("❌ Помилка видалення оброблених змін:", error);
-    throw error;
+    if (error) {
+      console.error("❌ Помилка видалення оброблених змін:", error);
+      throw error;
+    }
+
+    console.log(
+      `🗑️ Видалено всі оброблені записи для акту #${actId} (Адміністратор)`
+    );
+    return;
   }
 
-  console.log(`🗑️ Видалено всі оброблені записи для акту #${actId}`);
+  // ✅ Для Приймальника - видаляємо ТІЛЬКИ свої записи (де pruimalnyk = його ПІБ)
+  if (userAccessLevel === "Приймальник") {
+    const userDataKey = "userAuthData";
+    const storedData = localStorage.getItem(userDataKey);
+    let currentUserName: string | null = null;
+
+    if (storedData) {
+      try {
+        const userData = JSON.parse(storedData);
+        currentUserName = userData?.Name || null;
+      } catch (e) {
+        console.error("❌ Помилка парсингу localStorage:", e);
+      }
+    }
+
+    if (!currentUserName) {
+      console.warn(
+        "⚠️ Не вдалося отримати ПІБ поточного користувача для видалення"
+      );
+      return;
+    }
+
+    const { error } = await supabase
+      .from("act_changes_notifications")
+      .delete()
+      .eq("act_id", actId)
+      .eq("pruimalnyk", currentUserName); // ✅ Видаляємо тільки свої записи
+
+    if (error) {
+      console.error("❌ Помилка видалення оброблених змін:", error);
+      throw error;
+    }
+
+    console.log(
+      `🗑️ Видалено оброблені записи для акту #${actId} (Приймальник: ${currentUserName})`
+    );
+    return;
+  }
 }
 
 /* =============================== ГОЛОВНА ФУНКЦІЯ =============================== */

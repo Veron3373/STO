@@ -866,18 +866,24 @@ async function syncPruimalnikHistory(
   _totalDetailsSumIgnored: number,
   actDateOn: string | null = null
 ): Promise<void> {
-  // 1. Перевірка ролі (тільки Приймальник)
-  if (userAccessLevel !== "Приймальник") return;
+  // ✅ Отримуємо ПІБ приймальника з таблиці acts (стовпець pruimalnyk)
+  const { data: actData, error: actError } = await supabase
+    .from("acts")
+    .select("pruimalnyk")
+    .eq("act_id", actId)
+    .single();
 
-  const currentUserName = userName;
-  if (!currentUserName) {
+  if (actError || !actData || !actData.pruimalnyk) {
     console.warn(
-      "⚠️ syncPruimalnikHistory: Неможливо визначити ім'я користувача"
+      `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}`
     );
     return;
   }
 
-  console.log(`🔍 syncPruimalnikHistory: Обробка для "${currentUserName}"`);
+  const pruimalnykName = actData.pruimalnyk;
+  console.log(
+    `🔍 syncPruimalnikHistory: Обробка для приймальника "${pruimalnykName}" (акт #${actId})`
+  );
 
   // --- ЗБІР ДАНИХ З DOM ---
   const tableBody = document.querySelector<HTMLTableSectionElement>(
@@ -1019,11 +1025,11 @@ async function syncPruimalnikHistory(
   const { data: userDataArray, error } = await supabase
     .from("slyusars")
     .select("*")
-    .eq("data->>Name", currentUserName);
+    .eq("data->>Name", pruimalnykName); // ✅ Шукаємо по ПІБ з pruimalnyk
 
   if (error || !userDataArray || userDataArray.length === 0) {
     console.error(
-      "❌ syncPruimalnikHistory: Помилка пошуку приймальника:",
+      `❌ syncPruimalnikHistory: Помилка пошуку приймальника "${pruimalnykName}":`,
       error
     );
     return;
@@ -1140,7 +1146,7 @@ async function syncPruimalnikHistory(
     }
   }
 
-  console.log(`✅ Очищення завершено. Зберігаємо акт для "${currentUserName}"`);
+  console.log(`✅ Очищення завершено. Зберігаємо акт для "${pruimalnykName}"`);
 
   let history = slyusarData.Історія || {};
   let actFound = false;
@@ -1173,6 +1179,7 @@ async function syncPruimalnikHistory(
     СуммаЗапчастин: basePartsProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК
     ЗарплатаРоботи: salaryWork,
     ЗарплатаЗапчастин: salaryParts,
+    ЗарплатаСлюсаря: worksTotalSlusarSalary, // ✅ ДОДАНО: Зарплата слюсаря
     ДатаЗакриття: null, // Буде заповнено при закритті акту
   };
 

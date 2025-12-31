@@ -2,6 +2,7 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import type { ActNotificationPayload } from "./povidomlennya_tablucya";
+import { userAccessLevel } from "./users"; // ✅ Додано для перевірки ролі
 
 /**
  * Позначає повідомлення як видалене в БД (встановлює delit = TRUE)
@@ -9,70 +10,142 @@ import type { ActNotificationPayload } from "./povidomlennya_tablucya";
  * @returns true якщо успішно, false якщо помилка
  */
 export async function markNotificationAsDeleted(
-    notificationId: number
+  notificationId: number
 ): Promise<boolean> {
-    try {
-        console.log(`🗑️ Позначаємо повідомлення ${notificationId} як видалене...`);
+  try {
+    console.log(`🗑️ Позначаємо повідомлення ${notificationId} як видалене...`);
 
-        const { error } = await supabase
-            .from("act_changes_notifications")
-            .update({ delit: true }) // TRUE = видалене, не показувати
-            .eq("notification_id", notificationId);
+    const { error } = await supabase
+      .from("act_changes_notifications")
+      .update({ delit: true }) // TRUE = видалене, не показувати
+      .eq("notification_id", notificationId);
 
-        if (error) {
-            console.error("❌ Помилка при позначенні повідомлення як видаленого:", error);
-            return false;
-        }
-
-        console.log(`✅ Повідомлення ${notificationId} позначено як видалене`);
-        return true;
-    } catch (err) {
-        console.error("❌ Виняток при позначенні повідомлення:", err);
-        return false;
+    if (error) {
+      console.error(
+        "❌ Помилка при позначенні повідомлення як видаленого:",
+        error
+      );
+      return false;
     }
+
+    console.log(`✅ Повідомлення ${notificationId} позначено як видалене`);
+    return true;
+  } catch (err) {
+    console.error("❌ Виняток при позначенні повідомлення:", err);
+    return false;
+  }
 }
 
 /**
  * Завантажує всі НЕвидалені повідомлення з БД (delit = FALSE)
  * і повертає їх у форматі ActNotificationPayload
  */
-export async function loadUnseenNotifications(): Promise<ActNotificationPayload[]> {
-    try {
-        console.log("📥 Завантажуємо невидалені (delit = FALSE) повідомлення з БД...");
+export async function loadUnseenNotifications(): Promise<
+  ActNotificationPayload[]
+> {
+  try {
+    console.log(
+      "📥 Завантажуємо невидалені (delit = FALSE) повідомлення з БД..."
+    );
 
-        const { data, error } = await supabase
-            .from("act_changes_notifications")
-            .select("*")
-            .eq("delit", false)                     // ✅ беремо тільки рядки, де delit = FALSE
-            .order("data", { ascending: true });    // ✅ у тебе колонка часу називається data
+    // ✅ Для Адміністратора - всі повідомлення
+    if (userAccessLevel === "Адміністратор") {
+      const { data, error } = await supabase
+        .from("act_changes_notifications")
+        .select("*")
+        .eq("delit", false) // ✅ беремо тільки рядки, де delit = FALSE
+        .order("data", { ascending: true }); // ✅ у тебе колонка часу називається data
 
-        if (error) {
-            console.error("❌ Помилка при завантаженні повідомлень:", error);
-            return [];
-        }
-
-        if (!data || data.length === 0) {
-            console.log("ℹ️ Невидалених повідомлень не знайдено");
-            return [];
-        }
-
-        console.log(`✅ Завантажено ${data.length} невидалених повідомлень`);
-
-        // Конвертуємо дані з БД в формат ActNotificationPayload
-        return data.map((row: any) => ({
-            act_id: row.act_id,
-            notification_id: row.notification_id,
-            changed_by_surname: row.changed_by_surname || "Невідомо",
-            item_name: row.item_name || "",
-            dodav_vudaluv: row.dodav_vudaluv ?? true,
-            // timestamp беремо з колонки "data" (як у твоїй таблиці),
-            // але на всякий випадок підтримаємо і created_at, якщо ти її потім додаси
-            created_at: row.data ?? row.created_at,
-            pib: row.pib,   // ✅ ПІБ
-            auto: row.auto, // ✅ Авто
-        }));
-    } catch (err) {
-        console.error("❌ Виняток при завантаженні повідомлень:", err);
+      if (error) {
+        console.error("❌ Помилка при завантаженні повідомлень:", error);
         return [];
+      }
+
+      if (!data || data.length === 0) {
+        console.log("ℹ️ Невидалених повідомлень не знайдено");
+        return [];
+      }
+
+      console.log(
+        `✅ Завантажено ${data.length} невидалених повідомлень (Адміністратор)`
+      );
+
+      // Конвертуємо дані з БД в формат ActNotificationPayload
+      return data.map((row: any) => ({
+        act_id: row.act_id,
+        notification_id: row.notification_id,
+        changed_by_surname: row.changed_by_surname || "Невідомо",
+        item_name: row.item_name || "",
+        dodav_vudaluv: row.dodav_vudaluv ?? true,
+        created_at: row.data ?? row.created_at,
+        pib: row.pib, // ✅ ПІБ
+        auto: row.auto, // ✅ Авто
+      }));
     }
+
+    // ✅ Для Приймальника - фільтруємо по pruimalnyk
+    if (userAccessLevel === "Приймальник") {
+      // Отримуємо ПІБ поточного користувача з localStorage
+      const userDataKey = "userAuthData";
+      const storedData = localStorage.getItem(userDataKey);
+      let currentUserName: string | null = null;
+
+      if (storedData) {
+        try {
+          const userData = JSON.parse(storedData);
+          currentUserName = userData?.Name || null;
+        } catch (e) {
+          console.error("❌ Помилка парсингу localStorage:", e);
+        }
+      }
+
+      if (!currentUserName) {
+        console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+        return [];
+      }
+
+      console.log(
+        `📋 Фільтруємо повідомлення для приймальника: "${currentUserName}"`
+      );
+
+      const { data, error } = await supabase
+        .from("act_changes_notifications")
+        .select("*")
+        .eq("delit", false)
+        .eq("pruimalnyk", currentUserName) // ✅ Фільтр по приймальнику
+        .order("data", { ascending: true });
+
+      if (error) {
+        console.error("❌ Помилка при завантаженні повідомлень:", error);
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        console.log(`ℹ️ Повідомлень для ${currentUserName} не знайдено`);
+        return [];
+      }
+
+      console.log(
+        `✅ Завантажено ${data.length} повідомлень для ${currentUserName}`
+      );
+
+      // Конвертуємо дані з БД в формат ActNotificationPayload
+      return data.map((row: any) => ({
+        act_id: row.act_id,
+        notification_id: row.notification_id,
+        changed_by_surname: row.changed_by_surname || "Невідомо",
+        item_name: row.item_name || "",
+        dodav_vudaluv: row.dodav_vudaluv ?? true,
+        created_at: row.data ?? row.created_at,
+        pib: row.pib, // ✅ ПІБ
+        auto: row.auto, // ✅ Авто
+      }));
+    }
+
+    // ✅ Для інших ролей - немає повідомлень
+    return [];
+  } catch (err) {
+    console.error("❌ Виняток при завантаженні повідомлень:", err);
+    return [];
+  }
 }

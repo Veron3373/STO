@@ -9,10 +9,15 @@ import {
   logoutFromSystemAndRedirect,
   canUserViewActs,
   canUserOpenActs,
+  getSavedUserDataFromLocalStorage, // ✅ Додано для фільтрації по приймальнику
 } from "./users";
 
 // 👇 ІМПОРТ НОВОЇ ФУНКЦІЇ ПОВІДОМЛЕНЬ
-import { showRealtimeActNotification, removeNotificationsForAct, loadAndShowExistingNotifications } from "./povidomlennya_tablucya";
+import {
+  showRealtimeActNotification,
+  removeNotificationsForAct,
+  loadAndShowExistingNotifications,
+} from "./povidomlennya_tablucya";
 
 document.addEventListener("click", (e) => {
   const target = e.target as HTMLElement | null;
@@ -102,30 +107,71 @@ function validateDateFormat(dateStr: string): boolean {
  * 1. Завантажує існуючі сповіщення при старті (щоб підсвітити те, що вже є)
  */
 async function fetchModifiedActIds(): Promise<Set<number>> {
-  if (userAccessLevel !== "Адміністратор") return new Set();
+  // ✅ Для Адміністратора - всі повідомлення
+  if (userAccessLevel === "Адміністратор") {
+    const { data, error } = await supabase
+      .from("act_changes_notifications")
+      .select("act_id")
+      .eq("delit", false); // ✅ тільки "не видалені" нотифікації
 
-  const { data, error } = await supabase
-    .from("act_changes_notifications")
-    .select("act_id")
-    .eq("delit", false);            // ✅ тільки "не видалені" нотифікації
+    if (error) {
+      console.error("❌ Помилка завантаження сповіщень:", error);
+      return new Set();
+    }
 
-  if (error) {
-    console.error("❌ Помилка завантаження сповіщень:", error);
-    return new Set();
+    const ids = new Set((data || []).map((item) => Number(item.act_id)));
+    return ids;
   }
 
-  const ids = new Set((data || []).map((item) => Number(item.act_id)));
-  return ids;
-}
+  // ✅ Для Приймальника - фільтруємо по pruimalnyk
+  if (userAccessLevel === "Приймальник") {
+    const userData = getSavedUserDataFromLocalStorage?.();
+    const currentUserName = userData?.name;
 
+    if (!currentUserName) {
+      console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+      return new Set();
+    }
+
+    console.log(
+      `📋 Фільтруємо повідомлення для приймальника: "${currentUserName}"`
+    );
+
+    const { data, error } = await supabase
+      .from("act_changes_notifications")
+      .select("act_id")
+      .eq("delit", false)
+      .eq("pruimalnyk", currentUserName); // ✅ Фільтр по приймальнику
+
+    if (error) {
+      console.error("❌ Помилка завантаження сповіщень:", error);
+      return new Set();
+    }
+
+    const ids = new Set((data || []).map((item) => Number(item.act_id)));
+    console.log(
+      `✅ Знайдено ${ids.size} актів з повідомленнями для ${currentUserName}`
+    );
+    return ids;
+  }
+
+  // ✅ Для інших ролей - немає повідомлень
+  return new Set();
+}
 
 /**
  * 2. Підписується на нові сповіщення (PUSH) без перезавантаження таблиці
  */
 function subscribeToActNotifications() {
-  if (userAccessLevel !== "Адміністратор") return;
+  // ✅ Підписка для Адміністратора та Приймальника
+  if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
+    return;
 
-  console.log("📡 Підключення до Realtime повідомлень (Адміністратор)...");
+  console.log(`📡 Підключення до Realtime повідомлень (${userAccessLevel})...`);
+
+  // ✅ Отримуємо ПІБ поточного користувача для фільтрації
+  const userData = getSavedUserDataFromLocalStorage?.();
+  const currentUserName = userData?.name;
 
   supabase
     .channel("act-notifications-channel")
@@ -137,9 +183,28 @@ function subscribeToActNotifications() {
         table: "act_changes_notifications",
       },
       (payload) => {
-        console.log("📡 [Realtime INSERT] Отримано нове повідомлення:", payload.new);
+        console.log(
+          "📡 [Realtime INSERT] Отримано нове повідомлення:",
+          payload.new
+        );
         const newNotification = payload.new;
+
         if (newNotification && newNotification.act_id) {
+          // ✅ ФІЛЬТРАЦІЯ ДЛЯ ПРИЙМАЛЬНИКА
+          if (userAccessLevel === "Приймальник") {
+            const notificationPruimalnyk = newNotification.pruimalnyk;
+
+            if (notificationPruimalnyk !== currentUserName) {
+              console.log(
+                `⏭️ Повідомлення не для поточного приймальника (${currentUserName} != ${notificationPruimalnyk})`
+              );
+              return; // Пропускаємо
+            }
+            console.log(
+              `✅ Повідомлення для поточного приймальника: ${currentUserName}`
+            );
+          }
+
           const actId = Number(newNotification.act_id);
 
           // 1. Додаємо ID в локальний сет для підсвітки
@@ -156,8 +221,8 @@ function subscribeToActNotifications() {
             item_name: newNotification.item_name,
             dodav_vudaluv: newNotification.dodav_vudaluv,
             created_at: newNotification.data || newNotification.created_at, // поле timestamp з БД
-            pib: newNotification.pib,         // ✅ ПІБ клієнта
-            auto: newNotification.auto,       // ✅ Автомобіль
+            pib: newNotification.pib, // ✅ ПІБ клієнта
+            auto: newNotification.auto, // ✅ Автомобіль
           });
         }
       }
@@ -698,7 +763,6 @@ function updateTableBody(): void {
   );
   const oldTbody = table.querySelector("tbody");
   if (oldTbody) oldTbody.replaceWith(newTbody);
-
 }
 
 function createTable(accessLevel: string | null): HTMLTableElement {
@@ -855,7 +919,6 @@ export async function loadActsTable(
     if (!container) return;
     container.innerHTML = "";
     container.appendChild(table);
-
   } catch (error) {
     console.error("💥 Критична помилка:", error);
   }
@@ -892,7 +955,6 @@ export async function refreshActsTable(): Promise<void> {
     currentSearchTerm
   );
 }
-
 
 function resizeInput(input: HTMLInputElement): void {
   const tempSpan = document.createElement("span");
@@ -951,7 +1013,9 @@ function watchDateRangeChanges(): void {
 
   // Додаткові слухачі подій для кращої реактивності
   dateRangePicker.addEventListener("input", () => resizeInput(dateRangePicker));
-  dateRangePicker.addEventListener("change", () => resizeInput(dateRangePicker));
+  dateRangePicker.addEventListener("change", () =>
+    resizeInput(dateRangePicker)
+  );
 
   window.addEventListener("beforeunload", () => observer.disconnect());
 }
@@ -978,11 +1042,17 @@ export async function initializeActsSystem(): Promise<void> {
     // 📥 ЗАВАНТАЖУЄМО ІСНУЮЧІ ПОВІДОМЛЕННЯ З БД
     console.log(`🔍 [initializeActsSystem] accessLevel = "${accessLevel}"`);
     if (accessLevel === "Адміністратор") {
-      console.log("📥 [initializeActsSystem] Викликаємо loadAndShowExistingNotifications...");
+      console.log(
+        "📥 [initializeActsSystem] Викликаємо loadAndShowExistingNotifications..."
+      );
       await loadAndShowExistingNotifications();
-      console.log("✅ [initializeActsSystem] loadAndShowExistingNotifications завершено");
+      console.log(
+        "✅ [initializeActsSystem] loadAndShowExistingNotifications завершено"
+      );
     } else {
-      console.log(`⏭️ [initializeActsSystem] Пропускаємо loadAndShowExistingNotifications (accessLevel = "${accessLevel}")`);
+      console.log(
+        `⏭️ [initializeActsSystem] Пропускаємо loadAndShowExistingNotifications (accessLevel = "${accessLevel}")`
+      );
     }
 
     watchDateRangeChanges();

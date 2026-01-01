@@ -1299,9 +1299,15 @@ export function updatevutratuTable(): void {
 
     if (isFromAct && expense.tupOplatu) {
       // Для актів - відображаємо тип оплати з tupOplatu
+      const avansInfo =
+        expense.paymentMethod && Number(expense.paymentMethod) > 0
+          ? `<br><span style="color: #000; font-weight: 600; font-size: 0.95em;">💰 ${formatNumber(
+              Number(expense.paymentMethod)
+            )}</span>`
+          : "";
       methodCell.innerHTML = `
         <span style="font-size: 0.95em;">
-          ${expense.tupOplatu}
+          ${expense.tupOplatu}${avansInfo}
         </span>
       `;
     } else if (
@@ -1309,10 +1315,10 @@ export function updatevutratuTable(): void {
       expense.paymentMethod &&
       Number(expense.paymentMethod) > 0
     ) {
-      // Для актів з авансом - відображаємо зеленим
+      // Для актів з авансом - відображаємо чорним
       methodCell.innerHTML = `
-        <span style="color: #28a745; font-weight: 600; font-size: 0.95em;">
-          💰 ${formatNumber(Number(expense.paymentMethod))} грн
+        <span style="color: #000; font-weight: 600; font-size: 0.95em;">
+          💰 ${formatNumber(Number(expense.paymentMethod))}
         </span>
       `;
     } else if (isFromAct) {
@@ -1393,6 +1399,9 @@ export function updatevutratuDisplayedSums(): void {
   const totalAll = positiveSum + negativeSum;
   const diffSign = totalAll >= 0 ? "+" : "";
 
+  // Рахуємо підсумок після авансу (деталі + роботи + аванс - витрати)
+  const finalSum = totalDetailsSum + totalWorkSum + totalAvansSum + negativeSum;
+
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
       <span>Сумма <strong style="color: #070707ff;">💰 ${formatNumber(
@@ -1407,21 +1416,25 @@ export function updatevutratuDisplayedSums(): void {
         totalAll >= 0 ? "#006400" : "#8B0000"
       };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
       <span style="color: #666;">/</span>
-      <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
+      <span><strong style="color: #dc3545;">⚙️ ${formatNumber(
         totalDetailsSum
       )}</strong></span>
       <span style="color: #666;">+</span>
-      <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
+      <span><strong style="color: #dc3545;">🛠️ ${formatNumber(
         totalWorkSum
       )}</strong></span>
       <span style="color: #666;">+</span>
-      <span><strong style="color: #28a745;">💰 ${formatNumber(
+      <span><strong style="color: #dc3545;">💰 ${formatNumber(
         totalAvansSum
       )}</strong></span>
-      <span style="color: #666;">=</span>
-      <span><strong style="color: #006400;">${formatNumber(
-        totalDetailsSum + totalWorkSum + totalAvansSum
+      <span style="color: #666;">-</span>
+      <span><strong style="color: #8B0000;">💶 ${formatNumber(
+        Math.abs(negativeSum)
       )}</strong></span>
+      <span style="color: #666;">=</span>
+      <span><strong style="color: ${
+        finalSum >= 0 ? "#006400" : "#8B0000"
+      };">${formatNumber(finalSum)}</strong></span>
     </div>
   `;
 }

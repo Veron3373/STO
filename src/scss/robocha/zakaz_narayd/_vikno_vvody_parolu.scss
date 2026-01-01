@@ -1,10 +1,8 @@
 /* Стилі для оверлею модального вікна вводу пароля */
-.vikno_vvody_parolu-overlay {
+.vikno_vvody_parolu-overlay-ActsOn {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
     width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.6);
@@ -29,7 +27,7 @@
 }
 
 /* Стилі для самого вмісту модального вікна вводу пароля */
-.vikno_vvody_parolu-content {
+.vikno_vvody_parolu-content-ActsOn {
     background-color: #ffffff;
     padding: 30px;
     border-radius: 12px;
@@ -41,50 +39,39 @@
     /* Обмеження ширини */
     width: 90%;
     /* Адаптивна ширина */
-    /* Видаляємо transform: translateY(-20px) та opacity: 0 з цього місця,
-       оскільки вони повинні контролюватися з анімації.
-       Якщо display: none; і display: flex; перемикаються,
-       анімація буде спрацьовувати коректно. */
     animation: fadeInScale 0.3s ease-out forwards;
     /* Анімація появи */
     border: 1px solid #e0e0e0;
     /* Легка межа */
     position: relative;
     /* Для можливості позиціонування елементів всередині */
-    /* Z-index самого контенту може бути таким же, як і у оверлея, або на одиницю вищим,
-       але головне, щоб оверлей мав високий z-index. */
-    z-index: 2001;
-    /* Це просто для уточнення, що сам контент теж високо */
+    z-index: 99999991;
 }
 
 /* Анімація появи модального вікна */
-/* Змінюємо from-стан для більш сучасного ефекту "виїзду" або "збільшення" */
 @keyframes fadeInScale {
     from {
         transform: scale(0.95);
-        /* Починаємо з трохи меншого масштабу */
         opacity: 0;
     }
 
     to {
         transform: scale(1);
-        /* Збільшуємо до нормального розміру */
         opacity: 1;
     }
 }
 
 /* Стилі для тексту всередині модального вікна */
-.vikno_vvody_parolu-content p {
+.vikno_vvody_parolu-content-ActsOn p {
     font-size: 1.1em;
     color: #555;
     margin-bottom: 25px;
     line-height: 1.5;
     font-family: inherit;
-    /* Успадковує шрифт від батьківського елемента, зазвичай body */
 }
 
 /* Стилі для поля вводу пароля */
-.vikno_vvody_parolu-content .password-input {
+.vikno_vvody_parolu-content-ActsOn .password-input-ActsOn {
     width: calc(100% - 20px);
     /* Займає всю доступну ширину мінус відступи */
     padding: 12px 15px;
@@ -103,7 +90,7 @@
     /* Успадковує шрифт */
 }
 
-.vikno_vvody_parolu-content .password-input:focus {
+.vikno_vvody_parolu-content-ActsOn .password-input-ActsOn:focus {
     border-color: #007bff;
     /* Яскраво-синя рамка при фокусі */
     box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
@@ -111,7 +98,7 @@
 }
 
 /* Стилі для кнопок */
-.vikno_vvody_parolu-buttons {
+.vikno_vvody_parolu-buttons-ActsOn {
     display: flex;
     justify-content: space-around;
     /* Розташування кнопок з рівними проміжками */
@@ -119,7 +106,7 @@
     /* Відступ між кнопками */
 }
 
-.vikno_vvody_parolu-buttons button {
+.vikno_vvody_parolu-buttons-ActsOn button {
     padding: 12px 25px;
     border: none;
     border-radius: 8px;
@@ -136,36 +123,36 @@
 }
 
 /* Стилі для кнопки підтвердження */
-.vikno_vvody_parolu-buttons .btn-save-confirm {
+.vikno_vvody_parolu-buttons-ActsOn .btn-save-confirm-ActsOn {
     background-color: #007bff;
     /* Синій колір */
     color: white;
 }
 
-.vikno_vvody_parolu-buttons .btn-save-confirm:hover {
+.vikno_vvody_parolu-buttons-ActsOn .btn-save-confirm-ActsOn:hover {
     background-color: #0056b3;
     /* Темніший синій при наведенні */
     transform: translateY(-2px);
 }
 
-.vikno_vvody_parolu-buttons .btn-save-confirm:active {
+.vikno_vvody_parolu-buttons-ActsOn .btn-save-confirm-ActsOn:active {
     transform: translateY(0);
 }
 
 /* Стилі для кнопки скасування */
-.vikno_vvody_parolu-buttons .btn-save-cancel {
+.vikno_vvody_parolu-buttons-ActsOn .btn-save-cancel-ActsOn {
     background-color: #e0e0e0;
     /* Світло-сірий */
     color: #555;
 }
 
-.vikno_vvody_parolu-buttons .btn-save-cancel:hover {
+.vikno_vvody_parolu-buttons-ActsOn .btn-save-cancel-ActsOn:hover {
     background-color: #c9c9c9;
     /* Темніший сірий при наведенні */
     transform: translateY(-2px);
 }
 
-.vikno_vvody_parolu-buttons .btn-save-cancel:active {
+.vikno_vvody_parolu-buttons-ActsOn .btn-save-cancel-ActsOn:active {
     transform: translateY(0);
 }
 

@@ -4,21 +4,21 @@ import { reopenActAndClearSlyusars } from "./save_work";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import { getSavedUserDataFromLocalStorage } from "../../tablucya/users"; // Додаємо імпорт для отримання даних поточного користувача
 
-export const viknoVvodyParoluId = "vikno_vvody_parolu-modal";
+export const viknoVvodyParoluId = "vikno_vvody_parolu-modal-ActsOn";
 /** Створення DOM елемента модалки */
 export function createViknoVvodyParolu(): HTMLDivElement {
   const overlay = document.createElement("div");
   overlay.id = viknoVvodyParoluId;
-  overlay.className = "vikno_vvody_parolu-overlay";
+  overlay.className = "vikno_vvody_parolu-overlay-ActsOn";
   overlay.style.display = "none";
   const modal = document.createElement("div");
-  modal.className = "vikno_vvody_parolu-content modal-content-save";
+  modal.className = "vikno_vvody_parolu-content-ActsOn modal-content-save-ActsOn";
   modal.innerHTML = `
     <p>Введіть пароль для відкриття акту:</p>
-    <input type="password" id="password-input" placeholder="Пароль" class="password-input" style="padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; width: calc(100% - 20px);">
-    <div class="vikno_vvody_parolu-buttons save-buttons">
-      <button id="password-confirm-btn" class="btn-save-confirm">Підтвердити</button>
-      <button id="password-cancel-btn" class="btn-save-cancel">Скасувати</button>
+    <input type="password" id="password-input-ActsOn" placeholder="Пароль" class="password-input-ActsOn" style="padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; width: calc(100% - 20px);">
+    <div class="vikno_vvody_parolu-buttons-ActsOn save-buttons-ActsOn">
+      <button id="password-confirm-btn-ActsOn" class="btn-save-confirm-ActsOn">Підтвердити</button>
+      <button id="password-cancel-btn-ActsOn" class="btn-save-cancel-ActsOn">Скасувати</button>
     </div>
   `;
   overlay.appendChild(modal);
@@ -98,13 +98,13 @@ export function showViknoVvodyParolu(actId: number): Promise<boolean> {
     const modal = ensureModalMounted();
     modal.style.display = "flex";
     const passwordInput = document.getElementById(
-      "password-input"
+      "password-input-ActsOn"
     ) as HTMLInputElement | null;
     const confirmBtn = document.getElementById(
-      "password-confirm-btn"
+      "password-confirm-btn-ActsOn"
     ) as HTMLButtonElement | null;
     const cancelBtn = document.getElementById(
-      "password-cancel-btn"
+      "password-cancel-btn-ActsOn"
     ) as HTMLButtonElement | null;
     if (!passwordInput || !confirmBtn || !cancelBtn) {
       console.error("Елементи модалки пароля не знайдені");

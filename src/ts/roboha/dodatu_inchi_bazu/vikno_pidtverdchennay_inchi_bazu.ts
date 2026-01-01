@@ -22,6 +22,7 @@ export function createSavePromptModal(): HTMLDivElement {
   modal.innerHTML = `<p>Підтвердіть!!!</p>
     <div class="save-buttons">
       <button id="save-confirm" class="btn-save-confirm">Так</button>
+      <input type="password" id="save-password-input" class="save-password-input" placeholder="Пароль" />
       <button id="save-cancel" class="btn-save-cancel">Ні</button>
     </div>`;
 
@@ -437,6 +438,70 @@ export function showSavePromptModal(): Promise<boolean> {
         cleanup();
         showNotification("Помилка: відсутня змінна CRUD", "error");
         resolve(false);
+        return;
+      }
+
+      // ✅ ПЕРЕВІРКА ПАРОЛЯ
+      const passwordInput = document.getElementById(
+        "save-password-input"
+      ) as HTMLInputElement;
+      const enteredPassword = passwordInput?.value
+        ? Number(passwordInput.value)
+        : null;
+
+      // Отримуємо дані поточного користувача з localStorage
+      let currentUserName = "";
+      let currentUserAccess = "";
+      try {
+        const userDataStr = localStorage.getItem("userAuthData");
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          currentUserName = userData.Name || "";
+          currentUserAccess = userData.Доступ || "";
+        }
+      } catch (error) {
+        console.error("Помилка отримання даних користувача:", error);
+      }
+
+      // Перевіряємо пароль у базі даних
+      if (currentUserName && enteredPassword !== null) {
+        const { data: users, error } = await supabase
+          .from("slyusars")
+          .select("data")
+          .eq("data->>Name", currentUserName);
+
+        if (error) {
+          console.error("Помилка перевірки пароля:", error);
+          showNotification("Помилка перевірки пароля", "error");
+          return;
+        }
+
+        if (users && users.length > 0) {
+          const userData =
+            typeof users[0].data === "string"
+              ? JSON.parse(users[0].data)
+              : users[0].data;
+          const dbPassword = userData?.Пароль;
+
+          if (dbPassword !== enteredPassword) {
+            showNotification("Неправильний пароль", "error");
+            return;
+          }
+        } else {
+          showNotification("Користувача не знайдено", "error");
+          return;
+        }
+      } else {
+        showNotification("Введіть пароль", "warning");
+        return;
+      }
+
+      // Перевірка прав доступу
+      const isAdmin = currentUserAccess === "Адміністратор";
+
+      // Якщо не адмін і не редагування - забороняємо
+      if (!isAdmin && CRUD !== "Редагувати") {
+        showNotification("У вас немає прав для цієї операції", "error");
         return;
       }
 

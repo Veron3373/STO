@@ -1401,10 +1401,6 @@ export function updatevutratuDisplayedSums(): void {
   const totalSumElement = byId("total-sum");
   if (!totalSumElement) return;
 
-  const positiveSum = filteredvutratuData
-    .filter((e) => e.amount > 0)
-    .reduce((sum, e) => sum + e.amount, 0);
-
   const negativeSum = filteredvutratuData
     .filter((e) => e.amount < 0)
     .reduce((sum, e) => sum + e.amount, 0);

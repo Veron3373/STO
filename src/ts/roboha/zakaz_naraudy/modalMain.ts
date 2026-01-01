@@ -850,7 +850,6 @@ function renderModalContent(
   const showLockButton = canShowLockButton;
 
   // 💛 ПЕРЕВІРКА slusarsOn ДЛЯ ФАРБУВАННЯ ЗАГОЛОВКА (ТІЛЬКИ ДЛЯ ВІДКРИТИХ АКТІВ)
-  const isClosed = !!act.date_off;
   const shouldShowSlusarsOn =
     act.slusarsOn === true &&
     !isClosed &&

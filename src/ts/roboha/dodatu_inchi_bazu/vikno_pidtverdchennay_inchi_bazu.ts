@@ -744,6 +744,14 @@ export function showSavePromptModal(): Promise<boolean> {
         await clearInputAndReloadData();
         document.dispatchEvent(new CustomEvent("other-base-data-updated"));
 
+        // Очищуємо інпут пароля
+        const passwordInput = document.getElementById(
+          "save-password-input"
+        ) as HTMLInputElement;
+        if (passwordInput) {
+          passwordInput.value = "";
+        }
+
         console.log(
           "CRUD operation completed successfully, keeping main modal open"
         );

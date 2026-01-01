@@ -42,15 +42,14 @@
       gap: 10px;
 
       .save-password-input {
-        min-width: 20px;
+        width: 80px;
         padding: 8px 12px;
         border: 2px solid #00bcd4;
         border-radius: 8px;
         font-size: 1rem;
         outline: none;
         transition: all 0.3s ease;
-        width: auto;
-        flex: 0 1 auto;
+        flex-shrink: 0;
 
         &:focus {
           border-color: #0097a7;

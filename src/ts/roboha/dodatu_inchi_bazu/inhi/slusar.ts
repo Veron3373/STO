@@ -731,9 +731,6 @@ export const initYesButtonHandler = () => {
       const accessSelect = document.getElementById(
         "slusar-access"
       ) as HTMLSelectElement;
-      const modeButton = document.getElementById(
-        "modeToggleLabel"
-      ) as HTMLButtonElement;
 
       if (!searchInput || !percentInput || !passwordInput || !accessSelect)
         return;

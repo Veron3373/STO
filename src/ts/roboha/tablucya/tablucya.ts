@@ -244,15 +244,15 @@ function subscribeToSlusarNotifications() {
     return;
 
   console.log(
-    `📡 Підключення до Realtime повідомлень про завершення робіт (${userAccessLevel})...`
+    `📡 [slusarsOn] Підключення до Realtime для ${userAccessLevel}...`
   );
 
   const userData = getSavedUserDataFromLocalStorage?.();
   const currentUserName = userData?.name;
 
-  // 🔥 ПІДПИСКА БЕЗПОСЕРЕДНЬО НА ЗМІНИ В ТАБЛИЦІ acts (НЕ через notifications)
+  // 🔥 ПІДПИСКА БЕЗПОСЕРЕДНЬО НА ЗМІНИ В ТАБЛИЦІ acts
   supabase
-    .channel("slusarsOn-acts-channel")
+    .channel("slusarsOn-realtime-channel")
     .on(
       "postgres_changes",
       {
@@ -260,31 +260,38 @@ function subscribeToSlusarNotifications() {
         schema: "public",
         table: "acts",
       },
-      async (payload) => {
-        console.log("📡 [Realtime UPDATE acts] Зміна slusarsOn:", payload.new);
+      (payload) => {
+        console.log("📡 [slusarsOn] Realtime UPDATE отримано:", payload);
 
         const updatedAct = payload.new;
-        if (!updatedAct || updatedAct.act_id === undefined) return;
+        if (!updatedAct || updatedAct.act_id === undefined) {
+          console.log("⚠️ [slusarsOn] Немає act_id в payload");
+          return;
+        }
 
         const actId = Number(updatedAct.act_id);
         const newSlusarsOn = updatedAct.slusarsOn === true;
         const isClosed = !!updatedAct.date_off;
         const pruimalnyk = updatedAct.pruimalnyk;
 
+        console.log(
+          `📡 [slusarsOn] Акт #${actId}: slusarsOn=${newSlusarsOn}, closed=${isClosed}, pruimalnyk=${pruimalnyk}`
+        );
+
         // ✅ ФІЛЬТРАЦІЯ ДЛЯ ПРИЙМАЛЬНИКА
         if (userAccessLevel === "Приймальник") {
           if (pruimalnyk !== currentUserName) {
             console.log(
-              `⏭️ Акт не для поточного приймальника (${currentUserName} != ${pruimalnyk})`
+              `⏭️ [slusarsOn] Пропускаємо: не для ${currentUserName}`
             );
             return;
           }
         }
 
-        // 🎨 МИТТЄВЕ ОНОВЛЕННЯ КЛАСУ РЯДКА (БЕЗ ПЕРЕЗАВАНТАЖЕННЯ ТАБЛИЦІ)
+        // 🎨 МИТТЄВЕ ОНОВЛЕННЯ КЛАСУ РЯДКА
         updateSlusarsOnRowInDom(actId, newSlusarsOn, isClosed, pruimalnyk);
 
-        // 📢 Показуємо сповіщення тільки якщо завершено роботи
+        // 📢 Показуємо сповіщення
         if (newSlusarsOn && !isClosed) {
           const message = `✅ Роботи завершено в акті №${actId}`;
           if (typeof (window as any).showNotification === "function") {
@@ -293,12 +300,13 @@ function subscribeToSlusarNotifications() {
         }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log(`📡 [slusarsOn] Статус підписки:`, status);
+    });
 }
 
 /**
  * 🎨 Миттєво оновлює жовте фарбування рядка в таблиці
- * (БЕЗ перезавантаження всієї таблиці)
  */
 function updateSlusarsOnRowInDom(
   actId: number,
@@ -306,40 +314,91 @@ function updateSlusarsOnRowInDom(
   isClosed: boolean,
   pruimalnyk?: string
 ): void {
+  console.log(`🎨 [updateSlusarsOn] Шукаємо рядок для акту #${actId}...`);
+
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"
   );
-  if (!table) return;
+  if (!table) {
+    console.warn("⚠️ [updateSlusarsOn] Таблиця не знайдена");
+    return;
+  }
 
   const userData = getSavedUserDataFromLocalStorage?.();
   const currentUserName = userData?.name;
 
   const rows = table.querySelectorAll("tbody tr");
+  console.log(`🎨 [updateSlusarsOn] Знайдено ${rows.length} рядків`);
+
+  let found = false;
   rows.forEach((row) => {
-    const firstCell = row.querySelector("td");
-    if (firstCell) {
-      const cellText = firstCell.textContent || "";
-      const cellActId = parseInt(cellText.replace(/\D/g, ""));
+    // Шукаємо act_id в data-атрибуті або в першій клітинці
+    const rowActId = row.getAttribute("data-act-id");
 
-      if (cellActId === actId) {
-        // Перевірка видимості (як в коді рендерингу)
-        const shouldShowSlusarsOn =
-          slusarsOn &&
-          !isClosed &&
-          (userAccessLevel === "Адміністратор" ||
-            (userAccessLevel === "Приймальник" &&
-              pruimalnyk === currentUserName));
-
-        if (shouldShowSlusarsOn) {
-          row.classList.add("row-slusar-on");
-          console.log(`✅ Жовте фарбування додано для акту #${actId}`);
-        } else {
-          row.classList.remove("row-slusar-on");
-          console.log(`✅ Жовте фарбування знято з акту #${actId}`);
+    if (!rowActId) {
+      // Якщо немає data-act-id, шукаємо в першій клітинці з 🔒
+      const firstCell = row.querySelector("td");
+      if (firstCell) {
+        const cellText = firstCell.textContent || "";
+        // Витягуємо число (може бути "🔒 452" або просто "452")
+        const match = cellText.match(/\d+/);
+        if (match) {
+          const cellActId = parseInt(match[0]);
+          if (cellActId === actId) {
+            found = true;
+            applyClassToRow(
+              row,
+              slusarsOn,
+              isClosed,
+              pruimalnyk,
+              currentUserName,
+              actId
+            );
+          }
         }
       }
+    } else if (parseInt(rowActId) === actId) {
+      found = true;
+      applyClassToRow(
+        row,
+        slusarsOn,
+        isClosed,
+        pruimalnyk,
+        currentUserName,
+        actId
+      );
     }
   });
+
+  if (!found) {
+    console.warn(`⚠️ [updateSlusarsOn] Рядок для акту #${actId} не знайдено`);
+  }
+}
+
+/**
+ * Застосовує клас до рядка
+ */
+function applyClassToRow(
+  row: Element,
+  slusarsOn: boolean,
+  isClosed: boolean,
+  pruimalnyk: string | undefined,
+  currentUserName: string | undefined,
+  actId: number
+): void {
+  const shouldShowSlusarsOn =
+    slusarsOn &&
+    !isClosed &&
+    (userAccessLevel === "Адміністратор" ||
+      (userAccessLevel === "Приймальник" && pruimalnyk === currentUserName));
+
+  if (shouldShowSlusarsOn) {
+    row.classList.add("row-slusar-on");
+    console.log(`✅ [updateSlusarsOn] Додано row-slusar-on для акту #${actId}`);
+  } else {
+    row.classList.remove("row-slusar-on");
+    console.log(`✅ [updateSlusarsOn] Знято row-slusar-on з акту #${actId}`);
+  }
 }
 
 /**

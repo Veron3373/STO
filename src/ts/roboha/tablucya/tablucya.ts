@@ -250,57 +250,96 @@ function subscribeToSlusarNotifications() {
   const userData = getSavedUserDataFromLocalStorage?.();
   const currentUserName = userData?.name;
 
+  // 🔥 ПІДПИСКА БЕЗПОСЕРЕДНЬО НА ЗМІНИ В ТАБЛИЦІ acts (НЕ через notifications)
   supabase
-    .channel("slusar-notifications-channel")
+    .channel("slusarsOn-acts-channel")
     .on(
       "postgres_changes",
       {
-        event: "INSERT",
+        event: "UPDATE",
         schema: "public",
-        table: "slusar_complete_notifications",
+        table: "acts",
       },
-      (payload) => {
-        console.log(
-          "📡 [Realtime INSERT] Отримано нове повідомлення про завершення:",
-          payload.new
-        );
-        const newNotification = payload.new;
+      async (payload) => {
+        console.log("📡 [Realtime UPDATE acts] Зміна slusarsOn:", payload.new);
 
-        if (newNotification && newNotification.act_id) {
-          // ✅ ФІЛЬТРАЦІЯ ДЛЯ ПРИЙМАЛЬНИКА
-          if (userAccessLevel === "Приймальник") {
-            const notificationPruimalnyk = newNotification.pruimalnyk;
+        const updatedAct = payload.new;
+        if (!updatedAct || updatedAct.act_id === undefined) return;
 
-            if (notificationPruimalnyk !== currentUserName) {
-              console.log(
-                `⏭️ Повідомлення не для поточного приймальника (${currentUserName} != ${notificationPruimalnyk})`
-              );
-              return;
-            }
+        const actId = Number(updatedAct.act_id);
+        const newSlusarsOn = updatedAct.slusarsOn === true;
+        const isClosed = !!updatedAct.date_off;
+        const pruimalnyk = updatedAct.pruimalnyk;
+
+        // ✅ ФІЛЬТРАЦІЯ ДЛЯ ПРИЙМАЛЬНИКА
+        if (userAccessLevel === "Приймальник") {
+          if (pruimalnyk !== currentUserName) {
             console.log(
-              `✅ Повідомлення для поточного приймальника: ${currentUserName}`
+              `⏭️ Акт не для поточного приймальника (${currentUserName} != ${pruimalnyk})`
             );
+            return;
           }
+        }
 
-          const actId = Number(newNotification.act_id);
+        // 🎨 МИТТЄВЕ ОНОВЛЕННЯ КЛАСУ РЯДКА (БЕЗ ПЕРЕЗАВАНТАЖЕННЯ ТАБЛИЦІ)
+        updateSlusarsOnRowInDom(actId, newSlusarsOn, isClosed, pruimalnyk);
 
-          // 🔄 ОНОВЛЕННЯ ТАБЛИЦІ (перезавантаження для оновлення жовтого фарбування)
-          console.log(`🔄 Оновлення таблиці для акту #${actId}...`);
-          refreshActsTable();
-
-          // 📢 Показуємо сповіщення користувачу
-          const message = `✅ Слюсар ${newNotification.completed_by_surname} завершив роботи в акті №${newNotification.act_number}`;
-
-          // Перевіряємо чи є функція showNotification (якщо імпортована)
+        // 📢 Показуємо сповіщення тільки якщо завершено роботи
+        if (newSlusarsOn && !isClosed) {
+          const message = `✅ Роботи завершено в акті №${actId}`;
           if (typeof (window as any).showNotification === "function") {
-            (window as any).showNotification(message, "success", 5000);
-          } else {
-            console.log(message);
+            (window as any).showNotification(message, "success", 3000);
           }
         }
       }
     )
     .subscribe();
+}
+
+/**
+ * 🎨 Миттєво оновлює жовте фарбування рядка в таблиці
+ * (БЕЗ перезавантаження всієї таблиці)
+ */
+function updateSlusarsOnRowInDom(
+  actId: number,
+  slusarsOn: boolean,
+  isClosed: boolean,
+  pruimalnyk?: string
+): void {
+  const table = document.querySelector(
+    "#table-container-modal-sakaz_narad table"
+  );
+  if (!table) return;
+
+  const userData = getSavedUserDataFromLocalStorage?.();
+  const currentUserName = userData?.name;
+
+  const rows = table.querySelectorAll("tbody tr");
+  rows.forEach((row) => {
+    const firstCell = row.querySelector("td");
+    if (firstCell) {
+      const cellText = firstCell.textContent || "";
+      const cellActId = parseInt(cellText.replace(/\D/g, ""));
+
+      if (cellActId === actId) {
+        // Перевірка видимості (як в коді рендерингу)
+        const shouldShowSlusarsOn =
+          slusarsOn &&
+          !isClosed &&
+          (userAccessLevel === "Адміністратор" ||
+            (userAccessLevel === "Приймальник" &&
+              pruimalnyk === currentUserName));
+
+        if (shouldShowSlusarsOn) {
+          row.classList.add("row-slusar-on");
+          console.log(`✅ Жовте фарбування додано для акту #${actId}`);
+        } else {
+          row.classList.remove("row-slusar-on");
+          console.log(`✅ Жовте фарбування знято з акту #${actId}`);
+        }
+      }
+    }
+  });
 }
 
 /**

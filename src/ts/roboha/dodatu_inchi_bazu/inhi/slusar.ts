@@ -5,7 +5,7 @@ import {
 } from "../dodatu_inchi_bazu_danux";
 import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 import { setupDropdownKeyboard } from "./sharedAutocomplete";
-import { userAccessLevel, userName } from "../../tablucya/users";
+import { userAccessLevel } from "../../tablucya/users";
 
 let currentLoadedData: any[] = [];
 let currentConfig: {
@@ -233,8 +233,14 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
     "slusar-percent-parts"
   ) as HTMLInputElement;
 
+  // Перевірка прав доступу
+  const currentUser = getCurrentUserFromLocalStorage();
+  const isAdmin = currentUser?.access === "Адміністратор";
+
   if (passwordInput && data?.Пароль !== undefined) {
     passwordInput.value = String(data.Пароль);
+    // Пароль завжди редагується
+    passwordInput.disabled = false;
   }
   if (accessSelect && data?.Доступ) {
     // Якщо вибрано "Брацлавець Б. С.", встановлюємо Адміністратор доступ і блокуємо селект
@@ -243,7 +249,8 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
       accessSelect.disabled = true;
     } else {
       accessSelect.value = data.Доступ;
-      accessSelect.disabled = false;
+      // Блокуємо для не-адміністраторів
+      accessSelect.disabled = !isAdmin;
     }
     // Оновлюємо видимість інпутів відповідно до ролі
     updatePercentInputsVisibility(accessSelect.value);
@@ -251,9 +258,13 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
   }
   if (percentInput && data?.ПроцентРоботи !== undefined) {
     percentInput.value = String(data.ПроцентРоботи);
+    // Блокуємо для не-адміністраторів
+    percentInput.disabled = !isAdmin;
   }
   if (percentPartsInput && data?.ПроцентЗапчастин !== undefined) {
     percentPartsInput.value = String(data.ПроцентЗапчастин);
+    // Блокуємо для не-адміністраторів
+    percentPartsInput.disabled = !isAdmin;
   }
 };
 
@@ -304,16 +315,28 @@ const clearSlusarInputs = () => {
     "slusar-percent-parts"
   ) as HTMLInputElement;
 
-  if (passwordInput) passwordInput.value = "";
+  const currentUser = getCurrentUserFromLocalStorage();
+  const isAdmin = currentUser?.access === "Адміністратор";
+
+  if (passwordInput) {
+    passwordInput.value = "";
+    passwordInput.disabled = false; // Пароль завжди доступний
+  }
   if (accessSelect) {
     accessSelect.value = "Слюсар";
-    accessSelect.disabled = false;
+    accessSelect.disabled = !isAdmin; // Блокуємо для не-адміністраторів
     // Скидаємо видимість (для Слюсаря поле запчастин приховане)
     updatePercentInputsVisibility("Слюсар");
     updatePasswordVisibility("Слюсар");
   }
-  if (percentInput) percentInput.value = "50";
-  if (percentPartsInput) percentPartsInput.value = "50";
+  if (percentInput) {
+    percentInput.value = "50";
+    percentInput.disabled = !isAdmin; // Блокуємо для не-адміністраторів
+  }
+  if (percentPartsInput) {
+    percentPartsInput.value = "50";
+    percentPartsInput.disabled = !isAdmin; // Блокуємо для не-адміністраторів
+  }
 };
 
 const createCustomDropdown = (
@@ -827,15 +850,16 @@ export const initYesButtonHandler = () => {
         // Оновлюємо дані
         const updatedData = {
           ...currentData,
-          Пароль: password,
-          ПроцентРоботи: percentValue,
-          ПроцентЗапчастин: percentPartsValue,
+          Пароль: password, // Всі можуть змінювати пароль
         };
 
-        // Адміністратор може змінювати доступ, не-адміністратори - ні
+        // Адміністратор може змінювати ВСІ поля
         if (isAdmin) {
           updatedData.Доступ = access;
+          updatedData.ПроцентРоботи = percentValue;
+          updatedData.ПроцентЗапчастин = percentPartsValue;
         }
+        // Не-адміністратори можуть змінювати ТІЛЬКИ пароль
 
         // Оновлюємо запис у базі даних
         const { error: updateError } = await supabase

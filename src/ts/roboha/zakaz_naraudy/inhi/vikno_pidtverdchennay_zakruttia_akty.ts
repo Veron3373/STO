@@ -24,9 +24,6 @@ export function createViknoPidtverdchennayZakruttiaAkty(): HTMLDivElement {
     <div class="vikno_pidtverdchennay_zakruttia_akty-buttons save-buttons">
       <button id="vikno_pidtverdchennay_zakruttia_akty-confirm" class="vikno_pidtverdchennay_zakruttia_akty-confirm-btn btn-save-confirm">Так</button>
       <div class="payment-type-container">
-        <label for="payment-type-select" class="payment-type-label">
-          Тип оплати:
-        </label>
         <select id="payment-type-select" class="payment-type-select">
           <option value="Готівка" selected>💵 Готівка</option>
           <option value="Картка">💳 Картка</option>

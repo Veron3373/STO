@@ -384,7 +384,7 @@ export function showRealtimeActNotification(
     removeToastElement(toast);
 
     // ✅ Перевіряємо чи залишилися ще повідомлення для цього акту
-    await checkAndRemoveActHighlightIfNoNotifications(actId);
+    await checkAndRemoveActHighlightIfNoNotifications(payload.act_id);
   });
 }
 

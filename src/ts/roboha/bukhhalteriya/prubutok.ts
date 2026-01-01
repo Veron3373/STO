@@ -24,6 +24,8 @@ interface ExpenseRecordLocal {
   carId?: number;
   xto_rozraxuvav?: string;
   fullAmount?: number; // Повна сума з акту
+  fullDetailsAmount?: number; // Повна сума за деталі з акту
+  fullWorkAmount?: number; // Повна сума за роботу з акту
   tupOplatu?: string; // Тип оплати
 }
 
@@ -851,6 +853,8 @@ async function loadvutratuFromDatabase(): Promise<void> {
           carId: carId,
           xto_rozraxuvav: actItem.xto_rozraxuvav || undefined,
           fullAmount: fullAmount,
+          fullDetailsAmount: fullDetailsAmount,
+          fullWorkAmount: fullWorkAmount,
           tupOplatu: actItem.tupOplatu || undefined,
         });
       }
@@ -1426,20 +1430,18 @@ export function updatevutratuDisplayedSums(): void {
     )
     .reduce((sum, e) => sum + Number(e.paymentMethod || 0), 0);
 
-  // Рахуємо повні суми для каси (fullAmount розбито на деталі та роботи)
+  // Рахуємо повні суми для каси (fullDetailsAmount + fullWorkAmount)
   const totalFullDetailsSum = filteredvutratuData
-    .filter((e) => e.category === "💰 Прибуток" && e.fullAmount !== undefined)
-    .reduce((sum, e) => {
-      const actData = e as any;
-      return sum + (Number(actData.fullDetailsAmount) || 0);
-    }, 0);
+    .filter(
+      (e) => e.category === "💰 Прибуток" && e.fullDetailsAmount !== undefined
+    )
+    .reduce((sum, e) => sum + (e.fullDetailsAmount || 0), 0);
 
   const totalFullWorkSum = filteredvutratuData
-    .filter((e) => e.category === "💰 Прибуток" && e.fullAmount !== undefined)
-    .reduce((sum, e) => {
-      const actData = e as any;
-      return sum + (Number(actData.fullWorkAmount) || 0);
-    }, 0);
+    .filter(
+      (e) => e.category === "💰 Прибуток" && e.fullWorkAmount !== undefined
+    )
+    .reduce((sum, e) => sum + (e.fullWorkAmount || 0), 0);
 
   // Рахуємо підсумок після авансу (деталі + роботи + аванс - витрати) - для Каси
   const finalSumCasa =

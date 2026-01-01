@@ -1452,6 +1452,7 @@ export function updatevutratuDisplayedSums(): void {
         };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <span>Каса</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
           totalDetailsSum
         )}</strong></span>
@@ -1460,11 +1461,11 @@ export function updatevutratuDisplayedSums(): void {
           totalWorkSum
         )}</strong></span>
         <span style="color: #666;">+</span>
-        <span><strong style="color: #28a745;">💰 ${formatNumber(
+        <span><strong style="color: #000;">💰 ${formatNumber(
           totalAvansSum
         )}</strong></span>
         <span style="color: #666;">-</span>
-        <span><strong style="color: #8B0000;">💶 ${formatNumber(
+        <span><strong style="color: #8B0000;">💶 -${formatNumber(
           Math.abs(negativeSum)
         )}</strong></span>
         <span style="color: #666;">=</span>

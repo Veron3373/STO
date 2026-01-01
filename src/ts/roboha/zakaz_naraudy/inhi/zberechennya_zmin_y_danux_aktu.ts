@@ -708,7 +708,7 @@ async function logActChanges(
 
   // ✅ Записуємо зміни ТІЛЬКИ для Слюсаря, Запчастиста, Складовщика
   const allowedRoles = ["Слюсар", "Запчастист", "Складовщик"];
-  if (!allowedRoles.includes(userAccessLevel)) {
+  if (!userAccessLevel || !allowedRoles.includes(userAccessLevel)) {
     console.log(
       `⏭️ Користувач ${userAccessLevel} - логування змін пропущено (записуємо тільки для Слюсар/Запчастист/Складовщик)`
     );

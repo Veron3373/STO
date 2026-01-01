@@ -15,6 +15,100 @@ let currentConfig: {
   needsJsonParsing?: boolean;
 } | null = null;
 
+// Функція створення модального вікна підтвердження
+const createConfirmModal = (message: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+    `;
+
+    const modal = document.createElement("div");
+    modal.className = "modal-content-save";
+    modal.innerHTML = `
+      <p>${message}</p>
+      <div class="save-buttons">
+        <button id="modal-confirm-yes" class="btn-save-confirm">Так</button>
+        <button id="modal-confirm-no" class="btn-save-cancel">Ні</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const yesBtn = modal.querySelector(
+      "#modal-confirm-yes"
+    ) as HTMLButtonElement;
+    const noBtn = modal.querySelector("#modal-confirm-no") as HTMLButtonElement;
+
+    const cleanup = () => {
+      document.body.removeChild(overlay);
+    };
+
+    yesBtn?.addEventListener("click", () => {
+      cleanup();
+      resolve(true);
+    });
+
+    noBtn?.addEventListener("click", () => {
+      cleanup();
+      resolve(false);
+    });
+  });
+};
+
+// Функція показу повідомлення (без підтвердження)
+const showMessageModal = (
+  message: string,
+  isError: boolean = false
+): Promise<void> => {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+    `;
+
+    const modal = document.createElement("div");
+    modal.className = "modal-content-save";
+    modal.innerHTML = `
+      <p>${message}</p>
+      <div class="save-buttons">
+        <button id="modal-ok" class="btn-save-confirm">OK</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const okBtn = modal.querySelector("#modal-ok") as HTMLButtonElement;
+
+    const cleanup = () => {
+      document.body.removeChild(overlay);
+      resolve();
+    };
+
+    okBtn?.addEventListener("click", cleanup);
+  });
+};
+
 // Функція отримання даних користувача з localStorage
 const getCurrentUserFromLocalStorage = (): {
   name: string;
@@ -795,19 +889,12 @@ export const initYesButtonHandler = () => {
       // Перевірка прав доступу для не-адміністраторів
       if (!isAdmin) {
         if (normalizeName(name) !== normalizeName(currentUser?.name || "")) {
-          alert(
-            `❌ Помилка! Ви можете редагувати тільки свій профіль.\nОбрано: ${name}\nВаше ім'я: ${currentUser?.name}`
+          await showMessageModal(
+            `❌ Помилка! Ви можете редагувати тільки свій профіль.<br><br>Обрано: <strong>${name}</strong><br>Ваше ім'я: <strong>${currentUser?.name}</strong>`,
+            true
           );
           return;
         }
-        console.log(
-          `🔒 Не-адміністратор ${currentUser?.name} редагує свій профіль`
-        );
-      }
-
-      let percentPartsValue = 50;
-      if (percentPartsInput && percentPartsInput.value) {
-        percentPartsValue = Number(percentPartsInput.value);
       }
 
       // Валідація відсотка
@@ -816,16 +903,31 @@ export const initYesButtonHandler = () => {
         return;
       }
 
-      if (
-        isNaN(percentPartsValue) ||
-        percentPartsValue < 0 ||
-        percentPartsValue > 100
-      ) {
-        console.error(
-          "Невалідне значення проценту запчастин:",
-          percentPartsValue
-        );
-        percentPartsValue = 50;
+      let percentPartsValue = 50;
+      if (percentPartsInput && percentPartsInput.value) {
+        percentPartsValue = Number(percentPartsInput.value);
+        if (
+          isNaN(percentPartsValue) ||
+          percentPartsValue < 0 ||
+          percentPartsValue > 100
+        ) {
+          console.error(
+            "Невалідне значення проценту запчастин:",
+            percentPartsValue
+          );
+          percentPartsValue = 50;
+        }
+      }
+
+      // Показуємо підтвердження
+      const confirmed = await createConfirmModal(
+        isAdmin
+          ? `Підтвердіть збереження даних для співробітника <strong>${name}</strong>`
+          : `Підтвердіть зміну пароля`
+      );
+
+      if (!confirmed) {
+        return; // Користувач натиснув "Ні"
       }
 
       try {
@@ -838,8 +940,9 @@ export const initYesButtonHandler = () => {
 
         if (error || !rows) {
           console.error("Слюсар не знайдений або помилка:", error);
-          alert(
-            `❌ Помилка! Співробітник "${name}" не знайдений в базі даних.`
+          await showMessageModal(
+            `❌ Помилка! Співробітник "${name}" не знайдений в базі даних.`,
+            true
           );
           return;
         }
@@ -869,13 +972,11 @@ export const initYesButtonHandler = () => {
 
         if (updateError) {
           console.error("Помилка при оновленні даних:", updateError);
-          alert("❌ Помилка при збереженні даних!");
+          await showMessageModal("❌ Помилка при збереженні даних!", true);
           return;
         }
 
-        console.log(
-          `✅ Успішно оновлено дані для ${name}: Робота=${percentValue}, Запчастини=${percentPartsValue}`
-        );
+        console.log(`✅ Успішно оновлено дані для ${name}`);
 
         // Якщо користувач змінив свій власний пароль, оновлюємо localStorage
         if (normalizeName(name) === normalizeName(currentUser?.name || "")) {
@@ -888,10 +989,10 @@ export const initYesButtonHandler = () => {
           }
         }
 
-        alert(`✅ Дані успішно збережено!`);
+        await showMessageModal("✅ Дані успішно збережено!");
       } catch (error) {
         console.error("Помилка при обробці даних співробітника:", error);
-        alert("❌ Критична помилка при обробці даних!");
+        await showMessageModal("❌ Критична помилка при обробці даних!", true);
       }
     });
   }

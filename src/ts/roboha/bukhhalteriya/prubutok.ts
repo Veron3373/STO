@@ -1417,15 +1417,15 @@ export function updatevutratuDisplayedSums(): void {
         totalAll >= 0 ? "#006400" : "#8B0000"
       };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
       <span style="color: #666;">/</span>
-      <span><strong style="color: #dc3545;">⚙️ ${formatNumber(
+      <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
         totalDetailsSum
       )}</strong></span>
       <span style="color: #666;">+</span>
-      <span><strong style="color: #dc3545;">🛠️ ${formatNumber(
+      <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
         totalWorkSum
       )}</strong></span>
       <span style="color: #666;">+</span>
-      <span><strong style="color: #dc3545;">💰 ${formatNumber(
+      <span><strong style="color: #28a745;">💰 ${formatNumber(
         totalAvansSum
       )}</strong></span>
       <span style="color: #666;">-</span>

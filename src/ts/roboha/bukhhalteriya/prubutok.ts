@@ -1401,6 +1401,11 @@ export function updatevutratuDisplayedSums(): void {
   const totalSumElement = byId("total-sum");
   if (!totalSumElement) return;
 
+  // Рахуємо загальний прибуток зі стовпця "Прибуток" (amount для актів)
+  const positiveSum = filteredvutratuData
+    .filter((e) => e.amount > 0)
+    .reduce((sum, e) => sum + e.amount, 0);
+
   const negativeSum = filteredvutratuData
     .filter((e) => e.amount < 0)
     .reduce((sum, e) => sum + e.amount, 0);
@@ -1426,12 +1431,30 @@ export function updatevutratuDisplayedSums(): void {
     )
     .reduce((sum, e) => sum + Number(e.paymentMethod || 0), 0);
 
+  // Загальна сума = прибуток + витрати
+  const totalAll = positiveSum + negativeSum;
+  const diffSign = totalAll >= 0 ? "+" : "";
+
   // Рахуємо підсумок після авансу (деталі + роботи + аванс - витрати)
   const finalSum = totalDetailsSum + totalWorkSum + totalAvansSum + negativeSum;
 
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <span>Прибуток <strong style="color: #070707ff;">💰 ${formatNumber(
+          positiveSum
+        )}</strong> грн</span>
+        <span style="color: #666;">-</span>
+        <span><strong style="color: #8B0000;">💶 -${formatNumber(
+          Math.abs(negativeSum)
+        )}</strong></span>
+        <span style="color: #666;">=</span>
+        <span><strong style="color: ${
+          totalAll >= 0 ? "#006400" : "#8B0000"
+        };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
+      </div>
+      <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <span>Каса</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
           totalDetailsSum
         )}</strong></span>
@@ -1450,20 +1473,10 @@ export function updatevutratuDisplayedSums(): void {
         <span style="color: #666;">=</span>
         <span><strong style="color: ${
           finalSum >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${formatNumber(finalSum)}</strong></span>
+        };">📈 ${formatNumber(finalSum)}</strong> грн</span>
       </div>
-      <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <span>Каса</span>
-        <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-          totalDetailsSum
-        )}</strong></span>
-        <span style="color: #666;">+</span>
-        <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-          totalWorkSum
-        )}</strong></span>
-        <span style="color: #666;">+</span>
-        <span><strong style="color: #000;">💰 ${formatNumber(
-          totalAvansSum
+    </div>
+  `;
         )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(

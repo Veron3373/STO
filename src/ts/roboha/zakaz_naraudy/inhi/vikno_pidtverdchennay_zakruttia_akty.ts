@@ -21,6 +21,16 @@ export function createViknoPidtverdchennayZakruttiaAkty(): HTMLDivElement {
   modal.className = "vikno_pidtverdchennay_zakruttia_akty-content";
   modal.innerHTML = `
     <p id="vikno_pidtverdchennay_zakruttia_akty-message">Підтвердити закриття акту?</p>
+    <div style="margin: 1rem 0; text-align: center;">
+      <label for="payment-type-select" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+        Тип оплати:
+      </label>
+      <select id="payment-type-select" style="padding: 0.5rem 1rem; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; min-width: 200px; cursor: pointer;">
+        <option value="Готівка" selected>💵 Готівка</option>
+        <option value="IBAN">🏦 IBAN</option>
+        <option value="Картка">💳 Картка</option>
+      </select>
+    </div>
     <div class="vikno_pidtverdchennay_zakruttia_akty-buttons save-buttons">
       <button id="vikno_pidtverdchennay_zakruttia_akty-confirm" class="vikno_pidtverdchennay_zakruttia_akty-confirm-btn btn-save-confirm">Так</button>
       <button id="vikno_pidtverdchennay_zakruttia_akty-cancel" class="vikno_pidtverdchennay_zakruttia_akty-cancel-btn btn-save-cancel">Ні</button>
@@ -48,14 +58,18 @@ function checkForWarnings(): boolean {
   if (!container) return true;
 
   const qtyWarnings = container.querySelectorAll('.qty-cell[data-warn="1"]');
-  const priceWarnings = container.querySelectorAll('.price-cell[data-warnprice="1"]');
-  const slyusarSumWarnings = container.querySelectorAll('.slyusar-sum-cell[data-warnzp="1"]');
+  const priceWarnings = container.querySelectorAll(
+    '.price-cell[data-warnprice="1"]'
+  );
+  const slyusarSumWarnings = container.querySelectorAll(
+    '.slyusar-sum-cell[data-warnzp="1"]'
+  );
 
-  const pomulka = 
-    qtyWarnings.length === 0 && 
-    priceWarnings.length === 0 && 
+  const pomulka =
+    qtyWarnings.length === 0 &&
+    priceWarnings.length === 0 &&
     slyusarSumWarnings.length === 0;
-  
+
   if (!pomulka) {
     console.warn(
       `Знайдено попередження: кількість=${qtyWarnings.length}, ціна=${priceWarnings.length}, зарплата=${slyusarSumWarnings.length}`
@@ -133,10 +147,35 @@ export function showViknoPidtverdchennayZakruttiaAkty(
     const onConfirm = async () => {
       confirmBtn.disabled = true;
       try {
+        // Отримуємо вибраний тип оплати
+        const paymentSelect = document.getElementById(
+          "payment-type-select"
+        ) as HTMLSelectElement | null;
+        const selectedPaymentType = paymentSelect?.value || "Готівка";
+
+        console.log(`💳 Обрано тип оплати: ${selectedPaymentType}`);
+
         showNotification("Закриваємо акт...", "info", 1200);
 
         // Основне закриття акту + розмітка слюсарів
         await closeActAndMarkSlyusars(actId);
+
+        // Зберігаємо тип оплати в acts.tupOplatu
+        const { error: updatePaymentError } = await supabase
+          .from("acts")
+          .update({ tupOplatu: selectedPaymentType })
+          .eq("act_id", actId);
+
+        if (updatePaymentError) {
+          console.error(
+            "❌ Помилка збереження типу оплати:",
+            updatePaymentError
+          );
+        } else {
+          console.log(
+            `✅ Тип оплати "${selectedPaymentType}" збережено для акту ${actId}`
+          );
+        }
 
         // Отримання даних для SMS
         const { data: act, error: actError } = await supabase
@@ -162,8 +201,7 @@ export function showViknoPidtverdchennayZakruttiaAkty(
 
           const clientPhone =
             clientData?.["Телефон"] || clientData?.phone || "";
-          const clientName =
-            clientData?.["ПІБ"] || clientData?.fio || "Клієнт";
+          const clientName = clientData?.["ПІБ"] || clientData?.fio || "Клієнт";
           const totalSum = actData?.["Загальна сума"] || 0;
 
           if (clientPhone) {

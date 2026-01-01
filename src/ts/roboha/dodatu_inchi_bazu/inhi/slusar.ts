@@ -3,6 +3,7 @@ import {
   updateAllBd,
   updateTableNameDisplay,
 } from "../dodatu_inchi_bazu_danux";
+import { showNotification } from "../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 import { setupDropdownKeyboard } from "./sharedAutocomplete";
 import { userAccessLevel } from "../../tablucya/users";
@@ -78,33 +79,6 @@ const checkEmployeeExists = async (name: string): Promise<boolean> => {
     console.error("Помилка при перевірці існування співробітника:", error);
     return false;
   }
-};
-
-// Функція показу повідомлення про існування співробітника
-const showEmployeeExistsMessage = (name: string) => {
-  const message = document.createElement("div");
-  message.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #fff3cd;
-    border: 2px solid #ffc107;
-    color: #856404;
-    padding: 20px 30px;
-    border-radius: 8px;
-    font-size: 16px;
-    z-index: 10001;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  `;
-  message.innerHTML = `
-    <div style="text-align: center;">
-      <strong>⚠️ Увага!</strong><br>
-      Співробітник "${name}" вже існує в базі даних
-    </div>
-  `;
-  document.body.appendChild(message);
-  setTimeout(() => message.remove(), 3000);
 };
 
 // Оновлена функція updateAllBdFromInput
@@ -775,7 +749,10 @@ export const initYesButtonHandler = () => {
       if (isAddMode) {
         const exists = await checkEmployeeExists(name);
         if (exists) {
-          showEmployeeExistsMessage(name);
+          showNotification(
+            `Співробітник "${name}" вже існує в базі даних`,
+            "warning"
+          );
           return; // Не очищаємо поля, не додаємо
         }
       }

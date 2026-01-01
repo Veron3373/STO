@@ -1,5 +1,6 @@
 // src\ts\roboha\dodatu_inchi_bazu\vikno_pidtverdchennay_inchi_bazu.ts
 import { supabase } from "../../vxid/supabaseClient";
+import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { all_bd, CRUD } from "./dodatu_inchi_bazu_danux";
 import { resetShopState, resetDetailState } from "./inhi/scladMagasunDetal";
 import { tryHandleShopsCrud } from "./db_shops_details";
@@ -425,23 +426,6 @@ export function showSavePromptModal(): Promise<boolean> {
       cancelBtn.removeEventListener("click", onCancel);
     };
 
-    const toast = (message: string, color: string) => {
-      const note = document.createElement("div");
-      note.textContent = message;
-      note.style.position = "fixed";
-      note.style.top = "50%";
-      note.style.left = "50%";
-      note.style.transform = "translateX(-50%)";
-      note.style.backgroundColor = color;
-      note.style.color = "white";
-      note.style.padding = "12px 24px";
-      note.style.borderRadius = "8px";
-      note.style.zIndex = "10001";
-      note.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
-      document.body.appendChild(note);
-      setTimeout(() => note.remove(), 1500);
-    };
-
     const closeAllModals = () => {
       document
         .querySelectorAll(".modal-overlay-all_other_bases")
@@ -451,50 +435,9 @@ export function showSavePromptModal(): Promise<boolean> {
     const onConfirm = async () => {
       if (!CRUD) {
         cleanup();
-        toast("❌ Помилка: відсутня змінна CRUD", "#f44336");
+        showNotification("Помилка: відсутня змінна CRUD", "error");
         resolve(false);
         return;
-      }
-
-      // ✅ ПЕРЕВІРКА ДУБЛІВ перед збереженням
-      if (CRUD === "Додати") {
-        const inputValue = getInputValue();
-        if (inputValue) {
-          let tableFromDraft = "";
-          try {
-            if (all_bd) {
-              const parsed = JSON.parse(all_bd);
-              tableFromDraft = parsed?.table ?? "";
-            }
-          } catch (err) {
-            console.error("Error parsing all_bd:", err);
-          }
-
-          // Перевіряємо дублі для різних таблиць
-          if (tableFromDraft) {
-            const exists = await checkDuplicateExists(
-              tableFromDraft,
-              inputValue
-            );
-            if (exists) {
-              const tableNames: Record<string, string> = {
-                shops: "Магазин",
-                details: "Деталь",
-                slyusars: "Співробітник",
-                robota: "Робота",
-                faktura: "Контрагент",
-                dherelo: "Джерело",
-              };
-              const tableName = tableNames[tableFromDraft] || "Запис";
-              toast(
-                `⚠️ ${tableName} "${inputValue}" вже існує в базі`,
-                "#ffc107"
-              );
-              // Не закриваємо модальне вікно, щоб користувач міг виправити
-              return;
-            }
-          }
-        }
       }
 
       console.log("Starting CRUD operations...");
@@ -545,7 +488,7 @@ export function showSavePromptModal(): Promise<boolean> {
             document.dispatchEvent(new CustomEvent("other-base-data-updated"));
           } else {
             closeAllModals();
-            toast("❌ Помилка при збереженні (faktura)", "#f44336");
+            showNotification("Помилка при збереженні (faktura)", "error");
           }
           resolve(success);
           return;
@@ -584,7 +527,7 @@ export function showSavePromptModal(): Promise<boolean> {
             success = await performCrudOperation();
             cleanup();
             if (success) {
-              toast("✅ Операцію виконано успішно", "#4caf50");
+              showNotification("Операцію виконано успішно", "success");
               resetShopState();
               resetDetailState();
               await clearInputAndReloadData();
@@ -593,7 +536,7 @@ export function showSavePromptModal(): Promise<boolean> {
               );
             } else {
               closeAllModals();
-              toast("❌ Помилка при збереженні", "#f44336");
+              showNotification("Помилка при збереженні", "error");
             }
             resolve(success);
             return;
@@ -622,7 +565,7 @@ export function showSavePromptModal(): Promise<boolean> {
             success = await performCrudOperation();
             cleanup();
             if (success) {
-              toast("✅ Операцію виконано успішно", "#4caf50");
+              showNotification("Операцію виконано успішно", "success");
               resetShopState();
               resetDetailState();
               await clearInputAndReloadData();
@@ -631,7 +574,7 @@ export function showSavePromptModal(): Promise<boolean> {
               );
             } else {
               closeAllModals();
-              toast("❌ Помилка при збереженні", "#f44336");
+              showNotification("Помилка при збереженні", "error");
             }
             resolve(success);
             return;
@@ -670,7 +613,7 @@ export function showSavePromptModal(): Promise<boolean> {
             success = await performCrudOperation();
             cleanup();
             if (success) {
-              toast("✅ Операцію виконано успішно", "#4caf50");
+              showNotification("Операцію виконано успішно", "success");
               resetShopState();
               resetDetailState();
               await clearInputAndReloadData();
@@ -679,7 +622,7 @@ export function showSavePromptModal(): Promise<boolean> {
               );
             } else {
               closeAllModals();
-              toast("❌ Помилка при збереженні", "#f44336");
+              showNotification("Помилка при збереженні", "error");
             }
             resolve(success);
             return;
@@ -709,7 +652,7 @@ export function showSavePromptModal(): Promise<boolean> {
       cleanup();
 
       if (success) {
-        toast("✅ Операцію виконано успішно", "#4caf50");
+        showNotification("Операцію виконано успішно", "success");
         resetShopState();
         resetDetailState();
         await clearInputAndReloadData();
@@ -722,9 +665,9 @@ export function showSavePromptModal(): Promise<boolean> {
       } else {
         closeAllModals();
         const message = errorMessage
-          ? `❌ Помилка: ${errorMessage}`
-          : "❌ Помилка при збереженні";
-        toast(message, "#f44336");
+          ? `Помилка: ${errorMessage}`
+          : "Помилка при збереженні";
+        showNotification(message, "error");
         resolve(false);
       }
     };

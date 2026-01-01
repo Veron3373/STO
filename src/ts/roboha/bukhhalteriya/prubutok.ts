@@ -1453,7 +1453,7 @@ export function updatevutratuDisplayedSums(): void {
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Каса</span>
-        <span>Каса <strong style="color: #1E90FF;">⚙️ ${formatNumber(
+        <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
           totalDetailsSum
         )}</strong></span>
         <span style="color: #666;">+</span>

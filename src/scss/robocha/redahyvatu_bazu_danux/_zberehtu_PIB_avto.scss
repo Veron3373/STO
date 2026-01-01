@@ -10,7 +10,7 @@
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 1003;
+  z-index: 99999;
 
   &.active {
     display: flex;

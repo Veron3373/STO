@@ -25,7 +25,7 @@ function createPasswordCheckModal(): HTMLElement {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1002;
+    z-index: 10002;
   `;
 
   modal.innerHTML = `

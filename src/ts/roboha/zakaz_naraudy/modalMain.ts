@@ -849,8 +849,22 @@ function renderModalContent(
 
   const showLockButton = canShowLockButton;
 
+  // 💛 ПЕРЕВІРКА slusarsOn ДЛЯ ФАРБУВАННЯ ЗАГОЛОВКА (ТІЛЬКИ ДЛЯ ВІДКРИТИХ АКТІВ)
+  const isClosed = !!act.date_off;
+  const shouldShowSlusarsOn =
+    act.slusarsOn === true &&
+    !isClosed &&
+    (userAccessLevel === "Адміністратор" ||
+      userAccessLevel === "Слюсар" ||
+      (userAccessLevel === "Приймальник" &&
+        act.pruimalnyk === currentUserName));
+
+  const headerClass = shouldShowSlusarsOn
+    ? "zakaz_narayd-header zakaz_narayd-header-slusar-on"
+    : "zakaz_narayd-header";
+
   body.innerHTML = `
-    <div class="zakaz_narayd-header">
+    <div class="${headerClass}">
       <div class="zakaz_narayd-header-info">
         <h1>B.S.Motorservice</h1>
         <p>Адрес: вул. Корольова, 6, Вінниця</p>

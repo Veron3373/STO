@@ -6,6 +6,7 @@ import {
   showLoginModalBeforeTable,
   isUserAuthenticated,
   userAccessLevel,
+  userName as currentUserName,
   logoutFromSystemAndRedirect,
   canUserViewActs,
   canUserOpenActs,
@@ -507,6 +508,20 @@ function renderActsRows(
     const row = document.createElement("tr");
 
     row.classList.add(isClosed ? "row-closed" : "row-open");
+
+    // 💛 ПЕРЕВІРКА slusarsOn ДЛЯ ЗОЛОТИСТОГО ФАРБУВАННЯ (ТІЛЬКИ ДЛЯ ВІДКРИТИХ АКТІВ)
+    // ✨ Для Приймальника показувати тільки якщо pruimalnyk === currentUserName
+    const shouldShowSlusarsOn =
+      act.slusarsOn === true &&
+      !isClosed &&
+      (userAccessLevel === "Адміністратор" ||
+        userAccessLevel === "Слюсар" ||
+        (userAccessLevel === "Приймальник" &&
+          act.pruimalnyk === currentUserName));
+
+    if (shouldShowSlusarsOn) {
+      row.classList.add("row-slusar-on");
+    }
 
     // ПЕРЕВІРКА ПІДСВІТКИ (СИНЯ РУЧКА)
     if (act.act_id && modifiedActIds.has(Number(act.act_id))) {

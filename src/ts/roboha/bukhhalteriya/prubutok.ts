@@ -1451,10 +1451,8 @@ export function updatevutratuDisplayedSums(): void {
     totalFullDetailsSum + totalFullWorkSum + totalAvansSum + negativeSum;
 
   // Загальна сума прибутку (стовпець Прибуток) + витрати
-  const totalAll = positiveSum + negativeSum;
   const finalSumProfit =
     totalDetailsSum + totalWorkSum + totalAvansSum + negativeSum;
-  const diffSign = totalAll >= 0 ? "+" : "";
 
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">

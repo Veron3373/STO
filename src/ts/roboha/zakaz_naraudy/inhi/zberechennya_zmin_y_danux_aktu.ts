@@ -1256,12 +1256,8 @@ async function syncPruimalnikHistory(
  * Записує інформацію про приймальника в таблицю acts
  * ТІЛЬКИ для користувачів з рівнем доступу "Приймальник"
  * @param actId - ID акту
- * @param isNewAct - чи це створення нового акту (true) чи оновлення (false)
  */
-async function savePruimalnykToActs(
-  actId: number,
-  isNewAct: boolean
-): Promise<void> {
+async function savePruimalnykToActs(actId: number): Promise<void> {
   try {
     // ✅ Перевірка рівня доступу - записуємо ТІЛЬКИ для Приймальника
     if (userAccessLevel !== "Приймальник") {
@@ -1379,7 +1375,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   }
 
   // ✅ Записуємо інформацію про приймальника
-  await savePruimalnykToActs(actId, false);
+  await savePruimalnykToActs(actId);
 
   await updateScladActNumbers(actId, newScladIds);
   await applyScladDeltas(deltas);

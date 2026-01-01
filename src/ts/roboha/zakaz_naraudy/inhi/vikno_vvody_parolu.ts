@@ -12,7 +12,7 @@ export function createViknoVvodyParolu(): HTMLDivElement {
   overlay.className = "vikno_vvody_parolu-overlay";
   overlay.style.display = "none";
   const modal = document.createElement("div");
-  modal.className = "vikno_vvody_parolu-content modal-content-save";
+  modal.className = "vikno_vvody_parolu-content";
   modal.innerHTML = `
     <p>Введіть пароль для відкриття акту:</p>
     <input type="password" id="password-input" placeholder="Пароль" class="password-input" style="padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; width: calc(100% - 20px);">

@@ -1,4 +1,4 @@
-// _tablucya.scss ось цей 
+// _tablucya.scss ось цей
 
 html,
 body {
@@ -54,7 +54,6 @@ body {
 
   /* Body */
   tbody {
-
     /* Standard table behavior */
     tr {
       cursor: pointer;
@@ -190,6 +189,21 @@ body {
   opacity: 0.6;
 }
 
+/* 💛 Клас для рядків, де Слюсар завершив роботи (slusarsOn = true) */
+.row-slusar-on {
+  background: linear-gradient(90deg, #fff8e1 0%, #ffe082 100%) !important;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(90deg, #ffe082 0%, #ffd54f 100%) !important;
+  }
+
+  td {
+    color: #ff6f00;
+    font-weight: 600;
+  }
+}
+
 /* Клас для рядків актів (Синя ручка) */
 .act-modified-blue-pen {
   background-color: rgba(33, 150, 243, 0.12) !important;
@@ -279,7 +293,6 @@ body {
 }
 
 @keyframes pulse-slow {
-
   0%,
   100% {
     transform: scale(1);

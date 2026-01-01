@@ -1092,3 +1092,21 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
 
   return await getSettingBoolFromSettings(settingId, columnName);
 }
+/**
+ * Перевірка чи може Слюсар завершувати роботи (встановлювати slusarsOn).
+ * setting_id = 3, колонка "Слюсар"
+ */
+export async function canSlusarCompleteTasks(): Promise<boolean> {
+  const role = userAccessLevel;
+
+  if (!role) {
+    console.warn("userAccessLevel порожній, блокуємо завершення робіт.");
+    return false;
+  }
+
+  if (role !== "Слюсар") {
+    return false; // Тільки для Слюсаря
+  }
+
+  return await getSettingBoolFromSettings(3, "Слюсар");
+}

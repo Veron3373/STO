@@ -85,6 +85,11 @@ body {
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
 
+  // 💛 Золотистий градієнт для заголовка, коли Слюсар завершив роботи
+  &.zakaz_narayd-header-slusar-on {
+    background: linear-gradient(135deg, #ffc107 0%, #ffa000 100%);
+  }
+
   &-logo img {
     max-height: 80px;
   }
@@ -244,12 +249,12 @@ body {
   td[data-name="name"] {
     text-align: left;
   }
-  
+
   /* Комірка з найменуванням має бути з відносним позиціонуванням для кнопки */
   td.name-cell {
     position: relative;
     padding-right: 30px !important;
-    
+
     /* Прибираємо зайві обгортки та забезпечуємо повну ширину */
     > div {
       display: block;
@@ -257,7 +262,7 @@ body {
       min-height: 20px;
     }
   }
-  
+
   /* Комірка ПІБ без зайвих обгорток */
   td.pib-magazin-cell {
     white-space: nowrap;
@@ -326,7 +331,7 @@ body {
 .zakaz_narayd-sums-footer {
   text-align: right;
   padding: 10px 24px;
-  
+
   p {
     margin: 5px 0;
   }
@@ -339,7 +344,7 @@ body {
 .zakaz_narayd-sums-footer-total {
   font-weight: 700;
   //color: #1a73e8;
-  font-size: 1.0em;
+  font-size: 1em;
 }
 
 .editable-avans-input {
@@ -348,12 +353,12 @@ body {
   font-weight: 700;
   color: #2e7d32;
   /* width: 100px;  // <-- прибрати */
-  width: auto;          /* дозволяємо рости */
-  min-width: 3ch;       /* мінімум (≈ “0 000”) */
-  max-width: 16ch;      /* верхня межа, за потреби змініть */
+  width: auto; /* дозволяємо рости */
+  min-width: 3ch; /* мінімум (≈ “0 000”) */
+  max-width: 16ch; /* верхня межа, за потреби змініть */
   border: none;
   background: transparent;
-  font-size: 1.0em;
+  font-size: 1em;
   box-sizing: content-box; /* щоб ширина рахувалась без padding */
 
   &:focus {
@@ -381,19 +386,12 @@ body {
   grid-template-columns: 1fr max-content max-content; /* label | value | грн */
   column-gap: 0.4ch;
   align-items: baseline;
-  justify-items: end;      /* елементи у своїх колонках праворуч */
-  text-align: initial;     /* перекриває .zakaz_narayd-sums-footer{text-align:right} */
+  justify-items: end; /* елементи у своїх колонках праворуч */
+  text-align: initial; /* перекриває .zakaz_narayd-sums-footer{text-align:right} */
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
   margin: 5px 0;
 }
-
-
-
-
-
-
-
 
 .zakaz_narayd-table-container-value {
   padding: 0 24px;
@@ -655,7 +653,6 @@ h1 {
 
 // Магія Flexbox для розташування
 .zakaz_narayd-buttons-container {
-  
   // Кнопка "Додати рядок"
   #add-row-button {
     margin-right: auto; // Відштовхує все, що праворуч, до правого краю
@@ -692,4 +689,3 @@ tr:hover .delete-row-btn {
   outline: 2px solid #000 !important;
   outline-offset: -2px;
 }
-

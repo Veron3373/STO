@@ -5,7 +5,7 @@ import {
 } from "../dodatu_inchi_bazu_danux";
 import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 import { setupDropdownKeyboard } from "./sharedAutocomplete";
-import { userAccessLevel } from "../../tablucya/users";
+import { userAccessLevel, userName } from "../../tablucya/users";
 
 let currentLoadedData: any[] = [];
 let currentConfig: {
@@ -14,6 +14,25 @@ let currentConfig: {
   deepPath?: string[];
   needsJsonParsing?: boolean;
 } | null = null;
+
+// Функція отримання даних користувача з localStorage
+const getCurrentUserFromLocalStorage = (): {
+  name: string;
+  access: string;
+} | null => {
+  try {
+    const userDataStr = localStorage.getItem("userAuthData");
+    if (!userDataStr) return null;
+    const userData = JSON.parse(userDataStr);
+    return {
+      name: userData.Name || "",
+      access: userData.Доступ || "",
+    };
+  } catch (error) {
+    console.error("Помилка отримання даних користувача з localStorage:", error);
+    return null;
+  }
+};
 
 const databaseMapping = {
   Слюсар: {
@@ -482,6 +501,11 @@ const createSlusarAdditionalInputs = async () => {
   if (document.getElementById("slusar-additional-inputs")) {
     return;
   }
+
+  // Отримуємо поточного користувача
+  const currentUser = getCurrentUserFromLocalStorage();
+  const isAdmin = currentUser?.access === "Адміністратор";
+
   const additionalInputsContainer = document.createElement("div");
   additionalInputsContainer.id = "slusar-additional-inputs";
   additionalInputsContainer.className = "slusar-additional-inputs";
@@ -492,7 +516,9 @@ const createSlusarAdditionalInputs = async () => {
     </div>
     <div class="slusar-input-group">
       <label for="slusar-access" class="label-all_other_bases">Доступ:</label>
-      <select id="slusar-access" class="input-all_other_bases">
+      <select id="slusar-access" class="input-all_other_bases" ${
+        !isAdmin ? "disabled" : ""
+      }>
         <option value="Адміністратор">Адміністратор</option>
         <option value="Приймальник">Приймальник</option>  
         <option value="Слюсар">Слюсар</option>        
@@ -503,11 +529,15 @@ const createSlusarAdditionalInputs = async () => {
     <div class="slusar-percent-container">
       <div class="slusar-input-group slusar-percent-half">
         <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
-        <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
+        <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${
+          !isAdmin ? "disabled" : ""
+        }>
       </div>
       <div class="slusar-input-group slusar-percent-half hidden-all_other_bases" id="slusar-percent-parts-wrapper">
         <label for="slusar-percent-parts" class="label-all_other_bases">Процент з запчастин:</label>
-        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50">
+        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${
+          !isAdmin ? "disabled" : ""
+        }>
       </div>
     </div>
     <div class="slusar-stats-container">
@@ -566,14 +596,61 @@ const loadDatabaseData = async (buttonText: string) => {
     const searchInput = document.getElementById(
       "search-input-all_other_bases"
     ) as HTMLInputElement;
-    if (searchInput) searchInput.value = "";
-    createSlusarAdditionalInputs();
+
+    // Отримуємо поточного користувача
+    const currentUser = getCurrentUserFromLocalStorage();
+    const isAdmin = currentUser?.access === "Адміністратор";
+
+    // Створюємо додаткові інпути
+    await createSlusarAdditionalInputs();
+
+    // Отримуємо кнопку режиму
+    const modeButton = document.getElementById(
+      "modeToggleLabel"
+    ) as HTMLButtonElement;
+
+    if (!isAdmin && currentUser?.name) {
+      // Для не-адміністраторів: блокуємо поле пошуку і заповнюємо їхнє ім'я
+      if (searchInput) {
+        searchInput.value = currentUser.name;
+        searchInput.disabled = true;
+        searchInput.style.backgroundColor = "#f0f0f0";
+        searchInput.style.cursor = "not-allowed";
+      }
+
+      // Встановлюємо кнопку в режим "Редагувати"
+      if (modeButton) {
+        modeButton.textContent = "Редагувати";
+        modeButton.style.color = "orange";
+        modeButton.disabled = true;
+        modeButton.style.cursor = "not-allowed";
+      }
+
+      // Приховуємо кнопки імпорту/експорту для не-адміністраторів
+      const importBtn = document.getElementById("import-excel-btn");
+      const exportBtn = document.getElementById("export-works-excel-btn");
+      if (importBtn) importBtn.style.display = "none";
+      if (exportBtn) exportBtn.style.display = "none";
+    } else {
+      // Для адміністраторів: звичайна поведінка
+      if (searchInput) {
+        searchInput.value = "";
+        searchInput.disabled = false;
+        searchInput.style.backgroundColor = "";
+        searchInput.style.cursor = "";
+      }
+      if (modeButton) {
+        modeButton.disabled = false;
+        modeButton.style.cursor = "pointer";
+      }
+    }
+
     updateAllBd(
       JSON.stringify(
         {
           config: config,
           table: config.table,
-          input: "",
+          input: currentUser?.name || "",
         },
         null,
         2
@@ -582,6 +659,7 @@ const loadDatabaseData = async (buttonText: string) => {
     updateTableNameDisplay(buttonText, config.table);
     const { data, error } = await supabase.from(config.table).select("*");
     if (error || !data) throw new Error(error?.message || "Дані не отримані");
+
     createCustomDropdown(
       data,
       config.field,
@@ -589,6 +667,11 @@ const loadDatabaseData = async (buttonText: string) => {
       config.deepPath,
       config.needsJsonParsing
     );
+
+    // Для не-адміністраторів автоматично завантажуємо їхні дані
+    if (!isAdmin && currentUser?.name && searchInput) {
+      await updateAllBdFromInput(currentUser.name, true);
+    }
   } catch (err) {
     console.error(`Помилка завантаження з ${buttonText}`, err);
   }
@@ -667,11 +750,37 @@ export const initYesButtonHandler = () => {
       const searchInput = document.getElementById(
         "search-input-all_other_bases"
       ) as HTMLInputElement;
+      const passwordInput = document.getElementById(
+        "slusar-password"
+      ) as HTMLInputElement;
+      const accessSelect = document.getElementById(
+        "slusar-access"
+      ) as HTMLSelectElement;
 
-      if (!searchInput || !percentInput) return;
+      if (!searchInput || !percentInput || !passwordInput || !accessSelect)
+        return;
 
       const name = searchInput.value.trim();
       const percentValue = Number(percentInput.value);
+      const password = Number(passwordInput.value);
+      const access = accessSelect.value;
+
+      // Отримуємо поточного користувача
+      const currentUser = getCurrentUserFromLocalStorage();
+      const isAdmin = currentUser?.access === "Адміністратор";
+
+      // Перевірка прав доступу для не-адміністраторів
+      if (!isAdmin) {
+        if (normalizeName(name) !== normalizeName(currentUser?.name || "")) {
+          alert(
+            `❌ Помилка! Ви можете редагувати тільки свій профіль.\nОбрано: ${name}\nВаше ім'я: ${currentUser?.name}`
+          );
+          return;
+        }
+        console.log(
+          `🔒 Не-адміністратор ${currentUser?.name} редагує свій профіль`
+        );
+      }
 
       let percentPartsValue = 50;
       if (percentPartsInput && percentPartsInput.value) {
@@ -693,7 +802,6 @@ export const initYesButtonHandler = () => {
           "Невалідне значення проценту запчастин:",
           percentPartsValue
         );
-        // Можна продовжити зі значеняям за замовчуванням або повернути помилку
         percentPartsValue = 50;
       }
 
@@ -707,35 +815,59 @@ export const initYesButtonHandler = () => {
 
         if (error || !rows) {
           console.error("Слюсар не знайдений або помилка:", error);
+          alert(
+            `❌ Помилка! Співробітник "${name}" не знайдений в базі даних.`
+          );
           return;
         }
 
         let currentData =
           typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
 
-        // Оновлюємо ПроцентРоботи та ПроцентЗапчастин
-        currentData = {
+        // Оновлюємо дані
+        const updatedData = {
           ...currentData,
+          Пароль: password,
           ПроцентРоботи: percentValue,
           ПроцентЗапчастин: percentPartsValue,
         };
 
+        // Адміністратор може змінювати доступ, не-адміністратори - ні
+        if (isAdmin) {
+          updatedData.Доступ = access;
+        }
+
         // Оновлюємо запис у базі даних
         const { error: updateError } = await supabase
           .from("slyusars")
-          .update({ data: currentData })
+          .update({ data: updatedData })
           .eq("slyusar_id", rows.slyusar_id);
 
         if (updateError) {
-          console.error("Помилка при оновленні процентів:", updateError);
+          console.error("Помилка при оновленні даних:", updateError);
+          alert("❌ Помилка при збереженні даних!");
           return;
         }
 
         console.log(
-          `Успішно оновлено проценти для ${name}: Робота=${percentValue}, Запчастини=${percentPartsValue}`
+          `✅ Успішно оновлено дані для ${name}: Робота=${percentValue}, Запчастини=${percentPartsValue}`
         );
+
+        // Якщо користувач змінив свій власний пароль, оновлюємо localStorage
+        if (normalizeName(name) === normalizeName(currentUser?.name || "")) {
+          const userDataStr = localStorage.getItem("userAuthData");
+          if (userDataStr) {
+            const userData = JSON.parse(userDataStr);
+            userData.Пароль = String(password);
+            localStorage.setItem("userAuthData", JSON.stringify(userData));
+            console.log("🔄 Пароль оновлено в localStorage");
+          }
+        }
+
+        alert(`✅ Дані успішно збережено!`);
       } catch (error) {
-        console.error("Помилка при обробці даних слюсаря:", error);
+        console.error("Помилка при обробці даних співробітника:", error);
+        alert("❌ Критична помилка при обробці даних!");
       }
     });
   }

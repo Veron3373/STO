@@ -96,7 +96,7 @@ async function shopExistsByName(name: string): Promise<boolean> {
       const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
       const nm = normalizeName(d?.Name ?? "");
       if (nm && nm === needle) return true;
-    } catch { }
+    } catch {}
   }
   return false;
 }
@@ -298,7 +298,7 @@ async function slusarExistsByName(name: string): Promise<boolean> {
       const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
       const nm = normalizeName(d?.Name ?? "");
       if (nm && nm === needle) return true;
-    } catch { }
+    } catch {}
   }
   return false;
 }
@@ -334,25 +334,6 @@ async function handleAdd(
     }
     if (tableName === "slyusars" && (await slusarExistsByName(newValue))) {
       console.log("Слюсар з таким іменем уже існує. Пропускаємо створення.");
-
-      const toast = (message: string, color: string) => {
-        const note = document.createElement("div");
-        note.textContent = message;
-        note.style.position = "fixed";
-        note.style.top = "50%";
-        note.style.left = "50%";
-        note.style.transform = "translateX(-50%)";
-        note.style.backgroundColor = color;
-        note.style.color = "white";
-        note.style.padding = "12px 24px";
-        note.style.borderRadius = "8px";
-        note.style.zIndex = "10001";
-        note.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
-        document.body.appendChild(note);
-        setTimeout(() => note.remove(), 3000);
-      };
-
-      toast(`⚠️ Слюсар "${newValue}" вже присутній в базі даних`, "#ff9800");
       return true;
     }
 
@@ -467,7 +448,9 @@ export function showSavePromptModal(): Promise<boolean> {
         if (!tableFromDraft) {
           const contragentForm = document.getElementById("contragent-form");
           if (contragentForm) {
-            console.log("🔵 Detected contragent form - setting table to 'faktura'");
+            console.log(
+              "🔵 Detected contragent form - setting table to 'faktura'"
+            );
             tableFromDraft = "faktura";
           }
         }

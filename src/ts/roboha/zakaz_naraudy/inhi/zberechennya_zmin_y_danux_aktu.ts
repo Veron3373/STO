@@ -859,9 +859,9 @@ function getClientAndCarInfo(): { pib: string; auto: string } {
 
 /**
  * Синхронізує історію акту для Приймальника
- */
-/**
- * Синхронізує історію акту для Приймальника з новою логікою розрахунку
+ * НОВА ЛОГІКА:
+ * - Якщо зберігає Приймальник → оновлюємо його історію
+ * - Якщо зберігає НЕ Приймальник → шукаємо останнього приймальника з acts.pruimalnyk і оновлюємо його історію
  */
 async function syncPruimalnikHistory(
   actId: number,
@@ -869,21 +869,48 @@ async function syncPruimalnikHistory(
   _totalDetailsSumIgnored: number,
   actDateOn: string | null = null
 ): Promise<void> {
-  // ✅ Отримуємо ПІБ приймальника з таблиці acts (стовпець pruimalnyk)
-  const { data: actData, error: actError } = await supabase
-    .from("acts")
-    .select("pruimalnyk")
-    .eq("act_id", actId)
-    .single();
+  console.log(
+    `\n🔄 syncPruimalnikHistory: Початок синхронізації для акту #${actId}`
+  );
+  console.log(
+    `👤 Поточний користувач: "${userName}" (рівень доступу: "${userAccessLevel}")`
+  );
 
-  if (actError || !actData || !actData.pruimalnyk) {
-    console.warn(
-      `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}`
+  // ✅ Визначаємо ПІБ приймальника
+  let pruimalnykName: string;
+
+  if (userAccessLevel === "Приймальник") {
+    // Якщо зберігає Приймальник - беремо його ПІБ
+    const userData = getSavedUserDataFromLocalStorage?.();
+    if (!userData || !userData.name) {
+      console.warn("⚠️ Не вдалося отримати дані Приймальника з localStorage");
+      return;
+    }
+    pruimalnykName = userData.name;
+    console.log(
+      `✅ Зберігає Приймальник "${pruimalnykName}" - оновлюємо його історію`
     );
-    return;
+  } else {
+    // Якщо зберігає НЕ Приймальник - шукаємо останнього приймальника з acts.pruimalnyk
+    const { data: actData, error: actError } = await supabase
+      .from("acts")
+      .select("pruimalnyk")
+      .eq("act_id", actId)
+      .single();
+
+    if (actError || !actData || !actData.pruimalnyk) {
+      console.warn(
+        `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}. Користувач "${userName}" НЕ Приймальник - історія НЕ оновлюється`
+      );
+      return;
+    }
+
+    pruimalnykName = actData.pruimalnyk;
+    console.log(
+      `✅ Зберігає "${userName}" (${userAccessLevel}) - оновлюємо історію приймальника "${pruimalnykName}"`
+    );
   }
 
-  const pruimalnykName = actData.pruimalnyk;
   console.log(
     `🔍 syncPruimalnikHistory: Обробка для приймальника "${pruimalnykName}" (акт #${actId})`
   );
@@ -1239,7 +1266,7 @@ async function savePruimalnykToActs(
     // ✅ Перевірка рівня доступу - записуємо ТІЛЬКИ для Приймальника
     if (userAccessLevel !== "Приймальник") {
       console.log(
-        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" - pruimalnyk не перезаписується`
+        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" - pruimalnyk НЕ перезаписується`
       );
       return;
     }
@@ -1250,15 +1277,10 @@ async function savePruimalnykToActs(
       return;
     }
 
-    const updateData: any = {};
-
-    if (isNewAct) {
-      // При створенні нового акту записуємо приймальника
-      updateData.pruimalnyk = userData.name;
-    } else {
-      // При оновленні записуємо приймальника в той же стовпець (перезаписуємо)
-      updateData.pruimalnyk = userData.name;
-    }
+    // Завжди записуємо приймальника (незалежно від isNewAct)
+    const updateData = {
+      pruimalnyk: userData.name,
+    };
 
     const { error } = await supabase
       .from("acts")

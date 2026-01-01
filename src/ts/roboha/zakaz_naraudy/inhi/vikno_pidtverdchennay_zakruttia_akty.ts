@@ -25,10 +25,10 @@ export function createViknoPidtverdchennayZakruttiaAkty(): HTMLDivElement {
       <label for="payment-type-select" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
         Тип оплати:
       </label>
-      <select id="payment-type-select" style="padding: 0.5rem 1rem; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; min-width: 200px; cursor: pointer;">
+      <select id="payment-type-select" style="padding: 0.5rem 1rem; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; min-width: 120px; cursor: pointer;">
         <option value="Готівка" selected>💵 Готівка</option>
-        <option value="IBAN">🏦 IBAN</option>
         <option value="Картка">💳 Картка</option>
+        <option value="IBAN">🏦 IBAN</option>
       </select>
     </div>
     <div class="vikno_pidtverdchennay_zakruttia_akty-buttons save-buttons">

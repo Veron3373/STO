@@ -1380,6 +1380,16 @@ export function updatevutratuDisplayedSums(): void {
     .filter((e) => e.category === "💰 Прибуток" && e.workAmount !== undefined)
     .reduce((sum, e) => sum + (e.workAmount || 0), 0);
 
+  // Рахуємо суму авансів
+  const totalAvansSum = filteredvutratuData
+    .filter(
+      (e) =>
+        e.category === "💰 Прибуток" &&
+        e.paymentMethod &&
+        Number(e.paymentMethod) > 0
+    )
+    .reduce((sum, e) => sum + Number(e.paymentMethod || 0), 0);
+
   const totalAll = positiveSum + negativeSum;
   const diffSign = totalAll >= 0 ? "+" : "";
 
@@ -1391,7 +1401,7 @@ export function updatevutratuDisplayedSums(): void {
       <span style="color: #666;">-</span>
       <span><strong style="color: #8B0000;">💶 ${formatNumber(
         negativeSum
-      )}</strong> грн</span>
+      )}</strong></span>
       <span style="color: #666;">=</span>
       <span><strong style="color: ${
         totalAll >= 0 ? "#006400" : "#8B0000"
@@ -1399,15 +1409,19 @@ export function updatevutratuDisplayedSums(): void {
       <span style="color: #666;">/</span>
       <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
         totalDetailsSum
-      )}</strong> грн</span>
+      )}</strong></span>
       <span style="color: #666;">+</span>
       <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
         totalWorkSum
-      )}</strong> грн</span>
+      )}</strong></span>
+      <span style="color: #666;">+</span>
+      <span><strong style="color: #28a745;">💰 ${formatNumber(
+        totalAvansSum
+      )}</strong></span>
       <span style="color: #666;">=</span>
       <span><strong style="color: #006400;">${formatNumber(
-        totalDetailsSum + totalWorkSum
-      )}</strong> грн</span>
+        totalDetailsSum + totalWorkSum + totalAvansSum
+      )}</strong></span>
     </div>
   `;
 }

@@ -55,31 +55,6 @@ const normalizeName = (s: string) => {
   return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
 };
 
-// Функція перевірки дублікатів слюсаря
-const checkSlusarDuplicate = async (name: string): Promise<boolean> => {
-  try {
-    const { data: rows, error } = await supabase
-      .from("slyusars")
-      .select("data");
-    if (error) {
-      console.error("Помилка перевірки існування слюсаря:", error);
-      return false;
-    }
-    const needle = normalizeName(name);
-    for (const r of rows ?? []) {
-      try {
-        const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
-        const nm = normalizeName(d?.Name ?? "");
-        if (nm && nm === needle) return true;
-      } catch {}
-    }
-    return false;
-  } catch (error) {
-    console.error("Помилка при перевірці дубліката слюсаря:", error);
-    return false;
-  }
-};
-
 // Оновлена функція updateAllBdFromInput
 const updateAllBdFromInput = async (
   inputValue: string,

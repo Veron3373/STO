@@ -22,6 +22,52 @@ export function createSavePromptModal(): HTMLDivElement {
   return overlay;
 }
 
+// Нормалізація імені для порівняння
+function normalizeName(s: string): string {
+  return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Перевірка чи існує клієнт з таким ПІБ
+async function checkClientExists(
+  fullName: string,
+  currentClientId?: string | null
+): Promise<boolean> {
+  try {
+    const { data: clients, error } = await supabase
+      .from("clients")
+      .select("client_id, data");
+
+    if (error) {
+      console.error("❌ Помилка перевірки дублів:", error);
+      return false;
+    }
+
+    const needle = normalizeName(fullName);
+    for (const client of clients ?? []) {
+      try {
+        const data =
+          typeof client.data === "string"
+            ? JSON.parse(client.data)
+            : client.data;
+        const clientName = normalizeName(data?.ПІБ ?? "");
+
+        // Якщо це той самий клієнт (редагування), пропускаємо
+        if (currentClientId && client.client_id === currentClientId) {
+          continue;
+        }
+
+        if (clientName && clientName === needle) {
+          return true;
+        }
+      } catch {}
+    }
+    return false;
+  } catch (error) {
+    console.error("❌ Помилка при перевірці існування клієнта:", error);
+    return false;
+  }
+}
+
 // Показує модальне підтвердження з обіцянкою
 export function showSavePromptModal(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -57,7 +103,23 @@ export function showSavePromptModal(): Promise<boolean> {
       setTimeout(() => note.remove(), 2500);
     };
 
-    const onConfirm = () => {
+    const onConfirm = async () => {
+      // Перевіряємо на дублі ПІБ перед збереженням
+      const values = getModalFormValues();
+
+      // Якщо додаємо нового клієнта (userConfirmation === "yes")
+      if (userConfirmation === "yes" && values.fullName) {
+        const exists = await checkClientExists(values.fullName, null);
+        if (exists) {
+          showMessage(
+            `⚠️ Клієнт "${values.fullName}" вже існує в базі`,
+            "#ffc107"
+          );
+          // Не закриваємо модальне вікно, щоб користувач міг виправити
+          return;
+        }
+      }
+
       cleanup();
       showMessage("✅ Дані успішно збережено", "#4caf50");
       resolve(true);
@@ -82,7 +144,10 @@ async function deleteCarFromDatabase(carsId: string): Promise<void> {
 }
 
 // Додає авто до клієнта
-async function addCarToDatabase(clientId: string, carData: any): Promise<string | null> {
+async function addCarToDatabase(
+  clientId: string,
+  carData: any
+): Promise<string | null> {
   const { data, error } = await supabase
     .from("cars")
     .insert({

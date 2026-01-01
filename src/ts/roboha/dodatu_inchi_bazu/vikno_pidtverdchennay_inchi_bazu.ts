@@ -84,35 +84,64 @@ function normalizeName(s: string) {
   return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-async function shopExistsByName(name: string): Promise<boolean> {
-  const { data: rows, error } = await supabase.from("shops").select("data");
-  if (error) {
-    console.error("Помилка перевірки існування магазину:", error);
+// Перевірка дублів для різних таблиць
+async function checkDuplicateExists(
+  tableName: string,
+  value: string,
+  idField?: string,
+  currentId?: any
+): Promise<boolean> {
+  try {
+    const { data: rows, error } = await supabase.from(tableName).select("*");
+    if (error) {
+      console.error(`Помилка перевірки дублів у ${tableName}:`, error);
+      return false;
+    }
+
+    const needle = normalizeName(value);
+
+    for (const row of rows ?? []) {
+      // Якщо це редагування, пропускаємо поточний запис
+      if (idField && currentId && row[idField] === currentId) {
+        continue;
+      }
+
+      // Різна логіка для різних таблиць
+      try {
+        let nameToCheck = "";
+
+        if (tableName === "shops" || tableName === "faktura") {
+          const data =
+            typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+          nameToCheck = normalizeName(data?.Name ?? "");
+        } else if (tableName === "details") {
+          nameToCheck = normalizeName(row?.data ?? "");
+        } else if (tableName === "slyusars") {
+          const data =
+            typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+          nameToCheck = normalizeName(data?.Name ?? "");
+        } else if (tableName === "robota" || tableName === "dherelo") {
+          nameToCheck = normalizeName(row?.data ?? "");
+        }
+
+        if (nameToCheck && nameToCheck === needle) {
+          return true;
+        }
+      } catch {}
+    }
+    return false;
+  } catch (error) {
+    console.error(`Помилка при перевірці дублів у ${tableName}:`, error);
     return false;
   }
-  const needle = normalizeName(name);
-  for (const r of rows ?? []) {
-    try {
-      const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
-      const nm = normalizeName(d?.Name ?? "");
-      if (nm && nm === needle) return true;
-    } catch {}
-  }
-  return false;
+}
+
+async function shopExistsByName(name: string): Promise<boolean> {
+  return checkDuplicateExists("shops", name);
 }
 
 async function detailExistsByName(name: string): Promise<boolean> {
-  const { data: rows, error } = await supabase.from("details").select("data");
-  if (error) {
-    console.error("Помилка перевірки існування деталі:", error);
-    return false;
-  }
-  const needle = normalizeName(name);
-  for (const r of rows ?? []) {
-    const nm = normalizeName(r?.data ?? "");
-    if (nm && nm === needle) return true;
-  }
-  return false;
+  return checkDuplicateExists("details", name);
 }
 
 async function performCrudOperation(): Promise<boolean> {
@@ -425,6 +454,47 @@ export function showSavePromptModal(): Promise<boolean> {
         toast("❌ Помилка: відсутня змінна CRUD", "#f44336");
         resolve(false);
         return;
+      }
+
+      // ✅ ПЕРЕВІРКА ДУБЛІВ перед збереженням
+      if (CRUD === "Додати") {
+        const inputValue = getInputValue();
+        if (inputValue) {
+          let tableFromDraft = "";
+          try {
+            if (all_bd) {
+              const parsed = JSON.parse(all_bd);
+              tableFromDraft = parsed?.table ?? "";
+            }
+          } catch (err) {
+            console.error("Error parsing all_bd:", err);
+          }
+
+          // Перевіряємо дублі для різних таблиць
+          if (tableFromDraft) {
+            const exists = await checkDuplicateExists(
+              tableFromDraft,
+              inputValue
+            );
+            if (exists) {
+              const tableNames: Record<string, string> = {
+                shops: "Магазин",
+                details: "Деталь",
+                slyusars: "Співробітник",
+                robota: "Робота",
+                faktura: "Контрагент",
+                dherelo: "Джерело",
+              };
+              const tableName = tableNames[tableFromDraft] || "Запис";
+              toast(
+                `⚠️ ${tableName} "${inputValue}" вже існує в базі`,
+                "#ffc107"
+              );
+              // Не закриваємо модальне вікно, щоб користувач міг виправити
+              return;
+            }
+          }
+        }
       }
 
       console.log("Starting CRUD operations...");

@@ -913,19 +913,6 @@ export const initYesButtonHandler = () => {
         }
       }
 
-      // Показуємо підтвердження
-      const confirmed = await createConfirmModal(
-        `Підтвердіть збереження ${
-          isAdmin
-            ? `даних для співробітника <strong>${name}</strong>`
-            : "пароля"
-        }?`
-      );
-
-      if (!confirmed) {
-        return; // Користувач натиснув "Ні"
-      }
-
       try {
         // Шукаємо запис слюсаря за ім'ям
         const { data: rows, error } = await supabase
@@ -979,8 +966,6 @@ export const initYesButtonHandler = () => {
             console.log("🔄 Пароль оновлено в localStorage");
           }
         }
-
-        await showMessageModal("✅ Дані успішно збережено!");
       } catch (error) {
         console.error("Помилка при обробці даних співробітника:", error);
       }

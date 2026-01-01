@@ -114,7 +114,7 @@ export function showViknoPidtverdchennayZakruttiaAkty(
         `;
       } else {
         // Попереджень немає — стандартний текст
-        messageEl.textContent = `Підтвердити закриття акту №${actId}?`;
+        messageEl.textContent = `Підтвердити закриття акту №${actId}`;
       }
     }
 

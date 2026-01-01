@@ -314,7 +314,29 @@ async function loadChangesForAct(actId: number): Promise<{
       return { added: [], deleted: [] };
     }
 
-    console.log(`📋 Фільтруємо зміни для приймальника: "${currentUserName}"`);
+    console.log(
+      `📋 [loadChangesForAct] Приймальник: "${currentUserName}", шукаємо зміни для акту #${actId}`
+    );
+
+    // 🔍 ДІАГНОСТИКА: Спочатку дивимось всі записи для цього акту
+    const { data: allRecords, error: diagError } = await supabase
+      .from("act_changes_notifications")
+      .select("*")
+      .eq("act_id", actId);
+
+    if (!diagError && allRecords && allRecords.length > 0) {
+      console.log(
+        `🔍 [ДІАГНОСТИКА] Всі записи для акту #${actId}:`,
+        allRecords
+      );
+      console.log(
+        `🔍 [ДІАГНОСТИКА] pruimalnyk в записах:`,
+        allRecords.map((r) => r.pruimalnyk)
+      );
+      console.log(
+        `🔍 [ДІАГНОСТИКА] Порівнюємо з currentUserName: "${currentUserName}"`
+      );
+    }
 
     const { data, error } = await supabase
       .from("act_changes_notifications")
@@ -326,6 +348,12 @@ async function loadChangesForAct(actId: number): Promise<{
       console.error("❌ Помилка завантаження змін:", error);
       throw error;
     }
+
+    console.log(
+      `📋 [loadChangesForAct] Після фільтрації знайдено ${
+        data?.length || 0
+      } записів`
+    );
 
     const changes = (data || []) as ChangeRecord[];
     const added = changes.filter((c) => c.dodav_vudaluv === true);

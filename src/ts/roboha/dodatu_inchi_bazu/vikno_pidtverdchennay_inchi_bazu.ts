@@ -546,6 +546,36 @@ export function showSavePromptModal(): Promise<boolean> {
           }
         }
 
+        // ✅ ОБРОБКА СЛЮСАРІВ (Редагування) - викликаємо saveSlusarData
+        if (CRUD === "Редагувати" && tableFromDraft === "slyusars") {
+          const { saveSlusarData } = await import("./inhi/slusar");
+          success = await saveSlusarData();
+
+          cleanup();
+
+          if (success) {
+            showNotification("Дані успішно оновлено", "success");
+            resetShopState();
+            resetDetailState();
+            await clearInputAndReloadData();
+            document.dispatchEvent(new CustomEvent("other-base-data-updated"));
+
+            // Очищуємо інпут пароля
+            const passwordInput = document.getElementById(
+              "save-password-input"
+            ) as HTMLInputElement;
+            if (passwordInput) {
+              passwordInput.value = "";
+            }
+
+            resolve(true);
+          } else {
+            showNotification("Помилка при оновленні даних", "error");
+            resolve(false);
+          }
+          return;
+        }
+
         // ✅ КРОК 2: Якщо таблиця невідома, намагаємося визначити з форми
         if (!tableFromDraft) {
           const contragentForm = document.getElementById("contragent-form");

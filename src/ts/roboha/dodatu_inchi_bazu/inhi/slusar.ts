@@ -709,139 +709,140 @@ export const handleSlusarClick = async () => {
   await loadDatabaseData("Слюсар");
 };
 
-// Додаємо обробник для кнопки "Ок"
+// Додаємо обробник для кнопки "Ок" - ТІЛЬКИ ПОКАЗУЄ МОДАЛЬНЕ ВІКНО
 export const initYesButtonHandler = () => {
-  const yesButton = document.querySelector(
-    ".yes-button-all_other_bases"
-  ) as HTMLButtonElement;
-  if (yesButton) {
-    yesButton.addEventListener("click", async () => {
-      const percentInput = document.getElementById(
-        "slusar-percent"
-      ) as HTMLInputElement;
-      const percentPartsInput = document.getElementById(
-        "slusar-percent-parts"
-      ) as HTMLInputElement;
-      const searchInput = document.getElementById(
-        "search-input-all_other_bases"
-      ) as HTMLInputElement;
-      const passwordInput = document.getElementById(
-        "slusar-password"
-      ) as HTMLInputElement;
-      const accessSelect = document.getElementById(
-        "slusar-access"
-      ) as HTMLSelectElement;
-
-      if (!searchInput || !percentInput || !passwordInput || !accessSelect)
-        return;
-
-      const name = searchInput.value.trim();
-      const percentValue = Number(percentInput.value);
-      const password = Number(passwordInput.value);
-      const access = accessSelect.value;
-
-      // Отримуємо поточного користувача
-      const currentUser = getCurrentUserFromLocalStorage();
-      const isAdmin = currentUser?.access === "Адміністратор";
-
-      // Перевірка прав доступу для не-адміністраторів
-      if (!isAdmin) {
-        if (normalizeName(name) !== normalizeName(currentUser?.name || "")) {
-          console.error(`Спроба редагувати іншого користувача: ${name}`);
-          return;
-        }
-      }
-
-      // Валідація відсотка
-      if (isNaN(percentValue) || percentValue < 0 || percentValue > 100) {
-        console.error("Невалідне значення проценту роботи:", percentValue);
-        return;
-      }
-
-      let percentPartsValue = 50;
-      if (percentPartsInput && percentPartsInput.value) {
-        percentPartsValue = Number(percentPartsInput.value);
-        if (
-          isNaN(percentPartsValue) ||
-          percentPartsValue < 0 ||
-          percentPartsValue > 100
-        ) {
-          console.error(
-            "Невалідне значення проценту запчастин:",
-            percentPartsValue
-          );
-          percentPartsValue = 50;
-        }
-      }
-
-      try {
-        // Шукаємо запис слюсаря за ім'ям
-        const { data: rows, error } = await supabase
-          .from("slyusars")
-          .select("*")
-          .eq("data->>Name", name)
-          .single();
-
-        if (error || !rows) {
-          console.error("Слюсар не знайдений або помилка:", error);
-          return;
-        }
-
-        let currentData =
-          typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
-
-        // Оновлюємо дані
-        const updatedData = {
-          ...currentData,
-          Пароль: password, // Всі можуть змінювати пароль
-        };
-
-        // Адміністратор може змінювати ВСІ поля
-        if (isAdmin) {
-          updatedData.Доступ = access;
-          updatedData.ПроцентРоботи = percentValue;
-          updatedData.ПроцентЗапчастин = percentPartsValue;
-        }
-        // Не-адміністратори можуть змінювати ТІЛЬКИ пароль
-
-        // Оновлюємо запис у базі даних
-        const { error: updateError } = await supabase
-          .from("slyusars")
-          .update({ data: updatedData })
-          .eq("slyusar_id", rows.slyusar_id);
-
-        if (updateError) {
-          console.error("Помилка при оновленні даних:", updateError);
-          return;
-        }
-
-        console.log(`✅ Успішно оновлено дані для ${name}`);
-
-        // Якщо користувач змінив свій власний пароль, оновлюємо localStorage
-        if (normalizeName(name) === normalizeName(currentUser?.name || "")) {
-          const userDataStr = localStorage.getItem("userAuthData");
-          if (userDataStr) {
-            const userData = JSON.parse(userDataStr);
-            userData.Пароль = String(password);
-            localStorage.setItem("userAuthData", JSON.stringify(userData));
-            console.log("🔄 Пароль оновлено в localStorage");
-          }
-        }
-      } catch (error) {
-        console.error("Помилка при обробці даних співробітника:", error);
-      }
-    });
-  }
+  // Обробник прибрано - збереження тепер тільки через модальне вікно з перевіркою пароля
 };
 
 export const initSlusar = () => {
   console.log("Ініціалізовано модуль слюсаря");
-  initYesButtonHandler(); // Ініціалізуємо обробник кнопки "Ок"
+  initYesButtonHandler();
   document.addEventListener("table-changed", (event: any) => {
     if (event.detail?.table !== "slyusars") {
       removeSlusarAdditionalInputs();
     }
   });
+};
+
+// Функція збереження даних слюсаря (викликається з модального вікна після перевірки пароля)
+export const saveSlusarData = async (): Promise<boolean> => {
+  const percentInput = document.getElementById(
+    "slusar-percent"
+  ) as HTMLInputElement;
+  const percentPartsInput = document.getElementById(
+    "slusar-percent-parts"
+  ) as HTMLInputElement;
+  const searchInput = document.getElementById(
+    "search-input-all_other_bases"
+  ) as HTMLInputElement;
+  const passwordInput = document.getElementById(
+    "slusar-password"
+  ) as HTMLInputElement;
+  const accessSelect = document.getElementById(
+    "slusar-access"
+  ) as HTMLSelectElement;
+
+  if (!searchInput || !percentInput || !passwordInput || !accessSelect)
+    return false;
+
+  const name = searchInput.value.trim();
+  const percentValue = Number(percentInput.value);
+  const password = Number(passwordInput.value);
+  const access = accessSelect.value;
+
+  // Отримуємо поточного користувача
+  const currentUser = getCurrentUserFromLocalStorage();
+  const isAdmin = currentUser?.access === "Адміністратор";
+
+  // Перевірка прав доступу для не-адміністраторів
+  if (!isAdmin) {
+    if (normalizeName(name) !== normalizeName(currentUser?.name || "")) {
+      console.error(`Спроба редагувати іншого користувача: ${name}`);
+      return false;
+    }
+  }
+
+  // Валідація відсотка
+  if (isNaN(percentValue) || percentValue < 0 || percentValue > 100) {
+    console.error("Невалідне значення проценту роботи:", percentValue);
+    return false;
+  }
+
+  let percentPartsValue = 50;
+  if (percentPartsInput && percentPartsInput.value) {
+    percentPartsValue = Number(percentPartsInput.value);
+    if (
+      isNaN(percentPartsValue) ||
+      percentPartsValue < 0 ||
+      percentPartsValue > 100
+    ) {
+      console.error(
+        "Невалідне значення проценту запчастин:",
+        percentPartsValue
+      );
+      percentPartsValue = 50;
+    }
+  }
+
+  try {
+    // Шукаємо запис слюсаря за ім'ям
+    const { data: rows, error } = await supabase
+      .from("slyusars")
+      .select("*")
+      .eq("data->>Name", name)
+      .single();
+
+    if (error || !rows) {
+      console.error("Слюсар не знайдений або помилка:", error);
+      return false;
+    }
+
+    let currentData =
+      typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
+
+    // Оновлюємо дані
+    const updatedData = {
+      ...currentData,
+      Пароль: password, // Всі можуть змінювати пароль
+    };
+
+    // Адміністратор може змінювати ВСІ поля
+    if (isAdmin) {
+      updatedData.Доступ = access;
+      updatedData.ПроцентРоботи = percentValue;
+      updatedData.ПроцентЗапчастин = percentPartsValue;
+    }
+    // Не-адміністратори можуть змінювати ТІЛЬКИ пароль
+
+    // Оновлюємо запис у базі даних
+    const { error: updateError } = await supabase
+      .from("slyusars")
+      .update({ data: updatedData })
+      .eq("slyusar_id", rows.slyusar_id);
+
+    if (updateError) {
+      console.error("Помилка при оновленні даних:", updateError);
+      return false;
+    }
+
+    console.log(`✅ Успішно оновлено дані для ${name}`);
+
+    // Якщо користувач змінив свій власний пароль, оновлюємо localStorage
+    if (normalizeName(name) === normalizeName(currentUser?.name || "")) {
+      const userDataStr = localStorage.getItem("userAuthData");
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        userData.Пароль = String(password);
+        localStorage.setItem("userAuthData", JSON.stringify(userData));
+        console.log("🔄 Пароль оновлено в localStorage");
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Помилка при обробці даних співробітника:", error);
+    return false;
+  }
 };
 
 export { removeSlusarAdditionalInputs };

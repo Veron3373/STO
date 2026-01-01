@@ -1165,7 +1165,7 @@ export function updatevutratuTable(): void {
           <button class="Bukhhalter-payment-btn unpaid" 
                   onclick="event.stopPropagation(); toggleActPayment(${index})" 
                   title="Провести розрахунок">
-            💲 Не розраховано
+            💲 Сумма в касі
           </button>
         `;
       }

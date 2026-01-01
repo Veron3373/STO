@@ -1067,7 +1067,7 @@ function updateDetailsTotalSumDisplay(
 
     totalSumElement.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
-        <span>Сумма <strong style="color: #333;">💰 ${formatNumber(
+        <span>Сума <strong style="color: #333;">💰 ${formatNumber(
           saleTotal
         )}</strong> грн</span>
         <span style="color: #666;">-</span>

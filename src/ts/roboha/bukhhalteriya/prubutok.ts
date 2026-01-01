@@ -476,7 +476,7 @@ async function loadReceipterSalaries(): Promise<void> {
               // Додаткове логування для дебагу
               if (actId === 34) {
                 console.log(
-                  `🔍 [DEBUG] Акт 34: СуммаРоботи=${record.СуммаРоботи}, ЗарплатаРоботи=${salaryWork}, СуммаЗапчастин=${record.СуммаЗапчастин}, ЗарплатаЗапчастин=${salaryParts}`
+                  `🔍 [DEBUG] Акт 34: СумаРоботи=${record.СуммаРоботи}, ЗарплатаРоботи=${salaryWork}, СумаЗапчастин=${record.СуммаЗапчастин}, ЗарплатаЗапчастин=${salaryParts}`
                 );
               }
             }
@@ -1181,7 +1181,7 @@ export function updatevutratuTable(): void {
           <button class="Bukhhalter-payment-btn unpaid" 
                   onclick="event.stopPropagation(); toggleActPayment(${index})" 
                   title="Провести розрахунок">
-            💲 Сумма в касі
+            💲 Сума в касі
           </button>
         `;
       }
@@ -1439,7 +1439,7 @@ export function updatevutratuDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <span>Сумма <strong style="color: #070707ff;">💰 ${formatNumber(
+        <span>Сума <strong style="color: #070707ff;">💰 ${formatNumber(
           positiveSum
         )}</strong> грн</span>
         <span style="color: #666;">-</span>

@@ -949,7 +949,7 @@ export function updatePodlegleDisplayedSums(): void {
 
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
-      <span>Сумма <strong style="color: #333;">💰 ${formatNumber(
+      <span>Сума <strong style="color: #333;">💰 ${formatNumber(
         totalRevenue
       )}</strong> грн</span>
       <span style="color: #666;">-</span>

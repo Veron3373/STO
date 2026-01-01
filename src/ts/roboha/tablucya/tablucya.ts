@@ -733,7 +733,7 @@ function createTableHeader(
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   const headers = ["№ акту", "Дата", "Клієнт 🔽", "Автомобіль"];
-  if (accessLevel !== "Слюсар") headers.push("Сумма");
+  if (accessLevel !== "Слюсар") headers.push("Сума");
   headers.forEach((header) => {
     const th = document.createElement("th");
     th.textContent = header;

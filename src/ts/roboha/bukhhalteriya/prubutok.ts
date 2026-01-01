@@ -23,6 +23,8 @@ interface ExpenseRecordLocal {
   clientId?: number;
   carId?: number;
   xto_rozraxuvav?: string;
+  fullAmount?: number; // Повна сума з акту
+  tupOplatu?: string; // Тип оплати
 }
 
 type ExpenseMode = "add" | "edit" | "delete";
@@ -383,6 +385,8 @@ function setSaveButtonLoading(isLoading: boolean): void {
 interface ActData {
   "Прибуток за деталі"?: number;
   "Прибуток за роботу"?: number;
+  "За деталі"?: number; // Повна сума за деталі
+  "За роботу"?: number; // Повна сума за роботу
   client_id?: number;
   cars_id?: number;
   Деталі?: Array<{
@@ -732,7 +736,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
     let queryActs = supabase
       .from("acts")
       .select(
-        "act_id,date_on,date_off,rosraxovano,data,xto_rozraxuvav,client_id,cars_id,avans"
+        "act_id,date_on,date_off,rosraxovano,data,xto_rozraxuvav,client_id,cars_id,avans,tupOplatu"
       );
 
     // Застосовуємо фільтр по датах залежно від режиму
@@ -823,6 +827,11 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const carInfo =
           includeCarInNotes && carId ? await getCarData(carId) : "-";
 
+        // Отримуємо повну суму з акту (без вирахувань)
+        const fullDetailsAmount = Number(actData["За деталі"]) || 0;
+        const fullWorkAmount = Number(actData["За роботу"]) || 0;
+        const fullAmount = fullDetailsAmount + fullWorkAmount;
+
         vutratuData.push({
           id: actItem.act_id * -1,
           date: getKyivDate(actItem.date_on) || actItem.date_on,
@@ -841,6 +850,8 @@ async function loadvutratuFromDatabase(): Promise<void> {
           clientId: clientId,
           carId: carId,
           xto_rozraxuvav: actItem.xto_rozraxuvav || undefined,
+          fullAmount: fullAmount,
+          tupOplatu: actItem.tupOplatu || undefined,
         });
       }
     }
@@ -1109,7 +1120,7 @@ export function updatevutratuTable(): void {
 
   if (filteredvutratuData.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="10" class="Bukhhalter-no-data">Немає витрат для відображення</td></tr>';
+      '<tr><td colspan="11" class="Bukhhalter-no-data">Немає витрат для відображення</td></tr>';
     updatevutratuDisplayedSums();
     return;
   }
@@ -1270,10 +1281,30 @@ export function updatevutratuTable(): void {
       )}</span>`;
     }
 
+    // � Сума в касі - показуємо повну суму з акту без вирахувань
+    const fullAmountCell = row.insertCell();
+
+    if (isFromAct && expense.fullAmount !== undefined) {
+      fullAmountCell.innerHTML = `
+        <span style="color: #006400; font-size: 0.95em; font-weight: 500;">
+          ${formatNumber(expense.fullAmount)} грн
+        </span>
+      `;
+    } else {
+      fullAmountCell.textContent = "-";
+    }
+
     // 💳 Спосіб оплати
     const methodCell = row.insertCell();
 
-    if (
+    if (isFromAct && expense.tupOplatu) {
+      // Для актів - відображаємо тип оплати з tupOplatu
+      methodCell.innerHTML = `
+        <span style="font-size: 0.95em;">
+          ${expense.tupOplatu}
+        </span>
+      `;
+    } else if (
       isFromAct &&
       expense.paymentMethod &&
       Number(expense.paymentMethod) > 0
@@ -1285,7 +1316,7 @@ export function updatevutratuTable(): void {
         </span>
       `;
     } else if (isFromAct) {
-      // Для актів без авансу
+      // Для актів без авансу та без типу оплати
       methodCell.textContent = "-";
     } else {
       // Для витрат - показуємо спосіб оплати
@@ -1338,6 +1369,17 @@ export function updatevutratuDisplayedSums(): void {
     .filter((e) => e.amount < 0)
     .reduce((sum, e) => sum + e.amount, 0);
 
+  // Рахуємо суми за деталі та роботу тільки для актів
+  const totalDetailsSum = filteredvutratuData
+    .filter(
+      (e) => e.category === "💰 Прибуток" && e.detailsAmount !== undefined
+    )
+    .reduce((sum, e) => sum + (e.detailsAmount || 0), 0);
+
+  const totalWorkSum = filteredvutratuData
+    .filter((e) => e.category === "💰 Прибуток" && e.workAmount !== undefined)
+    .reduce((sum, e) => sum + (e.workAmount || 0), 0);
+
   const totalAll = positiveSum + negativeSum;
   const diffSign = totalAll >= 0 ? "+" : "";
 
@@ -1354,6 +1396,18 @@ export function updatevutratuDisplayedSums(): void {
       <span><strong style="color: ${
         totalAll >= 0 ? "#006400" : "#8B0000"
       };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
+      <span style="color: #666;">/</span>
+      <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
+        totalDetailsSum
+      )}</strong> грн</span>
+      <span style="color: #666;">+</span>
+      <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
+        totalWorkSum
+      )}</strong> грн</span>
+      <span style="color: #666;">=</span>
+      <span><strong style="color: #006400;">${formatNumber(
+        totalDetailsSum + totalWorkSum
+      )}</strong> грн</span>
     </div>
   `;
 }

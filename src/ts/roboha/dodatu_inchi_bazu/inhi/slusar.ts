@@ -67,10 +67,7 @@ const createConfirmModal = (message: string): Promise<boolean> => {
 };
 
 // Функція показу повідомлення (без підтвердження)
-const showMessageModal = (
-  message: string,
-  isError: boolean = false
-): Promise<void> => {
+const showMessageModal = (message: string): Promise<void> => {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.style.cssText = `

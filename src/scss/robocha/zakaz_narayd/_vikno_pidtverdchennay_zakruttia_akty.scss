@@ -112,6 +112,7 @@
           cursor: pointer;
           background-color: white;
           transition: border-color 0.2s ease;
+          letter-spacing: 3px;
 
           &:hover {
             border-color: #4caf50;
@@ -125,6 +126,7 @@
 
           option {
             padding: 0.5rem;
+            letter-spacing: 3px;
           }
         }
       }

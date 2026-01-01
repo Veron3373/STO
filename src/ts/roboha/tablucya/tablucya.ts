@@ -229,6 +229,78 @@ function subscribeToActNotifications() {
       }
     )
     .subscribe();
+
+  // 📢 ПІДПИСКА НА ПОВІДОМЛЕННЯ ПРО ЗАВЕРШЕННЯ РОБІТ СЛЮСАРЕМ
+  subscribeToSlusarNotifications();
+}
+
+/**
+ * 📢 Підписка на нові повідомлення про завершення робіт Слюсарем (slusarsOn)
+ * Оновлює жовте фарбування рядків в реальному часі
+ */
+function subscribeToSlusarNotifications() {
+  // ✅ Підписка тільки для Адміністратора та Приймальника
+  if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
+    return;
+
+  console.log(
+    `📡 Підключення до Realtime повідомлень про завершення робіт (${userAccessLevel})...`
+  );
+
+  const userData = getSavedUserDataFromLocalStorage?.();
+  const currentUserName = userData?.name;
+
+  supabase
+    .channel("slusar-notifications-channel")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "slusar_complete_notifications",
+      },
+      (payload) => {
+        console.log(
+          "📡 [Realtime INSERT] Отримано нове повідомлення про завершення:",
+          payload.new
+        );
+        const newNotification = payload.new;
+
+        if (newNotification && newNotification.act_id) {
+          // ✅ ФІЛЬТРАЦІЯ ДЛЯ ПРИЙМАЛЬНИКА
+          if (userAccessLevel === "Приймальник") {
+            const notificationPruimalnyk = newNotification.pruimalnyk;
+
+            if (notificationPruimalnyk !== currentUserName) {
+              console.log(
+                `⏭️ Повідомлення не для поточного приймальника (${currentUserName} != ${notificationPruimalnyk})`
+              );
+              return;
+            }
+            console.log(
+              `✅ Повідомлення для поточного приймальника: ${currentUserName}`
+            );
+          }
+
+          const actId = Number(newNotification.act_id);
+
+          // 🔄 ОНОВЛЕННЯ ТАБЛИЦІ (перезавантаження для оновлення жовтого фарбування)
+          console.log(`🔄 Оновлення таблиці для акту #${actId}...`);
+          refreshActsTable();
+
+          // 📢 Показуємо сповіщення користувачу
+          const message = `✅ Слюсар ${newNotification.completed_by_surname} завершив роботи в акті №${newNotification.act_number}`;
+
+          // Перевіряємо чи є функція showNotification (якщо імпортована)
+          if (typeof (window as any).showNotification === "function") {
+            (window as any).showNotification(message, "success", 5000);
+          } else {
+            console.log(message);
+          }
+        }
+      }
+    )
+    .subscribe();
 }
 
 /**

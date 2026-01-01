@@ -18,6 +18,10 @@ import {
   canSlusarCompleteTasks,
 } from "../../tablucya/users";
 import { showSlusarConfirm } from "./vikno_slusar_confirm";
+import {
+  recordSlusarCompletion,
+  hideSlusarNotificationsForAct,
+} from "./slusar_notification_tracker";
 
 // Імпортуємо функцію показу модального вікна
 import { showModal } from "../modalMain";
@@ -730,21 +734,23 @@ export function initStatusLockDelegation(): void {
           return;
         }
 
-        // Отримання поточного стану slusarsOn
+        // Отримання поточного стану slusarsOn та даних акту
         const { data: actData, error: actFetchError } = await supabase
           .from("acts")
-          .select("slusarsOn")
+          .select("slusarsOn, act_number, pruimalnyk")
           .eq("act_id", actId)
           .single();
 
         if (actFetchError) {
-          console.error("Помилка отримання slusarsOn:", actFetchError);
+          console.error("Помилка отримання даних акту:", actFetchError);
           showNotification("Помилка перевірки стану акту", "error");
           btn.disabled = false;
           return;
         }
 
         const currentSlusarsOn = actData?.slusarsOn === true;
+        const actNumber = actData?.act_number || String(actId);
+        const pruimalnyk = actData?.pruimalnyk;
 
         // 🎨 КРАСИВЕ МОДАЛЬНЕ ВІКНО ЗАМІСТЬ window.confirm()
         let confirmed = false;
@@ -774,6 +780,29 @@ export function initStatusLockDelegation(): void {
           showNotification("Помилка збереження", "error");
           btn.disabled = false;
           return;
+        }
+
+        // 📢 СТВОРЕННЯ PUSH-ПОВІДОМЛЕННЯ ДЛЯ АДМІНІСТРАТОРІВ ТА ПРИЙМАЛЬНИКА
+        try {
+          const userData = getSavedUserDataFromLocalStorage?.();
+          const userSurname = userData?.surname || "Невідомий";
+          const userFullName = userData?.name || undefined;
+
+          await recordSlusarCompletion(
+            actId,
+            actNumber,
+            newSlusarsOn,
+            userSurname,
+            userFullName,
+            pruimalnyk
+          );
+          console.log(`✅ Push-повідомлення створено для акту #${actId}`);
+        } catch (notifError) {
+          console.error(
+            "⚠️ Помилка створення повідомлення (не критично):",
+            notifError
+          );
+          // Не блокуємо операцію, якщо повідомлення не створилось
         }
 
         // Оновлення UI
@@ -981,6 +1010,19 @@ export function initStatusLockDelegation(): void {
           .eq("act_id", actId);
         if (actError)
           throw new Error("Не вдалося закрити акт: " + actError.message);
+
+        // 🗑️ ПРИХОВУВАННЯ PUSH-ПОВІДОМЛЕНЬ ПРО slusarsOn ПРИ ЗАКРИТТІ АКТУ
+        try {
+          await hideSlusarNotificationsForAct(actId);
+          console.log(
+            `✅ Повідомлення про завершення робіт приховано для акту #${actId}`
+          );
+        } catch (hideError) {
+          console.error(
+            "⚠️ Помилка приховування повідомлень (не критично):",
+            hideError
+          );
+        }
 
         // Используем то же время, что и для записи в БД, чтобы избежать рассинхрона
         const { date_on } = await fetchActDates(actId);

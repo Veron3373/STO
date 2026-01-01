@@ -474,6 +474,9 @@ export async function showModal(actId: number): Promise<void> {
     // 🔽 Перевірка прав на кнопку "Додати рядок" - тепер це робиться при рендері
     // await toggleAddRowButtonVisibility();
 
+    // 📢 ПІДПИСКА НА ЗМІНИ slusarsOn В РЕАЛЬНОМУ ЧАСІ (ОНОВЛЕННЯ ЗАГОЛОВКА)
+    setupSlusarsOnRealtimeSubscription(actId);
+
     showNotification("Дані успішно завантажено", "success", 1500);
   } catch (error) {
     console.error("💥 Критична помилка при завантаженні акту:", error);
@@ -1323,4 +1326,92 @@ function togglePriceColumnsVisibility(show: boolean): void {
   priceCells.forEach((el) => {
     el.style.display = displayValue;
   });
+}
+
+// ============================================================================
+// 📢 REALTIME ПІДПИСКА НА ЗМІНИ slusarsOn (ОНОВЛЕННЯ ЗАГОЛОВКА)
+// ============================================================================
+
+let slusarsOnSubscription: ReturnType<typeof supabase.channel> | null = null;
+
+/**
+ * Підписується на зміни slusarsOn для конкретного акту
+ * Оновлює жовте фарбування заголовка модального вікна в реальному часі
+ */
+function setupSlusarsOnRealtimeSubscription(actId: number): void {
+  // Очищаємо попередню підписку, якщо є
+  if (slusarsOnSubscription) {
+    slusarsOnSubscription.unsubscribe();
+    slusarsOnSubscription = null;
+  }
+
+  // Підписка тільки для Адміністратора, Слюсаря та Приймальника
+  if (
+    userAccessLevel !== "Адміністратор" &&
+    userAccessLevel !== "Слюсар" &&
+    userAccessLevel !== "Приймальник"
+  ) {
+    return;
+  }
+
+  console.log(
+    `📡 Підписка на зміни slusarsOn для акту #${actId} (${userAccessLevel})`
+  );
+
+  slusarsOnSubscription = supabase
+    .channel(`slusarsOn-act-${actId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "acts",
+        filter: `act_id=eq.${actId}`,
+      },
+      async (payload) => {
+        console.log("📡 [Realtime UPDATE] Зміна slusarsOn:", payload.new);
+
+        const updatedAct = payload.new;
+        if (!updatedAct) return;
+
+        const newSlusarsOn = updatedAct.slusarsOn === true;
+        const isClosed = !!updatedAct.date_off;
+
+        // Оновлюємо заголовок
+        const header = document.querySelector(".zakaz_narayd-header");
+        if (header) {
+          // Перевірка видимості (як в коді рендерингу)
+          const shouldShowSlusarsOn =
+            newSlusarsOn &&
+            !isClosed &&
+            (userAccessLevel === "Адміністратор" ||
+              userAccessLevel === "Слюсар" ||
+              (userAccessLevel === "Приймальник" &&
+                updatedAct.pruimalnyk === currentUserName));
+
+          if (shouldShowSlusarsOn) {
+            header.classList.add("zakaz_narayd-header-slusar-on");
+            console.log("✅ Заголовок пофарбовано в золотий (slusarsOn=true)");
+          } else {
+            header.classList.remove("zakaz_narayd-header-slusar-on");
+            console.log(
+              "✅ Золоте фарбування заголовка знято (slusarsOn=false)"
+            );
+          }
+        }
+      }
+    )
+    .subscribe();
+}
+
+/**
+ * Очищає підписку на slusarsOn при закритті модального вікна
+ * Викликається в modalUI.ts при закритті модалки
+ */
+export function cleanupSlusarsOnSubscription(): void {
+  if (slusarsOnSubscription) {
+    console.log("🧹 Очищення підписки на slusarsOn");
+    slusarsOnSubscription.unsubscribe();
+    slusarsOnSubscription = null;
+  }
 }

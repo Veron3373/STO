@@ -15,6 +15,7 @@ import {
 } from "./inhi/kastomna_tabluca";
 import { userAccessLevel, canUserAddRowToAct } from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
+import { cleanupSlusarsOnSubscription } from "./modalMain";
 
 function showNotification(message: string, type: string): void {
   console.log(`[${type}] ${message}`);
@@ -941,6 +942,8 @@ export function createModal(): void {
     console.log(
       "🗑️ Очищено приймальника з localStorage при закритті модального вікна"
     );
+    // 🧹 Очищуємо Realtime підписку на slusarsOn
+    cleanupSlusarsOnSubscription();
   });
 }
 

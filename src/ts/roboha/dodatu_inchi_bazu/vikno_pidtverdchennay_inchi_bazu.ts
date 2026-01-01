@@ -457,6 +457,27 @@ export function showSavePromptModal(): Promise<boolean> {
           console.error("Error parsing all_bd:", err);
         }
 
+        // ✅ ПЕРЕВІРКА НА ДУБЛІ СПІВРОБІТНИКІВ при додаванні
+        if (CRUD === "Додати" && tableFromDraft === "slyusars") {
+          const searchInput = document.getElementById(
+            "search-input-all_other_bases"
+          ) as HTMLInputElement;
+          const name = searchInput?.value?.trim();
+
+          if (name) {
+            const { checkEmployeeExists } = await import("./inhi/slusar");
+            const exists = await checkEmployeeExists(name);
+            if (exists) {
+              showNotification(
+                `Співробітник "${name}" вже існує в базі даних`,
+                "warning"
+              );
+              // Не закриваємо модальне вікно
+              return;
+            }
+          }
+        }
+
         // ✅ КРОК 2: Якщо таблиця невідома, намагаємося визначити з форми
         if (!tableFromDraft) {
           const contragentForm = document.getElementById("contragent-form");

@@ -57,7 +57,7 @@ const normalizeName = (s: string) => {
 };
 
 // Функція перевірки чи існує співробітник з таким іменем
-const checkEmployeeExists = async (name: string): Promise<boolean> => {
+export const checkEmployeeExists = async (name: string): Promise<boolean> => {
   try {
     const { data: rows, error } = await supabase
       .from("slyusars")
@@ -744,18 +744,6 @@ export const initYesButtonHandler = () => {
       const password = Number(passwordInput.value);
       const access = accessSelect.value;
       const isAddMode = modeButton?.textContent?.trim() === "Додати";
-
-      // Перевірка чи існує співробітник при додаванні
-      if (isAddMode) {
-        const exists = await checkEmployeeExists(name);
-        if (exists) {
-          showNotification(
-            `Співробітник "${name}" вже існує в базі даних`,
-            "warning"
-          );
-          return; // Не очищаємо поля, не додаємо
-        }
-      }
 
       // Отримуємо поточного користувача
       const currentUser = getCurrentUserFromLocalStorage();

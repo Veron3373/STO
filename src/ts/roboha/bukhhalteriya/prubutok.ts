@@ -1410,7 +1410,7 @@ export function updatevutratuDisplayedSums(): void {
     .filter((e) => e.amount < 0)
     .reduce((sum, e) => sum + e.amount, 0);
 
-  // Рахуємо суми за деталі та роботу тільки для актів
+  // Рахуємо суми за деталі та роботу тільки для актів (чистий прибуток)
   const totalDetailsSum = filteredvutratuData
     .filter(
       (e) => e.category === "💰 Прибуток" && e.detailsAmount !== undefined
@@ -1431,30 +1431,57 @@ export function updatevutratuDisplayedSums(): void {
     )
     .reduce((sum, e) => sum + Number(e.paymentMethod || 0), 0);
 
-  // Загальна сума = прибуток + витрати
-  const totalAll = positiveSum + negativeSum;
-  const diffSign = totalAll >= 0 ? "+" : "";
+  // Рахуємо повні суми для каси (fullAmount розбито на деталі та роботи)
+  const totalFullDetailsSum = filteredvutratuData
+    .filter((e) => e.category === "💰 Прибуток" && e.fullAmount !== undefined)
+    .reduce((sum, e) => {
+      const actData = e as any;
+      return sum + (Number(actData.fullDetailsAmount) || 0);
+    }, 0);
 
-  // Рахуємо підсумок після авансу (деталі + роботи + аванс - витрати)
-  const finalSum = totalDetailsSum + totalWorkSum + totalAvansSum + negativeSum;
+  const totalFullWorkSum = filteredvutratuData
+    .filter((e) => e.category === "💰 Прибуток" && e.fullAmount !== undefined)
+    .reduce((sum, e) => {
+      const actData = e as any;
+      return sum + (Number(actData.fullWorkAmount) || 0);
+    }, 0);
+
+  // Рахуємо підсумок після авансу (деталі + роботи + аванс - витрати) - для Каси
+  const finalSumCasa =
+    totalFullDetailsSum + totalFullWorkSum + totalAvansSum + negativeSum;
+
+  // Загальна сума прибутку (стовпець Прибуток) + витрати
+  const totalAll = positiveSum + negativeSum;
+  const finalSumProfit =
+    totalDetailsSum + totalWorkSum + totalAvansSum + negativeSum;
+  const diffSign = totalAll >= 0 ? "+" : "";
 
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <span>Прибуток <strong style="color: #070707ff;">💰 ${formatNumber(
-          positiveSum
-        )}</strong> грн</span>
+        <span>Каса</span>
+        <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
+          totalFullDetailsSum
+        )}</strong></span>
+        <span style="color: #666;">+</span>
+        <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
+          totalFullWorkSum
+        )}</strong></span>
+        <span style="color: #666;">+</span>
+        <span><strong style="color: #000;">💰 ${formatNumber(
+          totalAvansSum
+        )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
           Math.abs(negativeSum)
         )}</strong></span>
         <span style="color: #666;">=</span>
         <span><strong style="color: ${
-          totalAll >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${diffSign}${formatNumber(totalAll)}</strong> грн</span>
+          finalSumCasa >= 0 ? "#006400" : "#8B0000"
+        };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <span>Каса</span>
+        <span>Прибуток</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
           totalDetailsSum
         )}</strong></span>
@@ -1472,8 +1499,8 @@ export function updatevutratuDisplayedSums(): void {
         )}</strong></span>
         <span style="color: #666;">=</span>
         <span><strong style="color: ${
-          finalSum >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${formatNumber(finalSum)}</strong> грн</span>
+          finalSumProfit >= 0 ? "#006400" : "#8B0000"
+        };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
       </div>
     </div>
   `;

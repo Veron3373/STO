@@ -129,19 +129,9 @@ export async function loadUnseenNotifications(): Promise<
 
     // ✅ Для Приймальника - фільтруємо по pruimalnyk
     if (userAccessLevel === "Приймальник") {
-      // Отримуємо ПІБ поточного користувача з localStorage
-      const userDataKey = "userAuthData";
-      const storedData = localStorage.getItem(userDataKey);
-      let currentUserName: string | null = null;
-
-      if (storedData) {
-        try {
-          const userData = JSON.parse(storedData);
-          currentUserName = userData?.Name || null;
-        } catch (e) {
-          console.error("❌ Помилка парсингу localStorage:", e);
-        }
-      }
+      // Отримуємо ПІБ поточного користувача через функцію
+      const userData = getSavedUserDataFromLocalStorage();
+      const currentUserName = userData?.name || null;
 
       if (!currentUserName) {
         console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");

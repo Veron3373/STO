@@ -1,7 +1,10 @@
 // ===== ФАЙЛ: src/ts/roboha/zakaz_naraudy/inhi/act_changes_highlighter.ts =====
 
 import { supabase } from "../../../vxid/supabaseClient";
-import { userAccessLevel } from "../../tablucya/users";
+import {
+  userAccessLevel,
+  getSavedUserDataFromLocalStorage,
+} from "../../tablucya/users";
 import { ACT_ITEMS_TABLE_CONTAINER_ID, globalCache } from "../globalCache";
 
 /* ====================ТИПИ =============================== */
@@ -302,19 +305,9 @@ async function loadChangesForAct(actId: number): Promise<{
 
   // ✅ Для Приймальника - фільтруємо по pruimalnyk
   if (userAccessLevel === "Приймальник") {
-    // Отримуємо ПІБ поточного користувача з localStorage
-    const userDataKey = "userAuthData";
-    const storedData = localStorage.getItem(userDataKey);
-    let currentUserName: string | null = null;
-
-    if (storedData) {
-      try {
-        const userData = JSON.parse(storedData);
-        currentUserName = userData?.Name || null;
-      } catch (e) {
-        console.error("❌ Помилка парсингу localStorage:", e);
-      }
-    }
+    // Отримуємо ПІБ поточного користувача через функцію
+    const userData = getSavedUserDataFromLocalStorage();
+    const currentUserName = userData?.name || null;
 
     if (!currentUserName) {
       console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
@@ -362,19 +355,9 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
     return;
   }
 
-  // ✅ Отримуємо ПІБ поточного користувача
-  const userDataKey = "userAuthData";
-  const storedData = localStorage.getItem(userDataKey);
-  let currentUserName: string | null = null;
-
-  if (storedData) {
-    try {
-      const userData = JSON.parse(storedData);
-      currentUserName = userData?.Name || null;
-    } catch (e) {
-      console.error("❌ Помилка парсингу localStorage:", e);
-    }
-  }
+  // ✅ Отримуємо ПІБ поточного користувача через функцію
+  const userData = getSavedUserDataFromLocalStorage();
+  const currentUserName = userData?.name || null;
 
   if (!currentUserName) {
     console.warn(
@@ -382,6 +365,10 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
     );
     return;
   }
+
+  console.log(
+    `🔍 [deleteProcessedChanges] Приймальник: "${currentUserName}", видаляємо записи для акту #${actId}`
+  );
 
   // ✅ Видаляємо ТІЛЬКИ ті записи, де pruimalnyk = ПІБ поточного Приймальника
   const { error } = await supabase

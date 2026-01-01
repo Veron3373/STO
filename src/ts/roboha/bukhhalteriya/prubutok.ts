@@ -1439,7 +1439,7 @@ export function updatevutratuDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <span>Сума <strong style="color: #070707ff;">💰 ${formatNumber(
+        <span>Сума <strong style="color: #070707ff;">Прибуток 💰 ${formatNumber(
           positiveSum
         )}</strong> грн</span>
         <span style="color: #666;">-</span>
@@ -1453,7 +1453,7 @@ export function updatevutratuDisplayedSums(): void {
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Каса</span>
-        <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
+        <span><strong style="color: #1E90FF;">Каса ⚙️ ${formatNumber(
           totalDetailsSum
         )}</strong></span>
         <span style="color: #666;">+</span>

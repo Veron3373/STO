@@ -463,7 +463,18 @@ export function showSavePromptModal(): Promise<boolean> {
         console.error("Помилка отримання даних користувача:", error);
       }
 
-      // Перевіряємо пароль у базі даних
+      // Перевіряємо пароль у базі даних ПЕРЕД будь-якими змінами
+      let tableFromDraftForPasswordCheck = "";
+      try {
+        if (all_bd) {
+          const parsed = JSON.parse(all_bd);
+          tableFromDraftForPasswordCheck = parsed?.table ?? "";
+        }
+      } catch {}
+
+      // ✅ ПЕРЕВІРКА ПАРОЛЯ - робимо ОДИН РАЗ перед операцією
+      let passwordVerified = false;
+
       if (currentUserName && enteredPassword !== null) {
         const { data: users, error } = await supabase
           .from("slyusars")
@@ -483,7 +494,9 @@ export function showSavePromptModal(): Promise<boolean> {
               : users[0].data;
           const dbPassword = userData?.Пароль;
 
-          if (dbPassword !== enteredPassword) {
+          if (dbPassword === enteredPassword) {
+            passwordVerified = true;
+          } else {
             showNotification("Неправильний пароль", "error");
             return;
           }
@@ -495,6 +508,9 @@ export function showSavePromptModal(): Promise<boolean> {
         showNotification("Введіть пароль", "warning");
         return;
       }
+
+      // Якщо дійшли сюди - пароль правильний, продовжуємо
+      console.log("✅ Пароль перевірено успішно");
 
       // Перевірка прав доступу
       const isAdmin = currentUserAccess === "Адміністратор";

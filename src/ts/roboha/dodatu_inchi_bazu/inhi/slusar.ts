@@ -889,10 +889,7 @@ export const initYesButtonHandler = () => {
       // Перевірка прав доступу для не-адміністраторів
       if (!isAdmin) {
         if (normalizeName(name) !== normalizeName(currentUser?.name || "")) {
-          await showMessageModal(
-            `❌ Помилка! Ви можете редагувати тільки свій профіль.<br><br>Обрано: <strong>${name}</strong><br>Ваше ім'я: <strong>${currentUser?.name}</strong>`,
-            true
-          );
+          console.error(`Спроба редагувати іншого користувача: ${name}`);
           return;
         }
       }
@@ -921,9 +918,11 @@ export const initYesButtonHandler = () => {
 
       // Показуємо підтвердження
       const confirmed = await createConfirmModal(
-        isAdmin
-          ? `Підтвердіть збереження даних для співробітника <strong>${name}</strong>`
-          : `Підтвердіть зміну пароля`
+        `Підтвердіть збереження ${
+          isAdmin
+            ? `даних для співробітника <strong>${name}</strong>`
+            : "пароля"
+        }?`
       );
 
       if (!confirmed) {
@@ -940,10 +939,6 @@ export const initYesButtonHandler = () => {
 
         if (error || !rows) {
           console.error("Слюсар не знайдений або помилка:", error);
-          await showMessageModal(
-            `❌ Помилка! Співробітник "${name}" не знайдений в базі даних.`,
-            true
-          );
           return;
         }
 
@@ -972,7 +967,6 @@ export const initYesButtonHandler = () => {
 
         if (updateError) {
           console.error("Помилка при оновленні даних:", updateError);
-          await showMessageModal("❌ Помилка при збереженні даних!", true);
           return;
         }
 
@@ -992,7 +986,6 @@ export const initYesButtonHandler = () => {
         await showMessageModal("✅ Дані успішно збережено!");
       } catch (error) {
         console.error("Помилка при обробці даних співробітника:", error);
-        await showMessageModal("❌ Критична помилка при обробці даних!", true);
       }
     });
   }

@@ -165,57 +165,9 @@ const updateAllBdFromInput = async (
             : { [field]: inputValue.trim() },
       };
       updateAllBd(JSON.stringify(newRecordResult, null, 2));
-    } else {
-      // Перевірка дублікатів під час введення
-      if (table === "slyusars" && inputValue.trim().length > 2) {
-        const isDuplicate = await checkSlusarDuplicate(inputValue.trim());
-        if (isDuplicate) {
-          showDuplicateWarning(inputValue.trim());
-        }
-      }
     }
+    // Перевірка дублікатів видалена - не потрібна при редагуванні
   }
-};
-
-// Функція показу попередження про дублікат
-const showDuplicateWarning = (name: string) => {
-  const existingWarning = document.getElementById("slusar-duplicate-warning");
-  if (existingWarning) {
-    existingWarning.remove();
-  }
-  const searchInput = document.getElementById("search-input-all_other_bases");
-  if (!searchInput) return;
-  const warning = document.createElement("div");
-  warning.id = "slusar-duplicate-warning";
-  warning.className = "duplicate-warning";
-  warning.style.cssText = `
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: #fff3cd;
-    border: 1px solid #ffeaa7;
-    color: #856404;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    z-index: 1000;
-    margin-top: 2px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  `;
-  warning.innerHTML = `
-    <strong>⚠️ Увага:</strong> Слюсар "${name}" вже існує в базі даних
-  `;
-  const globalSearchWrap = document.getElementById("global-search-wrap");
-  if (globalSearchWrap) {
-    globalSearchWrap.style.position = "relative";
-    globalSearchWrap.appendChild(warning);
-  }
-  setTimeout(() => {
-    if (warning.parentNode) {
-      warning.remove();
-    }
-  }, 5000);
 };
 
 // Оновлена функція для заповнення додаткових інпутів

@@ -785,8 +785,9 @@ export function initStatusLockDelegation(): void {
         // 📢 СТВОРЕННЯ PUSH-ПОВІДОМЛЕННЯ ДЛЯ АДМІНІСТРАТОРІВ ТА ПРИЙМАЛЬНИКА
         try {
           const userData = getSavedUserDataFromLocalStorage?.();
-          const userSurname = userData?.surname || "Невідомий";
-          const userFullName = userData?.name || undefined;
+          const userFullName = userData?.name || "Невідомий";
+          // Витягуємо прізвище (перше слово з ПІБ)
+          const userSurname = userFullName.split(" ")[0] || userFullName;
 
           await recordSlusarCompletion(
             actId,

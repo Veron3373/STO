@@ -737,7 +737,7 @@ export function initStatusLockDelegation(): void {
         // Отримання поточного стану slusarsOn та даних акту
         const { data: actData, error: actFetchError } = await supabase
           .from("acts")
-          .select("slusarsOn, act_number, pruimalnyk")
+          .select("slusarsOn, pruimalnyk")
           .eq("act_id", actId)
           .single();
 
@@ -749,7 +749,7 @@ export function initStatusLockDelegation(): void {
         }
 
         const currentSlusarsOn = actData?.slusarsOn === true;
-        const actNumber = actData?.act_number || String(actId);
+        const actNumber = String(actId); // Номер акту = act_id
         const pruimalnyk = actData?.pruimalnyk;
 
         // 🎨 КРАСИВЕ МОДАЛЬНЕ ВІКНО ЗАМІСТЬ window.confirm()

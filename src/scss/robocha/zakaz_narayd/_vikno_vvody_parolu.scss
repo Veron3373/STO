@@ -9,8 +9,7 @@
   height: 100% !important;
   background-color: rgba(0, 0, 0, 0.6);
   /* Напівпрозорий чорний фон */
-  display: flex !important;
-  /* Використовуємо flexbox для центрування */
+  /* display керується через inline стилі в JS */
   justify-content: center !important;
   /* Центрування по горизонталі */
   align-items: center !important;
@@ -26,6 +25,11 @@
   margin: 0 !important;
   padding: 0 !important;
   box-sizing: border-box !important;
+}
+
+/* Коли модалка показана (display: flex встановлюється в JS) */
+.vikno_vvody_parolu-overlay-ActsOn[style*="display: flex"] {
+  display: flex !important;
 }
 
 /* Стилі для самого вмісту модального вікна вводу пароля */

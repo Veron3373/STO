@@ -134,24 +134,6 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
       return new Set();
     }
 
-    console.log(`📋 [fetchModifiedActIds] Приймальник: "${currentUserName}"`);
-
-    // 🔍 ДІАГНОСТИКА: Спочатку дивимось всі невидалені записи
-    const { data: allData, error: diagError } = await supabase
-      .from("act_changes_notifications")
-      .select("act_id, pruimalnyk")
-      .eq("delit", false);
-
-    if (!diagError && allData && allData.length > 0) {
-      console.log(`🔍 [ДІАГНОСТИКА] Всі невидалені записи:`, allData);
-      console.log(`🔍 [ДІАГНОСТИКА] Унікальні pruimalnyk:`, [
-        ...new Set(allData.map((r) => r.pruimalnyk)),
-      ]);
-      console.log(
-        `🔍 [ДІАГНОСТИКА] Порівнюємо з currentUserName: "${currentUserName}"`
-      );
-    }
-
     const { data, error } = await supabase
       .from("act_changes_notifications")
       .select("act_id")
@@ -164,9 +146,6 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
     }
 
     const ids = new Set((data || []).map((item) => Number(item.act_id)));
-    console.log(
-      `✅ [fetchModifiedActIds] Знайдено ${ids.size} актів для "${currentUserName}"`
-    );
     return ids;
   }
 

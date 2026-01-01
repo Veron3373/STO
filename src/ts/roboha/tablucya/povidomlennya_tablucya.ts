@@ -1,18 +1,21 @@
 // ===== ФАЙЛ: src/ts/roboha/tablucya/povidomlennya_tablucya.ts =====
 
-import { markNotificationAsDeleted, loadUnseenNotifications } from "./mark_notification_deleted";
+import {
+  markNotificationAsDeleted,
+  loadUnseenNotifications,
+} from "./mark_notification_deleted";
 
 export interface ActNotificationPayload {
-  act_id: number;              // номер акту (обов'язковий)
-  notification_id?: number;    // pk з таблиці act_changes_notifications
-  id?: number;                 // запасне поле, якщо прийде під іменем id
-  changed_by_surname: string;  // хто змінив
-  item_name: string;           // що змінено (робота/деталь)
-  dodav_vudaluv: boolean;      // true = додано, false = видалено
-  created_at?: string;         // timestamp з БД
-  data?: string;               // запасне поле, якщо час прийде сюди
-  pib?: string;                // ✅ ПІБ клієнта з акту
-  auto?: string;               // ✅ Дані автомобіля з акту
+  act_id: number; // номер акту (обов'язковий)
+  notification_id?: number; // pk з таблиці act_changes_notifications
+  id?: number; // запасне поле, якщо прийде під іменем id
+  changed_by_surname: string; // хто змінив
+  item_name: string; // що змінено (робота/деталь)
+  dodav_vudaluv: boolean; // true = додано, false = видалено
+  created_at?: string; // timestamp з БД
+  data?: string; // запасне поле, якщо час прийде сюди
+  pib?: string; // ✅ ПІБ клієнта з акту
+  auto?: string; // ✅ Дані автомобіля з акту
 }
 
 // ==========================
@@ -65,7 +68,6 @@ function playNotificationSound(isAdded: boolean) {
   }
 }
 
-
 // ==========================
 //   ГРУПУВАННЯ ЗВУКІВ (DEBOUNCE)
 // ==========================
@@ -95,7 +97,6 @@ function scheduleNotificationSound(isAdded: boolean) {
     lastBurstIsAdded = null;
   }, SOUND_BURST_DELAY);
 }
-
 
 function playCloseSound() {
   try {
@@ -146,7 +147,6 @@ function formatTimeOnly(dateStr?: string): string {
   // формат: 15:07 / 05.12
   return `${timePart} / ${datePart}`;
 }
-
 
 function reindexBadges() {
   const container = document.getElementById("act-realtime-container");
@@ -271,7 +271,6 @@ function collapseStack(container: HTMLElement) {
   hoverTimeouts.push(firstId);
 }
 
-
 // ==========================
 //   КОНТЕЙНЕР НОТИФІКАЦІЙ
 // ==========================
@@ -321,8 +320,12 @@ export function showRealtimeActNotification(
   toast.setAttribute("data-act-id", String(payload.act_id));
 
   // ✅ Формуємо рядки для клієнта та автомобіля (якщо є)
-  const pibLine = payload.pib ? `<div class="toast-client-row"><span class="client-label">👤</span><span class="client-value">${payload.pib}</span></div>` : "";
-  const autoLine = payload.auto ? `<div class="toast-auto-row"><span class="auto-label">🚗</span><span class="auto-value">${payload.auto}</span></div>` : "";
+  const pibLine = payload.pib
+    ? `<div class="toast-client-row"><span class="client-label">👤</span><span class="client-value">${payload.pib}</span></div>`
+    : "";
+  const autoLine = payload.auto
+    ? `<div class="toast-auto-row"><span class="auto-label">🚗</span><span class="auto-value">${payload.auto}</span></div>`
+    : "";
 
   toast.innerHTML = `
     <div class="toast-header-row">
@@ -336,7 +339,9 @@ export function showRealtimeActNotification(
     ${autoLine}
     <div class="toast-meta-row">
       <span class="meta-time-oval">${timeString}</span>
-      <span class="user-surname">${payload.changed_by_surname || "Користувач"}</span>
+      <span class="user-surname">${
+        payload.changed_by_surname || "Користувач"
+      }</span>
     </div>
     <div class="toast-body-row">
       <span class="item-icon">${icon}</span>
@@ -372,11 +377,14 @@ export function showRealtimeActNotification(
     playCloseSound();
 
     // Позначаємо повідомлення як видалене в БД перед видаленням з DOM
-    if (dbId && typeof dbId === 'number') {
+    if (dbId && typeof dbId === "number") {
       await markNotificationAsDeleted(dbId);
     }
 
     removeToastElement(toast);
+
+    // ✅ Перевіряємо чи залишилися ще повідомлення для цього акту
+    await checkAndRemoveActHighlightIfNoNotifications(actId);
   });
 }
 
@@ -444,25 +452,54 @@ function removeToastElement(toast: HTMLElement) {
  * Викликається при ініціалізації сторінки або поверненні з іншої сторінки
  */
 export async function loadAndShowExistingNotifications(): Promise<void> {
-  console.log("📥 [loadAndShowExistingNotifications] ПОЧАТОК: Завантажуємо існуючі повідомлення...");
-
   const notifications = await loadUnseenNotifications();
 
-  console.log(`📊 [loadAndShowExistingNotifications] Отримано ${notifications.length} повідомлень з БД`);
-  console.log("📊 [loadAndShowExistingNotifications] Дані:", notifications);
-
   if (notifications.length === 0) {
-    console.log("ℹ️ [loadAndShowExistingNotifications] Немає невидалених повідомлень для відображення");
     return;
   }
 
-  console.log(`📢 [loadAndShowExistingNotifications] Відображаємо ${notifications.length} збережених повідомлень`);
-
   // Показуємо кожне повідомлення (від старіших до новіших)
-  notifications.forEach((notification, index) => {
-    console.log(`📝 [loadAndShowExistingNotifications] Показуємо повідомлення ${index + 1}/${notifications.length}:`, notification);
+  notifications.forEach((notification) => {
     showRealtimeActNotification(notification);
   });
+}
 
-  console.log("✅ [loadAndShowExistingNotifications] ЗАВЕРШЕНО: Всі повідомлення відображені");
+/**
+ * Перевіряє чи залишилися повідомлення для акту після видалення одного
+ * Якщо більше немає - знімає синю обводку з акту в таблиці
+ */
+async function checkAndRemoveActHighlightIfNoNotifications(
+  actId: number
+): Promise<void> {
+  // Імпортуємо supabase та функцію для зняття підсвітки
+  const { supabase } = await import("../../vxid/supabaseClient");
+  const { getSavedUserDataFromLocalStorage } = await import("./users");
+  const { clearNotificationVisualOnly } = await import("./tablucya");
+
+  // Отримуємо ПІБ поточного користувача
+  const userData = getSavedUserDataFromLocalStorage?.();
+  const currentUserName = userData?.name;
+
+  if (!currentUserName) {
+    return;
+  }
+
+  // Перевіряємо чи є ще повідомлення для цього акту
+  const { data, error } = await supabase
+    .from("act_changes_notifications")
+    .select("notification_id")
+    .eq("act_id", actId)
+    .eq("delit", false)
+    .eq("pruimalnyk", currentUserName)
+    .limit(1);
+
+  if (error) {
+    console.error("❌ Помилка перевірки повідомлень:", error);
+    return;
+  }
+
+  // Якщо повідомлень більше немає - знімаємо синю обводку
+  if (!data || data.length === 0) {
+    clearNotificationVisualOnly(actId);
+  }
 }

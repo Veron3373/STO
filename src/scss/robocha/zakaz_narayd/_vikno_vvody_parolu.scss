@@ -4,48 +4,71 @@
     top: 0;
     left: 0;
     width: 100%;
+    height: 100%;
+    width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.6); /* Напівпрозорий чорний фон */
-    display: flex; /* Використовуємо flexbox для центрування */
-    justify-content: center; /* Центрування по горизонталі */
-    align-items: center; /* Центрування по вертикалі */
-    z-index: 2000; /* Збільшуємо z-index для оверлея вводу пароля. Переконайтеся, що це вище, ніж z-index вашого основного модального вікна акту. Наприклад, якщо основна модалка 1000, ця має бути 2000. */
-    backdrop-filter: blur(5px); /* Ефект розмиття фону */
-    -webkit-backdrop-filter: blur(5px); /* Для підтримки Safari */
-    /* Додатково, для блокування кліків на фоні: */
-    pointer-events: auto; /* Цей елемент (оверлей) буде перехоплювати всі події миші */
+    background-color: rgba(0, 0, 0, 0.6);
+    /* Напівпрозорий чорний фон */
+    display: flex;
+    /* Використовуємо flexbox для центрування */
+    justify-content: center;
+    /* Центрування по горизонталі */
+    align-items: center;
+    /* Центрування по вертикалі */
+    z-index: 9999999;
+    /* Максимальний z-index */
+    backdrop-filter: blur(5px);
+    /* Ефект розмиття фону */
+    -webkit-backdrop-filter: blur(5px);
+    /* Для підтримки Safari */
+    pointer-events: auto;
+    /* Цей елемент (оверлей) буде перехоплювати всі події миші */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 /* Стилі для самого вмісту модального вікна вводу пароля */
 .vikno_vvody_parolu-content {
     background-color: #ffffff;
     padding: 30px;
-    border-radius: 12px; /* Більш округлі кути */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); /* Виразніша тінь */
+    border-radius: 12px;
+    /* Більш округлі кути */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    /* Виразніша тінь */
     text-align: center;
-    max-width: 400px; /* Обмеження ширини */
-    width: 90%; /* Адаптивна ширина */
+    max-width: 400px;
+    /* Обмеження ширини */
+    width: 90%;
+    /* Адаптивна ширина */
     /* Видаляємо transform: translateY(-20px) та opacity: 0 з цього місця,
        оскільки вони повинні контролюватися з анімації.
        Якщо display: none; і display: flex; перемикаються,
        анімація буде спрацьовувати коректно. */
-    animation: fadeInScale 0.3s ease-out forwards; /* Анімація появи */
-    border: 1px solid #e0e0e0; /* Легка межа */
-    position: relative; /* Для можливості позиціонування елементів всередині */
+    animation: fadeInScale 0.3s ease-out forwards;
+    /* Анімація появи */
+    border: 1px solid #e0e0e0;
+    /* Легка межа */
+    position: relative;
+    /* Для можливості позиціонування елементів всередині */
     /* Z-index самого контенту може бути таким же, як і у оверлея, або на одиницю вищим,
        але головне, щоб оверлей мав високий z-index. */
-    z-index: 2001; /* Це просто для уточнення, що сам контент теж високо */
+    z-index: 2001;
+    /* Це просто для уточнення, що сам контент теж високо */
 }
 
 /* Анімація появи модального вікна */
 /* Змінюємо from-стан для більш сучасного ефекту "виїзду" або "збільшення" */
 @keyframes fadeInScale {
     from {
-        transform: scale(0.95); /* Починаємо з трохи меншого масштабу */
+        transform: scale(0.95);
+        /* Починаємо з трохи меншого масштабу */
         opacity: 0;
     }
+
     to {
-        transform: scale(1); /* Збільшуємо до нормального розміру */
+        transform: scale(1);
+        /* Збільшуємо до нормального розміру */
         opacity: 1;
     }
 }
@@ -56,33 +79,44 @@
     color: #555;
     margin-bottom: 25px;
     line-height: 1.5;
-    font-family: inherit; /* Успадковує шрифт від батьківського елемента, зазвичай body */
+    font-family: inherit;
+    /* Успадковує шрифт від батьківського елемента, зазвичай body */
 }
 
 /* Стилі для поля вводу пароля */
 .vikno_vvody_parolu-content .password-input {
-    width: calc(100% - 20px); /* Займає всю доступну ширину мінус відступи */
+    width: calc(100% - 20px);
+    /* Займає всю доступну ширину мінус відступи */
     padding: 12px 15px;
-    margin-bottom: 25px; /* Більший відступ знизу */
-    border: 1px solid #a7d9f7; /* Блакитна рамка */
+    margin-bottom: 25px;
+    /* Більший відступ знизу */
+    border: 1px solid #a7d9f7;
+    /* Блакитна рамка */
     border-radius: 8px;
     font-size: 1.05em;
-    box-sizing: border-box; /* Включає padding і border в ширину */
+    box-sizing: border-box;
+    /* Включає padding і border в ширину */
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    outline: none; /* Прибираємо стандартний outline */
-    font-family: inherit; /* Успадковує шрифт */
+    outline: none;
+    /* Прибираємо стандартний outline */
+    font-family: inherit;
+    /* Успадковує шрифт */
 }
 
 .vikno_vvody_parolu-content .password-input:focus {
-    border-color: #007bff; /* Яскраво-синя рамка при фокусі */
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.2); /* Легка тінь при фокусі */
+    border-color: #007bff;
+    /* Яскраво-синя рамка при фокусі */
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
+    /* Легка тінь при фокусі */
 }
 
 /* Стилі для кнопок */
 .vikno_vvody_parolu-buttons {
     display: flex;
-    justify-content: space-around; /* Розташування кнопок з рівними проміжками */
-    gap: 15px; /* Відступ між кнопками */
+    justify-content: space-around;
+    /* Розташування кнопок з рівними проміжками */
+    gap: 15px;
+    /* Відступ між кнопками */
 }
 
 .vikno_vvody_parolu-buttons button {
@@ -93,19 +127,24 @@
     font-size: 1.05em;
     font-weight: 600;
     transition: background-color 0.3s ease, transform 0.1s ease;
-    flex-grow: 1; /* Кнопки займають рівну ширину */
-    max-width: 160px; /* Обмеження для великих екранів */
-    font-family: inherit; /* Успадковує шрифт */
+    flex-grow: 1;
+    /* Кнопки займають рівну ширину */
+    max-width: 160px;
+    /* Обмеження для великих екранів */
+    font-family: inherit;
+    /* Успадковує шрифт */
 }
 
 /* Стилі для кнопки підтвердження */
 .vikno_vvody_parolu-buttons .btn-save-confirm {
-    background-color: #007bff; /* Синій колір */
+    background-color: #007bff;
+    /* Синій колір */
     color: white;
 }
 
 .vikno_vvody_parolu-buttons .btn-save-confirm:hover {
-    background-color: #0056b3; /* Темніший синій при наведенні */
+    background-color: #0056b3;
+    /* Темніший синій при наведенні */
     transform: translateY(-2px);
 }
 
@@ -115,12 +154,14 @@
 
 /* Стилі для кнопки скасування */
 .vikno_vvody_parolu-buttons .btn-save-cancel {
-    background-color: #e0e0e0; /* Світло-сірий */
+    background-color: #e0e0e0;
+    /* Світло-сірий */
     color: #555;
 }
 
 .vikno_vvody_parolu-buttons .btn-save-cancel:hover {
-    background-color: #c9c9c9; /* Темніший сірий при наведенні */
+    background-color: #c9c9c9;
+    /* Темніший сірий при наведенні */
     transform: translateY(-2px);
 }
 
@@ -138,7 +179,8 @@
     border-radius: 8px;
     font-size: 1.1em;
     color: white;
-    z-index: 3000; /* Зробимо сповіщення ще вищим, щоб вони були над усіма модалками */
+    z-index: 3000;
+    /* Зробимо сповіщення ще вищим, щоб вони були над усіма модалками */
     opacity: 0;
     transition: opacity 0.5s ease-in-out;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
@@ -152,17 +194,21 @@
 }
 
 .notification.info {
-    background-color: #2196F3; /* Blue */
+    background-color: #2196F3;
+    /* Blue */
 }
 
 .notification.success {
-    background-color: #4CAF50; /* Green */
+    background-color: #4CAF50;
+    /* Green */
 }
 
 .notification.warning {
-    background-color: #ff9800; /* Orange */
+    background-color: #ff9800;
+    /* Orange */
 }
 
 .notification.error {
-    background-color: #f44336; /* Red */
+    background-color: #f44336;
+    /* Red */
 }

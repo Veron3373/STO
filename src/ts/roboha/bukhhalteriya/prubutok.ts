@@ -1283,11 +1283,12 @@ export function updatevutratuTable(): void {
 
     // � Сума в касі - показуємо повну суму з акту без вирахувань
     const fullAmountCell = row.insertCell();
+    fullAmountCell.style.textAlign = "right";
 
     if (isFromAct && expense.fullAmount !== undefined) {
       fullAmountCell.innerHTML = `
         <span style="color: #006400; font-size: 0.95em; font-weight: 500;">
-          ${formatNumber(expense.fullAmount)} грн
+          ${formatNumber(expense.fullAmount)}
         </span>
       `;
     } else {

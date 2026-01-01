@@ -766,7 +766,7 @@ export function initStatusLockDelegation(): void {
 
         const { error: actError } = await supabase
           .from("acts")
-          .update({ date_off: null })
+          .update({ date_off: null, tupOplatu: null })
           .eq("act_id", actId);
         if (actError)
           throw new Error("Не вдалося відкрити акт: " + actError.message);

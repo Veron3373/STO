@@ -21,18 +21,18 @@ export function createViknoPidtverdchennayZakruttiaAkty(): HTMLDivElement {
   modal.className = "vikno_pidtverdchennay_zakruttia_akty-content";
   modal.innerHTML = `
     <p id="vikno_pidtverdchennay_zakruttia_akty-message">Підтвердити закриття акту?</p>
-    <div style="margin: 1rem 0; text-align: center;">
-      <label for="payment-type-select" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
-        Тип оплати:
-      </label>
-      <select id="payment-type-select" style="padding: 0.5rem 1rem; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; min-width: 120px; cursor: pointer;">
-        <option value="Готівка" selected>💵 Готівка</option>
-        <option value="Картка">💳 Картка</option>
-        <option value="IBAN">🏦 IBAN</option>
-      </select>
-    </div>
     <div class="vikno_pidtverdchennay_zakruttia_akty-buttons save-buttons">
       <button id="vikno_pidtverdchennay_zakruttia_akty-confirm" class="vikno_pidtverdchennay_zakruttia_akty-confirm-btn btn-save-confirm">Так</button>
+      <div class="payment-type-container">
+        <label for="payment-type-select" class="payment-type-label">
+          Тип оплати:
+        </label>
+        <select id="payment-type-select" class="payment-type-select">
+          <option value="Готівка" selected>💵 Готівка</option>
+          <option value="Картка">💳 Картка</option>
+          <option value="IBAN">🏦 IBAN</option>
+        </select>
+      </div>
       <button id="vikno_pidtverdchennay_zakruttia_akty-cancel" class="vikno_pidtverdchennay_zakruttia_akty-cancel-btn btn-save-cancel">Ні</button>
     </div>
   `;

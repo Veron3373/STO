@@ -1078,8 +1078,24 @@ export function filtervutratuData(): void {
     // Фільтр по категорії
     if (category && expense.category !== category) return false;
 
-    // Фільтр по способу оплати
-    if (paymentMethod && expense.paymentMethod !== paymentMethod) return false;
+    // Фільтр по способу оплати (перевіряємо як paymentMethod для витрат, так і tupOplatu для актів)
+    if (paymentMethod) {
+      const isFromAct = expense.category === "💰 Прибуток";
+      if (isFromAct) {
+        // Для актів перевіряємо tupOplatu
+        if (
+          !expense.tupOplatu ||
+          !expense.tupOplatu.includes(
+            paymentMethod.replace(/💵 |💳 |🏦 |📱 /g, "")
+          )
+        ) {
+          return false;
+        }
+      } else {
+        // Для витрат перевіряємо paymentMethod
+        if (expense.paymentMethod !== paymentMethod) return false;
+      }
+    }
 
     // Фільтр по розрахунку (0-оплачено, 1-Несплочено, 2-всі)
     if (paymentToggle === "0" && !expense.isPaid) return false;

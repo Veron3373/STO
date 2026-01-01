@@ -26,14 +26,13 @@
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     max-width: 500px;
-    width: 90%;
+    width:auto;
     z-index: 10001;
 
     #vikno_pidtverdchennay_zakruttia_akty-message {
       margin: 0 0 1rem 0;
       font-size: 1.1rem;
       text-align: center;
-      line-height: 1.5;
       align-items: end;
 
       strong {
@@ -120,10 +119,6 @@
             outline: none;
             border-color: #4caf50;
             box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
-          }
-
-          option {
-            padding: 0.5rem;
           }
         }
       }

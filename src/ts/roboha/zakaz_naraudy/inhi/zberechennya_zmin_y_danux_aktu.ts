@@ -691,28 +691,52 @@ function compareActChanges(
 
 /**
  * Записує зміни в таблицю act_changes_notifications
+ * ЛОГІКА:
+ * - Записуємо ТІЛЬКИ якщо це Слюсар, Запчастист, Складовщик
+ * - НЕ записуємо якщо це Приймальник або Адміністратор
+ * - Зберігаємо pruimalnyk з таблиці acts для фільтрації повідомлень
  */
 async function logActChanges(
   actId: number,
   added: ParsedItem[],
   deleted: ParsedItem[]
 ): Promise<void> {
-  // ⚠️ КРИТИЧНО: Перевірка ролі користувача - тільки для ПРИЙМАЛЬНИКА
+  // ⚠️ КРИТИЧНО: Перевірка ролі користувача
   console.log(
     `🔍 [logActChanges] Перевірка ролі користувача: "${userAccessLevel}"`
   );
 
-  // Записуємо зміни тільки якщо це Приймальник
-  if (userAccessLevel !== "Приймальник") {
+  // ✅ Записуємо зміни ТІЛЬКИ для Слюсаря, Запчастиста, Складовщика
+  const allowedRoles = ["Слюсар", "Запчастист", "Складовщик"];
+  if (!allowedRoles.includes(userAccessLevel)) {
     console.log(
-      `⏭️ Користувач ${userAccessLevel} - логування змін пропущено (записуємо тільки для Приймальника)`
+      `⏭️ Користувач ${userAccessLevel} - логування змін пропущено (записуємо тільки для Слюсар/Запчастист/Складовщик)`
     );
     return;
   }
 
   console.log(
-    `✅ [logActChanges] Користувач Приймальник - продовжуємо логування`
+    `✅ [logActChanges] Користувач ${userAccessLevel} - продовжуємо логування`
   );
+
+  // ✅ ОТРИМУЄМО ПРИЙМАЛЬНИКА З БД (acts.pruimalnyk)
+  let pruimalnykFromDb: string | undefined;
+  try {
+    const { data: actData, error: actError } = await supabase
+      .from("acts")
+      .select("pruimalnyk")
+      .eq("act_id", actId)
+      .single();
+
+    if (actError) {
+      console.error("❌ Помилка отримання pruimalnyk з acts:", actError);
+    } else if (actData?.pruimalnyk) {
+      pruimalnykFromDb = actData.pruimalnyk;
+      console.log(`📋 [logActChanges] Приймальник з БД: "${pruimalnykFromDb}"`);
+    }
+  } catch (err) {
+    console.error("❌ Виняток при отриманні pruimalnyk:", err);
+  }
 
   // ✅ ФУНКЦІЯ ВИЗНАЧЕННЯ АВТОРА ЗМІН
   const getChangeAuthor = (item: ParsedItem): string => {
@@ -737,10 +761,9 @@ async function logActChanges(
   // ✅ ОТРИМАННЯ ПІБ КЛІЄНТА ТА АВТОМОБІЛЯ З DOM
   const { pib, auto } = getClientAndCarInfo();
 
-  // ✅ ОТРИМАННЯ ПРИЙМАЛЬНИКА З localStorage
-  const pruimalnyk =
-    localStorage.getItem("current_act_pruimalnyk") || undefined;
-  console.log(`📋 [logActChanges] Приймальник з localStorage: "${pruimalnyk}"`);
+  // ✅ ВИКОРИСТОВУЄМО ПРИЙМАЛЬНИКА З БД (отриманого вище)
+  const pruimalnyk = pruimalnykFromDb;
+  console.log(`📋 [logActChanges] Приймальник з БД: "${pruimalnyk}"`);
 
   const records: ActChangeRecord[] = [];
 
@@ -759,7 +782,7 @@ async function logActChanges(
       data: new Date().toISOString(),
       pib: pib || undefined, // ✅ ПІБ клієнта
       auto: auto || undefined, // ✅ Дані автомобіля
-      pruimalnyk: pruimalnyk, // ✅ ПІБ приймальника з acts
+      pruimalnyk: pruimalnyk, // ✅ ПІБ приймальника з acts.pruimalnyk
     });
   });
 

@@ -2,23 +2,65 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import type { ActNotificationPayload } from "./povidomlennya_tablucya";
-import { userAccessLevel } from "./users"; // ✅ Додано для перевірки ролі
+import { userAccessLevel, getSavedUserDataFromLocalStorage } from "./users"; // ✅ Додано для перевірки ролі
 
 /**
  * Позначає повідомлення як видалене в БД (встановлює delit = TRUE)
+ * ЛОГІКА: Видалення дозволено ТІЛЬКИ Приймальнику, чий ПІБ = pruimalnyk
+ * Адміністратор НЕ може видаляти записи!
  * @param notificationId - ID повідомлення з таблиці act_changes_notifications
- * @returns true якщо успішно, false якщо помилка
+ * @returns true якщо успішно, false якщо помилка або немає прав
  */
 export async function markNotificationAsDeleted(
   notificationId: number
 ): Promise<boolean> {
   try {
-    console.log(`🗑️ Позначаємо повідомлення ${notificationId} як видалене...`);
+    // ⚠️ КРИТИЧНО: Тільки Приймальник може видаляти записи
+    if (userAccessLevel !== "Приймальник") {
+      console.log(
+        `⏭️ [markNotificationAsDeleted] ${userAccessLevel} не може видаляти записи - тільки Приймальник`
+      );
+      return false;
+    }
 
+    // Отримуємо ПІБ поточного Приймальника
+    const userData = getSavedUserDataFromLocalStorage?.();
+    const currentUserName = userData?.name;
+
+    if (!currentUserName) {
+      console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+      return false;
+    }
+
+    console.log(
+      `🗑️ Позначаємо повідомлення ${notificationId} як видалене (Приймальник: ${currentUserName})...`
+    );
+
+    // Спочатку перевіряємо, чи це повідомлення належить цьому Приймальнику
+    const { data: notificationData, error: fetchError } = await supabase
+      .from("act_changes_notifications")
+      .select("pruimalnyk")
+      .eq("notification_id", notificationId)
+      .single();
+
+    if (fetchError) {
+      console.error("❌ Помилка отримання повідомлення:", fetchError);
+      return false;
+    }
+
+    if (notificationData?.pruimalnyk !== currentUserName) {
+      console.log(
+        `⏭️ Повідомлення ${notificationId} не належить приймальнику ${currentUserName} (pruimalnyk: ${notificationData?.pruimalnyk})`
+      );
+      return false;
+    }
+
+    // Видаляємо тільки якщо pruimalnyk = ПІБ поточного Приймальника
     const { error } = await supabase
       .from("act_changes_notifications")
       .update({ delit: true }) // TRUE = видалене, не показувати
-      .eq("notification_id", notificationId);
+      .eq("notification_id", notificationId)
+      .eq("pruimalnyk", currentUserName); // ✅ Додатковий захист
 
     if (error) {
       console.error(
@@ -28,7 +70,9 @@ export async function markNotificationAsDeleted(
       return false;
     }
 
-    console.log(`✅ Повідомлення ${notificationId} позначено як видалене`);
+    console.log(
+      `✅ Повідомлення ${notificationId} позначено як видалене (Приймальник: ${currentUserName})`
+    );
     return true;
   } catch (err) {
     console.error("❌ Виняток при позначенні повідомлення:", err);

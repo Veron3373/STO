@@ -350,8 +350,18 @@ async function loadChangesForAct(actId: number): Promise<{
 
 /**
  * Видаляє оброблені записи з БД
+ * ЛОГІКА: Видалення дозволено ТІЛЬКИ Приймальнику, чий ПІБ = pruimalnyk
+ * Адміністратор НЕ може видаляти записи!
  */
 async function deleteProcessedChanges(actId: number): Promise<void> {
+  // ⚠️ КРИТИЧНО: Тільки Приймальник може видаляти записи
+  if (userAccessLevel !== "Приймальник") {
+    console.log(
+      `⏭️ [deleteProcessedChanges] ${userAccessLevel} не може видаляти записи - тільки Приймальник`
+    );
+    return;
+  }
+
   // ✅ Отримуємо ПІБ поточного користувача
   const userDataKey = "userAuthData";
   const storedData = localStorage.getItem(userDataKey);
@@ -373,7 +383,7 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
     return;
   }
 
-  // ✅ Для Адміністратора та Приймальника - видаляємо ТІЛЬКИ ті записи, де pruimalnyk = їхнє ПІБ
+  // ✅ Видаляємо ТІЛЬКИ ті записи, де pruimalnyk = ПІБ поточного Приймальника
   const { error } = await supabase
     .from("act_changes_notifications")
     .delete()
@@ -386,7 +396,7 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
   }
 
   console.log(
-    `🗑️ Видалено оброблені записи для акту #${actId} (${userAccessLevel}: ${currentUserName})`
+    `🗑️ Видалено оброблені записи для акту #${actId} (Приймальник: ${currentUserName})`
   );
 }
 

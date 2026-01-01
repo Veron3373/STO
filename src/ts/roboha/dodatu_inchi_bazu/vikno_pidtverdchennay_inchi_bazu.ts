@@ -452,52 +452,45 @@ export function showSavePromptModal(): Promise<boolean> {
       // Отримуємо дані поточного користувача з localStorage
       let currentUserName = "";
       let currentUserAccess = "";
+      let currentUserPassword: number | null = null;
+
       try {
         const userDataStr = localStorage.getItem("userAuthData");
         if (userDataStr) {
           const userData = JSON.parse(userDataStr);
           currentUserName = userData.Name || "";
           currentUserAccess = userData.Доступ || "";
+          currentUserPassword = userData.Пароль
+            ? Number(userData.Пароль)
+            : null;
         }
       } catch (error) {
         console.error("Помилка отримання даних користувача:", error);
       }
 
-      // ✅ ПЕРЕВІРКА ПАРОЛЯ - робимо ОДИН РАЗ перед операцією
-      if (currentUserName && enteredPassword !== null) {
-        const { data: users, error } = await supabase
-          .from("slyusars")
-          .select("data")
-          .eq("data->>Name", currentUserName);
+      // ✅ ПЕРЕВІРКА ПАРОЛЯ З LOCALSTORAGE
+      if (!currentUserName || currentUserPassword === null) {
+        showNotification("Помилка: дані користувача не знайдено", "error");
+        return;
+      }
 
-        if (error) {
-          console.error("Помилка перевірки пароля:", error);
-          showNotification("Помилка перевірки пароля", "error");
-          return;
-        }
-
-        if (users && users.length > 0) {
-          const userData =
-            typeof users[0].data === "string"
-              ? JSON.parse(users[0].data)
-              : users[0].data;
-          const dbPassword = userData?.Пароль;
-
-          if (dbPassword !== enteredPassword) {
-            showNotification("Неправильний пароль", "error");
-            return;
-          }
-        } else {
-          showNotification("Користувача не знайдено", "error");
-          return;
-        }
-      } else {
+      if (enteredPassword === null) {
         showNotification("Введіть пароль", "warning");
         return;
       }
 
+      // Перевіряємо пароль з localStorage
+      if (currentUserPassword !== enteredPassword) {
+        showNotification("Неправильний пароль", "error");
+        console.error("❌ Пароль не співпадає:", {
+          entered: enteredPassword,
+          stored: currentUserPassword,
+        });
+        return;
+      }
+
       // Якщо дійшли сюди - пароль правильний, продовжуємо
-      console.log("✅ Пароль перевірено успішно");
+      console.log("✅ Пароль перевірено успішно з localStorage");
 
       // Перевірка прав доступу
       const isAdmin = currentUserAccess === "Адміністратор";

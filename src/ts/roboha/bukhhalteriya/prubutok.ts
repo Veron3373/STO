@@ -1477,18 +1477,6 @@ export function updatevutratuDisplayedSums(): void {
       </div>
     </div>
   `;
-        )}</strong></span>
-        <span style="color: #666;">-</span>
-        <span><strong style="color: #8B0000;">💶 -${formatNumber(
-          Math.abs(negativeSum)
-        )}</strong></span>
-        <span style="color: #666;">=</span>
-        <span><strong style="color: ${
-          finalSum >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${formatNumber(finalSum)}</strong></span>
-      </div>
-    </div>
-  `;
 }
 
 // ==================== CRUD ОПЕРАЦІЇ ====================

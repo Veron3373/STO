@@ -481,7 +481,7 @@ export function showSavePromptModal(): Promise<boolean> {
 
       // Перевіряємо пароль з localStorage
       if (currentUserPassword !== enteredPassword) {
-        showNotification("Неправильний пароль", "error");
+        showNotification("Невірний пароль", "error");
         console.error("❌ Пароль не співпадає:", {
           entered: enteredPassword,
           stored: currentUserPassword,
@@ -495,9 +495,35 @@ export function showSavePromptModal(): Promise<boolean> {
       // Перевірка прав доступу
       const isAdmin = currentUserAccess === "Адміністратор";
 
-      // Якщо не адмін і не редагування - забороняємо
+      console.log("🔍 Перевірка прав:", {
+        isAdmin,
+        CRUD,
+        currentUserAccess,
+        currentUserName,
+      });
+
+      // Якщо не адмін і НЕ редагування співробітників - забороняємо
+      // Виключення: не-адміністратори можуть редагувати тільки співробітників (slyusars)
+      let tableFromDraftCheck = "";
+      try {
+        if (all_bd) {
+          const parsed = JSON.parse(all_bd);
+          tableFromDraftCheck = parsed?.table ?? "";
+        }
+      } catch {}
+
       if (!isAdmin && CRUD !== "Редагувати") {
         showNotification("У вас немає прав для цієї операції", "error");
+        return;
+      }
+
+      // Додаткова перевірка: не-адміністратори можуть редагувати тільки таблицю slyusars
+      if (
+        !isAdmin &&
+        CRUD === "Редагувати" &&
+        tableFromDraftCheck !== "slyusars"
+      ) {
+        showNotification("У вас немає прав редагувати цю таблицю", "error");
         return;
       }
 

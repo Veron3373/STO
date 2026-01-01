@@ -20,6 +20,7 @@ export const updateAllBd = (newValue: string | null) => {
 // Функція для оновлення CRUD режиму
 export const updateCRUD = (newMode: string) => {
   CRUD = newMode;
+  console.log("🔄 CRUD режим змінено на:", CRUD);
 };
 
 // Функція для оновлення відображення назви таблиці в інтерфейсі
@@ -214,7 +215,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Обробник експорту робіт
-  const exportWorksBtnRef = modal_all_other_bases.querySelector("#export-works-excel-btn");
+  const exportWorksBtnRef = modal_all_other_bases.querySelector(
+    "#export-works-excel-btn"
+  );
   if (exportWorksBtnRef) {
     exportWorksBtnRef.addEventListener("click", async () => {
       try {
@@ -305,7 +308,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </html>
         `;
 
-        const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel" });
+        const blob = new Blob([excelTemplate], {
+          type: "application/vnd.ms-excel",
+        });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -314,7 +319,6 @@ document.addEventListener("DOMContentLoaded", () => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-
       } catch (error: any) {
         console.error("Помилка експорту:", error);
         alert("Помилка при експорті: " + error.message);
@@ -459,6 +463,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const modes = ["Додати", "Редагувати", "Видалити"] as const;
   const colors = ["green", "orange", "crimson"];
   let modeIndex = 0;
+
+  // Перевірка чи користувач адміністратор
+  const userDataString = localStorage.getItem("userAuthData");
+  let isUserAdmin = false;
+  if (userDataString) {
+    try {
+      const userData = JSON.parse(userDataString);
+      isUserAdmin = userData.Доступ === "Адміністратор";
+    } catch (e) {
+      console.error("Помилка парсингу userAuthData:", e);
+    }
+  }
+
+  // Якщо не адмін - автоматично встановлюємо режим "Редагувати"
+  if (!isUserAdmin) {
+    modeIndex = 1; // Індекс режиму "Редагувати"
+    console.log(
+      "🔒 Не-адміністратор: автоматично встановлено режим 'Редагувати'"
+    );
+  }
 
   if (modeLabel) {
     modeLabel.textContent = modes[modeIndex];

@@ -9,7 +9,7 @@
   align-items: center;
   padding: 14px 10px;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 1001;
+  z-index: 9999;
 }
 
 .hidden-all_other_bases {
@@ -442,7 +442,7 @@
   border-radius: 4px;
   max-height: 200px;
   overflow-y: auto;
-  z-index: 1003;
+  z-index: 999;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   &.hidden-all_other_bases {

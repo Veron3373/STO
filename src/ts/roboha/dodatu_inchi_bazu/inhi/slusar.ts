@@ -3,7 +3,6 @@ import {
   updateAllBd,
   updateTableNameDisplay,
 } from "../dodatu_inchi_bazu_danux";
-import { showNotification } from "../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { setupEnterNavigationForFields } from "../../redahyvatu_klient_machuna/enter_navigation";
 import { setupDropdownKeyboard } from "./sharedAutocomplete";
 import { userAccessLevel } from "../../tablucya/users";
@@ -743,7 +742,6 @@ export const initYesButtonHandler = () => {
       const percentValue = Number(percentInput.value);
       const password = Number(passwordInput.value);
       const access = accessSelect.value;
-      const isAddMode = modeButton?.textContent?.trim() === "Додати";
 
       // Отримуємо поточного користувача
       const currentUser = getCurrentUserFromLocalStorage();

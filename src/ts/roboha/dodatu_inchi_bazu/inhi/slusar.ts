@@ -55,6 +55,58 @@ const normalizeName = (s: string) => {
   return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
 };
 
+// Функція перевірки чи існує співробітник з таким іменем
+const checkEmployeeExists = async (name: string): Promise<boolean> => {
+  try {
+    const { data: rows, error } = await supabase
+      .from("slyusars")
+      .select("data");
+    if (error) {
+      console.error("Помилка перевірки існування співробітника:", error);
+      return false;
+    }
+    const needle = normalizeName(name);
+    for (const r of rows ?? []) {
+      try {
+        const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
+        const nm = normalizeName(d?.Name ?? "");
+        if (nm && nm === needle) return true;
+      } catch {}
+    }
+    return false;
+  } catch (error) {
+    console.error("Помилка при перевірці існування співробітника:", error);
+    return false;
+  }
+};
+
+// Функція показу повідомлення про існування співробітника
+const showEmployeeExistsMessage = (name: string) => {
+  const message = document.createElement("div");
+  message.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    color: #856404;
+    padding: 20px 30px;
+    border-radius: 8px;
+    font-size: 16px;
+    z-index: 10001;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  `;
+  message.innerHTML = `
+    <div style="text-align: center;">
+      <strong>⚠️ Увага!</strong><br>
+      Співробітник "${name}" вже існує в базі даних
+    </div>
+  `;
+  document.body.appendChild(message);
+  setTimeout(() => message.remove(), 3000);
+};
+
 // Оновлена функція updateAllBdFromInput
 const updateAllBdFromInput = async (
   inputValue: string,
@@ -706,6 +758,9 @@ export const initYesButtonHandler = () => {
       const accessSelect = document.getElementById(
         "slusar-access"
       ) as HTMLSelectElement;
+      const modeButton = document.getElementById(
+        "modeToggleLabel"
+      ) as HTMLButtonElement;
 
       if (!searchInput || !percentInput || !passwordInput || !accessSelect)
         return;
@@ -714,6 +769,16 @@ export const initYesButtonHandler = () => {
       const percentValue = Number(percentInput.value);
       const password = Number(passwordInput.value);
       const access = accessSelect.value;
+      const isAddMode = modeButton?.textContent?.trim() === "Додати";
+
+      // Перевірка чи існує співробітник при додаванні
+      if (isAddMode) {
+        const exists = await checkEmployeeExists(name);
+        if (exists) {
+          showEmployeeExistsMessage(name);
+          return; // Не очищаємо поля, не додаємо
+        }
+      }
 
       // Отримуємо поточного користувача
       const currentUser = getCurrentUserFromLocalStorage();

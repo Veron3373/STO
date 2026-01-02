@@ -6,11 +6,7 @@ const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
   2: { id: "toggle-receiver", label: "Каталог", class: "_receiver" },
   3: { id: "toggle-zarplata", label: "Зарплата", class: "_zarplata" },
-  4: {
-    id: "percentage-value",
-    label: "Націнка на запчастини",
-    class: "_percentage",
-  },
+  4: { id: "percentage-value", label: "Націна на запчастина", class: "_percentage" },
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
 };
 
@@ -480,7 +476,7 @@ export async function createSettingsModal(): Promise<void> {
 
       <div class="percentage-control">
         <label class="percentage-label">
-          <span class="percentage-title"></span>
+          <span class="percentage-title">Націна на запчастина</span>
           <div class="percentage-input-wrapper">
             <input type="range" id="percentage-slider" min="0" max="100" value="0" step="1" />
             <div class="percentage-value-display">

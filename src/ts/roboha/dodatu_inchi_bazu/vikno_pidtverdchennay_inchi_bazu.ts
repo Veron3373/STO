@@ -6,7 +6,11 @@ import { resetShopState, resetDetailState } from "./inhi/scladMagasunDetal";
 import { tryHandleShopsCrud } from "./db_shops_details";
 import { tryHandleDetailsCrud } from "./db_shops_details";
 import { handleScladCrud } from "./db_sclad";
-import { getSlusarAdditionalData } from "./inhi/slusar";
+import {
+  getSlusarAdditionalData,
+  checkEmployeeExists,
+  saveSlusarData,
+} from "./inhi/slusar";
 
 export const savePromptModalId = "save-prompt-modal";
 
@@ -552,7 +556,6 @@ export function showSavePromptModal(): Promise<boolean> {
           const name = searchInput?.value?.trim();
 
           if (name) {
-            const { checkEmployeeExists } = await import("./inhi/slusar");
             const exists = await checkEmployeeExists(name);
             if (exists) {
               showNotification(
@@ -567,7 +570,6 @@ export function showSavePromptModal(): Promise<boolean> {
 
         // ✅ ОБРОБКА СЛЮСАРІВ (Редагування) - викликаємо saveSlusarData
         if (CRUD === "Редагувати" && tableFromDraft === "slyusars") {
-          const { saveSlusarData } = await import("./inhi/slusar");
           success = await saveSlusarData();
 
           cleanup();

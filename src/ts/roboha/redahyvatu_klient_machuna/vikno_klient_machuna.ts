@@ -11,6 +11,11 @@ import {
   savePromptModalId,
 } from "./pidtverdutu_sberihannya_PIB_avto";
 import { setupEnterNavigation } from "./enter_navigation";
+import {
+  saveModalIdCreate,
+  createSaveModalCreate,
+  showSaveModalCreate,
+} from "./pidtverdutu_sberihannya_zakaz_naryad";
 
 // Функція для форматування телефонного номера
 function formatPhoneNumber(value: string): string {
@@ -49,9 +54,9 @@ export function getModalFormValues() {
   const get = (id: string) =>
     (
       document.getElementById(id) as
-      | HTMLInputElement
-      | HTMLTextAreaElement
-      | null
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null
     )?.value || "";
   const phoneValue = get(phoneInputId);
   return {
@@ -70,8 +75,6 @@ export function getModalFormValues() {
     year: get(carYearInputId),
   };
 }
-
-
 
 export const modalOverlayId = "custom-modal-create-sakaz_narad";
 const modalClass = "modal-content-create-sakaz_narad";
@@ -106,7 +109,9 @@ export function setSelectedIds(cId: string | null, carId: string | null) {
 }
 
 export let transferredActComment: string = "";
-export function setTransferredActComment(val: string) { transferredActComment = val; }
+export function setTransferredActComment(val: string) {
+  transferredActComment = val;
+}
 let currentAutocompletes: { [key: string]: any } = {};
 export let userConfirmation: "no" | "yes" | null = null;
 
@@ -708,17 +713,17 @@ export async function showModalCreateSakazNarad() {
 
   // --- НАЛАШТУВАННЯ НАВІГАЦІЇ ENTER-ОМ ---
   const navigationFieldIds = [
-    clientInputId,        // ПІБ
-    phoneInputId,         // Номер телефону
-    carModelInputId,      // Автомобіль
-    carNumberInputId,     // Номер авто
-    carYearInputId,       // Рік
-    carEngineInputId,     // Обʼєм
-    carCodeInputId,       // Код ДВЗ
-    carFuelInputId,       // Пальне
-    carVinInputId,        // VIN-код
-    carIncomeInputId,     // Джерело
-    extraInputId,         // Додатково
+    clientInputId, // ПІБ
+    phoneInputId, // Номер телефону
+    carModelInputId, // Автомобіль
+    carNumberInputId, // Номер авто
+    carYearInputId, // Рік
+    carEngineInputId, // Обʼєм
+    carCodeInputId, // Код ДВЗ
+    carFuelInputId, // Пальне
+    carVinInputId, // VIN-код
+    carIncomeInputId, // Джерело
+    extraInputId, // Додатково
   ];
   setupEnterNavigation(navigationFieldIds);
 
@@ -928,9 +933,9 @@ export async function showModalCreateSakazNarad() {
         }))
         .filter((c) => c["Номер авто"] || c["Авто"])
         .sort((a, b) =>
-          (a["Авто"] || "").toString().localeCompare(
-            (b["Авто"] || "").toString()
-          )
+          (a["Авто"] || "")
+            .toString()
+            .localeCompare((b["Авто"] || "").toString())
         ) || [];
   };
 
@@ -994,9 +999,6 @@ export async function showModalCreateSakazNarad() {
   const btnCreate = document.getElementById(btnCreateId);
   if (btnCreate) {
     btnCreate.addEventListener("click", async () => {
-      const module = await import("./pidtverdutu_sberihannya_zakaz_naryad");
-      const { saveModalIdCreate, createSaveModalCreate, showSaveModalCreate } =
-        module;
       if (!document.getElementById(saveModalIdCreate)) {
         document.body.appendChild(createSaveModalCreate());
       }
@@ -1158,16 +1160,21 @@ function clearCarAndContactFields() {
 document.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector('[data-action="openHome"]')
-    ?.addEventListener("click", async (e) => { // 1. Додано async
+    ?.addEventListener("click", async (e) => {
+      // 1. Додано async
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
 
       // 2. ДОДАНО ПЕРЕВІРКУ АВТОРИЗАЦІЇ
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
-        console.warn("⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається.");
+        console.warn(
+          "⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається."
+        );
         // Тут можна викликати вашу функцію показу помилки, якщо вона не викликається автоматично глобально
         // Але головне - ми не йдемо далі:
         return;

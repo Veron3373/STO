@@ -4,6 +4,9 @@ import {
   markNotificationAsDeleted,
   loadUnseenNotifications,
 } from "./mark_notification_deleted";
+import { supabase } from "../../vxid/supabaseClient";
+import { getSavedUserDataFromLocalStorage } from "./users";
+import { clearNotificationVisualOnly } from "./tablucya";
 
 export interface ActNotificationPayload {
   act_id: number; // номер акту (обов'язковий)
@@ -471,11 +474,6 @@ export async function loadAndShowExistingNotifications(): Promise<void> {
 async function checkAndRemoveActHighlightIfNoNotifications(
   actId: number
 ): Promise<void> {
-  // Імпортуємо supabase та функцію для зняття підсвітки
-  const { supabase } = await import("../../vxid/supabaseClient");
-  const { getSavedUserDataFromLocalStorage } = await import("./users");
-  const { clearNotificationVisualOnly } = await import("./tablucya");
-
   // Отримуємо ПІБ поточного користувача
   const userData = getSavedUserDataFromLocalStorage?.();
   const currentUserName = userData?.name;

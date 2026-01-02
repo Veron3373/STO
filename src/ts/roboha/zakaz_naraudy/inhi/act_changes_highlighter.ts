@@ -6,6 +6,7 @@ import {
   getSavedUserDataFromLocalStorage,
 } from "../../tablucya/users";
 import { ACT_ITEMS_TABLE_CONTAINER_ID, globalCache } from "../globalCache";
+import { clearNotificationVisualOnly } from "../../tablucya/tablucya";
 
 /* ====================ТИПИ =============================== */
 
@@ -434,9 +435,6 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
       await deleteProcessedChanges(actId);
 
       // Знімаємо синю підсвітку з акту в таблиці
-      const { clearNotificationVisualOnly } = await import(
-        "../../tablucya/tablucya"
-      );
       clearNotificationVisualOnly(actId);
 
       console.log(

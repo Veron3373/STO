@@ -1466,62 +1466,95 @@ export function updatevutratuDisplayedSums(): void {
   const totalSumElement = byId("total-sum");
   if (!totalSumElement) return;
 
-  const negativeSum = filteredvutratuData
-    .filter((e) => e.amount < 0)
-    .reduce((sum, e) => sum + e.amount, 0);
+  let totalNegativeSum = 0;
+  let totalAvansSum = 0;
 
-  // Рахуємо суми за деталі та роботу тільки для актів (чистий прибуток)
-  const totalDetailsSum = filteredvutratuData
-    .filter(
-      (e) => e.category === "💰 Прибуток" && e.detailsAmount !== undefined
-    )
-    .reduce((sum, e) => sum + (e.detailsAmount || 0), 0);
+  // Суми для "Прибуток" (маржа)
+  let totalNetDetailsProfit = 0;
+  let totalNetWorkProfit = 0;
 
-  const totalWorkSum = filteredvutratuData
-    .filter((e) => e.category === "💰 Прибуток" && e.workAmount !== undefined)
-    .reduce((sum, e) => sum + (e.workAmount || 0), 0);
+  // Суми для "Каса" (оборот)
+  let totalNetFullDetails = 0;
+  let totalNetFullWork = 0;
 
-  // Рахуємо суму авансів
-  const totalAvansSum = filteredvutratuData
-    .filter(
-      (e) =>
-        e.category === "💰 Прибуток" &&
-        e.paymentMethod &&
-        Number(e.paymentMethod) > 0
-    )
-    .reduce((sum, e) => sum + Number(e.paymentMethod || 0), 0);
+  filteredvutratuData.forEach((expense) => {
+    // 1. Витрати (від'ємні суми)
+    if (expense.amount < 0) {
+      totalNegativeSum += expense.amount;
+    }
 
-  // Рахуємо повні суми для каси (fullDetailsAmount + fullWorkAmount)
-  const totalFullDetailsSum = filteredvutratuData
-    .filter(
-      (e) => e.category === "💰 Прибуток" && e.fullDetailsAmount !== undefined
-    )
-    .reduce((sum, e) => sum + (e.fullDetailsAmount || 0), 0);
+    // 2. Акти (Прибуток)
+    if (expense.category === "💰 Прибуток") {
+      // Аванси
+      if (expense.paymentMethod && Number(expense.paymentMethod) > 0) {
+        totalAvansSum += Number(expense.paymentMethod);
+      }
 
-  const totalFullWorkSum = filteredvutratuData
-    .filter(
-      (e) => e.category === "💰 Прибуток" && e.fullWorkAmount !== undefined
-    )
-    .reduce((sum, e) => sum + (e.fullWorkAmount || 0), 0);
+      const discountVal = expense.discountAmount || 0;
 
-  // Рахуємо підсумок після авансу (деталі + роботи + аванс - витрати) - для Каси
+      // --- Розрахунок для ПРИБУТКУ (маржа) ---
+      let detailsProfit = expense.detailsAmount || 0;
+      let workProfit = expense.workAmount || 0;
+
+      if (discountVal > 0) {
+        const posDetails = Math.max(0, detailsProfit);
+        const posWork = Math.max(0, workProfit);
+        const totalPos = posDetails + posWork;
+        if (totalPos > 0) {
+          const dPart = (posDetails / totalPos) * discountVal;
+          const wPart = (posWork / totalPos) * discountVal;
+          detailsProfit -= dPart;
+          workProfit -= wPart;
+        }
+      }
+      totalNetDetailsProfit += detailsProfit;
+      totalNetWorkProfit += workProfit;
+
+      // --- Розрахунок для КАСИ (повні суми) ---
+      let fullDetails = expense.fullDetailsAmount || 0;
+      let fullWork = expense.fullWorkAmount || 0;
+
+      if (discountVal > 0) {
+        // Тут теж розподіляємо знижку пропорційно, але на базі повних сум?
+        // Або краще на базі повних сум для логічності відображення в касі.
+        // Зазвичай знижка йде від загальної суми, тому розподілимо пропорційно.
+        const posDetailsFull = Math.max(0, fullDetails);
+        const posWorkFull = Math.max(0, fullWork);
+        const totalPosFull = posDetailsFull + posWorkFull;
+
+        if (totalPosFull > 0) {
+          const dPartFull = (posDetailsFull / totalPosFull) * discountVal;
+          const wPartFull = (posWorkFull / totalPosFull) * discountVal;
+          fullDetails -= dPartFull;
+          fullWork -= wPartFull;
+        }
+      }
+      totalNetFullDetails += fullDetails;
+      totalNetFullWork += fullWork;
+    }
+  });
+
+  // Фінальні суми
+  // Каса = (Чисті Деталі + Чиста Робота + Аванси) - Витрати
   const finalSumCasa =
-    totalFullDetailsSum + totalFullWorkSum + totalAvansSum + negativeSum;
+    totalNetFullDetails + totalNetFullWork + totalAvansSum + totalNegativeSum;
 
-  // Загальна сума прибутку (стовпець Прибуток) + витрати
+  // Прибуток = (Чиста Маржа Деталі + Чиста Маржа Робота + Аванси) - Витрати
+  // Примітка: Аванси в прибуток зазвичай не йдуть напряму, але у вашій попередній логіці вони додавалися.
+  // Зберігаю логіку: (details + work + avans + negative)
   const finalSumProfit =
-    totalDetailsSum + totalWorkSum + totalAvansSum + negativeSum;
+    totalNetDetailsProfit + totalNetWorkProfit + totalAvansSum + totalNegativeSum;
 
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Каса</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-    totalFullDetailsSum
+    totalNetFullDetails
   )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-    totalFullWorkSum
+    totalNetFullWork
   )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
@@ -1529,7 +1562,7 @@ export function updatevutratuDisplayedSums(): void {
   )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-    Math.abs(negativeSum)
+    Math.abs(totalNegativeSum)
   )}</strong></span>
         <span style="color: #666;">=</span>
         <span><strong style="color: ${finalSumCasa >= 0 ? "#006400" : "#8B0000"
@@ -1538,11 +1571,11 @@ export function updatevutratuDisplayedSums(): void {
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Прибуток</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-      totalDetailsSum
+      totalNetDetailsProfit
     )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-      totalWorkSum
+      totalNetWorkProfit
     )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
@@ -1550,7 +1583,7 @@ export function updatevutratuDisplayedSums(): void {
     )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-      Math.abs(negativeSum)
+      Math.abs(totalNegativeSum)
     )}</strong></span>
         <span style="color: #666;">=</span>
         <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"

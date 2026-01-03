@@ -991,9 +991,9 @@ function updateFinalSumWithAvans(): void {
 
   // Спочатку знижка (червона), потім аванс (зелений)
   if (discountPercent > 0) {
-    displayText += ` - <span style="color: #d32f2f; font-weight: 700;" id="editable-discount-amount" class="editable-discount-amount">${formatNumberWithSpaces(
+    displayText += ` - <input type="text" id="editable-discount-amount" class="editable-discount-amount" value="${formatNumberWithSpaces(
       Math.round(discountAmount)
-    )} грн (знижка)</span>`;
+    )}" style="color: #d32f2f; font-weight: 700; border: none; background: transparent; width: auto; padding: 0; margin: 0; font-size: inherit;" /> грн (знижка)`;
   }
 
   if (avans > 0) {
@@ -1008,34 +1008,63 @@ function updateFinalSumWithAvans(): void {
 
     // Додаємо обробник для редагування суми знижки
     if (discountPercent > 0) {
-      const discountAmountEl = avansSubtractDisplay.querySelector(
+      const discountAmountInput = avansSubtractDisplay.querySelector(
         "#editable-discount-amount"
-      ) as HTMLElement | null;
-      if (discountAmountEl) {
-        discountAmountEl.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const currentAmount = parseNumber(discountAmountEl.textContent);
-          const newAmount = prompt(
-            "Введіть суму знижки (грн):",
-            String(Math.round(currentAmount))
-          );
-          if (newAmount !== null && newAmount !== "") {
-            const newAmountNum = parseFloat(newAmount) || 0;
-            // Дозволяємо від'ємні суми, але обмежуємо відсоток максимум 100%
-            const newPercent =
-              overallSum > 0
-                ? Math.min(100, Math.max(0, (newAmountNum / overallSum) * 100))
-                : 0;
-            const discountInputEl = document.getElementById(
-              "editable-discount"
-            ) as HTMLInputElement;
-            if (discountInputEl) {
-              discountInputEl.value = String(Math.round(newPercent));
-              discountInputEl.dispatchEvent(new Event("input"));
-            }
+      ) as HTMLInputElement | null;
+      if (discountAmountInput) {
+        // Встановлюємо ширину input в залежності від значення
+        const autoFitInput = () => {
+          const visibleLen = (discountAmountInput.value || "0").length;
+          const ch = Math.min(Math.max(visibleLen, 3), 16);
+          discountAmountInput.style.width = ch + "ch";
+        };
+        autoFitInput();
+
+        const onInputDiscount = () => {
+          const numValue = parseInt(unformat(discountAmountInput.value) || "0");
+          discountAmountInput.value = format(numValue);
+          autoFitInput();
+
+          // Пересраховуємо відсоток на основі нової суми
+          const newPercent =
+            overallSum > 0
+              ? Math.min(100, Math.max(0, (numValue / overallSum) * 100))
+              : 0;
+          const discountInputEl = document.getElementById(
+            "editable-discount"
+          ) as HTMLInputElement;
+          if (discountInputEl) {
+            discountInputEl.value = String(Math.round(newPercent));
+            discountInputEl.dispatchEvent(new Event("input"));
           }
-        });
-        discountAmountEl.style.cursor = "pointer";
+        };
+
+        const onBlurDiscount = () => {
+          const numValue = parseInt(unformat(discountAmountInput.value) || "0");
+          discountAmountInput.value = format(numValue);
+          autoFitInput();
+        };
+
+        const onKeyDownDiscount = (e: KeyboardEvent) => {
+          const allowed =
+            /\d/.test(e.key) ||
+            [
+              "Backspace",
+              "Delete",
+              "ArrowLeft",
+              "ArrowRight",
+              "Home",
+              "End",
+              "Tab",
+            ].includes(e.key);
+          if (!allowed) {
+            e.preventDefault();
+          }
+        };
+
+        discountAmountInput.addEventListener("keydown", onKeyDownDiscount);
+        discountAmountInput.addEventListener("input", onInputDiscount);
+        discountAmountInput.addEventListener("blur", onBlurDiscount);
       }
     }
 

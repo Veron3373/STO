@@ -640,6 +640,13 @@ export function generateTableHTML(
       ${buttons}
     </div>`;
 
+  // Утилиты для форматирования чисел с пробелами
+  const unformat = (s: string) => s.replace(/\s+/g, "");
+  const format = (num: number) => {
+    const str = String(num);
+    return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  };
+
   setTimeout(() => {
     const avans = document.getElementById(
       "editable-avans"
@@ -649,12 +656,6 @@ export function generateTableHTML(
     ) as HTMLInputElement | null;
 
     if (!avans && !discount) return;
-
-    const unformat = (s: string) => s.replace(/\s+/g, "");
-    const format = (num: number) => {
-      const str = String(num);
-      return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    };
 
     // Обробник для Авансу
     if (avans) {

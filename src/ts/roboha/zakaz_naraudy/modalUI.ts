@@ -728,7 +728,9 @@ export function generateTableHTML(
         discount.style.width = ch + "ch";
       };
 
-      const initialValue = parseInt(unformat(discount.value) || "0");
+      let initialValue = parseInt(unformat(discount.value) || "0");
+      // Обмежуємо до 100% при ініціалізації
+      initialValue = Math.min(100, Math.max(0, initialValue));
       discount.value = format(initialValue);
       autoFitDiscount();
       updateFinalSumWithAvans();
@@ -739,7 +741,9 @@ export function generateTableHTML(
           discount.value.slice(0, selEndBefore)
         ).length;
 
-        const numValue = parseInt(unformat(discount.value) || "0");
+        let numValue = parseInt(unformat(discount.value) || "0");
+        // Обмежуємо до 100% при ручному вводі
+        numValue = Math.min(100, Math.max(0, numValue));
         discount.value = format(numValue);
         autoFitDiscount();
 
@@ -755,7 +759,9 @@ export function generateTableHTML(
       };
 
       const onBlurDiscount = () => {
-        const numValue = parseInt(unformat(discount.value) || "0");
+        let numValue = parseInt(unformat(discount.value) || "0");
+        // Обмежуємо до 100% при розфокусуванні
+        numValue = Math.min(100, Math.max(0, numValue));
         discount.value = format(numValue);
         autoFitDiscount();
         updateFinalSumWithAvans();
@@ -1015,19 +1021,17 @@ function updateFinalSumWithAvans(): void {
           );
           if (newAmount !== null && newAmount !== "") {
             const newAmountNum = parseFloat(newAmount) || 0;
-            if (newAmountNum >= 0 && newAmountNum <= overallSum) {
-              // Пересраховуємо відсоток на основі нової суми
-              const newPercent =
-                overallSum > 0 ? (newAmountNum / overallSum) * 100 : 0;
-              const discountInputEl = document.getElementById(
-                "editable-discount"
-              ) as HTMLInputElement;
-              if (discountInputEl) {
-                discountInputEl.value = String(Math.round(newPercent));
-                discountInputEl.dispatchEvent(new Event("input"));
-              }
-            } else {
-              alert("Сума знижки не може перевищувати загальну суму");
+            // Дозволяємо від'ємні суми, але обмежуємо відсоток максимум 100%
+            const newPercent =
+              overallSum > 0
+                ? Math.min(100, Math.max(0, (newAmountNum / overallSum) * 100))
+                : 0;
+            const discountInputEl = document.getElementById(
+              "editable-discount"
+            ) as HTMLInputElement;
+            if (discountInputEl) {
+              discountInputEl.value = String(Math.round(newPercent));
+              discountInputEl.dispatchEvent(new Event("input"));
             }
           }
         });

@@ -17,6 +17,13 @@ import { userAccessLevel, canUserAddRowToAct } from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
 import { cleanupSlusarsOnSubscription } from "./modalMain";
 
+// Утилиты для форматирования чисел с пробелами
+const unformat = (s: string) => s.replace(/\s+/g, "");
+const format = (num: number) => {
+  const str = String(num);
+  return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
 function showNotification(message: string, type: string): void {
   console.log(`[${type}] ${message}`);
 }
@@ -639,13 +646,6 @@ export function generateTableHTML(
       ${sumsFooter}
       ${buttons}
     </div>`;
-
-  // Утилиты для форматирования чисел с пробелами
-  const unformat = (s: string) => s.replace(/\s+/g, "");
-  const format = (num: number) => {
-    const str = String(num);
-    return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  };
 
   setTimeout(() => {
     const avans = document.getElementById(

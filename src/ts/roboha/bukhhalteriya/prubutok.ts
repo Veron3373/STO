@@ -1338,13 +1338,15 @@ export function updatevutratuTable(): void {
       if (discount > 0 || discountVal > 0) {
         html = `
             <div style="display: flex; flex-direction: column; align-items: flex-end;">
-              <span style="color: #006400; font-size: 0.95em; font-weight: 500;">
+              <span style="color: #1a73e8; font-size: 0.95em; font-weight: 500;">
                 ${formatNumber(expense.fullAmount)}
               </span>
               <div style="font-size: 0.85em; color: #d32f2f; margin-top: 2px;">
-                🏷️${discount > 0 ? discount : ""} (${formatNumber(discountVal)})
+                🏷️${discount > 0 ? discount + "%" : ""} ${formatNumber(
+          discountVal
+        )}
               </div>
-              <div style="font-size: 0.95em; font-weight: 700; color: #1a73e8; margin-top: 2px; border-top: 1px solid #ddd; padding-top: 2px;">
+              <div style="font-size: 0.95em; font-weight: 700; color: #006400; margin-top: 2px; border-top: 1px solid #ddd; padding-top: 2px;">
                 ${formatNumber(finalVal)}
               </div>
             </div>

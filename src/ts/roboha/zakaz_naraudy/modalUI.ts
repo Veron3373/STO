@@ -1044,8 +1044,14 @@ function updateFinalSumWithAvans(): void {
             idx++;
           }
           discountAmountInput.setSelectionRange(idx, idx);
+        };
 
-          // Пересраховуємо відсоток на основі нової суми
+        const onBlurDiscount = () => {
+          const numValue = parseInt(unformat(discountAmountInput.value) || "0");
+          discountAmountInput.value = format(numValue);
+          autoFitInput();
+
+          // Пересраховуємо відсоток на основі нової суми ТІЛЬКИ при blur
           const newPercent =
             overallSum > 0
               ? Math.min(100, Math.max(0, (numValue / overallSum) * 100))
@@ -1057,12 +1063,6 @@ function updateFinalSumWithAvans(): void {
             discountInputEl.value = String(Math.round(newPercent));
             discountInputEl.dispatchEvent(new Event("input"));
           }
-        };
-
-        const onBlurDiscount = () => {
-          const numValue = parseInt(unformat(discountAmountInput.value) || "0");
-          discountAmountInput.value = format(numValue);
-          autoFitInput();
         };
 
         const onKeyDownDiscount = (e: KeyboardEvent) => {

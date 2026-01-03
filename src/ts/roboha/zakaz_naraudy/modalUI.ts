@@ -956,6 +956,176 @@ function parseNumber(text: string | null | undefined): number {
   return parseFloat((text ?? "0").replace(/\s/g, "").replace(",", ".")) || 0;
 }
 
+// --- ДАНІ ДЛЯ РОЗРАХУНКУ ЗНИЖКИ ---
+const discountDataCache = {
+  actId: null as number | null,
+  receiverWorkPercent: 0,
+  receiverPartPercent: 0,
+  purchasePrices: new Map<number, number>(), // scladId -> price
+  isDataLoaded: false,
+  isLoading: false,
+};
+
+export function resetDiscountCache() {
+  discountDataCache.actId = null;
+  discountDataCache.isDataLoaded = false;
+  discountDataCache.isLoading = false;
+  discountDataCache.purchasePrices.clear();
+}
+
+async function ensureDiscountDataLoaded() {
+  const actId = globalCache.currentActId;
+  if (!actId) return;
+
+  if (discountDataCache.isLoading) return;
+  if (
+    discountDataCache.actId === actId &&
+    discountDataCache.isDataLoaded
+  )
+    return;
+
+  discountDataCache.isLoading = true;
+  discountDataCache.actId = actId;
+  discountDataCache.isDataLoaded = false;
+  discountDataCache.purchasePrices.clear();
+
+  try {
+    // 1. Отримуємо приймальника акту
+    const { data: actData } = await supabase
+      .from("acts")
+      .select("pruimalnyk")
+      .eq("act_id", actId)
+      .single();
+
+    const receiverName = actData?.pruimalnyk;
+
+    if (receiverName) {
+      // 2. Отримуємо відсотки приймальника
+      const { data: slyusars } = await supabase
+        .from("slyusars")
+        .select("data")
+        .eq("data->>Name", receiverName);
+
+      if (slyusars && slyusars.length > 0) {
+        const data =
+          typeof slyusars[0].data === "string"
+            ? JSON.parse(slyusars[0].data)
+            : slyusars[0].data;
+        if (data.Доступ === "Приймальник") {
+          discountDataCache.receiverWorkPercent =
+            Number(data.ПроцентРоботи) || 0;
+          discountDataCache.receiverPartPercent =
+            Number(data.ПроцентЗапчастин) || 0;
+        }
+      }
+    } else {
+      discountDataCache.receiverWorkPercent = 0;
+      discountDataCache.receiverPartPercent = 0;
+    }
+
+    // 3. Збираємо sclad_id з DOM
+    const scladIds = new Set<number>();
+    const tableBody = document.querySelector<HTMLTableSectionElement>(
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
+    );
+    if (tableBody) {
+      tableBody.querySelectorAll("tr").forEach((row) => {
+        const catalogCell = row.querySelector(".catalog-cell");
+        if (catalogCell) {
+          const id = catalogCell.getAttribute("data-sclad-id");
+          if (id) scladIds.add(parseInt(id));
+        }
+      });
+    }
+
+    if (scladIds.size > 0) {
+      const { data: prices } = await supabase
+        .from("sclad")
+        .select("sclad_id, price")
+        .in("sclad_id", Array.from(scladIds));
+
+      if (prices) {
+        prices.forEach((p) => {
+          let val = 0;
+          if (typeof p.price === "number") val = p.price;
+          else
+            val =
+              parseFloat(
+                String(p.price).replace(",", ".").replace(/[^\d.-]/g, "")
+              ) || 0;
+          discountDataCache.purchasePrices.set(p.sclad_id, val);
+        });
+      }
+    }
+
+    discountDataCache.isDataLoaded = true;
+    updateFinalSumWithAvans(); // Перерахунок після завантаження
+  } catch (e) {
+    console.error("❌ [Discount] Помилка завантаження даних:", e);
+  } finally {
+    discountDataCache.isLoading = false;
+  }
+}
+
+function calculateDiscountBase(overallSum: number): number {
+  if (
+    !discountDataCache.isDataLoaded ||
+    discountDataCache.actId !== globalCache.currentActId
+  ) {
+    ensureDiscountDataLoaded();
+    return overallSum; // Повертаємо загальну суму поки вантажиться
+  }
+
+  let worksSale = 0;
+  let worksSalary = 0;
+  let partsSale = 0;
+  let partsBuy = 0;
+
+  const tableBody = document.querySelector<HTMLTableSectionElement>(
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
+  );
+  if (tableBody) {
+    const rows = Array.from(tableBody.querySelectorAll("tr"));
+    for (const row of rows) {
+      const nameCell = row.querySelector('[data-name="name"]');
+      const type = nameCell?.getAttribute("data-type");
+      const sum = parseNumber(
+        row.querySelector('[data-name="sum"]')?.textContent
+      );
+
+      if (type === "works") {
+        worksSale += sum;
+        worksSalary += parseNumber(
+          row.querySelector('[data-name="slyusar_sum"]')?.textContent
+        );
+      } else if (type === "details") {
+        partsSale += sum;
+        const scladIdStr = row
+          .querySelector(".catalog-cell")
+          ?.getAttribute("data-sclad-id");
+        if (scladIdStr) {
+          const scladId = parseInt(scladIdStr);
+          const qty = parseNumber(
+            row.querySelector('[data-name="id_count"]')?.textContent
+          );
+          const price = discountDataCache.purchasePrices.get(scladId) || 0;
+          partsBuy += price * qty;
+        }
+      }
+    }
+  }
+
+  const profitWork = worksSale - worksSalary;
+  const profitParts = partsSale - partsBuy;
+
+  // База = (WorkProfit * (100% - RecWork%)) + (PartProfit * (100% - RecPart%))
+  const base =
+    profitWork * (1 - discountDataCache.receiverWorkPercent / 100) +
+    profitParts * (1 - discountDataCache.receiverPartPercent / 100);
+
+  return Math.max(0, base);
+}
+
 function updateFinalSumWithAvans(): void {
   const avansInput = document.getElementById(
     "editable-avans"
@@ -984,6 +1154,9 @@ function updateFinalSumWithAvans(): void {
   const discountPercent = parseNumber(discountInput?.value || "0");
   const overallSum = parseNumber(overallSumSpan.textContent);
 
+  // Розраховуємо БАЗУ для знижки (Загальна - Слюсар - Приймальник - Закупка)
+  const discountBase = calculateDiscountBase(overallSum);
+
   // Визначаємо реальну суму знижки
   let actualDiscountAmount: number;
 
@@ -991,8 +1164,8 @@ function updateFinalSumWithAvans(): void {
     // Якщо користувач вводив суму вручну - використовуємо її значення
     actualDiscountAmount = parseNumber(discountAmountInput.value);
   } else {
-    // Інакше розраховуємо з процента
-    actualDiscountAmount = (overallSum * discountPercent) / 100;
+    // Інакше розраховуємо з процента ВІД НОВОЇ БАЗИ
+    actualDiscountAmount = (discountBase * discountPercent) / 100;
     // Оновлюємо поле суми знижки
     if (discountAmountInput) {
       discountAmountInput.value = format(Math.round(actualDiscountAmount));
@@ -1057,11 +1230,15 @@ function updateFinalSumWithAvans(): void {
           ) as HTMLInputElement;
 
           if (discountInputEl && overallSum > 0) {
-            // Розраховуємо відсоток від введеної суми
-            const calculatedPercent = (numValue / overallSum) * 100;
+            // Розраховуємо БАЗУ для зворотного розрахунку
+            const currentDiscountBase = calculateDiscountBase(overallSum);
+
+            // Розраховуємо відсоток від бази (якщо база > 0)
+            const calculatedPercent = currentDiscountBase > 0
+              ? (numValue / currentDiscountBase) * 100
+              : 0;
 
             // Заокруглюємо до 0.5 (математичне заокруглювання)
-            // Ділимо на 0.5, округлюємо, множимо на 0.5
             const roundedToHalf = Math.round(calculatedPercent / 0.5) * 0.5;
 
             // Встановлюємо розраховані відсотки (максимум 100%)
@@ -1147,6 +1324,8 @@ export function createModal(): void {
     );
     // 🧹 Очищуємо Realtime підписку на slusarsOn
     cleanupSlusarsOnSubscription();
+    // 🧹 Очищуємо кеш розрахунку знижки
+    resetDiscountCache();
   });
 }
 

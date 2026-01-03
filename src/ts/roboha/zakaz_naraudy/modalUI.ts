@@ -1038,28 +1038,35 @@ function updateFinalSumWithAvans(): void {
           discountAmountInput.value = format(numValue);
           autoFitInput();
 
-          // Розраховуємо відсоток на основі нової суми
-          // ВАЖЛИВО: Перераховуємо відсоток ТІЛЬКИ якщо сума досягає величини цілого відсотка
-          // Інакше залишаємо поточний відсоток без змін
           const discountInputEl = document.getElementById(
             "editable-discount"
           ) as HTMLInputElement;
 
           if (discountInputEl && overallSum > 0) {
-            const newPercent = Math.round((numValue / overallSum) * 100);
-            const expectedAmountForNewPercent = Math.round(
-              (newPercent / 100) * overallSum
+            // Отримуємо поточний процент
+            const currentPercent = parseInt(discountInputEl.value || "0", 10);
+            // Розраховуємо, яка сума повинна бути для цього процента
+            const expectedAmountForCurrentPercent = Math.round(
+              (currentPercent / 100) * overallSum
             );
 
-            // Якщо сума достатня для нового цілого відсотка, оновлюємо його
-            if (
-              numValue >= expectedAmountForNewPercent ||
-              numValue >= overallSum
-            ) {
-              discountInputEl.value = String(newPercent);
+            // ЛОГІКА:
+            // - Якщо введена сума >= розрахункової суми для поточного відсотка, залишаємо суму як є, не міняємо відсоток
+            // - Якщо введена сума < розрахункової суми, то скидаємо на розраховану суму
+            // - Якщо сума >= totalSum, то 100%
+
+            if (numValue >= overallSum) {
+              // Максимум - 100% від всієї суми
+              discountAmountInput.value = format(overallSum);
+              discountInputEl.value = "100";
+              discountInputEl.dispatchEvent(new Event("input"));
+            } else if (numValue < expectedAmountForCurrentPercent) {
+              // Якщо сума менша за розраховану для поточного відсотка, скидаємо на розраховану
+              numValue = expectedAmountForCurrentPercent;
+              discountAmountInput.value = format(numValue);
               discountInputEl.dispatchEvent(new Event("input"));
             }
-            // Інакше залишаємо поточний процент без змін
+            // Інакше (numValue >= expectedAmountForCurrentPercent) - залишаємо суму як є, не міняємо відсоток
           }
         };
 

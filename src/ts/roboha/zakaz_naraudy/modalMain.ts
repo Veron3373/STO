@@ -987,11 +987,23 @@ function renderModalContent(
     const avansInput = document.getElementById(
       "editable-avans"
     ) as HTMLInputElement | null;
-    if (!avansInput) return;
+    const discountInput = document.getElementById(
+      "editable-discount"
+    ) as HTMLInputElement | null;
 
-    const avansValue = Number(act?.avans ?? actDetails?.["Аванс"] ?? 0);
-    avansInput.value = String(avansValue);
-    avansInput.dispatchEvent(new Event("input"));
+    if (avansInput) {
+      const avansValue = Number(act?.avans ?? actDetails?.["Аванс"] ?? 0);
+      avansInput.value = String(avansValue);
+      avansInput.dispatchEvent(new Event("input"));
+    }
+
+    if (discountInput) {
+      const discountValue = Number(
+        act?.discount ?? actDetails?.["Знижка"] ?? 0
+      );
+      discountInput.value = String(discountValue);
+      discountInput.dispatchEvent(new Event("input"));
+    }
   }, 60);
 }
 
@@ -1074,6 +1086,15 @@ async function addModalHandlers(
   ) as HTMLInputElement;
   if (avansInput) {
     avansInput.addEventListener("input", () => {
+      updateCalculatedSumsInFooter();
+    });
+  }
+
+  const discountInput = document.getElementById(
+    "editable-discount"
+  ) as HTMLInputElement;
+  if (discountInput) {
+    discountInput.addEventListener("input", () => {
       updateCalculatedSumsInFooter();
     });
   }

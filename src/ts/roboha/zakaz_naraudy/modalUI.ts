@@ -585,16 +585,28 @@ export function generateTableHTML(
       />
       <span class="sum-currency">грн</span>
     </p>
-      <p><strong>За роботу:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-works-sum">${formatNumberWithSpaces(
-        0
-      )}</span> грн</p>
-      <p><strong>За деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-sum">${formatNumberWithSpaces(
-        0
-      )}</span> грн</p>
-      <p id="overall-sum-line"><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
-        0
-      )}</span> грн<span id="avans-subtract-display" class="avans-subtract-display" style="display: none;"></span><span id="final-sum-display" class="final-sum-display" style="display: none;"></span></p>
-    </div>`;
+    <p><strong>За роботу:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-works-sum">${formatNumberWithSpaces(
+      0
+    )}</span> грн</p>
+    <p><strong>За деталі:</strong> <span class="zakaz_narayd-sums-footer-sum" id="total-details-sum">${formatNumberWithSpaces(
+      0
+    )}</span> грн</p>
+    <p class="sum-row">
+      <span class="sum-label">Знижка:</span>
+      <input 
+        type="text"
+        id="editable-discount"
+        class="editable-discount-input sum-value"
+        value="0"
+        placeholder="0"
+        autocomplete="off"
+      />
+      <span class="sum-currency">грн</span>
+    </p>
+    <p id="overall-sum-line"><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
+      0
+    )}</span> грн<span id="avans-subtract-display" class="avans-subtract-display" style="display: none;"></span><span id="final-sum-display" class="final-sum-display" style="display: none;"></span></p>
+  </div>`;
 
   const buttons =
     globalCache.isActClosed || !canAddRow
@@ -632,7 +644,11 @@ export function generateTableHTML(
     const avans = document.getElementById(
       "editable-avans"
     ) as HTMLInputElement | null;
-    if (!avans) return;
+    const discount = document.getElementById(
+      "editable-discount"
+    ) as HTMLInputElement | null;
+
+    if (!avans && !discount) return;
 
     const unformat = (s: string) => s.replace(/\s+/g, "");
     const format = (num: number) => {
@@ -640,63 +656,132 @@ export function generateTableHTML(
       return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     };
 
-    const autoFit = () => {
-      const visibleLen = (avans.value || avans.placeholder || "0").length;
-      const ch = Math.min(Math.max(visibleLen, 3), 16);
-      avans.style.width = ch + "ch";
-    };
+    // Обробник для Авансу
+    if (avans) {
+      const autoFitAvans = () => {
+        const visibleLen = (avans.value || avans.placeholder || "0").length;
+        const ch = Math.min(Math.max(visibleLen, 3), 16);
+        avans.style.width = ch + "ch";
+      };
 
-    const initialValue = parseInt(unformat(avans.value) || "0");
-    avans.value = format(initialValue);
-    autoFit();
-    updateFinalSumWithAvans();
-
-    const onInput = () => {
-      const selEndBefore = avans.selectionEnd ?? avans.value.length;
-      const digitsBefore = unformat(avans.value.slice(0, selEndBefore)).length;
-
-      const numValue = parseInt(unformat(avans.value) || "0");
-      avans.value = format(numValue);
-      autoFit();
-
-      let idx = 0,
-        digitsSeen = 0;
-      while (idx < avans.value.length && digitsSeen < digitsBefore) {
-        if (/\d/.test(avans.value[idx])) digitsSeen++;
-        idx++;
-      }
-      avans.setSelectionRange(idx, idx);
-
+      const initialValue = parseInt(unformat(avans.value) || "0");
+      avans.value = format(initialValue);
+      autoFitAvans();
       updateFinalSumWithAvans();
-    };
 
-    const onBlur = () => {
-      const numValue = parseInt(unformat(avans.value) || "0");
-      avans.value = format(numValue);
-      autoFit();
+      const onInputAvans = () => {
+        const selEndBefore = avans.selectionEnd ?? avans.value.length;
+        const digitsBefore = unformat(
+          avans.value.slice(0, selEndBefore)
+        ).length;
+
+        const numValue = parseInt(unformat(avans.value) || "0");
+        avans.value = format(numValue);
+        autoFitAvans();
+
+        let idx = 0,
+          digitsSeen = 0;
+        while (idx < avans.value.length && digitsSeen < digitsBefore) {
+          if (/\d/.test(avans.value[idx])) digitsSeen++;
+          idx++;
+        }
+        avans.setSelectionRange(idx, idx);
+
+        updateFinalSumWithAvans();
+      };
+
+      const onBlurAvans = () => {
+        const numValue = parseInt(unformat(avans.value) || "0");
+        avans.value = format(numValue);
+        autoFitAvans();
+        updateFinalSumWithAvans();
+      };
+
+      const onKeyDownAvans = (e: KeyboardEvent) => {
+        const allowed =
+          /\d/.test(e.key) ||
+          [
+            "Backspace",
+            "Delete",
+            "ArrowLeft",
+            "ArrowRight",
+            "Home",
+            "End",
+            "Tab",
+          ].includes(e.key);
+        if (!allowed) {
+          e.preventDefault();
+        }
+      };
+
+      avans.addEventListener("keydown", onKeyDownAvans);
+      avans.addEventListener("input", onInputAvans);
+      avans.addEventListener("blur", onBlurAvans);
+    }
+
+    // Обробник для Знижки
+    if (discount) {
+      const autoFitDiscount = () => {
+        const visibleLen = (discount.value || discount.placeholder || "0")
+          .length;
+        const ch = Math.min(Math.max(visibleLen, 3), 16);
+        discount.style.width = ch + "ch";
+      };
+
+      const initialValue = parseInt(unformat(discount.value) || "0");
+      discount.value = format(initialValue);
+      autoFitDiscount();
       updateFinalSumWithAvans();
-    };
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      const allowed =
-        /\d/.test(e.key) ||
-        [
-          "Backspace",
-          "Delete",
-          "ArrowLeft",
-          "ArrowRight",
-          "Home",
-          "End",
-          "Tab",
-        ].includes(e.key);
-      if (!allowed) {
-        e.preventDefault();
-      }
-    };
+      const onInputDiscount = () => {
+        const selEndBefore = discount.selectionEnd ?? discount.value.length;
+        const digitsBefore = unformat(
+          discount.value.slice(0, selEndBefore)
+        ).length;
 
-    avans.addEventListener("keydown", onKeyDown);
-    avans.addEventListener("input", onInput);
-    avans.addEventListener("blur", onBlur);
+        const numValue = parseInt(unformat(discount.value) || "0");
+        discount.value = format(numValue);
+        autoFitDiscount();
+
+        let idx = 0,
+          digitsSeen = 0;
+        while (idx < discount.value.length && digitsSeen < digitsBefore) {
+          if (/\d/.test(discount.value[idx])) digitsSeen++;
+          idx++;
+        }
+        discount.setSelectionRange(idx, idx);
+
+        updateFinalSumWithAvans();
+      };
+
+      const onBlurDiscount = () => {
+        const numValue = parseInt(unformat(discount.value) || "0");
+        discount.value = format(numValue);
+        autoFitDiscount();
+        updateFinalSumWithAvans();
+      };
+
+      const onKeyDownDiscount = (e: KeyboardEvent) => {
+        const allowed =
+          /\d/.test(e.key) ||
+          [
+            "Backspace",
+            "Delete",
+            "ArrowLeft",
+            "ArrowRight",
+            "Home",
+            "End",
+            "Tab",
+          ].includes(e.key);
+        if (!allowed) {
+          e.preventDefault();
+        }
+      };
+
+      discount.addEventListener("keydown", onKeyDownDiscount);
+      discount.addEventListener("input", onInputDiscount);
+      discount.addEventListener("blur", onBlurDiscount);
+    }
   }, 0);
 
   return tableHTML;
@@ -870,6 +955,9 @@ function updateFinalSumWithAvans(): void {
   const avansInput = document.getElementById(
     "editable-avans"
   ) as HTMLInputElement;
+  const discountInput = document.getElementById(
+    "editable-discount"
+  ) as HTMLInputElement;
   const overallSumSpan = document.getElementById("total-overall-sum");
   const avansSubtractDisplay = document.getElementById(
     "avans-subtract-display"
@@ -885,15 +973,30 @@ function updateFinalSumWithAvans(): void {
     return;
 
   const avans = parseNumber(avansInput.value);
+  const discount = parseNumber(discountInput?.value || "0");
   const overallSum = parseNumber(overallSumSpan.textContent);
 
-  if (avans > 0) {
-    const finalSum = overallSum - avans;
+  // Загальна сума мінус знижка = базова сума для розрахунку авансу
+  const sumAfterDiscount = overallSum - discount;
+  const finalSum = sumAfterDiscount - avans;
 
-    avansSubtractDisplay.textContent = ` - ${formatNumberWithSpaces(
+  let displayText = "";
+
+  if (discount > 0) {
+    displayText += ` - ${formatNumberWithSpaces(
+      Math.round(discount)
+    )} грн (знижка)`;
+  }
+
+  if (avans > 0) {
+    displayText += ` - ${formatNumberWithSpaces(
       Math.round(avans)
-    )} грн`;
-    avansSubtractDisplay.style.color = "#2e7d32";
+    )} грн (аванс)`;
+  }
+
+  if (discount > 0 || avans > 0) {
+    avansSubtractDisplay.textContent = displayText;
+    avansSubtractDisplay.style.color = "#d32f2f";
     avansSubtractDisplay.style.display = "inline";
 
     finalSumDisplay.textContent = ` = ${formatNumberWithSpaces(

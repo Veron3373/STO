@@ -1367,6 +1367,13 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     ? parseFloat(avansInput.value.replace(/\s/g, "") || "0")
     : 0;
 
+  const discountInput = document.getElementById(
+    "editable-discount"
+  ) as HTMLInputElement;
+  const discountValue = discountInput
+    ? parseFloat(discountInput.value.replace(/\s/g, "") || "0")
+    : 0;
+
   const updatedActData = {
     ...(originalActData || {}),
     Пробіг: newProbig,
@@ -1378,6 +1385,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "За роботу": totalWorksSum,
     "Загальна сума": grandTotalSum,
     Аванс: avansValue,
+    Знижка: discountValue,
     "Прибуток за деталі": Number((totalDetailsMargin || 0).toFixed(2)),
     "Прибуток за роботу": Number((totalWorksProfit || 0).toFixed(2)),
   };
@@ -1391,6 +1399,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     .update({
       data: updatedActData,
       avans: avansValue,
+      discount: discountValue,
     })
     .eq("act_id", actId);
   if (updateError) {

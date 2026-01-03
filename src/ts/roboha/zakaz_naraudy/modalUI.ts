@@ -1022,9 +1022,28 @@ function updateFinalSumWithAvans(): void {
         autoFitInput();
 
         const onInputDiscount = () => {
-          const numValue = parseInt(unformat(discountAmountInput.value) || "0");
+          const selEndBefore =
+            discountAmountInput.selectionEnd ??
+            discountAmountInput.value.length;
+          const digitsBefore = unformat(
+            discountAmountInput.value.slice(0, selEndBefore)
+          ).length;
+
+          let numValue = parseInt(unformat(discountAmountInput.value) || "0");
           discountAmountInput.value = format(numValue);
           autoFitInput();
+
+          // Восстанавливаем позицию курсора
+          let idx = 0,
+            digitsSeen = 0;
+          while (
+            idx < discountAmountInput.value.length &&
+            digitsSeen < digitsBefore
+          ) {
+            if (/\d/.test(discountAmountInput.value[idx])) digitsSeen++;
+            idx++;
+          }
+          discountAmountInput.setSelectionRange(idx, idx);
 
           // Пересраховуємо відсоток на основі нової суми
           const newPercent =

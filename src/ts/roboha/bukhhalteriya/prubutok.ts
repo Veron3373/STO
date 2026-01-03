@@ -27,6 +27,8 @@ interface ExpenseRecordLocal {
   fullDetailsAmount?: number; // Повна сума за деталі з акту
   fullWorkAmount?: number; // Повна сума за роботу з акту
   tupOplatu?: string; // Тип оплати
+  discount?: number; // Знижка у відсотках
+  discountAmount?: number; // Сума знижки
 }
 
 type ExpenseMode = "add" | "edit" | "delete";
@@ -833,6 +835,9 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const fullWorkAmount = Number(actData["За роботу"]) || 0;
         const fullAmount = fullDetailsAmount + fullWorkAmount;
 
+        const discountPercent = Number(actData["Знижка"]) || 0;
+        const discountAmountValue = Number(actData["СумаЗнижки"]) || 0;
+
         vutratuData.push({
           id: actItem.act_id * -1,
           date: getKyivDate(actItem.date_on) || actItem.date_on,
@@ -855,6 +860,8 @@ async function loadvutratuFromDatabase(): Promise<void> {
           fullDetailsAmount: fullDetailsAmount,
           fullWorkAmount: fullWorkAmount,
           tupOplatu: actItem.tupOplatu || undefined,
+          discount: discountPercent,
+          discountAmount: discountAmountValue,
         });
       }
     }
@@ -1156,8 +1163,8 @@ export function updatevutratuTable(): void {
     row.className = isOpenAct
       ? "open-row"
       : isNegative
-      ? "negative-row"
-      : "positive-row";
+        ? "negative-row"
+        : "positive-row";
 
     // 💰 Розраховано - показуємо дату витрати або розрахунку акту
     const paymentCell = row.insertCell();
@@ -1233,9 +1240,8 @@ export function updatevutratuTable(): void {
     if (isFromAct && expense.actNumber) {
       actCell.innerHTML = `
         <button class="Bukhhalter-act-btn"
-                onclick="event.stopPropagation(); openActModal(${
-                  Number(expense.actNumber) || 0
-                })"
+                onclick="event.stopPropagation(); openActModal(${Number(expense.actNumber) || 0
+        })"
                 title="Відкрити акт №${expense.actNumber}">
           📋 ${expense.actNumber}
         </button>
@@ -1262,14 +1268,14 @@ export function updatevutratuTable(): void {
         expense.detailsAmount > 0
           ? "#28a745"
           : expense.detailsAmount < 0
-          ? "#dc3545"
-          : "#999";
+            ? "#dc3545"
+            : "#999";
       const workColor =
         expense.workAmount > 0
           ? "#28a745"
           : expense.workAmount < 0
-          ? "#dc3545"
-          : "#999";
+            ? "#dc3545"
+            : "#999";
       const detailsSign = expense.detailsAmount > 0 ? "+" : "";
       const workSign = expense.workAmount > 0 ? "+" : "";
 
@@ -1292,8 +1298,8 @@ export function updatevutratuTable(): void {
         expense.amount > 0
           ? "#28a745"
           : expense.amount < 0
-          ? "#dc3545"
-          : "#999";
+            ? "#dc3545"
+            : "#999";
       const sign = expense.amount > 0 ? "+" : "";
       amountCell.innerHTML = `<span style="color: ${color}; font-size: 0.95em; font-weight: 500;">${sign}${formatNumber(
         expense.amount
@@ -1305,11 +1311,31 @@ export function updatevutratuTable(): void {
     fullAmountCell.style.textAlign = "right";
 
     if (isFromAct && expense.fullAmount !== undefined) {
-      fullAmountCell.innerHTML = `
-        <span style="color: #006400; font-size: 0.95em; font-weight: 500;">
+      const discount = expense.discount || 0;
+      const discountVal = expense.discountAmount || 0;
+      const finalVal = expense.fullAmount - discountVal;
+
+      let html = `<span style="color: #006400; font-size: 0.95em; font-weight: 500;">
           ${formatNumber(expense.fullAmount)}
-        </span>
-      `;
+        </span>`;
+
+      if (discount > 0 || discountVal > 0) {
+        html = `
+            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+              <span style="color: #006400; font-size: 0.95em; font-weight: 500;">
+                ${formatNumber(expense.fullAmount)}
+              </span>
+              <div style="font-size: 0.85em; color: #d32f2f; margin-top: 2px;">
+                🏷️${discount > 0 ? discount : ""} (${formatNumber(discountVal)})
+              </div>
+              <div style="font-size: 0.95em; font-weight: 700; color: #1a73e8; margin-top: 2px; border-top: 1px solid #ddd; padding-top: 2px;">
+                ${formatNumber(finalVal)}
+              </div>
+            </div>
+          `;
+      }
+
+      fullAmountCell.innerHTML = html;
     } else {
       fullAmountCell.textContent = "-";
     }
@@ -1339,8 +1365,8 @@ export function updatevutratuTable(): void {
       const avansInfo =
         expense.paymentMethod && Number(expense.paymentMethod) > 0
           ? `<br><span style="color: #000; font-weight: 600; font-size: 0.95em;">💰 ${formatNumber(
-              Number(expense.paymentMethod)
-            )}</span>`
+            Number(expense.paymentMethod)
+          )}</span>`
           : "";
       methodCell.innerHTML = `
         <span style="font-size: 0.95em;">
@@ -1455,46 +1481,44 @@ export function updatevutratuDisplayedSums(): void {
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Каса</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-          totalFullDetailsSum
-        )}</strong></span>
+    totalFullDetailsSum
+  )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-          totalFullWorkSum
-        )}</strong></span>
+    totalFullWorkSum
+  )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-          totalAvansSum
-        )}</strong></span>
+    totalAvansSum
+  )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-          Math.abs(negativeSum)
-        )}</strong></span>
+    Math.abs(negativeSum)
+  )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${
-          finalSumCasa >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
+        <span><strong style="color: ${finalSumCasa >= 0 ? "#006400" : "#8B0000"
+    };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Прибуток</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-          totalDetailsSum
-        )}</strong></span>
+      totalDetailsSum
+    )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-          totalWorkSum
-        )}</strong></span>
+      totalWorkSum
+    )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-          totalAvansSum
-        )}</strong></span>
+      totalAvansSum
+    )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-          Math.abs(negativeSum)
-        )}</strong></span>
+      Math.abs(negativeSum)
+    )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${
-          finalSumProfit >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
+        <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"
+    };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
       </div>
     </div>
   `;

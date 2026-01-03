@@ -159,23 +159,19 @@ export async function printModalToPdf(): Promise<void> {
     );
   }
 
-  // 🔶 Приховуємо рядок знижки, якщо аванс = 0
-  const avansInput = document.getElementById(
-    "editable-avans"
+  // 🔶 Приховуємо рядок знижки, якщо знижка = 0
+  const discountInput = document.getElementById(
+    "editable-discount"
   ) as HTMLInputElement | null;
-  const avansValue = avansInput
-    ? parseFloat(avansInput.value.replace(/\s/g, "") || "0")
+  const discountValue = discountInput
+    ? parseFloat(discountInput.value.replace(/\s/g, "") || "0")
     : 0;
 
-  let discountRow: HTMLElement | null = null;
-  if (avansValue === 0) {
+  if (discountValue === 0 && discountInput) {
     // Знаходимо рядок зі знижкою через input#editable-discount
-    const discountInput = document.getElementById("editable-discount");
-    if (discountInput) {
-      discountRow = discountInput.closest("p.sum-row") as HTMLElement;
-      if (discountRow) {
-        elementsToHide.push(discountRow);
-      }
+    const discountRow = discountInput.closest("p.sum-row") as HTMLElement;
+    if (discountRow) {
+      elementsToHide.push(discountRow);
     }
   }
 

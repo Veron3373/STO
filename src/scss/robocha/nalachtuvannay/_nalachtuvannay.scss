@@ -165,6 +165,25 @@
       &:not(.active) {
         background-color: #e3f2fd; // Світло-синій фон коли OFF
       }
+
+      .discount-status {
+        margin-left: auto;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      &.active .discount-status {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      &:not(.active) .discount-status {
+        background-color: #2196f3;
+        color: white;
+      }
     }
   }
 

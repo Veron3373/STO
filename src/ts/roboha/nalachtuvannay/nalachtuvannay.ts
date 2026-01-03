@@ -168,6 +168,17 @@ const ROLE_TO_COLUMN = {
 };
 
 function createToggle(id: string, label: string, cls: string): string {
+  // Спеціальний перемикач для знижки з текстом "Всі"/"Власник"
+  if (id === "toggle-discount") {
+    return `
+      <label class="toggle-switch ${cls}">
+        <input type="checkbox" id="${id}" />
+        <span class="slider"></span>
+        <span class="label-text">${label}</span>
+        <span class="discount-status">Власник</span>
+      </label>
+    `;
+  }
   return `
     <label class="toggle-switch ${cls}">
       <input type="checkbox" id="${id}" />
@@ -231,6 +242,13 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
       .forEach((cb) => {
         cb.closest(".toggle-switch")?.classList.toggle("active", cb.checked);
+        // Оновлюємо текст для перемикача знижки після завантаження
+        if (cb.id === "toggle-discount") {
+          const statusEl = cb
+            .closest(".toggle-switch")
+            ?.querySelector(".discount-status");
+          if (statusEl) statusEl.textContent = cb.checked ? "Всі" : "Власник";
+        }
       });
   } catch (err) {
     console.error(err);
@@ -551,6 +569,13 @@ export async function createSettingsModal(): Promise<void> {
     .forEach((cb) => {
       cb.addEventListener("change", () => {
         cb.closest(".toggle-switch")?.classList.toggle("active", cb.checked);
+        // Оновлюємо текст для перемикача знижки
+        if (cb.id === "toggle-discount") {
+          const statusEl = cb
+            .closest(".toggle-switch")
+            ?.querySelector(".discount-status");
+          if (statusEl) statusEl.textContent = cb.checked ? "Всі" : "Власник";
+        }
       });
     });
 

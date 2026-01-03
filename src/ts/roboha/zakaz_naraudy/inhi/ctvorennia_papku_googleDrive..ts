@@ -330,8 +330,8 @@ export async function findAndRestoreFolderLink(
           ? cleanNameComponent(actInfo.year)
           : null,
         actInfo.phone &&
-          actInfo.phone !== "—" &&
-          actInfo.phone !== "Без_телефону"
+        actInfo.phone !== "—" &&
+        actInfo.phone !== "Без_телефону"
           ? cleanNameComponent(actInfo.phone)
           : null,
       ].filter(Boolean) as string[];
@@ -454,13 +454,21 @@ async function getActFullInfo(actId: number): Promise<{
 async function updateActPhotoLinkWithRetry(
   actId: number,
   driveUrl: string,
-  maxRetries: number = 3
+  maxRetries: number = 5 // Збільшено кількість спроб
 ): Promise<void> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`📝 Спроба ${attempt}/${maxRetries} запису шляху в БД...`);
+      console.log(`📝 [Debug] actId=${actId}, driveUrl=${driveUrl}`);
+
+      // Затримка перед повторними спробами (експоненційна)
+      if (attempt > 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+        console.log(`⏳ Очікування ${delay}ms перед спробою ${attempt}...`);
+        await sleep(delay);
+      }
 
       const { data: currentAct, error: fetchError } = await supabase
         .from("acts")
@@ -468,18 +476,27 @@ async function updateActPhotoLinkWithRetry(
         .eq("act_id", actId)
         .single();
 
-      if (fetchError || !currentAct) {
-        throw new Error(`Не вдалося знайти акт з ID ${actId}`);
+      if (fetchError) {
+        console.error(`❌ Помилка отримання акту:`, fetchError);
+        throw new Error(
+          `Не вдалося знайти акт з ID ${actId}: ${fetchError.message}`
+        );
+      }
+
+      if (!currentAct) {
+        throw new Error(`Акт з ID ${actId} не знайдено`);
       }
 
       // НОРМАЛІЗАЦІЯ
       const parsed = safeParseJSON(currentAct.data);
       const actData: Record<string, any> =
-        parsed && typeof parsed === "object" ? parsed : currentAct.data ?? {};
+        parsed && typeof parsed === "object"
+          ? { ...parsed }
+          : { ...(currentAct.data ?? {}) };
 
       // 🔒 Перевіряємо чи посилання вже є (захист від дублювання)
       const existingPhotos = Array.isArray(actData["Фото"])
-        ? actData["Фото"]
+        ? [...actData["Фото"]]
         : [];
 
       if (existingPhotos.includes(driveUrl)) {
@@ -493,6 +510,10 @@ async function updateActPhotoLinkWithRetry(
       actData["Фото"] = [...new Set(uniquePhotos)]; // Унікальні значення
 
       console.log(`💾 Записуємо в БД:`, actData["Фото"]);
+      console.log(
+        `💾 [Debug] Повний об'єкт data:`,
+        JSON.stringify(actData).slice(0, 500)
+      );
 
       const { data: updatedRow, error: updateError } = await supabase
         .from("acts")
@@ -502,16 +523,56 @@ async function updateActPhotoLinkWithRetry(
         .single();
 
       if (updateError) {
+        console.error(`❌ Помилка update:`, updateError);
         throw new Error(`Не вдалося оновити акт: ${updateError.message}`);
       }
 
+      if (!updatedRow) {
+        throw new Error("Не отримано відповідь від БД після оновлення");
+      }
+
       // ✅ Перевіряємо, що дані справді записалися
-      const savedLinks: string[] = Array.isArray(updatedRow?.data?.["Фото"])
-        ? updatedRow.data["Фото"]
+      const updatedData =
+        safeParseJSON(updatedRow.data) || updatedRow.data || {};
+      const savedLinks: string[] = Array.isArray(updatedData?.["Фото"])
+        ? updatedData["Фото"]
         : [];
 
+      console.log(
+        `🔍 [Debug] Отримані дані після update:`,
+        JSON.stringify(updatedData).slice(0, 500)
+      );
+      console.log(`🔍 [Debug] savedLinks:`, savedLinks);
+
       if (!savedLinks.includes(driveUrl)) {
-        throw new Error("Посилання не збереглося в БД після оновлення");
+        // 🔄 Додаткова перевірка - можливо БД повернула старі дані, перечитаємо
+        await sleep(300);
+        const { data: recheck } = await supabase
+          .from("acts")
+          .select("data")
+          .eq("act_id", actId)
+          .single();
+
+        const recheckData = safeParseJSON(recheck?.data) || recheck?.data || {};
+        const recheckLinks: string[] = Array.isArray(recheckData?.["Фото"])
+          ? recheckData["Фото"]
+          : [];
+
+        console.log(`🔍 [Debug] Recheck links:`, recheckLinks);
+
+        if (!recheckLinks.includes(driveUrl)) {
+          throw new Error(
+            "Посилання не збереглося в БД після оновлення (перевірено двічі)"
+          );
+        }
+
+        // Якщо recheck показав що все ок
+        console.log(
+          "✅ Шлях успішно записаний в БД (підтверджено recheck):",
+          recheckLinks
+        );
+        updatePhotoSection(recheckLinks, false);
+        return;
       }
 
       console.log("✅ Шлях успішно записаний в БД:", savedLinks);
@@ -519,19 +580,11 @@ async function updateActPhotoLinkWithRetry(
       // Локально перемикаємо UI в режим "відкрити"
       updatePhotoSection(savedLinks, false);
 
-      // Із БД підтягнемо ще раз, щоб синхронізувати стан (на всякий випадок)
-      // Із БД підтягнемо ще раз, щоб синхронізувати стан (на всякий випадок)
-      // setTimeout(() => refreshPhotoData(actId), 500); // ВИДАЛЕНО: Викликає race condition (UI блимає червоним)
-
       return; // ✅ Успіх!
     } catch (error) {
       lastError = handleError(error);
       console.error(`❌ Спроба ${attempt} невдала:`, lastError.message);
-
-      if (attempt < maxRetries) {
-        console.log(`⏳ Очікування 2 секунди перед наступною спробою...`);
-        await sleep(2000); // Збільшено затримку для уникнення конфліктів
-      }
+      // Затримка перед наступною спробою вже є на початку циклу
     }
   }
 
@@ -597,27 +650,38 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 
     if (isCreatingFolder) return; // 🚫 захист від мульти-кліків
 
+    const modal = document.getElementById("zakaz_narayd-custom-modal");
+    const actIdStr = modal?.getAttribute("data-act-id");
+    if (!actIdStr) return;
+    const actId = Number(actIdStr);
+
     // ⚡️ КРИТИЧНО ДЛЯ iOS: Перевіряємо UI стан синхронно
     // Якщо кнопка "Створити" (червона), то ми ймовірно будемо викликати Auth
     // Auth мусить бути викликаний ОДРАЗУ ж в обробнику кліку, до будь-яких await
     const cell = e.currentTarget as HTMLElement;
     const isCreateMode = cell.getAttribute("data-has-link") !== "true";
 
+    // 🍎 ДЛЯ iOS: Авторизація має бути ПЕРШОЮ дією в обробнику кліку
+    // Інакше Safari заблокує popup як "not user initiated"
     if (isCreateMode && !accessToken) {
-      console.log("📱 [iOS Debug] Pre-flight Auth check (Create Mode detected)...");
+      console.log(
+        "📱 [iOS Debug] Pre-flight Auth check (Create Mode detected)..."
+      );
+      isCreatingFolder = true; // Блокуємо повторні кліки
+      photoCell.style.pointerEvents = "none";
+      showNotification("Підключення до Google Drive...", "info");
+
       try {
         await initGoogleApi();
+        console.log("✅ [iOS Debug] Авторизація успішна");
       } catch (authErr) {
         console.error("❌ Auth cancelled/failed:", authErr);
-        // Не продовжуємо, якщо юзер скасував логін, бо далі все одно буде помилка
+        isCreatingFolder = false;
+        photoCell.style.pointerEvents = "";
+        showNotification("Авторизацію скасовано або помилка входу", "warning");
         return;
       }
     }
-
-    const modal = document.getElementById("zakaz_narayd-custom-modal");
-    const actIdStr = modal?.getAttribute("data-act-id");
-    if (!actIdStr) return;
-    const actId = Number(actIdStr);
 
     try {
       // тягнемо АКТ із БД — беремо ЛИШЕ актуальний стан
@@ -673,11 +737,18 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       }
 
       // 🔍 СПОЧАТКУ ШУКАЄМО ІСНУЮЧУ ПАПКУ (може бути створена, але не записана в БД)
-      isCreatingFolder = true;
-      photoCell.style.pointerEvents = "none";
+      // Якщо ми ще не встановили блокування (для випадку коли hasLink = true і ми пропустили auth блок)
+      if (!isCreatingFolder) {
+        isCreatingFolder = true;
+        photoCell.style.pointerEvents = "none";
+      }
 
-      // (Auth double-check, хоча ми вже зробили це вище)
+      // (Auth double-check, хоча ми вже зробили це вище для iOS)
       if (!accessToken) {
+        console.log(
+          "📱 [iOS Debug] Повторна авторизація (accessToken відсутній)..."
+        );
+        showNotification("Підключення до Google Drive...", "info");
         await initGoogleApi();
       }
 
@@ -687,9 +758,17 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       console.log("📱 [iOS Debug] Інформація про акт отримана:", actInfo);
 
       showNotification("Пошук існуючої папки в Google Drive...", "info");
-      const existingUrl = await findAndRestoreFolderLink(actId, actInfo);
 
-      if (existingUrl) {
+      let folderUrl: string | null = null;
+
+      try {
+        folderUrl = await findAndRestoreFolderLink(actId, actInfo);
+      } catch (searchErr) {
+        console.warn("⚠️ Помилка пошуку існуючої папки:", searchErr);
+        // Продовжуємо — спробуємо створити нову
+      }
+
+      if (folderUrl) {
         showNotification(
           "Знайдено існуючу папку! Посилання відновлено.",
           "success"
@@ -701,7 +780,29 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       showNotification("Створення нової папки в Google Drive...", "info");
       await createDriveFolderStructure(actInfo);
 
-      showNotification("Готово. Посилання додано у форму.", "success");
+      // 🔒 Додаткова перевірка: переконуємось що посилання збереглось
+      await sleep(500); // Даємо БД час на синхронізацію
+      const { data: verifyAct } = await supabase
+        .from("acts")
+        .select("data")
+        .eq("act_id", actId)
+        .single();
+
+      const verifyData = safeParseJSON(verifyAct?.data) || {};
+      const savedLinks = Array.isArray(verifyData["Фото"])
+        ? verifyData["Фото"]
+        : [];
+
+      if (savedLinks.length === 0) {
+        console.error("❌ Посилання не збереглось в БД після створення папки!");
+        showNotification(
+          "Папку створено, але посилання не збереглось. Спробуйте ще раз.",
+          "warning"
+        );
+      } else {
+        console.log("✅ Верифікація: посилання успішно збережено:", savedLinks);
+        showNotification("Готово. Посилання додано у форму.", "success");
+      }
     } catch (err) {
       console.error("❌ Google Drive помилка:", err);
 

@@ -1022,45 +1022,36 @@ function updateFinalSumWithAvans(): void {
         autoFitInput();
 
         const onInputDiscount = () => {
-          const selEndBefore =
-            discountAmountInput.selectionEnd ??
-            discountAmountInput.value.length;
-          const digitsBefore = unformat(
-            discountAmountInput.value.slice(0, selEndBefore)
-          ).length;
-
-          let numValue = parseInt(unformat(discountAmountInput.value) || "0");
-          discountAmountInput.value = format(numValue);
-          autoFitInput();
-
-          // Восстанавливаем позицию курсора
-          let idx = 0,
-            digitsSeen = 0;
-          while (
-            idx < discountAmountInput.value.length &&
-            digitsSeen < digitsBefore
-          ) {
-            if (/\d/.test(discountAmountInput.value[idx])) digitsSeen++;
-            idx++;
-          }
-          discountAmountInput.setSelectionRange(idx, idx);
+          // При вводі НЕ форматуємо - тільки дозволяємо вводити цифри
+          // Форматування буде тільки при blur (вихід з інпута)
         };
 
         const onBlurDiscount = () => {
-          const numValue = parseInt(unformat(discountAmountInput.value) || "0");
+          let numValue = parseInt(unformat(discountAmountInput.value) || "0");
+
+          // Перевіряємо не більша ли сума від загальної суми
+          if (numValue > overallSum) {
+            numValue = overallSum;
+          }
+
+          // Форматуємо число з пробілами
           discountAmountInput.value = format(numValue);
           autoFitInput();
 
-          // Пересраховуємо відсоток на основі нової суми ТІЛЬКИ при blur
-          const newPercent =
-            overallSum > 0
-              ? Math.min(100, Math.max(0, (numValue / overallSum) * 100))
-              : 0;
+          // Розраховуємо відсоток на основі нової суми
+          let newPercent = 0;
+          if (numValue >= overallSum && overallSum > 0) {
+            // Якщо сума дорівнює або більша за загальну - 100%
+            newPercent = 100;
+          } else if (overallSum > 0) {
+            newPercent = Math.round((numValue / overallSum) * 100);
+          }
+
           const discountInputEl = document.getElementById(
             "editable-discount"
           ) as HTMLInputElement;
           if (discountInputEl) {
-            discountInputEl.value = String(Math.round(newPercent));
+            discountInputEl.value = String(newPercent);
             discountInputEl.dispatchEvent(new Event("input"));
           }
         };

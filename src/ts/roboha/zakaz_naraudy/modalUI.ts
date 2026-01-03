@@ -1068,62 +1068,8 @@ async function ensureDiscountDataLoaded() {
 }
 
 function calculateDiscountBase(overallSum: number): number {
-  if (
-    !discountDataCache.isDataLoaded ||
-    discountDataCache.actId !== globalCache.currentActId
-  ) {
-    ensureDiscountDataLoaded();
-    return overallSum; // Повертаємо загальну суму поки вантажиться
-  }
-
-  let worksSale = 0;
-  let worksSalary = 0;
-  let partsSale = 0;
-  let partsBuy = 0;
-
-  const tableBody = document.querySelector<HTMLTableSectionElement>(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
-  );
-  if (tableBody) {
-    const rows = Array.from(tableBody.querySelectorAll("tr"));
-    for (const row of rows) {
-      const nameCell = row.querySelector('[data-name="name"]');
-      const type = nameCell?.getAttribute("data-type");
-      const sum = parseNumber(
-        row.querySelector('[data-name="sum"]')?.textContent
-      );
-
-      if (type === "works") {
-        worksSale += sum;
-        worksSalary += parseNumber(
-          row.querySelector('[data-name="slyusar_sum"]')?.textContent
-        );
-      } else if (type === "details") {
-        partsSale += sum;
-        const scladIdStr = row
-          .querySelector(".catalog-cell")
-          ?.getAttribute("data-sclad-id");
-        if (scladIdStr) {
-          const scladId = parseInt(scladIdStr);
-          const qty = parseNumber(
-            row.querySelector('[data-name="id_count"]')?.textContent
-          );
-          const price = discountDataCache.purchasePrices.get(scladId) || 0;
-          partsBuy += price * qty;
-        }
-      }
-    }
-  }
-
-  const profitWork = worksSale - worksSalary;
-  const profitParts = partsSale - partsBuy;
-
-  // База = (WorkProfit * (100% - RecWork%)) + (PartProfit * (100% - RecPart%))
-  const base =
-    profitWork * (1 - discountDataCache.receiverWorkPercent / 100) +
-    profitParts * (1 - discountDataCache.receiverPartPercent / 100);
-
-  return Math.max(0, base);
+  // Знижка діє на ВЕСЬ чек (загальну суму), а не на маржу
+  return overallSum;
 }
 
 function updateFinalSumWithAvans(): void {

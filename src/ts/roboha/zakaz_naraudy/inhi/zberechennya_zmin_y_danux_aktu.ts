@@ -1053,8 +1053,7 @@ async function syncPruimalnikHistory(
           const buyPrice = priceMap.get(part.scladId) || 0;
           partsTotalBuy += buyPrice * part.qty;
           console.log(
-            `🛒 Деталь ID=${part.scladId}: Qty=${
-              part.qty
+            `🛒 Деталь ID=${part.scladId}: Qty=${part.qty
             }, BuyPrice=${buyPrice}, TotalBuy=${buyPrice * part.qty}`
           );
         } else {
@@ -1395,8 +1394,12 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     Аванс: avansValue,
     Знижка: discountValue,
     СумаЗнижки: discountAmountValue,
-    "Прибуток за деталі": Number((totalDetailsMargin || 0).toFixed(2)),
-    "Прибуток за роботу": Number((totalWorksProfit || 0).toFixed(2)),
+    "Прибуток за деталі": globalCache.settings.saveMargins
+      ? Number((totalDetailsMargin || 0).toFixed(2))
+      : 0,
+    "Прибуток за роботу": globalCache.settings.saveMargins
+      ? Number((totalWorksProfit || 0).toFixed(2))
+      : 0,
   };
 
   const deltas = calculateDeltas();
@@ -1422,13 +1425,20 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   await updateScladActNumbers(actId, newScladIds);
   await applyScladDeltas(deltas);
   await syncShopsOnActSave(actId, detailRowsForShops);
-  await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
-  await syncPruimalnikHistory(
-    actId,
-    totalWorksSum,
-    totalDetailsSum,
-    globalCache.currentActDateOn
-  ); // ✅ Нова синхронізація для приймальника
+
+  if (globalCache.settings.saveMargins) {
+    await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
+    await syncPruimalnikHistory(
+      actId,
+      totalWorksSum,
+      totalDetailsSum,
+      globalCache.currentActDateOn
+    );
+  } else {
+    console.log(
+      "ℹ️ saveMargins = false: Синхронізація зарплат слюсарів та приймальників пропущена"
+    );
+  }
 
   // ===== ЛОГУВАННЯ ЗМІН =====
   try {

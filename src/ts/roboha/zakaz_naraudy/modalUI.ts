@@ -965,6 +965,9 @@ function updateFinalSumWithAvans(): void {
   const discountInput = document.getElementById(
     "editable-discount"
   ) as HTMLInputElement;
+  const discountAmountInput = document.getElementById(
+    "editable-discount-amount"
+  ) as HTMLInputElement;
   const overallSumSpan = document.getElementById("total-overall-sum");
   const avansSubtractDisplay = document.getElementById(
     "avans-subtract-display"
@@ -983,15 +986,26 @@ function updateFinalSumWithAvans(): void {
   const discountPercent = parseNumber(discountInput?.value || "0");
   const overallSum = parseNumber(overallSumSpan.textContent);
 
-  // Розраховуємо суму знижки як відсоток від загальної суми
-  const discountAmount = (overallSum * discountPercent) / 100;
+  // ВАЖЛИВО: якщо користувач вже вводить суму знижки, використовуємо її (не перезаписуємо)
+  const userEnteredDiscountAmount = discountAmountInput
+    ? parseNumber(discountAmountInput.value)
+    : 0;
+
+  // Розраховуємо суму знижки:
+  // - Якщо користувач ввів значення в поле суми - використовуємо його
+  // - Інакше розраховуємо як відсоток від загальної суми
+  const discountAmount =
+    userEnteredDiscountAmount > 0
+      ? userEnteredDiscountAmount
+      : (overallSum * discountPercent) / 100;
+
   const sumAfterDiscount = overallSum - discountAmount;
   const finalSum = sumAfterDiscount - avans;
 
   let displayText = "";
 
   // Спочатку знижка (червона), потім аванс (зелений)
-  if (discountPercent > 0) {
+  if (discountPercent > 0 || discountAmount > 0) {
     displayText += ` - <input type="text" id="editable-discount-amount" class="editable-discount-amount" value="${formatNumberWithSpaces(
       Math.round(discountAmount)
     )}" style="color: #d32f2f; font-weight: 700; border: none; background: transparent; width: auto; padding: 0; margin: 0; font-size: inherit;" /> <span style="color: #d32f2f; font-weight: 700;">грн (знижка)</span>`;

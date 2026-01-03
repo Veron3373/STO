@@ -986,18 +986,13 @@ function updateFinalSumWithAvans(): void {
   const discountPercent = parseNumber(discountInput?.value || "0");
   const overallSum = parseNumber(overallSumSpan.textContent);
 
-  // ВАЖЛИВО: якщо користувач вже вводить суму знижки, використовуємо її (не перезаписуємо)
-  const userEnteredDiscountAmount = discountAmountInput
-    ? parseNumber(discountAmountInput.value)
-    : 0;
+  // Розраховуємо суму знижки як відсоток від загальної суми
+  const discountAmount = (overallSum * discountPercent) / 100;
 
-  // Розраховуємо суму знижки:
-  // - Якщо користувач ввів значення в поле суми - використовуємо його
-  // - Інакше розраховуємо як відсоток від загальної суми
-  const discountAmount =
-    userEnteredDiscountAmount > 0
-      ? userEnteredDiscountAmount
-      : (overallSum * discountPercent) / 100;
+  // Оновлюємо поле суми знижки, якщо воно існує
+  if (discountAmountInput) {
+    discountAmountInput.value = format(Math.round(discountAmount));
+  }
 
   const sumAfterDiscount = overallSum - discountAmount;
   const finalSum = sumAfterDiscount - avans;

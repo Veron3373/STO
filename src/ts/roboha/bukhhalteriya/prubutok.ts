@@ -1280,32 +1280,50 @@ export function updatevutratuTable(): void {
       expense.detailsAmount !== undefined &&
       expense.workAmount !== undefined
     ) {
+      const discountVal = expense.discountAmount || 0;
+      let finalDetailsAmount = expense.detailsAmount;
+      let finalWorkAmount = expense.workAmount;
+
+      // Розподіляємо знижку пропорційно між позитивними значеннями деталей та робіт
+      if (discountVal > 0) {
+        const positiveDetails = Math.max(0, expense.detailsAmount);
+        const positiveWork = Math.max(0, expense.workAmount);
+        const totalPositive = positiveDetails + positiveWork;
+
+        if (totalPositive > 0) {
+          const detailsPart = (positiveDetails / totalPositive) * discountVal;
+          const workPart = (positiveWork / totalPositive) * discountVal;
+          finalDetailsAmount -= detailsPart;
+          finalWorkAmount -= workPart;
+        }
+      }
+
       const detailsColor =
-        expense.detailsAmount > 0
+        finalDetailsAmount > 0
           ? "#28a745"
-          : expense.detailsAmount < 0
+          : finalDetailsAmount < 0
             ? "#dc3545"
             : "#999";
       const workColor =
-        expense.workAmount > 0
+        finalWorkAmount > 0
           ? "#28a745"
-          : expense.workAmount < 0
+          : finalWorkAmount < 0
             ? "#dc3545"
             : "#999";
-      const detailsSign = expense.detailsAmount > 0 ? "+" : "";
-      const workSign = expense.workAmount > 0 ? "+" : "";
+      const detailsSign = finalDetailsAmount > 0 ? "+" : "";
+      const workSign = finalWorkAmount > 0 ? "+" : "";
 
-      // Показувати емодзі тільки якщо значення не дорівнює 0
+      // Показувати емодзі тільки якщо значення не дорівнює 0 (або якщо було не 0 до знижки)
       const detailsEmoji = expense.detailsAmount !== 0 ? "⚙️ " : "";
       const workEmoji = expense.workAmount !== 0 ? "🛠️ " : "";
 
       amountCell.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
           <span style="color: ${detailsColor}; font-size: 0.95em; font-weight: 500; text-align: right;">
-            ${detailsEmoji}${detailsSign}${formatNumber(expense.detailsAmount)}
+            ${detailsEmoji}${detailsSign}${formatNumber(finalDetailsAmount)}
           </span>
           <span style="color: ${workColor}; font-size: 0.95em; font-weight: 500; text-align: right;">
-            ${workEmoji}${workSign}${formatNumber(expense.workAmount)}
+            ${workEmoji}${workSign}${formatNumber(finalWorkAmount)}
           </span>
         </div>
       `;

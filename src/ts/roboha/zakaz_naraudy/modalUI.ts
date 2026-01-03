@@ -1054,8 +1054,8 @@ function updateFinalSumWithAvans(): void {
           if (discountInputEl && overallSum > 0) {
             // Розраховуємо відсоток від введеної суми
             const calculatedPercent = (numValue / overallSum) * 100;
-            // Округляємо вниз (якщо 12.5%, то буде 12%)
-            const roundedPercent = Math.floor(calculatedPercent);
+            // Округляємо до найближчого цілого числа
+            const roundedPercent = Math.round(calculatedPercent);
 
             // Встановлюємо розраховані відсотки (максимум 100%)
             const finalPercent = Math.min(roundedPercent, 100);

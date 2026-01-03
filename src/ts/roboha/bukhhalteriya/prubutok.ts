@@ -973,6 +973,9 @@ export async function initializevutratuData(): Promise<void> {
     "Bukhhalter-vutratu-payment-method"
   );
 
+  const dateFromInput = byId<HTMLInputElement>("Bukhhalter-vutratu-date-from");
+  const dateToInput = byId<HTMLInputElement>("Bukhhalter-vutratu-date-to");
+
   if (categorySelect) {
     categorySelect.addEventListener("change", () => {
       filtervutratuData();
@@ -982,6 +985,19 @@ export async function initializevutratuData(): Promise<void> {
   if (paymentMethodSelect) {
     paymentMethodSelect.addEventListener("change", () => {
       filtervutratuData();
+    });
+  }
+
+  // ✅ Додаємо слухачі для зміни дати - ПЕРЕЗАВАНТАЖУЄМО з бази
+  if (dateFromInput) {
+    dateFromInput.addEventListener("change", () => {
+      searchvutratuFromDatabase();
+    });
+  }
+
+  if (dateToInput) {
+    dateToInput.addEventListener("change", () => {
+      searchvutratuFromDatabase();
     });
   }
 

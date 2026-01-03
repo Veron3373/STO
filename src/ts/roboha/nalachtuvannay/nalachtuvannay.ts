@@ -476,7 +476,7 @@ export async function createSettingsModal(): Promise<void> {
 
       <div class="percentage-control">
         <label class="percentage-label">
-          <span class="percentage-title">Націна на запчастина</span>
+          <span class="percentage-title">Націнка на запчастини</span>
           <div class="percentage-input-wrapper">
             <input type="range" id="percentage-slider" min="0" max="100" value="0" step="1" />
             <div class="percentage-value-display">

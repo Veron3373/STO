@@ -744,9 +744,6 @@ export function generateTableHTML(
         discount.value = value;
         autoFitDiscount();
 
-        // Скидаємо флаг, щоб сума знижки перераховувалася автоматично
-        (window as any).isDiscountAmountManuallySet = false;
-
         updateFinalSumWithAvans();
       };
 
@@ -778,6 +775,14 @@ export function generateTableHTML(
         }
       };
 
+
+      const onFocusDiscount = () => {
+        // Коли користувач фокусується на полі проценту,
+        // скидаємо флаг, щоб сума знижки перераховувалася автоматично
+        (window as any).isDiscountAmountManuallySet = false;
+      };
+
+      discount.addEventListener("focus", onFocusDiscount);
       discount.addEventListener("keydown", onKeyDownDiscount);
       discount.addEventListener("input", onInputDiscount);
       discount.addEventListener("blur", onBlurDiscount);
@@ -979,23 +984,30 @@ function updateFinalSumWithAvans(): void {
   const discountPercent = parseNumber(discountInput?.value || "0");
   const overallSum = parseNumber(overallSumSpan.textContent);
 
-  // Розраховуємо суму знижки з процента
-  const discountAmount = (overallSum * discountPercent) / 100;
+  // Визначаємо реальну суму знижки
+  let actualDiscountAmount: number;
 
-  // Оновлюємо поле суми знижки ТІЛЬКИ якщо користувач не вводив її вручну
-  if (discountAmountInput && !(window as any).isDiscountAmountManuallySet) {
-    discountAmountInput.value = format(Math.round(discountAmount));
+  if ((window as any).isDiscountAmountManuallySet && discountAmountInput) {
+    // Якщо користувач вводив суму вручну - використовуємо її значення
+    actualDiscountAmount = parseNumber(discountAmountInput.value);
+  } else {
+    // Інакше розраховуємо з процента
+    actualDiscountAmount = (overallSum * discountPercent) / 100;
+    // Оновлюємо поле суми знижки
+    if (discountAmountInput) {
+      discountAmountInput.value = format(Math.round(actualDiscountAmount));
+    }
   }
 
-  const sumAfterDiscount = overallSum - discountAmount;
+  const sumAfterDiscount = overallSum - actualDiscountAmount;
   const finalSum = sumAfterDiscount - avans;
 
   let displayText = "";
 
   // Спочатку знижка (червона), потім аванс (зелений)
-  if (discountPercent > 0 || discountAmount > 0) {
+  if (discountPercent > 0 || actualDiscountAmount > 0) {
     displayText += ` - <input type="text" id="editable-discount-amount" class="editable-discount-amount" value="${formatNumberWithSpaces(
-      Math.round(discountAmount)
+      Math.round(actualDiscountAmount)
     )}" style="color: #d32f2f; font-weight: 700; border: none; background: transparent; width: auto; padding: 0; margin: 0; font-size: inherit;" /> <span style="color: #d32f2f; font-weight: 700;">грн (знижка)</span>`;
   }
 
@@ -1059,7 +1071,9 @@ function updateFinalSumWithAvans(): void {
             // Встановлюємо флаг, що сума вводилася вручну
             (window as any).isDiscountAmountManuallySet = true;
 
-            discountInputEl.dispatchEvent(new Event("input"));
+            // Оновлюємо відображення напряму, БЕЗ виклику події input
+            // (щоб не скинути флаг isDiscountAmountManuallySet)
+            updateFinalSumWithAvans();
           }
         };
 

@@ -994,7 +994,7 @@ function updateFinalSumWithAvans(): void {
   if (discountPercent > 0) {
     displayText += ` - <input type="text" id="editable-discount-amount" class="editable-discount-amount" value="${formatNumberWithSpaces(
       Math.round(discountAmount)
-    )}" style="color: #d32f2f; font-weight: 700; border: none; background: transparent; width: auto; padding: 0; margin: 0; font-size: inherit;" /> грн (знижка)`;
+    )}" style="color: #d32f2f; font-weight: 700; border: none; background: transparent; width: auto; padding: 0; margin: 0; font-size: inherit;" /> <span style="color: #d32f2f; font-weight: 700;">грн (знижка)</span>`;
   }
 
   if (avans > 0) {

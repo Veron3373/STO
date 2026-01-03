@@ -141,7 +141,7 @@ export async function printModalToPdf(): Promise<void> {
     document.querySelector(".modal-footer") as HTMLElement,
   ].filter(Boolean) as HTMLElement[];
 
-   // таблиця для приховування колонок
+  // таблиця для приховування колонок
   const table = document.querySelector(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} table.zakaz_narayd-items-table`
   ) as HTMLTableElement | null;
@@ -157,6 +157,26 @@ export async function printModalToPdf(): Promise<void> {
       ],
       elementsToHide
     );
+  }
+
+  // 🔶 Приховуємо рядок знижки, якщо аванс = 0
+  const avansInput = document.getElementById(
+    "editable-avans"
+  ) as HTMLInputElement | null;
+  const avansValue = avansInput
+    ? parseFloat(avansInput.value.replace(/\s/g, "") || "0")
+    : 0;
+
+  let discountRow: HTMLElement | null = null;
+  if (avansValue === 0) {
+    // Знаходимо рядок зі знижкою через input#editable-discount
+    const discountInput = document.getElementById("editable-discount");
+    if (discountInput) {
+      discountRow = discountInput.closest("p.sum-row") as HTMLElement;
+      if (discountRow) {
+        elementsToHide.push(discountRow);
+      }
+    }
   }
 
   // 🔶 тимчасово зняти прапорці-попередження

@@ -973,30 +973,31 @@ function updateFinalSumWithAvans(): void {
     return;
 
   const avans = parseNumber(avansInput.value);
-  const discount = parseNumber(discountInput?.value || "0");
+  const discountPercent = parseNumber(discountInput?.value || "0");
   const overallSum = parseNumber(overallSumSpan.textContent);
 
-  // Загальна сума мінус знижка = базова сума для розрахунку авансу
-  const sumAfterDiscount = overallSum - discount;
+  // Розраховуємо суму знижки як відсоток від загальної суми
+  const discountAmount = (overallSum * discountPercent) / 100;
+  const sumAfterDiscount = overallSum - discountAmount;
   const finalSum = sumAfterDiscount - avans;
 
   let displayText = "";
 
-  if (discount > 0) {
-    displayText += ` - ${formatNumberWithSpaces(
-      Math.round(discount)
-    )} грн (знижка)`;
+  // Спочатку знижка (червона), потім аванс (зелений)
+  if (discountPercent > 0) {
+    displayText += ` - <span style="color: #d32f2f; font-weight: 700;">${formatNumberWithSpaces(
+      Math.round(discountAmount)
+    )} грн (знижка)</span>`;
   }
 
   if (avans > 0) {
-    displayText += ` - ${formatNumberWithSpaces(
+    displayText += ` - <span style="color: #2e7d32; font-weight: 700;">${formatNumberWithSpaces(
       Math.round(avans)
-    )} грн (аванс)`;
+    )} грн (аванс)</span>`;
   }
 
-  if (discount > 0 || avans > 0) {
-    avansSubtractDisplay.textContent = displayText;
-    avansSubtractDisplay.style.color = "#d32f2f";
+  if (discountPercent > 0 || avans > 0) {
+    avansSubtractDisplay.innerHTML = displayText;
     avansSubtractDisplay.style.display = "inline";
 
     finalSumDisplay.textContent = ` = ${formatNumberWithSpaces(

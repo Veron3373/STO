@@ -990,6 +990,9 @@ function renderModalContent(
     const discountInput = document.getElementById(
       "editable-discount"
     ) as HTMLInputElement | null;
+    const discountAmountInput = document.getElementById(
+      "editable-discount-amount"
+    ) as HTMLInputElement | null;
 
     if (avansInput) {
       const avansValue = Number(act?.avans ?? actDetails?.["Аванс"] ?? 0);
@@ -1003,6 +1006,14 @@ function renderModalContent(
       );
       discountInput.value = String(discountValue);
       discountInput.dispatchEvent(new Event("input"));
+    }
+
+    if (discountAmountInput) {
+      const discountAmountValue = Number(
+        act?.discount_amount ?? actDetails?.["СумаЗнижки"] ?? 0
+      );
+      discountAmountInput.value = String(discountAmountValue);
+      discountAmountInput.dispatchEvent(new Event("input"));
     }
   }, 60);
 }

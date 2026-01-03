@@ -1403,15 +1403,15 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
 
   showNotification("Збереження змін...", "info");
 
+  // 💾 Збереження даних акту (тільки JSONB, без окремих колонок)
   const { error: updateError } = await supabase
     .from("acts")
     .update({
       data: updatedActData,
       avans: avansValue,
-      discount: discountValue,
-      discount_amount: discountAmountValue,
     })
     .eq("act_id", actId);
+
   if (updateError) {
     throw new Error(`Не вдалося оновити акт: ${updateError.message}`);
   }

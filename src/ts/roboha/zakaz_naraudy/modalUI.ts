@@ -483,9 +483,8 @@ function createRowHtml(
     : "";
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${
-        item ? pibMagazinType : ""
-      }">${pibMagazinValue}</td>`
+    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${item ? pibMagazinType : ""
+    }">${pibMagazinValue}</td>`
     : "";
 
   /* ===== ЗМІНИ: відображення пустоти замість 0 ===== */
@@ -521,27 +520,23 @@ function createRowHtml(
 
   return `
     <tr>
-      <td class="row-index">${
-        item?.type === "work"
-          ? `🛠️ ${index + 1}`
-          : item?.type === "detail"
-          ? `⚙️ ${index + 1}`
-          : `${index + 1}`
-      }</td>
+      <td class="row-index">${item?.type === "work"
+      ? `🛠️ ${index + 1}`
+      : item?.type === "detail"
+        ? `⚙️ ${index + 1}`
+        : `${index + 1}`
+    }</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${
-    item?.name || ""
-  }</div>
-        ${
-          showDeleteBtn
-            ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
-            : ""
-        }
+        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${item?.name || ""
+    }</div>
+        ${showDeleteBtn
+      ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
+      : ""
+    }
       </td>
       ${catalogCellHTML}
-      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
-    item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
-  }</td>
+      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
+    }</td>
       ${priceCellHTML}
       ${sumCellHTML}
       ${zarplataCellHTML}
@@ -569,11 +564,11 @@ export function generateTableHTML(
   const actItemsHtml =
     allItems.length > 0
       ? allItems
-          .map(
-            (item, index) =>
-              createRowHtml(item, index, showPibMagazin, showCatalog, canAddRow) // <--- ПЕРЕДАЄМО canAddRow
-          )
-          .join("")
+        .map(
+          (item, index) =>
+            createRowHtml(item, index, showPibMagazin, showCatalog, canAddRow) // <--- ПЕРЕДАЄМО canAddRow
+        )
+        .join("")
       : createRowHtml(null, 0, showPibMagazin, showCatalog, canAddRow); // <--- ПЕРЕДАЄМО canAddRow
 
   const sumsFooter = isRestricted
@@ -619,9 +614,8 @@ export function generateTableHTML(
     globalCache.isActClosed || !canAddRow
       ? ""
       : `
-    <div class="zakaz_narayd-buttons-container${
-      isRestricted ? " obmesheniy" : ""
-    }">
+    <div class="zakaz_narayd-buttons-container${isRestricted ? " obmesheniy" : ""
+      }">
       <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
       <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
     </div>`;
@@ -729,41 +723,38 @@ export function generateTableHTML(
         discount.style.width = ch + "ch";
       };
 
-      let initialValue = parseInt(unformat(discount.value) || "0");
+      let initialValue = parseFloat(discount.value.replace(/,/g, ".") || "0");
       // Обмежуємо до 100% при ініціалізації
       initialValue = Math.min(100, Math.max(0, initialValue));
-      discount.value = format(initialValue);
+      discount.value = String(initialValue);
       autoFitDiscount();
       updateFinalSumWithAvans();
 
       const onInputDiscount = () => {
-        const selEndBefore = discount.selectionEnd ?? discount.value.length;
-        const digitsBefore = unformat(
-          discount.value.slice(0, selEndBefore)
-        ).length;
+        // Дозволяємо тільки цифри, крапку та кому
+        let value = discount.value.replace(/[^0-9.,]/g, "");
+        // Замінюємо кому на крапку
+        value = value.replace(/,/g, ".");
+        // Дозволяємо тільки одну крапку
+        const parts = value.split(".");
+        if (parts.length > 2) {
+          value = parts[0] + "." + parts.slice(1).join("");
+        }
 
-        let numValue = parseInt(unformat(discount.value) || "0");
-        // Обмежуємо до 100% при ручному вводі
-        numValue = Math.min(100, Math.max(0, numValue));
-        discount.value = format(numValue);
+        discount.value = value;
         autoFitDiscount();
 
-        let idx = 0,
-          digitsSeen = 0;
-        while (idx < discount.value.length && digitsSeen < digitsBefore) {
-          if (/\d/.test(discount.value[idx])) digitsSeen++;
-          idx++;
-        }
-        discount.setSelectionRange(idx, idx);
+        // Скидаємо флаг, щоб сума знижки перераховувалася автоматично
+        (window as any).isDiscountAmountManuallySet = false;
 
         updateFinalSumWithAvans();
       };
 
       const onBlurDiscount = () => {
-        let numValue = parseInt(unformat(discount.value) || "0");
+        let numValue = parseFloat(discount.value.replace(/,/g, ".") || "0");
         // Обмежуємо до 100% при розфокусуванні
         numValue = Math.min(100, Math.max(0, numValue));
-        discount.value = format(numValue);
+        discount.value = String(numValue);
         autoFitDiscount();
         updateFinalSumWithAvans();
       };
@@ -771,6 +762,8 @@ export function generateTableHTML(
       const onKeyDownDiscount = (e: KeyboardEvent) => {
         const allowed =
           /\d/.test(e.key) ||
+          e.key === "." ||
+          e.key === "," ||
           [
             "Backspace",
             "Delete",
@@ -1054,11 +1047,13 @@ function updateFinalSumWithAvans(): void {
           if (discountInputEl && overallSum > 0) {
             // Розраховуємо відсоток від введеної суми
             const calculatedPercent = (numValue / overallSum) * 100;
-            // Округляємо до найближчого цілого числа
-            const roundedPercent = Math.round(calculatedPercent);
+
+            // Заокруглюємо до 0.5 (математичне заокруглювання)
+            // Ділимо на 0.5, округлюємо, множимо на 0.5
+            const roundedToHalf = Math.round(calculatedPercent / 0.5) * 0.5;
 
             // Встановлюємо розраховані відсотки (максимум 100%)
-            const finalPercent = Math.min(roundedPercent, 100);
+            const finalPercent = Math.min(roundedToHalf, 100);
             discountInputEl.value = String(finalPercent);
 
             // Встановлюємо флаг, що сума вводилася вручну
@@ -1107,9 +1102,8 @@ export function createTableRow(
   value: string,
   className: string = ""
 ): string {
-  return `<tr><td>${label}</td><td${
-    className ? ` class="${className}"` : ""
-  }>${value}</td></tr>`;
+  return `<tr><td>${label}</td><td${className ? ` class="${className}"` : ""
+    }>${value}</td></tr>`;
 }
 
 export function createModal(): void {

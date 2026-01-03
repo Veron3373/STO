@@ -1106,6 +1106,9 @@ async function addModalHandlers(
   ) as HTMLInputElement;
   if (discountInput) {
     discountInput.addEventListener("input", () => {
+      // Коли користувач вручну змінює відсоток, скидаємо флаг суми
+      // щоб наступна зміна суми могла знову установити флаг
+      (window as any).isDiscountAmountManuallySet = false;
       updateCalculatedSumsInFooter();
     });
   }

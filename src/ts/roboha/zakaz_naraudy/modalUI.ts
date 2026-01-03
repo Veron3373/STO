@@ -986,12 +986,11 @@ function updateFinalSumWithAvans(): void {
   const discountPercent = parseNumber(discountInput?.value || "0");
   const overallSum = parseNumber(overallSumSpan.textContent);
 
-  // ВАЖЛИВО: Розраховуємо суму знижки ЗАВЖДИ з процента
-  // (якщо процент змінився, сума повинна оновитися)
+  // Розраховуємо суму знижки з процента
   const discountAmount = (overallSum * discountPercent) / 100;
 
-  // Оновлюємо поле суми знижки (якщо воно існує)
-  if (discountAmountInput) {
+  // Оновлюємо поле суми знижки ТІЛЬКИ якщо користувач не вводив її вручну
+  if (discountAmountInput && !(window as any).isDiscountAmountManuallySet) {
     discountAmountInput.value = format(Math.round(discountAmount));
   }
 
@@ -1061,6 +1060,10 @@ function updateFinalSumWithAvans(): void {
             // Встановлюємо розраховані відсотки (максимум 100%)
             const finalPercent = Math.min(roundedPercent, 100);
             discountInputEl.value = String(finalPercent);
+
+            // Встановлюємо флаг, що сума вводилася вручну
+            (window as any).isDiscountAmountManuallySet = true;
+
             discountInputEl.dispatchEvent(new Event("input"));
           }
         };

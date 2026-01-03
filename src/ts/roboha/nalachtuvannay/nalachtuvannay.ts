@@ -206,7 +206,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, data, procent")
-      .in("setting_id", [1, 2, 3, 4, 5])
+      .in("setting_id", [1, 2, 3, 4, 5, 6])
       .order("setting_id");
 
     if (error) throw error;
@@ -376,6 +376,15 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         .update({ [column]: checkbox5?.checked ?? false })
         .eq("setting_id", 5);
       if (error5) throw error5;
+
+      const checkbox6 = modal.querySelector(
+        "#toggle-discount"
+      ) as HTMLInputElement;
+      const { error: error6 } = await supabase
+        .from("settings")
+        .update({ [column]: checkbox6?.checked ?? false })
+        .eq("setting_id", 6);
+      if (error6) throw error6;
     } else {
       // Зберегти налаштування для інших ролей - КОЖЕН TOGGLE У СВОЮ КОМІРКУ
       const settings = ROLE_SETTINGS[role as keyof typeof ROLE_SETTINGS];

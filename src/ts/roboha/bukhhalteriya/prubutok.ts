@@ -88,11 +88,7 @@ const EXPENSE_CATEGORIES = [
   "💼 Інше",
 ];
 
-const PAYMENT_METHODS = [
-  "💵 Готівка",
-  "💳 Картка",
-  "🏦 IBAN",
-];
+const PAYMENT_METHODS = ["💵 Готівка", "💳 Картка", "🏦 IBAN"];
 
 // ВСТАВИТИ ЦЕЙ КОД:
 // Функції для перетворення між форматами з емодзі та без
@@ -1179,8 +1175,8 @@ export function updatevutratuTable(): void {
     row.className = isOpenAct
       ? "open-row"
       : isNegative
-        ? "negative-row"
-        : "positive-row";
+      ? "negative-row"
+      : "positive-row";
 
     // 💰 Розраховано - показуємо дату витрати або розрахунку акту
     const paymentCell = row.insertCell();
@@ -1256,8 +1252,9 @@ export function updatevutratuTable(): void {
     if (isFromAct && expense.actNumber) {
       actCell.innerHTML = `
         <button class="Bukhhalter-act-btn"
-                onclick="event.stopPropagation(); openActModal(${Number(expense.actNumber) || 0
-        })"
+                onclick="event.stopPropagation(); openActModal(${
+                  Number(expense.actNumber) || 0
+                })"
                 title="Відкрити акт №${expense.actNumber}">
           📋 ${expense.actNumber}
         </button>
@@ -1280,42 +1277,29 @@ export function updatevutratuTable(): void {
       expense.detailsAmount !== undefined &&
       expense.workAmount !== undefined
     ) {
-      const discountVal = expense.discountAmount || 0;
+      // Знижка вже врахована в збережених значеннях detailsAmount і workAmount
+      // Тому просто відображаємо їх без додаткових вирахувань
       let finalDetailsAmount = expense.detailsAmount;
       let finalWorkAmount = expense.workAmount;
-
-      // Розподіляємо знижку пропорційно між позитивними значеннями деталей та робіт
-      if (discountVal > 0) {
-        const positiveDetails = Math.max(0, expense.detailsAmount);
-        const positiveWork = Math.max(0, expense.workAmount);
-        const totalPositive = positiveDetails + positiveWork;
-
-        if (totalPositive > 0) {
-          const detailsPart = (positiveDetails / totalPositive) * discountVal;
-          const workPart = (positiveWork / totalPositive) * discountVal;
-          finalDetailsAmount -= detailsPart;
-          finalWorkAmount -= workPart;
-        }
-      }
 
       const detailsColor =
         finalDetailsAmount > 0
           ? "#28a745"
           : finalDetailsAmount < 0
-            ? "#dc3545"
-            : "#999";
+          ? "#dc3545"
+          : "#999";
       const workColor =
         finalWorkAmount > 0
           ? "#28a745"
           : finalWorkAmount < 0
-            ? "#dc3545"
-            : "#999";
+          ? "#dc3545"
+          : "#999";
       const detailsSign = finalDetailsAmount > 0 ? "+" : "";
       const workSign = finalWorkAmount > 0 ? "+" : "";
 
-      // Показувати емодзі тільки якщо значення не дорівнює 0 (або якщо було не 0 до знижки)
-      const detailsEmoji = expense.detailsAmount !== 0 ? "⚙️ " : "";
-      const workEmoji = expense.workAmount !== 0 ? "🛠️ " : "";
+      // Показувати емодзі тільки якщо значення не дорівнює 0
+      const detailsEmoji = finalDetailsAmount !== 0 ? "⚙️ " : "";
+      const workEmoji = finalWorkAmount !== 0 ? "🛠️ " : "";
 
       amountCell.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
@@ -1332,8 +1316,8 @@ export function updatevutratuTable(): void {
         expense.amount > 0
           ? "#28a745"
           : expense.amount < 0
-            ? "#dc3545"
-            : "#999";
+          ? "#dc3545"
+          : "#999";
       const sign = expense.amount > 0 ? "+" : "";
       amountCell.innerHTML = `<span style="color: ${color}; font-size: 0.95em; font-weight: 500;">${sign}${formatNumber(
         expense.amount
@@ -1401,8 +1385,8 @@ export function updatevutratuTable(): void {
       const avansInfo =
         expense.paymentMethod && Number(expense.paymentMethod) > 0
           ? `<br><span style="color: #000; font-weight: 600; font-size: 0.95em;">💰 ${formatNumber(
-            Number(expense.paymentMethod)
-          )}</span>`
+              Number(expense.paymentMethod)
+            )}</span>`
           : "";
       methodCell.innerHTML = `
         <span style="font-size: 0.95em;">
@@ -1493,20 +1477,10 @@ export function updatevutratuDisplayedSums(): void {
       const discountVal = expense.discountAmount || 0;
 
       // --- Розрахунок для ПРИБУТКУ (маржа) ---
+      // Знижка вже врахована в detailsAmount і workAmount при збереженні акту
       let detailsProfit = expense.detailsAmount || 0;
       let workProfit = expense.workAmount || 0;
 
-      if (discountVal > 0) {
-        const posDetails = Math.max(0, detailsProfit);
-        const posWork = Math.max(0, workProfit);
-        const totalPos = posDetails + posWork;
-        if (totalPos > 0) {
-          const dPart = (posDetails / totalPos) * discountVal;
-          const wPart = (posWork / totalPos) * discountVal;
-          detailsProfit -= dPart;
-          workProfit -= wPart;
-        }
-      }
       totalNetDetailsProfit += detailsProfit;
       totalNetWorkProfit += workProfit;
 
@@ -1515,9 +1489,7 @@ export function updatevutratuDisplayedSums(): void {
       let fullWork = expense.fullWorkAmount || 0;
 
       if (discountVal > 0) {
-        // Тут теж розподіляємо знижку пропорційно, але на базі повних сум?
-        // Або краще на базі повних сум для логічності відображення в касі.
-        // Зазвичай знижка йде від загальної суми, тому розподілимо пропорційно.
+        // Знижку віднімаємо від повних сум для каси
         const posDetailsFull = Math.max(0, fullDetails);
         const posWorkFull = Math.max(0, fullWork);
         const totalPosFull = posDetailsFull + posWorkFull;
@@ -1543,51 +1515,56 @@ export function updatevutratuDisplayedSums(): void {
   // Примітка: Аванси в прибуток зазвичай не йдуть напряму, але у вашій попередній логіці вони додавалися.
   // Зберігаю логіку: (details + work + avans + negative)
   const finalSumProfit =
-    totalNetDetailsProfit + totalNetWorkProfit + totalAvansSum + totalNegativeSum;
+    totalNetDetailsProfit +
+    totalNetWorkProfit +
+    totalAvansSum +
+    totalNegativeSum;
 
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Каса</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-    totalNetFullDetails
-  )}</strong></span>
+          totalNetFullDetails
+        )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-    totalNetFullWork
-  )}</strong></span>
+          totalNetFullWork
+        )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-    totalAvansSum
-  )}</strong></span>
+          totalAvansSum
+        )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-    Math.abs(totalNegativeSum)
-  )}</strong></span>
+          Math.abs(totalNegativeSum)
+        )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${finalSumCasa >= 0 ? "#006400" : "#8B0000"
-    };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
+        <span><strong style="color: ${
+          finalSumCasa >= 0 ? "#006400" : "#8B0000"
+        };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Прибуток</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-      totalNetDetailsProfit
-    )}</strong></span>
+          totalNetDetailsProfit
+        )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-      totalNetWorkProfit
-    )}</strong></span>
+          totalNetWorkProfit
+        )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-      totalAvansSum
-    )}</strong></span>
+          totalAvansSum
+        )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-      Math.abs(totalNegativeSum)
-    )}</strong></span>
+          Math.abs(totalNegativeSum)
+        )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"
-    };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
+        <span><strong style="color: ${
+          finalSumProfit >= 0 ? "#006400" : "#8B0000"
+        };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
       </div>
     </div>
   `;

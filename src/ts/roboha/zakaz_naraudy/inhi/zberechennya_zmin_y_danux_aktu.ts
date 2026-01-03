@@ -1053,7 +1053,8 @@ async function syncPruimalnikHistory(
           const buyPrice = priceMap.get(part.scladId) || 0;
           partsTotalBuy += buyPrice * part.qty;
           console.log(
-            `🛒 Деталь ID=${part.scladId}: Qty=${part.qty
+            `🛒 Деталь ID=${part.scladId}: Qty=${
+              part.qty
             }, BuyPrice=${buyPrice}, TotalBuy=${buyPrice * part.qty}`
           );
         } else {
@@ -1381,6 +1382,22 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     ? parseFloat(discountAmountInput.value.replace(/\s/g, "") || "0")
     : 0;
 
+  // Розподіляємо знижку пропорційно між прибутком деталей та робіт
+  // Знижка розподіляється пропорційно до повних сум (За деталі / За роботу)
+  let finalDetailsProfit = totalDetailsMargin || 0;
+  let finalWorksProfit = totalWorksProfit || 0;
+
+  if (discountAmountValue > 0 && globalCache.settings.saveMargins) {
+    const totalSum = totalDetailsSum + totalWorksSum;
+    if (totalSum > 0) {
+      // Розподіляємо знижку пропорційно до повних сум
+      const detailsPart = (totalDetailsSum / totalSum) * discountAmountValue;
+      const worksPart = (totalWorksSum / totalSum) * discountAmountValue;
+      finalDetailsProfit -= detailsPart;
+      finalWorksProfit -= worksPart;
+    }
+  }
+
   const updatedActData = {
     ...(originalActData || {}),
     Пробіг: newProbig,
@@ -1395,10 +1412,10 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     Знижка: discountValue,
     СумаЗнижки: discountAmountValue,
     "Прибуток за деталі": globalCache.settings.saveMargins
-      ? Number((totalDetailsMargin || 0).toFixed(2))
+      ? Number(finalDetailsProfit.toFixed(2))
       : 0,
     "Прибуток за роботу": globalCache.settings.saveMargins
-      ? Number((totalWorksProfit || 0).toFixed(2))
+      ? Number(finalWorksProfit.toFixed(2))
       : 0,
   };
 

@@ -6,8 +6,13 @@ const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
   2: { id: "toggle-receiver", label: "Каталог", class: "_receiver" },
   3: { id: "toggle-zarplata", label: "Зарплата", class: "_zarplata" },
-  4: { id: "percentage-value", label: "Націна на запчастина", class: "_percentage" },
+  4: {
+    id: "percentage-value",
+    label: "Націнка на запчастина",
+    class: "_percentage",
+  },
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
+  6: { id: "toggle-discount", label: "Знижка", class: "discount" },
 };
 
 const ROLES = [

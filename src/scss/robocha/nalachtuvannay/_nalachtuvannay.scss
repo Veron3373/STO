@@ -147,6 +147,25 @@
     &.active {
       background-color: #d9fbe3;
     }
+
+    // Спеціальні стилі для перемикача знижки
+    &.discount {
+      .slider {
+        background-color: #2196f3; // Синій коли OFF (false)
+      }
+
+      input:checked + .slider {
+        background-color: #4caf50; // Зелений коли ON (true)
+      }
+
+      &.active {
+        background-color: #d9fbe3;
+      }
+
+      &:not(.active) {
+        background-color: #e3f2fd; // Світло-синій фон коли OFF
+      }
+    }
   }
 
   .percentage-control {

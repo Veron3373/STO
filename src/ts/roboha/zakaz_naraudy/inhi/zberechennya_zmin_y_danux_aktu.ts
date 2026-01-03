@@ -1374,28 +1374,27 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     ? parseFloat(discountInput.value.replace(/\s/g, "") || "0")
     : 0;
 
-  // Отримуємо суму знижки в гривнях
-  const discountAmountInput = document.getElementById(
-    "editable-discount-amount"
-  ) as HTMLInputElement;
-  const discountAmountValue = discountAmountInput
-    ? parseFloat(discountAmountInput.value.replace(/\s/g, "") || "0")
-    : 0;
-
-  // Розподіляємо знижку пропорційно між прибутком деталей та робіт
-  // Знижка розподіляється пропорційно до повних сум (За деталі / За роботу)
+  // Розраховуємо знижку від маржі (а не від загальної суми)
+  // База для знижки = маржа деталей + маржа робіт
   let finalDetailsProfit = totalDetailsMargin || 0;
   let finalWorksProfit = totalWorksProfit || 0;
 
-  if (discountAmountValue > 0 && globalCache.settings.saveMargins) {
-    const totalSum = totalDetailsSum + totalWorksSum;
-    if (totalSum > 0) {
-      // Розподіляємо знижку пропорційно до повних сум
-      const detailsPart = (totalDetailsSum / totalSum) * discountAmountValue;
-      const worksPart = (totalWorksSum / totalSum) * discountAmountValue;
-      finalDetailsProfit -= detailsPart;
-      finalWorksProfit -= worksPart;
-    }
+  // Розраховуємо суму знижки від МАРЖІ (прибутку), а не від повної суми
+  const marginBase = finalDetailsProfit + finalWorksProfit;
+  const calculatedDiscountAmount = (marginBase * discountValue) / 100;
+
+  if (
+    calculatedDiscountAmount > 0 &&
+    globalCache.settings.saveMargins &&
+    marginBase > 0
+  ) {
+    // Розподіляємо знижку пропорційно до маржі деталей та робіт
+    const detailsPart =
+      (finalDetailsProfit / marginBase) * calculatedDiscountAmount;
+    const worksPart =
+      (finalWorksProfit / marginBase) * calculatedDiscountAmount;
+    finalDetailsProfit -= detailsPart;
+    finalWorksProfit -= worksPart;
   }
 
   const updatedActData = {
@@ -1410,7 +1409,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "Загальна сума": grandTotalSum,
     Аванс: avansValue,
     Знижка: discountValue,
-    СумаЗнижки: discountAmountValue,
+    СумаЗнижки: Number(calculatedDiscountAmount.toFixed(2)),
     "Прибуток за деталі": globalCache.settings.saveMargins
       ? Number(finalDetailsProfit.toFixed(2))
       : 0,

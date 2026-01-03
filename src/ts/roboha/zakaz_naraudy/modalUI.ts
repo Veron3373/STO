@@ -1039,20 +1039,27 @@ function updateFinalSumWithAvans(): void {
           autoFitInput();
 
           // Розраховуємо відсоток на основі нової суми
-          let newPercent = 0;
-          if (numValue >= overallSum && overallSum > 0) {
-            // Якщо сума дорівнює або більша за загальну - 100%
-            newPercent = 100;
-          } else if (overallSum > 0) {
-            newPercent = Math.round((numValue / overallSum) * 100);
-          }
-
+          // ВАЖЛИВО: Перераховуємо відсоток ТІЛЬКИ якщо сума досягає величини цілого відсотка
+          // Інакше залишаємо поточний відсоток без змін
           const discountInputEl = document.getElementById(
             "editable-discount"
           ) as HTMLInputElement;
-          if (discountInputEl) {
-            discountInputEl.value = String(newPercent);
-            discountInputEl.dispatchEvent(new Event("input"));
+
+          if (discountInputEl && overallSum > 0) {
+            const newPercent = Math.round((numValue / overallSum) * 100);
+            const expectedAmountForNewPercent = Math.round(
+              (newPercent / 100) * overallSum
+            );
+
+            // Якщо сума достатня для нового цілого відсотка, оновлюємо його
+            if (
+              numValue >= expectedAmountForNewPercent ||
+              numValue >= overallSum
+            ) {
+              discountInputEl.value = String(newPercent);
+              discountInputEl.dispatchEvent(new Event("input"));
+            }
+            // Інакше залишаємо поточний процент без змін
           }
         };
 

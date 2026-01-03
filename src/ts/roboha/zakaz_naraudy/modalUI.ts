@@ -601,7 +601,7 @@ export function generateTableHTML(
         placeholder="0"
         autocomplete="off"
       />
-      <span class="sum-currency">грн</span>
+      <span class="sum-currency">%</span>
     </p>
     <p id="overall-sum-line"><strong>Загальна сума:</strong> <span class="zakaz_narayd-sums-footer-total" id="total-overall-sum">${formatNumberWithSpaces(
       0
@@ -985,7 +985,7 @@ function updateFinalSumWithAvans(): void {
 
   // Спочатку знижка (червона), потім аванс (зелений)
   if (discountPercent > 0) {
-    displayText += ` - <span style="color: #d32f2f; font-weight: 700;">${formatNumberWithSpaces(
+    displayText += ` - <span style="color: #d32f2f; font-weight: 700;" id="editable-discount-amount" class="editable-discount-amount">${formatNumberWithSpaces(
       Math.round(discountAmount)
     )} грн (знижка)</span>`;
   }
@@ -999,6 +999,41 @@ function updateFinalSumWithAvans(): void {
   if (discountPercent > 0 || avans > 0) {
     avansSubtractDisplay.innerHTML = displayText;
     avansSubtractDisplay.style.display = "inline";
+
+    // Додаємо обробник для редагування суми знижки
+    if (discountPercent > 0) {
+      const discountAmountEl = avansSubtractDisplay.querySelector(
+        "#editable-discount-amount"
+      ) as HTMLElement | null;
+      if (discountAmountEl) {
+        discountAmountEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const currentAmount = parseNumber(discountAmountEl.textContent);
+          const newAmount = prompt(
+            "Введіть суму знижки (грн):",
+            String(Math.round(currentAmount))
+          );
+          if (newAmount !== null && newAmount !== "") {
+            const newAmountNum = parseFloat(newAmount) || 0;
+            if (newAmountNum >= 0 && newAmountNum <= overallSum) {
+              // Пересраховуємо відсоток на основі нової суми
+              const newPercent =
+                overallSum > 0 ? (newAmountNum / overallSum) * 100 : 0;
+              const discountInputEl = document.getElementById(
+                "editable-discount"
+              ) as HTMLInputElement;
+              if (discountInputEl) {
+                discountInputEl.value = String(Math.round(newPercent));
+                discountInputEl.dispatchEvent(new Event("input"));
+              }
+            } else {
+              alert("Сума знижки не може перевищувати загальну суму");
+            }
+          }
+        });
+        discountAmountEl.style.cursor = "pointer";
+      }
+    }
 
     finalSumDisplay.textContent = ` = ${formatNumberWithSpaces(
       Math.round(finalSum)

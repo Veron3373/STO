@@ -970,12 +970,18 @@ export function getFilteredpodlegleData(): PodlegleRecord[] {
     filteredData = filteredData.filter((item) => !item.isClosed);
   }
 
-  // Фільтр по відсоткам зарплати
+  // Фільтр по відсоткам зарплати (тільки записи зі стрілками)
   if (
     currentPercentageFilter === "higher" ||
     currentPercentageFilter === "lower"
   ) {
     filteredData = filteredData.filter((item) => {
+      // Фільтруємо тільки прості записи робіт (не приймальників)
+      // Приймальники мають customHtmlTotal, а прості записи - ні
+      if (item.customHtmlTotal) {
+        return false; // Виключаємо приймальників з фільтрації
+      }
+
       const actualSalaryPercent =
         item.total > 0 ? (item.salary / item.total) * 100 : 0;
       const configuredPercent = getSlyusarPercentByName(item.name);
@@ -985,9 +991,9 @@ export function getFilteredpodlegleData(): PodlegleRecord[] {
       }
 
       if (currentPercentageFilter === "higher") {
-        return actualSalaryPercent > configuredPercent;
+        return actualSalaryPercent > configuredPercent; // Червона стрілка вверх
       } else {
-        return actualSalaryPercent < configuredPercent;
+        return actualSalaryPercent < configuredPercent; // Синя стрілка вниз
       }
     });
   }

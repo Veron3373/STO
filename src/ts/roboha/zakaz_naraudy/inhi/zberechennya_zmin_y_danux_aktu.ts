@@ -1394,28 +1394,27 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     ? parseFloat(discountInput.value.replace(/\s/g, "") || "0")
     : 0;
 
-  // Розраховуємо знижку від маржі (а не від загальної суми)
-  // База для знижки = маржа деталей + маржа робіт
-  let finalDetailsProfit = totalDetailsMargin || 0;
-  let finalWorksProfit = totalWorksProfit || 0;
+  // Розраховуємо знижку від ВАЛУ (загальної суми), а НЕ від маржі
+  // Знижка застосовується до загальної суми продажу
+  const discountMultiplier = discountValue > 0 ? 1 - discountValue / 100 : 1;
 
-  // Розраховуємо суму знижки від МАРЖІ (прибутку), а не від повної суми
-  const marginBase = finalDetailsProfit + finalWorksProfit;
-  const calculatedDiscountAmount = (marginBase * discountValue) / 100;
+  // Сума продажу після знижки
+  const detailsSaleAfterDiscount = totalDetailsSum * discountMultiplier;
+  const worksSaleAfterDiscount = totalWorksSum * discountMultiplier;
 
-  if (
-    calculatedDiscountAmount > 0 &&
-    globalCache.settings.saveMargins &&
-    marginBase > 0
-  ) {
-    // Розподіляємо знижку пропорційно до маржі деталей та робіт
-    const detailsPart =
-      (finalDetailsProfit / marginBase) * calculatedDiscountAmount;
-    const worksPart =
-      (finalWorksProfit / marginBase) * calculatedDiscountAmount;
-    finalDetailsProfit -= detailsPart;
-    finalWorksProfit -= worksPart;
-  }
+  // Маржа = сума продажу після знижки - собівартість (для деталей вже врахована в totalDetailsMargin)
+  // Для деталей: маржа = (продажна ціна - вхідна ціна) * кількість
+  // Після знижки: маржа = продажна ціна * (1 - знижка%) - вхідна ціна * кількість
+  // Це еквівалентно: (totalDetailsSum * discountMultiplier) - totalPurchasePrice
+  // Де totalPurchasePrice = totalDetailsSum - totalDetailsMargin
+
+  const totalPurchasePrice = totalDetailsSum - (totalDetailsMargin || 0);
+  const finalDetailsProfit = detailsSaleAfterDiscount - totalPurchasePrice;
+
+  // Для робіт: прибуток = сума продажу після знижки - зарплата слюсаря
+  // totalWorksProfit = totalWorksSum - зарплата слюсаря, тому зарплата = totalWorksSum - totalWorksProfit
+  const totalSlyusarSalary = totalWorksSum - (totalWorksProfit || 0);
+  const finalWorksProfit = worksSaleAfterDiscount - totalSlyusarSalary;
 
   const updatedActData = {
     ...(originalActData || {}),

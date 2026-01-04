@@ -789,15 +789,16 @@ async function loadAllDetailsData(): Promise<void> {
 
           // Отримуємо знижку для конкретного акту
           const discountPercent = getDiscountByActId(actId);
+          const discountMultiplier =
+            discountPercent > 0 ? 1 - discountPercent / 100 : 1;
 
-          // Рахуємо маржу з урахуванням знижки
+          // Рахуємо маржу з урахуванням знижки від ВАЛУ
+          // Маржа = (ціна продажу × множник знижки) - вхідна ціна
           let margin: number | undefined;
           if (purchasePrice !== undefined) {
-            const rawMargin = (price - purchasePrice) * qty;
-            margin =
-              discountPercent > 0
-                ? rawMargin * (1 - discountPercent / 100)
-                : rawMargin;
+            const saleAfterDiscount = price * discountMultiplier * qty;
+            const purchaseTotal = purchasePrice * qty;
+            margin = saleAfterDiscount - purchaseTotal;
           }
 
           allDetailsData.push({
@@ -1310,16 +1311,16 @@ export async function searchDetailsData(): Promise<void> {
 
           // Отримуємо знижку для конкретного акту
           const discountPercent = getDiscountByActId(actId);
+          const discountMultiplier =
+            discountPercent > 0 ? 1 - discountPercent / 100 : 1;
 
-          // Рахуємо маржу з урахуванням знижки
+          // Рахуємо маржу з урахуванням знижки від ВАЛУ
+          // Маржа = (ціна продажу × множник знижки) - вхідна ціна
           let margin: number | undefined;
           if (purchasePrice !== undefined) {
-            const rawMargin = (price - purchasePrice) * qty;
-            // Знижка віднімається від маржі пропорційно
-            margin =
-              discountPercent > 0
-                ? rawMargin * (1 - discountPercent / 100)
-                : rawMargin;
+            const saleAfterDiscount = price * discountMultiplier * qty;
+            const purchaseTotal = purchasePrice * qty;
+            margin = saleAfterDiscount - purchaseTotal;
           }
 
           rawData.push({

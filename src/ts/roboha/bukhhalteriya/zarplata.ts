@@ -1079,12 +1079,12 @@ export function updatepodlegleTable(): void {
           // Процент зарплати більший ніж налаштований - темно червона стрілка вверх
           salaryArrowHtml = `<span class="salary-arrow-up" title="Відсоток ${actualSalaryPercent.toFixed(
             1
-          )}% > ${configuredPercent}%">🡁</span>`;
+          )}% > ${configuredPercent}%">🡱</span>`;
         } else if (actualSalaryPercent < configuredPercent) {
           // Процент зарплати менший ніж налаштований - синя стрілка вниз
           salaryArrowHtml = `<span class="salary-arrow-down" title="Відсоток ${actualSalaryPercent.toFixed(
             1
-          )}% < ${configuredPercent}%">🡃</span>`;
+          )}% < ${configuredPercent}%">🡳</span>`;
         }
       }
 

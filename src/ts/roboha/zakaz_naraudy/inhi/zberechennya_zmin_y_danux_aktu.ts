@@ -1409,7 +1409,6 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "Загальна сума": grandTotalSum,
     Аванс: avansValue,
     Знижка: discountValue,
-    СумаЗнижки: Number(calculatedDiscountAmount.toFixed(2)),
     "Прибуток за деталі": globalCache.settings.saveMargins
       ? Number(finalDetailsProfit.toFixed(2))
       : 0,

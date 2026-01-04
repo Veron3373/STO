@@ -1010,7 +1010,7 @@ function renderModalContent(
 
     if (discountAmountInput) {
       const discountAmountValue = Number(
-        act?.discount_amount ?? actDetails?.["СумаЗнижки"] ?? 0
+        act?.discount_amount ?? actDetails?.["ПроцентЗнижки"] ?? 0
       );
       discountAmountInput.value = String(discountAmountValue);
       discountAmountInput.dispatchEvent(new Event("input"));

@@ -832,7 +832,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const fullAmount = fullDetailsAmount + fullWorkAmount;
 
         const discountPercent = Number(actData["Знижка"]) || 0;
-        const discountAmountValue = Number(actData["СумаЗнижки"]) || 0;
+        const discountAmountValue = Number(actData["ПроцентЗнижки"]) || 0;
 
         vutratuData.push({
           id: actItem.act_id * -1,

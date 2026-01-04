@@ -1396,10 +1396,21 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
       }
 
       // Перевіряємо, чи слюсар не намагається призначити рядок іншому слюсарю
+      // Але пропускаємо існуючі рядки, які вже мають призначеного слюсаря і не були змінені
       if (
         item.pibMagazin &&
         item.pibMagazin.toLowerCase() !== userName.toLowerCase()
       ) {
+        // Якщо це існуючий рядок з тим самим ПІБ - дозволяємо (не змінювали)
+        if (originalItem) {
+          const originalPib = originalItem.ПІБ_Магазин || "";
+          // Якщо ПІБ не змінився - це просто рядок іншого слюсаря, який ми не чіпали
+          if (originalPib.toLowerCase() === item.pibMagazin.toLowerCase()) {
+            // Пропускаємо цей рядок - він не був змінений
+            continue;
+          }
+        }
+
         throw new Error(
           `⛔ Ви не можете призначити рядок "${item.name}" іншому слюсарю. Ви можете працювати тільки зі своїми рядками.`
         );

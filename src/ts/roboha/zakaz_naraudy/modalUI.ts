@@ -13,11 +13,7 @@ import {
   setupAutocompleteForEditableCells,
   refreshQtyWarningsIn,
 } from "./inhi/kastomna_tabluca";
-import {
-  userAccessLevel,
-  canUserAddRowToAct,
-  userName,
-} from "../tablucya/users";
+import { userAccessLevel, canUserAddRowToAct } from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
 import { cleanupSlusarsOnSubscription } from "./modalMain";
 

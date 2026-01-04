@@ -1011,12 +1011,14 @@ function initializeDateInputs(): void {
 
   dateInputs.forEach((input) => {
     input.addEventListener("click", function () {
-      (this as any).showPicker?.();
+      try {
+        (this as any).showPicker?.();
+      } catch (e) {
+        console.warn("showPicker not allowed:", e);
+      }
     });
 
-    input.addEventListener("focus", function () {
-      (this as any).showPicker?.();
-    });
+    // Removed focus listener to prevent NotAllowedError
 
     input.addEventListener("change", function () {
       console.log(`Дата змінена: ${this.id} = ${this.value}`);

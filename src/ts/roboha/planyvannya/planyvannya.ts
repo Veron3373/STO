@@ -1989,7 +1989,10 @@ class SchedulerApp {
 let schedulerAppInstance: SchedulerApp | null = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-  schedulerAppInstance = new SchedulerApp();
+  // Check if we are on the planner page
+  if (document.getElementById("postSchedulerWrapper")) {
+    schedulerAppInstance = new SchedulerApp();
+  }
 });
 
 // Глобальна функція для оновлення календаря після створення акту

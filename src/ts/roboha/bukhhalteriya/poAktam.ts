@@ -760,6 +760,9 @@ async function autoSearchDetailsFromInputs(): Promise<void> {
 
 async function loadAllDetailsData(): Promise<void> {
   const shops = await fetchShopData();
+  await fetchScladData();
+  await fetchActsDiscounts();
+
   allDetailsData = [];
 
   for (const shop of shops) {
@@ -768,6 +771,7 @@ async function loadAllDetailsData(): Promise<void> {
       const dayRecords = history[openDate] || [];
       for (const rec of dayRecords) {
         const act = rec.Акт;
+        const actId = Number(act);
         const automobile = rec.Автомобіль || "";
         const closeDate = rec.ДатаЗакриття || null;
         const isPaid = Boolean(rec.Розрахунок);
@@ -777,6 +781,24 @@ async function loadAllDetailsData(): Promise<void> {
           const qty = Number(det.Кількість) || 0;
           const price = Number(det.Ціна) || 0;
           const total = qty * price;
+          const scladId = det.sclad_id;
+
+          const purchasePrice = scladId
+            ? getPurchasePriceBySсladId(scladId)
+            : undefined;
+
+          // Отримуємо знижку для конкретного акту
+          const discountPercent = getDiscountByActId(actId);
+
+          // Рахуємо маржу з урахуванням знижки
+          let margin: number | undefined;
+          if (purchasePrice !== undefined) {
+            const rawMargin = (price - purchasePrice) * qty;
+            margin =
+              discountPercent > 0
+                ? rawMargin * (1 - discountPercent / 100)
+                : rawMargin;
+          }
 
           allDetailsData.push({
             dateOpen: openDate,
@@ -788,9 +810,13 @@ async function loadAllDetailsData(): Promise<void> {
             catalog: (det.Каталог ?? "").toString(),
             quantity: qty,
             price: price,
+            purchasePrice,
             total: total,
+            margin,
+            discountPercent,
             isPaid: isPaid,
             paymentDate: paymentDate,
+            sclad_id: scladId,
             isClosed: closeDate !== null,
           });
         }
@@ -996,13 +1022,19 @@ export function updateDetailsTable(): void {
         item.price
       )}</div>`;
 
+      // Показуємо маржу з індикатором знижки якщо вона є
+      const discountIndicator =
+        item.discountPercent && item.discountPercent > 0
+          ? ` <span style="color: #ff9800; font-size: 0.75em;">(-${item.discountPercent}%)</span>`
+          : "";
+
       const marginHtml =
         item.margin !== undefined
           ? `<div style="font-size: 0.85em; color: ${
               item.margin >= 0 ? "#28a745" : "#dc3545"
             }; font-weight: 500; margin-top: 2px;">+${formatNumber(
               item.margin
-            )}</div>`
+            )}${discountIndicator}</div>`
           : "";
 
       return `
@@ -1275,18 +1307,19 @@ export async function searchDetailsData(): Promise<void> {
           const purchasePrice = scladId
             ? getPurchasePriceBySсladId(scladId)
             : undefined;
-          
+
           // Отримуємо знижку для конкретного акту
           const discountPercent = getDiscountByActId(actId);
-          
+
           // Рахуємо маржу з урахуванням знижки
           let margin: number | undefined;
           if (purchasePrice !== undefined) {
             const rawMargin = (price - purchasePrice) * qty;
             // Знижка віднімається від маржі пропорційно
-            margin = discountPercent > 0 
-              ? rawMargin * (1 - discountPercent / 100)
-              : rawMargin;
+            margin =
+              discountPercent > 0
+                ? rawMargin * (1 - discountPercent / 100)
+                : rawMargin;
           }
 
           rawData.push({

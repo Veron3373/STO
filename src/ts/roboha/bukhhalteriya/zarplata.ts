@@ -1092,15 +1092,24 @@ export function updatepodlegleTable(): void {
       const totalHtml = item.customHtmlTotal
         ? item.customHtmlTotal
         : `
-        <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(
-          item.total
-        )}</div>
-        <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(
-          item.salary
-        )}${salaryArrowHtml}</div>
-        <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
+        <div class="salary-cell-wrapper">
+          <div class="salary-cell-numbers">
+            <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(
+              item.total
+            )}</div>
+            <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(
+              item.salary
+            )}</div>
+            <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
             item.margin
           )}</div>
+          </div>
+          ${
+            salaryArrowHtml
+              ? `<div class="salary-arrow-container">${salaryArrowHtml}</div>`
+              : ""
+          }
+        </div>
       `;
 
       return `

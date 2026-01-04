@@ -1253,20 +1253,33 @@ body {
 }
 
 /* ==================== СТРІЛКИ ПОРІВНЯННЯ ПРОЦЕНТІВ ==================== */
+.salary-cell-wrapper {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.salary-cell-numbers {
+  flex: 1;
+}
+
+.salary-arrow-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+}
+
 .salary-arrow-up {
   color: #8b0000; /* темно червоний - процент більший */
   font-weight: bold;
-  font-size: 1.4em;
-  margin-left: 4px;
-  vertical-align: middle;
+  font-size: 2em;
   line-height: 1;
 }
 
 .salary-arrow-down {
   color: #0d6efd; /* синій - процент менший */
   font-weight: bold;
-  font-size: 1.4em;
-  margin-left: 4px;
-  vertical-align: middle;
+  font-size: 2em;
   line-height: 1;
 }

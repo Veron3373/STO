@@ -145,7 +145,9 @@ export function updateTotalSum(): void {
 
   // Fallback для невідомих вкладок
   const total = calculateTotalSum();
-  totalSumElement.textContent = `${formatNumber(total)} грн`;
+  if (totalSumElement) {
+    totalSumElement.textContent = `${formatNumber(total)} грн`;
+  }
 }
 
 export function switchTab(e: Event, tabName: TabName) {
@@ -182,26 +184,26 @@ function updateTableDisplay(): void {
   const detailsContainer = byId<HTMLDivElement>("details-table-container");
   const vutratuContainer = byId<HTMLDivElement>("vutratu-table-container");
 
-  podlegleContainer.style.display = "none";
-  magazineContainer.style.display = "none";
-  detailsContainer.style.display = "none";
-  vutratuContainer.style.display = "none";
+  if (podlegleContainer) podlegleContainer.style.display = "none";
+  if (magazineContainer) magazineContainer.style.display = "none";
+  if (detailsContainer) detailsContainer.style.display = "none";
+  if (vutratuContainer) vutratuContainer.style.display = "none";
 
   if (currentTab === "magazine") {
-    tableTitle.innerHTML = "🏪 Дані по складу";
-    magazineContainer.style.display = "block";
+    if (tableTitle) tableTitle.innerHTML = "🏪 Дані по складу";
+    if (magazineContainer) magazineContainer.style.display = "block";
     updateMagazineTable();
   } else if (currentTab === "podlegle") {
-    tableTitle.innerHTML = "👨‍🔧 Дані по зарплаті";
-    podlegleContainer.style.display = "block";
+    if (tableTitle) tableTitle.innerHTML = "👨‍🔧 Дані по зарплаті";
+    if (podlegleContainer) podlegleContainer.style.display = "block";
     updatepodlegleTable();
   } else if (currentTab === "details") {
-    tableTitle.innerHTML = "📊 Деталі по актам";
-    detailsContainer.style.display = "block";
+    if (tableTitle) tableTitle.innerHTML = "📊 Деталі по актам";
+    if (detailsContainer) detailsContainer.style.display = "block";
     updateDetailsTable();
   } else if (currentTab === "vutratu") {
-    tableTitle.innerHTML = "💰 Дані по витратам";
-    vutratuContainer.style.display = "block";
+    if (tableTitle) tableTitle.innerHTML = "💰 Дані по витратам";
+    if (vutratuContainer) vutratuContainer.style.display = "block";
     updatevutratuTable();
   }
 

@@ -207,6 +207,7 @@ export interface DetailsRecord {
   purchasePrice?: number;
   total: number;
   margin?: number;
+  discountPercent?: number;
   isPaid: boolean;
   paymentDate?: string;
   sclad_id?: number;
@@ -216,6 +217,9 @@ export interface DetailsRecord {
 // Змінні для зберігання даних деталей
 let detailsData: DetailsRecord[] = [];
 let shopsData: ShopData[] = [];
+
+// Кеш для знижок з актів (act_id -> discountPercent)
+let actsDiscountCache: Map<number, number> = new Map();
 
 // НОВІ ЗМІННІ ДЛЯ АВТОФІЛЬТРАЦІЇ
 let allDetailsData: DetailsRecord[] = [];
@@ -1195,6 +1199,39 @@ function getPurchasePriceBySсladId(scladId: number): number | undefined {
   return item?.price;
 }
 
+// Функція для завантаження знижок з актів
+async function fetchActsDiscounts(): Promise<void> {
+  try {
+    const { data, error } = await supabase.from("acts").select("act_id, data");
+
+    if (error) {
+      console.error("Помилка завантаження знижок з актів:", error);
+      return;
+    }
+
+    actsDiscountCache.clear();
+
+    if (data && Array.isArray(data)) {
+      for (const act of data) {
+        const actData =
+          typeof act.data === "string" ? JSON.parse(act.data) : act.data;
+        const discountPercent = Number(actData?.["Знижка"]) || 0;
+        if (discountPercent > 0) {
+          actsDiscountCache.set(act.act_id, discountPercent);
+        }
+      }
+      console.log(`✅ Завантажено знижки для ${actsDiscountCache.size} актів`);
+    }
+  } catch (error) {
+    console.error("Помилка завантаження знижок:", error);
+  }
+}
+
+// Функція для отримання знижки за act_id
+function getDiscountByActId(actId: number): number {
+  return actsDiscountCache.get(actId) || 0;
+}
+
 // Функція пошуку з визначенням статусу акту
 export async function searchDetailsData(): Promise<void> {
   let dateOpen = byId<HTMLInputElement>("Bukhhalter-details-date-open").value;
@@ -1209,6 +1246,7 @@ export async function searchDetailsData(): Promise<void> {
   }
 
   await fetchScladData();
+  await fetchActsDiscounts();
 
   const shops = await fetchShopData();
   const rawData: DetailsRecord[] = [];
@@ -1232,13 +1270,24 @@ export async function searchDetailsData(): Promise<void> {
           const price = Number(det.Ціна) || 0;
           const total = qty * price;
           const scladId = det.sclad_id;
+          const actId = Number(act);
 
           const purchasePrice = scladId
             ? getPurchasePriceBySсladId(scladId)
             : undefined;
-          const margin = purchasePrice
-            ? (price - purchasePrice) * qty
-            : undefined;
+          
+          // Отримуємо знижку для конкретного акту
+          const discountPercent = getDiscountByActId(actId);
+          
+          // Рахуємо маржу з урахуванням знижки
+          let margin: number | undefined;
+          if (purchasePrice !== undefined) {
+            const rawMargin = (price - purchasePrice) * qty;
+            // Знижка віднімається від маржі пропорційно
+            margin = discountPercent > 0 
+              ? rawMargin * (1 - discountPercent / 100)
+              : rawMargin;
+          }
 
           rawData.push({
             dateOpen: openDate,
@@ -1253,6 +1302,7 @@ export async function searchDetailsData(): Promise<void> {
             purchasePrice,
             total,
             margin,
+            discountPercent,
             isPaid,
             paymentDate,
             sclad_id: scladId,

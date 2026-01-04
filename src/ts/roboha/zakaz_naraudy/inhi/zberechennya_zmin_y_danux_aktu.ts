@@ -1368,7 +1368,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
 
   const items = parseTableRows();
 
-  // ⚠️ ПЕРЕВІРКА ДЛЯ СЛЮСАРЯ: він не може зберігати зміни в чужих рядках
+  // ⚠️ ПЕРЕВІРКА ДЛЯ СЛЮСАРЯ: він може зберігати зміни тільки в своїх рядках
   if (userAccessLevel === "Слюсар" && userName) {
     const originalItems = originalActData?.actItems || [];
 
@@ -1385,11 +1385,24 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
         const originalPib = originalItem.ПІБ_Магазин || "";
 
         // Перевіряємо, чи це не його рядок
-        if (originalPib.toLowerCase() !== userName.toLowerCase()) {
+        if (
+          originalPib &&
+          originalPib.toLowerCase() !== userName.toLowerCase()
+        ) {
           throw new Error(
             `⛔ Ви не можете змінювати рядок "${item.name}", оскільки він призначений іншому слюсарю (${originalPib})`
           );
         }
+      }
+
+      // Перевіряємо, чи слюсар не намагається призначити рядок іншому слюсарю
+      if (
+        item.pibMagazin &&
+        item.pibMagazin.toLowerCase() !== userName.toLowerCase()
+      ) {
+        throw new Error(
+          `⛔ Ви не можете призначити рядок "${item.name}" іншому слюсарю. Ви можете працювати тільки зі своїми рядками.`
+        );
       }
     }
   }

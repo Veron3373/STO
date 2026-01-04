@@ -13,7 +13,11 @@ import {
   setupAutocompleteForEditableCells,
   refreshQtyWarningsIn,
 } from "./inhi/kastomna_tabluca";
-import { userAccessLevel, canUserAddRowToAct } from "../tablucya/users";
+import {
+  userAccessLevel,
+  canUserAddRowToAct,
+  userName,
+} from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
 import { cleanupSlusarsOnSubscription } from "./modalMain";
 
@@ -466,14 +470,20 @@ function createRowHtml(
 
   // Перевірка прав для слюсаря:
   const isSlyusar = userAccessLevel === "Слюсар";
+  const pibMagazinValue = item?.person_or_store || ""; // значення ПІБ_Магазин
 
-  // ⚠️ ВАЖЛИВО: Слюсар НЕ МОЖЕ редагувати або видаляти існуючі рядки (item !== null)
-  // Він може лише додавати нові рядки (item === null)
+  // Перевіряємо, чи це рядок слюсаря (його прізвище в ПІБ_Магазин)
+  const isOwnRow =
+    userName && pibMagazinValue.toLowerCase() === userName.toLowerCase();
+
+  // ⚠️ Слюсар може редагувати:
+  // 1. Нові рядки (item === null)
+  // 2. Рядки зі своїм прізвищем в ПІБ_Магазин
   // Адміністратор і Приймальник можуть редагувати все
   const canEdit =
     userAccessLevel === "Адміністратор" ||
     userAccessLevel === "Приймальник" ||
-    (isSlyusar && item === null); // слюсар може редагувати ТІЛЬКИ нові порожні рядки
+    (isSlyusar && (item === null || isOwnRow));
 
   const isEditable = !isActClosed && canEdit;
 
@@ -482,7 +492,6 @@ function createRowHtml(
   const pibMagazinType = item?.type === "detail" ? "shops" : "slyusars";
 
   const catalogValue = showCatalog ? item?.catalog || "" : "";
-  const pibMagazinValue = item?.person_or_store || ""; // значення ПІБ_Магазин
   const scladIdAttr =
     showCatalog && item?.sclad_id != null
       ? `data-sclad-id="${item.sclad_id}"`

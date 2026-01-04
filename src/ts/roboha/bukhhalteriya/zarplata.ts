@@ -70,6 +70,7 @@ interface SlyusarData {
       ЗарплатаРоботи?: number;
       ЗарплатаЗапчастин?: number;
       Розраховано?: string;
+      Знижка?: number; // Відсоток знижки
     }>;
   };
 }
@@ -78,6 +79,44 @@ export let podlegleData: PodlegleRecord[] = [];
 let slyusarsData: SlyusarData[] = [];
 let availableNames: string[] = [];
 let currentPaymentFilter: PaymentFilter = "all";
+
+// Кеш для знижок з актів (act_id -> discountPercent)
+let zarplataActsDiscountCache: Map<number, number> = new Map();
+
+// Функція для завантаження знижок з актів
+async function fetchZarplataActsDiscounts(): Promise<void> {
+  try {
+    const { data, error } = await supabase.from("acts").select("act_id, data");
+
+    if (error) {
+      console.error("Помилка завантаження знижок з актів:", error);
+      return;
+    }
+
+    zarplataActsDiscountCache.clear();
+
+    if (data && Array.isArray(data)) {
+      for (const act of data) {
+        const actData =
+          typeof act.data === "string" ? JSON.parse(act.data) : act.data;
+        const discountPercent = Number(actData?.["Знижка"]) || 0;
+        if (discountPercent > 0) {
+          zarplataActsDiscountCache.set(act.act_id, discountPercent);
+        }
+      }
+      console.log(
+        `✅ [Зарплата] Завантажено знижки для ${zarplataActsDiscountCache.size} актів`
+      );
+    }
+  } catch (error) {
+    console.error("Помилка завантаження знижок:", error);
+  }
+}
+
+// Функція для отримання знижки за act_id
+function getZarplataDiscountByActId(actId: number): number {
+  return zarplataActsDiscountCache.get(actId) || 0;
+}
 let currentStatusFilter: StatusFilter = "all";
 
 let lastSearchDateOpen: string = "";
@@ -520,6 +559,7 @@ async function autoSearchPodlegleFromInputs(): Promise<void> {
     console.log("Авто-пошук: розширення діапазону, оновлення даних...");
     showNotification("🔄 Оновлення даних...", "info", 1500);
     await loadSlyusarsData();
+    await fetchZarplataActsDiscounts();
     if (slyusarsData.length === 0) {
       showNotification("⚠️ Не вдалося завантажити дані.", "error", 3000);
       return;
@@ -1243,20 +1283,55 @@ export function searchDataInDatabase(
           const sumParts = record.СуммаЗапчастин || 0;
           const salaryParts = record.ЗарплатаЗапчастин || 0;
 
+          // Отримуємо знижку для акту (для відображення індикатора)
+          const actId = Number(record.Акт) || 0;
+          // Спочатку перевіряємо чи є знижка збережена в записі, якщо ні - беремо з кешу
+          const discountPercent =
+            record.Знижка || getZarplataDiscountByActId(actId);
+
           const totalSum = sumWork + sumParts;
           const totalSalary = salaryWork + salaryParts;
-          const margin = totalSum - totalSalary;
 
-          // Чистий прибуток = сума - зарплата
-          const netProfitParts = sumParts - salaryParts;
-          const netProfitWork = sumWork - salaryWork;
+          // Дані вже збережені з урахуванням знижки, тому просто показуємо їх
+          // sumWork та sumParts - це вже чистий прибуток після дисконту та зарплат
+          const margin = totalSum;
+
+          // Індикатор знижки
+          const discountIndicator =
+            discountPercent > 0
+              ? ` <span style="color: #ff9800; font-size: 0.75em;">(-${discountPercent}%)</span>`
+              : "";
 
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${salaryParts !== 0 ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>` : ''}
-              ${netProfitParts !== 0 ? `<div style="color: #28a745;">⚙️ +${formatNumber(netProfitParts)}</div>` : ''}
-              ${salaryWork !== 0 ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>` : ''}
-              ${netProfitWork !== 0 ? `<div style="color: #28a745;">🛠️ +${formatNumber(netProfitWork)}</div>` : ''}
+              ${
+                salaryParts !== 0
+                  ? `<div style="color: #dc3545;">⚙️ -${formatNumber(
+                      salaryParts
+                    )}</div>`
+                  : ""
+              }
+              ${
+                sumParts !== 0
+                  ? `<div style="color: #28a745;">⚙️ +${formatNumber(
+                      sumParts
+                    )}${discountIndicator}</div>`
+                  : ""
+              }
+              ${
+                salaryWork !== 0
+                  ? `<div style="color: #dc3545;">🛠️ -${formatNumber(
+                      salaryWork
+                    )}</div>`
+                  : ""
+              }
+              ${
+                sumWork !== 0
+                  ? `<div style="color: #28a745;">🛠️ +${formatNumber(
+                      sumWork
+                    )}${discountIndicator}</div>`
+                  : ""
+              }
             </div>`;
 
           podlegleData.push({
@@ -1660,6 +1735,7 @@ export async function handlepodlegleAddRecord(): Promise<void> {
   // ▼▼▼ ЗМІНА 2: Додано примусове оновлення даних ▼▼▼
   showNotification("🔄 Оновлення даних слюсарів...", "info", 1500);
   await loadSlyusarsData(); // <-- !! ОСНОВНЕ ВИПРАВЛЕННЯ !!
+  await fetchZarplataActsDiscounts();
   if (slyusarsData.length === 0) {
     showNotification(
       "⚠️ Не вдалося завантажити дані. Пошук неможливий.",

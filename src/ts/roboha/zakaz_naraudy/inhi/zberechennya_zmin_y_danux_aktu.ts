@@ -890,7 +890,8 @@ async function syncPruimalnikHistory(
   actId: number,
   _totalWorksSumIgnored: number,
   _totalDetailsSumIgnored: number,
-  actDateOn: string | null = null
+  actDateOn: string | null = null,
+  discountPercent: number = 0
 ): Promise<void> {
   console.log(
     `\n🔄 syncPruimalnikHistory: Початок синхронізації для акту #${actId}`
@@ -1067,12 +1068,19 @@ async function syncPruimalnikHistory(
   }
 
   // --- РОЗРАХУНОК БАЗ ТА ЗАРПЛАТ ---
+  // Враховуємо дисконт (знижку)
+  const discountMultiplier =
+    discountPercent > 0 ? 1 - discountPercent / 100 : 1;
 
-  // 1. Робота: (Сума Продажу - Зарплата Слюсаря)
-  const baseWorkProfit = worksTotalSale - worksTotalSlusarSalary;
+  // 1. Робота: (Сума Продажу * множник дисконту - Зарплата Слюсаря)
+  // Дисконт застосовується до суми продажу, а потім віднімаємо зарплату слюсаря
+  const workSaleAfterDiscount = worksTotalSale * discountMultiplier;
+  const baseWorkProfit = workSaleAfterDiscount - worksTotalSlusarSalary;
 
-  // 2. Запчастини: (Сума Продажу - Сума Закупки)
-  const basePartsProfit = partsTotalSale - partsTotalBuy;
+  // 2. Запчастини: (Сума Продажу * множник дисконту - Сума Закупки)
+  // Дисконт застосовується до суми продажу, а потім віднімаємо собівартість
+  const partsSaleAfterDiscount = partsTotalSale * discountMultiplier;
+  const basePartsProfit = partsSaleAfterDiscount - partsTotalBuy;
 
   // --- ОТРИМАННЯ ДАНИХ ПРИЙМАЛЬНИКА З БД ---
   const { data: userDataArray, error } = await supabase
@@ -1110,15 +1118,25 @@ async function syncPruimalnikHistory(
   const salaryWork = Math.round(baseWorkProfit * (percentWork / 100));
   const salaryParts = Math.round(basePartsProfit * (percentParts / 100));
 
+  // Чистий прибуток після відрахування зарплати приймальника
+  const netWorkProfit = baseWorkProfit - salaryWork;
+  const netPartsProfit = basePartsProfit - salaryParts;
+
   console.log("📊 Розрахунок ЗП Приймальника:", {
+    discountPercent,
+    discountMultiplier,
     worksTotalSale,
+    workSaleAfterDiscount,
     worksTotalSlusarSalary,
     baseWorkProfit,
     salaryWork,
+    netWorkProfit,
     partsTotalSale,
+    partsSaleAfterDiscount,
     partsTotalBuy,
     basePartsProfit,
     salaryParts,
+    netPartsProfit,
   });
 
   // ДЕБАГ для акту 34
@@ -1228,10 +1246,12 @@ async function syncPruimalnikHistory(
     Акт: String(actId),
     Клієнт: pib,
     Автомобіль: auto,
-    СуммаРоботи: baseWorkProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК (після відрахування зарплати слюсаря)
-    СуммаЗапчастин: basePartsProfit, // ТУТ ТЕПЕР ЧИСТИЙ ПРИБУТОК (після відрахування вхідної ціни)
+    // Записуємо чистий прибуток (після дисконту, собівартості/зарплати слюсаря і зарплати приймальника)
+    СуммаРоботи: netWorkProfit,
+    СуммаЗапчастин: netPartsProfit,
     ЗарплатаРоботи: salaryWork,
     ЗарплатаЗапчастин: salaryParts,
+    Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
     ДатаЗакриття: null, // Буде заповнено при закритті акту
   };
 
@@ -1447,7 +1467,8 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
       actId,
       totalWorksSum,
       totalDetailsSum,
-      globalCache.currentActDateOn
+      globalCache.currentActDateOn,
+      discountValue
     );
   } else {
     console.log(

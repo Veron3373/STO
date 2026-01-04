@@ -1818,10 +1818,10 @@ export function createPercentageToggle(): void {
 
     switch (value) {
       case "0":
-        currentPercentageFilter = "higher";
+        currentPercentageFilter = "lower";
         break;
       case "1":
-        currentPercentageFilter = "lower";
+        currentPercentageFilter = "higher";
         break;
       case "2":
       default:
@@ -1847,10 +1847,10 @@ export function createPercentageToggle(): void {
 
     switch (value) {
       case "0":
-        currentPercentageFilter = "higher";
+        currentPercentageFilter = "lower";
         break;
       case "1":
-        currentPercentageFilter = "lower";
+        currentPercentageFilter = "higher";
         break;
       case "2":
       default:

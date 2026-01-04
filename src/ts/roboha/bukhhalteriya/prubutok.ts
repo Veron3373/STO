@@ -1348,7 +1348,7 @@ export function updatevutratuTable(): void {
                 ${formatNumber(expense.fullAmount)}
               </span>
               <div style="font-size: 0.85em; color: #d32f2f; margin-top: 2px;">
-                🏷️${discount}%
+                🏷️${discount}% ${formatNumber(discountVal)}
               </div>
               <div style="font-size: 0.95em; font-weight: 700; color: #006400; margin-top: 2px; border-top: 1px solid #ddd; padding-top: 2px;">
                 ${formatNumber(finalVal)}

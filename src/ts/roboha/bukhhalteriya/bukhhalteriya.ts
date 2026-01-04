@@ -22,6 +22,7 @@ import {
   createNameSelect,
   createStatusToggle,
   createPaymentToggle,
+  createPercentageToggle,
   handlepodlegleAddRecord,
   deletepodlegleRecord,
   togglepodleglePayment,
@@ -1087,6 +1088,7 @@ window.addEventListener("load", async function () {
 
     createStatusToggle();
     createPaymentToggle();
+    createPercentageToggle();
     createNameSelect();
 
     createMagazinePaymentToggle();

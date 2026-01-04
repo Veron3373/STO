@@ -29,6 +29,7 @@ function hasFullAccess(): boolean {
 
 type PaymentFilter = "paid" | "unpaid" | "all";
 type StatusFilter = "closed" | "open" | "all";
+type PercentageFilter = "higher" | "lower" | "all";
 
 export interface PodlegleRecord {
   dateOpen: string;
@@ -80,6 +81,7 @@ export let podlegleData: PodlegleRecord[] = [];
 let slyusarsData: SlyusarData[] = [];
 let availableNames: string[] = [];
 let currentPaymentFilter: PaymentFilter = "all";
+let currentPercentageFilter: PercentageFilter = "all";
 
 // Кеш для знижок з актів (act_id -> discountPercent)
 let zarplataActsDiscountCache: Map<number, number> = new Map();
@@ -968,6 +970,28 @@ export function getFilteredpodlegleData(): PodlegleRecord[] {
     filteredData = filteredData.filter((item) => !item.isClosed);
   }
 
+  // Фільтр по відсоткам зарплати
+  if (
+    currentPercentageFilter === "higher" ||
+    currentPercentageFilter === "lower"
+  ) {
+    filteredData = filteredData.filter((item) => {
+      const actualSalaryPercent =
+        item.total > 0 ? (item.salary / item.total) * 100 : 0;
+      const configuredPercent = getSlyusarPercentByName(item.name);
+
+      if (configuredPercent === 0 || item.salary === 0) {
+        return false; // Не показувати записи без налаштованого відсотка або зарплати
+      }
+
+      if (currentPercentageFilter === "higher") {
+        return actualSalaryPercent > configuredPercent;
+      } else {
+        return actualSalaryPercent < configuredPercent;
+      }
+    });
+  }
+
   return filteredData;
 }
 
@@ -1773,6 +1797,73 @@ export function createPaymentToggle(): void {
   });
 }
 
+export function createPercentageToggle(): void {
+  const toggle = byId<HTMLInputElement>("percentage-filter-toggle");
+
+  if (!toggle) {
+    console.error("❌ Елемент percentage-filter-toggle не знайдено в HTML");
+    return;
+  }
+
+  // Обробник change
+  toggle.addEventListener("change", (e) => {
+    const target = e.target as HTMLInputElement;
+    const value = target.value;
+
+    switch (value) {
+      case "0":
+        currentPercentageFilter = "higher";
+        break;
+      case "1":
+        currentPercentageFilter = "lower";
+        break;
+      case "2":
+      default:
+        currentPercentageFilter = "all";
+        break;
+    }
+
+    if (hasPodlegleDataLoaded) {
+      filterPodlegleData();
+    } else {
+      updatepodlegleTable();
+    }
+
+    console.log(
+      `✅ Фільтр по процентам застосовано: ${currentPercentageFilter}`
+    );
+  });
+
+  // Обробник input (для сумісності)
+  toggle.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement;
+    const value = target.value;
+
+    switch (value) {
+      case "0":
+        currentPercentageFilter = "higher";
+        break;
+      case "1":
+        currentPercentageFilter = "lower";
+        break;
+      case "2":
+      default:
+        currentPercentageFilter = "all";
+        break;
+    }
+
+    if (hasPodlegleDataLoaded) {
+      filterPodlegleData();
+    } else {
+      updatepodlegleTable();
+    }
+
+    console.log(
+      `✅ Фільтр по процентам застосовано: ${currentPercentageFilter}`
+    );
+  });
+}
+
 // [НОВИЙ КОД]
 export async function handlepodlegleAddRecord(): Promise<void> {
   // <--- ЗМІНА 1: (async)
@@ -2208,7 +2299,16 @@ export function clearpodlegleForm(): void {
     paymentToggle.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  // ✅ 6. Скидаємо режим фільтрації дат на "Відкриття"
+  // ✅ 6. Скидаємо перемикач процентів на "Всі" (значення "2")
+  const percentageToggle = byId<HTMLInputElement>("percentage-filter-toggle");
+  if (percentageToggle) {
+    percentageToggle.value = "2";
+    currentPercentageFilter = "all";
+    // Тригеримо подію change для оновлення UI
+    percentageToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // ✅ 7. Скидаємо режим фільтрації дат на "Відкриття"
   podlegleDateFilterMode = "open";
   const dateFilterButtons = document.querySelectorAll(
     "#Bukhhalter-podlegle-section .date-filter-btn"

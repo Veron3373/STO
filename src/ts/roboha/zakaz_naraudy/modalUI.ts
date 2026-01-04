@@ -476,16 +476,43 @@ function createRowHtml(
   const isOwnRow =
     userName && pibMagazinValue.toLowerCase() === userName.toLowerCase();
 
+  // 🆕 НОВА ЛОГІКА: Рядок з роботою, де ПІБ_Магазин пустий
+  // Слюсар може редагувати пусті поля (кількість, ціна, зарплата, ПІБ_Магазин)
+  // але НЕ може редагувати вже заповнене поле "name"
+  const isWorkRowWithEmptyPib =
+    isSlyusar &&
+    item !== null &&
+    item.type === "work" &&
+    item.name?.trim() !== "" &&
+    pibMagazinValue.trim() === "";
+
   // ⚠️ Слюсар може редагувати:
   // 1. Нові рядки (item === null)
   // 2. Рядки зі своїм прізвищем в ПІБ_Магазин
+  // 3. 🆕 Рядки з роботою де ПІБ_Магазин пустий (тільки пусті поля!)
   // Адміністратор і Приймальник можуть редагувати все
   const canEdit =
     userAccessLevel === "Адміністратор" ||
     userAccessLevel === "Приймальник" ||
-    (isSlyusar && (item === null || isOwnRow));
+    (isSlyusar && (item === null || isOwnRow || isWorkRowWithEmptyPib));
 
   const isEditable = !isActClosed && canEdit;
+
+  // 🆕 Для рядків з пустим ПІБ - дозволяємо редагувати тільки пусті поля
+  // Поле "name" заборонено редагувати, якщо воно вже заповнене
+  const isNameEditable = isEditable && !isWorkRowWithEmptyPib;
+
+  // 🆕 Для пустих полів - дозволяємо редагування, якщо значення пусте
+  const isQtyEditable =
+    isEditable &&
+    (!isWorkRowWithEmptyPib || !item?.quantity || item.quantity === 0);
+  const isPriceEditable =
+    isEditable && (!isWorkRowWithEmptyPib || !item?.price || item.price === 0);
+  const isZarplataEditable = isEditable && globalCache.settings.showZarplata;
+  const isPibMagazinEditable =
+    isEditable && (!isWorkRowWithEmptyPib || pibMagazinValue.trim() === "");
+  const isCatalogEditable =
+    isEditable && (!isWorkRowWithEmptyPib || !item?.catalog?.trim());
 
   const dataTypeForName =
     item?.type === "detail" ? "details" : item?.type === "work" ? "works" : "";
@@ -499,14 +526,20 @@ function createRowHtml(
 
   const slyusarSumValue = "";
 
+  // 🆕 Для рядків з пустим ПІБ - автоматично підставляємо ім'я слюсаря
+  let displayPibMagazinValue = pibMagazinValue;
+  if (isWorkRowWithEmptyPib && userName) {
+    displayPibMagazinValue = userName;
+  }
+
   const catalogCellHTML = showCatalog
-    ? `<td contenteditable="${isEditable}" class="editable-autocomplete catalog-cell" data-name="catalog" ${scladIdAttr}>${catalogValue}</td>`
+    ? `<td contenteditable="${isCatalogEditable}" class="editable-autocomplete catalog-cell" data-name="catalog" ${scladIdAttr}>${catalogValue}</td>`
     : "";
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${
+    ? `<td contenteditable="${isPibMagazinEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${
         item ? pibMagazinType : ""
-      }">${pibMagazinValue}</td>`
+      }">${displayPibMagazinValue}</td>`
     : "";
 
   /* ===== ЗМІНИ: відображення пустоти замість 0 ===== */
@@ -521,12 +554,12 @@ function createRowHtml(
 
   // ⚡ ВАЖЛИВО: завжди створюємо комірки "Ціна" і "Сума",
   // а показ/приховування робимо через JS (togglePriceColumnsVisibility)
-  const priceCellHTML = `<td data-col="price" contenteditable="${isEditable}" class="text-right editable-autocomplete price-cell" data-name="price">${priceValue}</td>`;
+  const priceCellHTML = `<td data-col="price" contenteditable="${isPriceEditable}" class="text-right editable-autocomplete price-cell" data-name="price">${priceValue}</td>`;
 
   const sumCellHTML = `<td data-col="sum" class="text-right" data-name="sum">${sumValue}</td>`;
 
   const showZarplata = globalCache.settings.showZarplata;
-  const canEditZarplata = isEditable && showZarplata; // акт відкритий і стовпець увімкнено
+  const canEditZarplata = isZarplataEditable; // акт відкритий і стовпець увімкнено
 
   const zarplataCellHTML = showZarplata
     ? `<td contenteditable="${canEditZarplata}"
@@ -538,10 +571,12 @@ function createRowHtml(
 
   // 🔽 ЛОГІКА ВИДАЛЕННЯ:
   // Кнопка показується ТІЛЬКИ якщо акт відкритий І користувач має права (canDelete) І може редагувати цей рядок
-  const showDeleteBtn = !isActClosed && canDelete && canEdit;
+  // 🆕 Для рядків з пустим ПІБ - слюсар НЕ може видаляти (бо це чужий рядок)
+  const showDeleteBtn =
+    !isActClosed && canDelete && canEdit && !isWorkRowWithEmptyPib;
 
   return `
-    <tr>
+    <tr${isWorkRowWithEmptyPib ? ' data-partial-edit="true"' : ""}>
       <td class="row-index">${
         item?.type === "work"
           ? `🛠️ ${index + 1}`
@@ -550,7 +585,7 @@ function createRowHtml(
           : `${index + 1}`
       }</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${
+        <div contenteditable="${isNameEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${
     item?.name || ""
   }</div>
         ${
@@ -560,7 +595,7 @@ function createRowHtml(
         }
       </td>
       ${catalogCellHTML}
-      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
+      <td contenteditable="${isQtyEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
     item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
   }</td>
       ${priceCellHTML}

@@ -1367,6 +1367,33 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     )?.innerText?.trim() || "";
 
   const items = parseTableRows();
+
+  // ⚠️ ПЕРЕВІРКА ДЛЯ СЛЮСАРЯ: він не може зберігати зміни в чужих рядках
+  if (userAccessLevel === "Слюсар" && userName) {
+    const originalItems = originalActData?.actItems || [];
+
+    // Перевіряємо, чи слюсар намагається змінити існуючі рядки
+    for (const item of items) {
+      // Знаходимо оригінальний рядок
+      const originalItem = originalItems.find(
+        (orig: any) =>
+          orig.Найменування === item.name && orig.Type === item.type
+      );
+
+      // Якщо рядок існував раніше (не новий)
+      if (originalItem) {
+        const originalPib = originalItem.ПІБ_Магазин || "";
+
+        // Перевіряємо, чи це не його рядок
+        if (originalPib.toLowerCase() !== userName.toLowerCase()) {
+          throw new Error(
+            `⛔ Ви не можете змінювати рядок "${item.name}", оскільки він призначений іншому слюсарю (${originalPib})`
+          );
+        }
+      }
+    }
+  }
+
   const {
     details,
     works,

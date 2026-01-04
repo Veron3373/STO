@@ -917,6 +917,9 @@ export function setupAutocompleteForEditableCells(
 
       const query = target.textContent?.trim().toLowerCase() || "";
       const t = updatePibMagazinDataType(target);
+      const currentUserAccessLevel = getUserAccessLevelFromLocalStorage();
+      const currentUserName = getUserNameFromLocalStorage();
+
       if (t === "shops") {
         const all = globalCache.shops
           .map((s) => s.Name)
@@ -926,10 +929,20 @@ export function setupAutocompleteForEditableCells(
           : all;
         suggestions = filtered.map((x) => ({ label: x, value: x }));
       } else if (t === "slyusars") {
-        const allowedSlyusars = globalCache.slyusars
-          .filter((s) => s.Доступ === "Слюсар")
-          .map((s) => s.Name)
-          .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
+        // ⚠️ Для слюсаря показуємо ТІЛЬКИ його прізвище
+        let allowedSlyusars: string[];
+
+        if (currentUserAccessLevel === "Слюсар" && currentUserName) {
+          // Слюсар бачить тільки своє прізвище
+          allowedSlyusars = [currentUserName];
+        } else {
+          // Адміністратор та Приймальник бачать всіх слюсарів
+          allowedSlyusars = globalCache.slyusars
+            .filter((s) => s.Доступ === "Слюсар")
+            .map((s) => s.Name)
+            .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
+        }
+
         const filtered = query
           ? allowedSlyusars.filter((n) => n.toLowerCase().includes(query))
           : allowedSlyusars;
@@ -946,10 +959,23 @@ export function setupAutocompleteForEditableCells(
       suggestions = filtered.map((x) => ({ label: x, value: x }));
     } else if (target.getAttribute("data-type") === "slyusars") {
       const query = target.textContent?.trim().toLowerCase() || "";
-      const allowedSlyusars = globalCache.slyusars
-        .filter((s) => s.Доступ === "Слюсар")
-        .map((s) => s.Name)
-        .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
+      const currentUserAccessLevel = getUserAccessLevelFromLocalStorage();
+      const currentUserName = getUserNameFromLocalStorage();
+
+      // ⚠️ Для слюсаря показуємо ТІЛЬКИ його прізвище
+      let allowedSlyusars: string[];
+
+      if (currentUserAccessLevel === "Слюсар" && currentUserName) {
+        // Слюсар бачить тільки своє прізвище
+        allowedSlyusars = [currentUserName];
+      } else {
+        // Адміністратор та Приймальник бачать всіх слюсарів
+        allowedSlyusars = globalCache.slyusars
+          .filter((s) => s.Доступ === "Слюсар")
+          .map((s) => s.Name)
+          .sort((a, b) => a.localeCompare(b, "uk", { sensitivity: "base" }));
+      }
+
       const filtered = query
         ? allowedSlyusars.filter((n) => n.toLowerCase().includes(query))
         : allowedSlyusars;

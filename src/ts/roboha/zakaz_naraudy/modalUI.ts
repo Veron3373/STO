@@ -468,19 +468,17 @@ function createRowHtml(
 ): string {
   const isActClosed = globalCache.isActClosed;
 
-  // Перевірка прав для слюсаря: він може редагувати лише свої рядки
+  // Перевірка прав для слюсаря:
   const isSlyusar = userAccessLevel === "Слюсар";
-  const pibMagazinValue = item?.person_or_store || "";
-  const isOwnRow =
-    !isSlyusar ||
-    (userName && pibMagazinValue.toLowerCase() === userName.toLowerCase());
 
+  // ⚠️ ВАЖЛИВО: Слюсар НЕ МОЖЕ редагувати або видаляти існуючі рядки (item !== null)
+  // Він може лише додавати нові рядки (item === null)
   // Адміністратор і Приймальник можуть редагувати все
-  // Слюсар може редагувати тільки свої рядки
   const canEdit =
     userAccessLevel === "Адміністратор" ||
     userAccessLevel === "Приймальник" ||
-    isOwnRow;
+    (isSlyusar && item === null); // слюсар може редагувати ТІЛЬКИ нові порожні рядки
+
   const isEditable = !isActClosed && canEdit;
 
   const dataTypeForName =
@@ -488,6 +486,7 @@ function createRowHtml(
   const pibMagazinType = item?.type === "detail" ? "shops" : "slyusars";
 
   const catalogValue = showCatalog ? item?.catalog || "" : "";
+  const pibMagazinValue = item?.person_or_store || ""; // значення ПІБ_Магазин
   const scladIdAttr =
     showCatalog && item?.sclad_id != null
       ? `data-sclad-id="${item.sclad_id}"`

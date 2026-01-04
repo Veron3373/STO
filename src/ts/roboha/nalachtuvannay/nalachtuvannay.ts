@@ -12,7 +12,7 @@ const SETTINGS = {
     class: "_percentage",
   },
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
-  6: { id: "toggle-discount", label: "Знижка", class: "discount" },
+/*   6: { id: "toggle-discount", label: "Знижка", class: "discount" }, */
 };
 
 const ROLES = [

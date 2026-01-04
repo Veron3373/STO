@@ -774,11 +774,11 @@ async function loadvutratuFromDatabase(): Promise<void> {
         date: getKyivDate(item.dataOnn) || item.dataOnn.split("T")[0],
         paymentDate: null,
         rosraxovanoDate: item.dataOnn,
-        category: addEmojiToCategory(item.kategoria),
+        category: addEmojiToCategory(String(item.kategoria || "")),
         actNumber: item.act ?? undefined,
         description: item.opys_vytraty,
         amount: Number(item.suma || 0),
-        paymentMethod: addEmojiToPaymentMethod(item.sposob_oplaty),
+        paymentMethod: addEmojiToPaymentMethod(String(item.sposob_oplaty || "")),
         notes: item.prymitky || undefined,
         isPaid: !!item.dataOff,
         createdBy: item.xto_zapusav || undefined,
@@ -1179,8 +1179,8 @@ export function updatevutratuTable(): void {
     row.className = isOpenAct
       ? "open-row"
       : isNegative
-      ? "negative-row"
-      : "positive-row";
+        ? "negative-row"
+        : "positive-row";
 
     // 💰 Розраховано - показуємо дату витрати або розрахунку акту
     const paymentCell = row.insertCell();
@@ -1256,9 +1256,8 @@ export function updatevutratuTable(): void {
     if (isFromAct && expense.actNumber) {
       actCell.innerHTML = `
         <button class="Bukhhalter-act-btn"
-                onclick="event.stopPropagation(); openActModal(${
-                  Number(expense.actNumber) || 0
-                })"
+                onclick="event.stopPropagation(); openActModal(${Number(expense.actNumber) || 0
+        })"
                 title="Відкрити акт №${expense.actNumber}">
           📋 ${expense.actNumber}
         </button>
@@ -1290,14 +1289,14 @@ export function updatevutratuTable(): void {
         finalDetailsAmount > 0
           ? "#28a745"
           : finalDetailsAmount < 0
-          ? "#dc3545"
-          : "#999";
+            ? "#dc3545"
+            : "#999";
       const workColor =
         finalWorkAmount > 0
           ? "#28a745"
           : finalWorkAmount < 0
-          ? "#dc3545"
-          : "#999";
+            ? "#dc3545"
+            : "#999";
       const detailsSign = finalDetailsAmount > 0 ? "+" : "";
       const workSign = finalWorkAmount > 0 ? "+" : "";
 
@@ -1320,8 +1319,8 @@ export function updatevutratuTable(): void {
         expense.amount > 0
           ? "#28a745"
           : expense.amount < 0
-          ? "#dc3545"
-          : "#999";
+            ? "#dc3545"
+            : "#999";
       const sign = expense.amount > 0 ? "+" : "";
       amountCell.innerHTML = `<span style="color: ${color}; font-size: 0.95em; font-weight: 500;">${sign}${formatNumber(
         expense.amount
@@ -1387,8 +1386,8 @@ export function updatevutratuTable(): void {
       const avansInfo =
         expense.paymentMethod && Number(expense.paymentMethod) > 0
           ? `<br><span style="color: #000; font-weight: 600; font-size: 0.95em;">💰 ${formatNumber(
-              Number(expense.paymentMethod)
-            )}</span>`
+            Number(expense.paymentMethod)
+          )}</span>`
           : "";
       methodCell.innerHTML = `
         <span style="font-size: 0.95em;">
@@ -1527,46 +1526,44 @@ export function updatevutratuDisplayedSums(): void {
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Каса</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-          totalNetFullDetails
-        )}</strong></span>
+    totalNetFullDetails
+  )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-          totalNetFullWork
-        )}</strong></span>
+    totalNetFullWork
+  )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-          totalAvansSum
-        )}</strong></span>
+    totalAvansSum
+  )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-          Math.abs(totalNegativeSum)
-        )}</strong></span>
+    Math.abs(totalNegativeSum)
+  )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${
-          finalSumCasa >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
+        <span><strong style="color: ${finalSumCasa >= 0 ? "#006400" : "#8B0000"
+    };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Прибуток</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-          totalNetDetailsProfit
-        )}</strong></span>
+      totalNetDetailsProfit
+    )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-          totalNetWorkProfit
-        )}</strong></span>
+      totalNetWorkProfit
+    )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-          totalAvansSum
-        )}</strong></span>
+      totalAvansSum
+    )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-          Math.abs(totalNegativeSum)
-        )}</strong></span>
+      Math.abs(totalNegativeSum)
+    )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${
-          finalSumProfit >= 0 ? "#006400" : "#8B0000"
-        };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
+        <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"
+    };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
       </div>
     </div>
   `;

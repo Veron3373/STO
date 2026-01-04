@@ -832,7 +832,11 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const fullAmount = fullDetailsAmount + fullWorkAmount;
 
         const discountPercent = Number(actData["Знижка"]) || 0;
-        const discountAmountValue = Number(actData["ПроцентЗнижки"]) || 0;
+        // Розраховуємо суму знижки з відсотка та повної суми
+        const discountAmountValue =
+          discountPercent > 0
+            ? Math.round((fullAmount * discountPercent) / 100)
+            : 0;
 
         vutratuData.push({
           id: actItem.act_id * -1,
@@ -1337,16 +1341,14 @@ export function updatevutratuTable(): void {
           ${formatNumber(expense.fullAmount)}
         </span>`;
 
-      if (discount > 0 || discountVal > 0) {
+      if (discount > 0) {
         html = `
             <div style="display: flex; flex-direction: column; align-items: flex-end;">
               <span style="color: #1a73e8; font-size: 0.95em; font-weight: 500;">
                 ${formatNumber(expense.fullAmount)}
               </span>
               <div style="font-size: 0.85em; color: #d32f2f; margin-top: 2px;">
-                🏷️${discount > 0 ? discount + "%" : ""} ${formatNumber(
-          discountVal
-        )}
+                🏷️${discount}%
               </div>
               <div style="font-size: 0.95em; font-weight: 700; color: #006400; margin-top: 2px; border-top: 1px solid #ddd; padding-top: 2px;">
                 ${formatNumber(finalVal)}

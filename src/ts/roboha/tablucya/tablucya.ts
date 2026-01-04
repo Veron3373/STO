@@ -232,8 +232,12 @@ function subscribeToActNotifications() {
  * Оновлює жовте фарбування рядків в реальному часі
  */
 function subscribeToSlusarNotifications() {
-  // ✅ Підписка тільки для Адміністратора та Приймальника
-  if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
+  // ✅ Підписка для Адміністратора, Приймальника та Слюсаря
+  if (
+    userAccessLevel !== "Адміністратор" &&
+    userAccessLevel !== "Приймальник" &&
+    userAccessLevel !== "Слюсар"
+  )
     return;
 
   console.log(
@@ -383,6 +387,7 @@ function applyClassToRow(
     slusarsOn &&
     !isClosed &&
     (userAccessLevel === "Адміністратор" ||
+      userAccessLevel === "Слюсар" ||
       (userAccessLevel === "Приймальник" && pruimalnyk === currentUserName));
 
   if (shouldShowSlusarsOn) {

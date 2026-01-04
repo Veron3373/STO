@@ -13,7 +13,11 @@ import {
   setupAutocompleteForEditableCells,
   refreshQtyWarningsIn,
 } from "./inhi/kastomna_tabluca";
-import { userAccessLevel, canUserAddRowToAct } from "../tablucya/users";
+import {
+  userAccessLevel,
+  canUserAddRowToAct,
+  userName,
+} from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
 import { cleanupSlusarsOnSubscription } from "./modalMain";
 
@@ -463,14 +467,27 @@ function createRowHtml(
   canDelete: boolean = true // <--- НОВИЙ ПАРАМЕТР
 ): string {
   const isActClosed = globalCache.isActClosed;
-  const isEditable = !isActClosed;
+
+  // Перевірка прав для слюсаря: він може редагувати лише свої рядки
+  const isSlyusar = userAccessLevel === "Слюсар";
+  const pibMagazinValue = item?.person_or_store || "";
+  const isOwnRow =
+    !isSlyusar ||
+    (userName && pibMagazinValue.toLowerCase() === userName.toLowerCase());
+
+  // Адміністратор і Приймальник можуть редагувати все
+  // Слюсар може редагувати тільки свої рядки
+  const canEdit =
+    userAccessLevel === "Адміністратор" ||
+    userAccessLevel === "Приймальник" ||
+    isOwnRow;
+  const isEditable = !isActClosed && canEdit;
 
   const dataTypeForName =
     item?.type === "detail" ? "details" : item?.type === "work" ? "works" : "";
   const pibMagazinType = item?.type === "detail" ? "shops" : "slyusars";
 
   const catalogValue = showCatalog ? item?.catalog || "" : "";
-  const pibMagazinValue = showPibMagazin ? item?.person_or_store || "" : "";
   const scladIdAttr =
     showCatalog && item?.sclad_id != null
       ? `data-sclad-id="${item.sclad_id}"`
@@ -483,8 +500,9 @@ function createRowHtml(
     : "";
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${item ? pibMagazinType : ""
-    }">${pibMagazinValue}</td>`
+    ? `<td contenteditable="${isEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${
+        item ? pibMagazinType : ""
+      }">${pibMagazinValue}</td>`
     : "";
 
   /* ===== ЗМІНИ: відображення пустоти замість 0 ===== */
@@ -515,28 +533,32 @@ function createRowHtml(
     : "";
 
   // 🔽 ЛОГІКА ВИДАЛЕННЯ:
-  // Кнопка показується ТІЛЬКИ якщо акт відкритий І користувач має права (canDelete)
-  const showDeleteBtn = !isActClosed && canDelete;
+  // Кнопка показується ТІЛЬКИ якщо акт відкритий І користувач має права (canDelete) І може редагувати цей рядок
+  const showDeleteBtn = !isActClosed && canDelete && canEdit;
 
   return `
     <tr>
-      <td class="row-index">${item?.type === "work"
-      ? `🛠️ ${index + 1}`
-      : item?.type === "detail"
-        ? `⚙️ ${index + 1}`
-        : `${index + 1}`
-    }</td>
+      <td class="row-index">${
+        item?.type === "work"
+          ? `🛠️ ${index + 1}`
+          : item?.type === "detail"
+          ? `⚙️ ${index + 1}`
+          : `${index + 1}`
+      }</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${item?.name || ""
-    }</div>
-        ${showDeleteBtn
-      ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
-      : ""
-    }
+        <div contenteditable="${isEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${
+    item?.name || ""
+  }</div>
+        ${
+          showDeleteBtn
+            ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
+            : ""
+        }
       </td>
       ${catalogCellHTML}
-      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
-    }</td>
+      <td contenteditable="${isEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
+    item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
+  }</td>
       ${priceCellHTML}
       ${sumCellHTML}
       ${zarplataCellHTML}
@@ -564,11 +586,11 @@ export function generateTableHTML(
   const actItemsHtml =
     allItems.length > 0
       ? allItems
-        .map(
-          (item, index) =>
-            createRowHtml(item, index, showPibMagazin, showCatalog, canAddRow) // <--- ПЕРЕДАЄМО canAddRow
-        )
-        .join("")
+          .map(
+            (item, index) =>
+              createRowHtml(item, index, showPibMagazin, showCatalog, canAddRow) // <--- ПЕРЕДАЄМО canAddRow
+          )
+          .join("")
       : createRowHtml(null, 0, showPibMagazin, showCatalog, canAddRow); // <--- ПЕРЕДАЄМО canAddRow
 
   const sumsFooter = isRestricted
@@ -614,8 +636,9 @@ export function generateTableHTML(
     globalCache.isActClosed || !canAddRow
       ? ""
       : `
-    <div class="zakaz_narayd-buttons-container${isRestricted ? " obmesheniy" : ""
-      }">
+    <div class="zakaz_narayd-buttons-container${
+      isRestricted ? " obmesheniy" : ""
+    }">
       <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
       <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
     </div>`;
@@ -774,7 +797,6 @@ export function generateTableHTML(
           e.preventDefault();
         }
       };
-
 
       const onFocusDiscount = () => {
         // Коли користувач фокусується на полі проценту,
@@ -973,8 +995,6 @@ export function resetDiscountCache() {
   discountDataCache.purchasePrices.clear();
 }
 
-
-
 function calculateDiscountBase(overallSum: number): number {
   // Знижка діє на ВЕСЬ чек (загальну суму), а не на маржу
   return overallSum;
@@ -1088,9 +1108,10 @@ function updateFinalSumWithAvans(): void {
             const currentDiscountBase = calculateDiscountBase(overallSum);
 
             // Розраховуємо відсоток від бази (якщо база > 0)
-            const calculatedPercent = currentDiscountBase > 0
-              ? (numValue / currentDiscountBase) * 100
-              : 0;
+            const calculatedPercent =
+              currentDiscountBase > 0
+                ? (numValue / currentDiscountBase) * 100
+                : 0;
 
             // Заокруглюємо до 0.5 (математичне заокруглювання)
             const roundedToHalf = Math.round(calculatedPercent / 0.5) * 0.5;
@@ -1147,8 +1168,9 @@ export function createTableRow(
   value: string,
   className: string = ""
 ): string {
-  return `<tr><td>${label}</td><td${className ? ` class="${className}"` : ""
-    }>${value}</td></tr>`;
+  return `<tr><td>${label}</td><td${
+    className ? ` class="${className}"` : ""
+  }>${value}</td></tr>`;
 }
 
 export function createModal(): void {

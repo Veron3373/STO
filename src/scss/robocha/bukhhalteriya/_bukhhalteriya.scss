@@ -610,7 +610,8 @@ body {
 .Bukhhalter-payment-toggle,
 .Bukhhalter-status-toggle,
 .Bukhhalter-availability-toggle,
-.Bukhhalter-expense-type-toggle {
+.Bukhhalter-expense-type-toggle,
+.Bukhhalter-percentage-toggle {
   width: 100%;
   height: 20px;
   outline: none;
@@ -623,7 +624,8 @@ body {
 /* Градієнти для перемикачів */
 .Bukhhalter-payment-toggle,
 .Bukhhalter-status-toggle,
-.Bukhhalter-expense-type-toggle {
+.Bukhhalter-expense-type-toggle,
+.Bukhhalter-percentage-toggle {
   background: linear-gradient(
     to right,
     var(--success-color) 0%,
@@ -655,7 +657,8 @@ body {
 .Bukhhalter-payment-toggle::-webkit-slider-thumb,
 .Bukhhalter-status-toggle::-webkit-slider-thumb,
 .Bukhhalter-availability-toggle::-webkit-slider-thumb,
-.Bukhhalter-expense-type-toggle::-webkit-slider-thumb {
+.Bukhhalter-expense-type-toggle::-webkit-slider-thumb,
+.Bukhhalter-percentage-toggle::-webkit-slider-thumb {
   appearance: none;
   width: 20px;
   height: 20px;
@@ -670,7 +673,8 @@ body {
 .Bukhhalter-payment-toggle::-moz-range-thumb,
 .Bukhhalter-status-toggle::-moz-range-thumb,
 .Bukhhalter-availability-toggle::-moz-range-thumb,
-.Bukhhalter-expense-type-toggle::-moz-range-thumb {
+.Bukhhalter-expense-type-toggle::-moz-range-thumb,
+.Bukhhalter-percentage-toggle::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;

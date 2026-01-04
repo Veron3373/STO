@@ -1256,7 +1256,7 @@ body {
 .salary-cell-wrapper {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 0px;
 }
 
 .salary-cell-numbers {
@@ -1280,6 +1280,6 @@ body {
 .salary-arrow-down {
   color: #0d6efd; /* синій - процент менший */
   font-weight: bold;
-  font-size: 2em;
+  font-size: 1.5em;
   line-height: 1;
 }

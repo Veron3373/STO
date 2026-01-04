@@ -893,6 +893,7 @@ function updateNamesList(): void {
 export function createNameSelect(): void {
   try {
     const select = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select");
+    if (!select) return; // Added null check
 
     select.innerHTML = "";
 

@@ -51,6 +51,7 @@ export interface PodlegleRecord {
 
 interface SlyusarData {
   Name: string;
+  ПроцентРоботи?: number;
   Історія: {
     [date: string]: Array<{
       Акт: string;
@@ -82,6 +83,15 @@ let currentPaymentFilter: PaymentFilter = "all";
 
 // Кеш для знижок з актів (act_id -> discountPercent)
 let zarplataActsDiscountCache: Map<number, number> = new Map();
+
+// Кеш для процентів роботи слюсарів (Name -> ПроцентРоботи)
+let slyusarPercentCache: Map<string, number> = new Map();
+
+// Функція для отримання процента роботи слюсаря за ім'ям
+function getSlyusarPercentByName(name: string): number {
+  if (!name) return 0;
+  return slyusarPercentCache.get(name.toLowerCase()) || 0;
+}
 
 // Функція для завантаження знижок з актів
 async function fetchZarplataActsDiscounts(): Promise<void> {
@@ -256,8 +266,8 @@ class WorkSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -282,8 +292,9 @@ class WorkSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -747,6 +758,17 @@ export async function loadSlyusarsData(): Promise<void> {
               return null;
             }
 
+            // Кешуємо ПроцентРоботи для слюсаря
+            if (
+              parsedData.Name &&
+              typeof parsedData.ПроцентРоботи === "number"
+            ) {
+              slyusarPercentCache.set(
+                parsedData.Name.toLowerCase(),
+                parsedData.ПроцентРоботи
+              );
+            }
+
             return parsedData;
           } catch (parseError) {
             console.error(
@@ -914,7 +936,8 @@ export function createNameSelect(): void {
 
       if (hasDataForAllEmployees) {
         console.log(
-          `🔄 Автоматичне фільтрування по співробітнику: ${selectedName || "всі"
+          `🔄 Автоматичне фільтрування по співробітнику: ${
+            selectedName || "всі"
           }`
         );
 
@@ -927,7 +950,7 @@ export function createNameSelect(): void {
 
       refreshWorkDropdownOptions();
     });
-  } catch (error) { }
+  } catch (error) {}
 }
 
 export function getFilteredpodlegleData(): PodlegleRecord[] {
@@ -989,15 +1012,16 @@ export function updatePodlegleDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
       <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-    totalRevenue
-  )}</strong> грн</span>
+        totalRevenue
+      )}</strong> грн</span>
       <span style="color: #666;">-</span>
       <span><strong style="color: #8B0000;">💶 ${formatNumber(
-    totalSalary
-  )}</strong> грн</span>
+        totalSalary
+      )}</strong> грн</span>
       <span style="color: #666;">=</span>
-      <span><strong style="color: ${totalMargin >= 0 ? "#006400 " : "#8B0000"
-    };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
+      <span><strong style="color: ${
+        totalMargin >= 0 ? "#006400 " : "#8B0000"
+      };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
     </div>
   `;
 }
@@ -1042,6 +1066,28 @@ export function updatepodlegleTable(): void {
       const marginColor = item.margin >= 0 ? "#28a745" : "#dc3545";
       const marginSign = item.margin >= 0 ? "+" : "";
 
+      // Обчислюємо фактичний відсоток зарплати від загальної суми
+      const actualSalaryPercent =
+        item.total > 0 ? (item.salary / item.total) * 100 : 0;
+      // Отримуємо налаштований відсоток слюсаря з кешу
+      const configuredPercent = getSlyusarPercentByName(item.name);
+
+      // Визначаємо стрілку для порівняння процентів
+      let salaryArrowHtml = "";
+      if (configuredPercent > 0 && item.salary > 0) {
+        if (actualSalaryPercent > configuredPercent) {
+          // Процент зарплати більший ніж налаштований - червона стрілка вверх
+          salaryArrowHtml = `<span class="salary-arrow-up" title="Відсоток ${actualSalaryPercent.toFixed(
+            1
+          )}% > ${configuredPercent}%">🠝</span>`;
+        } else if (actualSalaryPercent < configuredPercent) {
+          // Процент зарплати менший ніж налаштований - жовта стрілка вниз
+          salaryArrowHtml = `<span class="salary-arrow-down" title="Відсоток ${actualSalaryPercent.toFixed(
+            1
+          )}% < ${configuredPercent}%">🠟</span>`;
+        }
+      }
+
       // ✅ Якщо є customHtmlTotal - використовуємо його, інакше стандартний
       const totalHtml = item.customHtmlTotal
         ? item.customHtmlTotal
@@ -1051,10 +1097,10 @@ export function updatepodlegleTable(): void {
         )}</div>
         <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(
           item.salary
-        )}</div>
+        )}${salaryArrowHtml}</div>
         <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
-          item.margin
-        )}</div>
+            item.margin
+          )}</div>
       `;
 
       return `
@@ -1062,10 +1108,11 @@ export function updatepodlegleTable(): void {
                     <td>
                              <button class="Bukhhalter-payment-btn ${buttonPaidClass}"
                                 onclick="event.stopPropagation(); togglepodleglePaymentWithConfirmation(${originalIndex})" 
-                                title="${item.isPaid
-          ? `Розраховано ${item.paymentDate || ""}`
-          : "Не розраховано"
-        }">
+                                title="${
+                                  item.isPaid
+                                    ? `Розраховано ${item.paymentDate || ""}`
+                                    : "Не розраховано"
+                                }">
                             ${paymentButtonText}
                         </button>
                     </td>
@@ -1074,8 +1121,9 @@ export function updatepodlegleTable(): void {
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
-                             onclick="event.stopPropagation(); openActModal(${Number(item.act) || 0
-        })"
+                             onclick="event.stopPropagation(); openActModal(${
+                               Number(item.act) || 0
+                             })"
                              title="Відкрити акт №${item.act}">
                        📋 ${item.act || "-"}
                      </button>
@@ -1300,30 +1348,34 @@ export function searchDataInDatabase(
 
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${salaryParts !== 0
-              ? `<div style="color: #dc3545;">⚙️ -${formatNumber(
-                salaryParts
-              )}</div>`
-              : ""
-            }
-              ${sumParts !== 0
-              ? `<div style="color: #28a745;">⚙️ +${formatNumber(
-                sumParts
-              )}${discountIndicator}</div>`
-              : ""
-            }
-              ${salaryWork !== 0
-              ? `<div style="color: #dc3545;">🛠️ -${formatNumber(
-                salaryWork
-              )}</div>`
-              : ""
-            }
-              ${sumWork !== 0
-              ? `<div style="color: #28a745;">🛠️ +${formatNumber(
-                sumWork
-              )}${discountIndicator}</div>`
-              : ""
-            }
+              ${
+                salaryParts !== 0
+                  ? `<div style="color: #dc3545;">⚙️ -${formatNumber(
+                      salaryParts
+                    )}</div>`
+                  : ""
+              }
+              ${
+                sumParts !== 0
+                  ? `<div style="color: #28a745;">⚙️ +${formatNumber(
+                      sumParts
+                    )}${discountIndicator}</div>`
+                  : ""
+              }
+              ${
+                salaryWork !== 0
+                  ? `<div style="color: #dc3545;">🛠️ -${formatNumber(
+                      salaryWork
+                    )}</div>`
+                  : ""
+              }
+              ${
+                sumWork !== 0
+                  ? `<div style="color: #28a745;">🛠️ +${formatNumber(
+                      sumWork
+                    )}${discountIndicator}</div>`
+                  : ""
+              }
             </div>`;
 
           podlegleData.push({
@@ -1523,16 +1575,16 @@ export function filterPodlegleData(): void {
       podlegleDateFilterMode === "paid"
         ? "розрахунку"
         : podlegleDateFilterMode === "close"
-          ? "закриття"
-          : "відкриття";
+        ? "закриття"
+        : "відкриття";
     const datePart =
       !dateOpen && !dateClose
         ? ""
         : dateOpen && !dateClose
-          ? ` (з ${dateOpen} до сьогодні)`
-          : !dateOpen && dateClose
-            ? ` (до ${dateClose} включно)`
-            : ` (з ${dateOpen} до ${dateClose})`;
+        ? ` (з ${dateOpen} до сьогодні)`
+        : !dateOpen && dateClose
+        ? ` (до ${dateClose} включно)`
+        : ` (з ${dateOpen} до ${dateClose})`;
 
     const workPart = workInput ? ` | робота: "${workInput}"` : "";
     const namePart = selectedName ? ` для ${selectedName}` : "";

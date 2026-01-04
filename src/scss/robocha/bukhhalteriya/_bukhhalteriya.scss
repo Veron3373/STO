@@ -129,9 +129,11 @@ body {
 }
 
 .Bukhhalter-total-sum {
-  background: linear-gradient(135deg,
-      var(--primary-color),
-      var(--primary-hover));
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--primary-hover)
+  );
   color: white;
   padding: 8px 15px;
   border-radius: var(--small-radius);
@@ -622,27 +624,31 @@ body {
 .Bukhhalter-payment-toggle,
 .Bukhhalter-status-toggle,
 .Bukhhalter-expense-type-toggle {
-  background: linear-gradient(to right,
-      var(--success-color) 0%,
-      var(--success-color) 33.33%,
-      var(--danger-color) 33.33%,
-      var(--danger-color) 66.66%,
-      var(--orange1) 66.66%,
-      var(--orange2) 100%);
+  background: linear-gradient(
+    to right,
+    var(--success-color) 0%,
+    var(--success-color) 33.33%,
+    var(--danger-color) 33.33%,
+    var(--danger-color) 66.66%,
+    var(--orange1) 66.66%,
+    var(--orange2) 100%
+  );
 }
 
 .Bukhhalter-availability-toggle {
-  background: linear-gradient(to right,
-      #4caf50 0%,
-      #4caf50 20%,
-      #9e9e9e 20%,
-      #9e9e9e 40%,
-      #f44336 40%,
-      #f44336 60%,
-      #2196f3 60%,
-      #2196f3 80%,
-      #ff9800 80%,
-      #ff9800 100%);
+  background: linear-gradient(
+    to right,
+    #4caf50 0%,
+    #4caf50 20%,
+    #9e9e9e 20%,
+    #9e9e9e 40%,
+    #f44336 40%,
+    #f44336 60%,
+    #2196f3 60%,
+    #2196f3 80%,
+    #ff9800 80%,
+    #ff9800 100%
+  );
 }
 
 /* Повзунки */
@@ -807,7 +813,6 @@ body {
   font-size: 12px;
 }
 
-
 /* ==================== ПОВЕРНЕННЯ ==================== */
 .magazine-povernennya,
 .return-cell {
@@ -854,7 +859,7 @@ body {
   text-align: center;
 }
 
-.return-date>div {
+.return-date > div {
   margin: 0;
 }
 
@@ -1128,7 +1133,7 @@ body {
     font-size: 9px;
   }
 
-  .return-date>div {
+  .return-date > div {
     font-size: 8px;
   }
 
@@ -1245,4 +1250,19 @@ body {
     font-size: 12px;
     padding: 7px 5px;
   }
+}
+
+/* ==================== СТРІЛКИ ПОРІВНЯННЯ ПРОЦЕНТІВ ==================== */
+.salary-arrow-up {
+  color: #dc3545; /* червоний - процент більший */
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-left: 4px;
+}
+
+.salary-arrow-down {
+  color: #ffc107; /* жовтий - процент менший */
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-left: 4px;
 }

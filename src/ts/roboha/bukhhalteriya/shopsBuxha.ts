@@ -484,8 +484,8 @@ function buildNameToCatalogMap(): Map<string, string> {
 
   allMagazineData.forEach((record) => {
     if (record.name && record.part_number) {
-      const name = record.name.trim();
-      const catalog = record.part_number.trim();
+      const name = String(record.name).trim();
+      const catalog = String(record.part_number).trim();
       if (name && catalog) {
         if (!map.has(name)) {
           map.set(name, catalog);
@@ -713,8 +713,8 @@ class SmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -739,8 +739,9 @@ class SmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -1181,8 +1182,8 @@ function mapRowToMagazineRecord(row: any): MagazineRecord {
     typeof row?.akt === "number"
       ? row.akt
       : row?.akt != null
-        ? Number(row.akt) || null
-        : null;
+      ? Number(row.akt) || null
+      : null;
 
   return {
     pkName: pk?.name,
@@ -1372,7 +1373,8 @@ async function loadScladData(
   } catch (err) {
     console.error("Помилка завантаження sclad з Supabase:", err);
     showNotification(
-      `Помилка завантаження даних з бази sclad: ${err instanceof Error ? err.message : "Невідома помилка"
+      `Помилка завантаження даних з бази sclad: ${
+        err instanceof Error ? err.message : "Невідома помилка"
       }`,
       "error",
       5000
@@ -1531,12 +1533,12 @@ export function updateMagazineTotalSum(): void {
   totalSumElement.innerHTML = `
   <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
     <span style="color: #ffffff;">Загальна сума: <strong style="color: #333;">💰 ${formatNumber(
-    totalSum
-  )}</strong> грн</span>
+      totalSum
+    )}</strong> грн</span>
     <span style="color: #666;">|</span>
     <span style="color: #ffffff;">На складі: <strong style="color: #8B0000;">💶 ${formatNumber(
-    remainingSum
-  )}</strong> грн</span>
+      remainingSum
+    )}</strong> грн</span>
   </div>
 `;
 }
@@ -1550,8 +1552,8 @@ export function getMagazineExportData(): any[] {
         item.isPaid && item.rosraxovano
           ? formatDate(item.rosraxovano)
           : item.isPaid
-            ? "Розраховано"
-            : "Не розраховано",
+          ? "Розраховано"
+          : "Не розраховано",
       date_open: formatDate(item.date_open || ""),
       shops: item.shops,
       rahunok: item.rahunok,
@@ -1601,8 +1603,8 @@ export function updateMagazineTable(): void {
         item.isPaid && item.rosraxovano
           ? formatDate(item.rosraxovano)
           : item.isPaid
-            ? "Розраховано"
-            : "Не розраховано";
+          ? "Розраховано"
+          : "Не розраховано";
 
       let stockClass = "";
       if (remainder > 0) {
@@ -1643,8 +1645,9 @@ export function updateMagazineTable(): void {
       return `
         <tr onclick="handleRowClick(${index})" class="${rowClass}">
           <td>
-            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
-        }" ${paymentDisabled} ${paymentOnclick}
+            <button class="Bukhhalter-payment-btn ${
+              item.isPaid ? "paid" : "unpaid"
+            }" ${paymentDisabled} ${paymentOnclick}
               title="${item.isPaid ? "Розраховано" : "Не розраховано"}">
               ${paymentIcon} ${paymentText}
             </button>

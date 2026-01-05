@@ -665,13 +665,13 @@
               <input type="date" class="Bukhhalter-field-input" id="Bukhhalter-vutratu-date-to">
             </div>
           </div>
-          <div class="Bukhhalter-field-group">
-            <label class="Bukhhalter-field-label">📂 Категорія</label>
-            <select class="Bukhhalter-field-input" id="Bukhhalter-vutratu-category">
-              <option value="">Оберіть категорію</option>
-            </select>
-          </div>
           <div class="Bukhhalter-form-row">
+            <div class="Bukhhalter-field-group">
+              <label class="Bukhhalter-field-label">📂 Категорія</label>
+              <select class="Bukhhalter-field-input" id="Bukhhalter-vutratu-category">
+                <option value="">Оберіть категорію</option>
+              </select>
+            </div>
             <div class="Bukhhalter-field-group">
               <label class="Bukhhalter-field-label">💳 Спосіб оплати</label>
               <select class="Bukhhalter-field-input" id="Bukhhalter-vutratu-payment-method">
@@ -714,6 +714,19 @@
               <div class="Bukhhalter-toggle-labels">
                 <span>Оплачено</span>
                 <span>Не сплочено</span>
+                <span>Всі</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="Bukhhalter-toggle-container">
+            <label class="Bukhhalter-field-label">🏷️ Знижка</label>
+            <div class="Bukhhalter-toggle-wrapper">
+              <input type="range" min="0" max="2" value="2" class="Bukhhalter-payment-toggle"
+                id="vutratu-discount-filter-toggle">
+              <div class="Bukhhalter-toggle-labels">
+                <span>Без знижки</span>
+                <span>Знижка</span>
                 <span>Всі</span>
               </div>
             </div>

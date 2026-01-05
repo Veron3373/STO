@@ -964,6 +964,7 @@ export async function initializevutratuData(): Promise<void> {
   createExpenseCategorySelect();
   createPaymentMethodSelect();
   createExpensePaymentToggle();
+  createExpenseDiscountToggle();
   createExpenseTypeToggle();
   createExpenseStatusToggle(); // Додати цю функцію
 
@@ -1052,6 +1053,15 @@ export function createExpensePaymentToggle(): void {
   });
 }
 
+export function createExpenseDiscountToggle(): void {
+  const toggle = byId<HTMLInputElement>("vutratu-discount-filter-toggle");
+  if (!toggle) return;
+
+  toggle.addEventListener("input", () => {
+    filtervutratuData();
+  });
+}
+
 function createExpenseStatusToggle(): void {
   const toggle = byId<HTMLInputElement>("vutratu-status-filter-toggle");
   if (!toggle) return;
@@ -1078,6 +1088,8 @@ export function filtervutratuData(): void {
     byId<HTMLInputElement>("vutratu-type-filter-toggle")?.value || "2";
   const statusToggle =
     byId<HTMLInputElement>("vutratu-status-filter-toggle")?.value || "2";
+  const discountToggle =
+    byId<HTMLInputElement>("vutratu-discount-filter-toggle")?.value || "2";
 
   filteredvutratuData = vutratuData.filter((expense) => {
     // НОВИЙ ФІЛЬТР: Фільтр по режиму дати (відкриття/закриття/розрахунку)
@@ -1139,6 +1151,28 @@ export function filtervutratuData(): void {
       const isClosed = !!expense.paymentDate;
       if (statusToggle === "0" && !isClosed) return false;
       if (statusToggle === "1" && isClosed) return false;
+    }
+
+    // Фільтр по знижці (0-Без знижки, 1-Знижка, 2-Всі)
+    if (discountToggle !== "2") {
+      // Знижка застосовна тільки для актів (Прибуток)
+      // Для витрат вважаємо, що знижки немає (amount < 0) - тому вони потраплять в "Без знижки"
+      // Або можна вирішити, що витрати показуються завжди або ніколи.
+      // Логічно: Витрати не мають знижки. Тому:
+      // Якщо обрано "Без знижки" (0) -> показуємо акти без знижки і витрати.
+      // Якщо обрано "Знижка" (1) -> показуємо акти зі знижкою. Витрати ховаємо.
+
+      const isExpense = expense.amount < 0;
+      const hasDiscount = (expense.discountAmount || 0) > 0;
+
+      if (discountToggle === "0") {
+        // "Без знижки" - показуємо, якщо немає знижки (або це витрата)
+        // Але якщо це акт і має знижку - ховаємо
+        if (!isExpense && hasDiscount) return false;
+      } else if (discountToggle === "1") {
+        // "З знижкою" - показуємо тільки якщо є знижка
+        if (!hasDiscount) return false;
+      }
     }
 
     return true;
@@ -1452,18 +1486,13 @@ export function updatevutratuDisplayedSums(): void {
   if (!totalSumElement) return;
 
   let totalNegativeSum = 0;
-
-  // Змінна для відображення ВЬОГО авансу (просто для інфо)
-  let totalAvansSumDisplay = 0;
-
-  // Змінна для додавання в касу ТІЛЬКИ авансу з ВІДКРИТИХ актів
-  let totalAvansSumForCash = 0;
+  let totalAvansSum = 0;
 
   // Суми для "Прибуток" (маржа)
   let totalNetDetailsProfit = 0;
   let totalNetWorkProfit = 0;
 
-  // Суми для "Каса" (оборот)
+  // Суми для "Каса" (оборот - тільки залишок після авансу)
   let totalNetFullDetails = 0;
   let totalNetFullWork = 0;
 
@@ -1475,16 +1504,18 @@ export function updatevutratuDisplayedSums(): void {
 
     // 2. Акти (Прибуток)
     if (expense.category === "💰 Прибуток") {
-      // Аванси
-      let actAvans = 0;
-      if (expense.paymentMethod && Number(expense.paymentMethod) > 0) {
-        actAvans = Number(expense.paymentMethod);
-        totalAvansSumDisplay += actAvans;
-      }
+      const avans =
+        expense.paymentMethod && Number(expense.paymentMethod) > 0
+          ? Number(expense.paymentMethod)
+          : 0;
+
+      // Накопичуємо загальну суму авансів
+      totalAvansSum += avans;
 
       const discountVal = expense.discountAmount || 0;
 
       // --- Розрахунок для ПРИБУТКУ (маржа) ---
+      // Знижка вже врахована в detailsAmount і workAmount
       let detailsProfit = expense.detailsAmount || 0;
       let workProfit = expense.workAmount || 0;
 
@@ -1495,8 +1526,8 @@ export function updatevutratuDisplayedSums(): void {
       let fullDetails = expense.fullDetailsAmount || 0;
       let fullWork = expense.fullWorkAmount || 0;
 
-      // Віднімаємо знижку від повних сум (розподіляємо пропорційно)
       if (discountVal > 0) {
+        // Знижку віднімаємо від повних сум для каси
         const posDetailsFull = Math.max(0, fullDetails);
         const posWorkFull = Math.max(0, fullWork);
         const totalPosFull = posDetailsFull + posWorkFull;
@@ -1509,34 +1540,21 @@ export function updatevutratuDisplayedSums(): void {
         }
       }
 
-      // ТЕПЕР застосовуємо логіку Авансу та Закриття
-      const isClosed = !!expense.paymentDate;
-
-      if (isClosed) {
-        // Якщо акт закритий - ми отримали ВСЮ суму (включаючи аванс).
-        // Додаємо повні суми до каси.
-        // Аванс тут НЕ плюсуємо окремо, бо він вже сидить всередині fullDetails/fullWork
-        totalNetFullDetails += fullDetails;
-        totalNetFullWork += fullWork;
-      } else {
-        // Якщо акт відкритий - ми отримали ТІЛЬКИ аванс.
-        // Повні суми ще не отримали, тому за деталі/роботу 0.
-        // Але аванс додаємо до живої каси.
-        totalAvansSumForCash += actAvans;
-      }
+      // ЛОГІКА: Показуємо повні суми, аванс просто візуалізуємо, але не додаємо до фіналу (бо він вже є частиною повних сум)
+      totalNetFullDetails += fullDetails;
+      totalNetFullWork += fullWork;
     }
   });
 
   // Фінальні суми
-  // Каса = (Закриті Деталі + Закрита Робота) + (Аванси Відкритих) - Витрати
+  // Каса = (Повні Деталі + Повна Робота) - Витрати
+  // Аванс тут НЕ додаємо, бо ми вже додали повні суми, в які він входить.
   const finalSumCasa =
-    totalNetFullDetails + totalNetFullWork + totalAvansSumForCash + totalNegativeSum;
+    totalNetFullDetails + totalNetFullWork + totalNegativeSum;
 
   // Прибуток = (Чиста Маржа Деталі + Чиста Маржа Робота) - Витрати
   const finalSumProfit =
-    totalNetDetailsProfit +
-    totalNetWorkProfit +
-    totalNegativeSum;
+    totalNetDetailsProfit + totalNetWorkProfit + totalNegativeSum;
 
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
@@ -1549,11 +1567,10 @@ export function updatevutratuDisplayedSums(): void {
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
     totalNetFullWork
   )}</strong></span>
-        <span style="color: #666;">(</span>
+        <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-    totalAvansSumDisplay
+    totalAvansSum
   )}</strong></span>
-        <span style="color: #666;">)</span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
     Math.abs(totalNegativeSum)
@@ -1771,6 +1788,7 @@ export function clearvutratuForm(): void {
   byId<HTMLSelectElement>("Bukhhalter-vutratu-category").value = "";
   byId<HTMLSelectElement>("Bukhhalter-vutratu-payment-method").value = "";
   byId<HTMLInputElement>("vutratu-payment-filter-toggle").value = "2";
+  byId<HTMLInputElement>("vutratu-discount-filter-toggle").value = "2";
   vutratuData = [];
   filteredvutratuData = [];
   updatevutratuTable();

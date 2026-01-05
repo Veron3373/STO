@@ -15,7 +15,9 @@ async function checkGoogleSession() {
 
     if (error || !session) {
       console.warn("⛔ [Бухгалтерія] Немає Google сесії");
-      window.location.replace("https://veron3373.github.io/STO/index.html");
+      window.location.replace(
+        "https://shlifservice24-lang.github.io/Shlif_service/index.html"
+      );
       return;
     }
 
@@ -25,7 +27,9 @@ async function checkGoogleSession() {
       console.warn("⛔ [Бухгалтерія] Email не в whitelist:", email);
       alert(`Доступ заборонено для ${email}`);
       await supabase.auth.signOut();
-      window.location.replace("https://veron3373.github.io/STO/");
+      window.location.replace(
+        "https://shlifservice24-lang.github.io/Shlif_service/"
+      );
       return;
     }
 
@@ -33,7 +37,9 @@ async function checkGoogleSession() {
     // Дозволяємо завантаження сторінки - модалка пароля покаже users.ts
   } catch (err) {
     console.error("❌ [Бухгалтерія] Помилка перевірки:", err);
-    window.location.replace("https://veron3373.github.io/STO/index.html");
+    window.location.replace(
+      "https://shlifservice24-lang.github.io/Shlif_service/index.html"
+    );
   }
 }
 

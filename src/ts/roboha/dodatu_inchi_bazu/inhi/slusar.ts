@@ -123,9 +123,12 @@ const updateAllBdFromInput = async (
         const idField = `${singularTable}_id`;
         const idValue = item[idField] !== undefined ? item[idField] : null;
 
-        // Зберігаємо ID слюсаря для можливості перейменування
-        if (table === "slyusars" && idValue !== null) {
+        // Зберігаємо ID слюсаря ТІЛЬКИ якщо він валідний.
+        // Якщо прийде null (наприклад, при тайпінгу нового імені), ми НЕ перезаписуємо старий ID,
+        // щоб зберегти контекст редагування.
+        if (table === "slyusars" && idValue !== null && Number(idValue) > 0) {
           localStorage.setItem("current_slyusar_id", String(idValue));
+          console.log(`[Slusar] Saved ID to storage: ${idValue}`);
         }
 
         let dataFieldValue: any;

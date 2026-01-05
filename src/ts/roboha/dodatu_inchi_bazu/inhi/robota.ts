@@ -78,11 +78,6 @@ const updateAllBdFromInput = (
         const idField = `${singularTable}_id`;
         const idValue = item[idField] !== undefined ? item[idField] : null;
 
-        // 🔥 SAVE ID for editing
-        if (idValue) {
-          localStorage.setItem("current_work_id", String(idValue));
-        }
-
         let dataFieldValue: any;
         if (needsJsonParsing && typeof item[field] === "string") {
           try {
@@ -120,16 +115,6 @@ const updateAllBdFromInput = (
         data: { [field]: inputValue.trim() },
       };
 
-      updateAllBd(JSON.stringify(newRecordResult, null, 2));
-    } else {
-      // 🔥 ENABLE EDITING: update all_bd even when typing
-      const singularTable = table.endsWith("s") ? table.slice(0, -1) : table;
-      const idField = `${singularTable}_id`;
-      const newRecordResult = {
-        table: table,
-        [idField]: null,
-        data: { [field]: inputValue.trim() },
-      };
       updateAllBd(JSON.stringify(newRecordResult, null, 2));
     }
   }

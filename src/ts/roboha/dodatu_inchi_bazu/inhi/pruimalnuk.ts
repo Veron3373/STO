@@ -76,11 +76,6 @@ const updateAllBdFromInput = (
         const idField = `${singularTable}_id`;
         const idValue = item[idField] !== undefined ? item[idField] : null;
 
-        // 🔥 SAVE ID for editing
-        if (idValue) {
-          localStorage.setItem("current_receiver_id", String(idValue));
-        }
-
         let dataFieldValue: any;
         if (needsJsonParsing && typeof item[field] === "string") {
           try {
@@ -100,8 +95,8 @@ const updateAllBdFromInput = (
               ? { [deepPath[0]]: extractNestedValue(dataFieldValue, deepPath) }
               : typeof dataFieldValue === "object" &&
                 !Array.isArray(dataFieldValue)
-                ? dataFieldValue
-                : { [field]: dataFieldValue },
+              ? dataFieldValue
+              : { [field]: dataFieldValue },
         };
 
         updateAllBd(JSON.stringify(result, null, 2));
@@ -124,20 +119,6 @@ const updateAllBdFromInput = (
             : { [field]: inputValue.trim() },
       };
 
-      updateAllBd(JSON.stringify(newRecordResult, null, 2));
-    } else {
-      // 🔥 ENABLE EDITING
-      const singularTable = table.endsWith("s") ? table.slice(0, -1) : table;
-      const idField = `${singularTable}_id`;
-
-      const newRecordResult = {
-        table: table,
-        [idField]: null,
-        data:
-          deepPath && deepPath.length === 1
-            ? { [deepPath[0]]: inputValue.trim() }
-            : { [field]: inputValue.trim() },
-      };
       updateAllBd(JSON.stringify(newRecordResult, null, 2));
     }
   }

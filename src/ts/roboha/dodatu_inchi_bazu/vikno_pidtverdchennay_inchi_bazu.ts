@@ -55,14 +55,6 @@ const clearInputAndReloadData = async () => {
     dropdown.classList.add("hidden-all_other_bases");
   }
 
-  // 🔥 Очищаємо збережені ID, щоб не використовувати старі дані при наступних операціях
-  localStorage.removeItem("current_slyusar_id");
-  localStorage.removeItem("current_work_id");
-  localStorage.removeItem("current_source_id");
-  localStorage.removeItem("current_receiver_id");
-  localStorage.removeItem("current_shop_id");
-  localStorage.removeItem("current_detail_id");
-
   if (currentTableName) await loadDatabaseData(currentTableName);
 };
 
@@ -141,7 +133,7 @@ async function checkDuplicateExists(
         if (nameToCheck && nameToCheck === needle) {
           return true;
         }
-      } catch { }
+      } catch {}
     }
     return false;
   } catch (error) {
@@ -222,28 +214,7 @@ async function handleEdit(
       return false;
     }
 
-    let idValue = data.record[idField];
-
-    // 🔥 FIX: Якщо ID не знайдено в all_bd (наприклад, при редагуванні, коли all_bd було оновлено без ID),
-    // спробуємо знайти його в localStorage, куди ми його зберегли при виборі.
-    if (!idValue) {
-      const storageMap: { [key: string]: string } = {
-        works: "current_work_id",
-        incomes: "current_source_id",
-        receivers: "current_receiver_id",
-        shops: "current_shop_id",
-        details: "current_detail_id",
-      };
-
-      const storageKey = storageMap[tableName];
-      if (storageKey) {
-        const storedId = localStorage.getItem(storageKey);
-        if (storedId) {
-          idValue = Number(storedId);
-          console.log(`[Edit] Recovered ID from storage for ${tableName}: ${idValue}`);
-        }
-      }
-    }
+    const idValue = data.record[idField];
     const { data: currentRecord, error: fetchError } = await supabase
       .from(tableName)
       .select("*")
@@ -362,7 +333,7 @@ async function slusarExistsByName(name: string): Promise<boolean> {
       const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
       const nm = normalizeName(d?.Name ?? "");
       if (nm && nm === needle) return true;
-    } catch { }
+    } catch {}
   }
   return false;
 }
@@ -543,7 +514,7 @@ export function showSavePromptModal(): Promise<boolean> {
           const parsed = JSON.parse(all_bd);
           tableFromDraftCheck = parsed?.table ?? "";
         }
-      } catch { }
+      } catch {}
 
       if (!isAdmin && CRUD !== "Редагувати") {
         showNotification("У вас немає прав для цієї операції", "error");

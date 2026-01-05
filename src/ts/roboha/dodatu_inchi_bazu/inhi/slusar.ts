@@ -15,6 +15,9 @@ let currentConfig: {
   needsJsonParsing?: boolean;
 } | null = null;
 
+let lastValidSlyusarId: number | null = null;
+
+
 // Функція отримання даних користувача з localStorage
 const getCurrentUserFromLocalStorage = (): {
   name: string;
@@ -123,12 +126,9 @@ const updateAllBdFromInput = async (
         const idField = `${singularTable}_id`;
         const idValue = item[idField] !== undefined ? item[idField] : null;
 
-        // Зберігаємо ID слюсаря ТІЛЬКИ якщо він валідний.
-        // Якщо прийде null (наприклад, при тайпінгу нового імені), ми НЕ перезаписуємо старий ID,
-        // щоб зберегти контекст редагування.
-        if (table === "slyusars" && idValue !== null && Number(idValue) > 0) {
-          localStorage.setItem("current_slyusar_id", String(idValue));
-          console.log(`[Slusar] Saved ID to storage: ${idValue}`);
+        // Зберігаємо ID для можливого перейменування/редагування
+        if (idValue !== null && table === "slyusars") {
+          lastValidSlyusarId = idValue;
         }
 
         let dataFieldValue: any;
@@ -174,22 +174,8 @@ const updateAllBdFromInput = async (
             : { [field]: inputValue.trim() },
       };
       updateAllBd(JSON.stringify(newRecordResult, null, 2));
-    } else {
-      // Якщо ми редагуємо текст вручну (і це не співпадіння), все одно оновлюємо all_bd
-      // Це важливо, щоб система знала, з якою таблицею ми працюємо при натисканні "Ок"
-      const singularTable = table.endsWith("s") ? table.slice(0, -1) : table;
-      const idField = `${singularTable}_id`;
-
-      const newRecordResult = {
-        table: table,
-        [idField]: null, // ID невідомий з тексту, але він може бути в localStorage для редагування
-        data:
-          deepPath && deepPath.length === 1
-            ? { [deepPath[0]]: inputValue.trim() }
-            : { [field]: inputValue.trim() },
-      };
-      updateAllBd(JSON.stringify(newRecordResult, null, 2));
     }
+    // Перевірка дублікатів видалена - не потрібна при редагуванні
   }
 };
 
@@ -218,8 +204,8 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
     passwordInput.disabled = false;
   }
   if (accessSelect && data?.Доступ) {
-    // Якщо вибрано "Брацлавець Б. С.", встановлюємо Адміністратор доступ і блокуємо селект
-    if (normalizeName(selectedName) === normalizeName("Брацлавець Б. С.")) {
+    // Якщо вибрано "Бемба В. Я", встановлюємо Адміністратор доступ і блокуємо селект
+    if (normalizeName(selectedName) === normalizeName("Бемба В. Я")) {
       accessSelect.value = "Адміністратор";
       accessSelect.disabled = true;
     } else {
@@ -277,6 +263,7 @@ const updatePercentInputsVisibility = (role: string) => {
 
 // Функція для очищення додаткових інпутів
 const clearSlusarInputs = () => {
+  lastValidSlyusarId = null; // Скидаємо збережений ID
   const passwordInput = document.getElementById(
     "slusar-password"
   ) as HTMLInputElement;
@@ -309,7 +296,7 @@ const clearSlusarInputs = () => {
     percentInput.disabled = !isAdmin; // Блокуємо для не-адміністраторів
   }
   if (percentPartsInput) {
-    percentPartsInput.value = "50";
+    percentPartsInput.value = "0";
     percentPartsInput.disabled = !isAdmin; // Блокуємо для не-адміністраторів
   }
 };
@@ -531,7 +518,7 @@ const createSlusarAdditionalInputs = async () => {
       </div>
       <div class="slusar-input-group slusar-percent-half hidden-all_other_bases" id="slusar-percent-parts-wrapper">
         <label for="slusar-percent-parts" class="label-all_other_bases">Процент з запчастин:</label>
-        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${!isAdmin ? "disabled" : ""
+        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="0" ${!isAdmin ? "disabled" : ""
     }>
       </div>
     </div>
@@ -700,7 +687,7 @@ export const getSlusarAdditionalData = () => {
   }
 
   // Валідація відсотка запчастин
-  let percentPartsValue = 50; // Значення за замовчуванням
+  let percentPartsValue = 0; // Значення за замовчуванням
   if (percentPartsInput && percentPartsInput.value) {
     percentPartsValue = Number(percentPartsInput.value);
     // Перевірка меж
@@ -788,7 +775,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
     return false;
   }
 
-  let percentPartsValue = 50;
+  let percentPartsValue = 0;
   if (percentPartsInput && percentPartsInput.value) {
     percentPartsValue = Number(percentPartsInput.value);
     if (
@@ -800,63 +787,41 @@ export const saveSlusarData = async (): Promise<boolean> => {
         "Невалідне значення проценту запчастин:",
         percentPartsValue
       );
-      percentPartsValue = 50;
+      percentPartsValue = 0;
     }
   }
 
   try {
-    let currentData: any = {};
-    let existingRecord: any = null;
+    // Шукаємо запис слюсаря
+    // Якщо ми в режимі редагування і маємо збережений ID - шукаємо по ID
+    let query = supabase.from("slyusars").select("*");
 
-    // ✅ ЛОГІКА ПОШУКУ ЗАПИСУ ДЛЯ РЕДАГУВАННЯ
-    const savedIdStr = localStorage.getItem("current_slyusar_id");
-    const savedId = savedIdStr ? Number(savedIdStr) : null;
+    // Перевіряємо режим кнопки "Редагувати"
+    const modeButton = document.getElementById("modeToggleLabel");
+    const isEditMode = modeButton && modeButton.textContent === "Редагувати";
 
-    // 1. Спробуємо знайти за збереженим ID (це дозволяє перейменування)
-    if (savedId) {
-      const { data: idRow, error: idError } = await supabase
-        .from("slyusars")
-        .select("*")
-        .eq("slyusar_id", savedId)
-        .single();
-
-      if (!idError && idRow) {
-        existingRecord = idRow;
-        console.log(`[EDIT] Found record by ID: ${savedId}`);
-      }
+    if (isEditMode && lastValidSlyusarId !== null) {
+      console.warn(`Редагування по ID: ${lastValidSlyusarId}, нове ім'я: ${name}`);
+      query = query.eq("slyusar_id", lastValidSlyusarId);
+    } else {
+      console.log(`Пошук по імені: ${name}`);
+      query = query.eq("data->>Name", name);
     }
 
-    // 2. Якщо за ID не знайшло (або немає ID) - шукаємо за старим методом (ім'я)
-    if (!existingRecord) {
-      console.log(`[EDIT] Record not found by ID (or ID null), trying name: ${name}`);
-      const { data: rows, error } = await supabase
-        .from("slyusars")
-        .select("*")
-        .eq("data->>Name", name)
-        .single();
+    const { data: rows, error } = await query.single();
 
-      if (!error && rows) {
-        existingRecord = rows;
-      }
-    }
-
-    if (!existingRecord) {
-      console.error("Слюсар не знайдений (ані за ID, ані за іменем)");
+    if (error || !rows) {
+      console.error("Слюсар не знайдений або помилка:", error);
       return false;
     }
 
-    try {
-      currentData =
-        typeof existingRecord.data === "string"
-          ? JSON.parse(existingRecord.data)
-          : existingRecord.data;
-    } catch {
-      currentData = {};
-    }
+    let currentData =
+      typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
 
     // Оновлюємо дані
     const updatedData = {
       ...currentData,
+      Name: name, // Оновлюємо ім'я, якщо воно було змінено
       Пароль: password, // Всі можуть змінювати пароль
     };
 
@@ -872,7 +837,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
     const { error: updateError } = await supabase
       .from("slyusars")
       .update({ data: updatedData })
-      .eq("slyusar_id", existingRecord.slyusar_id);
+      .eq("slyusar_id", rows.slyusar_id);
 
     if (updateError) {
       console.error("Помилка при оновленні даних:", updateError);

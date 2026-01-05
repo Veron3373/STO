@@ -1505,54 +1505,68 @@ export function updatevutratuDisplayedSums(): void {
 
     // 2. Акти (Прибуток)
     if (expense.category === "💰 Прибуток") {
+      const isClosed = !!expense.paymentDate;
       const avans =
         expense.paymentMethod && Number(expense.paymentMethod) > 0
           ? Number(expense.paymentMethod)
           : 0;
 
-      // Накопичуємо загальну суму авансів
+      // Накопичуємо загальну суму авансів (з усіх актів: закритих і відкритих)
       totalAvansSum += avans;
 
-      const discountVal = expense.discountAmount || 0;
-      totalDiscountSum += discountVal;
+      if (isClosed) {
+        const discountVal = expense.discountAmount || 0;
+        totalDiscountSum += discountVal;
 
-      // --- Розрахунок для ПРИБУТКУ (маржа) ---
-      // Знижка вже врахована в detailsAmount і workAmount
-      let detailsProfit = expense.detailsAmount || 0;
-      let workProfit = expense.workAmount || 0;
+        // --- Розрахунок для ПРИБУТКУ (маржа) ---
+        let detailsProfit = expense.detailsAmount || 0;
+        let workProfit = expense.workAmount || 0;
 
-      totalNetDetailsProfit += detailsProfit;
-      totalNetWorkProfit += workProfit;
+        totalNetDetailsProfit += detailsProfit;
+        totalNetWorkProfit += workProfit;
 
-      // --- Розрахунок для КАСИ (повні суми) ---
-      let fullDetails = expense.fullDetailsAmount || 0;
-      let fullWork = expense.fullWorkAmount || 0;
+        // --- Розрахунок для КАСИ (повні суми) ---
+        let fullDetails = expense.fullDetailsAmount || 0;
+        let fullWork = expense.fullWorkAmount || 0;
 
-      if (discountVal > 0) {
-        // Знижку віднімаємо від повних сум для каси
-        const posDetailsFull = Math.max(0, fullDetails);
-        const posWorkFull = Math.max(0, fullWork);
-        const totalPosFull = posDetailsFull + posWorkFull;
+        // Віднімаємо знижку
+        if (discountVal > 0) {
+          const posDetailsFull = Math.max(0, fullDetails);
+          const posWorkFull = Math.max(0, fullWork);
+          const totalPosFull = posDetailsFull + posWorkFull;
 
-        if (totalPosFull > 0) {
-          const dPartFull = (posDetailsFull / totalPosFull) * discountVal;
-          const wPartFull = (posWorkFull / totalPosFull) * discountVal;
-          fullDetails -= dPartFull;
-          fullWork -= wPartFull;
+          if (totalPosFull > 0) {
+            const dPartFull = (posDetailsFull / totalPosFull) * discountVal;
+            const wPartFull = (posWorkFull / totalPosFull) * discountVal;
+            fullDetails -= dPartFull;
+            fullWork -= wPartFull;
+          }
         }
-      }
 
-      // ЛОГІКА: Показуємо повні суми, аванс просто візуалізуємо, але не додаємо до фіналу (бо він вже є частиною повних сум)
-      totalNetFullDetails += fullDetails;
-      totalNetFullWork += fullWork;
+        // Віднімаємо аванс, щоб не дублювати його (бо він додається окремо в totalAvansSum)
+        if (avans > 0) {
+          const posDetailsFull = Math.max(0, fullDetails);
+          const posWorkFull = Math.max(0, fullWork);
+          const totalPosFull = posDetailsFull + posWorkFull;
+
+          if (totalPosFull > 0) {
+            const aPartDetails = (posDetailsFull / totalPosFull) * avans;
+            const aPartWork = (posWorkFull / totalPosFull) * avans;
+            fullDetails -= aPartDetails;
+            fullWork -= aPartWork;
+          }
+        }
+
+        totalNetFullDetails += fullDetails;
+        totalNetFullWork += fullWork;
+      }
     }
   });
 
   // Фінальні суми
-  // Каса = (Повні Деталі + Повна Робота) - Витрати
-  // Аванс тут НЕ додаємо, бо ми вже додали повні суми, в які він входить.
+  // Каса = (Залишок Деталі + Залишок Робота + Всі Аванси) - Витрати
   const finalSumCasa =
-    totalNetFullDetails + totalNetFullWork + totalNegativeSum;
+    totalNetFullDetails + totalNetFullWork + totalAvansSum + totalNegativeSum;
 
   // Прибуток = (Чиста Маржа Деталі + Чиста Маржа Робота) - Витрати
   const finalSumProfit =

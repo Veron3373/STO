@@ -1495,6 +1495,7 @@ export function updatevutratuDisplayedSums(): void {
   // Суми для "Каса" (оборот - тільки залишок після авансу)
   let totalNetFullDetails = 0;
   let totalNetFullWork = 0;
+  let totalDiscountSum = 0;
 
   filteredvutratuData.forEach((expense) => {
     // 1. Витрати (від'ємні суми)
@@ -1513,6 +1514,7 @@ export function updatevutratuDisplayedSums(): void {
       totalAvansSum += avans;
 
       const discountVal = expense.discountAmount || 0;
+      totalDiscountSum += discountVal;
 
       // --- Розрахунок для ПРИБУТКУ (маржа) ---
       // Знижка вже врахована в detailsAmount і workAmount
@@ -1595,6 +1597,12 @@ export function updatevutratuDisplayedSums(): void {
         <span style="color: #666;">=</span>
         <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"
     };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
+      </div>
+      <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <span>Знижки</span>
+        <span><strong style="color: #ff0000;">🏷️ ${formatNumber(
+      totalDiscountSum
+    )}</strong> грн</span>
       </div>
     </div>
   `;

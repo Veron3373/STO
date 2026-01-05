@@ -171,8 +171,22 @@ const updateAllBdFromInput = async (
             : { [field]: inputValue.trim() },
       };
       updateAllBd(JSON.stringify(newRecordResult, null, 2));
+    } else {
+      // Якщо ми редагуємо текст вручну (і це не співпадіння), все одно оновлюємо all_bd
+      // Це важливо, щоб система знала, з якою таблицею ми працюємо при натисканні "Ок"
+      const singularTable = table.endsWith("s") ? table.slice(0, -1) : table;
+      const idField = `${singularTable}_id`;
+
+      const newRecordResult = {
+        table: table,
+        [idField]: null, // ID невідомий з тексту, але він може бути в localStorage для редагування
+        data:
+          deepPath && deepPath.length === 1
+            ? { [deepPath[0]]: inputValue.trim() }
+            : { [field]: inputValue.trim() },
+      };
+      updateAllBd(JSON.stringify(newRecordResult, null, 2));
     }
-    // Перевірка дублікатів видалена - не потрібна при редагуванні
   }
 };
 

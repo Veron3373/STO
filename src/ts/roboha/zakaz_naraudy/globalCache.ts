@@ -91,8 +91,8 @@ export interface GlobalDataCache {
   works: string[];
   worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
-  slyusars: Array<{ Name: string;[k: string]: any }>;
-  shops: Array<{ Name: string;[k: string]: any }>;
+  slyusars: Array<{ Name: string; [k: string]: any }>;
+  shops: Array<{ Name: string; [k: string]: any }>;
   settings: {
     showPibMagazin: boolean;
     showCatalog: boolean;
@@ -176,8 +176,9 @@ function dedupeSklad<
   const seen = new Set<string>();
   const out: T[] = [];
   for (const r of rows) {
-    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${r.quantity
-      }`;
+    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${
+      r.quantity
+    }`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -255,7 +256,7 @@ export async function loadGlobalData(): Promise<void> {
         .filter(Boolean) || [];
 
     // магазини: ТЕПЕР витягуємо Name і з об'єктів, і з подвійно-JSON-рядків, і з «просто рядка»
-    const shopsParsed: Array<{ Name: string;[k: string]: any }> = [];
+    const shopsParsed: Array<{ Name: string; [k: string]: any }> = [];
     for (const row of shopsData || []) {
       let raw = row?.data;
 
@@ -287,7 +288,7 @@ export async function loadGlobalData(): Promise<void> {
       showZarplata: !!settingZarplata?.data,
       showSMS: !!settingSMS?.data,
       preferredLanguage: settingLanguage?.data === "en" ? "en" : "uk",
-      saveMargins: settingLanguage?.data === false, // Якщо False - зберігаємо (як просив користувач)
+      saveMargins: true, // Завжди зберігаємо маржу незалежно від settings
     };
 
     // склад: також нормалізуємо поле shop (shops)

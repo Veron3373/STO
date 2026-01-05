@@ -1597,10 +1597,11 @@ export function updatevutratuDisplayedSums(): void {
         <span style="color: #666;">=</span>
         <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"
     };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
-      </div>
-      <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
+        
+        <span style="color: #ccc; margin-left: 10px;">|</span>
+        
         <span>Знижки</span>
-        <span><strong style="color: #ff0000;">🏷️ ${formatNumber(
+        <span><strong style="color: #c62828;">🏷️ ${formatNumber(
       totalDiscountSum
     )}</strong> грн</span>
       </div>

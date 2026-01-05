@@ -1452,7 +1452,12 @@ export function updatevutratuDisplayedSums(): void {
   if (!totalSumElement) return;
 
   let totalNegativeSum = 0;
-  let totalAvansSum = 0;
+
+  // Змінна для відображення ВЬОГО авансу (просто для інфо)
+  let totalAvansSumDisplay = 0;
+
+  // Змінна для додавання в касу ТІЛЬКИ авансу з ВІДКРИТИХ актів
+  let totalAvansSumForCash = 0;
 
   // Суми для "Прибуток" (маржа)
   let totalNetDetailsProfit = 0;
@@ -1471,14 +1476,15 @@ export function updatevutratuDisplayedSums(): void {
     // 2. Акти (Прибуток)
     if (expense.category === "💰 Прибуток") {
       // Аванси
+      let actAvans = 0;
       if (expense.paymentMethod && Number(expense.paymentMethod) > 0) {
-        totalAvansSum += Number(expense.paymentMethod);
+        actAvans = Number(expense.paymentMethod);
+        totalAvansSumDisplay += actAvans;
       }
 
       const discountVal = expense.discountAmount || 0;
 
       // --- Розрахунок для ПРИБУТКУ (маржа) ---
-      // Знижка вже врахована в detailsAmount і workAmount при збереженні акту
       let detailsProfit = expense.detailsAmount || 0;
       let workProfit = expense.workAmount || 0;
 
@@ -1489,8 +1495,8 @@ export function updatevutratuDisplayedSums(): void {
       let fullDetails = expense.fullDetailsAmount || 0;
       let fullWork = expense.fullWorkAmount || 0;
 
+      // Віднімаємо знижку від повних сум (розподіляємо пропорційно)
       if (discountVal > 0) {
-        // Знижку віднімаємо від повних сум для каси
         const posDetailsFull = Math.max(0, fullDetails);
         const posWorkFull = Math.max(0, fullWork);
         const totalPosFull = posDetailsFull + posWorkFull;
@@ -1502,23 +1508,34 @@ export function updatevutratuDisplayedSums(): void {
           fullWork -= wPartFull;
         }
       }
-      totalNetFullDetails += fullDetails;
-      totalNetFullWork += fullWork;
+
+      // ТЕПЕР застосовуємо логіку Авансу та Закриття
+      const isClosed = !!expense.paymentDate;
+
+      if (isClosed) {
+        // Якщо акт закритий - ми отримали ВСЮ суму (включаючи аванс).
+        // Додаємо повні суми до каси.
+        // Аванс тут НЕ плюсуємо окремо, бо він вже сидить всередині fullDetails/fullWork
+        totalNetFullDetails += fullDetails;
+        totalNetFullWork += fullWork;
+      } else {
+        // Якщо акт відкритий - ми отримали ТІЛЬКИ аванс.
+        // Повні суми ще не отримали, тому за деталі/роботу 0.
+        // Але аванс додаємо до живої каси.
+        totalAvansSumForCash += actAvans;
+      }
     }
   });
 
   // Фінальні суми
-  // Каса = (Чисті Деталі + Чиста Робота + Аванси) - Витрати
+  // Каса = (Закриті Деталі + Закрита Робота) + (Аванси Відкритих) - Витрати
   const finalSumCasa =
-    totalNetFullDetails + totalNetFullWork + totalAvansSum + totalNegativeSum;
+    totalNetFullDetails + totalNetFullWork + totalAvansSumForCash + totalNegativeSum;
 
-  // Прибуток = (Чиста Маржа Деталі + Чиста Маржа Робота + Аванси) - Витрати
-  // Примітка: Аванси в прибуток зазвичай не йдуть напряму, але у вашій попередній логіці вони додавалися.
-  // Зберігаю логіку: (details + work + avans + negative)
+  // Прибуток = (Чиста Маржа Деталі + Чиста Маржа Робота) - Витрати
   const finalSumProfit =
     totalNetDetailsProfit +
     totalNetWorkProfit +
-    totalAvansSum +
     totalNegativeSum;
 
   totalSumElement.innerHTML = `
@@ -1532,10 +1549,11 @@ export function updatevutratuDisplayedSums(): void {
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
     totalNetFullWork
   )}</strong></span>
-        <span style="color: #666;">+</span>
+        <span style="color: #666;">(</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-    totalAvansSum
+    totalAvansSumDisplay
   )}</strong></span>
+        <span style="color: #666;">)</span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
     Math.abs(totalNegativeSum)
@@ -1552,10 +1570,6 @@ export function updatevutratuDisplayedSums(): void {
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
       totalNetWorkProfit
-    )}</strong></span>
-        <span style="color: #666;">+</span>
-        <span><strong style="color: #000;">💰 ${formatNumber(
-      totalAvansSum
     )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(

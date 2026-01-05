@@ -71,7 +71,7 @@ export const checkEmployeeExists = async (name: string): Promise<boolean> => {
         const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
         const nm = normalizeName(d?.Name ?? "");
         if (nm && nm === needle) return true;
-      } catch {}
+      } catch { }
     }
     return false;
   } catch (error) {
@@ -122,6 +122,12 @@ const updateAllBdFromInput = async (
         const singularTable = table.endsWith("s") ? table.slice(0, -1) : table;
         const idField = `${singularTable}_id`;
         const idValue = item[idField] !== undefined ? item[idField] : null;
+
+        // Зберігаємо ID слюсаря для можливості перейменування
+        if (table === "slyusars" && idValue !== null) {
+          localStorage.setItem("current_slyusar_id", String(idValue));
+        }
+
         let dataFieldValue: any;
         if (needsJsonParsing && typeof item[field] === "string") {
           try {
@@ -142,8 +148,8 @@ const updateAllBdFromInput = async (
               ? { [deepPath[0]]: extractNestedValue(dataFieldValue, deepPath) }
               : typeof dataFieldValue === "object" &&
                 !Array.isArray(dataFieldValue)
-              ? dataFieldValue
-              : { [field]: dataFieldValue },
+                ? dataFieldValue
+                : { [field]: dataFieldValue },
         };
         updateAllBd(JSON.stringify(result, null, 2));
         return;
@@ -491,9 +497,8 @@ const createSlusarAdditionalInputs = async () => {
     </div>
     <div class="slusar-input-group">
       <label for="slusar-access" class="label-all_other_bases">Доступ:</label>
-      <select id="slusar-access" class="input-all_other_bases" ${
-        !isAdmin ? "disabled" : ""
-      }>
+      <select id="slusar-access" class="input-all_other_bases" ${!isAdmin ? "disabled" : ""
+    }>
         <option value="Адміністратор">Адміністратор</option>
         <option value="Приймальник">Приймальник</option>  
         <option value="Слюсар">Слюсар</option>        
@@ -504,15 +509,13 @@ const createSlusarAdditionalInputs = async () => {
     <div class="slusar-percent-container">
       <div class="slusar-input-group slusar-percent-half">
         <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
-        <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${
-          !isAdmin ? "disabled" : ""
-        }>
+        <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${!isAdmin ? "disabled" : ""
+    }>
       </div>
       <div class="slusar-input-group slusar-percent-half hidden-all_other_bases" id="slusar-percent-parts-wrapper">
         <label for="slusar-percent-parts" class="label-all_other_bases">Процент з запчастин:</label>
-        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${
-          !isAdmin ? "disabled" : ""
-        }>
+        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${!isAdmin ? "disabled" : ""
+    }>
       </div>
     </div>
     <div class="slusar-stats-container">
@@ -785,20 +788,54 @@ export const saveSlusarData = async (): Promise<boolean> => {
   }
 
   try {
-    // Шукаємо запис слюсаря за ім'ям
-    const { data: rows, error } = await supabase
-      .from("slyusars")
-      .select("*")
-      .eq("data->>Name", name)
-      .single();
+    let currentData: any = {};
+    let existingRecord: any = null;
 
-    if (error || !rows) {
-      console.error("Слюсар не знайдений або помилка:", error);
+    // ✅ ЛОГІКА ПОШУКУ ЗАПИСУ ДЛЯ РЕДАГУВАННЯ
+    const savedIdStr = localStorage.getItem("current_slyusar_id");
+    const savedId = savedIdStr ? Number(savedIdStr) : null;
+
+    // 1. Спробуємо знайти за збереженим ID (це дозволяє перейменування)
+    if (savedId) {
+      const { data: idRow, error: idError } = await supabase
+        .from("slyusars")
+        .select("*")
+        .eq("slyusar_id", savedId)
+        .single();
+
+      if (!idError && idRow) {
+        existingRecord = idRow;
+        console.log(`[EDIT] Found record by ID: ${savedId}`);
+      }
+    }
+
+    // 2. Якщо за ID не знайшло (або немає ID) - шукаємо за старим методом (ім'я)
+    if (!existingRecord) {
+      console.log(`[EDIT] Record not found by ID (or ID null), trying name: ${name}`);
+      const { data: rows, error } = await supabase
+        .from("slyusars")
+        .select("*")
+        .eq("data->>Name", name)
+        .single();
+
+      if (!error && rows) {
+        existingRecord = rows;
+      }
+    }
+
+    if (!existingRecord) {
+      console.error("Слюсар не знайдений (ані за ID, ані за іменем)");
       return false;
     }
 
-    let currentData =
-      typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
+    try {
+      currentData =
+        typeof existingRecord.data === "string"
+          ? JSON.parse(existingRecord.data)
+          : existingRecord.data;
+    } catch {
+      currentData = {};
+    }
 
     // Оновлюємо дані
     const updatedData = {
@@ -818,7 +855,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
     const { error: updateError } = await supabase
       .from("slyusars")
       .update({ data: updatedData })
-      .eq("slyusar_id", rows.slyusar_id);
+      .eq("slyusar_id", existingRecord.slyusar_id);
 
     if (updateError) {
       console.error("Помилка при оновленні даних:", updateError);

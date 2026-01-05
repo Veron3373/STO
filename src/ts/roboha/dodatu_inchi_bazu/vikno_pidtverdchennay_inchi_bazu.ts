@@ -55,6 +55,14 @@ const clearInputAndReloadData = async () => {
     dropdown.classList.add("hidden-all_other_bases");
   }
 
+  // 🔥 Очищаємо збережені ID, щоб не використовувати старі дані при наступних операціях
+  localStorage.removeItem("current_slyusar_id");
+  localStorage.removeItem("current_work_id");
+  localStorage.removeItem("current_source_id");
+  localStorage.removeItem("current_receiver_id");
+  localStorage.removeItem("current_shop_id");
+  localStorage.removeItem("current_detail_id");
+
   if (currentTableName) await loadDatabaseData(currentTableName);
 };
 

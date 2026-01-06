@@ -240,6 +240,31 @@
       ]
     },
     {
+      "id": "AGRO_MASZ",
+      "name": "Agro-Masz",
+      "cyrillic_name": "Агро-Маш",
+      "numeric_id": 4088,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Польща",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "AGRO_MASZ_PO",
+          "mark_id": "AGRO_MASZ",
+          "name": "PO Plough",
+          "cyrillic_name": "PO Plough"
+        },
+        {
+          "id": "AGRO_MASZ_BT",
+          "mark_id": "AGRO_MASZ",
+          "name": "BT Cultivator",
+          "cyrillic_name": "BT Cultivator"
+        }
+      ]
+    },
+    {
       "id": "AION",
       "name": "GAC Aion",
       "cyrillic_name": "ГАК Аион",
@@ -835,6 +860,56 @@
       ]
     },
     {
+      "id": "AM_GENERAL",
+      "name": "AM General",
+      "cyrillic_name": "АМ Дженерал",
+      "numeric_id": 10732662,
+      "year_from": 1984,
+      "year_to": 2006,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "AM_GENERAL_HUMVEE",
+          "mark_id": "AM_GENERAL",
+          "name": "HMMWV (Humvee)",
+          "cyrillic_name": "Хамви"
+        }
+      ]
+    },
+    {
+      "id": "AMAZONE",
+      "name": "Amazone",
+      "cyrillic_name": "Амазоне",
+      "numeric_id": 12090,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "AMAZONE_CATROS",
+          "mark_id": "AMAZONE",
+          "name": "Catros",
+          "cyrillic_name": "Catros"
+        },
+        {
+          "id": "AMAZONE_EDX",
+          "mark_id": "AMAZONE",
+          "name": "EDX Seeder",
+          "cyrillic_name": "EDX Seeder"
+        },
+        {
+          "id": "AMAZONE_UX",
+          "mark_id": "AMAZONE",
+          "name": "UX Sprayer",
+          "cyrillic_name": "UX Sprayer"
+        }
+      ]
+    },
+    {
       "id": "AMBERAUTO",
       "name": "Амберавто",
       "cyrillic_name": "Амберавто",
@@ -922,21 +997,39 @@
       ]
     },
     {
-      "id": "AM_GENERAL",
-      "name": "AM General",
-      "cyrillic_name": "АМ Дженерал",
-      "numeric_id": 10732662,
-      "year_from": 1984,
-      "year_to": 2006,
+      "id": "ANTONIO_CARRARO",
+      "name": "Antonio Carraro",
+      "cyrillic_name": "Антоніо Карраро",
+      "numeric_id": 12938,
+      "year_from": null,
+      "year_to": 2025,
       "popular": 0,
-      "country": "США",
-      "updated_at": "2025-07-26 22:33:37",
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
       "models": [
         {
-          "id": "AM_GENERAL_HUMVEE",
-          "mark_id": "AM_GENERAL",
-          "name": "HMMWV (Humvee)",
-          "cyrillic_name": "Хамви"
+          "id": "ANTONIO_CARRARO_TTR",
+          "mark_id": "ANTONIO_CARRARO",
+          "name": "TTR",
+          "cyrillic_name": "TTR"
+        },
+        {
+          "id": "ANTONIO_CARRARO_TGF",
+          "mark_id": "ANTONIO_CARRARO",
+          "name": "TGF",
+          "cyrillic_name": "TGF"
+        },
+        {
+          "id": "ANTONIO_CARRARO_TTR_7600",
+          "mark_id": "ANTONIO_CARRARO",
+          "name": "TTR 7600",
+          "cyrillic_name": "TTR 7600"
+        },
+        {
+          "id": "ANTONIO_CARRARO_MACH_4",
+          "mark_id": "ANTONIO_CARRARO",
+          "name": "Mach 4",
+          "cyrillic_name": "Mach 4"
         }
       ]
     },
@@ -1003,6 +1096,31 @@
       ]
     },
     {
+      "id": "ARGO",
+      "name": "Argo Tractors",
+      "cyrillic_name": "Арго Тракторз",
+      "numeric_id": 12201,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "ARGO_LANDINI",
+          "mark_id": "ARGO",
+          "name": "Landini",
+          "cyrillic_name": "Landini"
+        },
+        {
+          "id": "ARGO_MCCORMICK",
+          "mark_id": "ARGO",
+          "name": "McCormick",
+          "cyrillic_name": "McCormick"
+        }
+      ]
+    },
+    {
       "id": "ARIEL",
       "name": "Ariel",
       "cyrillic_name": "Ариэль",
@@ -1049,6 +1167,43 @@
           "mark_id": "ARO",
           "name": "24",
           "cyrillic_name": "24"
+        }
+      ]
+    },
+    {
+      "id": "ASHOK_LEYLAND",
+      "name": "Ashok Leyland",
+      "cyrillic_name": "Ашок Лейланд",
+      "numeric_id": 3689,
+      "year_from": "Вантжівки",
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Індія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "ASHOK_LEYLAND_BOSS",
+          "mark_id": "ASHOK LEYLAND",
+          "name": "Boss",
+          "cyrillic_name": "Босс"
+        },
+        {
+          "id": "ASHOK_LEYLAND_CAPTAIN",
+          "mark_id": "ASHOK LEYLAND",
+          "name": "Captain",
+          "cyrillic_name": "Кептен"
+        },
+        {
+          "id": "ASHOK_LEYLAND_ECOMET",
+          "mark_id": "ASHOK LEYLAND",
+          "name": "Ecomet",
+          "cyrillic_name": "Екомет"
+        },
+        {
+          "id": "ASHOK_LEYLAND_U_3718",
+          "mark_id": "ASHOK LEYLAND",
+          "name": "U-3718",
+          "cyrillic_name": "U-3718"
         }
       ]
     },
@@ -1931,25 +2086,6 @@
       ]
     },
     {
-      "id": "AUTOBIANCHI",
-      "name": "Autobianchi",
-      "cyrillic_name": "Аутобьянки",
-      "numeric_id": 7001173,
-      "year_from": 1969,
-      "year_to": 1986,
-      "popular": 0,
-      "country": "Италия",
-      "updated_at": "2025-07-26 22:33:37",
-      "models": [
-        {
-          "id": "AUTOBIANCHI_A_112",
-          "mark_id": "AUTOBIANCHI",
-          "name": "A 112",
-          "cyrillic_name": "а 112"
-        }
-      ]
-    },
-    {
       "id": "AUTO_UNION",
       "name": "Auto Union",
       "cyrillic_name": "Авто Юнион",
@@ -1965,6 +2101,25 @@
           "mark_id": "AUTO_UNION",
           "name": "1000 Sp",
           "cyrillic_name": "1000 Сп"
+        }
+      ]
+    },
+    {
+      "id": "AUTOBIANCHI",
+      "name": "Autobianchi",
+      "cyrillic_name": "Аутобьянки",
+      "numeric_id": 7001173,
+      "year_from": 1969,
+      "year_to": 1986,
+      "popular": 0,
+      "country": "Италия",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "AUTOBIANCHI_A_112",
+          "mark_id": "AUTOBIANCHI",
+          "name": "A 112",
+          "cyrillic_name": "а 112"
         }
       ]
     },
@@ -2459,6 +2614,55 @@
           "mark_id": "BAW",
           "name": "Pony (Yuanbao)",
           "cyrillic_name": "Пони (Янбао)"
+        }
+      ]
+    },
+    {
+      "id": "BELARUS_MTZ",
+      "name": "Belarus (MTZ)",
+      "cyrillic_name": "Білорус (МТЗ)",
+      "numeric_id": 3817,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Білорусь",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "BELARUS_MTZ_80_82",
+          "mark_id": "BELARUS_MTZ",
+          "name": "80/82",
+          "cyrillic_name": "80/82"
+        },
+        {
+          "id": "BELARUS_MTZ_920",
+          "mark_id": "BELARUS_MTZ",
+          "name": "920",
+          "cyrillic_name": "920"
+        },
+        {
+          "id": "BELARUS_MTZ_952",
+          "mark_id": "BELARUS_MTZ",
+          "name": "952",
+          "cyrillic_name": "952"
+        },
+        {
+          "id": "BELARUS_MTZ_1025",
+          "mark_id": "BELARUS_MTZ",
+          "name": "1025",
+          "cyrillic_name": "1025"
+        },
+        {
+          "id": "BELARUS_MTZ_1221",
+          "mark_id": "BELARUS_MTZ",
+          "name": "1221",
+          "cyrillic_name": "1221"
+        },
+        {
+          "id": "BELARUS_MTZ_1523",
+          "mark_id": "BELARUS_MTZ",
+          "name": "1523",
+          "cyrillic_name": "1523"
         }
       ]
     },
@@ -3152,6 +3356,58 @@
           "mark_id": "BMW",
           "name": "Z8",
           "cyrillic_name": "з8"
+        }
+      ]
+    },
+    {
+      "id": "BOBCAT",
+      "name": "Bobcat",
+      "cyrillic_name": "Бобкэт",
+      "popular": 1,
+      "country": "США",
+      "models": [
+        {
+          "id": "BOB_S70",
+          "mark_id": "BOBCAT",
+          "name": "S70",
+          "cyrillic_name": "S70"
+        },
+        {
+          "id": "BOB_T590",
+          "mark_id": "BOBCAT",
+          "name": "T590",
+          "cyrillic_name": "T590"
+        }
+      ]
+    },
+    {
+      "id": "BOBCAT_COMPACT",
+      "name": "Bobcat",
+      "cyrillic_name": "Бобкет",
+      "numeric_id": 4940,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "BOBCAT_COMPACT_CT1021",
+          "mark_id": "BOBCAT_COMPACT",
+          "name": "CT1021",
+          "cyrillic_name": "CT1021"
+        },
+        {
+          "id": "BOBCAT_COMPACT_CT2035",
+          "mark_id": "BOBCAT_COMPACT",
+          "name": "CT2035",
+          "cyrillic_name": "CT2035"
+        },
+        {
+          "id": "BOBCAT_COMPACT_CT4058",
+          "mark_id": "BOBCAT_COMPACT",
+          "name": "CT4058",
+          "cyrillic_name": "CT4058"
         }
       ]
     },
@@ -4350,6 +4606,92 @@
       ]
     },
     {
+      "id": "CARRARO_TREKKER",
+      "name": "Carraro Tractors",
+      "cyrillic_name": "Карраро (трактори)",
+      "numeric_id": 3058,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "CARRARO_TREKKER_TREKKER",
+          "mark_id": "CARRARO_TREKKER",
+          "name": "Trekker",
+          "cyrillic_name": "Trekker"
+        },
+        {
+          "id": "CARRARO_TREKKER_TTR",
+          "mark_id": "CARRARO_TREKKER",
+          "name": "TTR",
+          "cyrillic_name": "TTR"
+        }
+      ]
+    },
+    {
+      "id": "CASE_IH",
+      "name": "Case IH",
+      "cyrillic_name": "Кейс IH",
+      "numeric_id": 9815,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "CASE_IH_FARMALL_A",
+          "mark_id": "CASE_IH",
+          "name": "Farmall A",
+          "cyrillic_name": "Farmall A"
+        },
+        {
+          "id": "CASE_IH_FARMALL_C",
+          "mark_id": "CASE_IH",
+          "name": "Farmall C",
+          "cyrillic_name": "Farmall C"
+        },
+        {
+          "id": "CASE_IH_MAXXUM",
+          "mark_id": "CASE_IH",
+          "name": "Maxxum",
+          "cyrillic_name": "Maxxum"
+        },
+        {
+          "id": "CASE_IH_PUMA",
+          "mark_id": "CASE_IH",
+          "name": "Puma",
+          "cyrillic_name": "Puma"
+        },
+        {
+          "id": "CASE_IH_OPTUM",
+          "mark_id": "CASE_IH",
+          "name": "Optum",
+          "cyrillic_name": "Optum"
+        },
+        {
+          "id": "CASE_IH_MAGNUM",
+          "mark_id": "CASE_IH",
+          "name": "Magnum",
+          "cyrillic_name": "Magnum"
+        },
+        {
+          "id": "CASE_IH_QUADTRAC",
+          "mark_id": "CASE_IH",
+          "name": "Steiger Quadtrac",
+          "cyrillic_name": "Steiger Quadtrac"
+        },
+        {
+          "id": "CASE_IH_AXIAL_FLOW",
+          "mark_id": "CASE_IH",
+          "name": "Axial-Flow Combine",
+          "cyrillic_name": "Axial-Flow Combine"
+        }
+      ]
+    },
+    {
       "id": "CATERHAM",
       "name": "Caterham",
       "cyrillic_name": "Катерхем",
@@ -4377,6 +4719,70 @@
           "mark_id": "CATERHAM",
           "name": "Seven",
           "cyrillic_name": "Севен"
+        }
+      ]
+    },
+    {
+      "id": "CATERPILLAR",
+      "name": "Caterpillar",
+      "cyrillic_name": "Катерпиллар",
+      "popular": 1,
+      "country": "США",
+      "models": [
+        {
+          "id": "CAT_320",
+          "mark_id": "CATERPILLAR",
+          "name": "320 Excavator",
+          "cyrillic_name": "320 Экскаватор"
+        },
+        {
+          "id": "CAT_D6",
+          "mark_id": "CATERPILLAR",
+          "name": "D6 Dozer",
+          "cyrillic_name": "Д6 Бульдозер"
+        },
+        {
+          "id": "CAT_420",
+          "mark_id": "CATERPILLAR",
+          "name": "420 Backhoe",
+          "cyrillic_name": "420 Экскаватор-погрузчик"
+        }
+      ]
+    },
+    {
+      "id": "CHALLENGER",
+      "name": "Challenger",
+      "cyrillic_name": "Челенджер",
+      "numeric_id": 3440,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "CHALLENGER_MT700",
+          "mark_id": "CHALLENGER",
+          "name": "MT700",
+          "cyrillic_name": "MT700"
+        },
+        {
+          "id": "CHALLENGER_MT800",
+          "mark_id": "CHALLENGER",
+          "name": "MT800",
+          "cyrillic_name": "MT800"
+        },
+        {
+          "id": "CHALLENGER_ROGATOR",
+          "mark_id": "CHALLENGER",
+          "name": "RoGator",
+          "cyrillic_name": "RoGator"
+        },
+        {
+          "id": "CHALLENGER_TERRA_GATOR",
+          "mark_id": "CHALLENGER",
+          "name": "TerraGator",
+          "cyrillic_name": "TerraGator"
         }
       ]
     },
@@ -6474,6 +6880,61 @@
       ]
     },
     {
+      "id": "CLAAS",
+      "name": "CLAAS",
+      "cyrillic_name": "Клаас",
+      "numeric_id": 9761,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "CLAAS_ARION",
+          "mark_id": "CLAAS",
+          "name": "Arion",
+          "cyrillic_name": "Arion"
+        },
+        {
+          "id": "CLAAS_AXION",
+          "mark_id": "CLAAS",
+          "name": "Axion",
+          "cyrillic_name": "Axion"
+        },
+        {
+          "id": "CLAAS_XERION",
+          "mark_id": "CLAAS",
+          "name": "Xerion",
+          "cyrillic_name": "Xerion"
+        },
+        {
+          "id": "CLAAS_LEXION",
+          "mark_id": "CLAAS",
+          "name": "Lexion",
+          "cyrillic_name": "Lexion"
+        },
+        {
+          "id": "CLAAS_TUCANO",
+          "mark_id": "CLAAS",
+          "name": "Tucano",
+          "cyrillic_name": "Tucano"
+        },
+        {
+          "id": "CLAAS_TRION",
+          "mark_id": "CLAAS",
+          "name": "Trion",
+          "cyrillic_name": "Trion"
+        },
+        {
+          "id": "CLAAS_JAGUAR",
+          "mark_id": "CLAAS",
+          "name": "Jaguar Forage Harvester",
+          "cyrillic_name": "Jaguar Forage Harvester"
+        }
+      ]
+    },
+    {
       "id": "CODA",
       "name": "Coda",
       "cyrillic_name": "Кода",
@@ -6922,6 +7383,49 @@
           "mark_id": "DAEWOO",
           "name": "Winstorm",
           "cyrillic_name": "Винсторм"
+        }
+      ]
+    },
+    {
+      "id": "DAF",
+      "name": "DAF",
+      "cyrillic_name": "ДАФ",
+      "numeric_id": 3152,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Нідерланди",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "DAF_CF",
+          "mark_id": "DAF",
+          "name": "CF",
+          "cyrillic_name": "CF"
+        },
+        {
+          "id": "DAF_LF",
+          "mark_id": "DAF",
+          "name": "LF",
+          "cyrillic_name": "LF"
+        },
+        {
+          "id": "DAF_XD",
+          "mark_id": "DAF",
+          "name": "XD",
+          "cyrillic_name": "XD"
+        },
+        {
+          "id": "DAF_XF",
+          "mark_id": "DAF",
+          "name": "XF",
+          "cyrillic_name": "XF"
+        },
+        {
+          "id": "DAF_XG",
+          "mark_id": "DAF",
+          "name": "XG",
+          "cyrillic_name": "XG"
         }
       ]
     },
@@ -7495,6 +7999,55 @@
       ]
     },
     {
+      "id": "DE_TOMASO",
+      "name": "De Tomaso",
+      "cyrillic_name": "Де Томазо",
+      "numeric_id": 3346,
+      "year_from": 1964,
+      "year_to": 2002,
+      "popular": 0,
+      "country": "Италия",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "DE_TOMASO_BIGUA",
+          "mark_id": "DE_TOMASO",
+          "name": "Bigua",
+          "cyrillic_name": "бигуа"
+        },
+        {
+          "id": "DE_TOMASO_GUARA",
+          "mark_id": "DE_TOMASO",
+          "name": "Guara",
+          "cyrillic_name": "Гуара"
+        },
+        {
+          "id": "DE_TOMASO_LONGCHAMP",
+          "mark_id": "DE_TOMASO",
+          "name": "Longchamp",
+          "cyrillic_name": "Лоншан"
+        },
+        {
+          "id": "DE_TOMASO_MANGUSTA",
+          "mark_id": "DE_TOMASO",
+          "name": "Mangusta",
+          "cyrillic_name": "Мангуста"
+        },
+        {
+          "id": "DE_TOMASO_PANTERA",
+          "mark_id": "DE_TOMASO",
+          "name": "Pantera",
+          "cyrillic_name": "Пантера"
+        },
+        {
+          "id": "DE_TOMASO_VALLELUNGA",
+          "mark_id": "DE_TOMASO",
+          "name": "Vallelunga",
+          "cyrillic_name": "Валлелунга"
+        }
+      ]
+    },
+    {
       "id": "DECO_RIDES",
       "name": "Deco Rides",
       "cyrillic_name": "Деко Райдс",
@@ -7717,51 +8270,45 @@
       ]
     },
     {
-      "id": "DE_TOMASO",
-      "name": "De Tomaso",
-      "cyrillic_name": "Де Томазо",
-      "numeric_id": 3346,
-      "year_from": 1964,
-      "year_to": 2002,
+      "id": "DEUTZ_FAHR",
+      "name": "Deutz-Fahr",
+      "cyrillic_name": "Дойц-Фар",
+      "numeric_id": 3990,
+      "year_from": null,
+      "year_to": 2025,
       "popular": 0,
-      "country": "Италия",
-      "updated_at": "2025-07-26 22:33:37",
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
       "models": [
         {
-          "id": "DE_TOMASO_BIGUA",
-          "mark_id": "DE_TOMASO",
-          "name": "Bigua",
-          "cyrillic_name": "бигуа"
+          "id": "DEUTZ_FAHR_5_SERIES",
+          "mark_id": "DEUTZ_FAHR",
+          "name": "5 Series",
+          "cyrillic_name": "5 Series"
         },
         {
-          "id": "DE_TOMASO_GUARA",
-          "mark_id": "DE_TOMASO",
-          "name": "Guara",
-          "cyrillic_name": "Гуара"
+          "id": "DEUTZ_FAHR_6_SERIES",
+          "mark_id": "DEUTZ_FAHR",
+          "name": "6 Series",
+          "cyrillic_name": "6 Series"
         },
         {
-          "id": "DE_TOMASO_LONGCHAMP",
-          "mark_id": "DE_TOMASO",
-          "name": "Longchamp",
-          "cyrillic_name": "Лоншан"
+          "id": "DEUTZ_FAHR_7_SERIES",
+          "mark_id": "DEUTZ_FAHR",
+          "name": "7 Series",
+          "cyrillic_name": "7 Series"
         },
         {
-          "id": "DE_TOMASO_MANGUSTA",
-          "mark_id": "DE_TOMASO",
-          "name": "Mangusta",
-          "cyrillic_name": "Мангуста"
+          "id": "DEUTZ_FAHR_9_SERIES",
+          "mark_id": "DEUTZ_FAHR",
+          "name": "9 Series",
+          "cyrillic_name": "9 Series"
         },
         {
-          "id": "DE_TOMASO_PANTERA",
-          "mark_id": "DE_TOMASO",
-          "name": "Pantera",
-          "cyrillic_name": "Пантера"
-        },
-        {
-          "id": "DE_TOMASO_VALLELUNGA",
-          "mark_id": "DE_TOMASO",
-          "name": "Vallelunga",
-          "cyrillic_name": "Валлелунга"
+          "id": "DEUTZ_FAHR_C9000",
+          "mark_id": "DEUTZ_FAHR",
+          "name": "C9000 Combine",
+          "cyrillic_name": "C9000 Combine"
         }
       ]
     },
@@ -8339,6 +8886,80 @@
       ]
     },
     {
+      "id": "DONGFENG",
+      "name": "Dongfeng",
+      "cyrillic_name": "Донгфенг",
+      "numeric_id": 3470,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "DONGFENG_CAPTAIN",
+          "mark_id": "DONGFENG",
+          "name": "Captain",
+          "cyrillic_name": "Кептен"
+        },
+        {
+          "id": "DONGFENG_KL",
+          "mark_id": "DONGFENG",
+          "name": "KL",
+          "cyrillic_name": "KL"
+        },
+        {
+          "id": "DONGFENG_KR",
+          "mark_id": "DONGFENG",
+          "name": "KR",
+          "cyrillic_name": "KR"
+        },
+        {
+          "id": "DONGFENG_KX",
+          "mark_id": "DONGFENG",
+          "name": "KX",
+          "cyrillic_name": "KX"
+        },
+        {
+          "id": "DONGFENG_TIANLONG",
+          "mark_id": "DONGFENG",
+          "name": "Tianlong",
+          "cyrillic_name": "Тяньлун"
+        }
+      ]
+    },
+    {
+      "id": "DONGFENG",
+      "name": "Dongfeng",
+      "cyrillic_name": "Дунфен",
+      "numeric_id": 4562,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "DONGFENG_DF_244",
+          "mark_id": "DONGFENG",
+          "name": "DF-244",
+          "cyrillic_name": "DF-244"
+        },
+        {
+          "id": "DONGFENG_DF_354",
+          "mark_id": "DONGFENG",
+          "name": "DF-354",
+          "cyrillic_name": "DF-354"
+        },
+        {
+          "id": "DONGFENG_DF_404",
+          "mark_id": "DONGFENG",
+          "name": "DF-404",
+          "cyrillic_name": "DF-404"
+        }
+      ]
+    },
+    {
       "id": "DONINVEST",
       "name": "Doninvest",
       "cyrillic_name": "Донинвест",
@@ -8560,6 +9181,44 @@
       ]
     },
     {
+      "id": "E_CAR",
+      "name": "E-Car",
+      "cyrillic_name": "Е-Кар",
+      "numeric_id": 7311215,
+      "year_from": 2012,
+      "year_to": 2014,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "E_CAR_GD04B",
+          "mark_id": "E_CAR",
+          "name": "GD04B",
+          "cyrillic_name": "гд04б"
+        }
+      ]
+    },
+    {
+      "id": "E_MOBIL",
+      "name": "Ё-мобиль",
+      "cyrillic_name": "Ё-мобиль",
+      "numeric_id": 9133574,
+      "year_from": 2013,
+      "year_to": 2013,
+      "popular": 0,
+      "country": "Россия",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "E_MOBIL_E_CROSSOVER",
+          "mark_id": "E_MOBIL",
+          "name": "Ё-Кроссовер",
+          "cyrillic_name": "Ё-Кроссовер"
+        }
+      ]
+    },
+    {
       "id": "EAGLE",
       "name": "Eagle",
       "cyrillic_name": "Игл",
@@ -8759,44 +9418,6 @@
       ]
     },
     {
-      "id": "E_CAR",
-      "name": "E-Car",
-      "cyrillic_name": "Е-Кар",
-      "numeric_id": 7311215,
-      "year_from": 2012,
-      "year_to": 2014,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-07-26 22:33:37",
-      "models": [
-        {
-          "id": "E_CAR_GD04B",
-          "mark_id": "E_CAR",
-          "name": "GD04B",
-          "cyrillic_name": "гд04б"
-        }
-      ]
-    },
-    {
-      "id": "E_MOBIL",
-      "name": "Ё-мобиль",
-      "cyrillic_name": "Ё-мобиль",
-      "numeric_id": 9133574,
-      "year_from": 2013,
-      "year_to": 2013,
-      "popular": 0,
-      "country": "Россия",
-      "updated_at": "2025-07-26 22:33:37",
-      "models": [
-        {
-          "id": "E_MOBIL_E_CROSSOVER",
-          "mark_id": "E_MOBIL",
-          "name": "Ё-Кроссовер",
-          "cyrillic_name": "Ё-Кроссовер"
-        }
-      ]
-    },
-    {
       "id": "FACEL_VEGA",
       "name": "Facel Vega",
       "cyrillic_name": "Фэйсл Вега",
@@ -8969,6 +9590,92 @@
           "mark_id": "FAW",
           "name": "Besturn X80",
           "cyrillic_name": "Бестёрн Икс80"
+        }
+      ]
+    },
+    {
+      "id": "FAW",
+      "name": "FAW",
+      "cyrillic_name": "ФАВ",
+      "numeric_id": 3708,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "FAW_J5P",
+          "mark_id": "FAW",
+          "name": "J5P",
+          "cyrillic_name": "J5P"
+        },
+        {
+          "id": "FAW_J6P",
+          "mark_id": "FAW",
+          "name": "J6P",
+          "cyrillic_name": "J6P"
+        },
+        {
+          "id": "FAW_J7",
+          "mark_id": "FAW",
+          "name": "J7",
+          "cyrillic_name": "J7"
+        }
+      ]
+    },
+    {
+      "id": "FENDT",
+      "name": "Fendt",
+      "cyrillic_name": "Фендт",
+      "numeric_id": 3928,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "FENDT_200",
+          "mark_id": "FENDT",
+          "name": "200 V/F/P",
+          "cyrillic_name": "200 V/F/P"
+        },
+        {
+          "id": "FENDT_300",
+          "mark_id": "FENDT",
+          "name": "300",
+          "cyrillic_name": "300"
+        },
+        {
+          "id": "FENDT_500",
+          "mark_id": "FENDT",
+          "name": "500 Vario",
+          "cyrillic_name": "500 Vario"
+        },
+        {
+          "id": "FENDT_700",
+          "mark_id": "FENDT",
+          "name": "700 Vario",
+          "cyrillic_name": "700 Vario"
+        },
+        {
+          "id": "FENDT_900",
+          "mark_id": "FENDT",
+          "name": "900 Vario",
+          "cyrillic_name": "900 Vario"
+        },
+        {
+          "id": "FENDT_1000",
+          "mark_id": "FENDT",
+          "name": "1000 Vario",
+          "cyrillic_name": "1000 Vario"
+        },
+        {
+          "id": "FENDT_KATANA",
+          "mark_id": "FENDT",
+          "name": "Katana Forage Harvester",
+          "cyrillic_name": "Katana Forage Harvester"
         }
       ]
     },
@@ -10340,6 +11047,31 @@
       ]
     },
     {
+      "id": "FORD_TRUCKS",
+      "name": "Ford Trucks",
+      "cyrillic_name": "Форд Тракс",
+      "numeric_id": 3563,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Туреччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "FORD_TRUCKS_CARGO",
+          "mark_id": "FORD TRUCKS",
+          "name": "Cargo",
+          "cyrillic_name": "Карго"
+        },
+        {
+          "id": "FORD_TRUCKS_F_MAX",
+          "mark_id": "FORD TRUCKS",
+          "name": "F-MAX",
+          "cyrillic_name": "F-MAX"
+        }
+      ]
+    },
+    {
       "id": "FORTHING",
       "name": "Forthing",
       "cyrillic_name": "Форфинг",
@@ -10498,6 +11230,37 @@
       ]
     },
     {
+      "id": "FOTON",
+      "name": "Foton",
+      "cyrillic_name": "Фотон",
+      "numeric_id": 3385,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "FOTON_AUMAN",
+          "mark_id": "FOTON",
+          "name": "Auman",
+          "cyrillic_name": "Ауман"
+        },
+        {
+          "id": "FOTON_AUMARK",
+          "mark_id": "FOTON",
+          "name": "Aumark",
+          "cyrillic_name": "Аумарк"
+        },
+        {
+          "id": "FOTON_EST",
+          "mark_id": "FOTON",
+          "name": "EST",
+          "cyrillic_name": "EST"
+        }
+      ]
+    },
+    {
       "id": "FRANKLIN",
       "name": "Franklin",
       "cyrillic_name": "Франклин",
@@ -10513,6 +11276,61 @@
           "mark_id": "FRANKLIN",
           "name": "Series 15",
           "cyrillic_name": "Серис 15"
+        }
+      ]
+    },
+    {
+      "id": "FREIGHTLINER",
+      "name": "Freightliner",
+      "cyrillic_name": "Фрейтлайнер",
+      "numeric_id": 3489,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "FREIGHTLINER_108SD",
+          "mark_id": "FREIGHTLINER",
+          "name": "108SD",
+          "cyrillic_name": "108SD"
+        },
+        {
+          "id": "FREIGHTLINER_114SD",
+          "mark_id": "FREIGHTLINER",
+          "name": "114SD",
+          "cyrillic_name": "114SD"
+        },
+        {
+          "id": "FREIGHTLINER_CASCADIA",
+          "mark_id": "FREIGHTLINER",
+          "name": "Cascadia",
+          "cyrillic_name": "Каскадія"
+        },
+        {
+          "id": "FREIGHTLINER_CENTURY_CLASS",
+          "mark_id": "FREIGHTLINER",
+          "name": "Century Class",
+          "cyrillic_name": "Сенчурі Клас"
+        },
+        {
+          "id": "FREIGHTLINER_COLUMBIA",
+          "mark_id": "FREIGHTLINER",
+          "name": "Columbia",
+          "cyrillic_name": "Колумбія"
+        },
+        {
+          "id": "FREIGHTLINER_CORONADO",
+          "mark_id": "FREIGHTLINER",
+          "name": "Coronado",
+          "cyrillic_name": "Коронодо"
+        },
+        {
+          "id": "FREIGHTLINER_M2_106",
+          "mark_id": "FREIGHTLINER",
+          "name": "M2 106",
+          "cyrillic_name": "M2 106"
         }
       ]
     },
@@ -10606,6 +11424,37 @@
           "mark_id": "FUQI",
           "name": "6500 (Land King)",
           "cyrillic_name": "6500"
+        }
+      ]
+    },
+    {
+      "id": "FUSO",
+      "name": "Fuso",
+      "cyrillic_name": "Фусо",
+      "numeric_id": 3433,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "FUSO_CANTER",
+          "mark_id": "FUSO",
+          "name": "Canter",
+          "cyrillic_name": "Кантер"
+        },
+        {
+          "id": "FUSO_FIGHTER",
+          "mark_id": "FUSO",
+          "name": "Fighter",
+          "cyrillic_name": "Файтер"
+        },
+        {
+          "id": "FUSO_SUPER_GREAT",
+          "mark_id": "FUSO",
+          "name": "Super Great",
+          "cyrillic_name": "Супер Грейт"
         }
       ]
     },
@@ -10854,6 +11703,43 @@
           "mark_id": "GAZ",
           "name": "Volga Siber",
           "cyrillic_name": "Волга Сайбер"
+        }
+      ]
+    },
+    {
+      "id": "GAZ",
+      "name": "GAZ",
+      "cyrillic_name": "ГАЗ",
+      "numeric_id": 3067,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Росія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "GAZ_GAZON",
+          "mark_id": "GAZ",
+          "name": "Gazon",
+          "cyrillic_name": "Газон"
+        },
+        {
+          "id": "GAZ_GAZON_NEXT",
+          "mark_id": "GAZ",
+          "name": "GAZon NEXT",
+          "cyrillic_name": "Газон Некст"
+        },
+        {
+          "id": "GAZ_SADKO_NEXT",
+          "mark_id": "GAZ",
+          "name": "Sadko NEXT",
+          "cyrillic_name": "Садко Некст"
+        },
+        {
+          "id": "GAZ_VALDAI_NEXT",
+          "mark_id": "GAZ",
+          "name": "Valdai NEXT",
+          "cyrillic_name": "Валдай Некст"
         }
       ]
     },
@@ -11596,6 +12482,37 @@
       ]
     },
     {
+      "id": "GOLDONI",
+      "name": "Goldoni",
+      "cyrillic_name": "Голдони",
+      "numeric_id": 3566,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "GOLDONI_Q_SERIES",
+          "mark_id": "GOLDONI",
+          "name": "Q Series",
+          "cyrillic_name": "Q Series"
+        },
+        {
+          "id": "GOLDONI_RONIN",
+          "mark_id": "GOLDONI",
+          "name": "Ronin",
+          "cyrillic_name": "Ronin"
+        },
+        {
+          "id": "GOLDONI_BASE",
+          "mark_id": "GOLDONI",
+          "name": "Base",
+          "cyrillic_name": "Base"
+        }
+      ]
+    },
+    {
       "id": "GONOW",
       "name": "Gonow",
       "cyrillic_name": "Гонов",
@@ -12312,6 +13229,49 @@
       ]
     },
     {
+      "id": "HINO",
+      "name": "Hino",
+      "cyrillic_name": "Хіно",
+      "numeric_id": 3366,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "HINO_300",
+          "mark_id": "HINO",
+          "name": "300",
+          "cyrillic_name": "300"
+        },
+        {
+          "id": "HINO_500",
+          "mark_id": "HINO",
+          "name": "500",
+          "cyrillic_name": "500"
+        },
+        {
+          "id": "HINO_700",
+          "mark_id": "HINO",
+          "name": "700",
+          "cyrillic_name": "700"
+        },
+        {
+          "id": "HINO_PROFIA",
+          "mark_id": "HINO",
+          "name": "Profia",
+          "cyrillic_name": "Профіа"
+        },
+        {
+          "id": "HINO_RANGER",
+          "mark_id": "HINO",
+          "name": "Ranger",
+          "cyrillic_name": "Рейнджер"
+        }
+      ]
+    },
+    {
       "id": "HIPHI",
       "name": "HiPhi",
       "cyrillic_name": "Хипхи",
@@ -12358,6 +13318,21 @@
           "mark_id": "HISPANO_SUIZA",
           "name": "K6",
           "cyrillic_name": "К6"
+        }
+      ]
+    },
+    {
+      "id": "HITACHI_CM",
+      "name": "Hitachi Construction",
+      "cyrillic_name": "Хитачи",
+      "popular": 0,
+      "country": "Япония",
+      "models": [
+        {
+          "id": "HIT_ZX200",
+          "mark_id": "HITACHI_CM",
+          "name": "ZX200",
+          "cyrillic_name": "ZX200"
         }
       ]
     },
@@ -12461,6 +13436,25 @@
           "mark_id": "HOLDEN",
           "name": "Zafira",
           "cyrillic_name": "Зафира"
+        }
+      ]
+    },
+    {
+      "id": "HOLLANDER",
+      "name": "Holaras",
+      "cyrillic_name": "Холарас",
+      "numeric_id": 12669,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Нідерланди",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "HOLLANDER_SILAGE",
+          "mark_id": "HOLLANDER",
+          "name": "Silage Dozer",
+          "cyrillic_name": "Silage Dozer"
         }
       ]
     },
@@ -13236,6 +14230,37 @@
       ]
     },
     {
+      "id": "HORSCH",
+      "name": "Horsch",
+      "cyrillic_name": "Горш",
+      "numeric_id": 4858,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "HORSCH_PRONTO",
+          "mark_id": "HORSCH",
+          "name": "Pronto",
+          "cyrillic_name": "Pronto"
+        },
+        {
+          "id": "HORSCH_TERRANO",
+          "mark_id": "HORSCH",
+          "name": "Terrano",
+          "cyrillic_name": "Terrano"
+        },
+        {
+          "id": "HORSCH_TIGER",
+          "mark_id": "HORSCH",
+          "name": "Tiger",
+          "cyrillic_name": "Tiger"
+        }
+      ]
+    },
+    {
       "id": "HOZON",
       "name": "Hozon",
       "cyrillic_name": "Хозон",
@@ -13462,6 +14487,37 @@
           "mark_id": "HUMMER",
           "name": "H3",
           "cyrillic_name": "н3"
+        }
+      ]
+    },
+    {
+      "id": "HURLIMANN",
+      "name": "Hürlimann",
+      "cyrillic_name": "Хюрліманн",
+      "numeric_id": 5838,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Швейцарія/Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "HURLIMANN_XT",
+          "mark_id": "HURLIMANN",
+          "name": "XT",
+          "cyrillic_name": "XT"
+        },
+        {
+          "id": "HURLIMANN_XTB",
+          "mark_id": "HURLIMANN",
+          "name": "XTB",
+          "cyrillic_name": "XTB"
+        },
+        {
+          "id": "HURLIMANN_XS",
+          "mark_id": "HURLIMANN",
+          "name": "XS",
+          "cyrillic_name": "XS"
         }
       ]
     },
@@ -14051,6 +15107,43 @@
       ]
     },
     {
+      "id": "HYUNDAI",
+      "name": "Hyundai",
+      "cyrillic_name": "Хюндай",
+      "numeric_id": 3336,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Південна Корея",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "HYUNDAI_HD_SERIES",
+          "mark_id": "HYUNDAI",
+          "name": "HD Series",
+          "cyrillic_name": "HD Серія"
+        },
+        {
+          "id": "HYUNDAI_MIGHTY",
+          "mark_id": "HYUNDAI",
+          "name": "Mighty",
+          "cyrillic_name": "Майті"
+        },
+        {
+          "id": "HYUNDAI_PAVISE",
+          "mark_id": "HYUNDAI",
+          "name": "Pavise",
+          "cyrillic_name": "Павіз"
+        },
+        {
+          "id": "HYUNDAI_XCIENT",
+          "mark_id": "HYUNDAI",
+          "name": "Xcient",
+          "cyrillic_name": "Ексієнт"
+        }
+      ]
+    },
+    {
       "id": "ICAR",
       "name": "iCar",
       "cyrillic_name": "ИКар",
@@ -14407,6 +15500,61 @@
       ]
     },
     {
+      "id": "INTERNATIONAL",
+      "name": "International",
+      "cyrillic_name": "Інтернешнл",
+      "numeric_id": 3397,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "INTERNATIONAL_DURASTAR",
+          "mark_id": "INTERNATIONAL",
+          "name": "Durastar",
+          "cyrillic_name": "Дюрастар"
+        },
+        {
+          "id": "INTERNATIONAL_HV",
+          "mark_id": "INTERNATIONAL",
+          "name": "HV",
+          "cyrillic_name": "HV"
+        },
+        {
+          "id": "INTERNATIONAL_HX",
+          "mark_id": "INTERNATIONAL",
+          "name": "HX",
+          "cyrillic_name": "HX"
+        },
+        {
+          "id": "INTERNATIONAL_LONESTAR",
+          "mark_id": "INTERNATIONAL",
+          "name": "LoneStar",
+          "cyrillic_name": "ЛоунСтар"
+        },
+        {
+          "id": "INTERNATIONAL_LT",
+          "mark_id": "INTERNATIONAL",
+          "name": "LT",
+          "cyrillic_name": "LT"
+        },
+        {
+          "id": "INTERNATIONAL_MV",
+          "mark_id": "INTERNATIONAL",
+          "name": "MV",
+          "cyrillic_name": "MV"
+        },
+        {
+          "id": "INTERNATIONAL_PROSTAR",
+          "mark_id": "INTERNATIONAL",
+          "name": "ProStar",
+          "cyrillic_name": "ПроСтар"
+        }
+      ]
+    },
+    {
       "id": "INVICTA",
       "name": "Invicta",
       "cyrillic_name": "Инвикта",
@@ -14520,6 +15668,37 @@
           "mark_id": "ISDERA",
           "name": "Spyder",
           "cyrillic_name": "спайдер"
+        }
+      ]
+    },
+    {
+      "id": "ISEKI",
+      "name": "Iseki",
+      "cyrillic_name": "Ісекі",
+      "numeric_id": 8926,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "ISEKI_TG",
+          "mark_id": "ISEKI",
+          "name": "TG Series",
+          "cyrillic_name": "TG Series"
+        },
+        {
+          "id": "ISEKI_TLE",
+          "mark_id": "ISEKI",
+          "name": "TLE Series",
+          "cyrillic_name": "TLE Series"
+        },
+        {
+          "id": "ISEKI_TM",
+          "mark_id": "ISEKI",
+          "name": "TM Series",
+          "cyrillic_name": "TM Series"
         }
       ]
     },
@@ -14717,6 +15896,49 @@
       ]
     },
     {
+      "id": "ISUZU",
+      "name": "Isuzu",
+      "cyrillic_name": "Ісузу",
+      "numeric_id": 3697,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "ISUZU_ELF",
+          "mark_id": "ISUZU",
+          "name": "Elf",
+          "cyrillic_name": "Ельф"
+        },
+        {
+          "id": "ISUZU_FORWARD",
+          "mark_id": "ISUZU",
+          "name": "Forward",
+          "cyrillic_name": "Форвард"
+        },
+        {
+          "id": "ISUZU_F_SERIES",
+          "mark_id": "ISUZU",
+          "name": "F-Series",
+          "cyrillic_name": "F-Series"
+        },
+        {
+          "id": "ISUZU_GIGA",
+          "mark_id": "ISUZU",
+          "name": "Giga",
+          "cyrillic_name": "Гіга"
+        },
+        {
+          "id": "ISUZU_N_SERIES_NPR_NRR",
+          "mark_id": "ISUZU",
+          "name": "N-Series (NPR/NRR)",
+          "cyrillic_name": "N-Series"
+        }
+      ]
+    },
+    {
       "id": "IVECO",
       "name": "Iveco",
       "cyrillic_name": "Ивеко",
@@ -14732,6 +15954,61 @@
           "mark_id": "IVECO",
           "name": "Massif",
           "cyrillic_name": "Массиф"
+        }
+      ]
+    },
+    {
+      "id": "IVECO",
+      "name": "Iveco",
+      "cyrillic_name": "Івеко",
+      "numeric_id": 3096,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "IVECO_DAILY",
+          "mark_id": "IVECO",
+          "name": "Daily",
+          "cyrillic_name": "Дейлі"
+        },
+        {
+          "id": "IVECO_EUROCARGO",
+          "mark_id": "IVECO",
+          "name": "Eurocargo",
+          "cyrillic_name": "Єврокарго"
+        },
+        {
+          "id": "IVECO_STRALIS",
+          "mark_id": "IVECO",
+          "name": "Stralis",
+          "cyrillic_name": "Страліс"
+        },
+        {
+          "id": "IVECO_S_WAY",
+          "mark_id": "IVECO",
+          "name": "S-Way",
+          "cyrillic_name": "S-Way"
+        },
+        {
+          "id": "IVECO_TRAKKER",
+          "mark_id": "IVECO",
+          "name": "Trakker",
+          "cyrillic_name": "Траккер"
+        },
+        {
+          "id": "IVECO_T_WAY",
+          "mark_id": "IVECO",
+          "name": "T-Way",
+          "cyrillic_name": "T-Way"
+        },
+        {
+          "id": "IVECO_X_WAY",
+          "mark_id": "IVECO",
+          "name": "X-Way",
+          "cyrillic_name": "X-Way"
         }
       ]
     },
@@ -15025,6 +16302,43 @@
       ]
     },
     {
+      "id": "JAC",
+      "name": "JAC",
+      "cyrillic_name": "ДЖАК",
+      "numeric_id": 3540,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "JAC_GALLOP",
+          "mark_id": "JAC",
+          "name": "Gallop",
+          "cyrillic_name": "Гелоп"
+        },
+        {
+          "id": "JAC_JUNLING",
+          "mark_id": "JAC",
+          "name": "Junling",
+          "cyrillic_name": "Джунлін"
+        },
+        {
+          "id": "JAC_K_SERIES",
+          "mark_id": "JAC",
+          "name": "K Series",
+          "cyrillic_name": "K Серія"
+        },
+        {
+          "id": "JAC_N_SERIES",
+          "mark_id": "JAC",
+          "name": "N-Series",
+          "cyrillic_name": "N-Series"
+        }
+      ]
+    },
+    {
       "id": "JAECOO",
       "name": "Jaecoo",
       "cyrillic_name": "Джейку",
@@ -15173,6 +16487,49 @@
           "mark_id": "JAGUAR",
           "name": "X-Type",
           "cyrillic_name": "X-type"
+        }
+      ]
+    },
+    {
+      "id": "JCB",
+      "name": "JCB",
+      "cyrillic_name": "ДжейСіБі",
+      "numeric_id": 12228,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Велика Британія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "JCB_FASTRAC_3000",
+          "mark_id": "JCB",
+          "name": "Fastrac 3000",
+          "cyrillic_name": "Fastrac 3000"
+        },
+        {
+          "id": "JCB_FASTRAC_4000",
+          "mark_id": "JCB",
+          "name": "Fastrac 4000",
+          "cyrillic_name": "Fastrac 4000"
+        },
+        {
+          "id": "JCB_FASTRAC_8000",
+          "mark_id": "JCB",
+          "name": "Fastrac 8000",
+          "cyrillic_name": "Fastrac 8000"
+        },
+        {
+          "id": "JCB_LOADALL",
+          "mark_id": "JCB",
+          "name": "Loadall",
+          "cyrillic_name": "Loadall"
+        },
+        {
+          "id": "JCB_TELESCOPIC",
+          "mark_id": "JCB",
+          "name": "Telescopic Handler",
+          "cyrillic_name": "Telescopic Handler"
         }
       ]
     },
@@ -15624,6 +16981,118 @@
       ]
     },
     {
+      "id": "John deere",
+      "name": "John Deere",
+      "cyrillic_name": "Джон Дір",
+      "numeric_id": 7307,
+      "year_from": "Трактори комбайни с/г техніка",
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "John deere_5E",
+          "mark_id": "John deere",
+          "name": "5E",
+          "cyrillic_name": "5E"
+        },
+        {
+          "id": "John deere_5M",
+          "mark_id": "John deere",
+          "name": "5M",
+          "cyrillic_name": "5M"
+        },
+        {
+          "id": "John deere_6M",
+          "mark_id": "John deere",
+          "name": "6M",
+          "cyrillic_name": "6M"
+        },
+        {
+          "id": "John deere_6R",
+          "mark_id": "John deere",
+          "name": "6R",
+          "cyrillic_name": "6R"
+        },
+        {
+          "id": "John deere_7R",
+          "mark_id": "John deere",
+          "name": "7R",
+          "cyrillic_name": "7R"
+        },
+        {
+          "id": "John deere_8R",
+          "mark_id": "John deere",
+          "name": "8R",
+          "cyrillic_name": "8R"
+        },
+        {
+          "id": "John deere_8RT",
+          "mark_id": "John deere",
+          "name": "8RT",
+          "cyrillic_name": "8RT"
+        },
+        {
+          "id": "John deere_9R",
+          "mark_id": "John deere",
+          "name": "9R",
+          "cyrillic_name": "9R"
+        },
+        {
+          "id": "John deere_9RX",
+          "mark_id": "John deere",
+          "name": "9RX",
+          "cyrillic_name": "9RX"
+        },
+        {
+          "id": "John deere_S_SERIES",
+          "mark_id": "John deere",
+          "name": "S Series Combine",
+          "cyrillic_name": "S Series Combine"
+        },
+        {
+          "id": "John deere_T_SERIES",
+          "mark_id": "John deere",
+          "name": "T Series Combine",
+          "cyrillic_name": "T Series Combine"
+        }
+      ]
+    },
+    {
+      "id": "JOHN_DEERE",
+      "name": "John Deere",
+      "cyrillic_name": "Джон Дир",
+      "popular": 1,
+      "country": "США",
+      "models": [
+        {
+          "id": "JD_8R",
+          "mark_id": "JOHN_DEERE",
+          "name": "8R Series",
+          "cyrillic_name": "8Р Серия"
+        },
+        {
+          "id": "JD_6M",
+          "mark_id": "JOHN_DEERE",
+          "name": "6M Series",
+          "cyrillic_name": "6М Серия"
+        },
+        {
+          "id": "JD_9RX",
+          "mark_id": "JOHN_DEERE",
+          "name": "9RX Series",
+          "cyrillic_name": "9RX Серия"
+        },
+        {
+          "id": "JD_S700",
+          "mark_id": "JOHN_DEERE",
+          "name": "S700 Combine",
+          "cyrillic_name": "S700 Комбайн"
+        }
+      ]
+    },
+    {
       "id": "JONWAY",
       "name": "Jonway",
       "cyrillic_name": "Джонвэй",
@@ -15682,6 +17151,49 @@
           "mark_id": "KAIYI",
           "name": "X7 Kunlun",
           "cyrillic_name": "Икс7 Кунлун"
+        }
+      ]
+    },
+    {
+      "id": "KAMAZ",
+      "name": "KamAZ",
+      "cyrillic_name": "КамАЗ",
+      "numeric_id": 3093,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Росія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "KAMAZ_43118",
+          "mark_id": "KAMAZ",
+          "name": "43118",
+          "cyrillic_name": "43118"
+        },
+        {
+          "id": "KAMAZ_5490",
+          "mark_id": "KAMAZ",
+          "name": "5490",
+          "cyrillic_name": "5490"
+        },
+        {
+          "id": "KAMAZ_65115",
+          "mark_id": "KAMAZ",
+          "name": "65115",
+          "cyrillic_name": "65115"
+        },
+        {
+          "id": "KAMAZ_6520",
+          "mark_id": "KAMAZ",
+          "name": "6520",
+          "cyrillic_name": "6520"
+        },
+        {
+          "id": "KAMAZ_65201",
+          "mark_id": "KAMAZ",
+          "name": "65201",
+          "cyrillic_name": "65201"
         }
       ]
     },
@@ -15757,6 +17269,49 @@
           "mark_id": "KAWEI",
           "name": "K150GT",
           "cyrillic_name": "к150гт"
+        }
+      ]
+    },
+    {
+      "id": "KENWORTH",
+      "name": "Kenworth",
+      "cyrillic_name": "Кенворт",
+      "numeric_id": 3839,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "KENWORTH_T370",
+          "mark_id": "KENWORTH",
+          "name": "T370",
+          "cyrillic_name": "T370"
+        },
+        {
+          "id": "KENWORTH_T680",
+          "mark_id": "KENWORTH",
+          "name": "T680",
+          "cyrillic_name": "T680"
+        },
+        {
+          "id": "KENWORTH_T800",
+          "mark_id": "KENWORTH",
+          "name": "T800",
+          "cyrillic_name": "T800"
+        },
+        {
+          "id": "KENWORTH_T880",
+          "mark_id": "KENWORTH",
+          "name": "T880",
+          "cyrillic_name": "T880"
+        },
+        {
+          "id": "KENWORTH_W900",
+          "mark_id": "KENWORTH",
+          "name": "W900",
+          "cyrillic_name": "W900"
         }
       ]
     },
@@ -16267,6 +17822,62 @@
       ]
     },
     {
+      "id": "KIA",
+      "name": "Kia",
+      "cyrillic_name": "Кіа",
+      "numeric_id": 3782,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Південна Корея",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "KIA_BONGO",
+          "mark_id": "KIA",
+          "name": "Bongo",
+          "cyrillic_name": "Бонго"
+        }
+      ]
+    },
+    {
+      "id": "KIOTI",
+      "name": "Kioti",
+      "cyrillic_name": "Кіоті",
+      "numeric_id": 10976,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Південна Корея",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "KIOTI_CS",
+          "mark_id": "KIOTI",
+          "name": "CS Series",
+          "cyrillic_name": "CS Series"
+        },
+        {
+          "id": "KIOTI_CK10",
+          "mark_id": "KIOTI",
+          "name": "CK10 Series",
+          "cyrillic_name": "CK10 Series"
+        },
+        {
+          "id": "KIOTI_DK10",
+          "mark_id": "KIOTI",
+          "name": "DK10 Series",
+          "cyrillic_name": "DK10 Series"
+        },
+        {
+          "id": "KIOTI_RX",
+          "mark_id": "KIOTI",
+          "name": "RX Series",
+          "cyrillic_name": "RX Series"
+        }
+      ]
+    },
+    {
       "id": "KNEWSTAR",
       "name": "Knewstar",
       "cyrillic_name": "Ньюстар",
@@ -16353,6 +17964,27 @@
       ]
     },
     {
+      "id": "KOMATSU",
+      "name": "Komatsu",
+      "cyrillic_name": "Комацу",
+      "popular": 1,
+      "country": "Япония",
+      "models": [
+        {
+          "id": "KOM_PC200",
+          "mark_id": "KOMATSU",
+          "name": "PC200",
+          "cyrillic_name": "PC200"
+        },
+        {
+          "id": "KOM_D65",
+          "mark_id": "KOMATSU",
+          "name": "D65",
+          "cyrillic_name": "D65"
+        }
+      ]
+    },
+    {
       "id": "KOMBAT",
       "name": "Комбат",
       "cyrillic_name": "Комбат",
@@ -16372,6 +18004,37 @@
       ]
     },
     {
+      "id": "KRONE",
+      "name": "Krone",
+      "cyrillic_name": "Кроне",
+      "numeric_id": 5350,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "KRONE_BIG_X",
+          "mark_id": "KRONE",
+          "name": "BiG X",
+          "cyrillic_name": "BiG X"
+        },
+        {
+          "id": "KRONE_BIG_M",
+          "mark_id": "KRONE",
+          "name": "BiG M",
+          "cyrillic_name": "BiG M"
+        },
+        {
+          "id": "KRONE_BIG_PACK",
+          "mark_id": "KRONE",
+          "name": "BiG Pack",
+          "cyrillic_name": "BiG Pack"
+        }
+      ]
+    },
+    {
       "id": "KTM",
       "name": "KTM AG",
       "cyrillic_name": "КТМ АГ",
@@ -16387,6 +18050,86 @@
           "mark_id": "KTM",
           "name": "X-Bow",
           "cyrillic_name": "икс-боу"
+        }
+      ]
+    },
+    {
+      "id": "KUBOTA",
+      "name": "Kubota",
+      "cyrillic_name": "Кубота",
+      "numeric_id": 6286,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "KUBOTA_B_SERIES",
+          "mark_id": "KUBOTA",
+          "name": "B Series",
+          "cyrillic_name": "B Series"
+        },
+        {
+          "id": "KUBOTA_L_SERIES",
+          "mark_id": "KUBOTA",
+          "name": "L Series",
+          "cyrillic_name": "L Series"
+        },
+        {
+          "id": "KUBOTA_M_SERIES",
+          "mark_id": "KUBOTA",
+          "name": "M Series",
+          "cyrillic_name": "M Series"
+        },
+        {
+          "id": "KUBOTA_MX_SERIES",
+          "mark_id": "KUBOTA",
+          "name": "MX Series",
+          "cyrillic_name": "MX Series"
+        },
+        {
+          "id": "KUBOTA_GRAND_L",
+          "mark_id": "KUBOTA",
+          "name": "Grand L",
+          "cyrillic_name": "Grand L"
+        },
+        {
+          "id": "KUBOTA_RTV",
+          "mark_id": "KUBOTA",
+          "name": "RTV Utility",
+          "cyrillic_name": "RTV Utility"
+        }
+      ]
+    },
+    {
+      "id": "KVERNELAND",
+      "name": "Kverneland",
+      "cyrillic_name": "Квернеланд",
+      "numeric_id": 6051,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Норвегія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "KVERNELAND_ES_PLOUGH",
+          "mark_id": "KVERNELAND",
+          "name": "ES Plough",
+          "cyrillic_name": "ES Plough"
+        },
+        {
+          "id": "KVERNELAND_ACCORD",
+          "mark_id": "KVERNELAND",
+          "name": "Accord Seeder",
+          "cyrillic_name": "Accord Seeder"
+        },
+        {
+          "id": "KVERNELAND_UNIVERSAL",
+          "mark_id": "KVERNELAND",
+          "name": "Universal",
+          "cyrillic_name": "Universal"
         }
       ]
     },
@@ -16585,6 +18328,43 @@
       ]
     },
     {
+      "id": "LAMBORGHINI_TRATTORI",
+      "name": "Lamborghini Trattori",
+      "cyrillic_name": "Ламборгіні (трактори)",
+      "numeric_id": 4608,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "LAMBORGHINI_TRATTORI_STRIKE",
+          "mark_id": "LAMBORGHINI_TRATTORI",
+          "name": "Strike",
+          "cyrillic_name": "Strike"
+        },
+        {
+          "id": "LAMBORGHINI_TRATTORI_SPARK",
+          "mark_id": "LAMBORGHINI_TRATTORI",
+          "name": "Spark",
+          "cyrillic_name": "Spark"
+        },
+        {
+          "id": "LAMBORGHINI_TRATTORI_NITRO",
+          "mark_id": "LAMBORGHINI_TRATTORI",
+          "name": "Nitro",
+          "cyrillic_name": "Nitro"
+        },
+        {
+          "id": "LAMBORGHINI_TRATTORI_RF",
+          "mark_id": "LAMBORGHINI_TRATTORI",
+          "name": "RF",
+          "cyrillic_name": "RF"
+        }
+      ]
+    },
+    {
       "id": "LANCIA",
       "name": "Lancia",
       "cyrillic_name": "Лянча",
@@ -16760,55 +18540,6 @@
       ]
     },
     {
-      "id": "LANDWIND",
-      "name": "Landwind",
-      "cyrillic_name": "Лендвинд",
-      "numeric_id": 3212,
-      "year_from": 2005,
-      "year_to": 2020,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-07-26 22:33:37",
-      "models": [
-        {
-          "id": "LANDWIND_CV9",
-          "mark_id": "LANDWIND",
-          "name": "Fashion (CV9)",
-          "cyrillic_name": "Фэшн"
-        },
-        {
-          "id": "LANDWIND_FORWARD",
-          "mark_id": "LANDWIND",
-          "name": "Forward",
-          "cyrillic_name": "Форвард"
-        },
-        {
-          "id": "LANDWIND_LW_X9",
-          "mark_id": "LANDWIND",
-          "name": "Х9",
-          "cyrillic_name": "х9"
-        },
-        {
-          "id": "LANDWIND_X5",
-          "mark_id": "LANDWIND",
-          "name": "X5",
-          "cyrillic_name": "Х5"
-        },
-        {
-          "id": "LANDWIND_X6",
-          "mark_id": "LANDWIND",
-          "name": "X6",
-          "cyrillic_name": "X6"
-        },
-        {
-          "id": "LANDWIND_X7",
-          "mark_id": "LANDWIND",
-          "name": "X7",
-          "cyrillic_name": "Х7"
-        }
-      ]
-    },
-    {
       "id": "LAND_ROVER",
       "name": "Land Rover",
       "cyrillic_name": "Ленд Ровер",
@@ -16888,6 +18619,92 @@
       ]
     },
     {
+      "id": "LANDINI",
+      "name": "Landini",
+      "cyrillic_name": "Ландіні",
+      "numeric_id": 3528,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "LANDINI_REX",
+          "mark_id": "LANDINI",
+          "name": "REX",
+          "cyrillic_name": "REX"
+        },
+        {
+          "id": "LANDINI_4_SERIES",
+          "mark_id": "LANDINI",
+          "name": "4 Series",
+          "cyrillic_name": "4 Series"
+        },
+        {
+          "id": "LANDINI_5_SERIES",
+          "mark_id": "LANDINI",
+          "name": "5 Series",
+          "cyrillic_name": "5 Series"
+        },
+        {
+          "id": "LANDINI_7_SERIES",
+          "mark_id": "LANDINI",
+          "name": "7 Series",
+          "cyrillic_name": "7 Series"
+        }
+      ]
+    },
+    {
+      "id": "LANDWIND",
+      "name": "Landwind",
+      "cyrillic_name": "Лендвинд",
+      "numeric_id": 3212,
+      "year_from": 2005,
+      "year_to": 2020,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "LANDWIND_CV9",
+          "mark_id": "LANDWIND",
+          "name": "Fashion (CV9)",
+          "cyrillic_name": "Фэшн"
+        },
+        {
+          "id": "LANDWIND_FORWARD",
+          "mark_id": "LANDWIND",
+          "name": "Forward",
+          "cyrillic_name": "Форвард"
+        },
+        {
+          "id": "LANDWIND_LW_X9",
+          "mark_id": "LANDWIND",
+          "name": "Х9",
+          "cyrillic_name": "х9"
+        },
+        {
+          "id": "LANDWIND_X5",
+          "mark_id": "LANDWIND",
+          "name": "X5",
+          "cyrillic_name": "Х5"
+        },
+        {
+          "id": "LANDWIND_X6",
+          "mark_id": "LANDWIND",
+          "name": "X6",
+          "cyrillic_name": "X6"
+        },
+        {
+          "id": "LANDWIND_X7",
+          "mark_id": "LANDWIND",
+          "name": "X7",
+          "cyrillic_name": "Х7"
+        }
+      ]
+    },
+    {
       "id": "LEAPMOTOR",
       "name": "Leapmotor",
       "cyrillic_name": "Липмотор",
@@ -16951,6 +18768,37 @@
           "mark_id": "LEAPMOTOR",
           "name": "T03",
           "cyrillic_name": "Т03"
+        }
+      ]
+    },
+    {
+      "id": "LEMKEN",
+      "name": "Lemken",
+      "cyrillic_name": "Лемкен",
+      "numeric_id": 8050,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "LEMKEN_KORUND",
+          "mark_id": "LEMKEN",
+          "name": "Korund",
+          "cyrillic_name": "Korund"
+        },
+        {
+          "id": "LEMKEN_RUBIN",
+          "mark_id": "LEMKEN",
+          "name": "Rubin",
+          "cyrillic_name": "Rubin"
+        },
+        {
+          "id": "LEMKEN_HELIODOR",
+          "mark_id": "LEMKEN",
+          "name": "Heliodor",
+          "cyrillic_name": "Heliodor"
         }
       ]
     },
@@ -17687,6 +19535,74 @@
       ]
     },
     {
+      "id": "LOVOL",
+      "name": "Lovol (Foton)",
+      "cyrillic_name": "Ловол (Фотон)",
+      "numeric_id": 5042,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "LOVOL_M_SERIES",
+          "mark_id": "LOVOL",
+          "name": "M Series",
+          "cyrillic_name": "M Series"
+        },
+        {
+          "id": "LOVOL_P_SERIES",
+          "mark_id": "LOVOL",
+          "name": "P Series",
+          "cyrillic_name": "P Series"
+        },
+        {
+          "id": "LOVOL_TE",
+          "mark_id": "LOVOL",
+          "name": "TE Series",
+          "cyrillic_name": "TE Series"
+        }
+      ]
+    },
+    {
+      "id": "LS_TRACTOR",
+      "name": "LS Tractor",
+      "cyrillic_name": "LS Трактор",
+      "numeric_id": 5654,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Південна Корея",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "LS_TRACTOR_MT1",
+          "mark_id": "LS_TRACTOR",
+          "name": "MT1",
+          "cyrillic_name": "MT1"
+        },
+        {
+          "id": "LS_TRACTOR_MT2",
+          "mark_id": "LS_TRACTOR",
+          "name": "MT2",
+          "cyrillic_name": "MT2"
+        },
+        {
+          "id": "LS_TRACTOR_MT3",
+          "mark_id": "LS_TRACTOR",
+          "name": "MT3",
+          "cyrillic_name": "MT3"
+        },
+        {
+          "id": "LS_TRACTOR_MT5",
+          "mark_id": "LS_TRACTOR",
+          "name": "MT5",
+          "cyrillic_name": "MT5"
+        }
+      ]
+    },
+    {
       "id": "LTI",
       "name": "LTI",
       "cyrillic_name": "ЛТИ",
@@ -17921,6 +19837,68 @@
       ]
     },
     {
+      "id": "M_HERO",
+      "name": "M-Hero",
+      "cyrillic_name": "М-Хиро",
+      "numeric_id": 14662000,
+      "year_from": 2023,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "M_HERO_I",
+          "mark_id": "M_HERO",
+          "name": "I",
+          "cyrillic_name": "1"
+        }
+      ]
+    },
+    {
+      "id": "MACK",
+      "name": "Mack",
+      "cyrillic_name": "Мак",
+      "numeric_id": 3419,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MACK_ANTHEM",
+          "mark_id": "MACK",
+          "name": "Anthem",
+          "cyrillic_name": "Антем"
+        },
+        {
+          "id": "MACK_CHU613",
+          "mark_id": "MACK",
+          "name": "CHU613",
+          "cyrillic_name": "CHU613"
+        },
+        {
+          "id": "MACK_GRANITE",
+          "mark_id": "MACK",
+          "name": "Granite",
+          "cyrillic_name": "Граніт"
+        },
+        {
+          "id": "MACK_PINNACLE",
+          "mark_id": "MACK",
+          "name": "Pinnacle",
+          "cyrillic_name": "Піннакл"
+        },
+        {
+          "id": "MACK_VISION",
+          "mark_id": "MACK",
+          "name": "Vision",
+          "cyrillic_name": "Віжн"
+        }
+      ]
+    },
+    {
       "id": "MAEXTRO",
       "name": "Maextro",
       "cyrillic_name": "Маэкстро",
@@ -18027,6 +20005,86 @@
           "mark_id": "MAHINDRA",
           "name": "Xylo",
           "cyrillic_name": "Ксило"
+        }
+      ]
+    },
+    {
+      "id": "MAHINDRA",
+      "name": "Mahindra",
+      "cyrillic_name": "Махіндра",
+      "numeric_id": 6645,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Індія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MAHINDRA_2000_SERIES",
+          "mark_id": "MAHINDRA",
+          "name": "2000 Series",
+          "cyrillic_name": "2000 Series"
+        },
+        {
+          "id": "MAHINDRA_6000_SERIES",
+          "mark_id": "MAHINDRA",
+          "name": "6000 Series",
+          "cyrillic_name": "6000 Series"
+        },
+        {
+          "id": "MAHINDRA_8000_SERIES",
+          "mark_id": "MAHINDRA",
+          "name": "8000 Series",
+          "cyrillic_name": "8000 Series"
+        }
+      ]
+    },
+    {
+      "id": "MAN",
+      "name": "MAN",
+      "cyrillic_name": "МАН",
+      "numeric_id": 3791,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MAN_F2000",
+          "mark_id": "MAN",
+          "name": "F2000",
+          "cyrillic_name": "Ф2000"
+        },
+        {
+          "id": "MAN_TGA",
+          "mark_id": "MAN",
+          "name": "TGA",
+          "cyrillic_name": "ТГА"
+        },
+        {
+          "id": "MAN_TGL",
+          "mark_id": "MAN",
+          "name": "TGL",
+          "cyrillic_name": "ТГЛ"
+        },
+        {
+          "id": "MAN_TGM",
+          "mark_id": "MAN",
+          "name": "TGM",
+          "cyrillic_name": "ТГМ"
+        },
+        {
+          "id": "MAN_TGS",
+          "mark_id": "MAN",
+          "name": "TGS",
+          "cyrillic_name": "ТГС"
+        },
+        {
+          "id": "MAN_TGX",
+          "mark_id": "MAN",
+          "name": "TGX",
+          "cyrillic_name": "ТГХ"
         }
       ]
     },
@@ -18391,6 +20449,55 @@
       ]
     },
     {
+      "id": "MASSEY_FERGUSON",
+      "name": "Massey Ferguson",
+      "cyrillic_name": "Массей Фергюсон",
+      "numeric_id": 12969,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Велика Британія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MASSEY_FERGUSON_4700",
+          "mark_id": "MASSEY_FERGUSON",
+          "name": "4700",
+          "cyrillic_name": "4700"
+        },
+        {
+          "id": "MASSEY_FERGUSON_5700",
+          "mark_id": "MASSEY_FERGUSON",
+          "name": "5700",
+          "cyrillic_name": "5700"
+        },
+        {
+          "id": "MASSEY_FERGUSON_6700",
+          "mark_id": "MASSEY_FERGUSON",
+          "name": "6700",
+          "cyrillic_name": "6700"
+        },
+        {
+          "id": "MASSEY_FERGUSON_7700_S",
+          "mark_id": "MASSEY_FERGUSON",
+          "name": "7700 S",
+          "cyrillic_name": "7700 S"
+        },
+        {
+          "id": "MASSEY_FERGUSON_8700_S",
+          "mark_id": "MASSEY_FERGUSON",
+          "name": "8700 S",
+          "cyrillic_name": "8700 S"
+        },
+        {
+          "id": "MASSEY_FERGUSON_IDEAL",
+          "mark_id": "MASSEY_FERGUSON",
+          "name": "IDEAL Combine",
+          "cyrillic_name": "IDEAL Combine"
+        }
+      ]
+    },
+    {
       "id": "MATRA",
       "name": "Matra",
       "cyrillic_name": "Матра",
@@ -18570,6 +20677,43 @@
           "mark_id": "MAYBACH",
           "name": "SW38",
           "cyrillic_name": "СВ38"
+        }
+      ]
+    },
+    {
+      "id": "MAZ",
+      "name": "MAZ",
+      "cyrillic_name": "МАЗ",
+      "numeric_id": 3822,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Білорусь",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MAZ_5440",
+          "mark_id": "MAZ",
+          "name": "5440",
+          "cyrillic_name": "5440"
+        },
+        {
+          "id": "MAZ_6312",
+          "mark_id": "MAZ",
+          "name": "6312",
+          "cyrillic_name": "6312"
+        },
+        {
+          "id": "MAZ_6430",
+          "mark_id": "MAZ",
+          "name": "6430",
+          "cyrillic_name": "6430"
+        },
+        {
+          "id": "MAZ_6501",
+          "mark_id": "MAZ",
+          "name": "6501",
+          "cyrillic_name": "6501"
         }
       ]
     },
@@ -19135,6 +21279,49 @@
           "mark_id": "MAZDA",
           "name": "Xedos 9",
           "cyrillic_name": "Кседос 9"
+        }
+      ]
+    },
+    {
+      "id": "MCCORMICK",
+      "name": "McCormick",
+      "cyrillic_name": "МакКормік",
+      "numeric_id": 4929,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія/США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MCCORMICK_X4",
+          "mark_id": "MCCORMICK",
+          "name": "X4",
+          "cyrillic_name": "X4"
+        },
+        {
+          "id": "MCCORMICK_X5",
+          "mark_id": "MCCORMICK",
+          "name": "X5",
+          "cyrillic_name": "X5"
+        },
+        {
+          "id": "MCCORMICK_X6",
+          "mark_id": "MCCORMICK",
+          "name": "X6",
+          "cyrillic_name": "X6"
+        },
+        {
+          "id": "MCCORMICK_X7",
+          "mark_id": "MCCORMICK",
+          "name": "X7",
+          "cyrillic_name": "X7"
+        },
+        {
+          "id": "MCCORMICK_X8",
+          "mark_id": "MCCORMICK",
+          "name": "X8",
+          "cyrillic_name": "X8"
         }
       ]
     },
@@ -19966,6 +22153,61 @@
           "mark_id": "MERCEDES",
           "name": "X-Класс",
           "cyrillic_name": "X-класс"
+        }
+      ]
+    },
+    {
+      "id": "MERCEDES",
+      "name": "MERCEDES",
+      "cyrillic_name": "Мерседес-Бенц",
+      "numeric_id": 3053,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MERCEDES_BENZ_ACTROS",
+          "mark_id": "MERCEDES",
+          "name": "Actros",
+          "cyrillic_name": "Актрос"
+        },
+        {
+          "id": "MERCEDES_BENZ_ANTOS",
+          "mark_id": "MERCEDES",
+          "name": "Antos",
+          "cyrillic_name": "Антос"
+        },
+        {
+          "id": "MERCEDES_BENZ_AROCS",
+          "mark_id": "MERCEDES",
+          "name": "Arocs",
+          "cyrillic_name": "Арокс"
+        },
+        {
+          "id": "MERCEDES_BENZ_ATEGO",
+          "mark_id": "MERCEDES",
+          "name": "Atego",
+          "cyrillic_name": "Атего"
+        },
+        {
+          "id": "MERCEDES_BENZ_AXOR",
+          "mark_id": "MERCEDES",
+          "name": "Axor",
+          "cyrillic_name": "Аксор"
+        },
+        {
+          "id": "MERCEDES_BENZ_ECONIC",
+          "mark_id": "MERCEDES",
+          "name": "Econic",
+          "cyrillic_name": "Еконік"
+        },
+        {
+          "id": "MERCEDES_BENZ_ZETROS",
+          "mark_id": "MERCEDES",
+          "name": "Zetros",
+          "cyrillic_name": "Зетрос"
         }
       ]
     },
@@ -21048,6 +23290,37 @@
       ]
     },
     {
+      "id": "MITSUBISHI_AGRI",
+      "name": "Mitsubishi Agri",
+      "cyrillic_name": "Міцубісі Агро",
+      "numeric_id": 6013,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "MITSUBISHI_AGRI_MT16",
+          "mark_id": "MITSUBISHI_AGRI",
+          "name": "MT16",
+          "cyrillic_name": "MT16"
+        },
+        {
+          "id": "MITSUBISHI_AGRI_MT20",
+          "mark_id": "MITSUBISHI_AGRI",
+          "name": "MT20",
+          "cyrillic_name": "MT20"
+        },
+        {
+          "id": "MITSUBISHI_AGRI_MT24",
+          "mark_id": "MITSUBISHI_AGRI",
+          "name": "MT24",
+          "cyrillic_name": "MT24"
+        }
+      ]
+    },
+    {
       "id": "MITSUOKA",
       "name": "Mitsuoka",
       "cyrillic_name": "Мицуока",
@@ -21509,25 +23782,6 @@
       ]
     },
     {
-      "id": "M_HERO",
-      "name": "M-Hero",
-      "cyrillic_name": "М-Хиро",
-      "numeric_id": 14662000,
-      "year_from": 2023,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-07-26 22:33:37",
-      "models": [
-        {
-          "id": "M_HERO_I",
-          "mark_id": "M_HERO",
-          "name": "I",
-          "cyrillic_name": "1"
-        }
-      ]
-    },
-    {
       "id": "NASH",
       "name": "Nash",
       "cyrillic_name": "Нэш",
@@ -21598,6 +23852,73 @@
           "mark_id": "NEVO",
           "name": "Q07",
           "cyrillic_name": "Ку07"
+        }
+      ]
+    },
+    {
+      "id": "NEW_HOLLAND",
+      "name": "New Holland",
+      "cyrillic_name": "Нью Голланд",
+      "numeric_id": 3731,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія/США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "NEW_HOLLAND_T4",
+          "mark_id": "NEW_HOLLAND",
+          "name": "T4",
+          "cyrillic_name": "T4"
+        },
+        {
+          "id": "NEW_HOLLAND_T5",
+          "mark_id": "NEW_HOLLAND",
+          "name": "T5",
+          "cyrillic_name": "T5"
+        },
+        {
+          "id": "NEW_HOLLAND_T6",
+          "mark_id": "NEW_HOLLAND",
+          "name": "T6",
+          "cyrillic_name": "T6"
+        },
+        {
+          "id": "NEW_HOLLAND_T7",
+          "mark_id": "NEW_HOLLAND",
+          "name": "T7",
+          "cyrillic_name": "T7"
+        },
+        {
+          "id": "NEW_HOLLAND_T8",
+          "mark_id": "NEW_HOLLAND",
+          "name": "T8",
+          "cyrillic_name": "T8"
+        },
+        {
+          "id": "NEW_HOLLAND_T9",
+          "mark_id": "NEW_HOLLAND",
+          "name": "T9",
+          "cyrillic_name": "T9"
+        },
+        {
+          "id": "NEW_HOLLAND_CR",
+          "mark_id": "NEW_HOLLAND",
+          "name": "CR Combine",
+          "cyrillic_name": "CR Combine"
+        },
+        {
+          "id": "NEW_HOLLAND_CX",
+          "mark_id": "NEW_HOLLAND",
+          "name": "CX Combine",
+          "cyrillic_name": "CX Combine"
+        },
+        {
+          "id": "NEW_HOLLAND_FR",
+          "mark_id": "NEW_HOLLAND",
+          "name": "FR Forage Harvester",
+          "cyrillic_name": "FR Forage Harvester"
         }
       ]
     },
@@ -22476,6 +24797,31 @@
           "mark_id": "NISSAN",
           "name": "Z",
           "cyrillic_name": "зет"
+        }
+      ]
+    },
+    {
+      "id": "NISSAN",
+      "name": "Nissan",
+      "cyrillic_name": "Ніссан",
+      "numeric_id": 3210,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "NISSAN_ATLAS_CABSTAR",
+          "mark_id": "NISSAN",
+          "name": "Atlas/Cabstar",
+          "cyrillic_name": "Атлас/Кабстар"
+        },
+        {
+          "id": "NISSAN_CONDOR",
+          "mark_id": "NISSAN",
+          "name": "Condor",
+          "cyrillic_name": "Кондор"
         }
       ]
     },
@@ -23439,6 +25785,49 @@
           "mark_id": "PERODUA",
           "name": "Viva",
           "cyrillic_name": "Вива"
+        }
+      ]
+    },
+    {
+      "id": "PETERBILT",
+      "name": "Peterbilt",
+      "cyrillic_name": "Пітербілт",
+      "numeric_id": 3479,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "США",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "PETERBILT_379",
+          "mark_id": "PETERBILT",
+          "name": "379",
+          "cyrillic_name": "379"
+        },
+        {
+          "id": "PETERBILT_386",
+          "mark_id": "PETERBILT",
+          "name": "386",
+          "cyrillic_name": "386"
+        },
+        {
+          "id": "PETERBILT_389",
+          "mark_id": "PETERBILT",
+          "name": "389",
+          "cyrillic_name": "389"
+        },
+        {
+          "id": "PETERBILT_567",
+          "mark_id": "PETERBILT",
+          "name": "567",
+          "cyrillic_name": "567"
+        },
+        {
+          "id": "PETERBILT_579",
+          "mark_id": "PETERBILT",
+          "name": "579",
+          "cyrillic_name": "579"
         }
       ]
     },
@@ -24833,6 +27222,37 @@
       ]
     },
     {
+      "id": "RAUCH",
+      "name": "Rauch",
+      "cyrillic_name": "Рауx",
+      "numeric_id": 4321,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Німеччина",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "RAUCH_AXIS",
+          "mark_id": "RAUCH",
+          "name": "Axis",
+          "cyrillic_name": "Axis"
+        },
+        {
+          "id": "RAUCH_MDS",
+          "mark_id": "RAUCH",
+          "name": "MDS",
+          "cyrillic_name": "MDS"
+        },
+        {
+          "id": "RAUCH_AGT",
+          "mark_id": "RAUCH",
+          "name": "AGT",
+          "cyrillic_name": "AGT"
+        }
+      ]
+    },
+    {
       "id": "RAVON",
       "name": "Ravon",
       "cyrillic_name": "Равон",
@@ -25404,6 +27824,61 @@
           "mark_id": "RENAULT",
           "name": "ZOE",
           "cyrillic_name": "ЗОЕ"
+        }
+      ]
+    },
+    {
+      "id": "RENAULT_TRUCKS",
+      "name": "Renault Trucks",
+      "cyrillic_name": "Рено Тракс",
+      "numeric_id": 3628,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Франція",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "RENAULT_TRUCKS_C",
+          "mark_id": "RENAULT TRUCKS",
+          "name": "C",
+          "cyrillic_name": "C"
+        },
+        {
+          "id": "RENAULT_TRUCKS_D",
+          "mark_id": "RENAULT TRUCKS",
+          "name": "D",
+          "cyrillic_name": "D"
+        },
+        {
+          "id": "RENAULT_TRUCKS_K",
+          "mark_id": "RENAULT TRUCKS",
+          "name": "K",
+          "cyrillic_name": "K"
+        },
+        {
+          "id": "RENAULT_TRUCKS_MAGNUM",
+          "mark_id": "RENAULT TRUCKS",
+          "name": "Magnum",
+          "cyrillic_name": "Магнум"
+        },
+        {
+          "id": "RENAULT_TRUCKS_MIDLUM",
+          "mark_id": "RENAULT TRUCKS",
+          "name": "Midlum",
+          "cyrillic_name": "Мідлум"
+        },
+        {
+          "id": "RENAULT_TRUCKS_PREMIUM",
+          "mark_id": "RENAULT TRUCKS",
+          "name": "Premium",
+          "cyrillic_name": "Преміум"
+        },
+        {
+          "id": "RENAULT_TRUCKS_T",
+          "mark_id": "RENAULT TRUCKS",
+          "name": "T",
+          "cyrillic_name": "T"
         }
       ]
     },
@@ -26106,6 +28581,37 @@
       ]
     },
     {
+      "id": "SAIC_IVECO_HONGYAN",
+      "name": "SAIC Iveco Hongyan",
+      "cyrillic_name": "SAIC Iveco Hongyan",
+      "numeric_id": 3891,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "SAIC_IVECO_HONGYAN_GENLYON",
+          "mark_id": "SAIC IVECO HONGYAN",
+          "name": "Genlyon",
+          "cyrillic_name": "Дженліон"
+        },
+        {
+          "id": "SAIC_IVECO_HONGYAN_GENLYON_H6",
+          "mark_id": "SAIC IVECO HONGYAN",
+          "name": "Genlyon H6",
+          "cyrillic_name": "Дженліон H6"
+        },
+        {
+          "id": "SAIC_IVECO_HONGYAN_KINGKAN",
+          "mark_id": "SAIC IVECO HONGYAN",
+          "name": "Kingkan",
+          "cyrillic_name": "Кінгкан"
+        }
+      ]
+    },
+    {
       "id": "SAIPA",
       "name": "Saipa",
       "cyrillic_name": "Сайпа",
@@ -26164,6 +28670,43 @@
           "mark_id": "SALEEN",
           "name": "S281",
           "cyrillic_name": "С281"
+        }
+      ]
+    },
+    {
+      "id": "SAME",
+      "name": "SAME",
+      "cyrillic_name": "САМЕ",
+      "numeric_id": 12123,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "SAME_EXPLORER",
+          "mark_id": "SAME",
+          "name": "Explorer",
+          "cyrillic_name": "Explorer"
+        },
+        {
+          "id": "SAME_DORADO",
+          "mark_id": "SAME",
+          "name": "Dorado",
+          "cyrillic_name": "Dorado"
+        },
+        {
+          "id": "SAME_FRUTTETO",
+          "mark_id": "SAME",
+          "name": "Frutteto",
+          "cyrillic_name": "Frutteto"
+        },
+        {
+          "id": "SAME_IRON",
+          "mark_id": "SAME",
+          "name": "Iron",
+          "cyrillic_name": "Iron"
         }
       ]
     },
@@ -26354,6 +28897,55 @@
           "mark_id": "SATURN",
           "name": "VUE",
           "cyrillic_name": "Вью"
+        }
+      ]
+    },
+    {
+      "id": "SCANIA",
+      "name": "Scania",
+      "cyrillic_name": "Сканія",
+      "numeric_id": 3032,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Швеція",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "SCANIA_4_SERIES",
+          "mark_id": "SCANIA",
+          "name": "4-series",
+          "cyrillic_name": "4 серія"
+        },
+        {
+          "id": "SCANIA_SERIES_G",
+          "mark_id": "SCANIA",
+          "name": "Series G",
+          "cyrillic_name": "Серія G"
+        },
+        {
+          "id": "SCANIA_SERIES_L",
+          "mark_id": "SCANIA",
+          "name": "Series L",
+          "cyrillic_name": "Серія L"
+        },
+        {
+          "id": "SCANIA_SERIES_P",
+          "mark_id": "SCANIA",
+          "name": "Series P",
+          "cyrillic_name": "Серія P"
+        },
+        {
+          "id": "SCANIA_SERIES_R",
+          "mark_id": "SCANIA",
+          "name": "Series R",
+          "cyrillic_name": "Серія R"
+        },
+        {
+          "id": "SCANIA_SERIES_S",
+          "mark_id": "SCANIA",
+          "name": "Series S",
+          "cyrillic_name": "Серія S"
         }
       ]
     },
@@ -26639,6 +29231,37 @@
       ]
     },
     {
+      "id": "SHACMAN",
+      "name": "Shacman",
+      "cyrillic_name": "Шакман",
+      "numeric_id": 3588,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "SHACMAN_F3000",
+          "mark_id": "SHACMAN",
+          "name": "F3000",
+          "cyrillic_name": "F3000"
+        },
+        {
+          "id": "SHACMAN_X3000",
+          "mark_id": "SHACMAN",
+          "name": "X3000",
+          "cyrillic_name": "X3000"
+        },
+        {
+          "id": "SHACMAN_X5000",
+          "mark_id": "SHACMAN",
+          "name": "X5000",
+          "cyrillic_name": "X5000"
+        }
+      ]
+    },
+    {
       "id": "SHANGHAI_MAPLE",
       "name": "Shanghai Maple",
       "cyrillic_name": "Шанхай Мапл",
@@ -26746,6 +29369,43 @@
           "mark_id": "SIMCA",
           "name": "1307",
           "cyrillic_name": "1307"
+        }
+      ]
+    },
+    {
+      "id": "SINOTRUK",
+      "name": "Sinotruk (HOWO)",
+      "cyrillic_name": "Сінотрак (ХОВО)",
+      "numeric_id": 3409,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Китай",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "SINOTRUK_HOWO",
+          "mark_id": "SINOTRUK",
+          "name": "HOWO",
+          "cyrillic_name": "HOWO"
+        },
+        {
+          "id": "SINOTRUK_HOWO_T7H",
+          "mark_id": "SINOTRUK",
+          "name": "HOWO T7H",
+          "cyrillic_name": "HOWO T7H"
+        },
+        {
+          "id": "SINOTRUK_HOWO_TX",
+          "mark_id": "SINOTRUK",
+          "name": "HOWO TX",
+          "cyrillic_name": "HOWO TX"
+        },
+        {
+          "id": "SINOTRUK_SITRAK_C7H",
+          "mark_id": "SINOTRUK",
+          "name": "Sitrak C7H",
+          "cyrillic_name": "Sitrak C7H"
         }
       ]
     },
@@ -27128,6 +29788,43 @@
       ]
     },
     {
+      "id": "SOLIS",
+      "name": "Solis (Sonalika)",
+      "cyrillic_name": "Соліс (Соналіка)",
+      "numeric_id": 11596,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Індія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "SOLIS_S20",
+          "mark_id": "SOLIS",
+          "name": "S20",
+          "cyrillic_name": "S20"
+        },
+        {
+          "id": "SOLIS_S26",
+          "mark_id": "SOLIS",
+          "name": "S26",
+          "cyrillic_name": "S26"
+        },
+        {
+          "id": "SOLIS_S50",
+          "mark_id": "SOLIS",
+          "name": "S50",
+          "cyrillic_name": "S50"
+        },
+        {
+          "id": "SOLIS_S90",
+          "mark_id": "SOLIS",
+          "name": "S90",
+          "cyrillic_name": "S90"
+        }
+      ]
+    },
+    {
       "id": "SOLLERS",
       "name": "Sollers",
       "cyrillic_name": "Соллерс",
@@ -27473,6 +30170,43 @@
           "mark_id": "STEYR",
           "name": "Haflinger",
           "cyrillic_name": "Хафлингер"
+        }
+      ]
+    },
+    {
+      "id": "STEYR",
+      "name": "Steyr",
+      "cyrillic_name": "Штайр",
+      "numeric_id": 5014,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Австрія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "STEYR_MULTI",
+          "mark_id": "STEYR",
+          "name": "Multi",
+          "cyrillic_name": "Multi"
+        },
+        {
+          "id": "STEYR_PROFI",
+          "mark_id": "STEYR",
+          "name": "Profi",
+          "cyrillic_name": "Profi"
+        },
+        {
+          "id": "STEYR_IMPULS",
+          "mark_id": "STEYR",
+          "name": "Impuls",
+          "cyrillic_name": "Impuls"
+        },
+        {
+          "id": "STEYR_TERRUS",
+          "mark_id": "STEYR",
+          "name": "Terrus",
+          "cyrillic_name": "Terrus"
         }
       ]
     },
@@ -28183,6 +30917,37 @@
       ]
     },
     {
+      "id": "TAFE",
+      "name": "TAFE",
+      "cyrillic_name": "TAFE",
+      "numeric_id": 9101,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Індія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "TAFE_MF_245",
+          "mark_id": "TAFE",
+          "name": "MF 245",
+          "cyrillic_name": "MF 245"
+        },
+        {
+          "id": "TAFE_MF_285",
+          "mark_id": "TAFE",
+          "name": "MF 285",
+          "cyrillic_name": "MF 285"
+        },
+        {
+          "id": "TAFE_MF_385",
+          "mark_id": "TAFE",
+          "name": "MF 385",
+          "cyrillic_name": "MF 385"
+        }
+      ]
+    },
+    {
       "id": "TAGAZ",
       "name": "ТагАЗ",
       "cyrillic_name": "ТагАЗ",
@@ -28411,6 +31176,37 @@
           "mark_id": "TATA",
           "name": "Xenon",
           "cyrillic_name": "Ксенон"
+        }
+      ]
+    },
+    {
+      "id": "TATA",
+      "name": "Tata",
+      "cyrillic_name": "Тата",
+      "numeric_id": 3889,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Індія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "TATA_LPT",
+          "mark_id": "TATA",
+          "name": "LPT",
+          "cyrillic_name": "ЛПТ"
+        },
+        {
+          "id": "TATA_PRIMA",
+          "mark_id": "TATA",
+          "name": "Prima",
+          "cyrillic_name": "Пріма"
+        },
+        {
+          "id": "TATA_SIGNA",
+          "mark_id": "TATA",
+          "name": "Signa",
+          "cyrillic_name": "Сігна"
         }
       ]
     },
@@ -29853,6 +32649,31 @@
       ]
     },
     {
+      "id": "TOYOTA",
+      "name": "Toyota",
+      "cyrillic_name": "Тойота",
+      "numeric_id": 3259,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "TOYOTA_DYNA",
+          "mark_id": "TOYOTA",
+          "name": "Dyna",
+          "cyrillic_name": "Дайна"
+        },
+        {
+          "id": "TOYOTA_TOYOACE",
+          "mark_id": "TOYOTA",
+          "name": "Toyoace",
+          "cyrillic_name": "Тойоейс"
+        }
+      ]
+    },
+    {
       "id": "TRABANT",
       "name": "Trabant",
       "cyrillic_name": "Трабант",
@@ -30236,6 +33057,43 @@
       ]
     },
     {
+      "id": "TYM",
+      "name": "TYM",
+      "cyrillic_name": "TYM",
+      "numeric_id": 3023,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Південна Корея",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "TYM_T25",
+          "mark_id": "TYM",
+          "name": "T25",
+          "cyrillic_name": "T25"
+        },
+        {
+          "id": "TYM_T394",
+          "mark_id": "TYM",
+          "name": "T394",
+          "cyrillic_name": "T394"
+        },
+        {
+          "id": "TYM_T654",
+          "mark_id": "TYM",
+          "name": "T654",
+          "cyrillic_name": "T654"
+        },
+        {
+          "id": "TYM_BRANSON_00",
+          "mark_id": "TYM",
+          "name": "Branson 00",
+          "cyrillic_name": "Branson 00"
+        }
+      ]
+    },
+    {
       "id": "UAZ",
       "name": "УАЗ",
       "cyrillic_name": "УАЗ",
@@ -30309,6 +33167,43 @@
       ]
     },
     {
+      "id": "UD_TRUCKS",
+      "name": "UD Trucks",
+      "cyrillic_name": "ЮД Тракс",
+      "numeric_id": 3512,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "UD_TRUCKS_CONDOR",
+          "mark_id": "UD TRUCKS",
+          "name": "Condor",
+          "cyrillic_name": "Кондор"
+        },
+        {
+          "id": "UD_TRUCKS_CRONER",
+          "mark_id": "UD TRUCKS",
+          "name": "Croner",
+          "cyrillic_name": "Кронер"
+        },
+        {
+          "id": "UD_TRUCKS_QUESTER",
+          "mark_id": "UD TRUCKS",
+          "name": "Quester",
+          "cyrillic_name": "Квестер"
+        },
+        {
+          "id": "UD_TRUCKS_QUON",
+          "mark_id": "UD TRUCKS",
+          "name": "Quon",
+          "cyrillic_name": "Квон"
+        }
+      ]
+    },
+    {
       "id": "ULTIMA",
       "name": "Ultima",
       "cyrillic_name": "Ультима",
@@ -30336,6 +33231,148 @@
           "mark_id": "ULTIMA",
           "name": "RS",
           "cyrillic_name": "РС"
+        }
+      ]
+    },
+    {
+      "id": "URSUS",
+      "name": "Ursus",
+      "cyrillic_name": "Урсус",
+      "numeric_id": 8567,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Польща",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "URSUS_C_SERIES",
+          "mark_id": "URSUS",
+          "name": "C Series",
+          "cyrillic_name": "C Series"
+        },
+        {
+          "id": "URSUS_C_330",
+          "mark_id": "URSUS",
+          "name": "C-330",
+          "cyrillic_name": "C-330"
+        },
+        {
+          "id": "URSUS_C_360",
+          "mark_id": "URSUS",
+          "name": "C-360",
+          "cyrillic_name": "C-360"
+        },
+        {
+          "id": "URSUS_8014H",
+          "mark_id": "URSUS",
+          "name": "8014H",
+          "cyrillic_name": "8014H"
+        }
+      ]
+    },
+    {
+      "id": "VADERSTAD",
+      "name": "Väderstad",
+      "cyrillic_name": "Ведерштад",
+      "numeric_id": 7226,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Швеція",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "VADERSTAD_TEMPO",
+          "mark_id": "VADERSTAD",
+          "name": "Tempo Planter",
+          "cyrillic_name": "Tempo Planter"
+        },
+        {
+          "id": "VADERSTAD_SPIRIT",
+          "mark_id": "VADERSTAD",
+          "name": "Spirit Seeder",
+          "cyrillic_name": "Spirit Seeder"
+        },
+        {
+          "id": "VADERSTAD_CARRIER",
+          "mark_id": "VADERSTAD",
+          "name": "Carrier Disc",
+          "cyrillic_name": "Carrier Disc"
+        }
+      ]
+    },
+    {
+      "id": "VALPADANA",
+      "name": "Valpadana",
+      "cyrillic_name": "Валпадана",
+      "numeric_id": 5104,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Італія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "VALPADANA_VP4600",
+          "mark_id": "VALPADANA",
+          "name": "4600",
+          "cyrillic_name": "4600"
+        },
+        {
+          "id": "VALPADANA_VP7000",
+          "mark_id": "VALPADANA",
+          "name": "7000",
+          "cyrillic_name": "7000"
+        },
+        {
+          "id": "VALPADANA_VP9000",
+          "mark_id": "VALPADANA",
+          "name": "9000",
+          "cyrillic_name": "9000"
+        }
+      ]
+    },
+    {
+      "id": "VALTRA",
+      "name": "Valtra",
+      "cyrillic_name": "Валтра",
+      "numeric_id": 11927,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Фінляндія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "VALTRA_A_SERIES",
+          "mark_id": "VALTRA",
+          "name": "A Series",
+          "cyrillic_name": "A Series"
+        },
+        {
+          "id": "VALTRA_G_SERIES",
+          "mark_id": "VALTRA",
+          "name": "G Series",
+          "cyrillic_name": "G Series"
+        },
+        {
+          "id": "VALTRA_N_SERIES",
+          "mark_id": "VALTRA",
+          "name": "N Series",
+          "cyrillic_name": "N Series"
+        },
+        {
+          "id": "VALTRA_T_SERIES",
+          "mark_id": "VALTRA",
+          "name": "T Series",
+          "cyrillic_name": "T Series"
+        },
+        {
+          "id": "VALTRA_S_SERIES",
+          "mark_id": "VALTRA",
+          "name": "S Series",
+          "cyrillic_name": "S Series"
         }
       ]
     },
@@ -30857,6 +33894,37 @@
           "mark_id": "VENUCIA",
           "name": "V-Online",
           "cyrillic_name": "Ви-Онлайн"
+        }
+      ]
+    },
+    {
+      "id": "VERSATILE",
+      "name": "Versatile",
+      "cyrillic_name": "Версатайл",
+      "numeric_id": 10247,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Канада",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "VERSATILE_4WD",
+          "mark_id": "VERSATILE",
+          "name": "4WD Series",
+          "cyrillic_name": "4WD Series"
+        },
+        {
+          "id": "VERSATILE_DELTA_TRACK",
+          "mark_id": "VERSATILE",
+          "name": "DeltaTrack",
+          "cyrillic_name": "DeltaTrack"
+        },
+        {
+          "id": "VERSATILE_MFWD",
+          "mark_id": "VERSATILE",
+          "name": "MFWD Series",
+          "cyrillic_name": "MFWD Series"
         }
       ]
     },
@@ -31868,6 +34936,76 @@
       ]
     },
     {
+      "id": "VOLVO",
+      "name": "Volvo",
+      "cyrillic_name": "Вольво",
+      "numeric_id": 3076,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Швеція",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "VOLVO_FE",
+          "mark_id": "VOLVO",
+          "name": "FE",
+          "cyrillic_name": "FE"
+        },
+        {
+          "id": "VOLVO_FH",
+          "mark_id": "VOLVO",
+          "name": "FH",
+          "cyrillic_name": "FH"
+        },
+        {
+          "id": "VOLVO_FH16",
+          "mark_id": "VOLVO",
+          "name": "FH16",
+          "cyrillic_name": "FH16"
+        },
+        {
+          "id": "VOLVO_FL",
+          "mark_id": "VOLVO",
+          "name": "FL",
+          "cyrillic_name": "FL"
+        },
+        {
+          "id": "VOLVO_FM",
+          "mark_id": "VOLVO",
+          "name": "FM",
+          "cyrillic_name": "FM"
+        },
+        {
+          "id": "VOLVO_FMX",
+          "mark_id": "VOLVO",
+          "name": "FMX",
+          "cyrillic_name": "FMX"
+        }
+      ]
+    },
+    {
+      "id": "VOLVO_CONSTRUCTION",
+      "name": "Volvo Construction",
+      "cyrillic_name": "Вольво Спецтехника",
+      "popular": 0,
+      "country": "Швеция",
+      "models": [
+        {
+          "id": "VOLVO_EC220",
+          "mark_id": "VOLVO_CONSTRUCTION",
+          "name": "EC220",
+          "cyrillic_name": "EC220"
+        },
+        {
+          "id": "VOLVO_L120",
+          "mark_id": "VOLVO_CONSTRUCTION",
+          "name": "L120 Loader",
+          "cyrillic_name": "L120 Погрузчик"
+        }
+      ]
+    },
+    {
       "id": "VORTEX",
       "name": "Vortex",
       "cyrillic_name": "Вортекс",
@@ -31957,6 +35095,31 @@
           "mark_id": "VUHL",
           "name": "05",
           "cyrillic_name": "05"
+        }
+      ]
+    },
+    {
+      "id": "W_MOTORS",
+      "name": "W Motors",
+      "cyrillic_name": "дабл-ю моторс",
+      "numeric_id": 10912724,
+      "year_from": 2013,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Объединённые Арабские Эмираты",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "W_MOTORS_FENYR_SUPERSPORT",
+          "mark_id": "W_MOTORS",
+          "name": "Fenyr Supersport",
+          "cyrillic_name": "Фенир Суперспорт"
+        },
+        {
+          "id": "W_MOTORS_LYKAN_HYPERSPORT",
+          "mark_id": "W_MOTORS",
+          "name": "Lykan Hypersport",
+          "cyrillic_name": "Ликан Гиперспорт"
         }
       ]
     },
@@ -32329,31 +35492,6 @@
       ]
     },
     {
-      "id": "W_MOTORS",
-      "name": "W Motors",
-      "cyrillic_name": "дабл-ю моторс",
-      "numeric_id": 10912724,
-      "year_from": 2013,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Объединённые Арабские Эмираты",
-      "updated_at": "2025-07-26 22:33:37",
-      "models": [
-        {
-          "id": "W_MOTORS_FENYR_SUPERSPORT",
-          "mark_id": "W_MOTORS",
-          "name": "Fenyr Supersport",
-          "cyrillic_name": "Фенир Суперспорт"
-        },
-        {
-          "id": "W_MOTORS_LYKAN_HYPERSPORT",
-          "mark_id": "W_MOTORS",
-          "name": "Lykan Hypersport",
-          "cyrillic_name": "Ликан Гиперспорт"
-        }
-      ]
-    },
-    {
       "id": "XCITE",
       "name": "Xcite",
       "cyrillic_name": "Иксайт",
@@ -32523,6 +35661,68 @@
           "mark_id": "XPENG",
           "name": "X9",
           "cyrillic_name": "Икс9"
+        }
+      ]
+    },
+    {
+      "id": "YANMAR",
+      "name": "Yanmar",
+      "cyrillic_name": "Янмар",
+      "numeric_id": 11937,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "YANMAR_SA",
+          "mark_id": "YANMAR",
+          "name": "SA Series",
+          "cyrillic_name": "SA Series"
+        },
+        {
+          "id": "YANMAR_YT2",
+          "mark_id": "YANMAR",
+          "name": "YT2",
+          "cyrillic_name": "YT2"
+        },
+        {
+          "id": "YANMAR_YT3",
+          "mark_id": "YANMAR",
+          "name": "YT3",
+          "cyrillic_name": "YT3"
+        }
+      ]
+    },
+    {
+      "id": "YANMAR_AGRI",
+      "name": "Yanmar Agri",
+      "cyrillic_name": "Янмар Агро",
+      "numeric_id": 11790,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Японія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "YANMAR_AGRI_AF",
+          "mark_id": "YANMAR_AGRI",
+          "name": "AF Series",
+          "cyrillic_name": "AF Series"
+        },
+        {
+          "id": "YANMAR_AGRI_EG",
+          "mark_id": "YANMAR_AGRI",
+          "name": "EG Series",
+          "cyrillic_name": "EG Series"
+        },
+        {
+          "id": "YANMAR_AGRI_FX",
+          "mark_id": "YANMAR_AGRI",
+          "name": "FX Series",
+          "cyrillic_name": "FX Series"
         }
       ]
     },
@@ -32823,6 +36023,43 @@
       ]
     },
     {
+      "id": "ZETOR",
+      "name": "Zetor",
+      "cyrillic_name": "Зетор",
+      "numeric_id": 5537,
+      "year_from": null,
+      "year_to": 2025,
+      "popular": 0,
+      "country": "Чехія",
+      "updated_at": "2025-10-25 10:00:00",
+      "models": [
+        {
+          "id": "ZETOR_MAJOR",
+          "mark_id": "ZETOR",
+          "name": "Major",
+          "cyrillic_name": "Major"
+        },
+        {
+          "id": "ZETOR_PROXIMA",
+          "mark_id": "ZETOR",
+          "name": "Proxima",
+          "cyrillic_name": "Proxima"
+        },
+        {
+          "id": "ZETOR_FORTERRA",
+          "mark_id": "ZETOR",
+          "name": "Forterra",
+          "cyrillic_name": "Forterra"
+        },
+        {
+          "id": "ZETOR_CRYSTAL",
+          "mark_id": "ZETOR",
+          "name": "Crystal",
+          "cyrillic_name": "Crystal"
+        }
+      ]
+    },
+    {
       "id": "ZHIDO",
       "name": "Zhido",
       "cyrillic_name": "Циду",
@@ -32898,1342 +36135,6 @@
       ]
     },
     {
-      "id": "ZIS",
-      "name": "ЗиС",
-      "cyrillic_name": "ЗиС",
-      "numeric_id": 11483318,
-      "year_from": 1936,
-      "year_to": 1958,
-      "popular": 0,
-      "country": "Россия",
-      "updated_at": "2025-07-26 22:33:37",
-      "models": [
-        {
-          "id": "ZIS_101",
-          "mark_id": "ZIS",
-          "name": "101",
-          "cyrillic_name": "101"
-        },
-        {
-          "id": "ZIS_102",
-          "mark_id": "ZIS",
-          "name": "102",
-          "cyrillic_name": "102"
-        },
-        {
-          "id": "ZIS_110",
-          "mark_id": "ZIS",
-          "name": "110",
-          "cyrillic_name": "110"
-        }
-      ]
-    },
-    {
-      "id": "ASHOK_LEYLAND",
-      "name": "Ashok Leyland",
-      "cyrillic_name": "Ашок Лейланд",
-      "numeric_id": 3689,
-      "year_from": "Вантжівки",
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Індія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "ASHOK_LEYLAND_BOSS",
-          "mark_id": "ASHOK LEYLAND",
-          "name": "Boss",
-          "cyrillic_name": "Босс"
-        },
-        {
-          "id": "ASHOK_LEYLAND_CAPTAIN",
-          "mark_id": "ASHOK LEYLAND",
-          "name": "Captain",
-          "cyrillic_name": "Кептен"
-        },
-        {
-          "id": "ASHOK_LEYLAND_ECOMET",
-          "mark_id": "ASHOK LEYLAND",
-          "name": "Ecomet",
-          "cyrillic_name": "Екомет"
-        },
-        {
-          "id": "ASHOK_LEYLAND_U_3718",
-          "mark_id": "ASHOK LEYLAND",
-          "name": "U-3718",
-          "cyrillic_name": "U-3718"
-        }
-      ]
-    },
-    {
-      "id": "DAF",
-      "name": "DAF",
-      "cyrillic_name": "ДАФ",
-      "numeric_id": 3152,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Нідерланди",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "DAF_CF",
-          "mark_id": "DAF",
-          "name": "CF",
-          "cyrillic_name": "CF"
-        },
-        {
-          "id": "DAF_LF",
-          "mark_id": "DAF",
-          "name": "LF",
-          "cyrillic_name": "LF"
-        },
-        {
-          "id": "DAF_XD",
-          "mark_id": "DAF",
-          "name": "XD",
-          "cyrillic_name": "XD"
-        },
-        {
-          "id": "DAF_XF",
-          "mark_id": "DAF",
-          "name": "XF",
-          "cyrillic_name": "XF"
-        },
-        {
-          "id": "DAF_XG",
-          "mark_id": "DAF",
-          "name": "XG",
-          "cyrillic_name": "XG"
-        }
-      ]
-    },
-    {
-      "id": "DONGFENG",
-      "name": "Dongfeng",
-      "cyrillic_name": "Донгфенг",
-      "numeric_id": 3470,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "DONGFENG_CAPTAIN",
-          "mark_id": "DONGFENG",
-          "name": "Captain",
-          "cyrillic_name": "Кептен"
-        },
-        {
-          "id": "DONGFENG_KL",
-          "mark_id": "DONGFENG",
-          "name": "KL",
-          "cyrillic_name": "KL"
-        },
-        {
-          "id": "DONGFENG_KR",
-          "mark_id": "DONGFENG",
-          "name": "KR",
-          "cyrillic_name": "KR"
-        },
-        {
-          "id": "DONGFENG_KX",
-          "mark_id": "DONGFENG",
-          "name": "KX",
-          "cyrillic_name": "KX"
-        },
-        {
-          "id": "DONGFENG_TIANLONG",
-          "mark_id": "DONGFENG",
-          "name": "Tianlong",
-          "cyrillic_name": "Тяньлун"
-        }
-      ]
-    },
-    {
-      "id": "FAW",
-      "name": "FAW",
-      "cyrillic_name": "ФАВ",
-      "numeric_id": 3708,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "FAW_J5P",
-          "mark_id": "FAW",
-          "name": "J5P",
-          "cyrillic_name": "J5P"
-        },
-        {
-          "id": "FAW_J6P",
-          "mark_id": "FAW",
-          "name": "J6P",
-          "cyrillic_name": "J6P"
-        },
-        {
-          "id": "FAW_J7",
-          "mark_id": "FAW",
-          "name": "J7",
-          "cyrillic_name": "J7"
-        }
-      ]
-    },
-    {
-      "id": "FORD_TRUCKS",
-      "name": "Ford Trucks",
-      "cyrillic_name": "Форд Тракс",
-      "numeric_id": 3563,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Туреччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "FORD_TRUCKS_CARGO",
-          "mark_id": "FORD TRUCKS",
-          "name": "Cargo",
-          "cyrillic_name": "Карго"
-        },
-        {
-          "id": "FORD_TRUCKS_F_MAX",
-          "mark_id": "FORD TRUCKS",
-          "name": "F-MAX",
-          "cyrillic_name": "F-MAX"
-        }
-      ]
-    },
-    {
-      "id": "FOTON",
-      "name": "Foton",
-      "cyrillic_name": "Фотон",
-      "numeric_id": 3385,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "FOTON_AUMAN",
-          "mark_id": "FOTON",
-          "name": "Auman",
-          "cyrillic_name": "Ауман"
-        },
-        {
-          "id": "FOTON_AUMARK",
-          "mark_id": "FOTON",
-          "name": "Aumark",
-          "cyrillic_name": "Аумарк"
-        },
-        {
-          "id": "FOTON_EST",
-          "mark_id": "FOTON",
-          "name": "EST",
-          "cyrillic_name": "EST"
-        }
-      ]
-    },
-    {
-      "id": "FREIGHTLINER",
-      "name": "Freightliner",
-      "cyrillic_name": "Фрейтлайнер",
-      "numeric_id": 3489,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "FREIGHTLINER_108SD",
-          "mark_id": "FREIGHTLINER",
-          "name": "108SD",
-          "cyrillic_name": "108SD"
-        },
-        {
-          "id": "FREIGHTLINER_114SD",
-          "mark_id": "FREIGHTLINER",
-          "name": "114SD",
-          "cyrillic_name": "114SD"
-        },
-        {
-          "id": "FREIGHTLINER_CASCADIA",
-          "mark_id": "FREIGHTLINER",
-          "name": "Cascadia",
-          "cyrillic_name": "Каскадія"
-        },
-        {
-          "id": "FREIGHTLINER_CENTURY_CLASS",
-          "mark_id": "FREIGHTLINER",
-          "name": "Century Class",
-          "cyrillic_name": "Сенчурі Клас"
-        },
-        {
-          "id": "FREIGHTLINER_COLUMBIA",
-          "mark_id": "FREIGHTLINER",
-          "name": "Columbia",
-          "cyrillic_name": "Колумбія"
-        },
-        {
-          "id": "FREIGHTLINER_CORONADO",
-          "mark_id": "FREIGHTLINER",
-          "name": "Coronado",
-          "cyrillic_name": "Коронодо"
-        },
-        {
-          "id": "FREIGHTLINER_M2_106",
-          "mark_id": "FREIGHTLINER",
-          "name": "M2 106",
-          "cyrillic_name": "M2 106"
-        }
-      ]
-    },
-    {
-      "id": "FUSO",
-      "name": "Fuso",
-      "cyrillic_name": "Фусо",
-      "numeric_id": 3433,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "FUSO_CANTER",
-          "mark_id": "FUSO",
-          "name": "Canter",
-          "cyrillic_name": "Кантер"
-        },
-        {
-          "id": "FUSO_FIGHTER",
-          "mark_id": "FUSO",
-          "name": "Fighter",
-          "cyrillic_name": "Файтер"
-        },
-        {
-          "id": "FUSO_SUPER_GREAT",
-          "mark_id": "FUSO",
-          "name": "Super Great",
-          "cyrillic_name": "Супер Грейт"
-        }
-      ]
-    },
-    {
-      "id": "GAZ",
-      "name": "GAZ",
-      "cyrillic_name": "ГАЗ",
-      "numeric_id": 3067,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Росія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "GAZ_GAZON",
-          "mark_id": "GAZ",
-          "name": "Gazon",
-          "cyrillic_name": "Газон"
-        },
-        {
-          "id": "GAZ_GAZON_NEXT",
-          "mark_id": "GAZ",
-          "name": "GAZon NEXT",
-          "cyrillic_name": "Газон Некст"
-        },
-        {
-          "id": "GAZ_SADKO_NEXT",
-          "mark_id": "GAZ",
-          "name": "Sadko NEXT",
-          "cyrillic_name": "Садко Некст"
-        },
-        {
-          "id": "GAZ_VALDAI_NEXT",
-          "mark_id": "GAZ",
-          "name": "Valdai NEXT",
-          "cyrillic_name": "Валдай Некст"
-        }
-      ]
-    },
-    {
-      "id": "HINO",
-      "name": "Hino",
-      "cyrillic_name": "Хіно",
-      "numeric_id": 3366,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "HINO_300",
-          "mark_id": "HINO",
-          "name": "300",
-          "cyrillic_name": "300"
-        },
-        {
-          "id": "HINO_500",
-          "mark_id": "HINO",
-          "name": "500",
-          "cyrillic_name": "500"
-        },
-        {
-          "id": "HINO_700",
-          "mark_id": "HINO",
-          "name": "700",
-          "cyrillic_name": "700"
-        },
-        {
-          "id": "HINO_PROFIA",
-          "mark_id": "HINO",
-          "name": "Profia",
-          "cyrillic_name": "Профіа"
-        },
-        {
-          "id": "HINO_RANGER",
-          "mark_id": "HINO",
-          "name": "Ranger",
-          "cyrillic_name": "Рейнджер"
-        }
-      ]
-    },
-    {
-      "id": "HYUNDAI",
-      "name": "Hyundai",
-      "cyrillic_name": "Хюндай",
-      "numeric_id": 3336,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Південна Корея",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "HYUNDAI_HD_SERIES",
-          "mark_id": "HYUNDAI",
-          "name": "HD Series",
-          "cyrillic_name": "HD Серія"
-        },
-        {
-          "id": "HYUNDAI_MIGHTY",
-          "mark_id": "HYUNDAI",
-          "name": "Mighty",
-          "cyrillic_name": "Майті"
-        },
-        {
-          "id": "HYUNDAI_PAVISE",
-          "mark_id": "HYUNDAI",
-          "name": "Pavise",
-          "cyrillic_name": "Павіз"
-        },
-        {
-          "id": "HYUNDAI_XCIENT",
-          "mark_id": "HYUNDAI",
-          "name": "Xcient",
-          "cyrillic_name": "Ексієнт"
-        }
-      ]
-    },
-    {
-      "id": "INTERNATIONAL",
-      "name": "International",
-      "cyrillic_name": "Інтернешнл",
-      "numeric_id": 3397,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "INTERNATIONAL_DURASTAR",
-          "mark_id": "INTERNATIONAL",
-          "name": "Durastar",
-          "cyrillic_name": "Дюрастар"
-        },
-        {
-          "id": "INTERNATIONAL_HV",
-          "mark_id": "INTERNATIONAL",
-          "name": "HV",
-          "cyrillic_name": "HV"
-        },
-        {
-          "id": "INTERNATIONAL_HX",
-          "mark_id": "INTERNATIONAL",
-          "name": "HX",
-          "cyrillic_name": "HX"
-        },
-        {
-          "id": "INTERNATIONAL_LONESTAR",
-          "mark_id": "INTERNATIONAL",
-          "name": "LoneStar",
-          "cyrillic_name": "ЛоунСтар"
-        },
-        {
-          "id": "INTERNATIONAL_LT",
-          "mark_id": "INTERNATIONAL",
-          "name": "LT",
-          "cyrillic_name": "LT"
-        },
-        {
-          "id": "INTERNATIONAL_MV",
-          "mark_id": "INTERNATIONAL",
-          "name": "MV",
-          "cyrillic_name": "MV"
-        },
-        {
-          "id": "INTERNATIONAL_PROSTAR",
-          "mark_id": "INTERNATIONAL",
-          "name": "ProStar",
-          "cyrillic_name": "ПроСтар"
-        }
-      ]
-    },
-    {
-      "id": "ISUZU",
-      "name": "Isuzu",
-      "cyrillic_name": "Ісузу",
-      "numeric_id": 3697,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "ISUZU_ELF",
-          "mark_id": "ISUZU",
-          "name": "Elf",
-          "cyrillic_name": "Ельф"
-        },
-        {
-          "id": "ISUZU_FORWARD",
-          "mark_id": "ISUZU",
-          "name": "Forward",
-          "cyrillic_name": "Форвард"
-        },
-        {
-          "id": "ISUZU_F_SERIES",
-          "mark_id": "ISUZU",
-          "name": "F-Series",
-          "cyrillic_name": "F-Series"
-        },
-        {
-          "id": "ISUZU_GIGA",
-          "mark_id": "ISUZU",
-          "name": "Giga",
-          "cyrillic_name": "Гіга"
-        },
-        {
-          "id": "ISUZU_N_SERIES_NPR_NRR",
-          "mark_id": "ISUZU",
-          "name": "N-Series (NPR/NRR)",
-          "cyrillic_name": "N-Series"
-        }
-      ]
-    },
-    {
-      "id": "IVECO",
-      "name": "Iveco",
-      "cyrillic_name": "Івеко",
-      "numeric_id": 3096,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "IVECO_DAILY",
-          "mark_id": "IVECO",
-          "name": "Daily",
-          "cyrillic_name": "Дейлі"
-        },
-        {
-          "id": "IVECO_EUROCARGO",
-          "mark_id": "IVECO",
-          "name": "Eurocargo",
-          "cyrillic_name": "Єврокарго"
-        },
-        {
-          "id": "IVECO_STRALIS",
-          "mark_id": "IVECO",
-          "name": "Stralis",
-          "cyrillic_name": "Страліс"
-        },
-        {
-          "id": "IVECO_S_WAY",
-          "mark_id": "IVECO",
-          "name": "S-Way",
-          "cyrillic_name": "S-Way"
-        },
-        {
-          "id": "IVECO_TRAKKER",
-          "mark_id": "IVECO",
-          "name": "Trakker",
-          "cyrillic_name": "Траккер"
-        },
-        {
-          "id": "IVECO_T_WAY",
-          "mark_id": "IVECO",
-          "name": "T-Way",
-          "cyrillic_name": "T-Way"
-        },
-        {
-          "id": "IVECO_X_WAY",
-          "mark_id": "IVECO",
-          "name": "X-Way",
-          "cyrillic_name": "X-Way"
-        }
-      ]
-    },
-    {
-      "id": "JAC",
-      "name": "JAC",
-      "cyrillic_name": "ДЖАК",
-      "numeric_id": 3540,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "JAC_GALLOP",
-          "mark_id": "JAC",
-          "name": "Gallop",
-          "cyrillic_name": "Гелоп"
-        },
-        {
-          "id": "JAC_JUNLING",
-          "mark_id": "JAC",
-          "name": "Junling",
-          "cyrillic_name": "Джунлін"
-        },
-        {
-          "id": "JAC_K_SERIES",
-          "mark_id": "JAC",
-          "name": "K Series",
-          "cyrillic_name": "K Серія"
-        },
-        {
-          "id": "JAC_N_SERIES",
-          "mark_id": "JAC",
-          "name": "N-Series",
-          "cyrillic_name": "N-Series"
-        }
-      ]
-    },
-    {
-      "id": "KAMAZ",
-      "name": "KamAZ",
-      "cyrillic_name": "КамАЗ",
-      "numeric_id": 3093,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Росія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "KAMAZ_43118",
-          "mark_id": "KAMAZ",
-          "name": "43118",
-          "cyrillic_name": "43118"
-        },
-        {
-          "id": "KAMAZ_5490",
-          "mark_id": "KAMAZ",
-          "name": "5490",
-          "cyrillic_name": "5490"
-        },
-        {
-          "id": "KAMAZ_65115",
-          "mark_id": "KAMAZ",
-          "name": "65115",
-          "cyrillic_name": "65115"
-        },
-        {
-          "id": "KAMAZ_6520",
-          "mark_id": "KAMAZ",
-          "name": "6520",
-          "cyrillic_name": "6520"
-        },
-        {
-          "id": "KAMAZ_65201",
-          "mark_id": "KAMAZ",
-          "name": "65201",
-          "cyrillic_name": "65201"
-        }
-      ]
-    },
-    {
-      "id": "KENWORTH",
-      "name": "Kenworth",
-      "cyrillic_name": "Кенворт",
-      "numeric_id": 3839,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "KENWORTH_T370",
-          "mark_id": "KENWORTH",
-          "name": "T370",
-          "cyrillic_name": "T370"
-        },
-        {
-          "id": "KENWORTH_T680",
-          "mark_id": "KENWORTH",
-          "name": "T680",
-          "cyrillic_name": "T680"
-        },
-        {
-          "id": "KENWORTH_T800",
-          "mark_id": "KENWORTH",
-          "name": "T800",
-          "cyrillic_name": "T800"
-        },
-        {
-          "id": "KENWORTH_T880",
-          "mark_id": "KENWORTH",
-          "name": "T880",
-          "cyrillic_name": "T880"
-        },
-        {
-          "id": "KENWORTH_W900",
-          "mark_id": "KENWORTH",
-          "name": "W900",
-          "cyrillic_name": "W900"
-        }
-      ]
-    },
-    {
-      "id": "KIA",
-      "name": "Kia",
-      "cyrillic_name": "Кіа",
-      "numeric_id": 3782,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Південна Корея",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "KIA_BONGO",
-          "mark_id": "KIA",
-          "name": "Bongo",
-          "cyrillic_name": "Бонго"
-        }
-      ]
-    },
-    {
-      "id": "MAN",
-      "name": "MAN",
-      "cyrillic_name": "МАН",
-      "numeric_id": 3791,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MAN_F2000",
-          "mark_id": "MAN",
-          "name": "F2000",
-          "cyrillic_name": "Ф2000"
-        },
-        {
-          "id": "MAN_TGA",
-          "mark_id": "MAN",
-          "name": "TGA",
-          "cyrillic_name": "ТГА"
-        },
-        {
-          "id": "MAN_TGL",
-          "mark_id": "MAN",
-          "name": "TGL",
-          "cyrillic_name": "ТГЛ"
-        },
-        {
-          "id": "MAN_TGM",
-          "mark_id": "MAN",
-          "name": "TGM",
-          "cyrillic_name": "ТГМ"
-        },
-        {
-          "id": "MAN_TGS",
-          "mark_id": "MAN",
-          "name": "TGS",
-          "cyrillic_name": "ТГС"
-        },
-        {
-          "id": "MAN_TGX",
-          "mark_id": "MAN",
-          "name": "TGX",
-          "cyrillic_name": "ТГХ"
-        }
-      ]
-    },
-    {
-      "id": "MAZ",
-      "name": "MAZ",
-      "cyrillic_name": "МАЗ",
-      "numeric_id": 3822,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Білорусь",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MAZ_5440",
-          "mark_id": "MAZ",
-          "name": "5440",
-          "cyrillic_name": "5440"
-        },
-        {
-          "id": "MAZ_6312",
-          "mark_id": "MAZ",
-          "name": "6312",
-          "cyrillic_name": "6312"
-        },
-        {
-          "id": "MAZ_6430",
-          "mark_id": "MAZ",
-          "name": "6430",
-          "cyrillic_name": "6430"
-        },
-        {
-          "id": "MAZ_6501",
-          "mark_id": "MAZ",
-          "name": "6501",
-          "cyrillic_name": "6501"
-        }
-      ]
-    },
-    {
-      "id": "MERCEDES",
-      "name": "MERCEDES",
-      "cyrillic_name": "Мерседес-Бенц",
-      "numeric_id": 3053,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MERCEDES_BENZ_ACTROS",
-          "mark_id": "MERCEDES",
-          "name": "Actros",
-          "cyrillic_name": "Актрос"
-        },
-        {
-          "id": "MERCEDES_BENZ_ANTOS",
-          "mark_id": "MERCEDES",
-          "name": "Antos",
-          "cyrillic_name": "Антос"
-        },
-        {
-          "id": "MERCEDES_BENZ_AROCS",
-          "mark_id": "MERCEDES",
-          "name": "Arocs",
-          "cyrillic_name": "Арокс"
-        },
-        {
-          "id": "MERCEDES_BENZ_ATEGO",
-          "mark_id": "MERCEDES",
-          "name": "Atego",
-          "cyrillic_name": "Атего"
-        },
-        {
-          "id": "MERCEDES_BENZ_AXOR",
-          "mark_id": "MERCEDES",
-          "name": "Axor",
-          "cyrillic_name": "Аксор"
-        },
-        {
-          "id": "MERCEDES_BENZ_ECONIC",
-          "mark_id": "MERCEDES",
-          "name": "Econic",
-          "cyrillic_name": "Еконік"
-        },
-        {
-          "id": "MERCEDES_BENZ_ZETROS",
-          "mark_id": "MERCEDES",
-          "name": "Zetros",
-          "cyrillic_name": "Зетрос"
-        }
-      ]
-    },
-    {
-      "id": "MACK",
-      "name": "Mack",
-      "cyrillic_name": "Мак",
-      "numeric_id": 3419,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MACK_ANTHEM",
-          "mark_id": "MACK",
-          "name": "Anthem",
-          "cyrillic_name": "Антем"
-        },
-        {
-          "id": "MACK_CHU613",
-          "mark_id": "MACK",
-          "name": "CHU613",
-          "cyrillic_name": "CHU613"
-        },
-        {
-          "id": "MACK_GRANITE",
-          "mark_id": "MACK",
-          "name": "Granite",
-          "cyrillic_name": "Граніт"
-        },
-        {
-          "id": "MACK_PINNACLE",
-          "mark_id": "MACK",
-          "name": "Pinnacle",
-          "cyrillic_name": "Піннакл"
-        },
-        {
-          "id": "MACK_VISION",
-          "mark_id": "MACK",
-          "name": "Vision",
-          "cyrillic_name": "Віжн"
-        }
-      ]
-    },
-    {
-      "id": "NISSAN",
-      "name": "Nissan",
-      "cyrillic_name": "Ніссан",
-      "numeric_id": 3210,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "NISSAN_ATLAS_CABSTAR",
-          "mark_id": "NISSAN",
-          "name": "Atlas/Cabstar",
-          "cyrillic_name": "Атлас/Кабстар"
-        },
-        {
-          "id": "NISSAN_CONDOR",
-          "mark_id": "NISSAN",
-          "name": "Condor",
-          "cyrillic_name": "Кондор"
-        }
-      ]
-    },
-    {
-      "id": "PETERBILT",
-      "name": "Peterbilt",
-      "cyrillic_name": "Пітербілт",
-      "numeric_id": 3479,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "PETERBILT_379",
-          "mark_id": "PETERBILT",
-          "name": "379",
-          "cyrillic_name": "379"
-        },
-        {
-          "id": "PETERBILT_386",
-          "mark_id": "PETERBILT",
-          "name": "386",
-          "cyrillic_name": "386"
-        },
-        {
-          "id": "PETERBILT_389",
-          "mark_id": "PETERBILT",
-          "name": "389",
-          "cyrillic_name": "389"
-        },
-        {
-          "id": "PETERBILT_567",
-          "mark_id": "PETERBILT",
-          "name": "567",
-          "cyrillic_name": "567"
-        },
-        {
-          "id": "PETERBILT_579",
-          "mark_id": "PETERBILT",
-          "name": "579",
-          "cyrillic_name": "579"
-        }
-      ]
-    },
-    {
-      "id": "RENAULT_TRUCKS",
-      "name": "Renault Trucks",
-      "cyrillic_name": "Рено Тракс",
-      "numeric_id": 3628,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Франція",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "RENAULT_TRUCKS_C",
-          "mark_id": "RENAULT TRUCKS",
-          "name": "C",
-          "cyrillic_name": "C"
-        },
-        {
-          "id": "RENAULT_TRUCKS_D",
-          "mark_id": "RENAULT TRUCKS",
-          "name": "D",
-          "cyrillic_name": "D"
-        },
-        {
-          "id": "RENAULT_TRUCKS_K",
-          "mark_id": "RENAULT TRUCKS",
-          "name": "K",
-          "cyrillic_name": "K"
-        },
-        {
-          "id": "RENAULT_TRUCKS_MAGNUM",
-          "mark_id": "RENAULT TRUCKS",
-          "name": "Magnum",
-          "cyrillic_name": "Магнум"
-        },
-        {
-          "id": "RENAULT_TRUCKS_MIDLUM",
-          "mark_id": "RENAULT TRUCKS",
-          "name": "Midlum",
-          "cyrillic_name": "Мідлум"
-        },
-        {
-          "id": "RENAULT_TRUCKS_PREMIUM",
-          "mark_id": "RENAULT TRUCKS",
-          "name": "Premium",
-          "cyrillic_name": "Преміум"
-        },
-        {
-          "id": "RENAULT_TRUCKS_T",
-          "mark_id": "RENAULT TRUCKS",
-          "name": "T",
-          "cyrillic_name": "T"
-        }
-      ]
-    },
-    {
-      "id": "SAIC_IVECO_HONGYAN",
-      "name": "SAIC Iveco Hongyan",
-      "cyrillic_name": "SAIC Iveco Hongyan",
-      "numeric_id": 3891,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "SAIC_IVECO_HONGYAN_GENLYON",
-          "mark_id": "SAIC IVECO HONGYAN",
-          "name": "Genlyon",
-          "cyrillic_name": "Дженліон"
-        },
-        {
-          "id": "SAIC_IVECO_HONGYAN_GENLYON_H6",
-          "mark_id": "SAIC IVECO HONGYAN",
-          "name": "Genlyon H6",
-          "cyrillic_name": "Дженліон H6"
-        },
-        {
-          "id": "SAIC_IVECO_HONGYAN_KINGKAN",
-          "mark_id": "SAIC IVECO HONGYAN",
-          "name": "Kingkan",
-          "cyrillic_name": "Кінгкан"
-        }
-      ]
-    },
-    {
-      "id": "SCANIA",
-      "name": "Scania",
-      "cyrillic_name": "Сканія",
-      "numeric_id": 3032,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Швеція",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "SCANIA_4_SERIES",
-          "mark_id": "SCANIA",
-          "name": "4-series",
-          "cyrillic_name": "4 серія"
-        },
-        {
-          "id": "SCANIA_SERIES_G",
-          "mark_id": "SCANIA",
-          "name": "Series G",
-          "cyrillic_name": "Серія G"
-        },
-        {
-          "id": "SCANIA_SERIES_L",
-          "mark_id": "SCANIA",
-          "name": "Series L",
-          "cyrillic_name": "Серія L"
-        },
-        {
-          "id": "SCANIA_SERIES_P",
-          "mark_id": "SCANIA",
-          "name": "Series P",
-          "cyrillic_name": "Серія P"
-        },
-        {
-          "id": "SCANIA_SERIES_R",
-          "mark_id": "SCANIA",
-          "name": "Series R",
-          "cyrillic_name": "Серія R"
-        },
-        {
-          "id": "SCANIA_SERIES_S",
-          "mark_id": "SCANIA",
-          "name": "Series S",
-          "cyrillic_name": "Серія S"
-        }
-      ]
-    },
-    {
-      "id": "SHACMAN",
-      "name": "Shacman",
-      "cyrillic_name": "Шакман",
-      "numeric_id": 3588,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "SHACMAN_F3000",
-          "mark_id": "SHACMAN",
-          "name": "F3000",
-          "cyrillic_name": "F3000"
-        },
-        {
-          "id": "SHACMAN_X3000",
-          "mark_id": "SHACMAN",
-          "name": "X3000",
-          "cyrillic_name": "X3000"
-        },
-        {
-          "id": "SHACMAN_X5000",
-          "mark_id": "SHACMAN",
-          "name": "X5000",
-          "cyrillic_name": "X5000"
-        }
-      ]
-    },
-    {
-      "id": "SINOTRUK",
-      "name": "Sinotruk (HOWO)",
-      "cyrillic_name": "Сінотрак (ХОВО)",
-      "numeric_id": 3409,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "SINOTRUK_HOWO",
-          "mark_id": "SINOTRUK",
-          "name": "HOWO",
-          "cyrillic_name": "HOWO"
-        },
-        {
-          "id": "SINOTRUK_HOWO_T7H",
-          "mark_id": "SINOTRUK",
-          "name": "HOWO T7H",
-          "cyrillic_name": "HOWO T7H"
-        },
-        {
-          "id": "SINOTRUK_HOWO_TX",
-          "mark_id": "SINOTRUK",
-          "name": "HOWO TX",
-          "cyrillic_name": "HOWO TX"
-        },
-        {
-          "id": "SINOTRUK_SITRAK_C7H",
-          "mark_id": "SINOTRUK",
-          "name": "Sitrak C7H",
-          "cyrillic_name": "Sitrak C7H"
-        }
-      ]
-    },
-    {
-      "id": "TATA",
-      "name": "Tata",
-      "cyrillic_name": "Тата",
-      "numeric_id": 3889,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Індія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "TATA_LPT",
-          "mark_id": "TATA",
-          "name": "LPT",
-          "cyrillic_name": "ЛПТ"
-        },
-        {
-          "id": "TATA_PRIMA",
-          "mark_id": "TATA",
-          "name": "Prima",
-          "cyrillic_name": "Пріма"
-        },
-        {
-          "id": "TATA_SIGNA",
-          "mark_id": "TATA",
-          "name": "Signa",
-          "cyrillic_name": "Сігна"
-        }
-      ]
-    },
-    {
-      "id": "TOYOTA",
-      "name": "Toyota",
-      "cyrillic_name": "Тойота",
-      "numeric_id": 3259,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "TOYOTA_DYNA",
-          "mark_id": "TOYOTA",
-          "name": "Dyna",
-          "cyrillic_name": "Дайна"
-        },
-        {
-          "id": "TOYOTA_TOYOACE",
-          "mark_id": "TOYOTA",
-          "name": "Toyoace",
-          "cyrillic_name": "Тойоейс"
-        }
-      ]
-    },
-    {
-      "id": "UD_TRUCKS",
-      "name": "UD Trucks",
-      "cyrillic_name": "ЮД Тракс",
-      "numeric_id": 3512,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "UD_TRUCKS_CONDOR",
-          "mark_id": "UD TRUCKS",
-          "name": "Condor",
-          "cyrillic_name": "Кондор"
-        },
-        {
-          "id": "UD_TRUCKS_CRONER",
-          "mark_id": "UD TRUCKS",
-          "name": "Croner",
-          "cyrillic_name": "Кронер"
-        },
-        {
-          "id": "UD_TRUCKS_QUESTER",
-          "mark_id": "UD TRUCKS",
-          "name": "Quester",
-          "cyrillic_name": "Квестер"
-        },
-        {
-          "id": "UD_TRUCKS_QUON",
-          "mark_id": "UD TRUCKS",
-          "name": "Quon",
-          "cyrillic_name": "Квон"
-        }
-      ]
-    },
-    {
-      "id": "VOLVO",
-      "name": "Volvo",
-      "cyrillic_name": "Вольво",
-      "numeric_id": 3076,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Швеція",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "VOLVO_FE",
-          "mark_id": "VOLVO",
-          "name": "FE",
-          "cyrillic_name": "FE"
-        },
-        {
-          "id": "VOLVO_FH",
-          "mark_id": "VOLVO",
-          "name": "FH",
-          "cyrillic_name": "FH"
-        },
-        {
-          "id": "VOLVO_FH16",
-          "mark_id": "VOLVO",
-          "name": "FH16",
-          "cyrillic_name": "FH16"
-        },
-        {
-          "id": "VOLVO_FL",
-          "mark_id": "VOLVO",
-          "name": "FL",
-          "cyrillic_name": "FL"
-        },
-        {
-          "id": "VOLVO_FM",
-          "mark_id": "VOLVO",
-          "name": "FM",
-          "cyrillic_name": "FM"
-        },
-        {
-          "id": "VOLVO_FMX",
-          "mark_id": "VOLVO",
-          "name": "FMX",
-          "cyrillic_name": "FMX"
-        }
-      ]
-    },
-    {
       "id": "ZIL",
       "name": "ZIL",
       "cyrillic_name": "ЗІЛ",
@@ -34261,6 +36162,37 @@
           "mark_id": "ZIL",
           "name": "4331",
           "cyrillic_name": "4331"
+        }
+      ]
+    },
+    {
+      "id": "ZIS",
+      "name": "ЗиС",
+      "cyrillic_name": "ЗиС",
+      "numeric_id": 11483318,
+      "year_from": 1936,
+      "year_to": 1958,
+      "popular": 0,
+      "country": "Россия",
+      "updated_at": "2025-07-26 22:33:37",
+      "models": [
+        {
+          "id": "ZIS_101",
+          "mark_id": "ZIS",
+          "name": "101",
+          "cyrillic_name": "101"
+        },
+        {
+          "id": "ZIS_102",
+          "mark_id": "ZIS",
+          "name": "102",
+          "cyrillic_name": "102"
+        },
+        {
+          "id": "ZIS_110",
+          "mark_id": "ZIS",
+          "name": "110",
+          "cyrillic_name": "110"
         }
       ]
     },
@@ -34397,1802 +36329,10 @@
           "cyrillic_name": "Терралорд"
         }
       ]
-    },
-    {
-      "id": "John deere",
-      "name": "John Deere",
-      "cyrillic_name": "Джон Дір",
-      "numeric_id": 7307,
-      "year_from": "Трактори комбайни с/г техніка",
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "John deere_5E",
-          "mark_id": "John deere",
-          "name": "5E",
-          "cyrillic_name": "5E"
-        },
-        {
-          "id": "John deere_5M",
-          "mark_id": "John deere",
-          "name": "5M",
-          "cyrillic_name": "5M"
-        },
-        {
-          "id": "John deere_6M",
-          "mark_id": "John deere",
-          "name": "6M",
-          "cyrillic_name": "6M"
-        },
-        {
-          "id": "John deere_6R",
-          "mark_id": "John deere",
-          "name": "6R",
-          "cyrillic_name": "6R"
-        },
-        {
-          "id": "John deere_7R",
-          "mark_id": "John deere",
-          "name": "7R",
-          "cyrillic_name": "7R"
-        },
-        {
-          "id": "John deere_8R",
-          "mark_id": "John deere",
-          "name": "8R",
-          "cyrillic_name": "8R"
-        },
-        {
-          "id": "John deere_8RT",
-          "mark_id": "John deere",
-          "name": "8RT",
-          "cyrillic_name": "8RT"
-        },
-        {
-          "id": "John deere_9R",
-          "mark_id": "John deere",
-          "name": "9R",
-          "cyrillic_name": "9R"
-        },
-        {
-          "id": "John deere_9RX",
-          "mark_id": "John deere",
-          "name": "9RX",
-          "cyrillic_name": "9RX"
-        },
-        {
-          "id": "John deere_S_SERIES",
-          "mark_id": "John deere",
-          "name": "S Series Combine",
-          "cyrillic_name": "S Series Combine"
-        },
-        {
-          "id": "John deere_T_SERIES",
-          "mark_id": "John deere",
-          "name": "T Series Combine",
-          "cyrillic_name": "T Series Combine"
-        }
-      ]
-    },
-    {
-      "id": "CASE_IH",
-      "name": "Case IH",
-      "cyrillic_name": "Кейс IH",
-      "numeric_id": 9815,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "CASE_IH_FARMALL_A",
-          "mark_id": "CASE_IH",
-          "name": "Farmall A",
-          "cyrillic_name": "Farmall A"
-        },
-        {
-          "id": "CASE_IH_FARMALL_C",
-          "mark_id": "CASE_IH",
-          "name": "Farmall C",
-          "cyrillic_name": "Farmall C"
-        },
-        {
-          "id": "CASE_IH_MAXXUM",
-          "mark_id": "CASE_IH",
-          "name": "Maxxum",
-          "cyrillic_name": "Maxxum"
-        },
-        {
-          "id": "CASE_IH_PUMA",
-          "mark_id": "CASE_IH",
-          "name": "Puma",
-          "cyrillic_name": "Puma"
-        },
-        {
-          "id": "CASE_IH_OPTUM",
-          "mark_id": "CASE_IH",
-          "name": "Optum",
-          "cyrillic_name": "Optum"
-        },
-        {
-          "id": "CASE_IH_MAGNUM",
-          "mark_id": "CASE_IH",
-          "name": "Magnum",
-          "cyrillic_name": "Magnum"
-        },
-        {
-          "id": "CASE_IH_QUADTRAC",
-          "mark_id": "CASE_IH",
-          "name": "Steiger Quadtrac",
-          "cyrillic_name": "Steiger Quadtrac"
-        },
-        {
-          "id": "CASE_IH_AXIAL_FLOW",
-          "mark_id": "CASE_IH",
-          "name": "Axial-Flow Combine",
-          "cyrillic_name": "Axial-Flow Combine"
-        }
-      ]
-    },
-    {
-      "id": "NEW_HOLLAND",
-      "name": "New Holland",
-      "cyrillic_name": "Нью Голланд",
-      "numeric_id": 3731,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія/США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "NEW_HOLLAND_T4",
-          "mark_id": "NEW_HOLLAND",
-          "name": "T4",
-          "cyrillic_name": "T4"
-        },
-        {
-          "id": "NEW_HOLLAND_T5",
-          "mark_id": "NEW_HOLLAND",
-          "name": "T5",
-          "cyrillic_name": "T5"
-        },
-        {
-          "id": "NEW_HOLLAND_T6",
-          "mark_id": "NEW_HOLLAND",
-          "name": "T6",
-          "cyrillic_name": "T6"
-        },
-        {
-          "id": "NEW_HOLLAND_T7",
-          "mark_id": "NEW_HOLLAND",
-          "name": "T7",
-          "cyrillic_name": "T7"
-        },
-        {
-          "id": "NEW_HOLLAND_T8",
-          "mark_id": "NEW_HOLLAND",
-          "name": "T8",
-          "cyrillic_name": "T8"
-        },
-        {
-          "id": "NEW_HOLLAND_T9",
-          "mark_id": "NEW_HOLLAND",
-          "name": "T9",
-          "cyrillic_name": "T9"
-        },
-        {
-          "id": "NEW_HOLLAND_CR",
-          "mark_id": "NEW_HOLLAND",
-          "name": "CR Combine",
-          "cyrillic_name": "CR Combine"
-        },
-        {
-          "id": "NEW_HOLLAND_CX",
-          "mark_id": "NEW_HOLLAND",
-          "name": "CX Combine",
-          "cyrillic_name": "CX Combine"
-        },
-        {
-          "id": "NEW_HOLLAND_FR",
-          "mark_id": "NEW_HOLLAND",
-          "name": "FR Forage Harvester",
-          "cyrillic_name": "FR Forage Harvester"
-        }
-      ]
-    },
-    {
-      "id": "MASSEY_FERGUSON",
-      "name": "Massey Ferguson",
-      "cyrillic_name": "Массей Фергюсон",
-      "numeric_id": 12969,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Велика Британія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MASSEY_FERGUSON_4700",
-          "mark_id": "MASSEY_FERGUSON",
-          "name": "4700",
-          "cyrillic_name": "4700"
-        },
-        {
-          "id": "MASSEY_FERGUSON_5700",
-          "mark_id": "MASSEY_FERGUSON",
-          "name": "5700",
-          "cyrillic_name": "5700"
-        },
-        {
-          "id": "MASSEY_FERGUSON_6700",
-          "mark_id": "MASSEY_FERGUSON",
-          "name": "6700",
-          "cyrillic_name": "6700"
-        },
-        {
-          "id": "MASSEY_FERGUSON_7700_S",
-          "mark_id": "MASSEY_FERGUSON",
-          "name": "7700 S",
-          "cyrillic_name": "7700 S"
-        },
-        {
-          "id": "MASSEY_FERGUSON_8700_S",
-          "mark_id": "MASSEY_FERGUSON",
-          "name": "8700 S",
-          "cyrillic_name": "8700 S"
-        },
-        {
-          "id": "MASSEY_FERGUSON_IDEAL",
-          "mark_id": "MASSEY_FERGUSON",
-          "name": "IDEAL Combine",
-          "cyrillic_name": "IDEAL Combine"
-        }
-      ]
-    },
-    {
-      "id": "FENDT",
-      "name": "Fendt",
-      "cyrillic_name": "Фендт",
-      "numeric_id": 3928,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "FENDT_200",
-          "mark_id": "FENDT",
-          "name": "200 V/F/P",
-          "cyrillic_name": "200 V/F/P"
-        },
-        {
-          "id": "FENDT_300",
-          "mark_id": "FENDT",
-          "name": "300",
-          "cyrillic_name": "300"
-        },
-        {
-          "id": "FENDT_500",
-          "mark_id": "FENDT",
-          "name": "500 Vario",
-          "cyrillic_name": "500 Vario"
-        },
-        {
-          "id": "FENDT_700",
-          "mark_id": "FENDT",
-          "name": "700 Vario",
-          "cyrillic_name": "700 Vario"
-        },
-        {
-          "id": "FENDT_900",
-          "mark_id": "FENDT",
-          "name": "900 Vario",
-          "cyrillic_name": "900 Vario"
-        },
-        {
-          "id": "FENDT_1000",
-          "mark_id": "FENDT",
-          "name": "1000 Vario",
-          "cyrillic_name": "1000 Vario"
-        },
-        {
-          "id": "FENDT_KATANA",
-          "mark_id": "FENDT",
-          "name": "Katana Forage Harvester",
-          "cyrillic_name": "Katana Forage Harvester"
-        }
-      ]
-    },
-    {
-      "id": "CLAAS",
-      "name": "CLAAS",
-      "cyrillic_name": "Клаас",
-      "numeric_id": 9761,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "CLAAS_ARION",
-          "mark_id": "CLAAS",
-          "name": "Arion",
-          "cyrillic_name": "Arion"
-        },
-        {
-          "id": "CLAAS_AXION",
-          "mark_id": "CLAAS",
-          "name": "Axion",
-          "cyrillic_name": "Axion"
-        },
-        {
-          "id": "CLAAS_XERION",
-          "mark_id": "CLAAS",
-          "name": "Xerion",
-          "cyrillic_name": "Xerion"
-        },
-        {
-          "id": "CLAAS_LEXION",
-          "mark_id": "CLAAS",
-          "name": "Lexion",
-          "cyrillic_name": "Lexion"
-        },
-        {
-          "id": "CLAAS_TUCANO",
-          "mark_id": "CLAAS",
-          "name": "Tucano",
-          "cyrillic_name": "Tucano"
-        },
-        {
-          "id": "CLAAS_TRION",
-          "mark_id": "CLAAS",
-          "name": "Trion",
-          "cyrillic_name": "Trion"
-        },
-        {
-          "id": "CLAAS_JAGUAR",
-          "mark_id": "CLAAS",
-          "name": "Jaguar Forage Harvester",
-          "cyrillic_name": "Jaguar Forage Harvester"
-        }
-      ]
-    },
-    {
-      "id": "DEUTZ_FAHR",
-      "name": "Deutz-Fahr",
-      "cyrillic_name": "Дойц-Фар",
-      "numeric_id": 3990,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "DEUTZ_FAHR_5_SERIES",
-          "mark_id": "DEUTZ_FAHR",
-          "name": "5 Series",
-          "cyrillic_name": "5 Series"
-        },
-        {
-          "id": "DEUTZ_FAHR_6_SERIES",
-          "mark_id": "DEUTZ_FAHR",
-          "name": "6 Series",
-          "cyrillic_name": "6 Series"
-        },
-        {
-          "id": "DEUTZ_FAHR_7_SERIES",
-          "mark_id": "DEUTZ_FAHR",
-          "name": "7 Series",
-          "cyrillic_name": "7 Series"
-        },
-        {
-          "id": "DEUTZ_FAHR_9_SERIES",
-          "mark_id": "DEUTZ_FAHR",
-          "name": "9 Series",
-          "cyrillic_name": "9 Series"
-        },
-        {
-          "id": "DEUTZ_FAHR_C9000",
-          "mark_id": "DEUTZ_FAHR",
-          "name": "C9000 Combine",
-          "cyrillic_name": "C9000 Combine"
-        }
-      ]
-    },
-    {
-      "id": "KUBOTA",
-      "name": "Kubota",
-      "cyrillic_name": "Кубота",
-      "numeric_id": 6286,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "KUBOTA_B_SERIES",
-          "mark_id": "KUBOTA",
-          "name": "B Series",
-          "cyrillic_name": "B Series"
-        },
-        {
-          "id": "KUBOTA_L_SERIES",
-          "mark_id": "KUBOTA",
-          "name": "L Series",
-          "cyrillic_name": "L Series"
-        },
-        {
-          "id": "KUBOTA_M_SERIES",
-          "mark_id": "KUBOTA",
-          "name": "M Series",
-          "cyrillic_name": "M Series"
-        },
-        {
-          "id": "KUBOTA_MX_SERIES",
-          "mark_id": "KUBOTA",
-          "name": "MX Series",
-          "cyrillic_name": "MX Series"
-        },
-        {
-          "id": "KUBOTA_GRAND_L",
-          "mark_id": "KUBOTA",
-          "name": "Grand L",
-          "cyrillic_name": "Grand L"
-        },
-        {
-          "id": "KUBOTA_RTV",
-          "mark_id": "KUBOTA",
-          "name": "RTV Utility",
-          "cyrillic_name": "RTV Utility"
-        }
-      ]
-    },
-    {
-      "id": "VALTRA",
-      "name": "Valtra",
-      "cyrillic_name": "Валтра",
-      "numeric_id": 11927,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Фінляндія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "VALTRA_A_SERIES",
-          "mark_id": "VALTRA",
-          "name": "A Series",
-          "cyrillic_name": "A Series"
-        },
-        {
-          "id": "VALTRA_G_SERIES",
-          "mark_id": "VALTRA",
-          "name": "G Series",
-          "cyrillic_name": "G Series"
-        },
-        {
-          "id": "VALTRA_N_SERIES",
-          "mark_id": "VALTRA",
-          "name": "N Series",
-          "cyrillic_name": "N Series"
-        },
-        {
-          "id": "VALTRA_T_SERIES",
-          "mark_id": "VALTRA",
-          "name": "T Series",
-          "cyrillic_name": "T Series"
-        },
-        {
-          "id": "VALTRA_S_SERIES",
-          "mark_id": "VALTRA",
-          "name": "S Series",
-          "cyrillic_name": "S Series"
-        }
-      ]
-    },
-    {
-      "id": "JCB",
-      "name": "JCB",
-      "cyrillic_name": "ДжейСіБі",
-      "numeric_id": 12228,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Велика Британія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "JCB_FASTRAC_3000",
-          "mark_id": "JCB",
-          "name": "Fastrac 3000",
-          "cyrillic_name": "Fastrac 3000"
-        },
-        {
-          "id": "JCB_FASTRAC_4000",
-          "mark_id": "JCB",
-          "name": "Fastrac 4000",
-          "cyrillic_name": "Fastrac 4000"
-        },
-        {
-          "id": "JCB_FASTRAC_8000",
-          "mark_id": "JCB",
-          "name": "Fastrac 8000",
-          "cyrillic_name": "Fastrac 8000"
-        },
-        {
-          "id": "JCB_LOADALL",
-          "mark_id": "JCB",
-          "name": "Loadall",
-          "cyrillic_name": "Loadall"
-        },
-        {
-          "id": "JCB_TELESCOPIC",
-          "mark_id": "JCB",
-          "name": "Telescopic Handler",
-          "cyrillic_name": "Telescopic Handler"
-        }
-      ]
-    },
-    {
-      "id": "BELARUS_MTZ",
-      "name": "Belarus (MTZ)",
-      "cyrillic_name": "Білорус (МТЗ)",
-      "numeric_id": 3817,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Білорусь",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "BELARUS_MTZ_80_82",
-          "mark_id": "BELARUS_MTZ",
-          "name": "80/82",
-          "cyrillic_name": "80/82"
-        },
-        {
-          "id": "BELARUS_MTZ_920",
-          "mark_id": "BELARUS_MTZ",
-          "name": "920",
-          "cyrillic_name": "920"
-        },
-        {
-          "id": "BELARUS_MTZ_952",
-          "mark_id": "BELARUS_MTZ",
-          "name": "952",
-          "cyrillic_name": "952"
-        },
-        {
-          "id": "BELARUS_MTZ_1025",
-          "mark_id": "BELARUS_MTZ",
-          "name": "1025",
-          "cyrillic_name": "1025"
-        },
-        {
-          "id": "BELARUS_MTZ_1221",
-          "mark_id": "BELARUS_MTZ",
-          "name": "1221",
-          "cyrillic_name": "1221"
-        },
-        {
-          "id": "BELARUS_MTZ_1523",
-          "mark_id": "BELARUS_MTZ",
-          "name": "1523",
-          "cyrillic_name": "1523"
-        }
-      ]
-    },
-    {
-      "id": "SAME",
-      "name": "SAME",
-      "cyrillic_name": "САМЕ",
-      "numeric_id": 12123,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "SAME_EXPLORER",
-          "mark_id": "SAME",
-          "name": "Explorer",
-          "cyrillic_name": "Explorer"
-        },
-        {
-          "id": "SAME_DORADO",
-          "mark_id": "SAME",
-          "name": "Dorado",
-          "cyrillic_name": "Dorado"
-        },
-        {
-          "id": "SAME_FRUTTETO",
-          "mark_id": "SAME",
-          "name": "Frutteto",
-          "cyrillic_name": "Frutteto"
-        },
-        {
-          "id": "SAME_IRON",
-          "mark_id": "SAME",
-          "name": "Iron",
-          "cyrillic_name": "Iron"
-        }
-      ]
-    },
-    {
-      "id": "LAMBORGHINI_TRATTORI",
-      "name": "Lamborghini Trattori",
-      "cyrillic_name": "Ламборгіні (трактори)",
-      "numeric_id": 4608,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "LAMBORGHINI_TRATTORI_STRIKE",
-          "mark_id": "LAMBORGHINI_TRATTORI",
-          "name": "Strike",
-          "cyrillic_name": "Strike"
-        },
-        {
-          "id": "LAMBORGHINI_TRATTORI_SPARK",
-          "mark_id": "LAMBORGHINI_TRATTORI",
-          "name": "Spark",
-          "cyrillic_name": "Spark"
-        },
-        {
-          "id": "LAMBORGHINI_TRATTORI_NITRO",
-          "mark_id": "LAMBORGHINI_TRATTORI",
-          "name": "Nitro",
-          "cyrillic_name": "Nitro"
-        },
-        {
-          "id": "LAMBORGHINI_TRATTORI_RF",
-          "mark_id": "LAMBORGHINI_TRATTORI",
-          "name": "RF",
-          "cyrillic_name": "RF"
-        }
-      ]
-    },
-    {
-      "id": "HURLIMANN",
-      "name": "Hürlimann",
-      "cyrillic_name": "Хюрліманн",
-      "numeric_id": 5838,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Швейцарія/Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "HURLIMANN_XT",
-          "mark_id": "HURLIMANN",
-          "name": "XT",
-          "cyrillic_name": "XT"
-        },
-        {
-          "id": "HURLIMANN_XTB",
-          "mark_id": "HURLIMANN",
-          "name": "XTB",
-          "cyrillic_name": "XTB"
-        },
-        {
-          "id": "HURLIMANN_XS",
-          "mark_id": "HURLIMANN",
-          "name": "XS",
-          "cyrillic_name": "XS"
-        }
-      ]
-    },
-    {
-      "id": "LANDINI",
-      "name": "Landini",
-      "cyrillic_name": "Ландіні",
-      "numeric_id": 3528,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "LANDINI_REX",
-          "mark_id": "LANDINI",
-          "name": "REX",
-          "cyrillic_name": "REX"
-        },
-        {
-          "id": "LANDINI_4_SERIES",
-          "mark_id": "LANDINI",
-          "name": "4 Series",
-          "cyrillic_name": "4 Series"
-        },
-        {
-          "id": "LANDINI_5_SERIES",
-          "mark_id": "LANDINI",
-          "name": "5 Series",
-          "cyrillic_name": "5 Series"
-        },
-        {
-          "id": "LANDINI_7_SERIES",
-          "mark_id": "LANDINI",
-          "name": "7 Series",
-          "cyrillic_name": "7 Series"
-        }
-      ]
-    },
-    {
-      "id": "MCCORMICK",
-      "name": "McCormick",
-      "cyrillic_name": "МакКормік",
-      "numeric_id": 4929,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія/США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MCCORMICK_X4",
-          "mark_id": "MCCORMICK",
-          "name": "X4",
-          "cyrillic_name": "X4"
-        },
-        {
-          "id": "MCCORMICK_X5",
-          "mark_id": "MCCORMICK",
-          "name": "X5",
-          "cyrillic_name": "X5"
-        },
-        {
-          "id": "MCCORMICK_X6",
-          "mark_id": "MCCORMICK",
-          "name": "X6",
-          "cyrillic_name": "X6"
-        },
-        {
-          "id": "MCCORMICK_X7",
-          "mark_id": "MCCORMICK",
-          "name": "X7",
-          "cyrillic_name": "X7"
-        },
-        {
-          "id": "MCCORMICK_X8",
-          "mark_id": "MCCORMICK",
-          "name": "X8",
-          "cyrillic_name": "X8"
-        }
-      ]
-    },
-    {
-      "id": "ZETOR",
-      "name": "Zetor",
-      "cyrillic_name": "Зетор",
-      "numeric_id": 5537,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Чехія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "ZETOR_MAJOR",
-          "mark_id": "ZETOR",
-          "name": "Major",
-          "cyrillic_name": "Major"
-        },
-        {
-          "id": "ZETOR_PROXIMA",
-          "mark_id": "ZETOR",
-          "name": "Proxima",
-          "cyrillic_name": "Proxima"
-        },
-        {
-          "id": "ZETOR_FORTERRA",
-          "mark_id": "ZETOR",
-          "name": "Forterra",
-          "cyrillic_name": "Forterra"
-        },
-        {
-          "id": "ZETOR_CRYSTAL",
-          "mark_id": "ZETOR",
-          "name": "Crystal",
-          "cyrillic_name": "Crystal"
-        }
-      ]
-    },
-    {
-      "id": "VERSATILE",
-      "name": "Versatile",
-      "cyrillic_name": "Версатайл",
-      "numeric_id": 10247,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Канада",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "VERSATILE_4WD",
-          "mark_id": "VERSATILE",
-          "name": "4WD Series",
-          "cyrillic_name": "4WD Series"
-        },
-        {
-          "id": "VERSATILE_DELTA_TRACK",
-          "mark_id": "VERSATILE",
-          "name": "DeltaTrack",
-          "cyrillic_name": "DeltaTrack"
-        },
-        {
-          "id": "VERSATILE_MFWD",
-          "mark_id": "VERSATILE",
-          "name": "MFWD Series",
-          "cyrillic_name": "MFWD Series"
-        }
-      ]
-    },
-    {
-      "id": "CHALLENGER",
-      "name": "Challenger",
-      "cyrillic_name": "Челенджер",
-      "numeric_id": 3440,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "CHALLENGER_MT700",
-          "mark_id": "CHALLENGER",
-          "name": "MT700",
-          "cyrillic_name": "MT700"
-        },
-        {
-          "id": "CHALLENGER_MT800",
-          "mark_id": "CHALLENGER",
-          "name": "MT800",
-          "cyrillic_name": "MT800"
-        },
-        {
-          "id": "CHALLENGER_ROGATOR",
-          "mark_id": "CHALLENGER",
-          "name": "RoGator",
-          "cyrillic_name": "RoGator"
-        },
-        {
-          "id": "CHALLENGER_TERRA_GATOR",
-          "mark_id": "CHALLENGER",
-          "name": "TerraGator",
-          "cyrillic_name": "TerraGator"
-        }
-      ]
-    },
-    {
-      "id": "KRONE",
-      "name": "Krone",
-      "cyrillic_name": "Кроне",
-      "numeric_id": 5350,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "KRONE_BIG_X",
-          "mark_id": "KRONE",
-          "name": "BiG X",
-          "cyrillic_name": "BiG X"
-        },
-        {
-          "id": "KRONE_BIG_M",
-          "mark_id": "KRONE",
-          "name": "BiG M",
-          "cyrillic_name": "BiG M"
-        },
-        {
-          "id": "KRONE_BIG_PACK",
-          "mark_id": "KRONE",
-          "name": "BiG Pack",
-          "cyrillic_name": "BiG Pack"
-        }
-      ]
-    },
-    {
-      "id": "MAHINDRA",
-      "name": "Mahindra",
-      "cyrillic_name": "Махіндра",
-      "numeric_id": 6645,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Індія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MAHINDRA_2000_SERIES",
-          "mark_id": "MAHINDRA",
-          "name": "2000 Series",
-          "cyrillic_name": "2000 Series"
-        },
-        {
-          "id": "MAHINDRA_6000_SERIES",
-          "mark_id": "MAHINDRA",
-          "name": "6000 Series",
-          "cyrillic_name": "6000 Series"
-        },
-        {
-          "id": "MAHINDRA_8000_SERIES",
-          "mark_id": "MAHINDRA",
-          "name": "8000 Series",
-          "cyrillic_name": "8000 Series"
-        }
-      ]
-    },
-    {
-      "id": "SOLIS",
-      "name": "Solis (Sonalika)",
-      "cyrillic_name": "Соліс (Соналіка)",
-      "numeric_id": 11596,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Індія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "SOLIS_S20",
-          "mark_id": "SOLIS",
-          "name": "S20",
-          "cyrillic_name": "S20"
-        },
-        {
-          "id": "SOLIS_S26",
-          "mark_id": "SOLIS",
-          "name": "S26",
-          "cyrillic_name": "S26"
-        },
-        {
-          "id": "SOLIS_S50",
-          "mark_id": "SOLIS",
-          "name": "S50",
-          "cyrillic_name": "S50"
-        },
-        {
-          "id": "SOLIS_S90",
-          "mark_id": "SOLIS",
-          "name": "S90",
-          "cyrillic_name": "S90"
-        }
-      ]
-    },
-    {
-      "id": "KIOTI",
-      "name": "Kioti",
-      "cyrillic_name": "Кіоті",
-      "numeric_id": 10976,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Південна Корея",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "KIOTI_CS",
-          "mark_id": "KIOTI",
-          "name": "CS Series",
-          "cyrillic_name": "CS Series"
-        },
-        {
-          "id": "KIOTI_CK10",
-          "mark_id": "KIOTI",
-          "name": "CK10 Series",
-          "cyrillic_name": "CK10 Series"
-        },
-        {
-          "id": "KIOTI_DK10",
-          "mark_id": "KIOTI",
-          "name": "DK10 Series",
-          "cyrillic_name": "DK10 Series"
-        },
-        {
-          "id": "KIOTI_RX",
-          "mark_id": "KIOTI",
-          "name": "RX Series",
-          "cyrillic_name": "RX Series"
-        }
-      ]
-    },
-    {
-      "id": "YANMAR",
-      "name": "Yanmar",
-      "cyrillic_name": "Янмар",
-      "numeric_id": 11937,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "YANMAR_SA",
-          "mark_id": "YANMAR",
-          "name": "SA Series",
-          "cyrillic_name": "SA Series"
-        },
-        {
-          "id": "YANMAR_YT2",
-          "mark_id": "YANMAR",
-          "name": "YT2",
-          "cyrillic_name": "YT2"
-        },
-        {
-          "id": "YANMAR_YT3",
-          "mark_id": "YANMAR",
-          "name": "YT3",
-          "cyrillic_name": "YT3"
-        }
-      ]
-    },
-    {
-      "id": "LS_TRACTOR",
-      "name": "LS Tractor",
-      "cyrillic_name": "LS Трактор",
-      "numeric_id": 5654,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Південна Корея",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "LS_TRACTOR_MT1",
-          "mark_id": "LS_TRACTOR",
-          "name": "MT1",
-          "cyrillic_name": "MT1"
-        },
-        {
-          "id": "LS_TRACTOR_MT2",
-          "mark_id": "LS_TRACTOR",
-          "name": "MT2",
-          "cyrillic_name": "MT2"
-        },
-        {
-          "id": "LS_TRACTOR_MT3",
-          "mark_id": "LS_TRACTOR",
-          "name": "MT3",
-          "cyrillic_name": "MT3"
-        },
-        {
-          "id": "LS_TRACTOR_MT5",
-          "mark_id": "LS_TRACTOR",
-          "name": "MT5",
-          "cyrillic_name": "MT5"
-        }
-      ]
-    },
-    {
-      "id": "TYM",
-      "name": "TYM",
-      "cyrillic_name": "TYM",
-      "numeric_id": 3023,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Південна Корея",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "TYM_T25",
-          "mark_id": "TYM",
-          "name": "T25",
-          "cyrillic_name": "T25"
-        },
-        {
-          "id": "TYM_T394",
-          "mark_id": "TYM",
-          "name": "T394",
-          "cyrillic_name": "T394"
-        },
-        {
-          "id": "TYM_T654",
-          "mark_id": "TYM",
-          "name": "T654",
-          "cyrillic_name": "T654"
-        },
-        {
-          "id": "TYM_BRANSON_00",
-          "mark_id": "TYM",
-          "name": "Branson 00",
-          "cyrillic_name": "Branson 00"
-        }
-      ]
-    },
-    {
-      "id": "ISEKI",
-      "name": "Iseki",
-      "cyrillic_name": "Ісекі",
-      "numeric_id": 8926,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "ISEKI_TG",
-          "mark_id": "ISEKI",
-          "name": "TG Series",
-          "cyrillic_name": "TG Series"
-        },
-        {
-          "id": "ISEKI_TLE",
-          "mark_id": "ISEKI",
-          "name": "TLE Series",
-          "cyrillic_name": "TLE Series"
-        },
-        {
-          "id": "ISEKI_TM",
-          "mark_id": "ISEKI",
-          "name": "TM Series",
-          "cyrillic_name": "TM Series"
-        }
-      ]
-    },
-    {
-      "id": "ANTONIO_CARRARO",
-      "name": "Antonio Carraro",
-      "cyrillic_name": "Антоніо Карраро",
-      "numeric_id": 12938,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "ANTONIO_CARRARO_TTR",
-          "mark_id": "ANTONIO_CARRARO",
-          "name": "TTR",
-          "cyrillic_name": "TTR"
-        },
-        {
-          "id": "ANTONIO_CARRARO_TGF",
-          "mark_id": "ANTONIO_CARRARO",
-          "name": "TGF",
-          "cyrillic_name": "TGF"
-        },
-        {
-          "id": "ANTONIO_CARRARO_TTR_7600",
-          "mark_id": "ANTONIO_CARRARO",
-          "name": "TTR 7600",
-          "cyrillic_name": "TTR 7600"
-        },
-        {
-          "id": "ANTONIO_CARRARO_MACH_4",
-          "mark_id": "ANTONIO_CARRARO",
-          "name": "Mach 4",
-          "cyrillic_name": "Mach 4"
-        }
-      ]
-    },
-    {
-      "id": "GOLDONI",
-      "name": "Goldoni",
-      "cyrillic_name": "Голдони",
-      "numeric_id": 3566,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "GOLDONI_Q_SERIES",
-          "mark_id": "GOLDONI",
-          "name": "Q Series",
-          "cyrillic_name": "Q Series"
-        },
-        {
-          "id": "GOLDONI_RONIN",
-          "mark_id": "GOLDONI",
-          "name": "Ronin",
-          "cyrillic_name": "Ronin"
-        },
-        {
-          "id": "GOLDONI_BASE",
-          "mark_id": "GOLDONI",
-          "name": "Base",
-          "cyrillic_name": "Base"
-        }
-      ]
-    },
-    {
-      "id": "LOVOL",
-      "name": "Lovol (Foton)",
-      "cyrillic_name": "Ловол (Фотон)",
-      "numeric_id": 5042,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "LOVOL_M_SERIES",
-          "mark_id": "LOVOL",
-          "name": "M Series",
-          "cyrillic_name": "M Series"
-        },
-        {
-          "id": "LOVOL_P_SERIES",
-          "mark_id": "LOVOL",
-          "name": "P Series",
-          "cyrillic_name": "P Series"
-        },
-        {
-          "id": "LOVOL_TE",
-          "mark_id": "LOVOL",
-          "name": "TE Series",
-          "cyrillic_name": "TE Series"
-        }
-      ]
-    },
-    {
-      "id": "DONGFENG",
-      "name": "Dongfeng",
-      "cyrillic_name": "Дунфен",
-      "numeric_id": 4562,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Китай",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "DONGFENG_DF_244",
-          "mark_id": "DONGFENG",
-          "name": "DF-244",
-          "cyrillic_name": "DF-244"
-        },
-        {
-          "id": "DONGFENG_DF_354",
-          "mark_id": "DONGFENG",
-          "name": "DF-354",
-          "cyrillic_name": "DF-354"
-        },
-        {
-          "id": "DONGFENG_DF_404",
-          "mark_id": "DONGFENG",
-          "name": "DF-404",
-          "cyrillic_name": "DF-404"
-        }
-      ]
-    },
-    {
-      "id": "URSUS",
-      "name": "Ursus",
-      "cyrillic_name": "Урсус",
-      "numeric_id": 8567,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Польща",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "URSUS_C_SERIES",
-          "mark_id": "URSUS",
-          "name": "C Series",
-          "cyrillic_name": "C Series"
-        },
-        {
-          "id": "URSUS_C_330",
-          "mark_id": "URSUS",
-          "name": "C-330",
-          "cyrillic_name": "C-330"
-        },
-        {
-          "id": "URSUS_C_360",
-          "mark_id": "URSUS",
-          "name": "C-360",
-          "cyrillic_name": "C-360"
-        },
-        {
-          "id": "URSUS_8014H",
-          "mark_id": "URSUS",
-          "name": "8014H",
-          "cyrillic_name": "8014H"
-        }
-      ]
-    },
-    {
-      "id": "BOBCAT_COMPACT",
-      "name": "Bobcat",
-      "cyrillic_name": "Бобкет",
-      "numeric_id": 4940,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "США",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "BOBCAT_COMPACT_CT1021",
-          "mark_id": "BOBCAT_COMPACT",
-          "name": "CT1021",
-          "cyrillic_name": "CT1021"
-        },
-        {
-          "id": "BOBCAT_COMPACT_CT2035",
-          "mark_id": "BOBCAT_COMPACT",
-          "name": "CT2035",
-          "cyrillic_name": "CT2035"
-        },
-        {
-          "id": "BOBCAT_COMPACT_CT4058",
-          "mark_id": "BOBCAT_COMPACT",
-          "name": "CT4058",
-          "cyrillic_name": "CT4058"
-        }
-      ]
-    },
-    {
-      "id": "VALPADANA",
-      "name": "Valpadana",
-      "cyrillic_name": "Валпадана",
-      "numeric_id": 5104,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "VALPADANA_VP4600",
-          "mark_id": "VALPADANA",
-          "name": "4600",
-          "cyrillic_name": "4600"
-        },
-        {
-          "id": "VALPADANA_VP7000",
-          "mark_id": "VALPADANA",
-          "name": "7000",
-          "cyrillic_name": "7000"
-        },
-        {
-          "id": "VALPADANA_VP9000",
-          "mark_id": "VALPADANA",
-          "name": "9000",
-          "cyrillic_name": "9000"
-        }
-      ]
-    },
-    {
-      "id": "CARRARO_TREKKER",
-      "name": "Carraro Tractors",
-      "cyrillic_name": "Карраро (трактори)",
-      "numeric_id": 3058,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "CARRARO_TREKKER_TREKKER",
-          "mark_id": "CARRARO_TREKKER",
-          "name": "Trekker",
-          "cyrillic_name": "Trekker"
-        },
-        {
-          "id": "CARRARO_TREKKER_TTR",
-          "mark_id": "CARRARO_TREKKER",
-          "name": "TTR",
-          "cyrillic_name": "TTR"
-        }
-      ]
-    },
-    {
-      "id": "HOLLANDER",
-      "name": "Holaras",
-      "cyrillic_name": "Холарас",
-      "numeric_id": 12669,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Нідерланди",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "HOLLANDER_SILAGE",
-          "mark_id": "HOLLANDER",
-          "name": "Silage Dozer",
-          "cyrillic_name": "Silage Dozer"
-        }
-      ]
-    },
-    {
-      "id": "STEYR",
-      "name": "Steyr",
-      "cyrillic_name": "Штайр",
-      "numeric_id": 5014,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Австрія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "STEYR_MULTI",
-          "mark_id": "STEYR",
-          "name": "Multi",
-          "cyrillic_name": "Multi"
-        },
-        {
-          "id": "STEYR_PROFI",
-          "mark_id": "STEYR",
-          "name": "Profi",
-          "cyrillic_name": "Profi"
-        },
-        {
-          "id": "STEYR_IMPULS",
-          "mark_id": "STEYR",
-          "name": "Impuls",
-          "cyrillic_name": "Impuls"
-        },
-        {
-          "id": "STEYR_TERRUS",
-          "mark_id": "STEYR",
-          "name": "Terrus",
-          "cyrillic_name": "Terrus"
-        }
-      ]
-    },
-    {
-      "id": "MITSUBISHI_AGRI",
-      "name": "Mitsubishi Agri",
-      "cyrillic_name": "Міцубісі Агро",
-      "numeric_id": 6013,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "MITSUBISHI_AGRI_MT16",
-          "mark_id": "MITSUBISHI_AGRI",
-          "name": "MT16",
-          "cyrillic_name": "MT16"
-        },
-        {
-          "id": "MITSUBISHI_AGRI_MT20",
-          "mark_id": "MITSUBISHI_AGRI",
-          "name": "MT20",
-          "cyrillic_name": "MT20"
-        },
-        {
-          "id": "MITSUBISHI_AGRI_MT24",
-          "mark_id": "MITSUBISHI_AGRI",
-          "name": "MT24",
-          "cyrillic_name": "MT24"
-        }
-      ]
-    },
-    {
-      "id": "TAFE",
-      "name": "TAFE",
-      "cyrillic_name": "TAFE",
-      "numeric_id": 9101,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Індія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "TAFE_MF_245",
-          "mark_id": "TAFE",
-          "name": "MF 245",
-          "cyrillic_name": "MF 245"
-        },
-        {
-          "id": "TAFE_MF_285",
-          "mark_id": "TAFE",
-          "name": "MF 285",
-          "cyrillic_name": "MF 285"
-        },
-        {
-          "id": "TAFE_MF_385",
-          "mark_id": "TAFE",
-          "name": "MF 385",
-          "cyrillic_name": "MF 385"
-        }
-      ]
-    },
-    {
-      "id": "ARGO",
-      "name": "Argo Tractors",
-      "cyrillic_name": "Арго Тракторз",
-      "numeric_id": 12201,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Італія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "ARGO_LANDINI",
-          "mark_id": "ARGO",
-          "name": "Landini",
-          "cyrillic_name": "Landini"
-        },
-        {
-          "id": "ARGO_MCCORMICK",
-          "mark_id": "ARGO",
-          "name": "McCormick",
-          "cyrillic_name": "McCormick"
-        }
-      ]
-    },
-    {
-      "id": "YANMAR_AGRI",
-      "name": "Yanmar Agri",
-      "cyrillic_name": "Янмар Агро",
-      "numeric_id": 11790,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Японія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "YANMAR_AGRI_AF",
-          "mark_id": "YANMAR_AGRI",
-          "name": "AF Series",
-          "cyrillic_name": "AF Series"
-        },
-        {
-          "id": "YANMAR_AGRI_EG",
-          "mark_id": "YANMAR_AGRI",
-          "name": "EG Series",
-          "cyrillic_name": "EG Series"
-        },
-        {
-          "id": "YANMAR_AGRI_FX",
-          "mark_id": "YANMAR_AGRI",
-          "name": "FX Series",
-          "cyrillic_name": "FX Series"
-        }
-      ]
-    },
-    {
-      "id": "AGRO_MASZ",
-      "name": "Agro-Masz",
-      "cyrillic_name": "Агро-Маш",
-      "numeric_id": 4088,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Польща",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "AGRO_MASZ_PO",
-          "mark_id": "AGRO_MASZ",
-          "name": "PO Plough",
-          "cyrillic_name": "PO Plough"
-        },
-        {
-          "id": "AGRO_MASZ_BT",
-          "mark_id": "AGRO_MASZ",
-          "name": "BT Cultivator",
-          "cyrillic_name": "BT Cultivator"
-        }
-      ]
-    },
-    {
-      "id": "VADERSTAD",
-      "name": "Väderstad",
-      "cyrillic_name": "Ведерштад",
-      "numeric_id": 7226,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Швеція",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "VADERSTAD_TEMPO",
-          "mark_id": "VADERSTAD",
-          "name": "Tempo Planter",
-          "cyrillic_name": "Tempo Planter"
-        },
-        {
-          "id": "VADERSTAD_SPIRIT",
-          "mark_id": "VADERSTAD",
-          "name": "Spirit Seeder",
-          "cyrillic_name": "Spirit Seeder"
-        },
-        {
-          "id": "VADERSTAD_CARRIER",
-          "mark_id": "VADERSTAD",
-          "name": "Carrier Disc",
-          "cyrillic_name": "Carrier Disc"
-        }
-      ]
-    },
-    {
-      "id": "HORSCH",
-      "name": "Horsch",
-      "cyrillic_name": "Горш",
-      "numeric_id": 4858,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "HORSCH_PRONTO",
-          "mark_id": "HORSCH",
-          "name": "Pronto",
-          "cyrillic_name": "Pronto"
-        },
-        {
-          "id": "HORSCH_TERRANO",
-          "mark_id": "HORSCH",
-          "name": "Terrano",
-          "cyrillic_name": "Terrano"
-        },
-        {
-          "id": "HORSCH_TIGER",
-          "mark_id": "HORSCH",
-          "name": "Tiger",
-          "cyrillic_name": "Tiger"
-        }
-      ]
-    },
-    {
-      "id": "LEMKEN",
-      "name": "Lemken",
-      "cyrillic_name": "Лемкен",
-      "numeric_id": 8050,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "LEMKEN_KORUND",
-          "mark_id": "LEMKEN",
-          "name": "Korund",
-          "cyrillic_name": "Korund"
-        },
-        {
-          "id": "LEMKEN_RUBIN",
-          "mark_id": "LEMKEN",
-          "name": "Rubin",
-          "cyrillic_name": "Rubin"
-        },
-        {
-          "id": "LEMKEN_HELIODOR",
-          "mark_id": "LEMKEN",
-          "name": "Heliodor",
-          "cyrillic_name": "Heliodor"
-        }
-      ]
-    },
-    {
-      "id": "KVERNELAND",
-      "name": "Kverneland",
-      "cyrillic_name": "Квернеланд",
-      "numeric_id": 6051,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Норвегія",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "KVERNELAND_ES_PLOUGH",
-          "mark_id": "KVERNELAND",
-          "name": "ES Plough",
-          "cyrillic_name": "ES Plough"
-        },
-        {
-          "id": "KVERNELAND_ACCORD",
-          "mark_id": "KVERNELAND",
-          "name": "Accord Seeder",
-          "cyrillic_name": "Accord Seeder"
-        },
-        {
-          "id": "KVERNELAND_UNIVERSAL",
-          "mark_id": "KVERNELAND",
-          "name": "Universal",
-          "cyrillic_name": "Universal"
-        }
-      ]
-    },
-    {
-      "id": "AMAZONE",
-      "name": "Amazone",
-      "cyrillic_name": "Амазоне",
-      "numeric_id": 12090,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "AMAZONE_CATROS",
-          "mark_id": "AMAZONE",
-          "name": "Catros",
-          "cyrillic_name": "Catros"
-        },
-        {
-          "id": "AMAZONE_EDX",
-          "mark_id": "AMAZONE",
-          "name": "EDX Seeder",
-          "cyrillic_name": "EDX Seeder"
-        },
-        {
-          "id": "AMAZONE_UX",
-          "mark_id": "AMAZONE",
-          "name": "UX Sprayer",
-          "cyrillic_name": "UX Sprayer"
-        }
-      ]
-    },
-    {
-      "id": "RAUCH",
-      "name": "Rauch",
-      "cyrillic_name": "Рауx",
-      "numeric_id": 4321,
-      "year_from": null,
-      "year_to": 2025,
-      "popular": 0,
-      "country": "Німеччина",
-      "updated_at": "2025-10-25 10:00:00",
-      "models": [
-        {
-          "id": "RAUCH_AXIS",
-          "mark_id": "RAUCH",
-          "name": "Axis",
-          "cyrillic_name": "Axis"
-        },
-        {
-          "id": "RAUCH_MDS",
-          "mark_id": "RAUCH",
-          "name": "MDS",
-          "cyrillic_name": "MDS"
-        },
-        {
-          "id": "RAUCH_AGT",
-          "mark_id": "RAUCH",
-          "name": "AGT",
-          "cyrillic_name": "AGT"
-        }
-      ]
     }
   ],
-
-  "meta": { "cached": true, "duration_ms": 0 }
+  "meta": {
+    "cached": true,
+    "duration_ms": 0
+  }
 }

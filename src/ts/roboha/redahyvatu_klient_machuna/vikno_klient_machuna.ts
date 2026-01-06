@@ -54,9 +54,9 @@ export function getModalFormValues() {
   const get = (id: string) =>
     (
       document.getElementById(id) as
-        | HTMLInputElement
-        | HTMLTextAreaElement
-        | null
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | null
     )?.value || "";
   const phoneValue = get(phoneInputId);
   return {
@@ -546,15 +546,30 @@ function setupEditingAutocompletes() {
   ) as HTMLInputElement;
   const carVinList = document.getElementById(carVinListId) as HTMLUListElement;
 
-  const carSuggestions = autoData.data.flatMap((mark) =>
+  // Дані з auto.json
+  const carSuggestionsFromFile = autoData.data.flatMap((mark) =>
     mark.models.map((model) => ({
       mark_id: formatDisplayText(mark.id),
       mark_cyrillic: mark.cyrillic_name || "",
       name: formatDisplayText(model.name),
       model_cyrillic: model.cyrillic_name || "",
       display: `${formatDisplayText(mark.id)} ${formatDisplayText(model.name)}`,
+      source: "file", // Позначка що це з файлу
     }))
   );
+
+  // Дані з бази даних cars
+  const carSuggestionsFromDB = allUniqueData.carModels.map((model) => ({
+    mark_id: "",
+    mark_cyrillic: "",
+    name: model,
+    model_cyrillic: "",
+    display: model,
+    source: "database", // Позначка що це з БД
+  }));
+
+  // Комбінуємо обидва джерела
+  const combinedCarSuggestions = [...carSuggestionsFromFile, ...carSuggestionsFromDB];
 
   const matchesSearch = (item: any, searchValue: string): boolean => {
     const search = searchValue.toLowerCase();
@@ -571,7 +586,7 @@ function setupEditingAutocompletes() {
   setupAutocomplete(
     carModelInput,
     carModelList,
-    carSuggestions,
+    combinedCarSuggestions,
     (item) => item.display,
     (item) => {
       carModelInput.value = item.display;

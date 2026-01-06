@@ -568,8 +568,26 @@ function setupEditingAutocompletes() {
     source: "database", // Позначка що це з БД
   }));
 
-  // Комбінуємо обидва джерела
-  const combinedCarSuggestions = [...carSuggestionsFromFile, ...carSuggestionsFromDB];
+  // Комбінуємо обидва джерела і видаляємо дублі
+  const uniqueMap = new Map<string, any>();
+
+  // Спочатку додаємо дані з файлу (вони мають пріоритет)
+  carSuggestionsFromFile.forEach((item) => {
+    const key = item.display.toLowerCase().trim();
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, item);
+    }
+  });
+
+  // Потім додаємо дані з БД (тільки якщо їх ще немає)
+  carSuggestionsFromDB.forEach((item) => {
+    const key = item.display.toLowerCase().trim();
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, item);
+    }
+  });
+
+  const combinedCarSuggestions = Array.from(uniqueMap.values());
 
   const matchesSearch = (item: any, searchValue: string): boolean => {
     const search = searchValue.toLowerCase();

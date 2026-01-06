@@ -542,8 +542,7 @@ async function syncSlyusarsHistoryForAct(params: {
 
       if (normalizedAccess !== "приймальник") {
         console.log(
-          `⏭️ Пропускаємо ${
-            slyusarData["Name"] || "Невідомий"
+          `⏭️ Пропускаємо ${slyusarData["Name"] || "Невідомий"
           } - роль: ${access}`
         );
         continue;
@@ -955,22 +954,27 @@ export function initStatusLockDelegation(): void {
         }
 
         // 2️⃣ Валідація всіх полів таблиці перед закриттям
-        const validationResult = validateActTableBeforeClosing();
-        if (!validationResult.isValid) {
-          showNotification(
-            "❌ Закриття відмінено, заповніть всі поля таблиці",
-            "error",
-            5000
-          );
-          console.warn(
-            "Помилки валідації таблиці перед закриттям:",
-            validationResult.errors
-          );
-          validationResult.errors.forEach((err) => {
-            console.warn(`  • ${err}`);
-          });
-          btn.disabled = false;
-          return;
+        // ⚠️ Адміністратор може закрити акт без валідації
+        if (!hasFullAccess()) {
+          const validationResult = validateActTableBeforeClosing();
+          if (!validationResult.isValid) {
+            showNotification(
+              "❌ Закриття відмінено, заповніть всі поля таблиці",
+              "error",
+              5000
+            );
+            console.warn(
+              "Помилки валідації таблиці перед закриттям:",
+              validationResult.errors
+            );
+            validationResult.errors.forEach((err) => {
+              console.warn(`  • ${err}`);
+            });
+            btn.disabled = false;
+            return;
+          }
+        } else {
+          console.log("🔓 Адміністратор: валідація пропущена");
         }
 
         // 3️⃣ Автозбереження перед закриттям

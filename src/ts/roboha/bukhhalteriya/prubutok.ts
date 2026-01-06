@@ -73,10 +73,13 @@ const expenseModes: Record<ExpenseMode, ExpenseModeConfig> = {
 const modeSequence: ExpenseMode[] = ["add", "edit", "delete"];
 
 const EXPENSE_CATEGORIES = [
+  "🚕 Таксі",
+  "🚚 Нова Пошта",
+  "🚛 Meest Express",
+  "🛻 Delivery",
   "🔧 Інструменти",
   "🏢 Оренда",
   "💡 Комунальні послуги",
-  "🚗 Доставка",
   "📱 Зв'язок",
   "🖥️ Обладнання",
   "📄 Канцелярія",

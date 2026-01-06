@@ -199,7 +199,7 @@ function updateTableDisplay(): void {
     if (podlegleContainer) podlegleContainer.style.display = "block";
     updatepodlegleTable();
   } else if (currentTab === "details") {
-    if (tableTitle) tableTitle.innerHTML = "📊 Деталі по актам";
+    if (tableTitle) tableTitle.innerHTML = "⚙️ Деталі по актам";
     if (detailsContainer) detailsContainer.style.display = "block";
     updateDetailsTable();
   } else if (currentTab === "vutratu") {

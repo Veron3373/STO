@@ -1460,12 +1460,8 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     "Загальна сума": grandTotalSum,
     Аванс: avansValue,
     Знижка: discountValue,
-    "Прибуток за деталі": globalCache.settings.saveMargins
-      ? Number(finalDetailsProfit.toFixed(2))
-      : 0,
-    "Прибуток за роботу": globalCache.settings.saveMargins
-      ? Number(finalWorksProfit.toFixed(2))
-      : 0,
+    "Прибуток за деталі": Number(finalDetailsProfit.toFixed(2)),
+    "Прибуток за роботу": Number(finalWorksProfit.toFixed(2)),
   };
 
   const deltas = calculateDeltas();
@@ -1492,20 +1488,15 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   await applyScladDeltas(deltas);
   await syncShopsOnActSave(actId, detailRowsForShops);
 
-  if (globalCache.settings.saveMargins) {
-    await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
-    await syncPruimalnikHistory(
-      actId,
-      totalWorksSum,
-      totalDetailsSum,
-      globalCache.currentActDateOn,
-      discountValue
-    );
-  } else {
-    console.log(
-      "ℹ️ saveMargins = false: Синхронізація зарплат слюсарів та приймальників пропущена"
-    );
-  }
+  // ✅ Завжди синхронізуємо зарплати та історію (saveMargins видалено)
+  await syncSlyusarsOnActSave(actId, workRowsForSlyusars);
+  await syncPruimalnikHistory(
+    actId,
+    totalWorksSum,
+    totalDetailsSum,
+    globalCache.currentActDateOn,
+    discountValue
+  );
 
   // ===== ЛОГУВАННЯ ЗМІН =====
   try {

@@ -194,7 +194,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, data, procent")
-      .in("setting_id", [1, 2, 3, 4, 5, 6])
+      .in("setting_id", [1, 2, 3, 4, 5])
       .order("setting_id");
 
     if (error) throw error;

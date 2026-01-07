@@ -215,6 +215,71 @@ async function handleEdit(
     }
 
     const idValue = data.record[idField];
+    
+    // ✅ ЗАХИСТ: Заборона редагування Name та Доступ для slyusar_id = 1
+    if (tableName === "slyusars" && idValue === 1) {
+      const additionalData = getSlusarAdditionalData();
+      
+      // Отримуємо поточні дані з бази
+      const { data: currentRecord, error: fetchError } = await supabase
+        .from(tableName)
+        .select("*")
+        .eq(idField, idValue)
+        .single();
+
+      if (fetchError || !currentRecord) {
+        console.error("Помилка при отриманні запису:", fetchError);
+        return false;
+      }
+
+      let currentData: any;
+      try {
+        currentData =
+          typeof currentRecord.data === "string"
+            ? JSON.parse(currentRecord.data)
+            : currentRecord.data;
+      } catch {
+        currentData = {};
+      }
+
+      // Для slyusar_id = 1 зберігаємо оригінальні Name та Доступ
+      const updateData: any = {
+        data: {
+          Name: currentData?.Name || "Брацлавець Б. С.", // Зберігаємо оригінальне ім'я
+          Опис:
+            currentData?.Опис && typeof currentData.Опис === "object"
+              ? currentData.Опис
+              : {},
+          Історія:
+            currentData?.Історія && typeof currentData.Історія === "object"
+              ? currentData.Історія
+              : {},
+          ПроцентРоботи: additionalData.percent,
+          ПроцентЗапчастин: additionalData.percentParts,
+          Пароль: additionalData.password,
+          Доступ: currentData?.Доступ || "Адміністратор", // Зберігаємо оригінальний доступ
+        },
+      };
+
+      const { error } = await supabase
+        .from(tableName)
+        .update(updateData)
+        .eq(idField, idValue);
+      if (error) {
+        console.error("Помилка при редагуванні:", error);
+        return false;
+      }
+
+      console.log(
+        `Успішно відредаговано: ${tableName}, ID: ${idValue} (захищений акаунт - Name та Доступ не змінено)`
+      );
+      showNotification(
+        "Дані оновлено. Name та Доступ адміністратора захищені від змін",
+        "info"
+      );
+      return true;
+    }
+    
     const { data: currentRecord, error: fetchError } = await supabase
       .from(tableName)
       .select("*")
@@ -304,6 +369,17 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
     }
 
     const idValue = data.record[idField];
+    
+    // ✅ ЗАХИСТ: Заборона видалення slyusar_id = 1
+    if (tableName === "slyusars" && idValue === 1) {
+      console.error("Видалення адміністраторського акаунту заборонено!");
+      showNotification(
+        "Видалення адміністраторського акаунту заборонено!",
+        "error"
+      );
+      return false;
+    }
+    
     const { error } = await supabase
       .from(tableName)
       .delete()

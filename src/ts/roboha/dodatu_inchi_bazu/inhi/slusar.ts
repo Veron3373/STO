@@ -818,16 +818,19 @@ export const saveSlusarData = async (): Promise<boolean> => {
     let currentData =
       typeof rows.data === "string" ? JSON.parse(rows.data) : rows.data;
 
+    // ✅ ЗАХИСТ: Для slyusar_id = 1 зберігаємо оригінальні Name та Доступ
+    const isSlyusarId1 = rows.slyusar_id === 1;
+
     // Оновлюємо дані
     const updatedData = {
       ...currentData,
-      Name: name, // Оновлюємо ім'я, якщо воно було змінено
+      Name: isSlyusarId1 ? currentData.Name : name, // Для ID=1 зберігаємо оригінальне ім'я
       Пароль: password, // Всі можуть змінювати пароль
     };
 
-    // Адміністратор може змінювати ВСІ поля
+    // Адміністратор може змінювати ВСІ поля (крім Name та Доступ для slyusar_id = 1)
     if (isAdmin) {
-      updatedData.Доступ = access;
+      updatedData.Доступ = isSlyusarId1 ? currentData.Доступ : access; // Для ID=1 зберігаємо оригінальний доступ
       updatedData.ПроцентРоботи = percentValue;
       updatedData.ПроцентЗапчастин = percentPartsValue;
     }
@@ -844,7 +847,11 @@ export const saveSlusarData = async (): Promise<boolean> => {
       return false;
     }
 
-    console.log(`✅ Успішно оновлено дані для ${name}`);
+    if (isSlyusarId1) {
+      console.log(`✅ Успішно оновлено дані для ${currentData.Name} (захищений акаунт - Name та Доступ не змінено)`);
+    } else {
+      console.log(`✅ Успішно оновлено дані для ${name}`);
+    }
 
     // Якщо користувач змінив свій власний пароль, оновлюємо localStorage
     if (normalizeName(name) === normalizeName(currentUser?.name || "")) {

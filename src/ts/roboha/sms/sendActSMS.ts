@@ -3,6 +3,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { sendSMS } from "./smsAPI";
 import { generateSMSText } from "./smsConfig";
+import { refreshActsTable } from "../tablucya/tablucya";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { showSmsConfirmModal } from "./vikno_sms_confirm";
 
@@ -190,8 +191,22 @@ export async function handleSmsButtonClick(actId: number): Promise<void> {
       const btn = document.querySelector(`#sms-btn[data-act-id="${actId}"]`);
       if (btn) {
         btn.innerHTML = "📨";
-        btn.setAttribute("title", now);
+        // Форматуємо дату для title
+        try {
+          const d = new Date(now);
+          const m = (d.getMonth() + 1).toString().padStart(2, '0');
+          const dd = d.getDate().toString().padStart(2, '0');
+          const y = d.getFullYear();
+          const h = d.getHours().toString().padStart(2, '0');
+          const min = d.getMinutes().toString().padStart(2, '0');
+          btn.setAttribute("title", `${h}:${min} / ${dd}.${m}.${y}`);
+        } catch {
+          btn.setAttribute("title", now);
+        }
       }
+
+      // Оновлюємо таблицю актів, щоб показати новий статус SMS
+      refreshActsTable();
     } else {
       showNotification(`❌ Помилка: ${result.error}`, "error", 4000);
     }

@@ -64,6 +64,7 @@ import {
 
 import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
+import { handleSmsButtonClick } from "../sms/sendActSMS";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -936,7 +937,7 @@ function renderModalContent(
           <div class="status-row">
             <span>${carInfo.engine}</span>
             ${!act.sms
-      ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="Немає SMS">📬</button>`
+      ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="Немає SMS">📭</button>`
       : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${act.sms}">📨</button>`
     }
           </div>
@@ -1051,6 +1052,13 @@ async function addModalHandlers(
   initPhoneClickHandler(body, clientPhone);
   addSaveHandler(actId, actDetails);
   initDeleteRowHandler();
+
+  const smsBtn = document.getElementById("sms-btn");
+  if (smsBtn) {
+    smsBtn.addEventListener("click", () => {
+      handleSmsButtonClick(actId);
+    });
+  }
 
   if (!isRestricted) {
     setTimeout(() => {

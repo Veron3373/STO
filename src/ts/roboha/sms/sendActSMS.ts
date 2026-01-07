@@ -77,3 +77,112 @@ export async function sendActClosedSMS(
     return false;
   }
 }
+
+/**
+ * Ручна відправка SMS при кліку на кнопку 📭/📨
+ * Перевіряє налаштування в таблиці settings (setting_id = 4)
+ */
+export async function handleSmsButtonClick(actId: number): Promise<void> {
+  try {
+    // 1. Перевірка налаштування (setting_id = 4)
+    const { data: settingData, error: settingError } = await supabase
+      .from("settings")
+      .select("data")
+      .eq("setting_id", 4)
+      .single();
+
+    if (settingError) {
+      console.error("Помилка перевірки налаштувань:", settingError);
+      showNotification("Помилка перевірки налаштувань SMS", "error");
+      return;
+    }
+
+    const isSmsEnabled =
+      settingData?.data === true ||
+      settingData?.data === "true" ||
+      settingData?.data === 1;
+
+    if (!isSmsEnabled) {
+      showNotification("SMS відключені (див. Налаштування)", "warning");
+      return;
+    }
+
+    // 2. Отримання даних про акт і клієнта
+    const { data: act, error: actError } = await supabase
+      .from("acts")
+      .select("client_id, data")
+      .eq("act_id", actId)
+      .single();
+
+    if (actError || !act) {
+      showNotification("Не знайдено дані акту", "error");
+      return;
+    }
+
+    const actData =
+      typeof act.data === "string" ? JSON.parse(act.data) : act.data;
+    const totalSum = actData?.["Загальна сума"] || 0;
+
+    const { data: client, error: clientError } = await supabase
+      .from("clients")
+      .select("data")
+      .eq("client_id", act.client_id)
+      .single();
+
+    if (clientError || !client) {
+      showNotification("Не знайдено дані клієнта", "error");
+      return;
+    }
+
+    const clientData =
+      typeof client.data === "string" ? JSON.parse(client.data) : client.data;
+    const clientPhone = clientData?.["Телефон"] || clientData?.phone || "";
+    const clientName = clientData?.["ПІБ"] || clientData?.fio || "Клієнт";
+
+    if (!clientPhone) {
+      showNotification("У клієнта не вказано номер телефону", "warning");
+      return;
+    }
+
+    // 3. Підтвердження відправки
+    const confirmed = window.confirm(
+      `Відправити SMS для Акту №${actId}?\nСума: ${totalSum} грн\nКлієнт: ${clientName} (${clientPhone})`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // 4. Відправка
+    showNotification("📤 Відправка SMS...", "info", 1500);
+    const message = generateSMSText(clientName, totalSum);
+    const result = await sendSMS(clientPhone, message);
+
+    if (result.success) {
+      const now = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from("acts")
+        .update({ sms: now })
+        .eq("act_id", actId);
+
+      if (updateError) {
+        console.error("Помилка оновлення статусу SMS:", updateError);
+      }
+
+      showNotification(`✅ SMS успішно відправлено!`, "success", 3000);
+
+      // Оновлюємо кнопку в інтерфейсі (якщо вона є)
+      const btn = document.querySelector(`#sms-btn[data-act-id="${actId}"]`);
+      if (btn) {
+        btn.innerHTML = "📨";
+        btn.setAttribute("title", now);
+      }
+    } else {
+      showNotification(`❌ Помилка: ${result.error}`, "error", 4000);
+    }
+
+  } catch (error: any) {
+    console.error("Помилка handleSmsButtonClick:", error);
+    showNotification("Критична помилка при відправці SMS", "error");
+  }
+}

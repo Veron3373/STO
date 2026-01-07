@@ -5,7 +5,6 @@ import { closeActAndMarkSlyusars } from "./save_work";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import { ACT_ITEMS_TABLE_CONTAINER_ID } from "../globalCache";
 import { userAccessLevel } from "../../tablucya/users";
-import { sendActClosedSMS } from "../../sms/sendActSMS";
 import { supabase } from "../../../vxid/supabaseClient";
 
 export const viknoPidtverdchennayZakruttiaAktyId =
@@ -174,44 +173,7 @@ export function showViknoPidtverdchennayZakruttiaAkty(
           );
         }
 
-        // Отримання даних для SMS
-        const { data: act, error: actError } = await supabase
-          .from("acts")
-          .select("client_id, data")
-          .eq("act_id", actId)
-          .single();
-
-        if (!actError && act) {
-          const { data: client } = await supabase
-            .from("clients")
-            .select("data")
-            .eq("client_id", act.client_id)
-            .single();
-
-          const clientData =
-            typeof client?.data === "string"
-              ? JSON.parse(client.data)
-              : client?.data;
-
-          const actData =
-            typeof act.data === "string" ? JSON.parse(act.data) : act.data;
-
-          const clientPhone =
-            clientData?.["Телефон"] || clientData?.phone || "";
-          const clientName = clientData?.["ПІБ"] || clientData?.fio || "Клієнт";
-          const totalSum = actData?.["Загальна сума"] || 0;
-
-          if (clientPhone) {
-            // Відправка SMS (асинхронно, не блокуємо UI)
-            sendActClosedSMS(actId, clientPhone, clientName, totalSum).catch(
-              (err) => {
-                console.error("Помилка відправки SMS:", err);
-              }
-            );
-          } else {
-            console.warn("⚠️ Номер телефону клієнта не знайдено");
-          }
-        }
+        // SMS відправка видалена звідси за запитом користувача
 
         await refreshActsTable();
         cleanup();

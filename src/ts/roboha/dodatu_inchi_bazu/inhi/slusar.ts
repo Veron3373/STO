@@ -443,12 +443,16 @@ const createCustomDropdown = (
   };
 
   const onFocus = () => {
-    renderSuggestions(inputElement.value.trim());
+    // Якщо поле readonly (захищений адмін), показуємо всі варіанти (скидаємо фільтр)
+    const filter = inputElement.readOnly ? "" : inputElement.value.trim();
+    renderSuggestions(filter);
   };
 
   const onClick = (e: Event) => {
     e.stopPropagation(); // Prevents document click from closing the dropdown immediately
-    renderSuggestions(inputElement.value.trim());
+    // Якщо поле readonly (захищений адмін), показуємо всі варіанти (скидаємо фільтр)
+    const filter = inputElement.readOnly ? "" : inputElement.value.trim();
+    renderSuggestions(filter);
   };
 
   const onDocClick = (e: Event) => {

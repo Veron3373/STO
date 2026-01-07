@@ -15,6 +15,7 @@ import { initRobota, handleRobotaClick } from "./inhi/robota";
 import { initSlusar, handleSlusarClick } from "./inhi/slusar";
 import { initPruimalnik, handlePruimalnikClick } from "./inhi/pruimalnuk";
 import { initDherelo, handleDhereloClick } from "./inhi/djerelo";
+import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 
 // Змінні для експорту
 export let all_bd: string | null = null;
@@ -152,10 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
           try {
             const data = JSON.parse(all_bd);
             if (data.table === "slyusars" && data.slyusar_id === 1) {
-              // Імпортуємо showNotification
-              const { showNotification } = await import(
-                "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna"
-              );
               showNotification(
                 "Видалення адміністраторського акаунту заборонено!",
                 "error"

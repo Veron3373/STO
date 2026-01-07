@@ -516,29 +516,45 @@ function createClientCell(
   // Додаємо ПІБ
   td.innerHTML = `<div>${pibOnly}</div>`;
 
-  // Додаємо телефони
-  phones.forEach((p) => {
-    td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;
-  });
-
-  // Додаємо статус SMS, якщо він є
+  let smsHtml = "";
+  // Формуємо HTML для SMS, якщо є
   if (act && act.sms) {
     try {
-      // Замінюємо пробіл на T для сумісності з Safari, якщо це рядок "YYYY-MM-DD HH:mm:ss"
       const dateString = String(act.sms).replace(" ", "T");
       const smsDate = new Date(dateString);
 
       if (!isNaN(smsDate.getTime())) {
         const { date, time } = formatDateTime(smsDate);
-        // Колір #0400ffff (синій) як в запиті
-        const timeHtml = `<span style="color: #0400ffff; font-size: 0.85em; font-weight: bold;">${time}</span>`;
+        // Колір #0400ff
+        const timeHtml = `<span style="color: #0400ff; font-size: 0.85em; font-weight: bold;">${time}</span>`;
         const dateHtml = `<span style="font-size: 0.85em; color: #555;">${date}</span>`;
 
-        td.innerHTML += `<div style="margin-top: 4px; font-size: 0.9em; line-height: 1.2;">📨 ${timeHtml} / ${dateHtml}</div>`;
+        smsHtml = `<div style="font-size: 0.9em; line-height: 1.2; white-space: nowrap;">📨 ${timeHtml} / ${dateHtml}</div>`;
       }
     } catch (e) {
       console.warn(`Error parsing SMS date for act ${actId}:`, e);
     }
+  }
+
+  // Виводимо телефони і SMS
+  if (phones.length > 0) {
+    phones.forEach((p) => {
+      if (smsHtml) {
+        // Якщо є SMS - виводимо в один рядок: SMS зліва, телефон справа
+        td.innerHTML += `
+           <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 4px;">
+             ${smsHtml}
+             <div class="phone-blue-italic" style="margin-left: 5px;">${p}</div>
+           </div>`;
+        // Очищаємо smsHtml щоб не дублювати якщо телефонів кілька (хоча зазвичай один)
+        smsHtml = "";
+      } else {
+        td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;
+      }
+    });
+  } else if (smsHtml) {
+    // Якщо телефонів немає, але є SMS
+    td.innerHTML += `<div style="margin-top: 4px; text-align: left;">${smsHtml}</div>`;
   }
 
   td.addEventListener("click", async () => {

@@ -111,12 +111,18 @@ export async function handleSmsButtonClick(actId: number): Promise<void> {
     // 2. Отримання даних про акт і клієнта
     const { data: act, error: actError } = await supabase
       .from("acts")
-      .select("client_id, data, sms")
+      .select("client_id, data, sms, date_off")
       .eq("act_id", actId)
       .single();
 
     if (actError || !act) {
       showNotification("Не знайдено дані акту", "error");
+      return;
+    }
+
+    // Якщо акт закритий (є date_off), забороняємо відправку
+    if (act.date_off) {
+      showNotification("SMS не надіслано. Для початку відкрийте акт", "warning", 3000);
       return;
     }
 

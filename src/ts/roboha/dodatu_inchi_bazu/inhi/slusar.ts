@@ -210,17 +210,21 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
     passwordInput.disabled = false;
   }
 
-  // ✅ ЗАХИСТ: Блокуємо поле Name для slyusar_id = 1
-  if (searchInput && isSlyusarId1) {
-    searchInput.disabled = true;
-    searchInput.style.backgroundColor = "#f0f0f0";
-    searchInput.style.cursor = "not-allowed";
-    searchInput.title = "Ім'я адміністраторського акаунту не можна змінити";
-  } else if (searchInput) {
-    searchInput.disabled = false;
-    searchInput.style.backgroundColor = "";
-    searchInput.style.cursor = "";
-    searchInput.title = "";
+  // ✅ ЗАХИСТ: Для slyusar_id = 1 - поле доступне для вибору, але заборонено ручне редагування
+  if (searchInput) {
+    if (isSlyusarId1) {
+      // Поле активне для вибору з dropdown, але readonly для ручного введення
+      searchInput.readOnly = true;
+      searchInput.style.backgroundColor = "#f9f9f9";
+      searchInput.style.cursor = "pointer";
+      searchInput.title = "Ім'я адміністратора не можна змінити. Виберіть іншого користувача зі списку.";
+    } else {
+      // Для інших користувачів - повне редагування
+      searchInput.readOnly = false;
+      searchInput.style.backgroundColor = "";
+      searchInput.style.cursor = "";
+      searchInput.title = "";
+    }
   }
 
   if (accessSelect && data?.Доступ) {
@@ -302,9 +306,21 @@ const clearSlusarInputs = () => {
   const percentPartsInput = document.getElementById(
     "slusar-percent-parts"
   ) as HTMLInputElement;
+  const searchInput = document.getElementById(
+    "search-input-all_other_bases"
+  ) as HTMLInputElement;
 
   const currentUser = getCurrentUserFromLocalStorage();
   const isAdmin = currentUser?.access === "Адміністратор";
+
+  // Скидаємо стан поля пошуку
+  if (searchInput) {
+    searchInput.readOnly = false;
+    searchInput.disabled = false;
+    searchInput.style.backgroundColor = "";
+    searchInput.style.cursor = "";
+    searchInput.title = "";
+  }
 
   if (passwordInput) {
     passwordInput.value = "";

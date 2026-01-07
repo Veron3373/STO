@@ -4,6 +4,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import { sendSMS } from "./smsAPI";
 import { generateSMSText } from "./smsConfig";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import { showSmsConfirmModal } from "./vikno_sms_confirm";
 
 /**
  * Відправка SMS при закритті акту
@@ -145,8 +146,10 @@ export async function handleSmsButtonClick(actId: number): Promise<void> {
     }
 
     // 3. Підтвердження відправки
-    const confirmed = window.confirm(
-      `Відправити SMS для Акту №${actId}?\nСума: ${totalSum} грн\nКлієнт: ${clientName} (${clientPhone})`
+    const confirmed = await showSmsConfirmModal(
+      clientName,
+      totalSum,
+      clientPhone
     );
 
     if (!confirmed) {

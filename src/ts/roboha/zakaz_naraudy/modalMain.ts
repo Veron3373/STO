@@ -927,11 +927,11 @@ function renderModalContent(
           <div class="status-row">
             <span>${carInfo.vin}</span>
             <div class="status-icons">
-              ${
-                !isRestricted && canShowCreateActBtn
-                  ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
-                  : ""
-              }
+                     ${
+                       !isRestricted && canShowPrintActBtn
+                         ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+                         : ""
+                     }
             </div>
           </div>
           `
@@ -955,11 +955,11 @@ function renderModalContent(
     actDetails?.["Причина звернення"] || "—"
   }</span>
         </div>
-        ${
-          !isRestricted && canShowPrintActBtn
-            ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
-            : ""
-        }
+         ${
+           !isRestricted && canShowCreateActBtn
+             ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+             : ""
+         }
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">

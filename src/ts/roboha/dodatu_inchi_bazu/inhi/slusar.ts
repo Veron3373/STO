@@ -193,19 +193,45 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
   const percentPartsInput = document.getElementById(
     "slusar-percent-parts"
   ) as HTMLInputElement;
+  const searchInput = document.getElementById(
+    "search-input-all_other_bases"
+  ) as HTMLInputElement;
 
   // Перевірка прав доступу
   const currentUser = getCurrentUserFromLocalStorage();
   const isAdmin = currentUser?.access === "Адміністратор";
+
+  // ✅ ЗАХИСТ: Перевірка чи це slyusar_id = 1
+  const isSlyusarId1 = lastValidSlyusarId === 1;
 
   if (passwordInput && data?.Пароль !== undefined) {
     passwordInput.value = String(data.Пароль);
     // Пароль завжди редагується
     passwordInput.disabled = false;
   }
+
+  // ✅ ЗАХИСТ: Блокуємо поле Name для slyusar_id = 1
+  if (searchInput && isSlyusarId1) {
+    searchInput.disabled = true;
+    searchInput.style.backgroundColor = "#f0f0f0";
+    searchInput.style.cursor = "not-allowed";
+    searchInput.title = "Ім'я адміністраторського акаунту не можна змінити";
+  } else if (searchInput) {
+    searchInput.disabled = false;
+    searchInput.style.backgroundColor = "";
+    searchInput.style.cursor = "";
+    searchInput.title = "";
+  }
+
   if (accessSelect && data?.Доступ) {
+    // ✅ ЗАХИСТ: Блокуємо Доступ для slyusar_id = 1
+    if (isSlyusarId1) {
+      accessSelect.value = data.Доступ;
+      accessSelect.disabled = true;
+      accessSelect.title = "Доступ адміністраторського акаунту не можна змінити";
+    }
     // Якщо вибрано "Бемба В. Я", встановлюємо Адміністратор доступ і блокуємо селект
-    if (normalizeName(selectedName) === normalizeName("Бемба В. Я")) {
+    else if (normalizeName(selectedName) === normalizeName("Бемба В. Я")) {
       accessSelect.value = "Адміністратор";
       accessSelect.disabled = true;
     } else {

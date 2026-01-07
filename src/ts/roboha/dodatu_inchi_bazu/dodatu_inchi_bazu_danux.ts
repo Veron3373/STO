@@ -147,6 +147,26 @@ document.addEventListener("DOMContentLoaded", () => {
   if (yesButton) {
     yesButton.addEventListener("click", async () => {
       try {
+        // ✅ ЗАХИСТ: Перевірка перед відкриттям модального вікна
+        if (CRUD === "Видалити" && all_bd) {
+          try {
+            const data = JSON.parse(all_bd);
+            if (data.table === "slyusars" && data.slyusar_id === 1) {
+              // Імпортуємо showNotification
+              const { showNotification } = await import(
+                "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna"
+              );
+              showNotification(
+                "Видалення адміністраторського акаунту заборонено!",
+                "error"
+              );
+              return; // Не відкриваємо модальне вікно
+            }
+          } catch (e) {
+            console.error("Помилка при перевірці all_bd:", e);
+          }
+        }
+
         const confirmed = await showSavePromptModal();
         if (confirmed) {
           // Логіка при підтвердженні

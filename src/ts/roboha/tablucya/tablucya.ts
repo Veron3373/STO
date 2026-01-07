@@ -540,13 +540,13 @@ function createClientCell(
   if (phones.length > 0) {
     phones.forEach((p) => {
       if (smsHtml) {
-        // Якщо є SMS - виводимо в один рядок: SMS зліва, телефон справа
+        // Для збереження центрування телефону використовуємо position: relative
         td.innerHTML += `
-           <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 4px;">
-             ${smsHtml}
-             <div class="phone-blue-italic" style="margin-left: 5px;">${p}</div>
+           <div style="position: relative; width: 100%; margin-top: 4px; min-height: 1.2em;">
+             <div style="position: absolute; left: 0; top: 0; white-space: nowrap;">${smsHtml}</div>
+             <div class="phone-blue-italic" style="text-align: center; width: 100%;">${p}</div>
            </div>`;
-        // Очищаємо smsHtml щоб не дублювати якщо телефонів кілька (хоча зазвичай один)
+        // Очищаємо smsHtml щоб не дублювати
         smsHtml = "";
       } else {
         td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;

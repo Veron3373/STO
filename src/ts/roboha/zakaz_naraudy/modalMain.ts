@@ -936,9 +936,11 @@ function renderModalContent(
     `
           <div class="status-row">
             <span>${carInfo.engine}</span>
-            ${!act.sms
-      ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="Немає SMS">📭</button>`
-      : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${act.sms}">📨</button>`
+            ${userAccessLevel === "Адміністратор" || userAccessLevel === "Приймальник"
+      ? !act.sms
+        ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="Немає SMS">📭</button>`
+        : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${act.sms}">📨</button>`
+      : ""
     }
           </div>
           `

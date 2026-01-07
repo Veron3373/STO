@@ -522,23 +522,22 @@ function createClientCell(
   });
 
   // Додаємо статус SMS, якщо він є
-  if (act.sms) {
+  if (act && act.sms) {
     try {
-      const smsDate = new Date(act.sms);
+      // Замінюємо пробіл на T для сумісності з Safari, якщо це рядок "YYYY-MM-DD HH:mm:ss"
+      const dateString = String(act.sms).replace(" ", "T");
+      const smsDate = new Date(dateString);
+
       if (!isNaN(smsDate.getTime())) {
         const { date, time } = formatDateTime(smsDate);
-        // Формат: 📨 11:54 / 07.01.2026
-        // Вимога: <div style="color: #0400ffff; font-size: 0.85em;">11:54</div> бірюзовий (хоча #0400ffff це синій, але зробимо як в коді дати)
-        // У запиті: "📨 16:32 / 12.02.2023 невеликим шщрифтом <div style="color: #0400ffff; font-size: 0.85em;">11:54</div> колір бірюзовий"
-        // Зроблю схоже на createDateCell
+        // Колір #0400ffff (синій) як в запиті
+        const timeHtml = `<span style="color: #0400ffff; font-size: 0.85em; font-weight: bold;">${time}</span>`;
+        const dateHtml = `<span style="font-size: 0.85em; color: #555;">${date}</span>`;
 
-        const timeHtml = `<span style="color: #0400ffff; font-size: 0.85em;">${time}</span>`;
-        const dateHtml = `<span style="font-size: 0.85em;">${date}</span>`;
-
-        td.innerHTML += `<div style="margin-top: 4px; font-size: 0.9em;">📨 ${timeHtml} / ${dateHtml}</div>`;
+        td.innerHTML += `<div style="margin-top: 4px; font-size: 0.9em; line-height: 1.2;">📨 ${timeHtml} / ${dateHtml}</div>`;
       }
     } catch (e) {
-      console.warn("Error parsing SMS date", e);
+      console.warn(`Error parsing SMS date for act ${actId}:`, e);
     }
   }
 

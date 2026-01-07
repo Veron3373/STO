@@ -506,15 +506,41 @@ function isActClosed(act: any): boolean {
 
 function createClientCell(
   clientInfo: { pib: string; phone: string },
-  actId: number
+  actId: number,
+  act: any
 ): HTMLTableCellElement {
   const td = document.createElement("td");
   const phones = clientInfo.phone ? [clientInfo.phone] : [];
   let pibOnly = clientInfo.pib;
+
+  // Додаємо ПІБ
   td.innerHTML = `<div>${pibOnly}</div>`;
+
+  // Додаємо телефони
   phones.forEach((p) => {
     td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;
   });
+
+  // Додаємо статус SMS, якщо він є
+  if (act.sms) {
+    try {
+      const smsDate = new Date(act.sms);
+      if (!isNaN(smsDate.getTime())) {
+        const { date, time } = formatDateTime(smsDate);
+        // Формат: 📨 11:54 / 07.01.2026
+        // Вимога: <div style="color: #0400ffff; font-size: 0.85em;">11:54</div> бірюзовий (хоча #0400ffff це синій, але зробимо як в коді дати)
+        // У запиті: "📨 16:32 / 12.02.2023 невеликим шщрифтом <div style="color: #0400ffff; font-size: 0.85em;">11:54</div> колір бірюзовий"
+        // Зроблю схоже на createDateCell
+
+        const timeHtml = `<span style="color: #0400ffff; font-size: 0.85em;">${time}</span>`;
+        const dateHtml = `<span style="font-size: 0.85em;">${date}</span>`;
+
+        td.innerHTML += `<div style="margin-top: 4px; font-size: 0.9em;">📨 ${timeHtml} / ${dateHtml}</div>`;
+      }
+    } catch (e) {
+      console.warn("Error parsing SMS date", e);
+    }
+  }
 
   td.addEventListener("click", async () => {
     const canOpen = await canUserOpenActs();
@@ -706,7 +732,7 @@ function renderActsRows(
       )
     );
     row.appendChild(createDateCell(act, act.act_id));
-    row.appendChild(createClientCell(clientInfo, act.act_id));
+    row.appendChild(createClientCell(clientInfo, act.act_id, act));
     row.appendChild(createCarCell(carInfo, act.act_id));
 
     if (accessLevel !== "Слюсар") {

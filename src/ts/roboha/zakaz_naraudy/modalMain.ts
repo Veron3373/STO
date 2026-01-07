@@ -44,7 +44,7 @@ import {
   calculateSlyusarSum,
 } from "./modalUI";
 import { showModalAllOtherBases } from "../dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
-import { formatDate } from "./inhi/formatuvannya_datu";
+import { formatDate, formatDateTime } from "./inhi/formatuvannya_datu";
 import { addSaveHandler } from "./inhi/zberechennya_zmin_y_danux_aktu";
 import {
   userAccessLevel,
@@ -936,10 +936,29 @@ function renderModalContent(
     `
           <div class="status-row">
             <span>${carInfo.engine}</span>
-            ${userAccessLevel === "Адміністратор" || userAccessLevel === "Приймальник"
-      ? !act.sms
-        ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="Немає SMS">📭</button>`
-        : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${act.sms}">📨</button>`
+            ${(userAccessLevel === "Адміністратор" || userAccessLevel === "Приймальник") &&
+      globalCache.settings.showSMS
+      ? (() => {
+        let tooltip = "Немає SMS";
+        const isSent = !!act.sms;
+        if (isSent) {
+          try {
+            const dateString = String(act.sms).replace(" ", "T");
+            const d = new Date(dateString);
+            if (!isNaN(d.getTime())) {
+              const { date, time } = formatDateTime(d);
+              tooltip = `${time} / ${date}`;
+            } else {
+              tooltip = String(act.sms);
+            }
+          } catch {
+            tooltip = String(act.sms);
+          }
+        }
+        return !isSent
+          ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📭</button>`
+          : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📨</button>`;
+      })()
       : ""
     }
           </div>

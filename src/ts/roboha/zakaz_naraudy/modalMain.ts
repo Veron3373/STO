@@ -618,38 +618,7 @@ async function canUserSeePrintActButton(): Promise<boolean> {
  *  - Запчастист  → settings.setting_id = 21, колонка "Запчастист"
  *  - Складовщик  → settings.setting_id = 18, колонка "Складовщик"
  */
-async function canUserSeeSkladButton(): Promise<boolean> {
-  const role = userAccessLevel;
 
-  if (!role) return true;
-  if (role === "Адміністратор") return true;
-
-  let settingId: number | null = null;
-  let columnName: string | null = null;
-
-  switch (role) {
-    case "Приймальник":
-      settingId = 20;
-      columnName = "Приймальник";
-      break;
-
-    case "Запчастист":
-      settingId = 21;
-      columnName = "Запчастист";
-      break;
-
-    case "Складовщик":
-      settingId = 18;
-      columnName = "Складовщик";
-      break;
-
-    default:
-      return true;
-  }
-
-  if (!settingId || !columnName) return true;
-  return await getRoleSettingBool(settingId, columnName);
-}
 
 export async function showModal(actId: number): Promise<void> {
   const canOpen = await canUserOpenActs();
@@ -730,13 +699,11 @@ export async function showModal(actId: number): Promise<void> {
       canShowLockButton,
       canShowCreateActBtn,
       canShowPrintActBtn,
-      canShowSkladBtn,
       canShowAddRowBtn,
     ] = await Promise.all([
       canUserSeeLockButton(),
       canUserSeeCreateActButton(),
       canUserSeePrintActButton(),
-      canUserSeeSkladButton(),
       canUserAddRowToAct(),
     ]);
 
@@ -748,7 +715,6 @@ export async function showModal(actId: number): Promise<void> {
       canShowLockButton,
       canShowCreateActBtn,
       canShowPrintActBtn,
-      canShowSkladBtn,
       canShowAddRowBtn
     );
 
@@ -957,10 +923,7 @@ async function applyAccessRestrictionsToNewRow(): Promise<void> {
 function applyAccessRestrictions(): void {
   if (userAccessLevel === "Слюсар") {
     const printActButton = document.getElementById("print-act-button");
-    const skladButton = document.getElementById("sklad");
-
     if (printActButton) printActButton.classList.add("hidden");
-    if (skladButton) skladButton.classList.add("hidden");
     restrictPhotoAccess();
   }
 }
@@ -1081,7 +1044,7 @@ function renderModalContent(
   canShowLockButton: boolean,
   canShowCreateActBtn: boolean,
   canShowPrintActBtn: boolean,
-  canShowSkladBtn: boolean,
+
   canShowAddRowBtn: boolean
 ): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -1294,10 +1257,7 @@ function renderModalContent(
           <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Рекомендації"] || "—"
     }</span>
         </div>
-        ${!isRestricted && canShowSkladBtn
-      ? `<button id="sklad" title="Склад" class="sklad">📦</button>`
-      : ""
-    }
+
       </div>
     </div>
     ${generateTableHTML(

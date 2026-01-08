@@ -216,41 +216,32 @@ const handleIndexIconClick = async (e: MouseEvent) => {
 
     // Функція запуску логіки "Робота" (збереження в works)
     const runWorkLogic = async () => {
-      if (confirm(`Записати "${workName}" як нову роботу?`)) {
-        try {
-          // Змінюємо тип рядка на works, якщо він ще не такий
-          if (type !== "works") {
-            nameCell.setAttribute("data-type", "works");
-            if (indexCell.firstChild) {
-              indexCell.innerHTML = indexCell.innerHTML.replace("⚙️", "🛠️");
-            }
+      try {
+        // Змінюємо тип рядка на works, якщо він ще не такий
+        if (type !== "works") {
+          nameCell.setAttribute("data-type", "works");
+          if (indexCell.firstChild) {
+            indexCell.innerHTML = indexCell.innerHTML.replace("⚙️", "🛠️");
           }
-
-          const { data, error } = await supabase
-            .from("works")
-            .insert({ data: workName })
-            .select("work_id")
-            .single();
-
-          if (error) throw error;
-
-          if (data && data.work_id) {
-            catalogCell.textContent = String(data.work_id);
-            catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
-          }
-
-          showNotification("Роботу успішно збережено в базу даних!", "success");
-        } catch (err: any) {
-          console.error("Error saving work:", err);
-          showNotification(
-            "Помилка при збереженні роботи: " + err.message,
-            "error"
-          );
         }
+
+        const { data, error } = await supabase
+          .from("works")
+          .insert({ data: workName })
+          .select("work_id")
+          .single();
+
+        if (error) throw error;
+
+        if (data && data.work_id) {
+          catalogCell.textContent = String(data.work_id);
+          catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        showNotification("Роботу успішно збережено в базу даних!", "success");
+      } catch (err: any) {
       }
     };
-
-    // 🛠️ ДЛЯ РОБІТ (або невизначених) при кліку на 🛠️
     if (indexCell.textContent?.includes("🛠️")) {
       e.preventDefault();
       e.stopPropagation();

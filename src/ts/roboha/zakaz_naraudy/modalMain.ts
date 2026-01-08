@@ -125,7 +125,7 @@ function initDeleteRowHandler(): void {
 
 const handleIndexIconClick = async (e: MouseEvent) => {
   const target = e.target as HTMLElement;
-  const indexCell = target.closest(".row-index");
+  const indexCell = target.closest(".row-index") as HTMLElement;
 
   if (indexCell) {
     const row = indexCell.closest("tr") as HTMLTableRowElement;
@@ -249,6 +249,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
         if (data && data.work_id) {
           catalogCell.textContent = String(data.work_id);
           catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+          if (indexCell) indexCell.style.cursor = "";
         }
 
         showNotification("Роботу успішно збережено в базу даних!", "success");

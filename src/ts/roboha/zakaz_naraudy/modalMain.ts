@@ -225,9 +225,22 @@ const handleIndexIconClick = async (e: MouseEvent) => {
           }
         }
 
+        // Отримуємо наступний ID
+        const { data: maxIdData, error: idError } = await supabase
+          .from("works")
+          .select("work_id")
+          .order("work_id", { ascending: false })
+          .limit(1)
+          .single();
+
+        let nextId = 1;
+        if (!idError && maxIdData) {
+          nextId = Number(maxIdData.work_id) + 1;
+        }
+
         const { data, error } = await supabase
           .from("works")
-          .insert({ data: workName })
+          .insert({ work_id: nextId, data: workName })
           .select("work_id")
           .single();
 

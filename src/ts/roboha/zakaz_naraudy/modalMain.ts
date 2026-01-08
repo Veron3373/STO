@@ -121,17 +121,176 @@ function initDeleteRowHandler(): void {
   });
 }
 
+
+
+function createChoiceModal(
+  onWork: () => void,
+  onPart: () => void,
+  onCancel: () => void
+): void {
+  // Styles for the modal
+  const styleId = "choice-modal-styles";
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `
+      .custom-choice-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100000;
+        animation: fadeIn 0.2s ease-out;
+      }
+      .custom-choice-modal {
+        background: #1e1e1e;
+        border: 1px solid #333;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        color: white;
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+        animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .custom-choice-title {
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+        font-weight: 500;
+        color: #e0e0e0;
+      }
+      .custom-choice-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .custom-btn {
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.1s, opacity 0.2s;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .custom-btn:active {
+        transform: scale(0.96);
+      }
+      .btn-part {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+      }
+      .btn-part:hover {
+        opacity: 0.9;
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+      }
+      .btn-work {
+        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+      }
+      .btn-work:hover {
+        opacity: 0.9;
+        box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+      }
+      .btn-cancel {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: transparent;
+        color: #777;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+      }
+      .btn-cancel:hover {
+        color: #fff;
+      }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "custom-choice-overlay";
+
+  const modal = document.createElement("div");
+  modal.className = "custom-choice-modal";
+  modal.style.position = "relative";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "btn-cancel";
+  closeBtn.innerHTML = "&times;";
+  closeBtn.onclick = () => {
+    document.body.removeChild(overlay);
+    onCancel();
+  };
+  modal.appendChild(closeBtn);
+
+  const title = document.createElement("h3");
+  title.textContent = "Записати дані в базу даних?";
+  title.className = "custom-choice-title";
+  modal.appendChild(title);
+
+  const buttonsDiv = document.createElement("div");
+  buttonsDiv.className = "custom-choice-buttons";
+
+  const btnPart = document.createElement("button");
+  btnPart.className = "custom-btn btn-part";
+  btnPart.innerHTML = "⚙️ Запчастина";
+  btnPart.onclick = () => {
+    document.body.removeChild(overlay);
+    onPart();
+  };
+
+  const btnWork = document.createElement("button");
+  btnWork.className = "custom-btn btn-work";
+  btnWork.innerHTML = "🛠️ Робота";
+  btnWork.onclick = () => {
+    document.body.removeChild(overlay);
+    onWork();
+  };
+
+  buttonsDiv.appendChild(btnPart);
+  buttonsDiv.appendChild(btnWork);
+  modal.appendChild(buttonsDiv);
+  overlay.appendChild(modal);
+
+  // Close on outside click
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+      onCancel();
+    }
+  });
+
+  document.body.appendChild(overlay);
+}
+
 function initIndexIconHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
 
   body.addEventListener("click", async (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    // Шукаємо клік по комірці індексу або її дітям
     const indexCell = target.closest(".row-index");
 
     if (indexCell) {
-      const row = indexCell.closest("tr");
+      const row = indexCell.closest("tr") as HTMLTableRowElement;
       if (!row) return;
 
       const nameCell = row.querySelector('[data-name="name"]');
@@ -146,36 +305,16 @@ function initIndexIconHandler(): void {
       // Логіка працює тільки якщо каталог пустий (немає в базі)
       if (catalogValue !== "") return;
 
-      // 🛠️ ДЛЯ РОБІТ
-      if (type === "works" && indexCell.textContent?.includes("🛠️")) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (confirm("Записати дану роботу в базу даних?")) {
-          try {
-            const { error } = await supabase
-              .from("works")
-              .insert({ data: workName });
-
-            if (error) throw error;
-
-            showNotification(
-              "Роботу успішно збережено в базу даних!",
-              "success"
-            );
-          } catch (err: any) {
-            console.error("Error saving work:", err);
-            showNotification(
-              "Помилка при збереженні роботи: " + err.message,
-              "error"
-            );
+      // Функція запуску логіки "Запчастина" (відкриття модалки складу)
+      const runPartLogic = () => {
+        // Змінюємо тип рядка на деталі, якщо він ще не такий
+        if (type !== "details") {
+          nameCell.setAttribute("data-type", "details");
+          // Оновлюємо іконку
+          if (indexCell.firstChild) {
+            indexCell.innerHTML = indexCell.innerHTML.replace("🛠️", "⚙️");
           }
         }
-      }
-      // ⚙️ ДЛЯ ДЕТАЛЕЙ
-      else if (type === "details" && indexCell.textContent?.includes("⚙️")) {
-        e.preventDefault();
-        e.stopPropagation();
 
         showModalAllOtherBases();
 
@@ -209,6 +348,95 @@ function initIndexIconHandler(): void {
             scladDateInput.dispatchEvent(new Event("input"));
           }
         }, 300);
+
+        // Слухаємо подію оновлення бази (коли юзер збереже деталь)
+        const onDataUpdated = async () => {
+          // Це проста евристика: беремо останню додану деталь з бази
+          // Оскільки ми не знаємо точний ID створеної деталі з події,
+          // ми шукаємо по імені, яке ми передали.
+          try {
+            const { data: details } = await supabase
+              .from("details")
+              .select("detail_id, data")
+              .order("detail_id", { ascending: false })
+              .limit(5); // беремо останні 5 про всяк випадок
+
+            if (details) {
+              // Шукаємо співпадіння по назві
+              const match = details.find(d => d.data === workName);
+              if (match) {
+                if (catalogCell) {
+                  catalogCell.textContent = String(match.detail_id);
+                  // Trigger input event to save changes in act
+                  catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+                  showNotification("Catalog оновлено автоматично!", "success");
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Error auto-updating catalog:", err);
+          }
+          document.removeEventListener("other-base-data-updated", onDataUpdated);
+        };
+        document.addEventListener("other-base-data-updated", onDataUpdated);
+      };
+
+      // Функція запуску логіки "Робота" (збереження в works)
+      const runWorkLogic = async () => {
+        if (confirm(`Записати "${workName}" як нову роботу?`)) {
+          try {
+            // Змінюємо тип рядка на works, якщо він ще не такий
+            if (type !== "works") {
+              nameCell.setAttribute("data-type", "works");
+              if (indexCell.firstChild) {
+                indexCell.innerHTML = indexCell.innerHTML.replace("⚙️", "🛠️");
+              }
+            }
+
+            const { data, error } = await supabase
+              .from("works")
+              .insert({ data: workName })
+              .select('work_id') // Повертаємо ID
+              .single();
+
+            if (error) throw error;
+
+            if (data && data.work_id) {
+              catalogCell.textContent = String(data.work_id);
+              // Trigger input event to save changes in Act
+              catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+
+            showNotification(
+              "Роботу успішно збережено в базу даних!",
+              "success"
+            );
+          } catch (err: any) {
+            console.error("Error saving work:", err);
+            showNotification(
+              "Помилка при збереженні роботи: " + err.message,
+              "error"
+            );
+          }
+        }
+      };
+
+      // 🛠️ ДЛЯ РОБІТ (або невизначених) при кліку на 🛠️
+      if (indexCell.textContent?.includes("🛠️")) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        createChoiceModal(
+          () => runWorkLogic(), // On Work
+          () => runPartLogic(), // On Part
+          () => { } // On Cancel
+        );
+      }
+      // ⚙️ ДЛЯ ДЕТАЛЕЙ при кліку на ⚙️ -> Пряма дія
+      else if (indexCell.textContent?.includes("⚙️")) {
+        e.preventDefault();
+        e.stopPropagation();
+        runPartLogic();
       }
     }
   });

@@ -133,7 +133,7 @@ async function checkDuplicateExists(
         if (nameToCheck && nameToCheck === needle) {
           return true;
         }
-      } catch {}
+      } catch { }
     }
     return false;
   } catch (error) {
@@ -215,11 +215,11 @@ async function handleEdit(
     }
 
     const idValue = data.record[idField];
-    
+
     // ✅ ЗАХИСТ: Заборона редагування Name та Доступ для slyusar_id = 1
     if (tableName === "slyusars" && idValue === 1) {
       const additionalData = getSlusarAdditionalData();
-      
+
       // Отримуємо поточні дані з бази
       const { data: currentRecord, error: fetchError } = await supabase
         .from(tableName)
@@ -279,7 +279,7 @@ async function handleEdit(
       );
       return true;
     }
-    
+
     const { data: currentRecord, error: fetchError } = await supabase
       .from(tableName)
       .select("*")
@@ -369,7 +369,7 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
     }
 
     const idValue = data.record[idField];
-    
+
     // ✅ ЗАХИСТ: Заборона видалення slyusar_id = 1
     if (tableName === "slyusars" && idValue === 1) {
       console.error("Видалення адміністраторського акаунту заборонено!");
@@ -379,7 +379,7 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
       );
       return false;
     }
-    
+
     const { error } = await supabase
       .from(tableName)
       .delete()
@@ -409,7 +409,7 @@ async function slusarExistsByName(name: string): Promise<boolean> {
       const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
       const nm = normalizeName(d?.Name ?? "");
       if (nm && nm === needle) return true;
-    } catch {}
+    } catch { }
   }
   return false;
 }
@@ -582,30 +582,8 @@ export function showSavePromptModal(): Promise<boolean> {
         currentUserName,
       });
 
-      // Якщо не адмін і НЕ редагування співробітників - забороняємо
-      // Виключення: не-адміністратори можуть редагувати тільки співробітників (slyusars)
-      let tableFromDraftCheck = "";
-      try {
-        if (all_bd) {
-          const parsed = JSON.parse(all_bd);
-          tableFromDraftCheck = parsed?.table ?? "";
-        }
-      } catch {}
 
-      if (!isAdmin && CRUD !== "Редагувати") {
-        showNotification("У вас немає прав для цієї операції", "error");
-        return;
-      }
 
-      // Додаткова перевірка: не-адміністратори можуть редагувати тільки таблицю slyusars
-      if (
-        !isAdmin &&
-        CRUD === "Редагувати" &&
-        tableFromDraftCheck !== "slyusars"
-      ) {
-        showNotification("У вас немає прав редагувати цю таблицю", "error");
-        return;
-      }
 
       console.log("Starting CRUD operations...");
       let success = false;

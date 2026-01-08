@@ -121,6 +121,99 @@ function initDeleteRowHandler(): void {
   });
 }
 
+function initIndexIconHandler(): void {
+  const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
+  if (!body) return;
+
+  body.addEventListener("click", async (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // Шукаємо клік по комірці індексу або її дітям
+    const indexCell = target.closest(".row-index");
+
+    if (indexCell) {
+      const row = indexCell.closest("tr");
+      if (!row) return;
+
+      const nameCell = row.querySelector('[data-name="name"]');
+      const catalogCell = row.querySelector(".catalog-cell");
+
+      if (!nameCell || !catalogCell) return;
+
+      const workName = nameCell.textContent?.trim() || "";
+      const catalogValue = catalogCell.textContent?.trim() || "";
+      const type = nameCell.getAttribute("data-type");
+
+      // Логіка працює тільки якщо каталог пустий (немає в базі)
+      if (catalogValue !== "") return;
+
+      // 🛠️ ДЛЯ РОБІТ
+      if (type === "works" && indexCell.textContent?.includes("🛠️")) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (confirm("Записати дану роботу в базу даних?")) {
+          try {
+            const { error } = await supabase
+              .from("works")
+              .insert({ data: workName });
+
+            if (error) throw error;
+
+            showNotification(
+              "Роботу успішно збережено в базу даних!",
+              "success"
+            );
+          } catch (err: any) {
+            console.error("Error saving work:", err);
+            showNotification(
+              "Помилка при збереженні роботи: " + err.message,
+              "error"
+            );
+          }
+        }
+      }
+      // ⚙️ ДЛЯ ДЕТАЛЕЙ
+      else if (type === "details" && indexCell.textContent?.includes("⚙️")) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        showModalAllOtherBases();
+
+        // Чекаємо поки відкриється модалка і заповнюємо дані
+        setTimeout(() => {
+          // 1. Натискаємо кнопку "Склад"
+          const buttons = document.querySelectorAll(
+            ".toggle-button-all_other_bases"
+          );
+          buttons.forEach((btn) => {
+            if (btn.textContent?.includes("Склад")) {
+              (btn as HTMLElement).click();
+            }
+          });
+
+          // 2. Заповнюємо інпути
+          const scladDetailInput = document.getElementById(
+            "sclad_detail"
+          ) as HTMLInputElement;
+          const scladDateInput = document.getElementById(
+            "sclad_date"
+          ) as HTMLInputElement;
+
+          if (scladDetailInput) {
+            scladDetailInput.value = workName;
+            scladDetailInput.dispatchEvent(new Event("input"));
+          }
+          if (scladDateInput) {
+            const today = new Date().toISOString().split("T")[0];
+            scladDateInput.value = today;
+            scladDateInput.dispatchEvent(new Event("input"));
+          }
+        }, 300);
+      }
+    }
+  });
+}
+
 /**
  * Допоміжна функція: читає boolean-настройку з таблиці settings
  * для конкретного рядка (setting_id) та колонки (назви ролі).
@@ -956,7 +1049,7 @@ function renderModalContent(
           }
         }
         return !isSent
-          ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📭</button>`
+          ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">✉️</button>`
           : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📨</button>`;
       })()
       : ""
@@ -1073,6 +1166,7 @@ async function addModalHandlers(
   initPhoneClickHandler(body, clientPhone);
   addSaveHandler(actId, actDetails);
   initDeleteRowHandler();
+  initIndexIconHandler();
 
   const smsBtn = document.getElementById("sms-btn");
   if (smsBtn) {

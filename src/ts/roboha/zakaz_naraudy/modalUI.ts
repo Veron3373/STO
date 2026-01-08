@@ -528,9 +528,6 @@ function createRowHtml(
 
   // 🆕 Для рядків з пустим ПІБ - автоматично підставляємо ім'я слюсаря
   let displayPibMagazinValue = pibMagazinValue;
-  if (isWorkRowWithEmptyPib && userName) {
-    displayPibMagazinValue = userName;
-  }
 
   const catalogCellHTML = showCatalog
     ? `<td contenteditable="${isCatalogEditable}" class="editable-autocomplete catalog-cell" data-name="catalog" ${scladIdAttr}>${catalogValue}</td>`

@@ -265,11 +265,41 @@ const handleIndexIconClick = async (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
-      createChoiceModal(
-        () => runWorkLogic(), // On Work
-        () => runPartLogic(), // On Part
-        () => { } // On Cancel
-      );
+      const role = userAccessLevel;
+
+      if (role === "Слюсар") {
+        // Слюсарю завжди дозволено тільки Роботу, без модалки
+        runWorkLogic();
+        return;
+      }
+
+      let allowed = false;
+
+      if (role === "Адміністратор") {
+        allowed = true;
+      } else if (role === "Приймальник") {
+        // setting_id = 2, col = "Приймальник"
+        allowed = await getRoleSettingBool(2, "Приймальник");
+      } else if (role === "Запчастист") {
+        // setting_id = 1, col = "Запчастист"
+        allowed = await getRoleSettingBool(1, "Запчастист");
+      } else if (role === "Складовщик") {
+        // setting_id = 1, col = "Складовщик"
+        allowed = await getRoleSettingBool(1, "Складовщик");
+      } else {
+        // Інші ролі за замовчуванням
+        allowed = false;
+      }
+
+      if (allowed) {
+        createChoiceModal(
+          () => runWorkLogic(), // On Work
+          () => runPartLogic(), // On Part
+          () => { } // On Cancel
+        );
+      } else {
+        // showNotification("Функція недоступна", "warning"); // Опціонально можна розкоментувати
+      }
     }
     // ⚙️ ДЛЯ ДЕТАЛЕЙ при кліку на ⚙️ -> Пряма дія
     else if (indexCell.textContent?.includes("⚙️")) {
@@ -403,7 +433,7 @@ function createChoiceModal(
 
   const btnPart = document.createElement("button");
   btnPart.className = "custom-btn btn-part";
-  btnPart.innerHTML = "⚙️ Запчастина";
+  btnPart.innerHTML = "⚙️ Запчастини";
   btnPart.onclick = () => {
     document.body.removeChild(overlay);
     onPart();

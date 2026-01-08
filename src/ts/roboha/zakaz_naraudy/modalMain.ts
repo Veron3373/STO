@@ -240,6 +240,11 @@ const handleIndexIconClick = async (e: MouseEvent) => {
 
         showNotification("Роботу успішно збережено в базу даних!", "success");
       } catch (err: any) {
+        console.error("Error saving work:", err);
+        showNotification(
+          "Помилка при збереженні роботи: " + err.message,
+          "error"
+        );
       }
     };
     if (indexCell.textContent?.includes("🛠️")) {

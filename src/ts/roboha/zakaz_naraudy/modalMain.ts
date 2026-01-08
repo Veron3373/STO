@@ -123,12 +123,168 @@ function initDeleteRowHandler(): void {
 
 
 
+const handleIndexIconClick = async (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  const indexCell = target.closest(".row-index");
+
+  if (indexCell) {
+    const row = indexCell.closest("tr") as HTMLTableRowElement;
+    if (!row) return;
+
+    const nameCell = row.querySelector('[data-name="name"]');
+    const catalogCell = row.querySelector(".catalog-cell");
+
+    if (!nameCell || !catalogCell) return;
+
+    const workName = nameCell.textContent?.trim() || "";
+    const catalogValue = catalogCell.textContent?.trim() || "";
+    const type = nameCell.getAttribute("data-type");
+
+    // Логіка працює тільки якщо каталог пустий (немає в базі)
+    if (catalogValue !== "") return;
+
+    // Функція запуску логіки "Запчастина" (відкриття модалки складу)
+    const runPartLogic = () => {
+      // Змінюємо тип рядка на деталі, якщо він ще не такий
+      if (type !== "details") {
+        nameCell.setAttribute("data-type", "details");
+        // Оновлюємо іконку
+        if (indexCell.firstChild) {
+          indexCell.innerHTML = indexCell.innerHTML.replace("🛠️", "⚙️");
+        }
+      }
+
+      showModalAllOtherBases();
+
+      // Чекаємо поки відкриється модалка і заповнюємо дані
+      setTimeout(() => {
+        // 1. Натискаємо кнопку "Склад"
+        const buttons = document.querySelectorAll(
+          ".toggle-button-all_other_bases"
+        );
+        buttons.forEach((btn) => {
+          if (btn.textContent?.includes("Склад")) {
+            (btn as HTMLElement).click();
+          }
+        });
+
+        // 2. Заповнюємо інпути
+        const scladDetailInput = document.getElementById(
+          "sclad_detail"
+        ) as HTMLInputElement;
+        const scladDateInput = document.getElementById(
+          "sclad_date"
+        ) as HTMLInputElement;
+
+        if (scladDetailInput) {
+          scladDetailInput.value = workName;
+          scladDetailInput.dispatchEvent(new Event("input"));
+        }
+        if (scladDateInput) {
+          const today = new Date().toISOString().split("T")[0];
+          scladDateInput.value = today;
+          scladDateInput.dispatchEvent(new Event("input"));
+        }
+      }, 300);
+
+      // Слухаємо подію оновлення бази (коли юзер збереже деталь)
+      const onDataUpdated = async () => {
+        try {
+          const { data: details } = await supabase
+            .from("details")
+            .select("detail_id, data")
+            .order("detail_id", { ascending: false })
+            .limit(5);
+
+          if (details) {
+            const match = details.find((d) => d.data === workName);
+            if (match) {
+              if (catalogCell) {
+                catalogCell.textContent = String(match.detail_id);
+                catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+                showNotification("Catalog оновлено автоматично!", "success");
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error auto-updating catalog:", err);
+        }
+        document.removeEventListener("other-base-data-updated", onDataUpdated);
+      };
+      document.addEventListener("other-base-data-updated", onDataUpdated);
+    };
+
+    // Функція запуску логіки "Робота" (збереження в works)
+    const runWorkLogic = async () => {
+      if (confirm(`Записати "${workName}" як нову роботу?`)) {
+        try {
+          // Змінюємо тип рядка на works, якщо він ще не такий
+          if (type !== "works") {
+            nameCell.setAttribute("data-type", "works");
+            if (indexCell.firstChild) {
+              indexCell.innerHTML = indexCell.innerHTML.replace("⚙️", "🛠️");
+            }
+          }
+
+          const { data, error } = await supabase
+            .from("works")
+            .insert({ data: workName })
+            .select("work_id")
+            .single();
+
+          if (error) throw error;
+
+          if (data && data.work_id) {
+            catalogCell.textContent = String(data.work_id);
+            catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+
+          showNotification("Роботу успішно збережено в базу даних!", "success");
+        } catch (err: any) {
+          console.error("Error saving work:", err);
+          showNotification(
+            "Помилка при збереженні роботи: " + err.message,
+            "error"
+          );
+        }
+      }
+    };
+
+    // 🛠️ ДЛЯ РОБІТ (або невизначених) при кліку на 🛠️
+    if (indexCell.textContent?.includes("🛠️")) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      createChoiceModal(
+        () => runWorkLogic(), // On Work
+        () => runPartLogic(), // On Part
+        () => { } // On Cancel
+      );
+    }
+    // ⚙️ ДЛЯ ДЕТАЛЕЙ при кліку на ⚙️ -> Пряма дія
+    else if (indexCell.textContent?.includes("⚙️")) {
+      e.preventDefault();
+      e.stopPropagation();
+      runPartLogic();
+    }
+  }
+};
+
+function initIndexIconHandler(): void {
+  const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
+  if (!body) return;
+
+  // Видаляємо попередній слухач, щоб уникнути дублювання
+  body.removeEventListener("click", handleIndexIconClick);
+  // Додаємо новий
+  body.addEventListener("click", handleIndexIconClick);
+}
+
 function createChoiceModal(
   onWork: () => void,
   onPart: () => void,
   onCancel: () => void
 ): void {
-  // Styles for the modal
   const styleId = "choice-modal-styles";
   if (!document.getElementById(styleId)) {
     const style = document.createElement("style");
@@ -140,87 +296,73 @@ function createChoiceModal(
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.5);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 100000;
-        animation: fadeIn 0.2s ease-out;
+        font-family: 'Roboto', sans-serif;
       }
       .custom-choice-modal {
-        background: #1e1e1e;
-        border: 1px solid #333;
-        padding: 2rem;
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-        color: white;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         text-align: center;
         max-width: 400px;
         width: 90%;
-        animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        color: #333;
       }
       .custom-choice-title {
-        font-size: 1.25rem;
-        margin-bottom: 2rem;
+        font-size: 18px;
+        margin-bottom: 20px;
         font-weight: 500;
-        color: #e0e0e0;
+        color: #333;
       }
       .custom-choice-buttons {
         display: flex;
-        gap: 1rem;
+        gap: 15px;
         justify-content: center;
-        flex-wrap: wrap;
       }
       .custom-btn {
         border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        font-size: 1rem;
+        padding: 10px 20px;
+        border-radius: 4px;
+        font-size: 14px;
         cursor: pointer;
-        transition: transform 0.1s, opacity 0.2s;
-        font-weight: 600;
+        font-weight: 500;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-      }
-      .custom-btn:active {
-        transform: scale(0.96);
+        gap: 8px;
+        transition: background 0.2s;
       }
       .btn-part {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        background: #2196F3;
         color: white;
-        box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
       }
       .btn-part:hover {
-        opacity: 0.9;
-        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        background: #1976D2;
       }
       .btn-work {
-        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+        background: #FF9800;
         color: white;
-        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
       }
       .btn-work:hover {
-        opacity: 0.9;
-        box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+        background: #F57C00;
       }
-      .btn-cancel {
+      .btn-cancel-x {
         position: absolute;
-        top: 1rem;
-        right: 1rem;
+        top: 10px;
+        right: 15px;
         background: transparent;
-        color: #777;
-        font-size: 1.5rem;
+        border: none;
+        font-size: 20px;
+        color: #999;
         cursor: pointer;
-        padding: 0;
-        line-height: 1;
       }
-      .btn-cancel:hover {
-        color: #fff;
+      .btn-cancel-x:hover {
+        color: #333;
       }
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     `;
     document.head.appendChild(style);
   }
@@ -233,7 +375,7 @@ function createChoiceModal(
   modal.style.position = "relative";
 
   const closeBtn = document.createElement("button");
-  closeBtn.className = "btn-cancel";
+  closeBtn.className = "btn-cancel-x";
   closeBtn.innerHTML = "&times;";
   closeBtn.onclick = () => {
     document.body.removeChild(overlay);
@@ -279,167 +421,6 @@ function createChoiceModal(
   });
 
   document.body.appendChild(overlay);
-}
-
-function initIndexIconHandler(): void {
-  const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
-  if (!body) return;
-
-  body.addEventListener("click", async (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const indexCell = target.closest(".row-index");
-
-    if (indexCell) {
-      const row = indexCell.closest("tr") as HTMLTableRowElement;
-      if (!row) return;
-
-      const nameCell = row.querySelector('[data-name="name"]');
-      const catalogCell = row.querySelector(".catalog-cell");
-
-      if (!nameCell || !catalogCell) return;
-
-      const workName = nameCell.textContent?.trim() || "";
-      const catalogValue = catalogCell.textContent?.trim() || "";
-      const type = nameCell.getAttribute("data-type");
-
-      // Логіка працює тільки якщо каталог пустий (немає в базі)
-      if (catalogValue !== "") return;
-
-      // Функція запуску логіки "Запчастина" (відкриття модалки складу)
-      const runPartLogic = () => {
-        // Змінюємо тип рядка на деталі, якщо він ще не такий
-        if (type !== "details") {
-          nameCell.setAttribute("data-type", "details");
-          // Оновлюємо іконку
-          if (indexCell.firstChild) {
-            indexCell.innerHTML = indexCell.innerHTML.replace("🛠️", "⚙️");
-          }
-        }
-
-        showModalAllOtherBases();
-
-        // Чекаємо поки відкриється модалка і заповнюємо дані
-        setTimeout(() => {
-          // 1. Натискаємо кнопку "Склад"
-          const buttons = document.querySelectorAll(
-            ".toggle-button-all_other_bases"
-          );
-          buttons.forEach((btn) => {
-            if (btn.textContent?.includes("Склад")) {
-              (btn as HTMLElement).click();
-            }
-          });
-
-          // 2. Заповнюємо інпути
-          const scladDetailInput = document.getElementById(
-            "sclad_detail"
-          ) as HTMLInputElement;
-          const scladDateInput = document.getElementById(
-            "sclad_date"
-          ) as HTMLInputElement;
-
-          if (scladDetailInput) {
-            scladDetailInput.value = workName;
-            scladDetailInput.dispatchEvent(new Event("input"));
-          }
-          if (scladDateInput) {
-            const today = new Date().toISOString().split("T")[0];
-            scladDateInput.value = today;
-            scladDateInput.dispatchEvent(new Event("input"));
-          }
-        }, 300);
-
-        // Слухаємо подію оновлення бази (коли юзер збереже деталь)
-        const onDataUpdated = async () => {
-          // Це проста евристика: беремо останню додану деталь з бази
-          // Оскільки ми не знаємо точний ID створеної деталі з події,
-          // ми шукаємо по імені, яке ми передали.
-          try {
-            const { data: details } = await supabase
-              .from("details")
-              .select("detail_id, data")
-              .order("detail_id", { ascending: false })
-              .limit(5); // беремо останні 5 про всяк випадок
-
-            if (details) {
-              // Шукаємо співпадіння по назві
-              const match = details.find(d => d.data === workName);
-              if (match) {
-                if (catalogCell) {
-                  catalogCell.textContent = String(match.detail_id);
-                  // Trigger input event to save changes in act
-                  catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
-                  showNotification("Catalog оновлено автоматично!", "success");
-                }
-              }
-            }
-          } catch (err) {
-            console.error("Error auto-updating catalog:", err);
-          }
-          document.removeEventListener("other-base-data-updated", onDataUpdated);
-        };
-        document.addEventListener("other-base-data-updated", onDataUpdated);
-      };
-
-      // Функція запуску логіки "Робота" (збереження в works)
-      const runWorkLogic = async () => {
-        if (confirm(`Записати "${workName}" як нову роботу?`)) {
-          try {
-            // Змінюємо тип рядка на works, якщо він ще не такий
-            if (type !== "works") {
-              nameCell.setAttribute("data-type", "works");
-              if (indexCell.firstChild) {
-                indexCell.innerHTML = indexCell.innerHTML.replace("⚙️", "🛠️");
-              }
-            }
-
-            const { data, error } = await supabase
-              .from("works")
-              .insert({ data: workName })
-              .select('work_id') // Повертаємо ID
-              .single();
-
-            if (error) throw error;
-
-            if (data && data.work_id) {
-              catalogCell.textContent = String(data.work_id);
-              // Trigger input event to save changes in Act
-              catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
-            }
-
-            showNotification(
-              "Роботу успішно збережено в базу даних!",
-              "success"
-            );
-          } catch (err: any) {
-            console.error("Error saving work:", err);
-            showNotification(
-              "Помилка при збереженні роботи: " + err.message,
-              "error"
-            );
-          }
-        }
-      };
-
-      // 🛠️ ДЛЯ РОБІТ (або невизначених) при кліку на 🛠️
-      if (indexCell.textContent?.includes("🛠️")) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        createChoiceModal(
-          () => runWorkLogic(), // On Work
-          () => runPartLogic(), // On Part
-          () => { } // On Cancel
-        );
-      }
-      // ⚙️ ДЛЯ ДЕТАЛЕЙ при кліку на ⚙️ -> Пряма дія
-      else if (indexCell.textContent?.includes("⚙️")) {
-        e.preventDefault();
-        e.stopPropagation();
-        runPartLogic();
-      }
-    }
-  });
 }
 
 /**

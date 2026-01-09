@@ -225,6 +225,27 @@ const handleIndexIconClick = async (e: MouseEvent) => {
           }
         }
 
+        // ✅ ВИПРАВЛЕНО: Перевіряємо чи така робота вже існує в БД
+        const { data: existingWork, error: searchError } = await supabase
+          .from("works")
+          .select("work_id")
+          .eq("data", workName)
+          .limit(1)
+          .maybeSingle();
+
+        if (searchError) {
+          console.error("Помилка пошуку роботи:", searchError);
+        }
+
+        // Якщо робота вже існує - використовуємо її work_id
+        if (existingWork && existingWork.work_id) {
+          catalogCell.textContent = String(existingWork.work_id);
+          catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+          if (indexCell) indexCell.style.cursor = "";
+          showNotification(`Робота вже існує в базі (ID: ${existingWork.work_id})`, "info");
+          return;
+        }
+
         // Отримуємо наступний ID
         const { data: maxIdData, error: idError } = await supabase
           .from("works")

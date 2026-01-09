@@ -187,25 +187,84 @@ function dedupeSklad<
 
 /* ===================== завантаження кеша ===================== */
 
+/**
+ * Завантажує всі дані з таблиці з пагінацією (обхід ліміту 1000 записів Supabase)
+ */
+async function fetchAllWithPagination<T>(
+  tableName: string,
+  selectFields: string,
+  orderBy?: string
+): Promise<T[]> {
+  const allData: T[] = [];
+  let from = 0;
+  const step = 1000;
+  let keepFetching = true;
+
+  while (keepFetching) {
+    let query = supabase
+      .from(tableName)
+      .select(selectFields)
+      .range(from, from + step - 1);
+    
+    if (orderBy) {
+      query = query.order(orderBy, { ascending: true });
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(`❌ Помилка завантаження ${tableName}:`, error.message);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      allData.push(...(data as T[]));
+      if (data.length < step) {
+        keepFetching = false;
+      } else {
+        from += step;
+      }
+    } else {
+      keepFetching = false;
+    }
+  }
+
+  return allData;
+}
+
 export async function loadGlobalData(): Promise<void> {
   try {
+    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ робіт
+    const worksData = await fetchAllWithPagination<{ work_id: number; data: string }>(
+      "works",
+      "work_id, data",
+      "work_id"
+    );
+
+    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ деталей зі складу
+    const skladRows = await fetchAllWithPagination<{
+      sclad_id: number;
+      part_number: string;
+      name: string;
+      price: number;
+      kilkist_on: number;
+      kilkist_off: number;
+      unit_measurement: string | null;
+      shops: any;
+    }>(
+      "sclad",
+      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops",
+      "sclad_id"
+    );
+
     const [
-      { data: worksData },
       { data: detailsData },
       { data: slyusarsData },
       { data: shopsData },
-      { data: skladRows, error: skladErr },
     ] = await Promise.all([
-      supabase.from("works").select("work_id, data"),
       supabase.from("details").select("data"),
       supabase.from("slyusars").select("data"),
       supabase.from("shops").select("data"),
-      supabase
-        .from("sclad")
-        .select(
-          "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops"
-        )
-        .order("sclad_id", { ascending: false }),
     ]);
 
     const { data: settingsRows } = await supabase
@@ -215,12 +274,9 @@ export async function loadGlobalData(): Promise<void> {
     const settingCatalog = settingsRows?.find((s: any) => s.setting_id === 2);
     const settingZarplata = settingsRows?.find((s: any) => s.setting_id === 3);
     const settingSMS = settingsRows?.find((s: any) => s.setting_id === 5);
-    // const settingSaveMargins = settingsRows?.find((s: any) => s.setting_id === 6); // ВИДАЛЕНО
 
-    if (skladErr)
-      console.warn("⚠️ Не вдалося отримати sclad:", skladErr.message);
+    console.log(`✅ Завантажено складу: ${skladRows.length} записів`);
 
-    // ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
     // ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
     globalCache.worksWithId =
       worksData?.map((r: any) => ({
@@ -318,18 +374,19 @@ export async function loadGlobalData(): Promise<void> {
 
 export async function loadSkladLite(): Promise<void> {
   try {
-    const { data, error } = await supabase
-      .from("sclad")
-      .select("sclad_id, part_number, kilkist_on, kilkist_off");
-    if (error) {
-      console.warn(
-        "⚠️ loadSkladLite(): не вдалося отримати sclad:",
-        error.message
-      );
-      globalCache.skladLite = [];
-      return;
-    }
-    globalCache.skladLite = (data || []).map((r: any): SkladLiteRow => {
+    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ записів
+    const data = await fetchAllWithPagination<{
+      sclad_id: number;
+      part_number: string;
+      kilkist_on: number;
+      kilkist_off: number;
+    }>(
+      "sclad",
+      "sclad_id, part_number, kilkist_on, kilkist_off",
+      "sclad_id"
+    );
+
+    globalCache.skladLite = data.map((r: any): SkladLiteRow => {
       const on = Number(r.kilkist_on ?? 0);
       const off = Number(r.kilkist_off ?? 0);
       return {
@@ -340,6 +397,8 @@ export async function loadSkladLite(): Promise<void> {
         diff: off - on,
       };
     });
+    
+    console.log(`✅ loadSkladLite: завантажено ${globalCache.skladLite.length} записів`);
   } catch (e) {
     console.error("💥 loadSkladLite(): критична помилка:", e);
     globalCache.skladLite = [];

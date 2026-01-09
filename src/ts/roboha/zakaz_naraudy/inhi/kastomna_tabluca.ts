@@ -66,7 +66,7 @@ export function resetPercentCache(): void {
 }
 
 /**
- * Завантажує дані з бази для автодоповнення назв
+ * Завантажує дані з бази для автодоповнення назв (з пагінацією для обходу ліміту 1000)
  */
 async function loadNameAutocompleteData(query: string): Promise<void> {
   if (query.length < NAME_AUTOCOMPLETE_MIN_CHARS) {
@@ -79,36 +79,57 @@ async function loadNameAutocompleteData(query: string): Promise<void> {
   try {
     const searchPattern = `%${query}%`;
 
-    const [worksResult, detailsResult] = await Promise.all([
-      supabase
+    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для works (обхід ліміту 1000)
+    let allWorks: string[] = [];
+    let from = 0;
+    const step = 1000;
+    let keepFetching = true;
+
+    while (keepFetching) {
+      const { data, error } = await supabase
         .from("works")
-        .select("data")
+        .select("work_id, data")
         .ilike("data", searchPattern)
-        .limit(1000),
-      supabase
-        .from("details")
-        .select("data")
-        .ilike("data", searchPattern)
-        .limit(1000),
-    ]);
+        .order("work_id", { ascending: true })
+        .range(from, from + step - 1);
 
-    const works = (worksResult.data || [])
-      .map((r: any) => r.data || "")
-      .filter(Boolean);
+      if (error) {
+        console.error("❌ Помилка завантаження робіт:", error.message);
+        break;
+      }
 
-    const details = (detailsResult.data || [])
+      if (data && data.length > 0) {
+        allWorks = [...allWorks, ...data.map((r: any) => r.data || "").filter(Boolean)];
+        if (data.length < step) {
+          keepFetching = false;
+        } else {
+          from += step;
+        }
+      } else {
+        keepFetching = false;
+      }
+    }
+
+    // Деталі - зазвичай їх менше 1000, але на всяк випадок теж можна пагінувати
+    const { data: detailsResult } = await supabase
+      .from("details")
+      .select("data")
+      .ilike("data", searchPattern)
+      .limit(1000);
+
+    const details = (detailsResult || [])
       .map((r: any) => r.data || "")
       .filter(Boolean);
 
     nameAutocompleteCache = {
       query: query.toLowerCase(),
-      works,
+      works: allWorks,
       details,
       timestamp: Date.now(),
     };
 
     console.log(
-      `✅ Завантажено: ${works.length} робіт, ${details.length} деталей`
+      `✅ Завантажено: ${allWorks.length} робіт, ${details.length} деталей`
     );
   } catch (error) {
     console.error("❌ Помилка завантаження даних для автодоповнення:", error);

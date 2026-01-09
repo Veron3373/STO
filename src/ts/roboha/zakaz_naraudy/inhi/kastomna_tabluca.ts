@@ -99,7 +99,7 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       return {
         value: p.name,
         sclad_id: p.sclad_id,
-        label: `${p.part_number} - ${p.name} (К-ть: ${qty} по ${priceRounded}-грн)${timeOn ? ' ' + timeOn : ''}`,
+        label: `${p.part_number} - ${p.name} (К-ть: ${qty} ціна ${priceRounded} - грн)${timeOn ? ' ' + timeOn : ''}`,
         labelHtml: labelHtml,
         fullName: p.name,
         itemType: "detail" as const,

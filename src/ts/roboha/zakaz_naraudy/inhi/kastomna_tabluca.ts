@@ -58,8 +58,8 @@ export function resetPercentCache(): void {
 }
 
 /**
- * ✅ ВИПРАВЛЕНО: Отримує підказки для назви з globalCache (який вже завантажив ВСІ дані з пагінацією)
- * Більше не робимо окремих запитів до бази - використовуємо кеш
+ * ✅ ВИПРАВЛЕНО: Отримує підказки для назви з globalCache та skladParts
+ * Показуєwork_id для робіт та part_number, кількість, ціну, дату для деталей
  */
 async function getNameSuggestions(query: string): Promise<Suggest[]> {
   const q = query.trim().toLowerCase();
@@ -68,39 +68,63 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     return [];
   }
 
-  // ✅ Використовуємо globalCache замість окремих запитів до бази
-  // globalCache.works і globalCache.details вже завантажені з пагінацією (всі записи)
+  await ensureSkladLoaded();
   
-  console.log(`🔎 Фільтрація для "${q}" (works: ${globalCache.works.length}, details: ${globalCache.details.length})`);
+  console.log(`🔎 Фільтрація для "${q}" (works: ${globalCache.works.length}, skladParts: ${globalCache.skladParts.length})`);
 
-  // Фільтруємо деталі з globalCache
-  const filteredDetails = globalCache.details
-    .filter((name) => name.toLowerCase().includes(q))
+  // Фільтруємо деталі зі складу (по part_number або name)
+  const filteredSkladParts = globalCache.skladParts
+    .filter((p) => 
+      p.part_number.toLowerCase().includes(q) ||
+      p.name.toLowerCase().includes(q)
+    )
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
-    .map((x) => ({
-      label: x,
-      value: x, // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
-      fullName: x,
-      itemType: "detail" as const,
-    }));
+    .map((p) => {
+      const qty = Number(p.quantity) || 0;
+      const price = Math.round(Number(p.price) || 0);
+      const priceRounded = formatUA(price);
+      
+      // Форматування дати
+      const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
+      
+      // Колір для кількості
+      let colorStyle = "";
+      if (qty === 0) colorStyle = "color: #888"; // сіра
+      else if (qty < 0) colorStyle = "color: #e40b0b"; // червона
+      else colorStyle = "color: #1565c0"; // синя
 
-  // Фільтруємо роботи з globalCache
-  const filteredWorks = globalCache.works
-    .filter((name) => name.toLowerCase().includes(q))
+      const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded}${timeOn ? ', ' + timeOn : ''})</span>`;
+
+      return {
+        value: p.name,
+        sclad_id: p.sclad_id,
+        label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded}${timeOn ? ', ' + timeOn : ''})`,
+        labelHtml: labelHtml,
+        fullName: p.name,
+        itemType: "detail" as const,
+      };
+    });
+
+  // Фільтруємо роботи з worksWithId (пошук по work_id або name)
+  const filteredWorks = globalCache.worksWithId
+    .filter((w) => 
+      w.work_id.toLowerCase().includes(q) ||
+      (w.name && w.name.toLowerCase().includes(q))
+    )
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
-    .map((x) => ({
-      label: x,
-      value: x, // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
-      fullName: x,
+    .map((w) => ({
+      label: `${w.work_id} - ${w.name}`,
+      value: w.name,
+      fullName: w.name,
       itemType: "work" as const,
     }));
 
   console.log(
-    `📋 Знайдено - Деталей: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`
+    `📋 Знайдено - Деталей: ${filteredSkladParts.length}, Робіт: ${filteredWorks.length}`
   );
 
   // Повертаємо спочатку деталі (синім), потім роботи (зеленим)
-  return [...filteredDetails, ...filteredWorks];
+  return [...filteredSkladParts, ...filteredWorks];
 }
 
 /* ====================== helpers ====================== */
@@ -570,8 +594,12 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
               }
             }
           } else {
-            // If Detail selected via Name
-            pibMagCell.textContent = "";
+            // ✅ ВИПРАВЛЕНО: Якщо вибрано деталь зі складу - підтягуємо всі дані
+            if (chosenScladId !== undefined) {
+              applyCatalogSelectionById(target, chosenScladId, fullText);
+            } else {
+              pibMagCell.textContent = "";
+            }
           }
         }
 

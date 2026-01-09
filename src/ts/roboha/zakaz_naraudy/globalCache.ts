@@ -114,6 +114,7 @@ export interface GlobalDataCache {
     quantity: number;
     unit?: string | null;
     shop?: string | null;
+    time_on?: string | null;
   }>;
   skladLite: SkladLiteRow[];
   oldNumbers: Map<number, number>;
@@ -251,9 +252,10 @@ export async function loadGlobalData(): Promise<void> {
       kilkist_off: number;
       unit_measurement: string | null;
       shops: any;
+      time_on: string | null;
     }>(
       "sclad",
-      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops",
+      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on",
       "sclad_id"
     );
 
@@ -367,6 +369,7 @@ export async function loadGlobalData(): Promise<void> {
           quantity: on - off,
           unit: r.unit_measurement ?? null,
           shop: shopName, // ← ТЕПЕР завжди чиста назва або null
+          time_on: r.time_on ?? null,
         };
       }) || [];
 
@@ -442,7 +445,7 @@ export async function ensureSkladLoaded(): Promise<void> {
   const { data, error } = await supabase
     .from("sclad")
     .select(
-      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops"
+      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on"
     )
     .order("sclad_id", { ascending: false });
   if (error) {
@@ -467,6 +470,7 @@ export async function ensureSkladLoaded(): Promise<void> {
         quantity: on - off,
         unit: r.unit_measurement ?? null,
         shop: shopName,
+        time_on: r.time_on ?? null,
       };
     }) || [];
   globalCache.skladParts = dedupeSklad(mapped);

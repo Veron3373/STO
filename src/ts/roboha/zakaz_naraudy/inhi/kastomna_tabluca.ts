@@ -93,12 +93,13 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       else if (qty < 0) colorStyle = "color: #e40b0b"; // червона
       else colorStyle = "color: #1565c0"; // синя
 
-      const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded}${timeOn ? ', ' + timeOn : ''})</span>`;
+      // ✅ ВИПРАВЛЕНО: Дата за дужками чорним кольором, формат "К-ть: X по ціна-грн"
+      const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
 
       return {
         value: p.name,
         sclad_id: p.sclad_id,
-        label: `${p.part_number} - ${p.name} (К-ть: ${qty}, ${priceRounded}${timeOn ? ', ' + timeOn : ''})`,
+        label: `${p.part_number} - ${p.name} (К-ть: ${qty} по ${priceRounded}-грн)${timeOn ? ' ' + timeOn : ''}`,
         labelHtml: labelHtml,
         fullName: p.name,
         itemType: "detail" as const,

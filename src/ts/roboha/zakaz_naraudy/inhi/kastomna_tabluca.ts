@@ -79,7 +79,7 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
     .map((x) => ({
       label: x,
-      value: shortenName(x),
+      value: x, // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
       fullName: x,
       itemType: "detail" as const,
     }));
@@ -90,7 +90,7 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
     .map((x) => ({
       label: x,
-      value: shortenName(x),
+      value: x, // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
       fullName: x,
       itemType: "work" as const,
     }));
@@ -487,7 +487,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
               '[data-name="name"]'
             ) as HTMLElement | null;
             if (nameCell) {
-              setCellText(nameCell, shortenName(chosenFullName));
+              // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
+              setCellText(nameCell, chosenFullName);
               nameCell.setAttribute("data-type", "works");
               nameCell.dispatchEvent(new Event("input", { bubbles: true }));
             }
@@ -529,8 +530,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         _suppressAutocomplete = true;
 
         const fullText = chosenFullName || label;
-        const shortenedText = shortenName(fullText);
-        target.textContent = shortenedText;
+        // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
+        target.textContent = fullText;
 
         // Determine Type
         const rawItemType =
@@ -1365,7 +1366,8 @@ async function applyCatalogSelectionById(
   const basePrice = Math.round(picked.price || 0);
   const priceWithMarkup = Math.round(basePrice * (1 + percent / 100));
 
-  const nameToSet = fullName || shortenName(picked.name || "");
+  // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
+  const nameToSet = fullName || picked.name || "";
   setCellText(nameCell, nameToSet);
 
   // КРИТИЧНО: Встановлюємо тип "details" для деталей зі складу

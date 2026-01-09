@@ -265,20 +265,6 @@ export function restoreOriginalNames(
   });
 }
 
-function shortenName(fullName: string): string {
-  if (!fullName) return fullName;
-  const sentences = fullName
-    .split(/(?<=\.)\s*/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  if (sentences.length <= 1 || fullName.length < 100) return fullName;
-
-  const firstSentence = sentences[0].replace(/\.$/, "");
-  const lastSentence = sentences[sentences.length - 1];
-  if (sentences.length === 2) return `${firstSentence}.....${lastSentence}`;
-  return `${firstSentence}.....${lastSentence}`;
-}
-
 /** ---------- підрахунки ---------- */
 function setCellText(cell: HTMLElement | null, text: string) {
   if (!cell) return;

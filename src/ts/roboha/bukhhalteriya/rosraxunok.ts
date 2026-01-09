@@ -271,36 +271,36 @@ async function saveSlyusarsDataToDatabase(
 
       // Оновлюємо запис
       if (primaryKey) {
-        const updatePromise = supabase
-          .from("slyusars")
-          .update({ data: slyusar })
-          .eq(primaryKey, target[primaryKey])
-          .select()
-          .then(({ data: upd, error: updErr }) => {
-            if (updErr) {
-              console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
-              throw updErr;
-            }
-            console.log(`✅ Оновлено ${slyusar.Name}`);
-            return upd;
-          });
+        const updatePromise = (async () => {
+          const { data: upd, error: updErr } = await supabase
+            .from("slyusars")
+            .update({ data: slyusar })
+            .eq(primaryKey, target[primaryKey])
+            .select();
+          if (updErr) {
+            console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
+            throw updErr;
+          }
+          console.log(`✅ Оновлено ${slyusar.Name}`);
+          return upd;
+        })();
         
         updatePromises.push(updatePromise);
       } else {
         // fallback: оновлення за вмістом JSON
-        const updatePromise = supabase
-          .from("slyusars")
-          .update({ data: slyusar })
-          .contains("data", { Name: slyusar.Name })
-          .select()
-          .then(({ data: upd, error: updErr }) => {
-            if (updErr) {
-              console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
-              throw updErr;
-            }
-            console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
-            return upd;
-          });
+        const updatePromise = (async () => {
+          const { data: upd, error: updErr } = await supabase
+            .from("slyusars")
+            .update({ data: slyusar })
+            .contains("data", { Name: slyusar.Name })
+            .select();
+          if (updErr) {
+            console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
+            throw updErr;
+          }
+          console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
+          return upd;
+        })();
         
         updatePromises.push(updatePromise);
       }

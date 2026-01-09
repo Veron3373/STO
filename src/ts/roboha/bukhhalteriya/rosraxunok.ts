@@ -236,79 +236,80 @@ async function saveSlyusarsDataToDatabase(
       throw new Error(`Помилка отримання даних: ${fetchError.message}`);
     }
 
-    // Визначаємо назву ключа таблиці
-    const primaryKeyCandidates = ["id", "slyusars_id", "uid", "pk"];
+    // ✅ ВИПРАВЛЕНО: Додано правильний ключ slyusar_id
+    const primaryKeyCandidates = ["slyusar_id", "id", "slyusars_id", "uid", "pk"];
     const detectPrimaryKey = (row: any): string | null => {
       if (!row) return null;
       for (const k of primaryKeyCandidates) if (k in row) return k;
       return null;
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
+    
+    console.log(`📌 Знайдено primary key: ${primaryKey}`);
+
+    // ✅ ОПТИМІЗАЦІЯ: Збираємо всі оновлення в масив промісів
+    const updatePromises: Promise<any>[] = [];
 
     for (const slyusar of slyusarsData) {
-      try {
-        // Знаходимо відповідний запис у вибірці за ім'ям всередині JSON
-        const target = existingData?.find((item) => {
-          let js = item.data;
-          if (typeof js === "string") {
-            try {
-              js = JSON.parse(js);
-            } catch {
-              /* ignore */
+      // Знаходимо відповідний запис у вибірці за ім'ям всередині JSON
+      const target = existingData?.find((item) => {
+        let js = item.data;
+        if (typeof js === "string") {
+          try {
+            js = JSON.parse(js);
+          } catch {
+            /* ignore */
+          }
+        }
+        return js && js.Name === slyusar.Name;
+      });
+
+      if (!target) {
+        console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
+        continue;
+      }
+
+      // Оновлюємо запис
+      if (primaryKey) {
+        const updatePromise = supabase
+          .from("slyusars")
+          .update({ data: slyusar })
+          .eq(primaryKey, target[primaryKey])
+          .select()
+          .then(({ data: upd, error: updErr }) => {
+            if (updErr) {
+              console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
+              throw updErr;
             }
-          }
-          return js && js.Name === slyusar.Name;
-        });
-
-        if (!target) {
-          console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
-          continue;
-        }
-
-        // Оновлюємо запис
-        if (primaryKey) {
-          const { data: upd, error: updErr } = await supabase
-            .from("slyusars")
-            .update({ data: slyusar })
-            .eq(primaryKey, target[primaryKey])
-            .select();
-
-          if (updErr) {
-            console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
-            throw updErr;
-          } else {
-            console.log(
-              `✅ Оновлено по ключу (${primaryKey}) для ${slyusar.Name}`,
-              upd
-            );
-          }
-        } else {
-          // fallback: оновлення за вмістом JSON
-          const { data: upd, error: updErr } = await supabase
-            .from("slyusars")
-            .update({ data: slyusar })
-            .contains("data", { Name: slyusar.Name })
-            .select();
-
-          if (updErr) {
-            console.error(
-              `Помилка оновлення (fallback) ${slyusar.Name}:`,
-              updErr
-            );
-            throw updErr;
-          } else {
-            console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`, upd);
-          }
-        }
-      } catch (recordError) {
-        console.error(
-          `Помилка обробки запису для ${slyusar.Name}:`,
-          recordError
-        );
-        throw recordError;
+            console.log(`✅ Оновлено ${slyusar.Name}`);
+            return upd;
+          });
+        
+        updatePromises.push(updatePromise);
+      } else {
+        // fallback: оновлення за вмістом JSON
+        const updatePromise = supabase
+          .from("slyusars")
+          .update({ data: slyusar })
+          .contains("data", { Name: slyusar.Name })
+          .select()
+          .then(({ data: upd, error: updErr }) => {
+            if (updErr) {
+              console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
+              throw updErr;
+            }
+            console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
+            return upd;
+          });
+        
+        updatePromises.push(updatePromise);
       }
     }
 
+    // ✅ Чекаємо завершення ВСІХ оновлень
+    await Promise.all(updatePromises);
+    
+    console.log(`✅ Збережено ${updatePromises.length} записів слюсарів`);
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
     console.error("❌ Помилка збереження в базу slyusars:", error);

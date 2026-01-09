@@ -781,75 +781,77 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       throw new Error(`Помилка отримання даних: ${fetchError.message}`);
     }
 
-    const primaryKeyCandidates = ["id", "slyusars_id", "uid", "pk"];
+    // ✅ ВИПРАВЛЕНО: Додано правильний ключ slyusar_id
+    const primaryKeyCandidates = ["slyusar_id", "id", "slyusars_id", "uid", "pk"];
     const detectPrimaryKey = (row: any): string | null => {
       if (!row) return null;
       for (const k of primaryKeyCandidates) if (k in row) return k;
       return null;
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
+    
+    console.log(`📌 Знайдено primary key: ${primaryKey}`);
+
+    // ✅ ОПТИМІЗАЦІЯ: Збираємо всі оновлення в масив промісів
+    const updatePromises: Promise<any>[] = [];
 
     for (const slyusar of slyusarsData) {
-      try {
-        const target = existingData?.find((item) => {
-          let js = item.data;
-          if (typeof js === "string") {
-            try {
-              js = JSON.parse(js);
-            } catch {
-              /* ignore */
+      const target = existingData?.find((item) => {
+        let js = item.data;
+        if (typeof js === "string") {
+          try {
+            js = JSON.parse(js);
+          } catch {
+            /* ignore */
+          }
+        }
+        return js && js.Name === slyusar.Name;
+      });
+
+      if (!target) {
+        console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
+        continue;
+      }
+
+      if (primaryKey) {
+        const updatePromise = supabase
+          .from("slyusars")
+          .update({ data: slyusar })
+          .eq(primaryKey, target[primaryKey])
+          .select()
+          .then(({ data: upd, error: updErr }) => {
+            if (updErr) {
+              console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
+              throw updErr;
             }
-          }
-          return js && js.Name === slyusar.Name;
-        });
-
-        if (!target) {
-          console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
-          continue;
-        }
-
-        if (primaryKey) {
-          const { data: upd, error: updErr } = await supabase
-            .from("slyusars")
-            .update({ data: slyusar })
-            .eq(primaryKey, target[primaryKey])
-            .select();
-
-          if (updErr) {
-            console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
-            throw updErr;
-          } else {
-            console.log(
-              `✅ Оновлено по ключу (${primaryKey}) для ${slyusar.Name}`,
-              upd
-            );
-          }
-        } else {
-          const { data: upd, error: updErr } = await supabase
-            .from("slyusars")
-            .update({ data: slyusar })
-            .contains("data", { Name: slyusar.Name })
-            .select();
-
-          if (updErr) {
-            console.error(
-              `Помилка оновлення (fallback) ${slyusar.Name}:`,
-              updErr
-            );
-            throw updErr;
-          } else {
-            console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`, upd);
-          }
-        }
-      } catch (recordError) {
-        console.error(
-          `Помилка обробки запису для ${slyusar.Name}:`,
-          recordError
-        );
-        throw recordError;
+            console.log(`✅ Оновлено ${slyusar.Name}`);
+            return upd;
+          });
+        
+        updatePromises.push(updatePromise);
+      } else {
+        const updatePromise = supabase
+          .from("slyusars")
+          .update({ data: slyusar })
+          .contains("data", { Name: slyusar.Name })
+          .select()
+          .then(({ data: upd, error: updErr }) => {
+            if (updErr) {
+              console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
+              throw updErr;
+            }
+            console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
+            return upd;
+          });
+        
+        updatePromises.push(updatePromise);
       }
     }
 
+    // ✅ Чекаємо завершення ВСІХ оновлень
+    await Promise.all(updatePromises);
+    
+    console.log(`✅ Збережено ${updatePromises.length} записів слюсарів`);
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
     console.error("❌ Помилка збереження в базу slyusars:", error);
@@ -1960,10 +1962,11 @@ export async function togglepodleglePaymentWithConfirmation(
     return;
   }
 
-  togglepodleglePayment(index);
+  // ✅ ВИПРАВЛЕНО: Чекаємо завершення togglepodleglePayment
+  await togglepodleglePayment(index);
 }
 
-export function togglepodleglePayment(index: number): void {
+export async function togglepodleglePayment(index: number): Promise<void> {
   if (!podlegleData[index]) {
     console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
@@ -1997,6 +2000,10 @@ export function togglepodleglePayment(index: number): void {
 
   const currentDate = getCurrentDate();
   let statusMsg = "";
+  
+  // Зберігаємо попередній стан для можливого відкату
+  const prevIsPaid = record.isPaid;
+  const prevPaymentDate = record.paymentDate;
 
   // ВАРІАНТ 1: ПРИЙМАЛЬНИК (якщо є суми і немає Записів)
   if (
@@ -2057,19 +2064,19 @@ export function togglepodleglePayment(index: number): void {
     return;
   }
 
-  // Збереження
-  saveSlyusarsDataToDatabase()
-    .then(() => {
-      updatepodlegleTable();
-      showNotification(statusMsg, "success");
-    })
-    .catch((error) => {
-      console.error(`❌ Помилка збереження:`, error);
-      showNotification("❌ Помилка збереження змін в базу даних", "error");
-      // Відкат змін в UI
-      record.isPaid = !record.isPaid;
-      updatepodlegleTable();
-    });
+  // ✅ ВИПРАВЛЕНО: Використовуємо await замість .then() для гарантованого збереження
+  try {
+    await saveSlyusarsDataToDatabase();
+    updatepodlegleTable();
+    showNotification(statusMsg, "success");
+  } catch (error) {
+    console.error(`❌ Помилка збереження:`, error);
+    showNotification("❌ Помилка збереження змін в базу даних", "error");
+    // Відкат змін
+    record.isPaid = prevIsPaid;
+    record.paymentDate = prevPaymentDate;
+    updatepodlegleTable();
+  }
 }
 
 export async function runMassPaymentCalculation(): Promise<void> {

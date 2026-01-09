@@ -24,19 +24,11 @@ import { calculateRowSum } from "../modalUI";
 
 /* ====================== настройки ====================== */
 const LIVE_WARNINGS = false;
-const NAME_AUTOCOMPLETE_MIN_CHARS = 3; // мінімум символів для пошуку
+const NAME_AUTOCOMPLETE_MIN_CHARS = 2; // мінімум символів для пошуку (знижено з 3 до 2)
 const NAME_AUTOCOMPLETE_MAX_RESULTS = 50; // максимум результатів
 
 // Кеш для відсотку
 let cachedPercent: number | null = null;
-
-/* ====================== кеш для автодоповнення назв ====================== */
-let nameAutocompleteCache: {
-  query: string; // запит, за яким завантажили
-  works: string[]; // роботи з бази
-  details: string[]; // деталі з бази
-  timestamp: number; // час завантаження
-} | null = null;
 
 /** Завантажити відсоток з бази даних settings */
 export async function loadPercentFromSettings(): Promise<number> {
@@ -66,79 +58,8 @@ export function resetPercentCache(): void {
 }
 
 /**
- * Завантажує дані з бази для автодоповнення назв (з пагінацією для обходу ліміту 1000)
- */
-async function loadNameAutocompleteData(query: string): Promise<void> {
-  if (query.length < NAME_AUTOCOMPLETE_MIN_CHARS) {
-    nameAutocompleteCache = null;
-    return;
-  }
-
-  console.log(`🔍 Завантаження даних для "${query}" з бази...`);
-
-  try {
-    const searchPattern = `%${query}%`;
-
-    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для works (обхід ліміту 1000)
-    let allWorks: string[] = [];
-    let from = 0;
-    const step = 1000;
-    let keepFetching = true;
-
-    while (keepFetching) {
-      const { data, error } = await supabase
-        .from("works")
-        .select("work_id, data")
-        .ilike("data", searchPattern)
-        .order("work_id", { ascending: true })
-        .range(from, from + step - 1);
-
-      if (error) {
-        console.error("❌ Помилка завантаження робіт:", error.message);
-        break;
-      }
-
-      if (data && data.length > 0) {
-        allWorks = [...allWorks, ...data.map((r: any) => r.data || "").filter(Boolean)];
-        if (data.length < step) {
-          keepFetching = false;
-        } else {
-          from += step;
-        }
-      } else {
-        keepFetching = false;
-      }
-    }
-
-    // Деталі - зазвичай їх менше 1000, але на всяк випадок теж можна пагінувати
-    const { data: detailsResult } = await supabase
-      .from("details")
-      .select("data")
-      .ilike("data", searchPattern)
-      .limit(1000);
-
-    const details = (detailsResult || [])
-      .map((r: any) => r.data || "")
-      .filter(Boolean);
-
-    nameAutocompleteCache = {
-      query: query.toLowerCase(),
-      works: allWorks,
-      details,
-      timestamp: Date.now(),
-    };
-
-    console.log(
-      `✅ Завантажено: ${allWorks.length} робіт, ${details.length} деталей`
-    );
-  } catch (error) {
-    console.error("❌ Помилка завантаження даних для автодоповнення:", error);
-    nameAutocompleteCache = null;
-  }
-}
-
-/**
- * Отримує підказки для назви (фільтрує з кешу або завантажує з бази)
+ * ✅ ВИПРАВЛЕНО: Отримує підказки для назви з globalCache (який вже завантажив ВСІ дані з пагінацією)
+ * Більше не робимо окремих запитів до бази - використовуємо кеш
  */
 async function getNameSuggestions(query: string): Promise<Suggest[]> {
   const q = query.trim().toLowerCase();
@@ -147,20 +68,13 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     return [];
   }
 
-  const needsReload =
-    !nameAutocompleteCache || !q.startsWith(nameAutocompleteCache.query);
+  // ✅ Використовуємо globalCache замість окремих запитів до бази
+  // globalCache.works і globalCache.details вже завантажені з пагінацією (всі записи)
+  
+  console.log(`🔎 Фільтрація для "${q}" (works: ${globalCache.works.length}, details: ${globalCache.details.length})`);
 
-  if (needsReload) {
-    await loadNameAutocompleteData(q);
-  }
-
-  if (!nameAutocompleteCache) {
-    return [];
-  }
-
-  console.log(`🔎 Фільтрація для "${q}"`);
-
-  const filteredDetails = nameAutocompleteCache.details
+  // Фільтруємо деталі з globalCache
+  const filteredDetails = globalCache.details
     .filter((name) => name.toLowerCase().includes(q))
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
     .map((x) => ({
@@ -170,7 +84,8 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       itemType: "detail" as const,
     }));
 
-  const filteredWorks = nameAutocompleteCache.works
+  // Фільтруємо роботи з globalCache
+  const filteredWorks = globalCache.works
     .filter((name) => name.toLowerCase().includes(q))
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
     .map((x) => ({
@@ -181,9 +96,10 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     }));
 
   console.log(
-    `📋 Деталей: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`
+    `📋 Знайдено - Деталей: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`
   );
 
+  // Повертаємо спочатку деталі (синім), потім роботи (зеленим)
   return [...filteredDetails, ...filteredWorks];
 }
 

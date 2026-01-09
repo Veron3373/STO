@@ -257,12 +257,17 @@ export async function loadGlobalData(): Promise<void> {
       "sclad_id"
     );
 
+    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ деталей
+    const detailsData = await fetchAllWithPagination<{ data: string }>(
+      "details",
+      "data",
+      "detail_id"
+    );
+
     const [
-      { data: detailsData },
       { data: slyusarsData },
       { data: shopsData },
     ] = await Promise.all([
-      supabase.from("details").select("data"),
       supabase.from("slyusars").select("data"),
       supabase.from("shops").select("data"),
     ]);

@@ -42,7 +42,7 @@ async function checkExistingSession() {
     console.log("👤 Знайдено сесію:", session.user.email);
     await handleAuthenticatedUser(session.user);
   } else {
-    console.log("📭 Немає активної сесії");
+    console.log("✉️ Немає активної сесії");
   }
 }
 

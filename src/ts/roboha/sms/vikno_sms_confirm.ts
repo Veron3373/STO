@@ -43,7 +43,7 @@ export function showSmsConfirmModal(
 
         if (messageEl) {
             messageEl.innerHTML = `
-            <strong>Відправити SMS клієнту?</strong><br><br>
+            <strong>Відправити SMS повідомлення</strong><br><br>
             Клієнт: ${clientName}<br>
             Телефон: ${clientPhone}<br>
             Сума до сплати: <strong>${totalSum} грн</strong>

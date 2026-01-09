@@ -1065,16 +1065,18 @@ export function updatepodlegleTable(): void {
       // Визначаємо стрілку для порівняння процентів
       let salaryArrowHtml = "";
       if (configuredPercent > 0 && item.salary > 0) {
+        // Розраховуємо різницю в гривнях: очікувана зарплата - фактична зарплата
+        const expectedSalary = (item.total * configuredPercent) / 100;
+        const salaryDifference = item.salary - expectedSalary;
+        const diffSign = salaryDifference >= 0 ? "+" : "";
+        const diffText = `${actualSalaryPercent.toFixed(1)}% з ${configuredPercent}% (${diffSign}${Math.round(salaryDifference)} грн)`;
+        
         if (actualSalaryPercent > configuredPercent) {
           // Процент зарплати більший ніж налаштований - темно червона стрілка вверх
-          salaryArrowHtml = `<span class="salary-arrow-up" title="Відсоток ${actualSalaryPercent.toFixed(
-            1
-          )}% > ${configuredPercent}%">🡱</span>`;
+          salaryArrowHtml = `<span class="salary-arrow-up" title="${diffText}">🡱</span>`;
         } else if (actualSalaryPercent < configuredPercent) {
           // Процент зарплати менший ніж налаштований - синя стрілка вниз
-          salaryArrowHtml = `<span class="salary-arrow-down" title="Відсоток ${actualSalaryPercent.toFixed(
-            1
-          )}% < ${configuredPercent}%">🡳</span>`;
+          salaryArrowHtml = `<span class="salary-arrow-down" title="${diffText}">🡳</span>`;
         }
       }
 

@@ -105,22 +105,12 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-// 🧠 Ініціалізація при завантаженні
+// 🧠 Ініціалізація при завантаженні - перевірка сесії
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("📄 DOM завантажено");
 
   // Перевіряємо чи вже є сесія
   await checkExistingSession();
-
-  // Прив'язка кнопки входу
-  const loginButton = document.getElementById("login");
-  if (loginButton) {
-    loginButton.addEventListener("click", (e) => {
-      e.preventDefault();
-      signInWithGoogle();
-    });
-    console.log("🔘 Кнопка входу підключена");
-  } else {
-    console.warn("⚠️ Кнопка login не знайдена");
-  }
+  
+  // Кнопка входу підключається в auth.tsx, тут не дублюємо
 });

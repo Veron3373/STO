@@ -40,11 +40,18 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
 export async function signInWithGoogle() {
   console.log("🔑 Запуск Google OAuth...");
 
-  const baseUrl = await getGitUrl();
+  // Використовуємо поточний origin як redirectTo (швидше і надійніше)
+  const currentOrigin = window.location.origin;
+  const redirectUrl = currentOrigin.includes('github.io') 
+    ? currentOrigin + '/STO/' 
+    : await getGitUrl();
+  
+  console.log("🔗 Redirect URL:", redirectUrl);
+  
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: baseUrl,
+      redirectTo: redirectUrl,
     },
   });
 

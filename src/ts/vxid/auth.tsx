@@ -5,6 +5,9 @@ import "../../scss/main.scss";
 import App from "./App.tsx";
 import { signInWithGoogle } from "./login.ts";
 
+// Флаг щоб запобігти подвійному кліку
+let isLoggingIn = false;
+
 // Чекаємо поки DOM завантажиться
 document.addEventListener("DOMContentLoaded", () => {
   // перевірка localStorage
@@ -20,10 +23,28 @@ document.addEventListener("DOMContentLoaded", () => {
     // Прив'язка кнопки входу з HTML (id="login")
     const loginButton = document.getElementById("login");
     if (loginButton) {
-      loginButton.addEventListener("click", (e) => {
+      loginButton.addEventListener("click", async (e) => {
         e.preventDefault();
+        
+        // Запобігаємо подвійному кліку
+        if (isLoggingIn) {
+          console.log("⏳ Вже виконується вхід...");
+          return;
+        }
+        
+        isLoggingIn = true;
+        loginButton.setAttribute("disabled", "true");
         console.log("🔑 Клік по кнопці входу!");
-        signInWithGoogle();
+        
+        try {
+          await signInWithGoogle();
+        } finally {
+          // Відновлюємо кнопку через 3 сек якщо OAuth не відкрився
+          setTimeout(() => {
+            isLoggingIn = false;
+            loginButton.removeAttribute("disabled");
+          }, 3000);
+        }
       });
       console.log("🔘 Кнопка входу підключена");
     } else {

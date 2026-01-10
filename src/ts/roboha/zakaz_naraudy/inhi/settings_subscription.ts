@@ -10,6 +10,7 @@ import { globalCache } from "../globalCache";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { userAccessLevel } from "../../tablucya/users";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { enforcePageAccess } from "./page_access_guard";
 
 let settingsChannel: RealtimeChannel | null = null;
 
@@ -96,10 +97,13 @@ function updateZarplataVisibility(): void {
 }
 
 function updateSMSButtonVisibility(): void {
+  // SMS кнопки в актах тепер контролюються через ролеві налаштування (20, 21, 18)
+  // і оновлюються через updateActButtonsVisibility()
+  // Тут залишаємо тільки для глобальних SMS кнопок (якщо є)
   const show = globalCache.settings.showSMS;
-  const btns = document.querySelectorAll('[data-action="send-sms"], .sms-button');
+  const btns = document.querySelectorAll('[data-action="send-sms"]:not(#sms-btn), .sms-button:not(#sms-btn)');
   btns.forEach(b => (b as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 SMS: ${show ? 'показано' : 'приховано'}`);
+  console.log(`🔄 Глобальні SMS кнопки: ${show ? 'показано' : 'приховано'}`);
 }
 
 async function updateMenuVisibility(): Promise<void> {
@@ -112,11 +116,98 @@ async function updateMenuVisibility(): Promise<void> {
   }
 }
 
+/**
+ * Оновлює видимість кнопок в акті на основі налаштувань ролі
+ */
+async function updateActButtonsVisibility(): Promise<void> {
+  if (userAccessLevel === "Адміністратор") return; // Адмін бачить все
+
+  try {
+    const roleColumn = userAccessLevel;
+    if (!roleColumn) return;
+
+    // Отримуємо ВСІ налаштування для ролі
+    const { data: settings, error } = await supabase
+      .from("settings")
+      .select(`setting_id, "${roleColumn}"`);
+
+    if (error || !settings) {
+      console.error("❌ Помилка отримання налаштувань кнопок:", error);
+      return;
+    }
+
+    // Мапа: роль → setting_id → селектор
+    const roleButtonMap: Record<string, Record<number, string>> = {
+      "Слюсар": {
+        1: "[data-zarplata-visible]",   // Зарплата
+        2: "[data-price-visible]",      // Ціна та Сума
+        3: "#status-lock-btn",          // Закриття акту
+        4: "#status-lock-btn",          // Закриття з зауваженнями
+        5: "#status-lock-btn",          // Відкриття акту
+      },
+      "Приймальник": {
+        14: "[data-zarplata-visible]",  // Зарплата
+        15: "[data-price-visible]",     // Ціна та Сума
+        16: "#status-lock-btn",         // Закриття з зауваженнями
+        17: "#status-lock-btn",         // Відкриття акту
+        18: "#create-act-btn",          // Рахунок і Акт
+        19: "#print-act-button",        // PDF
+        20: "#sms-btn",                 // SMS
+      },
+      "Запчастист": {
+        14: "[data-zarplata-visible]",  // Зарплата
+        15: "[data-price-visible]",     // Ціна та Сума
+        16: "#status-lock-btn",         // Закриття акту
+        17: "#status-lock-btn",         // Закриття з зауваженнями
+        18: "#status-lock-btn",         // Відкриття акту
+        19: "#create-act-btn",          // Рахунок і Акт
+        20: "#print-act-button",        // PDF
+        21: "#sms-btn",                 // SMS
+      },
+      "Складовщик": {
+        11: "[data-zarplata-visible]",  // Зарплата
+        12: "[data-price-visible]",     // Ціна та Сума
+        13: "#status-lock-btn",         // Закриття акту
+        14: "#status-lock-btn",         // Закриття з зауваженнями
+        15: "#status-lock-btn",         // Відкриття акту
+        16: "#create-act-btn",          // Рахунок і Акт
+        17: "#print-act-button",        // PDF
+        18: "#sms-btn",                 // SMS
+      },
+    };
+
+    const buttonMap = roleButtonMap[roleColumn];
+    if (!buttonMap) return;
+
+    // Оновлюємо видимість для кожного налаштування
+    settings.forEach((row: any) => {
+      const settingId = row.setting_id;
+      const allowed = !!(row as any)[roleColumn];
+      const selector = buttonMap[settingId];
+      
+      if (!selector) return;
+      
+      const buttons = document.querySelectorAll(selector);
+      if (buttons.length > 0) {
+        buttons.forEach(btn => {
+          (btn as HTMLElement).style.display = allowed ? '' : 'none';
+        });
+        console.log(`🔄 Кнопка ${selector}: ${allowed ? 'показано' : 'приховано'} (setting_id=${settingId})`);
+      }
+    });
+
+    console.log(`✅ Кнопки актів оновлено для ролі ${roleColumn}`);
+  } catch (error) {
+    console.error("❌ Помилка оновлення кнопок актів:", error);
+  }
+}
+
 async function updateUIBasedOnSettings(): Promise<void> {
   updatePibMagazinVisibility();
   updateCatalogVisibility();
   updateZarplataVisibility();
   updateSMSButtonVisibility();
+  await updateActButtonsVisibility();
   await updateMenuVisibility();
   console.log("🔄 UI оновлено для всіх елементів");
 }
@@ -148,6 +239,10 @@ async function handleSettingsChange(payload: any): Promise<void> {
   console.log(`✅ Оновлюємо UI для ролі ${userAccessLevel}...`);
   await refreshSettingsCache();
   await updateUIBasedOnSettings();
+  
+  // 🔐 КРИТИЧНО: Перевіряємо чи користувач ще має доступ до поточної сторінки
+  await enforcePageAccess();
+  
   showNotification("Налаштування оновлено адміністратором", "info", 3000);
 }
 

@@ -4,6 +4,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { isEmailAllowed } from "../../../../constants";
+import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 async function checkAuthOnPageLoad(): Promise<void> {
   console.log("🔒 Перевірка авторизації...");
@@ -35,6 +36,9 @@ async function checkAuthOnPageLoad(): Promise<void> {
 
   // 👇 ЗАПУСКАЄМО ЗМІНУ URL ТУТ (коли вхід успішний)
   obfuscateCurrentUrl();
+
+  // 🔐 Перевіряємо доступ до сторінки на основі налаштувань
+  await enforcePageAccess();
 
   // Показуємо сторінку
   document.body.classList.add("auth-verified");

@@ -672,14 +672,46 @@ async function canUserSeePrintActButton(): Promise<boolean> {
 }
 
 /**
- * Чи можна показувати кнопку "Склад 📦"
+ * Чи можна показувати кнопку SMS ✉️ в акті
  *
  * Мапа:
  *  - Приймальник → settings.setting_id = 20, колонка "Приймальник"
  *  - Запчастист  → settings.setting_id = 21, колонка "Запчастист"
  *  - Складовщик  → settings.setting_id = 18, колонка "Складовщик"
+ *  - Адміністратор → завжди TRUE
  */
+async function canUserSeeSmsButton(): Promise<boolean> {
+  const role = userAccessLevel;
 
+  if (!role) return true;
+  if (role === "Адміністратор") return true;
+
+  let settingId: number | null = null;
+  let columnName: string | null = null;
+
+  switch (role) {
+    case "Приймальник":
+      settingId = 20;
+      columnName = "Приймальник";
+      break;
+
+    case "Запчастист":
+      settingId = 21;
+      columnName = "Запчастист";
+      break;
+
+    case "Складовщик":
+      settingId = 18;
+      columnName = "Складовщик";
+      break;
+
+    default:
+      return true;
+  }
+
+  if (!settingId || !columnName) return true;
+  return await getRoleSettingBool(settingId, columnName);
+}
 
 export async function showModal(actId: number): Promise<void> {
   const canOpen = await canUserOpenActs();
@@ -761,11 +793,13 @@ export async function showModal(actId: number): Promise<void> {
       canShowCreateActBtn,
       canShowPrintActBtn,
       canShowAddRowBtn,
+      canShowSmsBtn,
     ] = await Promise.all([
       canUserSeeLockButton(),
       canUserSeeCreateActButton(),
       canUserSeePrintActButton(),
       canUserAddRowToAct(),
+      canUserSeeSmsButton(),
     ]);
 
     renderModalContent(
@@ -776,7 +810,8 @@ export async function showModal(actId: number): Promise<void> {
       canShowLockButton,
       canShowCreateActBtn,
       canShowPrintActBtn,
-      canShowAddRowBtn
+      canShowAddRowBtn,
+      canShowSmsBtn
     );
 
     // 🔽 ТУТ ВЖЕ Є ТАБЛИЦЯ В DOM — МОЖНА ХОВАТИ/ПОКАЗУВАТИ ЦІНА/СУМА
@@ -1103,8 +1138,8 @@ function renderModalContent(
   canShowLockButton: boolean,
   canShowCreateActBtn: boolean,
   canShowPrintActBtn: boolean,
-
-  canShowAddRowBtn: boolean
+  canShowAddRowBtn: boolean,
+  canShowSmsBtn: boolean
 ): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
@@ -1260,8 +1295,7 @@ function renderModalContent(
     `
           <div class="status-row">
             <span>${carInfo.engine}</span>
-            ${(userAccessLevel === "Адміністратор" || userAccessLevel === "Приймальник") &&
-      globalCache.settings.showSMS
+            ${canShowSmsBtn
       ? (() => {
         let tooltip = "Немає SMS";
         const isSent = !!act.sms;

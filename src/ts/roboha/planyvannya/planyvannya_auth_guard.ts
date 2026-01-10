@@ -4,6 +4,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { isEmailAllowed } from "../../../../constants";
+import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 console.log("🔒 [Планування] Перевірка доступу...");
 
@@ -35,6 +36,9 @@ async function checkPlanningAccess(): Promise<void> {
 
     // Змінюємо URL
     obfuscateCurrentUrl();
+
+    // 🔐 Перевіряємо доступ до сторінки на основі налаштувань
+    await enforcePageAccess();
 
     // Показуємо сторінку
     document.body.classList.add("auth-verified");

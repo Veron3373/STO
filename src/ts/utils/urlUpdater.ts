@@ -1,20 +1,21 @@
 // src/ts/utils/urlUpdater.ts
 // 🔗 ОНОВЛЕННЯ URL в HTML елементах
 
-import { getGitUrl } from "./gitUtils";
+import { getGitUrl, getGitName } from "./gitUtils";
 
 /**
  * Оновлює всі посилання в документі, що ведуть на старий домен
  */
 export async function updateDynamicLinks(): Promise<void> {
   try {
+    const gitName = await getGitName();
     const mainUrl = await getGitUrl("main.html");
     const indexUrl = await getGitUrl("index.html");
     const baseUrl = await getGitUrl();
     
-    // Знаходимо всі посилання, що містять старі домени
+    // Знаходимо всі посилання динамічно за gitName з бази
     const oldDomainSelectors = [
-      'a[href*="veron3373.github.io"]',
+      `a[href*="${gitName}.github.io"]`,
       'a[href*=".github.io/STO/"]',
       'a[id="postNavLinkHome"]' // конкретне посилання в planyvannya.html
     ];

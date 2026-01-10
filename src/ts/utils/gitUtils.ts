@@ -3,9 +3,36 @@
 
 import { supabase } from "../vxid/supabaseClient";
 
+const CACHE_KEY = "gitName_cache";
+
 /**
- * Отримання назви гіта з бази даних
- * @returns Promise<string> - назва гіта (наприклад, "veron3373")
+ * Визначення gitName з кешу або URL (fallback коли база недоступна)
+ * @returns string - назва гіта з кешу/URL
+ */
+function getGitNameFallback(): string {
+  try {
+    // Спочатку перевіряємо кеш
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      return cached;
+    }
+    
+    // Якщо кешу немає - беремо з URL
+    const hostname = window.location.hostname; // наприклад: "
+    if (hostname.endsWith('.github.io')) {
+      return hostname.replace('.github.io', ''); // ""
+    }
+    
+    // Для localhost - повертаємо з кешу або пустий рядок
+    return cached || "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Отримання назви гіта з бази даних (setting_id: 1, стовпець infaGit)
+ * @returns Promise<string> - назва гіта (наприклад, ")
  */
 export async function getGitName(): Promise<string> {
   try {
@@ -17,13 +44,20 @@ export async function getGitName(): Promise<string> {
     
     if (error) {
       console.error("❌ Помилка отримання назви гіта:", error);
-      return "veron3373"; // fallback значення
+      return getGitNameFallback();
     }
     
-    return data?.infaGit || "veron3373";
+    const gitName = data?.infaGit;
+    if (gitName) {
+      // Кешуємо успішний результат
+      localStorage.setItem(CACHE_KEY, gitName);
+      return gitName;
+    }
+    
+    return getGitNameFallback();
   } catch (err) {
     console.error("❌ Виняток отримання назви гіта:", err);
-    return "veron3373"; // fallback значення
+    return getGitNameFallback();
   }
 }
 
@@ -31,7 +65,7 @@ export async function getGitName(): Promise<string> {
  * Формування повного гіт URL
  * @param gitName - назва гіта
  * @param path - додатковий шлях (опціонально)
- * @returns string - повний URL (наприклад, "https://veron3373.github.io/STO/")
+ * @returns string - повний URL (наприклад, )
  */
 export function buildGitUrl(gitName: string, path: string = ""): string {
   const baseUrl = `https://${gitName}.github.io/STO`;
@@ -58,6 +92,6 @@ export async function getFallbackUrl(path: string = ""): Promise<string> {
     return await getGitUrl(path);
   } catch (error) {
     console.error("❌ Помилка отримання URL, використовую fallback:", error);
-    return buildGitUrl("veron3373", path);
+    return buildGitUrl(getGitNameFallback(), path);
   }
 }

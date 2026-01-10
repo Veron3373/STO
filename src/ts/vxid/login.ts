@@ -45,9 +45,7 @@ export async function signInWithGoogle() {
   const redirectUrl = currentOrigin.includes('github.io') 
     ? currentOrigin + '/STO/' 
     : await getGitUrl();
-  
-  console.log("🔗 Redirect URL:", redirectUrl);
-  
+    
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {

@@ -1,7 +1,6 @@
 // src\ts\roboha\zakaz_naraudy\inhi\ctvorennia_papku_googleDrive..ts
 
 import { supabase } from "../../../vxid/supabaseClient";
-import { getGitName, buildGitUrl } from "../../../utils/gitUtils";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 
 // ------- Глобальні декларації -------
@@ -12,23 +11,6 @@ declare let google: any;
 const CLIENT_ID =
   "467665595953-63b13ucmm8ssbm2vfjjr41e3nqt6f11a.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
-
-// Отримання дозволених origins з урахуванням динамічної назви гіта
-async function getAllowedOrigins(): Promise<string[]> {
-  const gitName = await getGitName();
-  return [
-    buildGitUrl(gitName, "").replace(/\/STO\/$/, ""), // github.io
-    `https://${gitName.toLowerCase()}.vercel.app`, // vercel.app
-    "https://stobraclavec.vercel.app", // явно додаємо vercel
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-  ];
-}
-
 
 
 // ------- Стан аутентифікації -------
@@ -43,11 +25,6 @@ function handleError(error: unknown): Error {
   if (error instanceof Error) return error;
   if (typeof error === "string") return new Error(error);
   return new Error("Невідома помилка");
-}
-
-async function isAllowedOrigin(): Promise<boolean> {
-  const allowedOrigins = await getAllowedOrigins();
-  return allowedOrigins.includes(window.location.origin);
 }
 
 // Безпечний JSON.parse
@@ -138,9 +115,8 @@ export async function initGoogleApi(): Promise<void> {
     console.log("🔐 [iOS Debug] User Agent:", navigator.userAgent);
     console.log("🔐 [iOS Debug] Origin:", window.location.origin);
 
-    if (!(await isAllowedOrigin())) {
-      throw new Error(`Домен ${window.location.origin} не дозволено.`);
-    }
+    // Перевірка домену виконується Google Cloud Console автоматично
+    // Тому ми не робимо додаткову перевірку тут
 
     console.log("🔐 [iOS Debug] Завантаження Google API скриптів...");
     await loadGoogleAPIs();

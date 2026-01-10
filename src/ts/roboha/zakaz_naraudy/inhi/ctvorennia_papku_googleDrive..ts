@@ -449,77 +449,33 @@ async function getActFullInfo(actId: number): Promise<{
   }
 }
 
-// ✅ Надійний апдейт з нормалізацією JSON та retry логікою
-// 🔒 Захист від гонки умов при одночасному доступі з різних пристроїв
+// ✅ Надійний апдейт з окремою колонкою photo_url (атомарна операція)
+// 🔒 Виправлено: тепер немає race condition з JSON полем data
 async function updateActPhotoLinkWithRetry(
   actId: number,
   driveUrl: string,
-  maxRetries: number = 5 // Збільшено кількість спроб
+  maxRetries: number = 3
 ): Promise<void> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`📝 Спроба ${attempt}/${maxRetries} запису шляху в БД...`);
+      console.log(`📝 Спроба ${attempt}/${maxRetries} запису photo_url в БД...`);
       console.log(`📝 [Debug] actId=${actId}, driveUrl=${driveUrl}`);
 
       // Затримка перед повторними спробами (експоненційна)
       if (attempt > 1) {
-        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 4000);
         console.log(`⏳ Очікування ${delay}ms перед спробою ${attempt}...`);
         await sleep(delay);
       }
 
-      const { data: currentAct, error: fetchError } = await supabase
-        .from("acts")
-        .select("data")
-        .eq("act_id", actId)
-        .single();
-
-      if (fetchError) {
-        console.error(`❌ Помилка отримання акту:`, fetchError);
-        throw new Error(
-          `Не вдалося знайти акт з ID ${actId}: ${fetchError.message}`
-        );
-      }
-
-      if (!currentAct) {
-        throw new Error(`Акт з ID ${actId} не знайдено`);
-      }
-
-      // НОРМАЛІЗАЦІЯ
-      const parsed = safeParseJSON(currentAct.data);
-      const actData: Record<string, any> =
-        parsed && typeof parsed === "object"
-          ? { ...parsed }
-          : { ...(currentAct.data ?? {}) };
-
-      // 🔒 Перевіряємо чи посилання вже є (захист від дублювання)
-      const existingPhotos = Array.isArray(actData["Фото"])
-        ? [...actData["Фото"]]
-        : [];
-
-      if (existingPhotos.includes(driveUrl)) {
-        console.log("ℹ️ Посилання вже існує в БД, пропускаємо оновлення");
-        updatePhotoSection(existingPhotos, false);
-        return; // ✅ Вже є, нічого не робимо
-      }
-
-      // Додаємо нове посилання БЕЗ дублікатів
-      const uniquePhotos = [driveUrl, ...existingPhotos.filter(Boolean)];
-      actData["Фото"] = [...new Set(uniquePhotos)]; // Унікальні значення
-
-      console.log(`💾 Записуємо в БД:`, actData["Фото"]);
-      console.log(
-        `💾 [Debug] Повний об'єкт data:`,
-        JSON.stringify(actData).slice(0, 500)
-      );
-
+      // ✅ Атомарний update окремої колонки - немає race condition!
       const { data: updatedRow, error: updateError } = await supabase
         .from("acts")
-        .update({ data: actData })
+        .update({ photo_url: driveUrl })
         .eq("act_id", actId)
-        .select("data")
+        .select("photo_url")
         .single();
 
       if (updateError) {
@@ -532,65 +488,35 @@ async function updateActPhotoLinkWithRetry(
       }
 
       // ✅ Перевіряємо, що дані справді записалися
-      const updatedData =
-        safeParseJSON(updatedRow.data) || updatedRow.data || {};
-      const savedLinks: string[] = Array.isArray(updatedData?.["Фото"])
-        ? updatedData["Фото"]
-        : [];
-
-      console.log(
-        `🔍 [Debug] Отримані дані після update:`,
-        JSON.stringify(updatedData).slice(0, 500)
-      );
-      console.log(`🔍 [Debug] savedLinks:`, savedLinks);
-
-      if (!savedLinks.includes(driveUrl)) {
-        // 🔄 Додаткова перевірка - можливо БД повернула старі дані, перечитаємо
-        await sleep(300);
+      if (updatedRow.photo_url !== driveUrl) {
+        // 🔄 Додаткова перевірка - перечитаємо
+        await sleep(200);
         const { data: recheck } = await supabase
           .from("acts")
-          .select("data")
+          .select("photo_url")
           .eq("act_id", actId)
           .single();
 
-        const recheckData = safeParseJSON(recheck?.data) || recheck?.data || {};
-        const recheckLinks: string[] = Array.isArray(recheckData?.["Фото"])
-          ? recheckData["Фото"]
-          : [];
-
-        console.log(`🔍 [Debug] Recheck links:`, recheckLinks);
-
-        if (!recheckLinks.includes(driveUrl)) {
-          throw new Error(
-            "Посилання не збереглося в БД після оновлення (перевірено двічі)"
-          );
+        if (recheck?.photo_url !== driveUrl) {
+          throw new Error("photo_url не збереглося в БД після оновлення");
         }
-
-        // Якщо recheck показав що все ок
-        console.log(
-          "✅ Шлях успішно записаний в БД (підтверджено recheck):",
-          recheckLinks
-        );
-        updatePhotoSection(recheckLinks, false);
-        return;
       }
 
-      console.log("✅ Шлях успішно записаний в БД:", savedLinks);
+      console.log("✅ photo_url успішно записано в БД:", driveUrl);
 
       // Локально перемикаємо UI в режим "відкрити"
-      updatePhotoSection(savedLinks, false);
+      updatePhotoSection(driveUrl, false);
 
       return; // ✅ Успіх!
     } catch (error) {
       lastError = handleError(error);
       console.error(`❌ Спроба ${attempt} невдала:`, lastError.message);
-      // Затримка перед наступною спробою вже є на початку циклу
     }
   }
 
   // Якщо всі спроби невдалі
   throw new Error(
-    `Не вдалося записати шлях після ${maxRetries} спроб: ${lastError?.message}`
+    `Не вдалося записати photo_url після ${maxRetries} спроб: ${lastError?.message}`
   );
 }
 
@@ -599,9 +525,10 @@ async function updateActPhotoLinkWithRetry(
 /**
  * Малює текст у комірці (зелений — відкрити, червоний — створити)
  * і робить КЛІК ПО ВСІЙ КОМІРЦІ. Ніяких window.open тут — тільки рендер.
+ * @param photoUrl - URL папки Google Drive або null/undefined
  */
 export function updatePhotoSection(
-  photoLinks: string[],
+  photoUrl: string | null | undefined,
   isActClosed = false
 ): void {
   const photoCell = document.querySelector(
@@ -610,12 +537,11 @@ export function updatePhotoSection(
 
   if (!photoCell) return;
 
-  const hasLink =
-    Array.isArray(photoLinks) && photoLinks.length > 0 && !!photoLinks[0];
+  const hasLink = !!photoUrl && photoUrl.length > 0;
 
   photoCell.setAttribute("data-has-link", hasLink ? "true" : "false");
   if (hasLink) {
-    photoCell.setAttribute("data-link-url", photoLinks[0]);
+    photoCell.setAttribute("data-link-url", photoUrl);
   } else {
     photoCell.removeAttribute("data-link-url");
   }
@@ -684,10 +610,10 @@ export function addGoogleDriveHandler(isActClosed = false): void {
     }
 
     try {
-      // тягнемо АКТ із БД — беремо ЛИШЕ актуальний стан
+      // тягнемо АКТ із БД — беремо ЛИШЕ актуальний стан (тепер з photo_url)
       const { data: act, error } = await supabase
         .from("acts")
-        .select("data, date_off")
+        .select("photo_url, date_off")
         .eq("act_id", actId)
         .single();
 
@@ -696,15 +622,12 @@ export function addGoogleDriveHandler(isActClosed = false): void {
         return;
       }
 
-      const actData = safeParseJSON(act.data) || {};
-      const links: string[] = Array.isArray(actData?.["Фото"])
-        ? actData["Фото"]
-        : [];
-      const hasLink = links.length > 0 && links[0];
+      const photoUrl = act.photo_url;
+      const hasLink = !!photoUrl && photoUrl.length > 0;
 
       // Якщо посилання вже є — відкриваємо його
       if (hasLink) {
-        console.log("📂 [iOS Debug] Відкриваємо існуючу папку:", links[0]);
+        console.log("📂 [iOS Debug] Відкриваємо існуючу папку:", photoUrl);
 
         // 🍎 Для iOS використовуємо прямий редірект (більш надійно)
         if (isIOS()) {
@@ -717,12 +640,12 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 
           // Прямий перехід (найнадійніший метод для iOS)
           setTimeout(() => {
-            window.location.href = links[0];
+            window.location.href = photoUrl;
           }, 300);
         } else {
           // Для desktop - звичайне нове вікно
           console.log("💻 [Desktop] Відкриваємо в новому вікні");
-          window.open(links[0], "_blank", "noopener,noreferrer");
+          window.open(photoUrl, "_blank", "noopener,noreferrer");
         }
         return;
       }
@@ -784,23 +707,18 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       await sleep(500); // Даємо БД час на синхронізацію
       const { data: verifyAct } = await supabase
         .from("acts")
-        .select("data")
+        .select("photo_url")
         .eq("act_id", actId)
         .single();
 
-      const verifyData = safeParseJSON(verifyAct?.data) || {};
-      const savedLinks = Array.isArray(verifyData["Фото"])
-        ? verifyData["Фото"]
-        : [];
-
-      if (savedLinks.length === 0) {
+      if (!verifyAct?.photo_url) {
         console.error("❌ Посилання не збереглось в БД після створення папки!");
         showNotification(
           "Папку створено, але посилання не збереглось. Спробуйте ще раз.",
           "warning"
         );
       } else {
-        console.log("✅ Верифікація: посилання успішно збережено:", savedLinks);
+        console.log("✅ Верифікація: посилання успішно збережено:", verifyAct.photo_url);
         showNotification("Готово. Посилання додано у форму.", "success");
       }
     } catch (err) {
@@ -851,7 +769,7 @@ export async function refreshPhotoData(actId: number): Promise<void> {
 
     const { data: act, error } = await supabase
       .from("acts")
-      .select("data, date_off")
+      .select("photo_url, date_off")
       .eq("act_id", actId)
       .single();
 
@@ -860,18 +778,15 @@ export async function refreshPhotoData(actId: number): Promise<void> {
       return;
     }
 
-    const actData = safeParseJSON(act.data) || {};
-    const photoLinks: string[] = Array.isArray(actData?.["Фото"])
-      ? actData["Фото"].filter(Boolean) // Фільтруємо порожні значення
-      : [];
+    const photoUrl = act.photo_url;
 
     console.log(
-      `📊 [Refresh] Знайдено ${photoLinks.length} посилань:`,
-      photoLinks
+      `📊 [Refresh] photo_url:`,
+      photoUrl || "(порожньо)"
     );
 
     const isActClosed = !!act.date_off;
-    updatePhotoSection(photoLinks, isActClosed);
+    updatePhotoSection(photoUrl, isActClosed);
 
     console.log(
       `✅ [Refresh] UI оновлено, акт ${isActClosed ? "закритий" : "відкритий"}`

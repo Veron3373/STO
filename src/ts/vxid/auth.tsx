@@ -5,18 +5,29 @@ import "../../scss/main.scss";
 import App from "./App.tsx";
 import { signInWithGoogle } from "./login.ts";
 
-// перевірка localStorage
-const user = localStorage.getItem("user");
+// Чекаємо поки DOM завантажиться
+document.addEventListener("DOMContentLoaded", () => {
+  // перевірка localStorage
+  const user = localStorage.getItem("user");
 
-if (user) {
-  createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-      <App />
-    </StrictMode>
-  );
-} else {
-  const button = document.createElement("button");
- // button.innerText = "Увійти через Google";
-  button.onclick = signInWithGoogle;
-  document.body.appendChild(button);
-}
+  if (user) {
+    createRoot(document.getElementById("root")!).render(
+      <StrictMode>
+        <App />
+      </StrictMode>
+    );
+  } else {
+    // Прив'язка кнопки входу з HTML (id="login")
+    const loginButton = document.getElementById("login");
+    if (loginButton) {
+      loginButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        console.log("🔑 Клік по кнопці входу!");
+        signInWithGoogle();
+      });
+      console.log("🔘 Кнопка входу підключена");
+    } else {
+      console.warn("⚠️ Кнопка login не знайдена в DOM");
+    }
+  }
+});

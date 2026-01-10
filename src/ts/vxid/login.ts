@@ -43,7 +43,7 @@ export async function signInWithGoogle() {
   // Ми просто беремо "origin" (корінь сайту).
   // На локалхості це буде "http://localhost:5173"
   // На Vercel це буде "https://sto-gray.vercel.app"
-  // Ніяких зайвих "/STO/" чи перевірок GitHub більше не треба.
+  // Ніяких зайвих "/" чи перевірок GitHub більше не треба.
   const redirectUrl = window.location.origin;
   
   console.log("🔗 Redirect URL встановлено:", redirectUrl);

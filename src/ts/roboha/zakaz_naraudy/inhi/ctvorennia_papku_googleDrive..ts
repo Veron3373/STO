@@ -17,7 +17,7 @@ const SCOPES = "https://www.googleapis.com/auth/drive.file";
 async function getAllowedOrigins(): Promise<string[]> {
   const gitName = await getGitName();
   return [
-    buildGitUrl(gitName, "").replace(/\/STO\/$/, ""), // без /STO/
+    buildGitUrl(gitName, "").replace(/\/STO\/$/, ""), // без 
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",

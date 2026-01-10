@@ -16,7 +16,7 @@ export async function updateDynamicLinks(): Promise<void> {
     // Знаходимо всі посилання динамічно за gitName з бази
     const oldDomainSelectors = [
       `a[href*="${gitName}.github.io"]`,
-      'a[href*=".github.io/STO/"]',
+      'a[href*=".github.io/"]',
       'a[id="postNavLinkHome"]' // конкретне посилання в planyvannya.html
     ];
     
@@ -37,7 +37,7 @@ export async function updateDynamicLinks(): Promise<void> {
         console.log("🔗 Оновлено посилання на index.html:", indexUrl);
       }
       // Замінюємо базові посилання на домен
-      else if (href.includes('.github.io/STO/')) {
+      else if (href.includes('.github.io/')) {
         const pathMatch = href.match(/\/STO\/(.*)$/);
         const path = pathMatch ? pathMatch[1] : '';
         getGitUrl(path).then(newUrl => {

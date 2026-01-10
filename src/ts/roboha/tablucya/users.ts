@@ -535,7 +535,7 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
 
   if (!session) {
     console.warn("⛔ Немає авторизації Google. Модальне вікно пароля приховано.");
-    window.location.href = "/STO/index.html";
+    window.location.href = "/index.html";
     return null;
   }
 
@@ -565,7 +565,7 @@ export function logoutFromSystemAndRedirect(): void {
   userAccessLevel = null;
   userName = null;
   console.log("🚪 Вихід з системи та перенаправлення...");
-  window.location.href = "/STO/";
+  window.location.href = "/index.html";
 }
 
 export async function initializeAuthSystem(): Promise<void> {

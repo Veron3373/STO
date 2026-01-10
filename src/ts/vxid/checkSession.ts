@@ -8,9 +8,9 @@ export async function requireAuth() {
   } = await supabase.auth.getSession();
 
   if (!session || error) {
-    if (window.location.pathname !== "/STO/index.html") {
+    if (window.location.pathname !== "/index.html") {
       console.warn("⛔ Сесія відсутня або помилка:", error);
-      window.location.href = "/STO/index.html";
+      window.location.href = "/index.html";
     }
     return;
   }

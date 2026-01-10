@@ -2,7 +2,7 @@
 // Захист сторінки bukhhalteriya.html від неавторизованого доступу
 
 import { supabase } from "../../vxid/supabaseClient";
-import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
+import { getGitUrl } from "../../utils/gitUtils";
 import { initUrlUpdater } from "../../utils/urlUpdater";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";

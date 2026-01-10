@@ -1010,9 +1010,10 @@ function restrictPhotoAccess(): void {
     const actId = Number(actIdStr);
 
     try {
+      // Фото тепер зберігається в окремій колонці photo_url
       const { data: act, error } = await supabase
         .from("acts")
-        .select("data, date_off")
+        .select("photo_url, date_off")
         .eq("act_id", actId)
         .single();
 
@@ -1021,14 +1022,11 @@ function restrictPhotoAccess(): void {
         return;
       }
 
-      const actData = safeParseJSON(act.data) || {};
-      const links: string[] = Array.isArray(actData?.["Фото"])
-        ? actData["Фото"]
-        : [];
-      const hasLink = links.length > 0 && links[0];
+      const photoUrl = act.photo_url;
+      const hasLink = !!photoUrl && photoUrl.length > 0;
 
       if (hasLink) {
-        window.open(links[0], "_blank");
+        window.open(photoUrl, "_blank");
         return;
       }
 

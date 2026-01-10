@@ -78,8 +78,8 @@ export async function createActInDatabase(
   try {
     const dateOn = getCurrentDateTimeLocal();
 
+    // Фото тепер зберігається в окремій колонці photo_url, не в JSON data
     const actData = {
-      Фото: [],
       Деталі: [{ Сума: 0, Ціна: 0, Деталь: "", Магазин: "", Кількість: 0 }],
       Пробіг: 0,
       Роботи: [{ Сума: 0, Ціна: 0, Робота: "", Слюсар: "", Кількість: 0 }],

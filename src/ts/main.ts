@@ -20,6 +20,7 @@ import "./roboha/zakaz_naraudy/inhi/act_changes_highlighter";
 import "./roboha/zakaz_naraudy/inhi/act_notifications";
 import "./roboha/tablucya/povidomlennya_tablucya";
 import "./roboha/zakaz_naraudy/inhi/act_realtime_subscription";
+import "./roboha/zakaz_naraudy/inhi/settings_realtime_init";
 import "./vxid/url_obfuscator";
 import "./roboha/planyvannya/planyvannya";
 import "./roboha/planyvannya/planyvannya_post";

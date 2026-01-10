@@ -159,6 +159,16 @@ class SchedulerApp {
 
   private async loadDataFromDatabase(): Promise<void> {
     try {
+      // 🔐 Перевіряємо доступ перед завантаженням даних
+      const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
+      const hasAccess = await checkCurrentPageAccess();
+      
+      if (!hasAccess) {
+        console.log("⛔ Доступ до Планувальника заборонено - перенаправлення...");
+        window.location.href = "/";
+        return;
+      }
+
       // Запит 1: Отримуємо всіх слюсарів
       const { data: slyusarsData, error: slyusarsError } = await supabase
         .from("slyusars")

@@ -288,12 +288,9 @@ export async function addRecord(e?: Event): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед оновленням даних
   const hasAccess = await checkCurrentPageAccess();
   if (!hasAccess) {
-    showNotification(
-      "⛔ Доступ заблоковано. Зверніться до Адміністратора",
-      "error",
-      3000
-    );
+    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     setSearchButtonLoadingEl(btn, false);
+    window.location.href = "/";
     return;
   }
   

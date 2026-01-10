@@ -1267,6 +1267,16 @@ function getDiscountByActId(actId: number): number {
 
 // Функція пошуку з визначенням статусу акту
 export async function searchDetailsData(): Promise<void> {
+  // 🔐 Перевіряємо доступ до сторінки перед пошуком
+  const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
+  const hasAccess = await checkCurrentPageAccess();
+  
+  if (!hasAccess) {
+    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
+    window.location.href = "/";
+    return;
+  }
+
   let dateOpen = byId<HTMLInputElement>("Bukhhalter-details-date-open").value;
   const dateClose = byId<HTMLInputElement>(
     "Bukhhalter-details-date-close"

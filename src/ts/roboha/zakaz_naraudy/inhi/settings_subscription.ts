@@ -117,7 +117,7 @@ async function updateMenuVisibility(): Promise<void> {
 }
 
 /**
- * Оновлює видимість кнопок в акті на основі налаштувань ролі
+ * Оновлює видимість кнопок і колонок в акті на основі налаштувань ролі
  */
 async function updateActButtonsVisibility(): Promise<void> {
   if (userAccessLevel === "Адміністратор") return; // Адмін бачить все
@@ -136,70 +136,126 @@ async function updateActButtonsVisibility(): Promise<void> {
       return;
     }
 
-    // Мапа: роль → setting_id → селектор
-    const roleButtonMap: Record<string, Record<number, string>> = {
+    // Мапа: роль → setting_id → дія (селектор або функція)
+    const roleActionMap: Record<string, Record<number, { type: 'selector' | 'column', value: string }>> = {
       "Слюсар": {
-        1: "[data-zarplata-visible]",   // Зарплата
-        2: "[data-price-visible]",      // Ціна та Сума
-        3: "#status-lock-btn",          // Закриття акту
-        4: "#status-lock-btn",          // Закриття з зауваженнями
-        5: "#status-lock-btn",          // Відкриття акту
+        1: { type: 'column', value: 'zarplata' },      // Зарплата колонка
+        2: { type: 'column', value: 'price' },         // Ціна та Сума колонки
+        3: { type: 'selector', value: '#status-lock-btn' },
+        4: { type: 'selector', value: '#status-lock-btn' },
+        5: { type: 'selector', value: '#status-lock-btn' },
       },
       "Приймальник": {
-        14: "[data-zarplata-visible]",  // Зарплата
-        15: "[data-price-visible]",     // Ціна та Сума
-        16: "#status-lock-btn",         // Закриття з зауваженнями
-        17: "#status-lock-btn",         // Відкриття акту
-        18: "#create-act-btn",          // Рахунок і Акт
-        19: "#print-act-button",        // PDF
-        20: "#sms-btn",                 // SMS
+        14: { type: 'column', value: 'zarplata' },     // Зарплата колонка
+        15: { type: 'column', value: 'price' },        // Ціна та Сума колонки
+        16: { type: 'selector', value: '#status-lock-btn' },
+        17: { type: 'selector', value: '#status-lock-btn' },
+        18: { type: 'selector', value: '#create-act-btn' },
+        19: { type: 'selector', value: '#print-act-button' },
+        20: { type: 'selector', value: '#sms-btn' },
       },
       "Запчастист": {
-        14: "[data-zarplata-visible]",  // Зарплата
-        15: "[data-price-visible]",     // Ціна та Сума
-        16: "#status-lock-btn",         // Закриття акту
-        17: "#status-lock-btn",         // Закриття з зауваженнями
-        18: "#status-lock-btn",         // Відкриття акту
-        19: "#create-act-btn",          // Рахунок і Акт
-        20: "#print-act-button",        // PDF
-        21: "#sms-btn",                 // SMS
+        14: { type: 'column', value: 'zarplata' },     // Зарплата колонка
+        15: { type: 'column', value: 'price' },        // Ціна та Сума колонки
+        16: { type: 'selector', value: '#status-lock-btn' },
+        17: { type: 'selector', value: '#status-lock-btn' },
+        18: { type: 'selector', value: '#status-lock-btn' },
+        19: { type: 'selector', value: '#create-act-btn' },
+        20: { type: 'selector', value: '#print-act-button' },
+        21: { type: 'selector', value: '#sms-btn' },
       },
       "Складовщик": {
-        11: "[data-zarplata-visible]",  // Зарплата
-        12: "[data-price-visible]",     // Ціна та Сума
-        13: "#status-lock-btn",         // Закриття акту
-        14: "#status-lock-btn",         // Закриття з зауваженнями
-        15: "#status-lock-btn",         // Відкриття акту
-        16: "#create-act-btn",          // Рахунок і Акт
-        17: "#print-act-button",        // PDF
-        18: "#sms-btn",                 // SMS
+        11: { type: 'column', value: 'zarplata' },     // Зарплата колонка
+        12: { type: 'column', value: 'price' },        // Ціна та Сума колонки
+        13: { type: 'selector', value: '#status-lock-btn' },
+        14: { type: 'selector', value: '#status-lock-btn' },
+        15: { type: 'selector', value: '#status-lock-btn' },
+        16: { type: 'selector', value: '#create-act-btn' },
+        17: { type: 'selector', value: '#print-act-button' },
+        18: { type: 'selector', value: '#sms-btn' },
       },
     };
 
-    const buttonMap = roleButtonMap[roleColumn];
-    if (!buttonMap) return;
+    const actionMap = roleActionMap[roleColumn];
+    if (!actionMap) return;
 
     // Оновлюємо видимість для кожного налаштування
     settings.forEach((row: any) => {
       const settingId = row.setting_id;
       const allowed = !!(row as any)[roleColumn];
-      const selector = buttonMap[settingId];
+      const action = actionMap[settingId];
       
-      if (!selector) return;
+      if (!action) return;
       
-      const buttons = document.querySelectorAll(selector);
-      if (buttons.length > 0) {
-        buttons.forEach(btn => {
-          (btn as HTMLElement).style.display = allowed ? '' : 'none';
-        });
-        console.log(`🔄 Кнопка ${selector}: ${allowed ? 'показано' : 'приховано'} (setting_id=${settingId})`);
+      if (action.type === 'selector') {
+        // Приховування/показ кнопок
+        const buttons = document.querySelectorAll(action.value);
+        if (buttons.length > 0) {
+          buttons.forEach(btn => {
+            (btn as HTMLElement).style.display = allowed ? '' : 'none';
+          });
+          console.log(`🔄 Кнопка ${action.value}: ${allowed ? 'показано' : 'приховано'} (setting_id=${settingId})`);
+        }
+      } else if (action.type === 'column') {
+        // Приховування/показ колонок
+        if (action.value === 'zarplata') {
+          toggleZarplataColumnVisibility(allowed);
+        } else if (action.value === 'price') {
+          togglePriceColumnsVisibility(allowed);
+        }
+        console.log(`🔄 Колонка ${action.value}: ${allowed ? 'показано' : 'приховано'} (setting_id=${settingId})`);
       }
     });
 
-    console.log(`✅ Кнопки актів оновлено для ролі ${roleColumn}`);
+    console.log(`✅ Кнопки та колонки актів оновлено для ролі ${roleColumn}`);
   } catch (error) {
     console.error("❌ Помилка оновлення кнопок актів:", error);
   }
+}
+
+/**
+ * Приховує/показує колонку Зарплата в таблиці акту
+ */
+function toggleZarplataColumnVisibility(show: boolean): void {
+  // Заголовки колонки Зар-та
+  const headers = document.querySelectorAll('th');
+  headers.forEach(h => {
+    if (h.textContent?.includes('Зар-та')) {
+      (h as HTMLElement).style.display = show ? '' : 'none';
+    }
+  });
+  
+  // Комірки з даними зарплати
+  const cells = document.querySelectorAll('td[data-name="slyusar_sum"], td.slyusar-sum-cell');
+  cells.forEach(cell => {
+    (cell as HTMLElement).style.display = show ? '' : 'none';
+  });
+}
+
+/**
+ * Приховує/показує колонки Ціна та Сума в таблиці акту
+ */
+function togglePriceColumnsVisibility(show: boolean): void {
+  // Заголовки колонок
+  const headers = document.querySelectorAll('th');
+  headers.forEach(h => {
+    const text = h.textContent?.trim();
+    if (text === 'Ціна' || text === 'Сума') {
+      (h as HTMLElement).style.display = show ? '' : 'none';
+    }
+  });
+  
+  // Комірки з даними ціни та суми
+  const priceCells = document.querySelectorAll('td[data-name="price"], td.price-cell');
+  const sumCells = document.querySelectorAll('td[data-name="sum"], td.sum-cell');
+  
+  priceCells.forEach(cell => {
+    (cell as HTMLElement).style.display = show ? '' : 'none';
+  });
+  
+  sumCells.forEach(cell => {
+    (cell as HTMLElement).style.display = show ? '' : 'none';
+  });
 }
 
 async function updateUIBasedOnSettings(): Promise<void> {
@@ -275,3 +331,8 @@ export function disconnectSettingsSubscription(): void {
 export function isSettingsSubscriptionActive(): boolean {
   return settingsChannel !== null;
 }
+
+/**
+ * Експортуємо функції для використання в інших модулях
+ */
+export { updateActButtonsVisibility, updateUIBasedOnSettings };

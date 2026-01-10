@@ -1817,6 +1817,16 @@ export function createPercentageToggle(): void {
 
 // [НОВИЙ КОД]
 export async function handlepodlegleAddRecord(): Promise<void> {
+  // 🔐 Перевіряємо доступ до сторінки перед пошуком
+  const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
+  const hasAccess = await checkCurrentPageAccess();
+  
+  if (!hasAccess) {
+    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
+    window.location.href = "/";
+    return;
+  }
+
   // <--- ЗМІНА 1: (async)
   const dateOpen = byId<HTMLInputElement>(
     "Bukhhalter-podlegle-date-open"

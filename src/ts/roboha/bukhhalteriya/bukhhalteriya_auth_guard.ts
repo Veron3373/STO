@@ -3,8 +3,28 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
-import { isEmailAllowed } from "../../../../constants";
 import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
+
+// Перевірка email через базу даних whitelist
+async function isEmailAllowed(email: string | undefined): Promise<boolean> {
+  if (!email) return false;
+  try {
+    const { data, error } = await supabase
+      .from("whitelist")
+      .select("email")
+      .eq("email", email.toLowerCase())
+      .single();
+    if (error?.code === "PGRST116") return false;
+    if (error) {
+      console.error("❌ Помилка whitelist:", error);
+      return false;
+    }
+    return !!data;
+  } catch (err) {
+    console.error("❌ Виняток whitelist:", err);
+    return false;
+  }
+}
 
 async function checkAuthOnPageLoad(): Promise<void> {
   console.log("🔒 Перевірка авторизації...");
@@ -23,7 +43,8 @@ async function checkAuthOnPageLoad(): Promise<void> {
   }
 
   // ✅ Перевірка email в whitelist
-  if (!isEmailAllowed(session.user.email)) {
+  const allowed = await isEmailAllowed(session.user.email);
+  if (!allowed) {
     console.warn("⛔ Email не в whitelist:", session.user.email);
     await supabase.auth.signOut();
     window.location.replace(

@@ -2,9 +2,29 @@
 // 🔐 ПЕРЕВІРКА GOOGLE СЕСІЇ для main.html
 
 import { supabase } from "../vxid/supabaseClient";
-import { isEmailAllowed } from "../../../constants";
 
 console.log("🔒 [Main] Перевірка Google сесії...");
+
+// Перевірка email через базу даних whitelist
+async function isEmailAllowed(email: string | undefined): Promise<boolean> {
+  if (!email) return false;
+  try {
+    const { data, error } = await supabase
+      .from("whitelist")
+      .select("email")
+      .eq("email", email.toLowerCase())
+      .single();
+    if (error?.code === "PGRST116") return false;
+    if (error) {
+      console.error("❌ Помилка whitelist:", error);
+      return false;
+    }
+    return !!data;
+  } catch (err) {
+    console.error("❌ Виняток whitelist:", err);
+    return false;
+  }
+}
 
 async function checkMainPageSession() {
   try {
@@ -21,8 +41,9 @@ async function checkMainPageSession() {
     }
 
     const email = session.user.email;
+    const allowed = await isEmailAllowed(email);
 
-    if (!isEmailAllowed(email)) {
+    if (!allowed) {
       console.warn("⛔ [Main] Email не в whitelist:", email);
       await supabase.auth.signOut();
       window.location.replace("https://veron3373.github.io/STO/");

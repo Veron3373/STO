@@ -1,9 +1,39 @@
 // src/ts/vxid/login.ts
 // 🔐 СИСТЕМА ВХОДУ: Google OAuth + Whitelist перевірка
 import { supabase } from "./supabaseClient";
-import { isEmailAllowed } from "../../../constants";
 
 console.log("🔒 Ініціалізація системи входу...");
+
+// 🔍 Перевірка email через базу даних whitelist
+async function isEmailAllowed(email: string | undefined): Promise<boolean> {
+  if (!email) return false;
+
+  try {
+    // Перевіряємо чи є email в whitelist (завдяки RLS побачимо тільки свій email)
+    const { data, error } = await supabase
+      .from("whitelist")
+      .select("email")
+      .eq("email", email.toLowerCase())
+      .single();
+
+    if (error) {
+      // Якщо помилка "не знайдено" - це нормально, email не в whitelist
+      if (error.code === "PGRST116") {
+        console.warn("⛔ Email не знайдено в whitelist:", email);
+        return false;
+      }
+      // Інші помилки логуємо
+      console.error("❌ Помилка перевірки whitelist:", error);
+      return false;
+    }
+
+    // Якщо data існує - email в whitelist
+    return !!data;
+  } catch (err) {
+    console.error("❌ Виняток при перевірці whitelist:", err);
+    return false;
+  }
+}
 
 // 🚪 Вхід через Google OAuth
 export async function signInWithGoogle() {
@@ -50,7 +80,8 @@ async function checkExistingSession() {
 async function handleAuthenticatedUser(user: any) {
   const email = user.email;
 
-  if (!isEmailAllowed(email)) {
+  const allowed = await isEmailAllowed(email);
+  if (!allowed) {
     console.warn("⛔ Email НЕ в whitelist:", email);
     alert(
       `Доступ заборонено.\nВаш email: ${email}\n\nЗверніться до адміністратора.`

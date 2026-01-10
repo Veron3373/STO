@@ -3,10 +3,30 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
-import { isEmailAllowed } from "../../../../constants";
 import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 console.log("🔒 [Планування] Перевірка доступу...");
+
+// Перевірка email через базу даних whitelist
+async function isEmailAllowed(email: string | undefined): Promise<boolean> {
+  if (!email) return false;
+  try {
+    const { data, error } = await supabase
+      .from("whitelist")
+      .select("email")
+      .eq("email", email.toLowerCase())
+      .single();
+    if (error?.code === "PGRST116") return false;
+    if (error) {
+      console.error("❌ Помилка whitelist:", error);
+      return false;
+    }
+    return !!data;
+  } catch (err) {
+    console.error("❌ Виняток whitelist:", err);
+    return false;
+  }
+}
 
 async function checkPlanningAccess(): Promise<void> {
   try {
@@ -23,8 +43,9 @@ async function checkPlanningAccess(): Promise<void> {
     }
 
     const email = session.user.email;
+    const allowed = await isEmailAllowed(email);
 
-    if (!isEmailAllowed(email)) {
+    if (!allowed) {
       console.warn("⛔ [Планування] Email не в whitelist:", email);
       alert(`Доступ заборонено для ${email}`);
       await supabase.auth.signOut();

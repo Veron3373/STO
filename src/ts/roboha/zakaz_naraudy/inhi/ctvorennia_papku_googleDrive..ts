@@ -9,7 +9,7 @@ declare let google: any;
 
 // ------- Константи -------
 const CLIENT_ID =
-  "467665595953-63b13ucmm8ssbm2vfjjr41e3nqt6f11a.apps.googleusercontent.com";
+  "480043605958-30g4gmngetf2edddn52t3mhoobs7rh6f.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
 

@@ -48,7 +48,6 @@ export async function signInWithGoogle() {
 
   if (error) {
     console.error("❌ Помилка Google OAuth:", error);
-    alert("Помилка входу. Спробуйте ще раз.");
   } else {
     console.log("✅ Google OAuth ініційовано");
   }

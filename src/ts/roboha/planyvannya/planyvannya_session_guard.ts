@@ -45,9 +45,8 @@ async function checkPlanningSession() {
 
     if (!allowed) {
       console.warn("⛔ [Планування] Email не в whitelist:", email);
-      alert(`Доступ заборонено для ${email}`);
       await supabase.auth.signOut();
-      window.location.replace("https://veron3373.github.io/STO/");
+      window.location.replace("https://veron3373.github.io/STO/index.html");
       return;
     }
 

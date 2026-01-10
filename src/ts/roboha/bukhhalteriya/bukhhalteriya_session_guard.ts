@@ -46,10 +46,9 @@ async function checkGoogleSession() {
 
     if (!allowed) {
       console.warn("⛔ [Бухгалтерія] Email не в whitelist:", email);
-      alert(`Доступ заборонено для ${email}`);
       await supabase.auth.signOut();
       window.location.replace(
-        "https://shlifservice24-lang.github.io/Shlif_service/"
+        "https://shlifservice24-lang.github.io/Shlif_service/index.html"
       );
       return;
     }

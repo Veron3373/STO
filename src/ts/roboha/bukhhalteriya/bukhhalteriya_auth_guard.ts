@@ -2,6 +2,8 @@
 // Захист сторінки bukhhalteriya.html від неавторизованого доступу
 
 import { supabase } from "../../vxid/supabaseClient";
+import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
+import { initUrlUpdater } from "../../utils/urlUpdater";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
@@ -36,9 +38,8 @@ async function checkAuthOnPageLoad(): Promise<void> {
 
   if (error || !session) {
     console.warn("⛔ Доступ заблоковано. Немає сесії.");
-    window.location.replace(
-      "https://shlifservice24-lang.github.io/Shlif_service/main.html"
-    );
+    const mainUrl = await getGitUrl("main.html");
+    window.location.replace(mainUrl);
     return;
   }
 
@@ -47,13 +48,15 @@ async function checkAuthOnPageLoad(): Promise<void> {
   if (!allowed) {
     console.warn("⛔ Email не в whitelist:", session.user.email);
     await supabase.auth.signOut();
-    window.location.replace(
-      "https://shlifservice24-lang.github.io/Shlif_service/"
-    );
+    const baseUrl = await getGitUrl();
+    window.location.replace(baseUrl);
     return;
   }
 
   console.log("✅ Авторизовано:", session.user.email);
+
+  // Оновлюємо посилання на сторінці
+  initUrlUpdater();
 
   // 👇 ЗАПУСКАЄМО ЗМІНУ URL ТУТ (коли вхід успішний)
   obfuscateCurrentUrl();

@@ -2,6 +2,8 @@
 // 🔐 ПЕРЕВІРКА GOOGLE СЕСІЇ для planyvannya.html
 
 import { supabase } from "../../vxid/supabaseClient";
+import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
+import { initUrlUpdater } from "../../utils/urlUpdater";
 import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 
 console.log("🔒 [Планування] Перевірка Google сесії...");
@@ -36,7 +38,8 @@ async function checkPlanningSession() {
 
     if (error || !session) {
       console.warn("⛔ [Планування] Немає Google сесії");
-      window.location.replace("https://veron3373.github.io/STO/index.html");
+      const indexUrl = await getGitUrl("index.html");
+      window.location.replace(indexUrl);
       return;
     }
 
@@ -46,17 +49,22 @@ async function checkPlanningSession() {
     if (!allowed) {
       console.warn("⛔ [Планування] Email не в whitelist:", email);
       await supabase.auth.signOut();
-      window.location.replace("https://veron3373.github.io/STO/index.html");
+      const indexUrl = await getGitUrl("index.html");
+      window.location.replace(indexUrl);
       return;
     }
 
     console.log("✅ [Планування] Google сесія підтверджена:", email);
 
+    // Оновлюємо посилання на сторінці
+    initUrlUpdater();
+
     // Змінюємо URL для безпеки
     obfuscateCurrentUrl();
   } catch (err) {
     console.error("❌ [Планування] Помилка перевірки:", err);
-    window.location.replace("https://veron3373.github.io/STO/index.html");
+    const fallbackUrl = await getFallbackUrl("index.html");
+    window.location.replace(fallbackUrl);
   }
 }
 

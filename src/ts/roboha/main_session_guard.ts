@@ -2,6 +2,8 @@
 // 🔐 ПЕРЕВІРКА GOOGLE СЕСІЇ для main.html
 
 import { supabase } from "../vxid/supabaseClient";
+import { getGitUrl, getFallbackUrl } from "../utils/gitUtils";
+import { initUrlUpdater } from "../utils/urlUpdater";
 
 console.log("🔒 [Main] Перевірка Google сесії...");
 
@@ -36,7 +38,8 @@ async function checkMainPageSession() {
     if (error || !session) {
       console.warn("⛔ [Main] Немає Google сесії");
       alert("Сесія закінчилась. Увійдіть знову.");
-      window.location.replace("https://veron3373.github.io/STO/index.html");
+      const indexUrl = await getGitUrl("index.html");
+      window.location.replace(indexUrl);
       return;
     }
 
@@ -46,14 +49,20 @@ async function checkMainPageSession() {
     if (!allowed) {
       console.warn("⛔ [Main] Email не в whitelist:", email);
       await supabase.auth.signOut();
-      window.location.replace("https://veron3373.github.io/STO/");
+      const baseUrl = await getGitUrl();
+      window.location.replace(baseUrl);
       return;
     }
 
     console.log("✅ [Main] Доступ дозволено:", email);
+    
+    // Оновлюємо посилання на сторінці
+    initUrlUpdater();
   } catch (err) {
     console.error("❌ [Main] Помилка перевірки:", err);
-    window.location.replace("https://veron3373.github.io/STO/index.html");
+    // У разі помилки використовуємо fallback URL
+    const fallbackUrl = await getFallbackUrl("index.html");
+    window.location.replace(fallbackUrl);
   }
 }
 

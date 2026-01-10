@@ -1,6 +1,7 @@
 // src/ts/vxid/login.ts
 // 🔐 СИСТЕМА ВХОДУ: Google OAuth + Whitelist перевірка
 import { supabase } from "./supabaseClient";
+import { getGitUrl } from "../utils/gitUtils";
 
 console.log("🔒 Ініціалізація системи входу...");
 
@@ -39,10 +40,11 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
 export async function signInWithGoogle() {
   console.log("🔑 Запуск Google OAuth...");
 
+  const baseUrl = await getGitUrl();
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: "https://veron3373.github.io/STO/",
+      redirectTo: baseUrl,
     },
   });
 

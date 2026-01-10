@@ -1,6 +1,7 @@
 // src\ts\roboha\zakaz_naraudy\inhi\ctvorennia_papku_googleDrive..ts
 
 import { supabase } from "../../../vxid/supabaseClient";
+import { getGitName, buildGitUrl } from "../../../utils/gitUtils";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 
 // ------- Глобальні декларації -------
@@ -12,15 +13,21 @@ const CLIENT_ID =
   "467665595953-63b13ucmm8ssbm2vfjjr41e3nqt6f11a.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
-const ALLOWED_ORIGINS = [
-  "https://veron3373.github.io",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:8080",
-  "http://127.0.0.1:8080",
-];
+// Отримання дозволених origins з урахуванням динамічної назви гіта
+async function getAllowedOrigins(): Promise<string[]> {
+  const gitName = await getGitName();
+  return [
+    buildGitUrl(gitName, "").replace(/\/STO\/$/, ""), // без /STO/
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+  ];
+}
+
+
 
 // ------- Стан аутентифікації -------
 let accessToken: string | null = null;
@@ -36,8 +43,9 @@ function handleError(error: unknown): Error {
   return new Error("Невідома помилка");
 }
 
-function isAllowedOrigin(): boolean {
-  return ALLOWED_ORIGINS.includes(window.location.origin);
+async function isAllowedOrigin(): Promise<boolean> {
+  const allowedOrigins = await getAllowedOrigins();
+  return allowedOrigins.includes(window.location.origin);
 }
 
 // Безпечний JSON.parse
@@ -128,7 +136,7 @@ export async function initGoogleApi(): Promise<void> {
     console.log("🔐 [iOS Debug] User Agent:", navigator.userAgent);
     console.log("🔐 [iOS Debug] Origin:", window.location.origin);
 
-    if (!isAllowedOrigin()) {
+    if (!(await isAllowedOrigin())) {
       throw new Error(`Домен ${window.location.origin} не дозволено.`);
     }
 

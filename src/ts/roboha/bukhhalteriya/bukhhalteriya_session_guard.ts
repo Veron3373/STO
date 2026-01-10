@@ -2,6 +2,8 @@
 // 🔐 ПЕРЕВІРКА GOOGLE СЕСІЇ для bukhhalteriya.html (БЕЗ блокування модалки пароля)
 
 import { supabase } from "../../vxid/supabaseClient";
+import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
+import { initUrlUpdater } from "../../utils/urlUpdater";
 
 console.log("🔒 [Бухгалтерія] Перевірка Google сесії...");
 
@@ -35,9 +37,8 @@ async function checkGoogleSession() {
 
     if (error || !session) {
       console.warn("⛔ [Бухгалтерія] Немає Google сесії");
-      window.location.replace(
-        "https://shlifservice24-lang.github.io/Shlif_service/index.html"
-      );
+      const indexUrl = await getGitUrl("index.html");
+      window.location.replace(indexUrl);
       return;
     }
 
@@ -47,19 +48,21 @@ async function checkGoogleSession() {
     if (!allowed) {
       console.warn("⛔ [Бухгалтерія] Email не в whitelist:", email);
       await supabase.auth.signOut();
-      window.location.replace(
-        "https://shlifservice24-lang.github.io/Shlif_service/index.html"
-      );
+      const indexUrl = await getGitUrl("index.html");
+      window.location.replace(indexUrl);
       return;
     }
 
     console.log("✅ [Бухгалтерія] Google сесія підтверджена:", email);
+    
+    // Оновлюємо посилання на сторінці
+    initUrlUpdater();
+    
     // Дозволяємо завантаження сторінки - модалка пароля покаже users.ts
   } catch (err) {
     console.error("❌ [Бухгалтерія] Помилка перевірки:", err);
-    window.location.replace(
-      "https://shlifservice24-lang.github.io/Shlif_service/index.html"
-    );
+    const fallbackUrl = await getFallbackUrl("index.html");
+    window.location.replace(fallbackUrl);
   }
 }
 

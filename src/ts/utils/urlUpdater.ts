@@ -1,0 +1,69 @@
+// src/ts/utils/urlUpdater.ts
+// 🔗 ОНОВЛЕННЯ URL в HTML елементах
+
+import { getGitUrl } from "./gitUtils";
+
+/**
+ * Оновлює всі посилання в документі, що ведуть на старий домен
+ */
+export async function updateDynamicLinks(): Promise<void> {
+  try {
+    const mainUrl = await getGitUrl("main.html");
+    const indexUrl = await getGitUrl("index.html");
+    const baseUrl = await getGitUrl();
+    
+    // Знаходимо всі посилання, що містять старі домени
+    const oldDomainSelectors = [
+      'a[href*="veron3373.github.io"]',
+      'a[href*=".github.io/STO/"]',
+      'a[id="postNavLinkHome"]' // конкретне посилання в planyvannya.html
+    ];
+    
+    const links = document.querySelectorAll(oldDomainSelectors.join(', '));
+    
+    links.forEach((link) => {
+      const href = link.getAttribute('href');
+      if (!href) return;
+      
+      // Замінюємо посилання на main.html
+      if (href.includes('/main.html') || link.id === 'postNavLinkHome') {
+        link.setAttribute('href', mainUrl);
+        console.log("🔗 Оновлено посилання на main.html:", mainUrl);
+      }
+      // Замінюємо посилання на index.html
+      else if (href.includes('/index.html')) {
+        link.setAttribute('href', indexUrl);
+        console.log("🔗 Оновлено посилання на index.html:", indexUrl);
+      }
+      // Замінюємо базові посилання на домен
+      else if (href.includes('.github.io/STO/')) {
+        const pathMatch = href.match(/\/STO\/(.*)$/);
+        const path = pathMatch ? pathMatch[1] : '';
+        getGitUrl(path).then(newUrl => {
+          link.setAttribute('href', newUrl);
+          console.log("🔗 Оновлено посилання:", newUrl);
+        });
+      }
+      // Замінюємо просто базовий URL
+      else if (href.includes('.github.io/STO')) {
+        link.setAttribute('href', baseUrl);
+        console.log("🔗 Оновлено базове посилання:", baseUrl);
+      }
+    });
+    
+    console.log("✅ Посилання оновлено динамічно");
+  } catch (error) {
+    console.error("❌ Помилка оновлення посилань:", error);
+  }
+}
+
+/**
+ * Ініціалізація оновлення посилань після завантаження DOM
+ */
+export function initUrlUpdater(): void {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateDynamicLinks);
+  } else {
+    updateDynamicLinks();
+  }
+}

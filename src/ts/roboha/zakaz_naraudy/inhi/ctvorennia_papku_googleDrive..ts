@@ -71,6 +71,24 @@ function isIOS(): boolean {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+// Детекція Android
+function isAndroid(): boolean {
+  return /Android/i.test(navigator.userAgent);
+}
+
+// Детекція мобільного пристрою (iOS або Android)
+function isMobile(): boolean {
+  return isIOS() || isAndroid() || /Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i.test(navigator.userAgent);
+}
+
+// Визначення типу пристрою для логування
+function getDeviceType(): string {
+  if (isIOS()) return "iOS";
+  if (isAndroid()) return "Android";
+  if (isMobile()) return "Mobile (Other)";
+  return "Desktop";
+}
+
 // ================= ЗАВАНТАЖЕННЯ API =================
 
 async function loadGoogleAPIs(): Promise<void> {
@@ -591,7 +609,7 @@ export function addGoogleDriveHandler(isActClosed = false): void {
     // Інакше Safari заблокує popup як "not user initiated"
     if (isCreateMode && !accessToken) {
       console.log(
-        "📱 [iOS Debug] Pre-flight Auth check (Create Mode detected)..."
+        `📱 [${getDeviceType()}] Pre-flight Auth check (Create Mode detected)...`
       );
       isCreatingFolder = true; // Блокуємо повторні кліки
       photoCell.style.pointerEvents = "none";
@@ -599,7 +617,7 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 
       try {
         await initGoogleApi();
-        console.log("✅ [iOS Debug] Авторизація успішна");
+        console.log(`✅ [${getDeviceType()}] Авторизація успішна`);
       } catch (authErr) {
         console.error("❌ Auth cancelled/failed:", authErr);
         isCreatingFolder = false;
@@ -627,18 +645,18 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 
       // Якщо посилання вже є — відкриваємо його
       if (hasLink) {
-        console.log("📂 [iOS Debug] Відкриваємо існуючу папку:", photoUrl);
+        console.log(`📂 [${getDeviceType()}] Відкриваємо існуючу папку:`, photoUrl);
 
-        // 🍎 Для iOS використовуємо прямий редірект (більш надійно)
-        if (isIOS()) {
+        // 📱 Для мобільних пристроїв (iOS/Android) використовуємо прямий редірект
+        if (isMobile()) {
           console.log(
-            "📱 [iOS] Використовуємо window.location.href для переходу"
+            `📱 [${getDeviceType()}] Використовуємо window.location.href для переходу`
           );
 
           // Показуємо повідомлення
           showNotification("Відкриваємо папку Google Drive...", "info");
 
-          // Прямий перехід (найнадійніший метод для iOS)
+          // Прямий перехід (найнадійніший метод для мобільних)
           setTimeout(() => {
             window.location.href = photoUrl;
           }, 300);
@@ -666,19 +684,19 @@ export function addGoogleDriveHandler(isActClosed = false): void {
         photoCell.style.pointerEvents = "none";
       }
 
-      // (Auth double-check, хоча ми вже зробили це вище для iOS)
+      // (Auth double-check для всіх платформ)
       if (!accessToken) {
         console.log(
-          "📱 [iOS Debug] Повторна авторизація (accessToken відсутній)..."
+          `📱 [${getDeviceType()}] Повторна авторизація (accessToken відсутній)...`
         );
         showNotification("Підключення до Google Drive...", "info");
         await initGoogleApi();
       }
 
       // Тільки після авторизації робимо запити до БД
-      console.log("📱 [iOS Debug] Отримання інформації про акт...");
+      console.log(`📱 [${getDeviceType()}] Отримання інформації про акт...`);
       const actInfo = await getActFullInfo(actId);
-      console.log("📱 [iOS Debug] Інформація про акт отримана:", actInfo);
+      console.log(`📱 [${getDeviceType()}] Інформація про акт отримана:`, actInfo);
 
       showNotification("Пошук існуючої папки в Google Drive...", "info");
 

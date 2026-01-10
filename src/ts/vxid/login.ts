@@ -1,7 +1,6 @@
 // src/ts/vxid/login.ts
 // 🔐 СИСТЕМА ВХОДУ: Google OAuth + Whitelist перевірка
 import { supabase } from "./supabaseClient";
-import { getGitUrl } from "../utils/gitUtils";
 
 console.log("🔒 Ініціалізація системи входу...");
 
@@ -40,12 +39,15 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
 export async function signInWithGoogle() {
   console.log("🔑 Запуск Google OAuth...");
 
-  // Використовуємо поточний origin як redirectTo (швидше і надійніше)
-  const currentOrigin = window.location.origin;
-  const redirectUrl = currentOrigin.includes('github.io') 
-    ? currentOrigin + '/STO/' 
-    : await getGitUrl();
-    
+  // 🔥 ВИПРАВЛЕНО ДЛЯ VERCEL:
+  // Ми просто беремо "origin" (корінь сайту).
+  // На локалхості це буде "http://localhost:5173"
+  // На Vercel це буде "https://sto-gray.vercel.app"
+  // Ніяких зайвих "/STO/" чи перевірок GitHub більше не треба.
+  const redirectUrl = window.location.origin;
+  
+  console.log("🔗 Redirect URL встановлено:", redirectUrl);
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -90,13 +92,18 @@ async function handleAuthenticatedUser(user: any) {
   if (!allowed) {
     console.warn("⛔ Email НЕ в whitelist:", email);
     await supabase.auth.signOut();
-    window.location.href = "/STO/index.html";
+    // 🔥 Якщо вхід заборонено - кидаємо на головну (корінь)
+    window.location.href = "/";
     return;
   }
 
   console.log("✅ Email дозволено:", email);
-  console.log("➡️ Перенаправлення на main.html");
-  window.location.href = "/STO/main.html";
+  
+  // 🔥 Перевіряємо, де ми зараз, щоб не перезавантажувати сторінку вічно
+  if (!window.location.pathname.includes("main.html")) {
+      console.log("➡️ Перенаправлення на main.html");
+      window.location.href = "/main.html";
+  }
 }
 
 // 🎯 Відстеження змін авторизації
@@ -116,6 +123,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Перевіряємо чи вже є сесія
   await checkExistingSession();
-  
-  // Кнопка входу підключається в auth.tsx, тут не дублюємо
 });

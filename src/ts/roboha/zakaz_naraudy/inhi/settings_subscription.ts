@@ -2,7 +2,7 @@
 /**
  * Real-time підписка на зміни в таблиці settings
  * Автоматично оновлює інтерфейс при зміні налаштувань адміністратором
- * без необхідності перезавантаження сторінки
+ * для ВСІХ ролей: Адміністратор, Приймальник, Слюсар, Запчастист, Складовщик
  */
 
 import { supabase } from "../../../vxid/supabaseClient";
@@ -11,54 +11,28 @@ import { showNotification } from "./vspluvauhe_povidomlenna";
 import { userAccessLevel } from "../../tablucya/users";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-// Канал підписки
 let settingsChannel: RealtimeChannel | null = null;
 
 /**
- * Мапа setting_id → колонка ролі в БД
+ * Перевіряє чи потрібно оновлювати UI для поточного користувача
  */
-const SETTING_COLUMN_MAP: Record<number, string> = {
-  1: "Приймальник",
-  2: "data",
-  3: "Слюсар",
-  4: "Приймальник",
-  5: "data",
-  6: "Приймальник",
-  7: "Приймальник",
-  8: "Приймальник",
-  9: "Приймальник",
-  13: "Складовщик",
-  14: "Приймальник",
-  15: "Приймальник",
-  16: "Запчастист",
-  17: "Приймальник",
-  18: "Приймальник",
-  19: "Запчастист",
-  20: "Приймальник",
-  21: "Приймальник",
-};
-
-/**
- * Мапа колонки в БД → роль користувача
- */
-const COLUMN_TO_ROLE: Record<string, string> = {
-  "data": "Адміністратор",
-  "Приймальник": "Приймальник",
-  "Слюсар": "Слюсар",
-  "Запчастист": "Запчастист",
-  "Складовщик": "Складовщик",
-};
-
-function shouldUpdateForCurrentUser(settingId: number, changedColumn?: string): boolean {
+function shouldUpdateForCurrentUser(_settingId: number, changedColumn?: string): boolean {
+  // Адміністратор бачить ВСІ зміни
   if (userAccessLevel === "Адміністратор") return true;
+  
+  // Якщо змінилась колонка "data" - це впливає на ВСІХ
   if (changedColumn === "data") return true;
-  if (changedColumn && COLUMN_TO_ROLE[changedColumn]) {
-    return COLUMN_TO_ROLE[changedColumn] === userAccessLevel;
+  
+  // Якщо знаємо яка колонка змінилась - перевіряємо чи це колонка поточної ролі
+  if (changedColumn) {
+    // Назва колонки в БД = назва ролі ("Приймальник", "Слюсар", "Запчастист", "Складовщик")
+    if (changedColumn === userAccessLevel) {
+      return true;
+    }
   }
-  const targetColumn = SETTING_COLUMN_MAP[settingId];
-  if (!targetColumn) return false;
-  if (targetColumn === "data") return true;
-  return targetColumn === userAccessLevel;
+  
+  // Якщо не знаємо колонку - оновлюємо на всяк випадок (безпечніше)
+  return true;
 }
 
 async function refreshSettingsCache(): Promise<void> {
@@ -100,7 +74,7 @@ function updatePibMagazinVisibility(): void {
   const cells = document.querySelectorAll('td.pib-magazin-cell, td[data-name="pib_magazin"]');
   headers.forEach(h => h.style.display = show ? '' : 'none');
   cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 ПІБ/Магазин: ${show ? 'показано' : 'приховано'}, ${headers.length}+${cells.length}`);
+  console.log(`🔄 ПІБ/Магазин: ${show ? 'показано' : 'приховано'}`);
 }
 
 function updateCatalogVisibility(): void {
@@ -109,7 +83,7 @@ function updateCatalogVisibility(): void {
   const cells = document.querySelectorAll('td.catalog-cell, td[data-name="catalog"]');
   headers.forEach(h => h.style.display = show ? '' : 'none');
   cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 Каталог: ${show ? 'показано' : 'приховано'}, ${headers.length}+${cells.length}`);
+  console.log(`🔄 Каталог: ${show ? 'показано' : 'приховано'}`);
 }
 
 function updateZarplataVisibility(): void {
@@ -118,21 +92,21 @@ function updateZarplataVisibility(): void {
   const cells = document.querySelectorAll('td.slyusar-sum-cell, td[data-name="slyusar_sum"]');
   headers.forEach(h => h.style.display = show ? '' : 'none');
   cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 Зарплата: ${show ? 'показано' : 'приховано'}, ${headers.length}+${cells.length}`);
+  console.log(`🔄 Зарплата: ${show ? 'показано' : 'приховано'}`);
 }
 
 function updateSMSButtonVisibility(): void {
   const show = globalCache.settings.showSMS;
   const btns = document.querySelectorAll('[data-action="send-sms"], .sms-button');
   btns.forEach(b => (b as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 SMS: ${show ? 'показано' : 'приховано'}, ${btns.length}`);
+  console.log(`🔄 SMS: ${show ? 'показано' : 'приховано'}`);
 }
 
 async function updateMenuVisibility(): Promise<void> {
   try {
     const { updateUIBasedOnAccess } = await import("../../tablucya/users");
     await updateUIBasedOnAccess(userAccessLevel);
-    console.log("✅ Меню оновлено");
+    console.log(`✅ Меню оновлено для ролі: ${userAccessLevel}`);
   } catch (error) {
     console.error("❌ Помилка оновлення меню:", error);
   }
@@ -144,7 +118,7 @@ async function updateUIBasedOnSettings(): Promise<void> {
   updateZarplataVisibility();
   updateSMSButtonVisibility();
   await updateMenuVisibility();
-  console.log("🔄 UI оновлено");
+  console.log("🔄 UI оновлено для всіх елементів");
 }
 
 async function handleSettingsChange(payload: any): Promise<void> {
@@ -153,6 +127,7 @@ async function handleSettingsChange(payload: any): Promise<void> {
   if (eventType !== "UPDATE" && eventType !== "INSERT") return;
   const settingId = newRecord?.setting_id;
   if (!settingId) return;
+  
   let changedColumn: string | undefined;
   if (eventType === "UPDATE" && oldRecord) {
     for (const key of Object.keys(newRecord)) {
@@ -162,12 +137,15 @@ async function handleSettingsChange(payload: any): Promise<void> {
       }
     }
   }
-  console.log(`🔍 setting_id=${settingId}, колонка="${changedColumn || '?'}"`);
+  
+  console.log(`🔍 setting_id=${settingId}, колонка="${changedColumn || '?'}", роль="${userAccessLevel}"`);
+  
   if (!shouldUpdateForCurrentUser(settingId, changedColumn)) {
-    console.log(`ℹ️ Не стосується ролі ${userAccessLevel}`);
+    console.log(`ℹ️ Зміна не стосується ролі ${userAccessLevel}`);
     return;
   }
-  console.log(`✅ Стосується ${userAccessLevel}, оновлюємо...`);
+  
+  console.log(`✅ Оновлюємо UI для ролі ${userAccessLevel}...`);
   await refreshSettingsCache();
   await updateUIBasedOnSettings();
   showNotification("Налаштування оновлено адміністратором", "info", 3000);
@@ -179,7 +157,7 @@ export function initializeSettingsSubscription(): void {
     settingsChannel = null;
   }
   try {
-    console.log("🔌 Підписка на settings...");
+    console.log(`🔌 Підписка на settings для ролі: ${userAccessLevel}`);
     settingsChannel = supabase
       .channel("settings-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, handleSettingsChange)

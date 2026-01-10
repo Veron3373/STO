@@ -83,10 +83,8 @@ async function handleAuthenticatedUser(user: any) {
   const allowed = await isEmailAllowed(email);
   if (!allowed) {
     console.warn("⛔ Email НЕ в whitelist:", email);
-    alert(
-      `Доступ заборонено.\nВаш email: ${email}\n\nЗверніться до адміністратора.`
-    );
     await supabase.auth.signOut();
+    window.location.href = "/STO/index.html";
     return;
   }
 

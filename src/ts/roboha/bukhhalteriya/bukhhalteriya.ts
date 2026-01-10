@@ -35,6 +35,7 @@ import {
   attemptAutoLogin,
   userAccessLevel,
 } from "../tablucya/users";
+import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 import {
   calculateMagazineTotalSum,
@@ -283,6 +284,19 @@ export async function addRecord(e?: Event): Promise<void> {
     null;
 
   setSearchButtonLoadingEl(btn, true);
+  
+  // 🔐 Перевіряємо доступ до сторінки перед оновленням даних
+  const hasAccess = await checkCurrentPageAccess();
+  if (!hasAccess) {
+    showNotification(
+      "⛔ Доступ заблоковано. Зверніться до Адміністратора",
+      "error",
+      3000
+    );
+    setSearchButtonLoadingEl(btn, false);
+    return;
+  }
+  
   try {
     if (currentTab === "podlegle") {
       handlepodlegleAddRecord();

@@ -166,6 +166,9 @@ const ROLE_TO_COLUMN = {
   Складовщик: "Складовщик",
 };
 
+// 🔹 Зберігає початковий стан налаштувань при відкритті модалки
+let initialSettingsState: Map<number, boolean | number> = new Map();
+
 function createToggle(id: string, label: string, cls: string): string {
   return `
     <label class="toggle-switch ${cls}">
@@ -199,6 +202,9 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
     if (error) throw error;
 
+    // 🔹 Очищуємо попередній стан
+    initialSettingsState.clear();
+
     Object.values(SETTINGS).forEach((s) => {
       const el = modal.querySelector(`#${s.id}`) as HTMLInputElement;
       if (el?.type === "checkbox") el.checked = false;
@@ -218,11 +224,15 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
         const val = typeof row.procent === "number" ? row.procent : 0;
         if (slider) slider.value = String(val);
         if (input) input.value = String(val);
+        // 🔹 Зберігаємо початкове значення
+        initialSettingsState.set(row.setting_id, val);
       } else {
         const checkbox = modal.querySelector(
           `#${setting.id}`
         ) as HTMLInputElement;
         if (checkbox) checkbox.checked = !!row.data;
+        // 🔹 Зберігаємо початкове значення
+        initialSettingsState.set(row.setting_id, !!row.data);
       }
     });
 
@@ -247,6 +257,9 @@ async function loadRoleSettings(
   if (!settings || !column) return;
 
   try {
+    // 🔹 Очищуємо попередній стан
+    initialSettingsState.clear();
+
     // Фільтруємо тільки реальні налаштування (без divider)
     const settingIds = settings
       .filter((s: any) => !s.divider && s.id)
@@ -273,7 +286,10 @@ async function loadRoleSettings(
       const checkbox = modal.querySelector(
         `#role-toggle-${row.setting_id}`
       ) as HTMLInputElement;
-      if (checkbox) checkbox.checked = !!row[column];
+      const value = !!row[column];
+      if (checkbox) checkbox.checked = value;
+      // 🔹 Зберігаємо початкове значення
+      initialSettingsState.set(row.setting_id, value);
     });
 
     modal
@@ -307,73 +323,84 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
     }
 
     const column = ROLE_TO_COLUMN[role as keyof typeof ROLE_TO_COLUMN];
+    let changesCount = 0;
 
     if (role === "Адміністратор") {
-      // Зберегти основні чекбокси для Адміністратора - КОЖЕН У СВОЮ КОМІРКУ
+      // Перевіряємо і зберігаємо тільки змінені налаштування
       const checkbox1 = modal.querySelector("#toggle-shop") as HTMLInputElement;
-      const { error: error1 } = await supabase
-        .from("settings")
-        .update({ [column]: checkbox1?.checked ?? false })
-        .eq("setting_id", 1);
-      if (error1) throw error1;
+      const newValue1 = checkbox1?.checked ?? false;
+      if (initialSettingsState.get(1) !== newValue1) {
+        const { error } = await supabase
+          .from("settings")
+          .update({ [column]: newValue1 })
+          .eq("setting_id", 1);
+        if (error) throw error;
+        changesCount++;
+      }
 
-      const checkbox2 = modal.querySelector(
-        "#toggle-receiver"
-      ) as HTMLInputElement;
-      const { error: error2 } = await supabase
-        .from("settings")
-        .update({ [column]: checkbox2?.checked ?? false })
-        .eq("setting_id", 2);
-      if (error2) throw error2;
+      const checkbox2 = modal.querySelector("#toggle-receiver") as HTMLInputElement;
+      const newValue2 = checkbox2?.checked ?? false;
+      if (initialSettingsState.get(2) !== newValue2) {
+        const { error } = await supabase
+          .from("settings")
+          .update({ [column]: newValue2 })
+          .eq("setting_id", 2);
+        if (error) throw error;
+        changesCount++;
+      }
 
-      const checkbox3 = modal.querySelector(
-        "#toggle-zarplata"
-      ) as HTMLInputElement;
-      const { error: error3 } = await supabase
-        .from("settings")
-        .update({ [column]: checkbox3?.checked ?? false })
-        .eq("setting_id", 3);
-      if (error3) throw error3;
+      const checkbox3 = modal.querySelector("#toggle-zarplata") as HTMLInputElement;
+      const newValue3 = checkbox3?.checked ?? false;
+      if (initialSettingsState.get(3) !== newValue3) {
+        const { error } = await supabase
+          .from("settings")
+          .update({ [column]: newValue3 })
+          .eq("setting_id", 3);
+        if (error) throw error;
+        changesCount++;
+      }
 
-      // Зберегти відсоток для Адміністратора - У СВОЮ КОМІРКУ
-      const input = modal.querySelector(
-        "#percentage-input"
-      ) as HTMLInputElement;
+      // Відсоток
+      const input = modal.querySelector("#percentage-input") as HTMLInputElement;
       const raw = Number(input?.value ?? 0);
-      const value = Math.min(
-        100,
-        Math.max(0, Math.floor(isFinite(raw) ? raw : 0))
-      );
-
-      const { error: error4 } = await supabase
-        .from("settings")
-        .update({ procent: value })
-        .eq("setting_id", 4);
-      if (error4) throw error4;
+      const newValue4 = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
+      if (initialSettingsState.get(4) !== newValue4) {
+        const { error } = await supabase
+          .from("settings")
+          .update({ procent: newValue4 })
+          .eq("setting_id", 4);
+        if (error) throw error;
+        changesCount++;
+      }
 
       const checkbox5 = modal.querySelector("#toggle-sms") as HTMLInputElement;
-      const { error: error5 } = await supabase
-        .from("settings")
-        .update({ [column]: checkbox5?.checked ?? false })
-        .eq("setting_id", 5);
-      if (error5) throw error5;
+      const newValue5 = checkbox5?.checked ?? false;
+      if (initialSettingsState.get(5) !== newValue5) {
+        const { error } = await supabase
+          .from("settings")
+          .update({ [column]: newValue5 })
+          .eq("setting_id", 5);
+        if (error) throw error;
+        changesCount++;
+      }
     } else {
-      // Зберегти налаштування для інших ролей - КОЖЕН TOGGLE У СВОЮ КОМІРКУ
+      // Зберегти налаштування для інших ролей - ТІЛЬКИ ЗМІНЕНІ
       const settings = ROLE_SETTINGS[role as keyof typeof ROLE_SETTINGS];
       if (settings) {
-        // Фільтруємо тільки реальні налаштування (без divider)
         const realSettings = settings.filter((s: any) => !s.divider && s.id);
 
-        const updates = await Promise.all(
-          realSettings.map(async (setting: any) => {
-            const checkbox = modal.querySelector(
-              `#role-toggle-${setting.id}`
-            ) as HTMLInputElement;
-            const value = checkbox?.checked ?? false;
+        for (const setting of realSettings) {
+          const checkbox = modal.querySelector(
+            `#role-toggle-${setting.id}`
+          ) as HTMLInputElement;
+          const newValue = checkbox?.checked ?? false;
+          const oldValue = initialSettingsState.get(setting.id as number);
 
+          // 🔹 Зберігаємо тільки якщо значення змінилось
+          if (oldValue !== newValue) {
             const { error } = await supabase
               .from("settings")
-              .update({ [column]: value })
+              .update({ [column]: newValue })
               .eq("setting_id", setting.id);
 
             if (error) {
@@ -383,17 +410,20 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
               );
               throw error;
             }
+            changesCount++;
+          }
+        }
 
-            return { setting_id: setting.id, [column]: value };
-          })
-        );
-
-        console.log("Збережено налаштування:", updates);
+        console.log(`Збережено ${changesCount} зміни(н)`);
       }
     }
 
-    resetPercentCache();
-    showNotification("Налаштування збережено!", "success", 1500);
+    if (changesCount === 0) {
+      showNotification("Змін не було", "info", 1500);
+    } else {
+      resetPercentCache();
+      showNotification(`Збережено ${changesCount} зміни(н)!`, "success", 1500);
+    }
     return true;
   } catch (err) {
     console.error("Save error details:", err);

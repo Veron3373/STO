@@ -13,6 +13,9 @@ const CLIENT_ID =
   "467665595953-63b13ucmm8ssbm2vfjjr41e3nqt6f11a.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
+// 📁 Назва базової папки в Google Drive для всіх фото актів
+const BASE_FOLDER_NAME = "B.S.Motorservice_Фото";
+
 // Отримання дозволених origins з урахуванням динамічної назви гіта
 async function getAllowedOrigins(): Promise<string[]> {
   const gitName = await getGitName();
@@ -315,6 +318,7 @@ export async function findOrCreateFolder(
 /**
  * 🔍 Шукає існуючу папку для акту і відновлює посилання в БД якщо знайдено
  * Використовується як fallback, коли папка створена, але шлях не записаний
+ * Підтримує як нову структуру (B.S.Motorservice_Фото/рік/акт), так і стару (рік/акт в корені)
  */
 export async function findAndRestoreFolderLink(
   actId: number,
@@ -332,46 +336,68 @@ export async function findAndRestoreFolderLink(
     const date = new Date(actInfo.date_on);
     const yyyy = String(date.getFullYear());
 
-    // 1) Шукаємо папку року
-    const yearFolderId = await findFolder(yyyy);
-    if (!yearFolderId) {
-      console.log("❌ Папку року не знайдено");
+    // Формуємо назву папки акту для пошуку
+    const parts = [
+      `Акт_${actId}`,
+      actInfo.fio && actInfo.fio !== "—" && actInfo.fio !== "Невідомий_клієнт"
+        ? cleanNameComponent(actInfo.fio)
+        : null,
+      actInfo.car && actInfo.car !== "—" && actInfo.car !== "Невідоме_авто"
+        ? cleanNameComponent(actInfo.car)
+        : null,
+      actInfo.year && actInfo.year !== "—" && actInfo.year !== "0000"
+        ? cleanNameComponent(actInfo.year)
+        : null,
+      actInfo.phone &&
+      actInfo.phone !== "—" &&
+      actInfo.phone !== "Без_телефону"
+        ? cleanNameComponent(actInfo.phone)
+        : null,
+    ].filter(Boolean) as string[];
+    const folderName = parts.join("_").slice(0, 100);
+
+    let actFolderId: string | null = null;
+
+    // === СПРОБА 1: Шукаємо в НОВІЙ структурі (B.S.Motorservice_Фото/рік/акт) ===
+    const baseFolderId = await findFolder(BASE_FOLDER_NAME, null);
+    if (baseFolderId) {
+      const yearFolderIdNew = await findFolder(yyyy, baseFolderId);
+      if (yearFolderIdNew) {
+        // Спочатку за appProperties.act_id
+        actFolderId = await findFolderByActId(actId, yearFolderIdNew);
+        // Потім за назвою
+        if (!actFolderId) {
+          actFolderId = await findFolder(folderName, yearFolderIdNew);
+        }
+        if (actFolderId) {
+          console.log(`✅ Знайдено в новій структурі: ${BASE_FOLDER_NAME}/${yyyy}/`);
+        }
+      }
+    }
+
+    // === СПРОБА 2: Шукаємо в СТАРІЙ структурі (рік/акт в корені диску) ===
+    if (!actFolderId) {
+      console.log(`🔄 Пошук в старій структурі (${yyyy}/ в корені диску)...`);
+      const yearFolderIdOld = await findFolder(yyyy, null);
+      if (yearFolderIdOld) {
+        // Спочатку за appProperties.act_id
+        actFolderId = await findFolderByActId(actId, yearFolderIdOld);
+        // Потім за назвою
+        if (!actFolderId) {
+          actFolderId = await findFolder(folderName, yearFolderIdOld);
+        }
+        if (actFolderId) {
+          console.log(`✅ Знайдено в старій структурі: ${yyyy}/ (корінь диску)`);
+        }
+      }
+    }
+
+    if (!actFolderId) {
+      console.log("❌ Папку акту не знайдено ні в новій, ні в старій структурі");
       return null;
     }
 
-    // 2) Шукаємо папку акту за appProperties.act_id
-    let actFolderId = await findFolderByActId(actId, yearFolderId);
-
-    // 3) Якщо не знайшли — шукаємо за назвою
-    if (!actFolderId) {
-      const parts = [
-        `Акт_${actId}`,
-        actInfo.fio && actInfo.fio !== "—" && actInfo.fio !== "Невідомий_клієнт"
-          ? cleanNameComponent(actInfo.fio)
-          : null,
-        actInfo.car && actInfo.car !== "—" && actInfo.car !== "Невідоме_авто"
-          ? cleanNameComponent(actInfo.car)
-          : null,
-        actInfo.year && actInfo.year !== "—" && actInfo.year !== "0000"
-          ? cleanNameComponent(actInfo.year)
-          : null,
-        actInfo.phone &&
-        actInfo.phone !== "—" &&
-        actInfo.phone !== "Без_телефону"
-          ? cleanNameComponent(actInfo.phone)
-          : null,
-      ].filter(Boolean) as string[];
-
-      const folderName = parts.join("_").slice(0, 100);
-      actFolderId = await findFolder(folderName, yearFolderId);
-    }
-
-    if (!actFolderId) {
-      console.log("❌ Папку акту не знайдено");
-      return null;
-    }
-
-    // 4) Знайдено! Записуємо в БД
+    // Знайдено! Записуємо в БД
     const driveUrl = `https://drive.google.com/drive/folders/${actFolderId}`;
     console.log(`✅ Знайдено існуючу папку: ${driveUrl}`);
 
@@ -848,8 +874,13 @@ export async function createDriveFolderStructure({
     const date = new Date(date_on);
     const yyyy = String(date.getFullYear());
 
-    // 1) Папка року
-    const yearFolderId = await findOrCreateFolder(yyyy);
+    // 0) Базова папка "B.S.Motorservice_Фото" в корені диску
+    const baseFolderId = await findOrCreateFolder(BASE_FOLDER_NAME, null);
+    console.log(`📁 Базова папка: ${BASE_FOLDER_NAME} (ID: ${baseFolderId})`);
+
+    // 1) Папка року всередині базової папки
+    const yearFolderId = await findOrCreateFolder(yyyy, baseFolderId);
+    console.log(`📁 Папка року: ${yyyy} (ID: ${yearFolderId})`);
 
     // 2) Спочатку шукаємо папку за appProperties.act_id
     let actFolderId = await findFolderByActId(act_id, yearFolderId);

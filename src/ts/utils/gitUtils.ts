@@ -62,13 +62,29 @@ export async function getGitName(): Promise<string> {
 }
 
 /**
- * Формування повного гіт URL
- * @param gitName - назва гіта
+ * Формування повного URL
+ * @param gitName - назва гіта (для GitHub Pages) або ігнорується для Vercel
  * @param path - додатковий шлях (опціонально)
- * @returns string - повний URL (наприклад, )
+ * @returns string - повний URL
  */
 export function buildGitUrl(gitName: string, path: string = ""): string {
-  const baseUrl = `https://${gitName}.github.io/STO`;
+  // 🔥 ВИПРАВЛЕНО ДЛЯ VERCEL:
+  // Використовуємо поточний origin (домен) замість захардкодженого GitHub URL
+  // На Vercel: "https://stobraclavec.vercel.app"
+  // На GitHub Pages: "https://username.github.io"
+  // На localhost: "http://localhost:5173"
+  const hostname = window.location.hostname;
+  
+  let baseUrl: string;
+  
+  if (hostname.endsWith('.github.io')) {
+    // GitHub Pages - старий формат
+    baseUrl = `https://${gitName}.github.io/STO`;
+  } else {
+    // Vercel, localhost або інший хостинг - використовуємо origin
+    baseUrl = window.location.origin;
+  }
+  
   return path ? `${baseUrl}/${path}` : `${baseUrl}/`;
 }
 

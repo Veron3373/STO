@@ -27,7 +27,7 @@ export async function updateDynamicLinks(): Promise<void> {
       if (!href) return;
       
       // Замінюємо посилання на main.html
-      if (href.includes('main.html') || link.id === 'postNavLinkHome') {
+      if (href.includes('/main.html') || link.id === 'postNavLinkHome') {
         link.setAttribute('href', mainUrl);
         console.log("🔗 Оновлено посилання на main.html:", mainUrl);
       }

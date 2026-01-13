@@ -5,13 +5,13 @@ import {
   loadGlobalData,
   ZAKAZ_NARAYD_MODAL_ID,
   ZAKAZ_NARAYD_BODY_ID,
-  ZAKAZ_NARAYD_CLOSE_BTN_ID,
   ACT_ITEMS_TABLE_CONTAINER_ID,
   formatNumberWithSpaces,
 } from "./globalCache";
 import {
   setupAutocompleteForEditableCells,
   refreshQtyWarningsIn,
+  shortenTextToFirstAndLast,
 } from "./inhi/kastomna_tabluca";
 import {
   userAccessLevel,
@@ -571,6 +571,12 @@ function createRowHtml(
   const showDeleteBtn =
     !isActClosed && canDelete && canEdit && !isWorkRowWithEmptyPib;
 
+  // Скорочуємо назву для відображення (перше речення.....останнє речення)
+  // Зберігаємо повну назву в data-full-name для PDF генерації
+  const fullName = item?.name || "";
+  const displayName = shortenTextToFirstAndLast(fullName);
+  const hasShortened = displayName !== fullName;
+
   return `
     <tr${isWorkRowWithEmptyPib ? ' data-partial-edit="true"' : ""}>
       <td class="row-index" style="${item?.type === "work" && showCatalog && !catalogValue
@@ -583,7 +589,7 @@ function createRowHtml(
         : `${index + 1}`
     }</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isNameEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}" style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${item?.name || ""
+        <div contenteditable="${isNameEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}"${hasShortened ? ` data-full-name="${fullName.replace(/"/g, '&quot;')}"` : ''} style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${displayName
     }</div>
         ${showDeleteBtn
       ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
@@ -1214,16 +1220,28 @@ export function createModal(): void {
   newModalOverlay.className = "zakaz_narayd-modal-overlay hidden";
   newModalOverlay.innerHTML = `
     <div class="zakaz_narayd-modal-content">
-      <button class="zakaz_narayd-modal-close" id="${ZAKAZ_NARAYD_CLOSE_BTN_ID}">&times;</button>
+      <button class="zakaz_narayd-modal-close" id="zakaz-narayd-close-btn">&times;</button>
       <div class="zakaz_narayd-modal-body" id="${ZAKAZ_NARAYD_BODY_ID}"></div>
     </div>`;
   document.body.appendChild(newModalOverlay);
 
-  const closeBtn = newModalOverlay.querySelector<HTMLButtonElement>(
-    `#${ZAKAZ_NARAYD_CLOSE_BTN_ID}`
-  );
-  closeBtn?.addEventListener("click", () => {
-    newModalOverlay.classList.add("hidden");
+  // Обробник для закриття по кліку на хрестик
+  const closeBtn = newModalOverlay.querySelector<HTMLButtonElement>("#zakaz-narayd-close-btn");
+  closeBtn?.addEventListener("click", () => closeZakazNaraydModal());
+
+  // Обробник для закриття по кліку на overlay
+  newModalOverlay.addEventListener("click", (e) => {
+    if (e.target === newModalOverlay) {
+      closeZakazNaraydModal();
+    }
+  });
+}
+
+/** Функція для закриття модального вікна */
+export function closeZakazNaraydModal(): void {
+  const modalOverlay = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
+  if (modalOverlay) {
+    modalOverlay.classList.add("hidden");
     globalCache.currentActId = null;
     // ✅ Очищуємо приймальника з localStorage при закритті модального вікна
     localStorage.removeItem("current_act_pruimalnyk");
@@ -1234,7 +1252,7 @@ export function createModal(): void {
     cleanupSlusarsOnSubscription();
     // 🧹 Очищуємо кеш розрахунку знижки
     resetDiscountCache();
-  });
+  }
 }
 
 if (!(window as any).__otherBasesHandlerBound__) {

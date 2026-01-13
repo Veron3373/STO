@@ -1043,6 +1043,13 @@ function initializeDateInputs(): void {
 // src/ts/roboha/bukhhalteriya/bukhhalteriya.ts
 
 window.addEventListener("load", async function () {
+  // Перевіряємо чи це сторінка бухгалтерії - якщо ні, виходимо
+  const currentPath = window.location.pathname;
+  if (!currentPath.includes("bukhhalteriya.html") && !currentPath.endsWith("bukhhalteriya")) {
+    console.log("ℹ️ Не сторінка бухгалтерії - пропускаємо ініціалізацію");
+    return;
+  }
+  
   console.log("🚀 Початок ініціалізації бухгалтерії...");
 
   // Перевірка наявності XLSX

@@ -241,6 +241,36 @@ function formatUA(n: number) {
 }
 
 /** ---------- робота з назвами ---------- */
+
+/**
+ * Скорочує текст: показує перше речення до першої крапки і останнє речення після останньої крапки.
+ * Якщо речень менше 3, повертає оригінал.
+ * @param fullText - повний текст
+ * @returns скорочений текст з ".....". між першим і останнім реченнями
+ */
+export function shortenTextToFirstAndLast(fullText: string): string {
+  if (!fullText) return fullText;
+  
+  // Розбиваємо на речення по крапці
+  // Шукаємо крапку за якою йде пробіл та велика літера (або кінець тексту)
+  const sentences = fullText
+    .split(/\.(?:\s+|$)/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  
+  // Якщо менше 3 речень - не скорочуємо
+  if (sentences.length < 3) return fullText;
+  
+  const firstSentence = sentences[0];
+  const lastSentence = sentences[sentences.length - 1];
+  
+  // Додаємо крапку після першого речення та перед крапками
+  return `${firstSentence}.....${lastSentence}`;
+}
+
+/**
+ * Розгортає скорочену назву назад до повної з кеша globalCache
+ */
 function expandName(shortenedName: string): string {
   if (!shortenedName || !shortenedName.includes(".....")) return shortenedName;
 
@@ -248,21 +278,25 @@ function expandName(shortenedName: string): string {
   const [firstPart, lastPart] = shortenedName.split(".....");
 
   const fullName = allNames.find((name) => {
+    // Розбиваємо на речення таким же чином як при скороченні
     const sentences = name
-      .split(/(?<=\.)\s*/)
+      .split(/\.(?:\s+|$)/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
     if (sentences.length < 2) return false;
+    const firstSentence = sentences[0];
     const lastSentence = sentences[sentences.length - 1];
-    return (
-      name.startsWith(firstPart) &&
-      (name.endsWith(lastPart) || lastSentence === lastPart)
-    );
+    return firstSentence === firstPart && lastSentence === lastPart;
   });
 
   return fullName || shortenedName;
 }
 
+/**
+ * Розгортає всі скорочені назви в таблиці і зберігає оригінальні значення.
+ * Використовується для PDF генерації.
+ * Спочатку перевіряє data-full-name атрибут, потім намагається розгорнути через кеш.
+ */
 export function expandAllNamesInTable(): Map<HTMLElement, string> {
   const originalTexts = new Map<HTMLElement, string>();
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
@@ -274,7 +308,13 @@ export function expandAllNamesInTable(): Map<HTMLElement, string> {
   nameCells.forEach((cell) => {
     const currentText = cell.textContent?.trim() || "";
     originalTexts.set(cell, currentText);
-    if (currentText.includes(".....")) {
+    
+    // Спочатку перевіряємо data-full-name атрибут
+    const fullNameAttr = cell.getAttribute("data-full-name");
+    if (fullNameAttr) {
+      cell.textContent = fullNameAttr;
+    } else if (currentText.includes(".....")) {
+      // Якщо немає атрибута, намагаємося розгорнути через кеш
       cell.textContent = expandName(currentText);
     }
   });
@@ -282,6 +322,9 @@ export function expandAllNamesInTable(): Map<HTMLElement, string> {
   return originalTexts;
 }
 
+/**
+ * Відновлює скорочені назви після PDF генерації
+ */
 export function restoreOriginalNames(
   originalTexts: Map<HTMLElement, string>
 ): void {

@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/bukhhalteriya",
+      "destination": "/bukhhalteriya.html"
+    },
+    {
+      "source": "/planyvannya", 
+      "destination": "/planyvannya.html"
+    },
+    {
+      "source": "/main",
+      "destination": "/main.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

@@ -131,6 +131,7 @@ export async function printModalToPdf(): Promise<void> {
     document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLElement,
     document.getElementById("status-lock-btn") as HTMLElement,
     document.getElementById("sklad") as HTMLElement,
+    document.getElementById("sms-btn") as HTMLElement, // <--- Приховуємо SMS кнопку
 
     // <--- ДОДАНО: Приховуємо нові кнопки-іконки під час друку
     document.getElementById("create-act-btn") as HTMLElement,

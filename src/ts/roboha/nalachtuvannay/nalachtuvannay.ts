@@ -1,6 +1,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { resetPercentCache } from "../zakaz_naraudy/inhi/kastomna_tabluca";
+import { invalidateGlobalDataCache, globalCache, saveGeneralSettingsToLocalStorage, applyWallpapers } from "../zakaz_naraudy/globalCache";
 
 const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
@@ -20,6 +21,7 @@ const ROLES = [
   "Слюсар",
   "Запчастист",
   "Складовщик",
+  "Загальні",
 ];
 
 const ROLE_COLORS = {
@@ -52,6 +54,12 @@ const ROLE_COLORS = {
     buttonHover: "linear-gradient(135deg, #D32F2F 0%, #C62828 100%)",
     border: "#F44336",
     "modal-window": "#F44336",
+  },
+  Загальні: {
+    button: "linear-gradient(135deg, #607D8B 0%, #455A64 100%)",
+    buttonHover: "linear-gradient(135deg, #455A64 0%, #37474F 100%)",
+    border: "#607D8B",
+    "modal-window": "#607D8B",
   },
 };
 
@@ -164,10 +172,237 @@ const ROLE_TO_COLUMN = {
   Слюсар: "Слюсар",
   Запчастист: "Запчастист",
   Складовщик: "Складовщик",
+  Загальні: "Загальні",
 };
 
 // 🔹 Зберігає початковий стан налаштувань при відкритті модалки
-let initialSettingsState: Map<number, boolean | number> = new Map();
+let initialSettingsState: Map<number, boolean | number | string> = new Map();
+
+// Константа за замовчуванням для кольорів
+const DEFAULT_COLOR = "#164D25";
+
+// Генерує HTML для секції "Загальні"
+function createGeneralSettingsHTML(): string {
+  return `
+    <div class="general-settings-container">
+      <div class="general-input-group">
+        <label class="general-label" for="general-sto-name">
+          <span class="general-label-text">🏢 Назва СТО</span>
+          <input type="text" id="general-sto-name" class="general-input" placeholder="Введіть назву СТО" />
+        </label>
+      </div>
+      
+      <div class="general-input-group">
+        <label class="general-label" for="general-address">
+          <span class="general-label-text">📍 Адреса</span>
+          <input type="text" id="general-address" class="general-input" placeholder="Введіть адресу" />
+        </label>
+      </div>
+      
+      <div class="general-input-group">
+        <label class="general-label" for="general-phone">
+          <span class="general-label-text">📞 Телефон</span>
+          <input type="text" id="general-phone" class="general-input" placeholder="Введіть телефон" />
+        </label>
+      </div>
+      
+      <div class="settings-divider"></div>
+      
+      <div class="general-color-group">
+        <label class="general-label color-label" for="general-header-color">
+          <span class="general-label-text">🎨 Колір шапки акту</span>
+          <div class="color-picker-wrapper">
+            <input type="color" id="general-header-color" class="color-picker" value="${DEFAULT_COLOR}" />
+            <span class="color-value" id="header-color-value">${DEFAULT_COLOR}</span>
+          </div>
+        </label>
+      </div>
+      
+      <div class="general-color-group">
+        <label class="general-label color-label" for="general-table-color">
+          <span class="general-label-text">🎨 Колір таблиці актів</span>
+          <div class="color-picker-wrapper">
+            <input type="color" id="general-table-color" class="color-picker" value="${DEFAULT_COLOR}" />
+            <span class="color-value" id="table-color-value">${DEFAULT_COLOR}</span>
+          </div>
+        </label>
+      </div>
+      
+<div class="settings-divider"></div>
+      
+      <div class="general-input-group">
+        <label class="general-label" for="general-wallpaper-main">
+          <span class="general-label-text">🖼️ Шпалери основні (URL)</span>
+          <input type="text" id="general-wallpaper-main" class="general-input" placeholder="Введіть URL зображення для основної сторінки" />
+        </label>
+      </div>
+      
+      <div class="reset-colors-wrapper">
+        <button type="button" id="reset-colors-btn" class="reset-colors-btn">
+          🔄 Скинути кольори за замовчуванням
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// Завантажує дані для секції "Загальні"
+async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("setting_id, Загальні")
+      .in("setting_id", [1, 2, 3, 4, 5, 7])
+      .order("setting_id");
+
+    if (error) throw error;
+
+    // Очищуємо попередній стан
+    initialSettingsState.clear();
+
+    data?.forEach((row: any) => {
+      const value = row["Загальні"] || "";
+      initialSettingsState.set(row.setting_id, value);
+
+      switch (row.setting_id) {
+        case 1: // Назва СТО
+          const nameInput = modal.querySelector("#general-sto-name") as HTMLInputElement;
+          if (nameInput) nameInput.value = value;
+          break;
+        case 2: // Адреса
+          const addressInput = modal.querySelector("#general-address") as HTMLInputElement;
+          if (addressInput) addressInput.value = value;
+          break;
+        case 3: // Телефон
+          const phoneInput = modal.querySelector("#general-phone") as HTMLInputElement;
+          if (phoneInput) phoneInput.value = value;
+          break;
+        case 4: // Колір шапки акту
+          const headerColor = modal.querySelector("#general-header-color") as HTMLInputElement;
+          const headerColorValue = modal.querySelector("#header-color-value") as HTMLElement;
+          const colorValue4 = value || DEFAULT_COLOR;
+          if (headerColor) headerColor.value = colorValue4;
+          if (headerColorValue) headerColorValue.textContent = colorValue4;
+          break;
+        case 5: // Колір таблиці актів
+          const tableColor = modal.querySelector("#general-table-color") as HTMLInputElement;
+          const tableColorValue = modal.querySelector("#table-color-value") as HTMLElement;
+          const colorValue5 = value || DEFAULT_COLOR;
+          if (tableColor) tableColor.value = colorValue5;
+          if (tableColorValue) tableColorValue.textContent = colorValue5;
+          break;
+        case 7: // Шпалери основні
+          const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
+          if (wallpaperMainInput) wallpaperMainInput.value = value;
+          break;
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    showNotification("Помилка завантаження загальних налаштувань", "error", 2000);
+  }
+}
+
+// Зберігає дані для секції "Загальні"
+async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
+  let changesCount = 0;
+
+  const nameInput = modal.querySelector("#general-sto-name") as HTMLInputElement;
+  const addressInput = modal.querySelector("#general-address") as HTMLInputElement;
+  const phoneInput = modal.querySelector("#general-phone") as HTMLInputElement;
+  const headerColor = modal.querySelector("#general-header-color") as HTMLInputElement;
+  const tableColor = modal.querySelector("#general-table-color") as HTMLInputElement;
+  const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
+
+  const newValues = [
+    { id: 1, value: nameInput?.value || "" },
+    { id: 2, value: addressInput?.value || "" },
+    { id: 3, value: phoneInput?.value || "" },
+    { id: 4, value: headerColor?.value || DEFAULT_COLOR },
+    { id: 5, value: tableColor?.value || DEFAULT_COLOR },
+    { id: 7, value: wallpaperMainInput?.value || "" },
+  ];
+
+  for (const { id, value } of newValues) {
+    const oldValue = initialSettingsState.get(id);
+    if (oldValue !== value) {
+      const { error } = await supabase
+        .from("settings")
+        .update({ "Загальні": value })
+        .eq("setting_id", id);
+
+      if (error) {
+        console.error(`Помилка при збереженні setting_id ${id}:`, error);
+        throw error;
+      }
+      changesCount++;
+    }
+  }
+
+  // Оновлюємо globalCache та localStorage, якщо були зміни
+  if (changesCount > 0) {
+    // Оновлюємо globalCache
+    globalCache.generalSettings.stoName = nameInput?.value || "B.S.Motorservice";
+    globalCache.generalSettings.address = addressInput?.value || "вул. Корольова, 6, Вінниця";
+    globalCache.generalSettings.phone = phoneInput?.value || "068 931 24 38";
+    globalCache.generalSettings.headerColor = headerColor?.value || DEFAULT_COLOR;
+    globalCache.generalSettings.tableColor = tableColor?.value || DEFAULT_COLOR;
+    globalCache.generalSettings.wallpaperMain = wallpaperMainInput?.value || "";
+    
+    // Зберігаємо в localStorage
+    saveGeneralSettingsToLocalStorage();
+    
+    // Застосовуємо шпалери одразу після збереження
+    applyWallpapers();
+    
+    // Інвалідуємо кеш глобальних даних
+    invalidateGlobalDataCache();
+  }
+
+  return changesCount;
+}
+
+// Ініціалізує обробники для секції "Загальні"
+function initGeneralSettingsHandlers(modal: HTMLElement): void {
+  // Color pickers
+  const headerColor = modal.querySelector("#general-header-color") as HTMLInputElement;
+  const tableColor = modal.querySelector("#general-table-color") as HTMLInputElement;
+  const headerColorValue = modal.querySelector("#header-color-value") as HTMLElement;
+  const tableColorValue = modal.querySelector("#table-color-value") as HTMLElement;
+
+  if (headerColor && headerColorValue) {
+    headerColor.addEventListener("input", () => {
+      headerColorValue.textContent = headerColor.value;
+    });
+  }
+
+  if (tableColor && tableColorValue) {
+    tableColor.addEventListener("input", () => {
+      tableColorValue.textContent = tableColor.value;
+    });
+  }
+
+  // Кнопка скидання кольорів та шпалер
+  const resetBtn = modal.querySelector("#reset-colors-btn") as HTMLButtonElement;
+  const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      if (headerColor) {
+        headerColor.value = DEFAULT_COLOR;
+        if (headerColorValue) headerColorValue.textContent = DEFAULT_COLOR;
+      }
+      if (tableColor) {
+        tableColor.value = DEFAULT_COLOR;
+        if (tableColorValue) tableColorValue.textContent = DEFAULT_COLOR;
+      }
+      // Очищаємо поле шпалер
+      if (wallpaperMainInput) {
+        wallpaperMainInput.value = "";
+      }
+      showNotification("Кольори та шпалери скинуто до значень за замовчуванням", "info", 1500);
+    });
+  }
+}
 
 function createToggle(id: string, label: string, cls: string): string {
   return `
@@ -383,6 +618,9 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         if (error) throw error;
         changesCount++;
       }
+    } else if (role === "Загальні") {
+      // Зберегти налаштування для секції "Загальні"
+      changesCount = await saveGeneralSettings(modal);
     } else {
       // Зберегти налаштування для інших ролей - ТІЛЬКИ ЗМІНЕНІ
       const settings = ROLE_SETTINGS[role as keyof typeof ROLE_SETTINGS];
@@ -461,6 +699,15 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
     if (percentageControl)
       (percentageControl as HTMLElement).style.display = "";
     loadSettings(modal);
+  } else if (role === "Загальні") {
+    // Обробка секції "Загальні"
+    if (mainToggles) (mainToggles as HTMLElement).style.display = "none";
+    if (percentageControl)
+      (percentageControl as HTMLElement).style.display = "none";
+
+    container.innerHTML = createGeneralSettingsHTML();
+    initGeneralSettingsHandlers(modal);
+    loadGeneralSettings(modal);
   } else {
     if (mainToggles) (mainToggles as HTMLElement).style.display = "none";
     if (percentageControl)
@@ -540,8 +787,23 @@ export async function createSettingsModal(): Promise<void> {
   let currentRoleIndex = 0;
 
   if (roleButton) {
-    roleButton.addEventListener("click", () => {
-      currentRoleIndex = (currentRoleIndex + 1) % ROLES.length;
+    roleButton.addEventListener("click", (e: MouseEvent) => {
+      const buttonRect = roleButton.getBoundingClientRect();
+      const clickX = e.clientX - buttonRect.left;
+      const buttonWidth = buttonRect.width;
+      
+      // Ліва зона 40% ширини - для перемикання назад
+      // Права зона 60% ширини - для перемикання вперед
+      const leftZoneWidth = buttonWidth * 0.4;
+      
+      if (clickX < leftZoneWidth) {
+        // Клік на ліву частину (40%) - назад
+        currentRoleIndex = (currentRoleIndex - 1 + ROLES.length) % ROLES.length;
+      } else {
+        // Клік на праву частину (60%) - вперед
+        currentRoleIndex = (currentRoleIndex + 1) % ROLES.length;
+      }
+      
       const newRole = ROLES[currentRoleIndex];
       roleButton.textContent = newRole;
       updateRoleTogglesVisibility(modal, newRole);

@@ -4,6 +4,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { byId, formatNumber, formatDate } from "./bukhhalteriya";
 import { userName, getSavedUserDataFromLocalStorage } from "../tablucya/users";
+import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 interface ExpenseRecordLocal {
   id: number;
@@ -1186,7 +1187,6 @@ export function filtervutratuData(): void {
 
 export async function searchvutratuFromDatabase(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
-  const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
   const hasAccess = await checkCurrentPageAccess();
   
   if (!hasAccess) {

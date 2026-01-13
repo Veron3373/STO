@@ -45,9 +45,6 @@ export async function signInWithGoogle() {
   // На Vercel це буде "https://sto-gray.vercel.app"
   // Ніяких зайвих "/" чи перевірок GitHub більше не треба.
   const redirectUrl = window.location.origin;
-  
-  console.log("🔗 Redirect URL встановлено:", redirectUrl);
-
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {

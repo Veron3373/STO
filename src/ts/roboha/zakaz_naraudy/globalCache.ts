@@ -74,6 +74,16 @@ export interface SkladLiteRow {
   diff: number; // kilkist_off - kilkist_on
 }
 
+// Інтерфейс для загальних налаштувань
+export interface GeneralSettings {
+  stoName: string;       // Назва СТО (setting_id: 1)
+  address: string;       // Адреса (setting_id: 2)
+  phone: string;         // Телефон (setting_id: 3)
+  headerColor: string;   // Колір шапки акту (setting_id: 4)
+  tableColor: string;    // Колір таблиці актів (setting_id: 5)
+  wallpaperMain: string;  // Шпалери основні (setting_id: 7)
+}
+
 export interface ActItem {
   type: "detail" | "work";
   name: string;
@@ -119,6 +129,7 @@ export interface GlobalDataCache {
   skladLite: SkladLiteRow[];
   oldNumbers: Map<number, number>;
   initialActItems: ActItem[];
+  generalSettings: GeneralSettings; // Загальні налаштування СТО
 }
 
 export const globalCache: GlobalDataCache = {
@@ -142,6 +153,14 @@ export const globalCache: GlobalDataCache = {
   skladLite: [],
   oldNumbers: new Map<number, number>(),
   initialActItems: [],
+  generalSettings: {
+    stoName: "B.S.Motorservice",
+    address: "вул. Корольова, 6, Вінниця",
+    phone: "068 931 24 38",
+    headerColor: "#164D25",
+    tableColor: "#164D25",
+    wallpaperMain: "",
+  },
 };
 
 export const ZAKAZ_NARAYD_MODAL_ID = "zakaz_narayd-custom-modal";
@@ -151,8 +170,134 @@ export const ZAKAZ_NARAYD_SAVE_BTN_ID = "save-act-data";
 export const EDITABLE_PROBIG_ID = "editable-probig";
 export const EDITABLE_REASON_ID = "editable-reason";
 export const EDITABLE_RECOMMENDATIONS_ID = "editable-recommendations";
+
+// 🔹 Ключ для збереження загальних налаштувань в localStorage
+const GENERAL_SETTINGS_STORAGE_KEY = "sto_general_settings";
+// 🔹 Ключ для прапора сесії (чи вже завантажено налаштування з БД в цій сесії)
+const GENERAL_SETTINGS_SESSION_KEY = "sto_general_settings_loaded";
+
+// 🔹 Перевіряє чи налаштування вже завантажено в цій сесії
+export function isGeneralSettingsLoadedThisSession(): boolean {
+  return sessionStorage.getItem(GENERAL_SETTINGS_SESSION_KEY) === "true";
+}
+
+// 🔹 Позначає що налаштування завантажено в цій сесії
+export function markGeneralSettingsAsLoaded(): void {
+  sessionStorage.setItem(GENERAL_SETTINGS_SESSION_KEY, "true");
+}
+
+// 🔹 Завантажує загальні налаштування з localStorage
+export function loadGeneralSettingsFromLocalStorage(): boolean {
+  try {
+    const stored = localStorage.getItem(GENERAL_SETTINGS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as GeneralSettings;
+      globalCache.generalSettings = {
+        stoName: parsed.stoName || "B.S.Motorservice",
+        address: parsed.address || "вул. Корольова, 6, Вінниця",
+        phone: parsed.phone || "068 931 24 38",
+        headerColor: parsed.headerColor || "#164D25",
+        tableColor: parsed.tableColor || "#164D25",
+        wallpaperMain: parsed.wallpaperMain || "",
+      };
+      console.log("✅ Загальні налаштування завантажено з localStorage");
+      // Застосовуємо шпалери після завантаження
+      applyWallpapers();
+      return true;
+    }
+  } catch (e) {
+    console.warn("⚠️ Помилка читання загальних налаштувань з localStorage:", e);
+  }
+  return false;
+}
+
+// 🔹 Зберігає загальні налаштування в localStorage
+export function saveGeneralSettingsToLocalStorage(): void {
+  try {
+    localStorage.setItem(
+      GENERAL_SETTINGS_STORAGE_KEY,
+      JSON.stringify(globalCache.generalSettings)
+    );
+    console.log("✅ Загальні налаштування збережено в localStorage");
+  } catch (e) {
+    console.warn("⚠️ Помилка збереження загальних налаштувань в localStorage:", e);
+  }
+}
+
+// 🔹 Завантажує загальні налаштування з БД і зберігає в localStorage
+export async function loadGeneralSettingsFromDB(): Promise<void> {
+  try {
+    const { data: generalSettingsRows } = await supabase
+      .from("settings")
+      .select("setting_id, Загальні")
+      .in("setting_id", [1, 2, 3, 4, 5, 7])
+      .order("setting_id") as { data: Array<{ setting_id: number; "Загальні": string | null }> | null };
+
+    if (generalSettingsRows) {
+      for (const row of generalSettingsRows) {
+        const value = (row as any)["Загальні"] || "";
+        switch (row.setting_id) {
+          case 1:
+            globalCache.generalSettings.stoName = value || "B.S.Motorservice";
+            break;
+          case 2:
+            globalCache.generalSettings.address = value || "вул. Корольова, 6, Вінниця";
+            break;
+          case 3:
+            globalCache.generalSettings.phone = value || "068 931 24 38";
+            break;
+          case 4:
+            globalCache.generalSettings.headerColor = value || "#164D25";
+            break;
+          case 5:
+            globalCache.generalSettings.tableColor = value || "#164D25";
+            break;
+          case 7:
+            globalCache.generalSettings.wallpaperMain = value || "";
+            break;
+        }
+      }
+      // Зберігаємо в localStorage
+      saveGeneralSettingsToLocalStorage();
+      // Застосовуємо шпалери
+      applyWallpapers();
+    }
+  } catch (e) {
+    console.error("❌ Помилка завантаження загальних налаштувань з БД:", e);
+  }
+}
+
+// 🔹 Застосовує шпалери до body.page-2
+export function applyWallpapers(): void {
+  const { wallpaperMain } = globalCache.generalSettings;
+  
+  // Застосовуємо шпалери для основної сторінки (body.page-2)
+  if (wallpaperMain) {
+    const styleId = "dynamic-wallpaper-main";
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement;
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = `body.page-2 { background-image: url("${wallpaperMain}") !important; }`;
+    console.log("🖼️ Шпалери основні застосовано:", wallpaperMain);
+  }
+}
+
 export const OPEN_GOOGLE_DRIVE_FOLDER_ID = "open-google-drive-folder";
 export const ACT_ITEMS_TABLE_CONTAINER_ID = "act-items-table-container";
+
+// ✅ Кешування глобальних даних з TTL (5 хвилин)
+const GLOBAL_DATA_CACHE_TTL = 5 * 60 * 1000; // 5 хвилин
+let lastGlobalDataLoadTime: number = 0;
+let globalDataLoaded: boolean = false;
+
+/** Примусово оновити кеш (наприклад, після додавання нових робіт/деталей) */
+export function invalidateGlobalDataCache(): void {
+  globalDataLoaded = false;
+  lastGlobalDataLoadTime = 0;
+}
 
 /* ===================== утиліти ===================== */
 
@@ -233,7 +378,14 @@ async function fetchAllWithPagination<T>(
   return allData;
 }
 
-export async function loadGlobalData(): Promise<void> {
+export async function loadGlobalData(forceReload: boolean = false): Promise<void> {
+  // ✅ Кешування: якщо дані вже завантажені і TTL не вийшов - не перезавантажуємо
+  const now = Date.now();
+  if (!forceReload && globalDataLoaded && (now - lastGlobalDataLoadTime < GLOBAL_DATA_CACHE_TTL)) {
+    console.log("✅ Використовуємо кешовані глобальні дані");
+    return;
+  }
+
   try {
     // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ робіт
     const worksData = await fetchAllWithPagination<{ work_id: number; data: string }>(
@@ -273,6 +425,20 @@ export async function loadGlobalData(): Promise<void> {
       supabase.from("slyusars").select("data"),
       supabase.from("shops").select("data"),
     ]);
+
+    // 🔹 Завантажуємо загальні налаштування:
+    // - Якщо вже завантажено в цій сесії → просто беремо з localStorage
+    // - Інакше (перезавантаження/новий вхід) → завантажуємо з БД і позначаємо прапором
+    if (isGeneralSettingsLoadedThisSession()) {
+      // Дані вже актуальні в цій сесії - просто читаємо з localStorage
+      loadGeneralSettingsFromLocalStorage();
+      console.log("✅ Загальні налаштування з localStorage (сесія активна)");
+    } else {
+      // Новий вхід або перезавантаження - завантажуємо з БД
+      console.log("📥 Завантаження загальних налаштувань з БД (новий вхід/перезавантаження)...");
+      await loadGeneralSettingsFromDB();
+      markGeneralSettingsAsLoaded();
+    }
 
     const { data: settingsRows } = await supabase
       .from("settings")
@@ -374,6 +540,11 @@ export async function loadGlobalData(): Promise<void> {
       }) || [];
 
     globalCache.skladParts = dedupeSklad(mapped);
+    
+    // ✅ Оновлюємо час кешу після успішного завантаження
+    lastGlobalDataLoadTime = Date.now();
+    globalDataLoaded = true;
+    console.log("✅ Глобальні дані завантажено та закешовано");
   } catch (error) {
     console.error("❌ Помилка завантаження глобальних даних:", error);
     showNotification("Помилка завантаження базових даних", "error");

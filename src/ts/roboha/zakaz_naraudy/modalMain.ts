@@ -819,21 +819,27 @@ export async function showModal(actId: number): Promise<void> {
     togglePriceColumnsVisibility(canSeePriceCols);
 
     updateAllSlyusarSumsFromHistory();
-    await fillMissingSlyusarSums();
+    
+    // 🚀 Запускаємо операції паралельно для швидкості
+    await Promise.all([
+      fillMissingSlyusarSums(),
+      addModalHandlers(actId, actDetails, clientData?.phone),
+      refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID),
+      refreshPhotoData(actId),
+    ]);
+    
     checkSlyusarSumWarningsOnLoad();
-    await addModalHandlers(actId, actDetails, clientData?.phone);
-    await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
-    await refreshPhotoData(actId);
     applyAccessRestrictions();
 
-    // 🔽 Підсвічування змін для Адміністратора та Приймальника
+    // 🔽 Підсвічування змін для Адміністратора та Приймальника (в фоні, не блокуємо)
     if (
       userAccessLevel === "Адміністратор" ||
       userAccessLevel === "Приймальник"
     ) {
-      await checkAndHighlightChanges(actId);
-      // Видаляємо повідомлення з UI для цього акту
-      removeNotificationsForAct(actId);
+      // Запускаємо без await щоб не блокувати відкриття акту
+      checkAndHighlightChanges(actId).then(() => {
+        removeNotificationsForAct(actId);
+      }).catch(err => console.error("Помилка підсвічування:", err));
     }
 
     // 🔽 Перевірка прав на кнопку "Додати рядок" - тепер це робиться при рендері
@@ -1224,78 +1230,20 @@ function renderModalContent(
     ? "zakaz_narayd-header zakaz_narayd-header-slusar-on"
     : "zakaz_narayd-header";
 
-  body.innerHTML = `
-    <div class="${headerClass}">
-      <div class="zakaz_narayd-header-info">
-        <h1>B.S.Motorservice</h1>
-        <p>Адрес: вул. Корольова, 6, Вінниця</p>
-        <p>068 931 24 38 тел</p>
-      </div>
-    </div>
-    <div class="zakaz_narayd-table-container">
-      <table class="zakaz_narayd-table left">
-        ${createTableRow("Акт №", `<span id="act-number">${act.act_id}</span>`)}
-        ${createTableRow("Клієнт", clientInfo.fio)}
-        ${createTableRow(
-    "Телефон",
-    `<span style="color: blue;">${clientInfo.phone}</span>`
-  )}
-        ${createTableRow("Примітка:", clientInfo.note)}
-        ${createTableRow("Фото", photoCellHtml)}
-      </table>
-      <table class="zakaz_narayd-table right">
-        ${createTableRow(
-    isClosed ? "Закритий" : "Відкритий",
-    `
-          <div class="status-row">
-            <div class="status-dates">
-              ${isClosed
-      ? `<span class="red">${formatDate(
-        act.date_off
-      )}</span> | <span class="green">${formatDate(
-        act.date_on
-      )}</span>`
-      : `<span class="green">${formatDate(act.date_on) || "-"
-      }</span>`
-    }
-            </div>
-            ${showLockButton
-      ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id
-      }">
+  // Генеруємо HTML кнопок для header
+  const headerButtons = `
+    <div class="zakaz_narayd-header-buttons">
+      ${showLockButton
+      ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}">
                    ${isClosed ? "🔒" : "🗝️"}
                    </button>`
       : ""
     }
-
-          </div>
-        `
-  )}
-        ${createTableRow(
-    "Автомобіль",
-    `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
-      carInfo.nomer || ""
-    ).trim()}`.trim() || "—"
-  )}
-        ${createTableRow(
-    "Vincode",
-    `
-          <div class="status-row">
-            <span>${carInfo.vin}</span>
-            <div class="status-icons">
-                     ${!isRestricted && canShowPrintActBtn
+      ${!isRestricted && canShowPrintActBtn
       ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
       : ""
     }
-            </div>
-          </div>
-          `
-  )}
-        ${createTableRow(
-    "Двигун",
-    `
-          <div class="status-row">
-            <span>${carInfo.engine}</span>
-            ${canShowSmsBtn
+      ${canShowSmsBtn
       ? (() => {
         let tooltip = "Немає SMS";
         const isSent = !!act.sms;
@@ -1319,9 +1267,52 @@ function renderModalContent(
       })()
       : ""
     }
-          </div>
-          `
+      ${!isRestricted && canShowCreateActBtn
+      ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+      : ""
+    }
+    </div>
+  `;
+
+  // Визначаємо стиль для header (не застосовуємо колір якщо slusarsOn активний - буде золотистий)
+  const headerStyle = shouldShowSlusarsOn ? "" : `background-color: ${globalCache.generalSettings.headerColor};`;
+
+  body.innerHTML = `
+    <div class="${headerClass}" style="${headerStyle}">
+      <div class="zakaz_narayd-header-info">
+        <h1>${globalCache.generalSettings.stoName}</h1>
+        <p>Адрес: ${globalCache.generalSettings.address}</p>
+        <p>${globalCache.generalSettings.phone} тел</p>
+      </div>
+      ${headerButtons}
+    </div>
+    <div class="zakaz_narayd-table-container">
+      <table class="zakaz_narayd-table left">
+        ${createTableRow("Акт №", `<span id="act-number">${act.act_id}</span>`)}
+        ${createTableRow("Клієнт", clientInfo.fio)}
+        ${createTableRow(
+    "Телефон",
+    `<span style="color: blue;">${clientInfo.phone}</span>`
   )}
+        ${createTableRow("Примітка:", clientInfo.note)}
+        ${createTableRow("Фото", photoCellHtml)}
+      </table>
+      <table class="zakaz_narayd-table right">
+        ${createTableRow(
+    isClosed ? "Закритий" : "Відкритий",
+    `${isClosed
+      ? `<span class="red">${formatDate(act.date_off)}</span> | <span class="green">${formatDate(act.date_on)}</span>`
+      : `<span class="green">${formatDate(act.date_on) || "-"}</span>`
+    }`
+  )}
+        ${createTableRow(
+    "Автомобіль",
+    `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
+      carInfo.nomer || ""
+    ).trim()}`.trim() || "—"
+  )}
+        ${createTableRow("Vincode", carInfo.vin)}
+        ${createTableRow("Двигун", carInfo.engine)}
         ${createTableRow(
     "Пробіг",
     `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
@@ -1339,10 +1330,6 @@ function renderModalContent(
           <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Причина звернення"] || "—"
     }</span>
         </div>
-         ${!isRestricted && canShowCreateActBtn
-      ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
-      : ""
-    }
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">

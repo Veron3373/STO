@@ -1,8 +1,6 @@
 // src/ts/utils/gitUtils.ts
 // 🔧 УТИЛІТИ для роботи з гітом
 
-import { supabase } from "../vxid/supabaseClient";
-
 const CACHE_KEY = "gitName_cache";
 
 /**
@@ -35,30 +33,17 @@ function getGitNameFallback(): string {
  * @returns Promise<string> - назва гіта (наприклад, ")
  */
 export async function getGitName(): Promise<string> {
-  try {
-    const { data, error } = await supabase
-      .from("settings")
-      .select("infaGit")
-      .eq("setting_id", 1)
-      .single();
-    
-    if (error) {
-      console.error("❌ Помилка отримання назви гіта:", error);
-      return getGitNameFallback();
-    }
-    
-    const gitName = data?.infaGit;
-    if (gitName) {
-      // Кешуємо успішний результат
-      localStorage.setItem(CACHE_KEY, gitName);
-      return gitName;
-    }
-    
-    return getGitNameFallback();
-  } catch (err) {
-    console.error("❌ Виняток отримання назви гіта:", err);
+  // 🔥 Для Vercel/localhost не потрібно отримувати gitName з БД
+  // URL формується динамічно через window.location.origin
+  const hostname = window.location.hostname;
+  
+  // На Vercel або localhost - просто повертаємо fallback
+  if (hostname.includes('vercel.app') || hostname === 'localhost' || hostname === '127.0.0.1') {
     return getGitNameFallback();
   }
+  
+  // Тільки для GitHub Pages пробуємо отримати з кешу
+  return getGitNameFallback();
 }
 
 /**

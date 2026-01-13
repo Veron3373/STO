@@ -152,13 +152,25 @@ function showError(errorDiv: HTMLElement, message: string): void {
 }
 
 // =============================================================================
-// ДОСТУП ДО НАЛАШТУВАНЬ (GET SETTING VALUE)
+// ДОСТУП ДО НАЛАШТУВАНЬ (GET SETTING VALUE) З КЕШЕМ
 // =============================================================================
+
+// Кеш для налаштувань - зберігає результати щоб не робити запити до БД кожен раз
+const settingsCache = new Map<string, { value: boolean; timestamp: number }>();
+const SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 хвилин - час життя кешу
 
 async function getSettingValue(
   settingId: number,
   roleKey: string
 ): Promise<boolean> {
+  // Перевіряємо кеш
+  const cacheKey = `${settingId}:${roleKey}`;
+  const cached = settingsCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < SETTINGS_CACHE_TTL) {
+    return cached.value;
+  }
+
   try {
     const { data, error } = await supabase
       .from("settings")
@@ -174,12 +186,24 @@ async function getSettingValue(
       return false;
     }
 
-    const value = (data as { [key: string]: any })?.[roleKey];
-    return Boolean(value);
+    const value = Boolean((data as { [key: string]: any })?.[roleKey]);
+    
+    // Зберігаємо в кеш
+    settingsCache.set(cacheKey, { value, timestamp: Date.now() });
+    
+    return value;
   } catch (error) {
     console.error("💥 Критична помилка запиту налаштувань:", error);
     return false;
   }
+}
+
+/**
+ * Очищує кеш налаштувань (викликати після зміни налаштувань в адмінці)
+ */
+export function clearSettingsCache(): void {
+  settingsCache.clear();
+  console.log("🗑️ Кеш налаштувань очищено");
 }
 
 // =============================================================================
@@ -560,7 +584,26 @@ export function isUserAuthenticated(): boolean {
 }
 
 export function logoutFromSystemAndRedirect(): void {
+  // Очищаємо всі дані користувача з localStorage
   clearSavedUserDataFromLocalStorage();
+  
+  // Очищаємо додаткові ключі localStorage
+  try {
+    localStorage.removeItem("sto_general_settings"); // Загальні налаштування СТО
+    localStorage.removeItem("current_act_pruimalnyk"); // Тимчасові дані акту
+    console.log("🗑️ Додаткові дані очищено з localStorage");
+  } catch (e) {
+    console.warn("⚠️ Помилка при очищенні додаткових даних localStorage:", e);
+  }
+  
+  // Очищаємо sessionStorage (прапори сесії)
+  try {
+    sessionStorage.clear();
+    console.log("🗑️ sessionStorage очищено");
+  } catch (e) {
+    console.warn("⚠️ Помилка при очищенні sessionStorage:", e);
+  }
+  
   isAuthenticated = false;
   userAccessLevel = null;
   userName = null;

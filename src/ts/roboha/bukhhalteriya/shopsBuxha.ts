@@ -11,6 +11,7 @@ import {
   canUserReturnMagazine,
   canUserCancelReturnMagazine,
 } from "../tablucya/users";
+import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 // ==== Доступ та підтвердження пароля (для масового розрахунку) ====
 const FULL_ACCESS_ALIASES = ["адміністратор", "full", "admin", "administrator"];
@@ -1397,7 +1398,6 @@ export async function initializeMagazineData(): Promise<void> {
 
 export async function searchMagazineData(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
-  const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
   const hasAccess = await checkCurrentPageAccess();
   
   if (!hasAccess) {

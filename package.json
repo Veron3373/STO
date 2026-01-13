@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "deploy": "tsc -b && vite build && gh-pages -d dist --no-history",
     "deploy1": "git status -sb && git add -A && (git commit -m \"опис\" || echo No changes to commit) && git push origin main && npm run deploy",
-    "deploy2": "git fetch origin && git status -sb && git add -A && (git commit -m \"опис\" || echo No changes to commit) && git push --force-with-lease origin main && npm run deploy"
+    "deploy2": "git fetch origin && git status -sb && git add -A && (git commit -m \"опис\" || echo No changes to commit) && git push --force-with-lease origin main && npm run deploy",
+    "vercel": "npm run build && vercel --prod --yes",
+    "vercel:test": "npm run build && vercel --yes",
+    "vercel:prod": "npm run build && vercel --prod --yes"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

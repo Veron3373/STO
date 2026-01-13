@@ -6,6 +6,7 @@ import {
   userAccessLevel,
 } from "../tablucya/users";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 const FULL_ACCESS_ALIASES = ["адміністратор", "full", "admin", "administrator"];
 
@@ -1020,6 +1021,11 @@ export function updatePodlegleDisplayedSums(): void {
 
 export function updatepodlegleTable(): void {
   const tbody = byId<HTMLTableSectionElement>("podlegle-tbody");
+  if (!tbody) {
+    console.log("⚠️ Елемент podlegle-tbody не знайдено - пропускаємо оновлення таблиці");
+    return;
+  }
+  
   const filteredData = getFilteredpodlegleData();
 
   if (filteredData.length === 0) {
@@ -1818,7 +1824,6 @@ export function createPercentageToggle(): void {
 // [НОВИЙ КОД]
 export async function handlepodlegleAddRecord(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
-  const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
   const hasAccess = await checkCurrentPageAccess();
   
   if (!hasAccess) {

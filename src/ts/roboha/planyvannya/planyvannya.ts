@@ -4,6 +4,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
 import { PostArxiv } from "./planyvannya_arxiv"; // Import new class
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 interface Post {
   id: number;
@@ -160,7 +161,6 @@ class SchedulerApp {
   private async loadDataFromDatabase(): Promise<void> {
     try {
       // 🔐 Перевіряємо доступ перед завантаженням даних
-      const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
       const hasAccess = await checkCurrentPageAccess();
       
       if (!hasAccess) {

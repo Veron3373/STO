@@ -59,32 +59,36 @@ body {
   }
 }
 
+/* Кнопка закриття модального вікна */
 .zakaz_narayd-modal-close {
   position: absolute;
   top: 14px;
   right: 16px;
-  font-size: 20px;
+  font-size: 24px;
   background: none;
   border: none;
   color: #fff;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color 0.2s, transform 0.2s;
+  z-index: 10;
 
   &:hover {
-    color: red;
-    font-weight: bold;
+    color: #ff6b6b;
+    transform: scale(1.2);
   }
 }
 
 .zakaz_narayd-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 20px;
   padding: 24px 24px 10px 24px;
   background-color: #004d26;
   color: #fff;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
+  position: relative;
 
   // 💛 Золотистий градієнт для заголовка, коли Слюсар завершив роботи
   &.zakaz_narayd-header-slusar-on {
@@ -110,6 +114,15 @@ body {
       font-size: 14px;
       color: #fff;
     }
+  }
+
+  &-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    align-items: flex-end;
+    margin-left: auto;
+    padding-right: 30px; // щоб не перекривало хрестик
   }
 }
 
@@ -255,18 +268,27 @@ body {
   th[data-name="name"],
   td[data-name="name"] {
     text-align: left;
+    min-width: 200px;
+    width: auto;
+    max-width: none;
   }
 
   /* Комірка з найменуванням має бути з відносним позиціонуванням для кнопки */
   td.name-cell {
     position: relative;
     padding-right: 30px !important;
-
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+    
     /* Прибираємо зайві обгортки та забезпечуємо повну ширину */
     >div {
       display: block;
       width: 100%;
       min-height: 20px;
+      white-space: normal;
+      word-wrap: break-word;
+      word-break: break-word;
     }
   }
 

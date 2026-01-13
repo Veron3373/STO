@@ -2,6 +2,7 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import { showModal } from "../zakaz_naraudy/modalMain";
+import { globalCache, loadGeneralSettingsFromDB, loadGeneralSettingsFromLocalStorage, isGeneralSettingsLoadedThisSession, markGeneralSettingsAsLoaded } from "../zakaz_naraudy/globalCache";
 import {
   showLoginModalBeforeTable,
   isUserAuthenticated,
@@ -958,9 +959,15 @@ function createTableHeader(
   const headerRow = document.createElement("tr");
   const headers = ["№ акту", "Дата", "Клієнт 🔽", "Автомобіль"];
   if (accessLevel !== "Слюсар") headers.push("Сума");
+  
+  // Колір шапки з налаштувань
+  const tableColor = globalCache.generalSettings?.tableColor || "#177245";
+  
   headers.forEach((header) => {
     const th = document.createElement("th");
     th.textContent = header;
+    th.style.backgroundColor = tableColor;
+    th.style.color = "#fff";
     if (header.includes("Клієнт")) {
       th.addEventListener("click", () => {
         sortActs();
@@ -1249,6 +1256,18 @@ function watchDateRangeChanges(): void {
 export async function initializeActsSystem(): Promise<void> {
   console.log("Ініціалізація системи актів...");
   try {
+    // 📦 Завантажуємо загальні налаштування:
+    // - Якщо вже завантажено в цій сесії → просто беремо з localStorage
+    // - Інакше (перезавантаження/новий вхід) → завантажуємо з БД і позначаємо прапором
+    if (isGeneralSettingsLoadedThisSession()) {
+      loadGeneralSettingsFromLocalStorage();
+      console.log("✅ Загальні налаштування з localStorage (сесія активна)");
+    } else {
+      console.log("📥 Завантаження загальних налаштувань з БД (новий вхід/перезавантаження)...");
+      await loadGeneralSettingsFromDB();
+      markGeneralSettingsAsLoaded();
+    }
+    
     const accessLevel = await showLoginModalBeforeTable();
     if (!accessLevel) {
       showAuthRequiredMessage();

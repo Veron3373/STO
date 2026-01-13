@@ -31,3 +31,5 @@ dist/
 
 # Deploy scripts (sensitive data)
 deploy-STO-*.ps1
+.vercel
+.env*.local

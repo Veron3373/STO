@@ -128,6 +128,19 @@ const parseNum = (s?: string | null): number => {
 const getCellText = (el?: HTMLElement | null): string =>
   cleanText(el?.textContent);
 
+/**
+ * Отримує назву з комірки, перевіряючи спочатку атрибут data-full-name.
+ * Якщо назва скорочена (є атрибут), повертає повну назву.
+ */
+const getNameCellText = (el?: HTMLElement | null): string => {
+  if (!el) return "";
+  // Перевіряємо чи є повна назва в атрибуті
+  const fullName = el.getAttribute("data-full-name");
+  if (fullName) return cleanText(fullName);
+  // Інакше повертаємо текст з комірки
+  return cleanText(el?.textContent);
+};
+
 const validateActId = (actId: number): void => {
   if (!Number.isInteger(actId) || actId <= 0) {
     throw new Error("Невірний формат номера акту");
@@ -238,7 +251,8 @@ export function parseTableRows(): ParsedItem[] {
 
   tableRows.forEach((row: Element) => {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
-    const name = getCellText(nameCell);
+    // Використовуємо getNameCellText для отримання повної назви
+    const name = getNameCellText(nameCell);
     if (!name) return;
 
     // Визначаємо тип рядка

@@ -11,6 +11,7 @@ import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
 } from "../tablucya/users";
+import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 const FULL_ACCESS_ALIASES = ["адміністратор", "full", "admin", "administrator"];
 
@@ -990,6 +991,13 @@ function calculateDetailsMarginTotal(): number {
 // Оновлення таблиці з кольоровим кодуванням та фільтрацією
 export function updateDetailsTable(): void {
   const tbody = byId<HTMLTableSectionElement>("details-tbody");
+  
+  // Перевірка чи елемент існує (може бути null якщо не на сторінці bukhhalteriya.html)
+  if (!tbody) {
+    console.log("⚠️ Елемент details-tbody не знайдено - пропускаємо оновлення таблиці");
+    return;
+  }
+  
   const filteredData = detailsData;
 
   if (filteredData.length === 0) {
@@ -1268,7 +1276,6 @@ function getDiscountByActId(actId: number): number {
 // Функція пошуку з визначенням статусу акту
 export async function searchDetailsData(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
-  const { checkCurrentPageAccess } = await import("../zakaz_naraudy/inhi/page_access_guard");
   const hasAccess = await checkCurrentPageAccess();
   
   if (!hasAccess) {

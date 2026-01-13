@@ -48,6 +48,7 @@ export interface PodlegleRecord {
   isClosed: boolean;
   isPaid: boolean;
   paymentDate?: string;
+  recordedDate?: string; // ✅ Додано: дата створення запису
   customHtmlTotal?: string; // ✅ Додано для кастомного відображення суми
 }
 
@@ -63,6 +64,7 @@ interface SlyusarData {
         Кількість: number;
         Зарплата?: number;
         Розраховано?: string;
+        Записано?: string; // ✅ Додано: дата створення запису
       }>;
       Клієнт?: string;
       Автомобіль?: string;
@@ -790,7 +792,7 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       return null;
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
-    
+
     console.log(`📌 Знайдено primary key: ${primaryKey}`);
 
     // ✅ ОПТИМІЗАЦІЯ: Збираємо всі оновлення в масив промісів
@@ -828,7 +830,7 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
           console.log(`✅ Оновлено ${slyusar.Name}`);
           return upd;
         })();
-        
+
         updatePromises.push(updatePromise);
       } else {
         const updatePromise = (async () => {
@@ -844,14 +846,14 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
           console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
           return upd;
         })();
-        
+
         updatePromises.push(updatePromise);
       }
     }
 
     // ✅ Чекаємо завершення ВСІХ оновлень
     await Promise.all(updatePromises);
-    
+
     console.log(`✅ Збережено ${updatePromises.length} записів слюсарів`);
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
@@ -1025,7 +1027,7 @@ export function updatepodlegleTable(): void {
     console.log("⚠️ Елемент podlegle-tbody не знайдено - пропускаємо оновлення таблиці");
     return;
   }
-  
+
   const filteredData = getFilteredpodlegleData();
 
   if (filteredData.length === 0) {
@@ -1078,7 +1080,7 @@ export function updatepodlegleTable(): void {
         const salaryDifference = item.salary - expectedSalary;
         const diffSign = salaryDifference >= 0 ? "+" : "";
         const diffText = `${actualSalaryPercent.toFixed(1)}% з ${configuredPercent}% (${diffSign}${Math.round(salaryDifference)} грн)`;
-        
+
         if (actualSalaryPercent > configuredPercent) {
           // Процент зарплати більший ніж налаштований - темно червона стрілка вверх
           salaryArrowHtml = `<span class="salary-arrow-up" title="${diffText}">🡱</span>`;
@@ -1125,6 +1127,7 @@ export function updatepodlegleTable(): void {
                     </td>
                     <td>${formatDate(item.dateOpen)}</td>
                     <td>${formatDate(item.dateClose) || "-"}</td>
+                    <td>${item.recordedDate || "-"}</td> <!-- ✅ Додано колонку "Додано" -->
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
@@ -1271,6 +1274,7 @@ export function searchDataInDatabase(
                 isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО: надійна перевірка на існування
                 isPaid: true,
                 paymentDate: payDmy,
+                recordedDate: entry.Записано || "", // ✅ Додано
               });
             });
           } else {
@@ -1301,6 +1305,7 @@ export function searchDataInDatabase(
                 isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО
                 isPaid: !!entry.Розраховано,
                 paymentDate: entry.Розраховано || "",
+                recordedDate: entry.Записано || "", // ✅ Додано
               });
             });
           }
@@ -1825,7 +1830,7 @@ export function createPercentageToggle(): void {
 export async function handlepodlegleAddRecord(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
   const hasAccess = await checkCurrentPageAccess();
-  
+
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     window.location.href = "/";
@@ -2015,7 +2020,7 @@ export async function togglepodleglePayment(index: number): Promise<void> {
 
   const currentDate = getCurrentDate();
   let statusMsg = "";
-  
+
   // Зберігаємо попередній стан для можливого відкату
   const prevIsPaid = record.isPaid;
   const prevPaymentDate = record.paymentDate;

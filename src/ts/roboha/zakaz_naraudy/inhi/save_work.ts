@@ -270,6 +270,7 @@ async function syncSlyusarsHistoryForAct(params: {
       Кількість: number;
       Робота: string;
       Зарплата: number;
+      Записано: string; // ✅ Додано дату створення запису
     }> = [];
     let summaRob = 0;
 
@@ -290,11 +291,19 @@ async function syncSlyusarsHistoryForAct(params: {
         зарплата: zp,
       });
 
+      // ✅ ДОДАНО: Форматуємо поточну дату в DD.MM.YYYY
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, "0");
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const year = now.getFullYear();
+      const recordedDate = `${day}.${month}.${year}`;
+
       zapis.push({
         Ціна: price,
         Кількість: qty,
         Робота: fullWorkName, // ← Зберігаємо ПОВНУ назву
         Зарплата: zp,
+        Записано: recordedDate, // ✅ Додано дату створення запису
       });
       summaRob += price * qty;
     }

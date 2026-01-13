@@ -129,11 +129,9 @@ body {
 }
 
 .Bukhhalter-total-sum {
-  background: linear-gradient(
-    135deg,
-    var(--primary-color),
-    var(--primary-hover)
-  );
+  background: linear-gradient(135deg,
+      var(--primary-color),
+      var(--primary-hover));
   color: white;
   padding: 8px 15px;
   border-radius: var(--small-radius);
@@ -626,31 +624,27 @@ body {
 .Bukhhalter-status-toggle,
 .Bukhhalter-expense-type-toggle,
 .Bukhhalter-percentage-toggle {
-  background: linear-gradient(
-    to right,
-    var(--success-color) 0%,
-    var(--success-color) 33.33%,
-    var(--danger-color) 33.33%,
-    var(--danger-color) 66.66%,
-    var(--orange1) 66.66%,
-    var(--orange2) 100%
-  );
+  background: linear-gradient(to right,
+      var(--success-color) 0%,
+      var(--success-color) 33.33%,
+      var(--danger-color) 33.33%,
+      var(--danger-color) 66.66%,
+      var(--orange1) 66.66%,
+      var(--orange2) 100%);
 }
 
 .Bukhhalter-availability-toggle {
-  background: linear-gradient(
-    to right,
-    #4caf50 0%,
-    #4caf50 20%,
-    #9e9e9e 20%,
-    #9e9e9e 40%,
-    #f44336 40%,
-    #f44336 60%,
-    #2196f3 60%,
-    #2196f3 80%,
-    #ff9800 80%,
-    #ff9800 100%
-  );
+  background: linear-gradient(to right,
+      #4caf50 0%,
+      #4caf50 20%,
+      #9e9e9e 20%,
+      #9e9e9e 40%,
+      #f44336 40%,
+      #f44336 60%,
+      #2196f3 60%,
+      #2196f3 80%,
+      #ff9800 80%,
+      #ff9800 100%);
 }
 
 /* Повзунки */
@@ -762,13 +756,15 @@ body {
 .vutratu-dataOff,
 .pidlehli-dataOn,
 .pidlehli-dataOff,
+.pidlehli-dodano,
 .pidlehli-akt,
 .magazine-dataOn,
 .magazine-akt,
 .poAktam-akt,
 .vutratu-akt,
 .poAktam-dataOn,
-.poAktam-dataOff {
+.poAktam-dataOff,
+.table-header-cell {
   min-width: var(--col-date);
   width: var(--col-date);
 }
@@ -863,7 +859,7 @@ body {
   text-align: center;
 }
 
-.return-date > div {
+.return-date>div {
   margin: 0;
 }
 
@@ -1137,7 +1133,7 @@ body {
     font-size: 9px;
   }
 
-  .return-date > div {
+  .return-date>div {
     font-size: 8px;
   }
 
@@ -1275,14 +1271,16 @@ body {
 }
 
 .salary-arrow-up {
-  color: #f44336; /* червоний - процент більший */
+  color: #f44336;
+  /* червоний - процент більший */
   font-weight: bold;
   font-size: 1.8em;
   line-height: 1;
 }
 
 .salary-arrow-down {
-  color: #28a745; /* зелений - процент менший */
+  color: #28a745;
+  /* зелений - процент менший */
   font-weight: bold;
   font-size: 1.5em;
   line-height: 1;

@@ -675,21 +675,29 @@ async function canUserSeePrintActButton(): Promise<boolean> {
  * Чи можна показувати кнопку SMS ✉️ в акті
  *
  * Мапа:
- *  - Приймальник → settings.setting_id = 20, колонка "Приймальник"
- *  - Запчастист  → settings.setting_id = 21, колонка "Запчастист"
- *  - Складовщик  → settings.setting_id = 18, колонка "Складовщик"
- *  - Адміністратор → завжди TRUE
+ *  - Слюсар        → завжди FALSE (приховано)
+ *  - Адміністратор → settings.setting_id = 5, колонка "data"
+ *  - Приймальник   → settings.setting_id = 20, колонка "Приймальник"
+ *  - Запчастист    → settings.setting_id = 21, колонка "Запчастист"
+ *  - Складовщик    → settings.setting_id = 18, колонка "Складовщик"
  */
 async function canUserSeeSmsButton(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) return true;
-  if (role === "Адміністратор") return true;
+
+  // ✅ Слюсар завжди не бачить SMS
+  if (role === "Слюсар") return false;
 
   let settingId: number | null = null;
   let columnName: string | null = null;
 
   switch (role) {
+    case "Адміністратор":
+      settingId = 5;
+      columnName = "data";
+      break;
+
     case "Приймальник":
       settingId = 20;
       columnName = "Приймальник";
@@ -819,7 +827,7 @@ export async function showModal(actId: number): Promise<void> {
     togglePriceColumnsVisibility(canSeePriceCols);
 
     updateAllSlyusarSumsFromHistory();
-    
+
     // 🚀 Запускаємо операції паралельно для швидкості
     await Promise.all([
       fillMissingSlyusarSums(),
@@ -827,7 +835,7 @@ export async function showModal(actId: number): Promise<void> {
       refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID),
       refreshPhotoData(actId),
     ]);
-    
+
     checkSlyusarSumWarningsOnLoad();
     applyAccessRestrictions();
 
@@ -902,6 +910,9 @@ async function fillMissingSlyusarSums(): Promise<void> {
 }
 
 function checkSlyusarSumWarningsOnLoad(): void {
+  // ✅ Слюсар не бачить колонку "Сума", тому не показуємо йому попередження про зарплату
+  if (userAccessLevel === "Слюсар") return;
+
   if (!globalCache.settings.showZarplata) return;
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return;

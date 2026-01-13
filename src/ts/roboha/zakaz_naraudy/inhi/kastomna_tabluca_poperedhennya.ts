@@ -2,6 +2,7 @@ import { globalCache, ensureSkladLoaded } from "../globalCache";
 import { loadPercentFromSettings } from "./kastomna_tabluca";
 import { supabase } from "../../../vxid/supabaseClient";
 import { updateCalculatedSumsInFooter } from "../modalUI";
+import { userAccessLevel } from "../../tablucya/users";
 
 // Cache for current act data
 let currentActDataCache: any = null;
@@ -230,6 +231,16 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
 }
 
 export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
+  // ✅ Слюсар не бачить колонку "Сума", тому не показуємо йому попередження про зарплату
+  if (userAccessLevel === "Слюсар") {
+    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
+    if (slyusarSumCell) {
+      setSlyusarSumWarningFlag(slyusarSumCell, false);
+      slyusarSumCell.removeAttribute("title");
+    }
+    return;
+  }
+
   if (globalCache.isActClosed) {
     const sumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
     if (sumCell) {

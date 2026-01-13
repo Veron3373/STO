@@ -10,6 +10,7 @@ import {
   EDITABLE_RECOMMENDATIONS_ID,
   ACT_ITEMS_TABLE_CONTAINER_ID,
   loadGlobalData,
+  invalidateGlobalDataCache,
 } from "../globalCache";
 import type { ActItem } from "../globalCache";
 import { updateCalculatedSumsInFooter } from "../modalUI";
@@ -1528,6 +1529,11 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
 
   globalCache.oldNumbers = readTableNewNumbers();
   updateInitialActItems(details, works);
+
+  // ✅ ВИПРАВЛЕНО: Інвалідуємо кеш перед завантаженням, щоб отримати свіжі дані з БД
+  // Це вирішує проблему, коли після збереження акту і повторного відкриття
+  // без перезавантаження сторінки дані зарплати не оновлювалися
+  invalidateGlobalDataCache();
 
   await Promise.all([
     loadGlobalData(),

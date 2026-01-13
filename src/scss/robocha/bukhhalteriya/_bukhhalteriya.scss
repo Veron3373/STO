@@ -215,6 +215,8 @@ body {
   text-align: center;
   padding: 8px 4px;
   line-height: 1.2;
+  width: 100%;
+  height: 100%;
 }
 
 .table-header-emoji {
@@ -763,8 +765,7 @@ body {
 .poAktam-akt,
 .vutratu-akt,
 .poAktam-dataOn,
-.poAktam-dataOff,
-.table-header-cell {
+.poAktam-dataOff {
   min-width: var(--col-date);
   width: var(--col-date);
 }

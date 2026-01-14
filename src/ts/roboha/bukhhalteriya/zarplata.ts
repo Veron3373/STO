@@ -1216,8 +1216,8 @@ export function searchDataInDatabase(
 ): void {
   podlegleData = [];
   if (!dateOpen && !dateClose) {
-    dateOpen = "01.01.2025";
-    console.log("📅 Використано дату за замовчуванням: 01.01.2025");
+    dateOpen = "01.01.2020"; // ✅ ВИПРАВЛЕНО: використовуємо більш ранню дату за замовчуванням
+    console.log("📅 Використано дату за замовчуванням: 01.01.2020");
   }
   if (slyusarsData.length === 0) {
     showNotification(
@@ -1251,7 +1251,13 @@ export function searchDataInDatabase(
         ) {
           if (podlegleDateFilterMode === "paid") {
             record.Записи.forEach((entry) => {
-              if (entry.Кількість === 0) return;
+              // ✅ ВИПРАВЛЕНО: Якщо кількість 0, але є зарплата - показуємо запис!
+              if (
+                entry.Кількість === 0 &&
+                (!entry.Зарплата || entry.Зарплата === 0)
+              )
+                return;
+
               const payDmy = entry.Розраховано || "";
               if (!payDmy) return;
               if (!inRangeByIso(payDmy, dateOpen, toIsoClose)) return;
@@ -1286,7 +1292,13 @@ export function searchDataInDatabase(
             if (!inRangeByIso(targetDmy, dateOpen, toIsoClose)) return;
 
             record.Записи.forEach((entry) => {
-              if (entry.Кількість === 0) return;
+              // ✅ ВИПРАВЛЕНО: Якщо кількість 0, але є зарплата - показуємо запис!
+              if (
+                entry.Кількість === 0 &&
+                (!entry.Зарплата || entry.Зарплата === 0)
+              )
+                return;
+
               const totalPrice = entry.Ціна * entry.Кількість;
               const salary = entry.Зарплата || 0;
               podlegleData.push({

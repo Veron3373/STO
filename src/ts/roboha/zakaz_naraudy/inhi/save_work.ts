@@ -254,6 +254,18 @@ async function syncSlyusarsHistoryForAct(params: {
   }
 
   // ОНОВИТИ / СТВОРИТИ
+  // Допоміжна функція для порівняння масивів робіт
+  function isWorkRowsEqual(a: any[], b: any[]): boolean {
+    if (a.length !== b.length) return false;
+    const sortFn = (x: any) => `${x.Найменування}|${x.Каталог||''}|${x.Кількість}|${x.Ціна}|${x.Зарплата||''}|${x["ПІБ _ Магазин"]||x.slyusarName||''}`;
+    const aa = [...a].sort((x, y) => sortFn(x).localeCompare(sortFn(y)));
+    const bb = [...b].sort((x, y) => sortFn(x).localeCompare(sortFn(y)));
+    for (let i = 0; i < aa.length; ++i) {
+      if (sortFn(aa[i]) !== sortFn(bb[i])) return false;
+    }
+    return true;
+  }
+
   for (const [slyusarName, rows] of curBySlyusar.entries()) {
     const slyRow = await fetchSlyusarByName(slyusarName);
     if (!slyRow) {
@@ -265,78 +277,74 @@ async function syncSlyusarsHistoryForAct(params: {
       continue;
     }
 
-    const zapis: Array<{
-      Ціна: number;
-      Кількість: number;
-      Робота: string;
-      Зарплата: number;
-      Записано: string; // ✅ Додано дату створення запису
-    }> = [];
-    let summaRob = 0;
+    // Пошук попередніх робіт цього слюсаря
+    const prevRows = (params.prevRows || []).filter(r => r.slyusarName === slyusarName);
+    // Якщо кількість або склад робіт змінились — оновлюємо
+    if (!isWorkRowsEqual(rows, prevRows)) {
+      const zapis: Array<{
+        Ціна: number;
+        Кількість: number;
+        Робота: string;
+        Зарплата: number;
+        Записано: string;
+      }> = [];
+      let summaRob = 0;
 
-    for (const r of rows) {
-      const qty = Number(r.Кількість) || 0;
-      const price = Number(r.Ціна) || 0;
-      const zp = Number(r.Зарплата) || 0;
+      for (const r of rows) {
+        const qty = Number(r.Кількість) || 0;
+        const price = Number(r.Ціна) || 0;
+        const zp = Number(r.Зарплата) || 0;
+        const workName = r.Найменування || "";
+        const fullWorkName = workName.includes(".....")
+          ? expandNameForSave(workName)
+          : workName;
+        // Формуємо дату
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, "0");
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const year = now.getFullYear();
+        const recordedDate = `${day}.${month}.${year}`;
+        zapis.push({
+          Ціна: price,
+          Кількість: qty,
+          Робота: fullWorkName,
+          Зарплата: zp,
+          Записано: recordedDate,
+        });
+        summaRob += price * qty;
+      }
 
-      // ← ДОДАНО: Розгортаємо назву перед збереженням
-      const workName = r.Найменування || "";
-      const fullWorkName = workName.includes(".....")
-        ? expandNameForSave(workName)
-        : workName;
+      const history = ensureSlyusarHistoryRoot(slyRow);
+      if (!history[params.dateKey]) history[params.dateKey] = [];
+      const dayBucket = history[params.dateKey] as any[];
 
-      console.log(`📝 Зберігаємо роботу:`, {
-        original: workName,
-        full: fullWorkName,
-        зарплата: zp,
-      });
+      let actEntry = dayBucket.find(
+        (e: any) => String(e?.["Акт"]) === String(params.actId)
+      );
+      if (!actEntry) {
+        actEntry = {
+          Акт: String(params.actId),
+          Записи: [],
+          СуммаРоботи: 0,
+          ДатаЗакриття: null,
+          Клієнт: "",
+          Автомобіль: "",
+        };
+        dayBucket.push(actEntry);
+      }
 
-      // ✅ ДОДАНО: Форматуємо поточну дату в DD.MM.YYYY
-      const now = new Date();
-      const day = String(now.getDate()).padStart(2, "0");
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const year = now.getFullYear();
-      const recordedDate = `${day}.${month}.${year}`;
+      actEntry["Записи"] = zapis;
+      actEntry["СуммаРоботи"] = Math.max(
+        0,
+        Math.round((summaRob + Number.EPSILON) * 100) / 100
+      );
+      actEntry["ДатаЗакриття"] = params.dateClose;
+      actEntry["Клієнт"] = params.clientInfo;
+      actEntry["Автомобіль"] = params.carInfo;
 
-      zapis.push({
-        Ціна: price,
-        Кількість: qty,
-        Робота: fullWorkName, // ← Зберігаємо ПОВНУ назву
-        Зарплата: zp,
-        Записано: recordedDate, // ✅ Додано дату створення запису
-      });
-      summaRob += price * qty;
+      await updateSlyusarJson(slyRow);
     }
-
-    const history = ensureSlyusarHistoryRoot(slyRow);
-    if (!history[params.dateKey]) history[params.dateKey] = [];
-    const dayBucket = history[params.dateKey] as any[];
-
-    let actEntry = dayBucket.find(
-      (e: any) => String(e?.["Акт"]) === String(params.actId)
-    );
-    if (!actEntry) {
-      actEntry = {
-        Акт: String(params.actId),
-        Записи: [],
-        СуммаРоботи: 0,
-        ДатаЗакриття: null,
-        Клієнт: "",
-        Автомобіль: "",
-      };
-      dayBucket.push(actEntry);
-    }
-
-    actEntry["Записи"] = zapis;
-    actEntry["СуммаРоботи"] = Math.max(
-      0,
-      Math.round((summaRob + Number.EPSILON) * 100) / 100
-    );
-    actEntry["ДатаЗакриття"] = params.dateClose;
-    actEntry["Клієнт"] = params.clientInfo;
-    actEntry["Автомобіль"] = params.carInfo;
-
-    await updateSlyusarJson(slyRow);
+    // Якщо змін не було — нічого не робимо
   }
 
   // ОЧИСТИТИ СТАРИХ

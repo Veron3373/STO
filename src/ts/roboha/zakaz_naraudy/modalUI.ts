@@ -231,7 +231,12 @@ async function updateSlyusarSalaryInRow(
 
   if (!globalCache.settings.showPibMagazin) return;
 
-  const workName = nameCell?.textContent?.trim();
+  // ✅ ВИПРАВЛЕНО: беремо повну назву з атрибуту, якщо є (для довгих назв)
+  const workName =
+    nameCell?.getAttribute("data-full-name") || nameCell?.textContent?.trim();
+
+  // console.log(`🔍 Робота для оновлення зарплати: "${workName}"`);
+
   const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
   const slyusarName = pibCell?.textContent?.trim();
   const slyusarSumCell = row.querySelector(
@@ -250,12 +255,14 @@ async function updateSlyusarSalaryInRow(
     return;
   }
 
+  /*
   console.log(`🔄 Оновлення зарплати для рядка:`, {
     actId,
     slyusarName,
     workName,
     totalSum,
   });
+  */
 
   // 1. ПРІОРИТЕТ: Шукаємо в історії для ПОТОЧНОГО акту
   const historySalary = getSlyusarSalaryFromHistory(
@@ -272,16 +279,16 @@ async function updateSlyusarSalaryInRow(
 
   // 2. ВИПРАВЛЕННЯ: Якщо в історії немає І totalSum <= 0 - очищуємо
   if (totalSum <= 0) {
-    console.log(`⚠️ Сума <= 0 і немає даних в історії - очищуємо`);
+    // console.log(`⚠️ Сума <= 0 і немає даних в історії - очищуємо`);
     slyusarSumCell.textContent = "";
     return;
   }
 
   // 3. Якщо є сума, але немає в історії - рахуємо від відсотка
-  console.log(`⚙️ Зарплати в історії немає, рахуємо від відсотка`);
+  // console.log(`⚙️ Зарплати в історії немає, рахуємо від відсотка`);
   const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-  console.log(`💰 Розрахована зарплата: ${calculatedSalary} (${percent}%)`);
+  // console.log(`💰 Розрахована зарплата: ${calculatedSalary} (${percent}%)`);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 }
 
@@ -315,7 +322,10 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
     if (typeFromCell !== "works") continue;
 
-    const workName = nameCell?.textContent?.trim();
+    // ✅ ВИПРАВЛЕНО: беремо повну назву з атрибуту, якщо є
+    const workName =
+      nameCell?.getAttribute("data-full-name") || nameCell?.textContent?.trim();
+
     const pibCell = row.querySelector(
       '[data-name="pib_magazin"]'
     ) as HTMLElement;
@@ -329,7 +339,7 @@ export async function initializeSlyusarSalaries(): Promise<void> {
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const totalSum = parseNumber(sumCell?.textContent);
 
-    console.log(`🔍 Обробка роботи "${workName}" для "${slyusarName}"`);
+    // console.log(`🔍 Обробка роботи "${workName}" для "${slyusarName}"`);
 
     // КРИТИЧНО: Завжди шукаємо в історії ПЕРШИМ
     const historySalary = getSlyusarSalaryFromHistory(
@@ -346,15 +356,15 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
     // ВИПРАВЛЕННЯ: Якщо немає в історії і сума <= 0 - пропускаємо
     if (totalSum <= 0) {
-      console.log(`⏭️ Сума <= 0 і немає в історії - пропускаємо`);
+      // console.log(`⏭️ Сума <= 0 і немає в історії - пропускаємо`);
       continue;
     }
 
     // Якщо немає в історії, але є сума - рахуємо від відсотка
-    console.log(`⚙️ Розрахунок від відсотка`);
+    // console.log(`⚙️ Розрахунок від відсотка`);
     const percent = await getSlyusarWorkPercent(slyusarName);
     const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-    console.log(`💰 Розраховано: ${calculatedSalary} (${percent}%)`);
+    // console.log(`💰 Розраховано: ${calculatedSalary} (${percent}%)`);
     slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
   }
 

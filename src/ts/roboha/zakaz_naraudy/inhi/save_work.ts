@@ -255,16 +255,6 @@ async function syncSlyusarsHistoryForAct(params: {
 
   // ОНОВИТИ / СТВОРИТИ
   // Допоміжна функція для порівняння масивів робіт
-  function isWorkRowsEqual(a: any[], b: any[]): boolean {
-    if (a.length !== b.length) return false;
-    const sortFn = (x: any) => `${x.Найменування}|${x.Каталог||''}|${x.Кількість}|${x.Ціна}|${x.Зарплата||''}|${x["ПІБ _ Магазин"]||x.slyusarName||''}`;
-    const aa = [...a].sort((x, y) => sortFn(x).localeCompare(sortFn(y)));
-    const bb = [...b].sort((x, y) => sortFn(x).localeCompare(sortFn(y)));
-    for (let i = 0; i < aa.length; ++i) {
-      if (sortFn(aa[i]) !== sortFn(bb[i])) return false;
-    }
-    return true;
-  }
 
   for (const [slyusarName, rows] of curBySlyusar.entries()) {
     const slyRow = await fetchSlyusarByName(slyusarName);
@@ -278,7 +268,6 @@ async function syncSlyusarsHistoryForAct(params: {
     }
 
     // Пошук попередніх робіт цього слюсаря
-    const prevRows = (params.prevRows || []).filter(r => r.slyusarName === slyusarName);
     // Якщо кількість або склад робіт змінились — оновлюємо
     // Отримуємо попередні записи робіт з історії
     const history = ensureSlyusarHistoryRoot(slyRow);

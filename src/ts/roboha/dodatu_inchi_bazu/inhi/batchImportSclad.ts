@@ -391,12 +391,27 @@ function parseBatchData(text: string) {
     } catch {
       row.status = "Помилка формату дати";
     }
+    // Перевірка одиниці виміру
     if (!VALID_UNITS.includes(row.unit)) {
       row.unitValid = false;
     }
-    row.shopValid = row.shop ? shopsListCache.includes(row.shop) : true;
-    row.detailValid = row.detail ? detailsListCache.includes(row.detail) : true;
-    if (row.actNo) {
+
+    // Магазин: якщо порожній - невалідний, якщо заповнений - перевіряємо чи є в списку
+    if (!row.shop || !row.shop.trim()) {
+      row.shopValid = false;
+    } else {
+      row.shopValid = shopsListCache.includes(row.shop);
+    }
+
+    // Деталь: якщо порожня - невалідна, якщо заповнена - перевіряємо чи є в списку
+    if (!row.detail || !row.detail.trim()) {
+      row.detailValid = false;
+    } else {
+      row.detailValid = detailsListCache.includes(row.detail);
+    }
+
+    // Акт: порожній - валідний (необов'язкове поле), заповнений - перевіряємо
+    if (row.actNo && row.actNo.trim()) {
       const trimmedActNo = row.actNo.trim();
       row.actValid = actsListCache.includes(trimmedActNo);
       if (row.actValid) {
@@ -406,6 +421,8 @@ function parseBatchData(text: string) {
         }
       }
     }
+
+    // Фінальна перевірка на заповненість обов'язкових полів
     if (
       isNaN(row.qty) ||
       isNaN(row.price) ||
@@ -414,7 +431,10 @@ function parseBatchData(text: string) {
       !row.catno ||
       !row.detail ||
       !row.unit ||
-      !row.shop
+      !row.shop ||
+      !row.shopValid ||
+      !row.detailValid ||
+      !row.unitValid
     ) {
       row.status = "Помилка валідації";
     }
@@ -965,6 +985,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         else closeDropdownList();
       }
       recalculateAndApplyWidths();
+      revalidateRow(index);
     });
     input.addEventListener("blur", (e) => {
       const target = e.target as HTMLInputElement;
@@ -1011,6 +1032,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         else closeDropdownList();
       }
       recalculateAndApplyWidths();
+      revalidateRow(index);
     });
     input.addEventListener("blur", (e) => {
       const target = e.target as HTMLInputElement;

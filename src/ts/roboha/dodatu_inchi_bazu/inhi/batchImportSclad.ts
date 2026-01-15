@@ -444,7 +444,7 @@ function parseBatchData(text: string) {
       !row.shop ||
       !row.unitValid
     ) {
-      row.status = "Помилка валідації";
+      row.status = "Помилка";
     }
     data.push(row);
   });
@@ -604,7 +604,7 @@ function showDropdownList(input: HTMLElement, options: string[]) {
 
       // Додатково: якщо всі поля валідні, явно встановлюємо статус (дублюємо логіку з updateDropdownList)
       const row = parsedDataGlobal[index];
-      if (row.status === "Помилка валідації") {
+      if (row.status === "Помилка") {
         // Перевіряємо чи всі обов'язкові поля заповнені
         const allFilled = row.date && row.shop && row.catno && row.detail && row.unit;
         const numbersValid = !isNaN(row.qty) && !isNaN(row.price);
@@ -872,9 +872,9 @@ function revalidateRow(index: number) {
     if (statusTextEl) statusTextEl.textContent = "Готовий";
   } else {
     // Якщо не валідно - ставимо помилку
-    row.status = "Помилка валідації";
+    row.status = "Помилка";
     statusCell.className = "status-cell-Excel error-Excel";
-    if (statusTextEl) statusTextEl.textContent = "Помилка валідації";
+    if (statusTextEl) statusTextEl.textContent = "Помилка";
   }
 }
 
@@ -1181,7 +1181,7 @@ function updateDropdownList(
 
       // Додатково: якщо всі поля валідні, явно встановлюємо статус
       const row = parsedDataGlobal[index];
-      if (row.status === "Помилка валідації") {
+      if (row.status === "Помилка") {
         // Перевіряємо чи всі обов'язкові поля заповнені
         const allFilled = row.date && row.shop && row.catno && row.detail && row.unit;
         const numbersValid = !isNaN(row.qty) && !isNaN(row.price);

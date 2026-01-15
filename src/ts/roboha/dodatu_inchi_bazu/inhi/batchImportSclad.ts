@@ -732,14 +732,14 @@ function renderBatchTable(data: any[]) {
       <td class="${detailTdClass}" style="width:${getWidth(
       "detail"
     )}px;min-width:${getWidth("detail")}px;max-width:${getWidth("detail")}px;">
-        <input
-          type="text"
+        <textarea
           class="cell-input-Excel cell-input-combo-Excel detail-input-Excel"
-          value="${row.detail}"
           data-field="detail"
           data-index="${index}"
           autocomplete="off"
-        >
+          rows="1"
+          style="overflow:hidden; resize:none; min-height:30px; width:100%; box-sizing:border-box; white-space: pre-wrap; line-height: 1.3; padding-top: 6px;"
+        >${row.detail}</textarea>
       </td>
       <td style="width:${getWidth("qty")}px;min-width:${getWidth(
       "qty"
@@ -1057,12 +1057,23 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
     });
   });
   // Деталь з live-фільтром
-  tbody.querySelectorAll(".detail-input-Excel").forEach((input) => {
+  tbody.querySelectorAll(".detail-input-Excel").forEach((el) => {
+    const input = el as HTMLInputElement | HTMLTextAreaElement;
+
+    // Авто-розширення висоти
+    const autoResize = () => {
+      input.style.height = 'auto';
+      input.style.height = input.scrollHeight + 'px';
+    };
+    // Ініціалізація висоти
+    setTimeout(autoResize, 0);
+
     input.addEventListener("click", (e) => {
       e.stopPropagation();
       showDropdownList(e.target as HTMLElement, detailsListCache);
     });
     input.addEventListener("input", (e) => {
+      autoResize(); // Авто-ресайз при введенні
       const target = e.target as HTMLInputElement;
       const index = parseInt(target.dataset.index || "0");
       const value = target.value;

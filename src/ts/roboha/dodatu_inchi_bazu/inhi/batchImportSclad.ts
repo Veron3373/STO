@@ -396,18 +396,26 @@ function parseBatchData(text: string) {
       row.unitValid = false;
     }
 
-    // Магазин: якщо порожній - невалідний, якщо заповнений - перевіряємо чи є в списку
+    // Магазин: якщо порожній - невалідний, якщо заповнений - завжди валідний (створимо якщо немає)
     if (!row.shop || !row.shop.trim()) {
       row.shopValid = false;
     } else {
-      row.shopValid = shopsListCache.includes(row.shop);
+      // Перевіряємо чи є в списку (для підсвічування), але завжди валідний
+      const existsInCache = shopsListCache.includes(row.shop);
+      row.shopValid = true; // завжди валідний, якщо заповнений
+      // Зберігаємо інфо чи існує (для кольору)
+      (row as any).shopExists = existsInCache;
     }
 
-    // Деталь: якщо порожня - невалідна, якщо заповнена - перевіряємо чи є в списку
+    // Деталь: якщо порожня - невалідна, якщо заповнена - завжди валідна (створимо якщо немає)
     if (!row.detail || !row.detail.trim()) {
       row.detailValid = false;
     } else {
-      row.detailValid = detailsListCache.includes(row.detail);
+      // Перевіряємо чи є в списку (для підсвічування), але завжди валідна
+      const existsInCache = detailsListCache.includes(row.detail);
+      row.detailValid = true; // завжди валідна, якщо заповнена
+      // Зберігаємо інфо чи існує (для кольору)
+      (row as any).detailExists = existsInCache;
     }
 
     // Акт: порожній - валідний (необов'язкове поле), заповнений - перевіряємо
@@ -422,7 +430,9 @@ function parseBatchData(text: string) {
       }
     }
 
-    // Фінальна перевірка на заповненість обов'язкових полів
+    // Фінальна перевірка: тільки обов'язкові поля та їх валідність
+    // shopValid і detailValid тепер завжди true якщо заповнені
+    // Помилка тільки якщо: порожні обов'язкові поля, невалідна одиниця, невалідний акт
     if (
       isNaN(row.qty) ||
       isNaN(row.price) ||
@@ -432,9 +442,9 @@ function parseBatchData(text: string) {
       !row.detail ||
       !row.unit ||
       !row.shop ||
-      !row.shopValid ||
-      !row.detailValid ||
-      !row.unitValid
+      !row.unitValid ||
+      // Акт перевіряємо тільки якщо заповнений
+      (row.actNo && row.actNo.trim() && (!row.actValid || row.actClosed))
     ) {
       row.status = "Помилка валідації";
     }
@@ -668,9 +678,10 @@ function renderBatchTable(data: any[]) {
             ? "success-Excel"
             : "";
     const getWidth = (col: string) => widths.get(col) || 100;
-    const shopTdClass = row.shop && !row.shopValid ? "invalid-shop" : "";
-    const detailTdClass =
-      row.detail && !row.detailValid ? "invalid-detail" : "";
+    // Магазин: жовтий якщо не існує в базі (буде створено)
+    const shopTdClass = row.shop && !(row as any).shopExists ? "invalid-shop" : "";
+    // Деталь: жовтий якщо не існує в базі (буде створено)
+    const detailTdClass = row.detail && !(row as any).detailExists ? "invalid-detail" : "";
     const unitTdClass = !row.unitValid ? "invalid-unit" : "";
     const actTdClass =
       row.actNo && !row.actValid
@@ -802,8 +813,9 @@ function revalidateRow(index: number) {
   const areNumbersValid =
     !isNaN(row.qty) && !isNaN(row.price) && !isNaN(row.clientPrice);
 
-  // Перевірка валідності (shopValid / detailValid / unitValid / actValid)
-  // actValid перевіряємо тільки якщо actNo вказано
+  // Перевірка валідності
+  // shopValid і detailValid тепер завжди true якщо заповнені
+  // Перевіряємо тільки unitValid та actValid (якщо акт заповнений)
   let isActValid = true;
   if (row.actNo && row.actNo.trim()) {
     isActValid = row.actValid && !row.actClosed;
@@ -812,8 +824,6 @@ function revalidateRow(index: number) {
   const isValid =
     isFilled &&
     areNumbersValid &&
-    row.shopValid &&
-    row.detailValid &&
     row.unitValid &&
     isActValid;
 
@@ -992,15 +1002,22 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       const index = parseInt(target.dataset.index || "0");
       const value = target.value.trim();
       const td = target.closest("td");
-      const isValid = !value || shopsListCache.includes(value);
-      parsedDataGlobal[index].shopValid = isValid;
-      if (!isValid && value) {
-        if (td) {
-          td.classList.add("invalid-shop");
-        }
+
+      if (!value) {
+        // Порожній - невалідний
+        parsedDataGlobal[index].shopValid = false;
+        (parsedDataGlobal[index] as any).shopExists = false;
       } else {
-        if (td) {
-          td.classList.remove("invalid-shop");
+        // Заповнений - завжди валідний, але перевіряємо чи існує
+        const existsInCache = shopsListCache.includes(value);
+        parsedDataGlobal[index].shopValid = true;
+        (parsedDataGlobal[index] as any).shopExists = existsInCache;
+
+        // Колір: жовтий якщо не існує
+        if (!existsInCache) {
+          if (td) td.classList.add("invalid-shop");
+        } else {
+          if (td) td.classList.remove("invalid-shop");
         }
       }
       revalidateRow(index);
@@ -1039,15 +1056,22 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       const index = parseInt(target.dataset.index || "0");
       const value = target.value.trim();
       const td = target.closest("td");
-      const isValid = !value || detailsListCache.includes(value);
-      parsedDataGlobal[index].detailValid = isValid;
-      if (!isValid && value) {
-        if (td) {
-          td.classList.add("invalid-detail");
-        }
+
+      if (!value) {
+        // Порожня - невалідна
+        parsedDataGlobal[index].detailValid = false;
+        (parsedDataGlobal[index] as any).detailExists = false;
       } else {
-        if (td) {
-          td.classList.remove("invalid-detail");
+        // Заповнена - завжди валідна, але перевіряємо чи існує
+        const existsInCache = detailsListCache.includes(value);
+        parsedDataGlobal[index].detailValid = true;
+        (parsedDataGlobal[index] as any).detailExists = existsInCache;
+
+        // Колір: жовтий якщо не існує
+        if (!existsInCache) {
+          if (td) td.classList.add("invalid-detail");
+        } else {
+          if (td) td.classList.remove("invalid-detail");
         }
       }
       revalidateRow(index);
@@ -1101,8 +1125,10 @@ function updateDropdownList(
         parsedDataGlobal[index].unitValid = true;
       } else if (field === "shop") {
         parsedDataGlobal[index].shopValid = true;
+        (parsedDataGlobal[index] as any).shopExists = true; // вибрано зі списку = існує
       } else if (field === "detail") {
         parsedDataGlobal[index].detailValid = true;
+        (parsedDataGlobal[index] as any).detailExists = true; // вибрано зі списку = існує
       } else if (field === "actNo") {
         parsedDataGlobal[index].actValid = true;
         const actIdNum = parseInt(option, 10);

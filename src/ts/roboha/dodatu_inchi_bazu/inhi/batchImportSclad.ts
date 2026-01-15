@@ -1,4 +1,5 @@
 // src\ts\roboha\dodatu_inchi_bazu\inhi\batchImportSclad.ts
+// Updated: 2026-01-15 19:18
 // === Guards for single init / single upload ===
 let batchInitDone = false; // щоб не ініціалізувати слухачі повторно
 let isUploading = false; // щоб не запустити upload кілька разів
@@ -329,7 +330,7 @@ function createBatchImportModal() {
           </table>
         </div>
         <div class="batch-buttons-Excel">
-          <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Завантажити деталі</button>
+          <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Розпарсити</button>
           <button id="batch-upload-btn-Excel" class="batch-btn-Excel upload-Excel hidden-all_other_bases">✅ Завантажити</button>
         </div>
       </div>

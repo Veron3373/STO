@@ -490,7 +490,12 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
       const textWidth = ctx.measureText(value).width + 40;
       if (textWidth > maxWidth) maxWidth = textWidth;
     });
-    widths.set(col, Math.min(Math.ceil(maxWidth), 350));
+    let limit = 130;
+    if (col === "detail") limit = 250;
+    else if (col === "shop") limit = 160;
+    else if (col === "catno") limit = 150;
+
+    widths.set(col, Math.min(Math.ceil(maxWidth), limit));
   });
   return widths;
 }

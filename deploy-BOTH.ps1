@@ -51,13 +51,13 @@ Write-Host "  DEPLOYING TO GITHUB PAGES" -ForegroundColor Magenta
 Write-Host "========================================" -ForegroundColor Magenta
 Write-Host ""
 
-# GitHub Pages deploy
+# GitHub Pages deploy - simplified
 git checkout gh-pages
-git merge main -m "Merge main to gh-pages"
+git pull origin gh-pages --rebase
 Copy-Item -Path "dist\*" -Destination "." -Recurse -Force
 git add .
 git commit -m "GitHub Pages deploy: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-git push origin gh-pages
+git push origin gh-pages --force
 git checkout main
 
 Write-Host ""
@@ -66,7 +66,7 @@ Write-Host "  DEPLOYING TO VERCEL" -ForegroundColor Magenta
 Write-Host "========================================" -ForegroundColor Magenta
 Write-Host ""
 
-vercel --prod --yes
+vercel --prod --yes --force
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green

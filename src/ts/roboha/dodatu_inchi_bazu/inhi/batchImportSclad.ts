@@ -1508,8 +1508,9 @@ function updateRowStatus(
       const deleteBtn = statusCell.querySelector(".delete-row-btn-Excel");
       deleteBtn?.remove();
 
-      // 🔒 Блокуємо всі інпути в рядку після успішного завантаження
-      const inputs = row.querySelectorAll<HTMLInputElement>('.cell-input-Excel');
+      // 🔒 Блокуємо тільки звичайні інпути (НЕ combo/dropdown)
+      // Виключаємо: shop, detail, actNo, unit (вони мають клас cell-input-combo-Excel)
+      const inputs = row.querySelectorAll<HTMLInputElement>('.cell-input-Excel:not(.cell-input-combo-Excel)');
       inputs.forEach(input => {
         input.readOnly = true;
         input.style.backgroundColor = '#f5f5f5';

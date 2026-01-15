@@ -93,13 +93,13 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       else if (qty < 0) colorStyle = "color: #e40b0b"; // червона
       else colorStyle = "color: #28a745"; // зелена
 
-      // ✅ ВИПРАВЛЕНО: Вся інформація в дужках має однаковий колір залежно від кількості
-      const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
+      // ✅ НОВИЙ ПОРЯДОК: Назва (синя) - Номер (помаранчевий підкреслений) (К-ть і ціна) Дата
+      const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #ff8c00; font-weight: 500; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
 
       return {
         value: p.name,
         sclad_id: p.sclad_id,
-        label: `${p.part_number} - ${p.name} (К-ть: ${qty} ціна ${priceRounded} - грн)${timeOn ? ' ' + timeOn : ''}`,
+        label: `${p.name} - ${p.part_number} (К-ть: ${qty} ціна ${priceRounded} - грн)${timeOn ? ' ' + timeOn : ''}`,
         labelHtml: labelHtml,
         fullName: p.name,
         itemType: "detail" as const,

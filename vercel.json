@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "stobraclavec",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
@@ -10,7 +11,7 @@
       "destination": "/bukhhalteriya.html"
     },
     {
-      "source": "/planyvannya", 
+      "source": "/planyvannya",
       "destination": "/planyvannya.html"
     },
     {

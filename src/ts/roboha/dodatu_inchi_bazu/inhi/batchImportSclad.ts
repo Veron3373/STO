@@ -1331,7 +1331,7 @@ async function uploadBatchData(data: any[]) {
       const offInput = document.createElement("input");
       offInput.id = "sclad_kilkist_off";
       offInput.type = "hidden";
-      offInput.value = String(row.qty || 0);
+      offInput.value = "0";
       document.body.appendChild(offInput);
 
       // заповнюємо інпути під handleScladCrud

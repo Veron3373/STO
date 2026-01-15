@@ -69,12 +69,12 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
   }
 
   await ensureSkladLoaded();
-  
+
   console.log(`🔎 Фільтрація для "${q}" (works: ${globalCache.works.length}, skladParts: ${globalCache.skladParts.length})`);
 
   // Фільтруємо деталі зі складу (по part_number або name)
   const filteredSkladParts = globalCache.skladParts
-    .filter((p) => 
+    .filter((p) =>
       p.part_number.toLowerCase().includes(q) ||
       p.name.toLowerCase().includes(q)
     )
@@ -83,17 +83,17 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       const qty = Number(p.quantity) || 0;
       const price = Math.round(Number(p.price) || 0);
       const priceRounded = formatUA(price);
-      
+
       // Форматування дати
       const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
-      
-      // Колір для кількості
+
+      // Колір для кількості та всієї інформації в дужках
       let colorStyle = "";
       if (qty === 0) colorStyle = "color: #888"; // сіра
       else if (qty < 0) colorStyle = "color: #e40b0b"; // червона
-      else colorStyle = "color: #1565c0"; // синя
+      else colorStyle = "color: #28a745"; // зелена
 
-      // ✅ ВИПРАВЛЕНО: Дата за дужками чорним кольором, формат "К-ть: X по ціна-грн"
+      // ✅ ВИПРАВЛЕНО: Вся інформація в дужках має однаковий колір залежно від кількості
       const labelHtml = `<span style="color: #1565c0">${p.part_number} - ${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
 
       return {
@@ -108,7 +108,7 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
 
   // Фільтруємо роботи з worksWithId (пошук по work_id або name)
   const filteredWorks = globalCache.worksWithId
-    .filter((w) => 
+    .filter((w) =>
       w.work_id.toLowerCase().includes(q) ||
       (w.name && w.name.toLowerCase().includes(q))
     )
@@ -250,20 +250,20 @@ function formatUA(n: number) {
  */
 export function shortenTextToFirstAndLast(fullText: string): string {
   if (!fullText) return fullText;
-  
+
   // Розбиваємо на речення по крапці
   // Шукаємо крапку за якою йде пробіл та велика літера (або кінець тексту)
   const sentences = fullText
     .split(/\.(?:\s+|$)/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-  
+
   // Якщо менше 3 речень - не скорочуємо
   if (sentences.length < 3) return fullText;
-  
+
   const firstSentence = sentences[0];
   const lastSentence = sentences[sentences.length - 1];
-  
+
   // Додаємо крапку після першого речення та перед крапками
   return `${firstSentence}.....${lastSentence}`;
 }
@@ -308,7 +308,7 @@ export function expandAllNamesInTable(): Map<HTMLElement, string> {
   nameCells.forEach((cell) => {
     const currentText = cell.textContent?.trim() || "";
     originalTexts.set(cell, currentText);
-    
+
     // Спочатку перевіряємо data-full-name атрибут
     const fullNameAttr = cell.getAttribute("data-full-name");
     if (fullNameAttr) {
@@ -399,8 +399,8 @@ function showCatalogInfo(target: HTMLElement, sclad_id: number) {
     qty < 0
       ? `<span class="neg">${qty}</span>`
       : qty === 0
-      ? `<span class="neutral">${qty}</span>`
-      : `<span class="positive">${qty}</span>`;
+        ? `<span class="neutral">${qty}</span>`
+        : `<span class="positive">${qty}</span>`;
 
   const box = document.createElement("div");
   box.className = "catalog-info-popover";

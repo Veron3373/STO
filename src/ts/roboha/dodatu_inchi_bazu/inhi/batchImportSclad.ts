@@ -1508,14 +1508,15 @@ function updateRowStatus(
       const deleteBtn = statusCell.querySelector(".delete-row-btn-Excel");
       deleteBtn?.remove();
 
-      // 🔒 Блокуємо тільки звичайні інпути (НЕ combo/dropdown)
-      // Виключаємо: shop, detail, actNo, unit (вони мають клас cell-input-combo-Excel)
-      const inputs = row.querySelectorAll<HTMLInputElement>('.cell-input-Excel:not(.cell-input-combo-Excel)');
+      // 🔒 Блокуємо АБСОЛЮТНО ВСІ інпути (включно з dropdown)
+      const inputs = row.querySelectorAll<HTMLInputElement>('.cell-input-Excel');
       inputs.forEach(input => {
         input.readOnly = true;
+        input.disabled = true; // Для надійності
         input.style.backgroundColor = '#f5f5f5';
         input.style.cursor = 'not-allowed';
         input.style.color = '#666';
+        input.style.pointerEvents = 'none'; // Забороняємо кліки (щоб dropdown не відкривався)
       });
     }
   }

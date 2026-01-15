@@ -93,8 +93,8 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       else if (qty < 0) colorStyle = "color: #e40b0b"; // червона
       else colorStyle = "color: #28a745"; // зелена
 
-      // ✅ НОВИЙ ПОРЯДОК: Назва (синя) - Номер (помаранчевий підкреслений) (К-ть і ціна) Дата
-      const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #ff8c00; font-weight: 500; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
+      // ✅ НОВИЙ ПОРЯДОК: Назва (синя) - Номер (чорний підкреслений) (К-ть і ціна) Дата
+      const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #000; font-weight: 500; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
 
       return {
         value: p.name,

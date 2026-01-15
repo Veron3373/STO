@@ -329,7 +329,7 @@ function createBatchImportModal() {
           </table>
         </div>
         <div class="batch-buttons-Excel">
-          <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Розпарсити</button>
+          <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Завантажити деталі</button>
           <button id="batch-upload-btn-Excel" class="batch-btn-Excel upload-Excel hidden-all_other_bases">✅ Завантажити</button>
         </div>
       </div>
@@ -442,9 +442,7 @@ function parseBatchData(text: string) {
       !row.detail ||
       !row.unit ||
       !row.shop ||
-      !row.unitValid ||
-      // Акт перевіряємо тільки якщо заповнений
-      (row.actNo && row.actNo.trim() && (!row.actValid || row.actClosed))
+      !row.unitValid
     ) {
       row.status = "Помилка валідації";
     }
@@ -815,17 +813,13 @@ function revalidateRow(index: number) {
 
   // Перевірка валідності
   // shopValid і detailValid тепер завжди true якщо заповнені
-  // Перевіряємо тільки unitValid та actValid (якщо акт заповнений)
-  let isActValid = true;
-  if (row.actNo && row.actNo.trim()) {
-    isActValid = row.actValid && !row.actClosed;
-  }
+  // Перевіряємо тільки unitValid
+  // Акт взагалі не перевіряємо - він необов'язковий
 
   const isValid =
     isFilled &&
     areNumbersValid &&
-    row.unitValid &&
-    isActValid;
+    row.unitValid;
 
   const statusCell = document.querySelector(
     `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`

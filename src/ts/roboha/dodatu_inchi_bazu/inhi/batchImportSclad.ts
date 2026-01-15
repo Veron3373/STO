@@ -300,6 +300,23 @@ function createBatchImportModal() {
   modal.id = batchModalId;
   modal.className = "modal-overlay-all_other_bases hidden-all_other_bases";
   modal.innerHTML = `
+    <style>
+      .batch-table-container-Excel {
+        overflow-y: auto;
+        max-height: 65vh;
+        position: relative;
+      }
+      .batch-table-Excel thead th {
+        position: sticky;
+        top: 0;
+        z-index: 20; /* Higher than cell content */
+        background-color: #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+      }
+      .excel-dropdown-list {
+        z-index: 99999 !important;
+      }
+    </style>
     <div class="modal-all_other_bases batch-modal-Excel">
       <button class="modal-close-all_other_bases">×</button>
       <div class="modal-content-Excel">
@@ -525,17 +542,24 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
   const rect = input.getBoundingClientRect();
   const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
   const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  let maxContentWidth = rect.width;
-  if (ctx) {
-    ctx.font = "14px Arial";
-    list.querySelectorAll("li").forEach((li) => {
-      const text = (li as HTMLElement).textContent || "";
-      const textWidth = ctx.measureText(text).width + 50;
-      if (textWidth > maxContentWidth) maxContentWidth = textWidth;
-    });
+
+  // Оптимізація: розраховуємо ширину ТІЛЬКИ якщо вона ще не задана
+  if (!list.style.width) {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    let maxContentWidth = rect.width;
+    if (ctx) {
+      ctx.font = "14px Arial";
+      list.querySelectorAll("li").forEach((li) => {
+        const text = (li as HTMLElement).textContent || "";
+        const textWidth = ctx.measureText(text).width + 50;
+        if (textWidth > maxContentWidth) maxContentWidth = textWidth;
+      });
+    }
+    const finalWidth = Math.min(Math.max(maxContentWidth, rect.width, 200), 500);
+    list.style.width = `${finalWidth}px`;
   }
+
   const firstItem = list.querySelector("li") as HTMLElement | null;
   const itemHeight = firstItem?.offsetHeight || 30;
   const totalItems = list.children.length;
@@ -549,9 +573,9 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
   const effectiveMaxVisible = Math.min(8, Math.max(3, maxItemsFromSpace));
   const visibleItems = Math.min(effectiveMaxVisible, totalItems);
   const listHeight = visibleItems * itemHeight + padding;
-  const finalWidth = Math.min(Math.max(maxContentWidth, rect.width, 200), 500);
+
   list.style.maxHeight = `${listHeight}px`;
-  list.style.width = `${finalWidth}px`;
+
   list.style.top = `${useAbove
     ? scrollY + rect.top - listHeight - gap
     : scrollY + rect.bottom + gap
@@ -1561,6 +1585,16 @@ export async function initBatchImport() {
   const existingConfirmModal = document.getElementById(confirmModalId);
   if (!existingConfirmModal) {
     document.body.appendChild(createConfirmModal());
+  }
+
+  // Слухач скролу для "прилипання" дропдауну до інпута
+  const tableContainer = document.getElementById("batch-table-container-Excel");
+  if (tableContainer) {
+    tableContainer.addEventListener("scroll", () => {
+      if (currentDropdownInput && currentDropdownList) {
+        positionDropdown(currentDropdownInput, currentDropdownList);
+      }
+    });
   }
 
   // Глобальний клік для закриття дропдаунів — призначаємо 1 раз

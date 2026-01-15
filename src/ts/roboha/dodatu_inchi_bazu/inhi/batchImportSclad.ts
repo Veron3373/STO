@@ -1278,32 +1278,72 @@ async function uploadBatchData(data: any[]) {
     const existingShops = new Map<string, number>();
     const existingDetails = new Map<string, number>();
 
-    // 3) Shops
+    // 3) Shops - з перевіркою на дублікати
+    console.log(`🏪 Обробка ${uniqueShops.length} унікальних магазинів...`);
     for (const shopName of uniqueShops) {
+      // Спочатку перевіряємо чи вже є в кеші (створений раніше в цьому ж батчі)
+      if (existingShops.has(shopName)) {
+        console.log(`✓ Магазин "${shopName}" вже в кеші, пропускаємо`);
+        continue;
+      }
+
       let shopId = await getShopIdByName(shopName);
       if (!shopId) {
+        console.log(`➕ Створюємо новий магазин: "${shopName}"`);
         resetShopState();
         shopEditState.currentName = shopName;
         shopEditState.touched = true;
         await tryHandleShopsCrud();
+
+        // Невелика затримка для синхронізації з БД
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         shopId = await getShopIdByName(shopName);
+        if (shopId) {
+          console.log(`✅ Магазин "${shopName}" створено з ID: ${shopId}`);
+        } else {
+          console.warn(`⚠️ Не вдалося отримати ID для магазину "${shopName}"`);
+        }
+      } else {
+        console.log(`✓ Магазин "${shopName}" вже існує з ID: ${shopId}`);
       }
+
       if (shopId) {
         await ensureShopDataName(shopId, shopName);
         existingShops.set(shopName, shopId);
       }
     }
 
-    // 4) Details
+    // 4) Details - з перевіркою на дублікати
+    console.log(`📦 Обробка ${uniqueDetails.length} унікальних деталей...`);
     for (const detailName of uniqueDetails) {
+      // Спочатку перевіряємо чи вже є в кеші (створена раніше в цьому ж батчі)
+      if (existingDetails.has(detailName)) {
+        console.log(`✓ Деталь "${detailName}" вже в кеші, пропускаємо`);
+        continue;
+      }
+
       let detailId = await getDetailIdByName(detailName);
       if (!detailId) {
+        console.log(`➕ Створюємо нову деталь: "${detailName}"`);
         resetDetailState();
         detailEditState.currentName = detailName;
         detailEditState.touched = true;
         await tryHandleDetailsCrud();
+
+        // Невелика затримка для синхронізації з БД
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         detailId = await getDetailIdByName(detailName);
+        if (detailId) {
+          console.log(`✅ Деталь "${detailName}" створено з ID: ${detailId}`);
+        } else {
+          console.warn(`⚠️ Не вдалося отримати ID для деталі "${detailName}"`);
+        }
+      } else {
+        console.log(`✓ Деталь "${detailName}" вже існує з ID: ${detailId}`);
       }
+
       if (detailId) {
         await ensureDetailDataName(detailId, detailName);
         existingDetails.set(detailName, detailId);
@@ -1450,9 +1490,14 @@ function updateRowStatus(
   success: boolean,
   statusText: string
 ) {
-  const statusCell = document.querySelector(
-    `#batch-table-Excel tbody tr:nth-child(${rowIndex + 1}) .status-cell-Excel`
+  const row = document.querySelector(
+    `#batch-table-Excel tbody tr:nth-child(${rowIndex + 1})`
   );
+
+  if (!row) return;
+
+  const statusCell = row.querySelector('.status-cell-Excel');
+
   if (statusCell) {
     const statusTextEl = statusCell.querySelector(".status-text-Excel");
     if (statusTextEl) statusTextEl.textContent = statusText;
@@ -1462,6 +1507,15 @@ function updateRowStatus(
     if (success) {
       const deleteBtn = statusCell.querySelector(".delete-row-btn-Excel");
       deleteBtn?.remove();
+
+      // 🔒 Блокуємо всі інпути в рядку після успішного завантаження
+      const inputs = row.querySelectorAll<HTMLInputElement>('.cell-input-Excel');
+      inputs.forEach(input => {
+        input.readOnly = true;
+        input.style.backgroundColor = '#f5f5f5';
+        input.style.cursor = 'not-allowed';
+        input.style.color = '#666';
+      });
     }
   }
 }

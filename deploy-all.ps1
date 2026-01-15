@@ -3,47 +3,49 @@ $Root = $PSScriptRoot
 Set-Location -LiteralPath $Root
 
 Write-Host "========================================"
-Write-Host "  Auto Deploy to GitHub & Vercel"
+Write-Host "  Auto Deploy: Checking & Publishing"
 Write-Host "========================================"
 Write-Host ""
 
-# Отримати поточну дату і час
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
 
-Write-Host "[1/5] Adding all changes..."
-git add -A
-
-Write-Host "[2/5] Committing changes..."
-git commit -m "deploy: $timestamp - auto sync all changes"
-if ($LASTEXITCODE -ne 0) { 
-    Write-Host "Nothing to commit or commit failed"
+# 1. Build & Check
+Write-Host "[1/4] Building & CSS/TS Checking..."
+# Використовуємо npm run build, який у вас запускає "tsc -b && vite build"
+npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ BUILD FAILED! Fixing required before deploy." -ForegroundColor Red
+    exit 1
 }
+Write-Host "✅ Build Success!" -ForegroundColor Green
 
-Write-Host "[3/5] Pushing to main branch..."
+# 2. Git Commit & Push (Source Code -> Vercel)
+Write-Host "[2/4] Saving source code to GitHub (main)..."
+git add -A
+git commit -m "deploy: $timestamp"
+# Ігноруємо помилку, якщо немає змін для коміту
+if ($LASTEXITCODE -ne 0) { Write-Host "No changes to commit (skipping commit step)" }
+
+Write-Host "Pushing to main..."
 git push origin main
 if ($LASTEXITCODE -ne 0) { 
-    Write-Host "Push to main failed!"
+    Write-Host "❌ Push failed!" -ForegroundColor Red
     exit 1 
 }
 
-Write-Host "[4/5] Syncing gh-pages with main..."
-git checkout gh-pages
-git reset --hard main
-git push origin gh-pages --force
-git checkout main
-
+# 3. Deploy to GitHub Pages (Dist folder)
+Write-Host "[3/4] Deploying to GitHub Pages..."
+# Використовуємо ваш існуючий скрипт, який правильний для React
+npm run deploy
 if ($LASTEXITCODE -ne 0) { 
-    Write-Host "gh-pages sync failed!"
+    Write-Host "❌ GitHub Pages deploy failed!" -ForegroundColor Red
     exit 1 
 }
 
-Write-Host "[5/5] Done!"
+Write-Host "[4/4] DONE!"
 Write-Host ""
 Write-Host "========================================"
-Write-Host "  Successfully deployed to:"
+Write-Host "  ✅ ALL SYSTEMS GO"
 Write-Host "  - GitHub Pages: https://veron3373.github.io/STO/"
 Write-Host "  - Vercel: https://stobraclavec.vercel.app"
 Write-Host "========================================"
-Write-Host ""
-Write-Host "Vercel will auto-deploy in 1-2 minutes..."
-Write-Host "GitHub Pages will auto-deploy in 1-2 minutes..."

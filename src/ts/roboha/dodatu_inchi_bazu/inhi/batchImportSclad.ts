@@ -265,14 +265,13 @@ function createConfirmModal() {
   `;
   return modal;
 }
-function showConfirmModal(count: number): Promise<boolean> {
+function showConfirmModal(count: number, totalCount: number): Promise<boolean> {
   return new Promise((resolve) => {
     const modal = document.getElementById(confirmModalId);
     if (!modal) return resolve(false);
     const message = modal.querySelector(".confirm-message-Excel");
     if (message) {
-      message.textContent = `Завантажити ${count} ${count === 1 ? "запис" : count < 5 ? "записи" : "записів"
-        } в базу даних?`;
+      message.textContent = `Завантажити ${count} із ${totalCount} записів в базу даних?`;
     }
     modal.classList.remove("hidden-all_other_bases");
     const yesBtn = document.getElementById("confirm-yes-Excel");
@@ -305,13 +304,19 @@ function createBatchImportModal() {
         overflow-y: auto;
         max-height: 65vh;
         position: relative;
+        border: 1px solid #e2e8f0; /* added border to container */
+      }
+      .batch-table-Excel {
+        border-collapse: separate; /* critical for sticky headers in some contexts */
+        border-spacing: 0;
       }
       .batch-table-Excel thead th {
-        position: sticky;
-        top: 0;
-        z-index: 20; /* Higher than cell content */
-        background-color: #e2e8f0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 20;
+        background-color: #e2e8f0 !important;
+        border-bottom: 2px solid #cbd5e1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
       }
       .excel-dropdown-list {
         z-index: 99999 !important;
@@ -1785,7 +1790,7 @@ export async function initBatchImport() {
         return;
       }
 
-      const confirmed = await showConfirmModal(validData.length);
+      const confirmed = await showConfirmModal(validData.length, currentData.length);
       if (confirmed) {
         await uploadBatchData(validData); // ⬅️ тепер захищено isUploading
       }

@@ -1119,12 +1119,15 @@ function updateDropdownList(
       if (field === "unit") {
         parsedDataGlobal[index].unitValid = true;
       } else if (field === "shop") {
+        parsedDataGlobal[index].shop = option; // явно оновлюємо
         parsedDataGlobal[index].shopValid = true;
         (parsedDataGlobal[index] as any).shopExists = true; // вибрано зі списку = існує
       } else if (field === "detail") {
+        parsedDataGlobal[index].detail = option; // явно оновлюємо
         parsedDataGlobal[index].detailValid = true;
         (parsedDataGlobal[index] as any).detailExists = true; // вибрано зі списку = існує
       } else if (field === "actNo") {
+        parsedDataGlobal[index].actNo = option; // явно оновлюємо
         parsedDataGlobal[index].actValid = true;
         const actIdNum = parseInt(option, 10);
         parsedDataGlobal[index].actClosed =
@@ -1133,8 +1136,30 @@ function updateDropdownList(
           if (td) td.classList.add("closed-act");
         }
       }
+
+      // Примусово оновлюємо статус
       recalculateAndApplyWidths();
       revalidateRow(index);
+
+      // Додатково: якщо всі поля валідні, явно встановлюємо статус
+      const row = parsedDataGlobal[index];
+      if (row.status === "Помилка валідації") {
+        // Перевіряємо чи всі обов'язкові поля заповнені
+        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit;
+        const numbersValid = !isNaN(row.qty) && !isNaN(row.price);
+        if (allFilled && numbersValid && row.unitValid) {
+          row.status = "Готовий";
+          const statusCell = document.querySelector(
+            `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`
+          );
+          if (statusCell) {
+            statusCell.className = "status-cell-Excel ready-Excel";
+            const statusText = statusCell.querySelector(".status-text-Excel");
+            if (statusText) statusText.textContent = "Готовий";
+          }
+        }
+      }
+
       closeDropdownList();
     });
     currentDropdownList!.appendChild(li);

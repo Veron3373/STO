@@ -270,7 +270,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
 // 🔹 Застосовує шпалери до body.page-2
 export function applyWallpapers(): void {
   const { wallpaperMain } = globalCache.generalSettings;
-  
+
   // Застосовуємо шпалери для основної сторінки (body.page-2)
   if (wallpaperMain) {
     const styleId = "dynamic-wallpaper-main";
@@ -292,6 +292,7 @@ export const ACT_ITEMS_TABLE_CONTAINER_ID = "act-items-table-container";
 const GLOBAL_DATA_CACHE_TTL = 5 * 60 * 1000; // 5 хвилин
 let lastGlobalDataLoadTime: number = 0;
 let globalDataLoaded: boolean = false;
+let isScladRealtimeSubscribed: boolean = false; // ← Флаг підписки Realtime
 
 /** Примусово оновити кеш (наприклад, після додавання нових робіт/деталей) */
 export function invalidateGlobalDataCache(): void {
@@ -351,7 +352,7 @@ async function fetchAllWithPagination<T>(
       .from(tableName)
       .select(selectFields)
       .range(from, from + step - 1);
-    
+
     if (orderBy) {
       query = query.order(orderBy, { ascending: true });
     }
@@ -540,10 +541,14 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
       }) || [];
 
     globalCache.skladParts = dedupeSklad(mapped);
-    
+
     // ✅ Оновлюємо час кешу після успішного завантаження
     lastGlobalDataLoadTime = Date.now();
     globalDataLoaded = true;
+
+    // 🔥 Активуємо Realtime підписку на зміни складу
+    initScladRealtimeSubscription();
+
     console.log("✅ Глобальні дані завантажено та закешовано");
   } catch (error) {
     console.error("❌ Помилка завантаження глобальних даних:", error);
@@ -576,7 +581,7 @@ export async function loadSkladLite(): Promise<void> {
         diff: off - on,
       };
     });
-    
+
     console.log(`✅ loadSkladLite: завантажено ${globalCache.skladLite.length} записів`);
   } catch (e) {
     console.error("💥 loadSkladLite(): критична помилка:", e);
@@ -645,4 +650,92 @@ export async function ensureSkladLoaded(): Promise<void> {
       };
     }) || [];
   globalCache.skladParts = dedupeSklad(mapped);
+}
+
+/* ===================== REALTIME SUBSCRIPTION (SCLAD) ===================== */
+
+/**
+ * Ініціалізує Pro Realtime підписку на таблицю sclad.
+ * Слухає INSERT, UPDATE, DELETE і синхронізує globalCache.skladParts.
+ */
+export function initScladRealtimeSubscription() {
+  if (isScladRealtimeSubscribed) {
+    console.log("⚠️ Realtime для sclad вже активний, пропускаємо ініціалізацію.");
+    return;
+  }
+  isScladRealtimeSubscribed = true;
+
+  console.log("📡 Ініціалізація Realtime підписки на sclad...");
+
+  supabase
+    .channel("sclad-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "sclad" },
+      (payload) => {
+        console.log(`🔔 Sclad Realtime event: ${payload.eventType}`, payload);
+        handleScladChange(payload);
+      }
+    )
+    .subscribe((status) => {
+      console.log(`📡 Sclad Realtime status: ${status}`);
+    });
+}
+
+function handleScladChange(payload: any) {
+  const { eventType, new: newRecord, old: oldRecord } = payload;
+
+  if (eventType === "DELETE") {
+    // 🗑️ Видалення запису
+    if (oldRecord && oldRecord.sclad_id) {
+      globalCache.skladParts = globalCache.skladParts.filter(
+        (p) => p.sclad_id !== oldRecord.sclad_id
+      );
+      console.log(`🗑️ Видалено зі складу (ID: ${oldRecord.sclad_id})`);
+    }
+  } else if (eventType === "INSERT") {
+    // ➕ Додавання запису
+    if (newRecord) {
+      const mapped = mapScladRecord(newRecord);
+      // Додаємо в початок або кінець? В ensureSkladLoaded order desc, але тут можна просто push, 
+      // бо автодоповнення все одно фільтрує.
+      globalCache.skladParts.push(mapped);
+      console.log(`➕ Додано на склад: ${mapScladRecord.name} (ID: ${newRecord.sclad_id})`);
+    }
+  } else if (eventType === "UPDATE") {
+    // 🔄 Оновлення запису
+    if (newRecord) {
+      const updated = mapScladRecord(newRecord);
+      const index = globalCache.skladParts.findIndex(
+        (p) => p.sclad_id === newRecord.sclad_id
+      );
+
+      if (index !== -1) {
+        globalCache.skladParts[index] = updated;
+        console.log(`🔄 Оновлено на складі: ${updated.name} (ID: ${newRecord.sclad_id})`);
+      } else {
+        // Якщо раптом немає в кеші (наприклад, було додано поки ми були офлайн?), додаємо
+        globalCache.skladParts.push(updated);
+      }
+    }
+  }
+}
+
+/** Допоміжна функція для мапінгу "сирого" запису з Realtime у формат globalCache */
+function mapScladRecord(r: any) {
+  const on = Number(r.kilkist_on ?? 0);
+  const off = Number(r.kilkist_off ?? 0);
+  const shopName = extractShopNameFromAny(r.shops);
+  return {
+    sclad_id: Number(r.sclad_id ?? 0),
+    part_number: String(r.part_number || "").trim(),
+    name: String(r.name || "").trim(),
+    price: Number(r.price ?? 0),
+    kilkist_on: on,
+    kilkist_off: off,
+    quantity: on - off,
+    unit: r.unit_measurement ?? null,
+    shop: shopName,
+    time_on: r.time_on ?? null,
+  };
 }

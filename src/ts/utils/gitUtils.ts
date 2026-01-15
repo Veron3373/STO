@@ -38,7 +38,7 @@ export async function getGitName(): Promise<string> {
   const hostname = window.location.hostname;
   
   // На Vercel або localhost - просто повертаємо fallback
-  if (hostname.includes('vercel.app') || hostname === 'localhost' || hostname === '127.0.0.1') {
+  if (hostname.includes('main.sto-braclavets.pages.dev') || hostname.includes('sto-braclavets.pages.dev') || hostname === 'localhost' || hostname === '127.0.0.1') {
     return getGitNameFallback();
   }
   

@@ -431,14 +431,14 @@ function parseBatchData(text: string) {
     }
 
     // Фінальна перевірка: тільки обов'язкові поля та їх валідність
-    // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Рахунок №, Одиниця
+    // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця
+    // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
     if (
       isNaN(row.qty) ||
       isNaN(row.price) ||
       !row.date ||
       !row.catno ||
       !row.detail ||
-      !row.invoice ||
       !row.unit ||
       !row.shop ||
       !row.unitValid
@@ -794,7 +794,8 @@ function revalidateRow(index: number) {
   }
 
   // Перевірка на заповненість обов'язкових полів
-  // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Рахунок №, Одиниця
+  // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця
+  // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
   const isFilled =
     row.date &&
     row.date.trim() &&
@@ -804,8 +805,6 @@ function revalidateRow(index: number) {
     row.catno.trim() &&
     row.detail &&
     row.detail.trim() &&
-    row.invoice &&
-    row.invoice.trim() &&
     row.unit &&
     row.unit.trim();
 

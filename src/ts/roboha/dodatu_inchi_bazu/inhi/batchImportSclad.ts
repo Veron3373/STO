@@ -585,8 +585,10 @@ function showDropdownList(input: HTMLElement, options: string[]) {
         parsedDataGlobal[index].unitValid = true;
       } else if (field === "shop") {
         parsedDataGlobal[index].shopValid = true;
+        (parsedDataGlobal[index] as any).shopExists = true; // вибрано зі списку = існує
       } else if (field === "detail") {
         parsedDataGlobal[index].detailValid = true;
+        (parsedDataGlobal[index] as any).detailExists = true; // вибрано зі списку = існує
       } else if (field === "actNo") {
         parsedDataGlobal[index].actValid = true;
         const actIdNum = parseInt(option, 10);
@@ -596,7 +598,24 @@ function showDropdownList(input: HTMLElement, options: string[]) {
           if (td) td.classList.add("closed-act");
         }
       }
+
       recalculateAndApplyWidths();
+      revalidateRow(index);
+
+      // Додатково: якщо всі поля валідні, явно встановлюємо статус (дублюємо логіку з updateDropdownList)
+      const row = parsedDataGlobal[index];
+      if (row.status === "Помилка валідації") {
+        // Перевіряємо чи всі обов'язкові поля заповнені
+        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit;
+        const numbersValid = !isNaN(row.qty) && !isNaN(row.price);
+        // Примітка: unitValid і так перевіряється вище
+        if (allFilled && numbersValid && row.unitValid) {
+          // Ще раз викликаємо revalidateRow, щоб вона точно схопила нові дані
+          // (іноді дані можуть не встигнути оновитися перед першим викликом)
+          revalidateRow(index);
+        }
+      }
+
       closeDropdownList();
     });
     list.appendChild(li);

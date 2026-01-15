@@ -431,12 +431,10 @@ function parseBatchData(text: string) {
     }
 
     // Фінальна перевірка: тільки обов'язкові поля та їх валідність
-    // shopValid і detailValid тепер завжди true якщо заповнені
-    // Помилка тільки якщо: порожні обов'язкові поля, невалідна одиниця, невалідний акт
+    // Ціна клієнта - необов'язкова (може бути 0)
     if (
       isNaN(row.qty) ||
       isNaN(row.price) ||
-      isNaN(row.clientPrice) ||
       !row.date ||
       !row.catno ||
       !row.detail ||
@@ -807,9 +805,9 @@ function revalidateRow(index: number) {
     row.unit &&
     row.unit.trim();
 
-  // Перевірка чисел
+  // Перевірка чисел (ціна клієнта необов'язкова)
   const areNumbersValid =
-    !isNaN(row.qty) && !isNaN(row.price) && !isNaN(row.clientPrice);
+    !isNaN(row.qty) && !isNaN(row.price);
 
   // Перевірка валідності
   // shopValid і detailValid тепер завжди true якщо заповнені

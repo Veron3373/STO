@@ -797,21 +797,39 @@ function revalidateRow(index: number) {
   // Перевірка на заповненість обов'язкових полів
   // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця
   // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
+
+  console.log(`[revalidateRow ${index}] Checking row:`, {
+    date: row.date,
+    shop: row.shop,
+    catno: row.catno,
+    detail: row.detail,
+    unit: row.unit,
+    qty: row.qty,
+    price: row.price,
+    unitValid: row.unitValid
+  });
+
   const isFilled =
     row.date &&
-    row.date.trim() &&
+    String(row.date).trim() &&
     row.shop &&
-    row.shop.trim() &&
+    String(row.shop).trim() &&
     row.catno &&
-    row.catno.trim() &&
+    String(row.catno).trim() &&
     row.detail &&
-    row.detail.trim() &&
+    String(row.detail).trim() &&
     row.unit &&
-    row.unit.trim();
+    String(row.unit).trim();
 
   // Перевірка чисел (ціна клієнта необов'язкова)
   const areNumbersValid =
     !isNaN(row.qty) && !isNaN(row.price);
+
+  console.log(`[revalidateRow ${index}] Validation:`, {
+    isFilled,
+    areNumbersValid,
+    unitValid: row.unitValid
+  });
 
   // Перевірка валідності
   // shopValid і detailValid тепер завжди true якщо заповнені

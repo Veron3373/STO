@@ -1002,7 +1002,7 @@ export function updateDetailsTable(): void {
 
   if (filteredData.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="13" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
+      '<tr><td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
 
     updateDetailsTotalSumDisplay(0, 0, 0);
     return;

@@ -271,7 +271,9 @@ function showConfirmModal(count: number, totalCount: number): Promise<boolean> {
     if (!modal) return resolve(false);
     const message = modal.querySelector(".confirm-message-Excel");
     if (message) {
-      message.textContent = `Завантажити ${count} із ${totalCount} записів в базу даних?`;
+      const isFull = count === totalCount;
+      const colorStyle = isFull ? "color: #10b981;" : "color: #ef4444;"; // green-500 : red-500
+      message.innerHTML = `Завантажити <strong style="${colorStyle}">${count}</strong> із <strong style="${colorStyle}">${totalCount}</strong> записів в базу даних?`;
     }
     modal.classList.remove("hidden-all_other_bases");
     const yesBtn = document.getElementById("confirm-yes-Excel");
@@ -302,21 +304,28 @@ function createBatchImportModal() {
     <style>
       .batch-table-container-Excel {
         overflow-y: auto;
-        max-height: 65vh;
+        max-height: 60vh; /* slightly less to ensure fit */
         position: relative;
-        border: 1px solid #e2e8f0; /* added border to container */
+        border: 1px solid #e2e8f0;
       }
       .batch-table-Excel {
-        border-collapse: separate; /* critical for sticky headers in some contexts */
+        border-collapse: separate; 
         border-spacing: 0;
+        width: 100%;
       }
       .batch-table-Excel thead th {
         position: sticky !important;
         top: 0 !important;
-        z-index: 20;
+        z-index: 100; /* Increased z-index */
         background-color: #e2e8f0 !important;
         border-bottom: 2px solid #cbd5e1;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 10px; /* Add padding for better look */
+        color: #1e293b;
+        font-weight: bold;
+      }
+      .batch-table-Excel tbody td {
+        border-bottom: 1px solid #e2e8f0;
       }
       .excel-dropdown-list {
         z-index: 99999 !important;

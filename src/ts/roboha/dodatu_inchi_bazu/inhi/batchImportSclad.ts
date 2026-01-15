@@ -84,18 +84,12 @@ function fromIsoToDisplay(isoDate: string): string {
   return "";
 }
 async function fetchNames(table: TableName): Promise<string[]> {
-  const { data: rows, error } = await supabase
-    .from(table)
-    .select("name:data->>Name");
-  if (!error && Array.isArray(rows) && rows.length) {
-    const list = rows.map((r: any) => (r?.name ?? "").trim()).filter(Boolean);
-    if (list.length) return uniqAndSort(list);
-  }
+  // Отримуємо повні дані, щоб коректно обробити різні ключі (Name, name, Назва)
   const { data: rows2, error: error2 } = await supabase
     .from(table)
     .select("data")
-    .not("data", "is", null)
-    .neq("data", "");
+    .not("data", "is", null);
+
   if (error2 || !Array.isArray(rows2)) {
     console.error(`[${table}] load error:`, error2);
     return [];
@@ -526,8 +520,8 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
   list.style.maxHeight = `${listHeight}px`;
   list.style.width = `${finalWidth}px`;
   list.style.top = `${useAbove
-      ? scrollY + rect.top - listHeight - gap
-      : scrollY + rect.bottom + gap
+    ? scrollY + rect.top - listHeight - gap
+    : scrollY + rect.bottom + gap
     }px`;
   list.style.left = `${scrollX + rect.left}px`;
 }
@@ -1340,6 +1334,16 @@ export async function initBatchImport() {
       modal.classList.remove("hidden-all_other_bases");
       resetModalState();
       parsedDataGlobal = [];
+
+      // Оновлюємо кеш у фоновому режимі при відкритті
+      Promise.all([loadShopsList(), loadDetailsList(), loadActsList()])
+        .then(([shops, details, acts]) => {
+          shopsListCache = shops;
+          detailsListCache = details;
+          actsListCache = acts.list;
+          actsDateOffMap = acts.map;
+        })
+        .catch((err) => console.error("Помилка оновлення кешу імпорту:", err));
     };
   }
 

@@ -752,6 +752,69 @@ function renderBatchTable(data: any[]) {
   });
   attachInputHandlers(tbody);
 }
+// ===== Валідація рядка при редагуванні =====
+function revalidateRow(index: number) {
+  const row = parsedDataGlobal[index];
+  if (!row) return;
+
+  // Якщо статус був "Успішно" або "Збережено", не чіпаємо
+  if (
+    row.status === "✅ Успішно" ||
+    row.status === "⚠️ Збережено (акт не оновлено)"
+  ) {
+    return;
+  }
+
+  // Перевірка на заповненість
+  const isFilled =
+    row.date &&
+    row.date.trim() &&
+    row.shop &&
+    row.shop.trim() &&
+    row.catno &&
+    row.catno.trim() &&
+    row.detail &&
+    row.detail.trim() &&
+    row.unit &&
+    row.unit.trim();
+
+  // Перевірка чисел
+  const areNumbersValid =
+    !isNaN(row.qty) && !isNaN(row.price) && !isNaN(row.clientPrice);
+
+  // Перевірка валідності (shopValid / detailValid / unitValid / actValid)
+  // actValid перевіряємо тільки якщо actNo вказано
+  let isActValid = true;
+  if (row.actNo && row.actNo.trim()) {
+    isActValid = row.actValid && !row.actClosed;
+  }
+
+  const isValid =
+    isFilled &&
+    areNumbersValid &&
+    row.shopValid &&
+    row.detailValid &&
+    row.unitValid &&
+    isActValid;
+
+  const statusCell = document.querySelector(
+    `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`
+  );
+  if (!statusCell) return;
+  const statusTextEl = statusCell.querySelector(".status-text-Excel");
+
+  if (isValid) {
+    row.status = "Готовий";
+    statusCell.className = "status-cell-Excel ready-Excel";
+    if (statusTextEl) statusTextEl.textContent = "Готовий";
+  } else {
+    // Якщо не валідно - ставимо помилку
+    row.status = "Помилка валідації";
+    statusCell.className = "status-cell-Excel error-Excel";
+    if (statusTextEl) statusTextEl.textContent = "Помилка валідації";
+  }
+}
+
 function attachInputHandlers(tbody: HTMLTableSectionElement) {
   tbody.querySelectorAll('input[data-field="date"]').forEach((input) => {
     input.addEventListener("click", () => {
@@ -767,13 +830,16 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       const target = e.target as HTMLInputElement;
       const index = parseInt(target.dataset.index || "0");
       parsedDataGlobal[index]["date"] = fromIsoToDisplay(target.value);
+      parsedDataGlobal[index]["date"] = fromIsoToDisplay(target.value);
       recalculateAndApplyWidths();
+      revalidateRow(index);
     });
     input.addEventListener("change", (e) => {
       const target = e.target as HTMLInputElement;
       const index = parseInt(target.dataset.index || "0");
       parsedDataGlobal[index]["date"] = fromIsoToDisplay(target.value);
       recalculateAndApplyWidths();
+      revalidateRow(index);
     });
   });
   tbody
@@ -791,6 +857,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
           parsedDataGlobal[index][field] = target.value;
         }
         recalculateAndApplyWidths();
+        revalidateRow(index);
       });
     });
   // Акт № з live-фільтром
@@ -824,6 +891,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       }
 
       recalculateAndApplyWidths();
+      revalidateRow(index);
     });
 
     // валідація: або порожньо, або існує серед ВІДКРИТИХ
@@ -842,6 +910,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       } else {
         td?.classList.remove("invalid-act", "closed-act");
       }
+      revalidateRow(index);
     });
   });
 
@@ -867,6 +936,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         }
         parsedDataGlobal[index].unitValid = true;
       }
+      revalidateRow(index);
     });
   });
   // Магазин з live-фільтром
@@ -912,6 +982,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
           td.classList.remove("invalid-shop");
         }
       }
+      revalidateRow(index);
     });
   });
   // Деталь з live-фільтром
@@ -957,6 +1028,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
           td.classList.remove("invalid-detail");
         }
       }
+      revalidateRow(index);
     });
   });
   // Видалення рядка
@@ -1019,6 +1091,7 @@ function updateDropdownList(
         }
       }
       recalculateAndApplyWidths();
+      revalidateRow(index);
       closeDropdownList();
     });
     currentDropdownList!.appendChild(li);

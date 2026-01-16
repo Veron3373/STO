@@ -534,6 +534,7 @@ function processItems(items: ParsedItem[]) {
         slyusar_id,
         Зарплата: salary,
         Прибуток: profit,
+        recordId, // ✅ Додаємо recordId для acts.data.Роботи
       });
 
       totalWorksSum += sum;

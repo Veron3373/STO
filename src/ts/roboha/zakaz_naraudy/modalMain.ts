@@ -1229,8 +1229,8 @@ function renderModalContent(
       const workIndex = slyusarWorkIndexMap.get(slyusarKey) ?? 0;
       slyusarWorkIndexMap.set(slyusarKey, workIndex + 1);
       
-      // ✅ Отримуємо recordId з історії слюсаря
-      const recordId = slyusarName ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex) : undefined;
+      // ✅ ПРІОРИТЕТ: беремо recordId з acts.data.Роботи (якщо є), інакше шукаємо в історії слюсаря
+      const recordId = item["recordId"] || (slyusarName ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex) : undefined);
       
       return {
         type: "work",

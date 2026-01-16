@@ -245,7 +245,7 @@ async function handleEdit(
       // Для slyusar_id = 1 зберігаємо оригінальні Name та Доступ
       const updateData: any = {
         data: {
-          Name: currentData?.Name || "Брацлавець Б. С.", // Зберігаємо оригінальне ім'я
+          Name: currentData?.Name || "Тест", // Зберігаємо оригінальне ім'я
           Опис:
             currentData?.Опис && typeof currentData.Опис === "object"
               ? currentData.Опис

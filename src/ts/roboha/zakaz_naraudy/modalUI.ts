@@ -472,16 +472,16 @@ async function processWorkRowsWithIndex(
  * Оновлює "Зар-та" для всіх робіт у таблиці з урахуванням історії/відсотків
  * Використовується з modalMain.ts одразу після рендеру модалки.
  */
-export function updateAllSlyusarSumsFromHistory(): void {
+export async function updateAllSlyusarSumsFromHistory(): Promise<void> {
   if (!globalCache.settings.showZarplata) return;
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
   );
   if (!tableBody) return;
 
-  // Використовуємо спільну функцію для обходу рядків з індексами
-  void processWorkRowsWithIndex(tableBody, (row, _slyusarName, _workName, currentIndex) => {
-    void updateSlyusarSalaryInRow(row, currentIndex);
+  // ✅ ВИПРАВЛЕНО: тепер чекаємо завершення всіх async операцій
+  await processWorkRowsWithIndex(tableBody, async (row, _slyusarName, _workName, currentIndex) => {
+    await updateSlyusarSalaryInRow(row, currentIndex);
   });
 }
 

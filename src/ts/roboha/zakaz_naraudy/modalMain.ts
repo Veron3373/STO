@@ -830,7 +830,8 @@ export async function showModal(actId: number): Promise<void> {
     const canSeePriceCols = await canUserSeePriceColumns();
     togglePriceColumnsVisibility(canSeePriceCols);
 
-    updateAllSlyusarSumsFromHistory();
+    // ✅ ВИПРАВЛЕНО: тепер чекаємо завершення встановлення зарплат з історії
+    await updateAllSlyusarSumsFromHistory();
 
     // 🚀 Запускаємо операції паралельно для швидкості
     await Promise.all([

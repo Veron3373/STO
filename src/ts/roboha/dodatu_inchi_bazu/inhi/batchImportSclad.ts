@@ -306,7 +306,7 @@ function createBatchImportModal() {
       .static-header-wrapper-Excel {
         display: none; /* Спочатку прихована */
         width: 100%;
-        overflow-x: hidden; /* Скролимо через JS */
+        overflow: hidden; /* Прибираємо ВСІ скроли (і вертикальний, і горизонтальний) */
         background-color: #e2e8f0;
         border: 1px solid #cbd5e1;
         border-bottom: none;

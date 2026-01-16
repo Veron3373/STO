@@ -89,13 +89,18 @@ function findSlyusarWorkRecord(
     (s) => s.Name?.toLowerCase() === slyusarName.toLowerCase()
   );
 
-  if (!slyusar?.["Історія"]) return null;
+  if (!slyusar?.["Історія"]) {
+    console.log(`❌ findSlyusarWorkRecord: Історія не знайдена для слюсаря "${slyusarName}"`);
+    return null;
+  }
 
   const history = slyusar["Історія"];
   const targetActId = String(actId);
   const fullWorkName = expandName(workName);
   const workNameLower = workName.toLowerCase();
   const fullWorkNameLower = fullWorkName.toLowerCase();
+
+  console.log(`🔍 findSlyusarWorkRecord: шукаємо "${workName}" для "${slyusarName}", акт ${actId}, rowIndex=${rowIndex}, recordId=${recordId}`);
 
   for (const dateKey in history) {
     const dayBucket = history[dateKey];
@@ -107,12 +112,16 @@ function findSlyusarWorkRecord(
       const zapisi = actEntry?.["Записи"];
       if (!Array.isArray(zapisi)) continue;
 
+      console.log(`📋 Знайдено записи для акту ${actId}:`, zapisi.map((z: any, i: number) => `[${i}] ${z.Робота} - ${z.Зарплата} (recordId: ${z.recordId})`));
+
       // ✅ 0. ПРІОРИТЕТ: Пошук за recordId (найточніший спосіб)
       if (recordId) {
         const recordById = zapisi.find((z: any) => z.recordId === recordId);
         if (recordById) {
+          console.log(`✅ Знайдено за recordId: ${recordId}, Зарплата: ${recordById.Зарплата}`);
           return recordById as SlyusarWorkRecord;
         }
+        console.log(`⚠️ recordId "${recordId}" не знайдено в записах!`);
       }
 
       // 1. Точний пошук за індексом (якщо передано)
@@ -121,20 +130,26 @@ function findSlyusarWorkRecord(
         const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
         
         if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
+          console.log(`✅ Знайдено за rowIndex ${rowIndex}: ${record.Робота}, Зарплата: ${record.Зарплата}`);
           return record as SlyusarWorkRecord;
         }
+        console.log(`⚠️ За rowIndex ${rowIndex} назва не співпала: "${record?.Робота}" != "${workName}"`);
       }
 
-      // 2. Fallback: пошук за назвою
+      // 2. Fallback: пошук за назвою (ПОВЕРТАЄ ПЕРШИЙ!)
       const record = zapisi.find((z: any) => {
         const recordWorkLower = (z.Робота?.trim() || "").toLowerCase();
         return recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower;
       });
 
-      if (record) return record as SlyusarWorkRecord;
+      if (record) {
+        console.log(`⚠️ Fallback за назвою: ${record.Робота}, Зарплата: ${record.Зарплата} (може бути неправильним!)`);
+        return record as SlyusarWorkRecord;
+      }
     }
   }
 
+  console.log(`❌ findSlyusarWorkRecord: запис не знайдено!`);
   return null;
 }
 
@@ -144,7 +159,7 @@ function findSlyusarWorkRecord(
  * @param slyusarName - ім'я слюсаря
  * @param workName - назва роботи
  * @param actId - номер акту
- * @param workIndex - індекс роботи серед робіт цього слюсаря в акті (0, 1, 2...)
+ * @param workIndex - загальний індекс роботи серед ВСІХ робіт цього слюсаря в акті (0, 1, 2...)
  * @returns recordId або undefined
  */
 export function getRecordIdFromHistory(
@@ -177,25 +192,23 @@ export function getRecordIdFromHistory(
       const zapisi = actEntry?.["Записи"];
       if (!Array.isArray(zapisi)) continue;
 
-      // Спочатку пробуємо знайти за індексом
+      // ✅ ВИПРАВЛЕНО: шукаємо за загальним індексом запису (workIndex = позиція серед всіх робіт слюсаря)
       if (workIndex >= 0 && workIndex < zapisi.length) {
         const record = zapisi[workIndex];
         const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
         
+        // Перевіряємо що назва співпадає (для надійності)
         if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
           return record?.recordId;
         }
       }
-
-      // Fallback: шукаємо за назвою та рахуємо індекс
-      let matchIndex = 0;
+      
+      // Fallback: якщо за індексом не знайшли - шукаємо просто за назвою
+      // (для старих записів без recordId)
       for (const record of zapisi) {
         const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
         if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
-          if (matchIndex === workIndex) {
-            return record?.recordId;
-          }
-          matchIndex++;
+          return record?.recordId;
         }
       }
     }

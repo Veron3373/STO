@@ -112,7 +112,7 @@ function findSlyusarWorkRecord(
       const zapisi = actEntry?.["Записи"];
       if (!Array.isArray(zapisi)) continue;
 
-      console.log(`📋 Знайдено записи для акту ${actId}:`, zapisi.map((z: any, i: number) => `[${i}] ${z.Робота} - ${z.Зарплата} (recordId: ${z.recordId})`));
+      console.log(`📋 Знайдено записи для акту ${actId}:`, zapisi.map((z: any, i: number) => `[${i}] ${z.Робота} - Зарплата:${z.Зарплата} (recordId: ${z.recordId})`));
 
       // ✅ 0. ПРІОРИТЕТ: Пошук за recordId (найточніший спосіб)
       if (recordId) {
@@ -124,11 +124,13 @@ function findSlyusarWorkRecord(
         console.log(`⚠️ recordId "${recordId}" не знайдено в записах!`);
       }
 
-      // 1. Точний пошук за індексом (якщо передано)
+      // ✅ 1. ВАЖЛИВО: Пошук за rowIndex (індекс запису в масиві Записи)
+      // rowIndex відповідає порядку робіт слюсаря в акті
       if (typeof rowIndex === "number" && rowIndex >= 0 && rowIndex < zapisi.length) {
         const record = zapisi[rowIndex];
         const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
         
+        // Перевіряємо співпадіння назви роботи
         if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
           console.log(`✅ Знайдено за rowIndex ${rowIndex}: ${record.Робота}, Зарплата: ${record.Зарплата}`);
           return record as SlyusarWorkRecord;
@@ -136,20 +138,14 @@ function findSlyusarWorkRecord(
         console.log(`⚠️ За rowIndex ${rowIndex} назва не співпала: "${record?.Робота}" != "${workName}"`);
       }
 
-      // 2. Fallback: пошук за назвою (ПОВЕРТАЄ ПЕРШИЙ!)
-      const record = zapisi.find((z: any) => {
-        const recordWorkLower = (z.Робота?.trim() || "").toLowerCase();
-        return recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower;
-      });
-
-      if (record) {
-        console.log(`⚠️ Fallback за назвою: ${record.Робота}, Зарплата: ${record.Зарплата} (може бути неправильним!)`);
-        return record as SlyusarWorkRecord;
-      }
+      // ❌ ВИДАЛЕНО FALLBACK ЗА НАЗВОЮ - він повертає неправильний запис при однакових назвах!
+      // Якщо recordId і rowIndex не допомогли - повертаємо null
+      console.log(`❌ Не знайдено запис ні за recordId, ні за rowIndex`);
+      return null;
     }
   }
 
-  console.log(`❌ findSlyusarWorkRecord: запис не знайдено!`);
+  console.log(`❌ findSlyusarWorkRecord: актовий запис не знайдено в історії!`);
   return null;
 }
 

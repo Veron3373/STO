@@ -51,6 +51,7 @@ export interface PodlegleRecord {
   recordedDate?: string; // ✅ Додано: дата створення запису
   customHtmlTotal?: string; // ✅ Додано для кастомного відображення суми
   workIndex?: number; // ✅ Додано: індекс роботи в масиві Записи для точного пошуку
+  recordId?: string; // ✅ Додано: унікальний ID запису для найточнішого пошуку
 }
 
 interface SlyusarData {
@@ -66,6 +67,7 @@ interface SlyusarData {
         Зарплата?: number;
         Розраховано?: string;
         Записано?: string; // ✅ Додано: дата створення запису
+        recordId?: string; // ✅ Додано: унікальний ID для точного пошуку
       }>;
       Клієнт?: string;
       Автомобіль?: string;
@@ -1283,6 +1285,7 @@ export function searchDataInDatabase(
                 paymentDate: payDmy,
                 recordedDate: entry.Записано || "", // ✅ Додано
                 workIndex: entryIndex, // ✅ Додано: індекс для точного пошуку
+                recordId: entry.recordId, // ✅ Додано: унікальний ID
               });
             });
           } else {
@@ -1321,6 +1324,7 @@ export function searchDataInDatabase(
                 paymentDate: entry.Розраховано || "",
                 recordedDate: entry.Записано || "", // ✅ Додано
                 workIndex: entryIndex, // ✅ Додано: індекс для точного пошуку
+                recordId: entry.recordId, // ✅ Додано: унікальний ID
               });
             });
           }
@@ -2061,8 +2065,13 @@ export async function togglepodleglePayment(index: number): Promise<void> {
   else if (actRecord.Записи) {
     let workEntry: any;
 
-    // ✅ ВИПРАВЛЕНО: Використовуємо workIndex для точного пошуку при однакових роботах
-    if (typeof record.workIndex === "number" && record.workIndex >= 0 && record.workIndex < actRecord.Записи.length) {
+    // ✅ ПРІОРИТЕТ 0: Пошук за recordId (найточніший спосіб)
+    if (record.recordId) {
+      workEntry = actRecord.Записи.find((e) => e.recordId === record.recordId);
+    }
+
+    // ✅ ПРІОРИТЕТ 1: Використовуємо workIndex для точного пошуку при однакових роботах
+    if (!workEntry && typeof record.workIndex === "number" && record.workIndex >= 0 && record.workIndex < actRecord.Записи.length) {
       // Точний пошук за індексом
       const entryByIndex = actRecord.Записи[record.workIndex];
       
@@ -2072,7 +2081,7 @@ export async function togglepodleglePayment(index: number): Promise<void> {
       }
     }
 
-    // Fallback: пошук за назвою (для старих записів без workIndex)
+    // Fallback: пошук за назвою (для старих записів без workIndex та recordId)
     if (!workEntry) {
       if (!record.isPaid) {
         workEntry = actRecord.Записи.find(

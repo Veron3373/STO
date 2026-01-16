@@ -189,6 +189,7 @@ export interface WorkRow {
   Кількість: number;
   Ціна: number;
   Зарплата: number;
+  recordId?: string; // ✅ Унікальний ID для точного пошуку
 }
 
 async function syncSlyusarsHistoryForAct(params: {
@@ -290,6 +291,15 @@ async function syncSlyusarsHistoryForAct(params: {
 
     // Створюємо новий масив записів, зберігаючи стару дату та "Розраховано" для незмінних робіт
     const prevWorks = Array.isArray(actEntry["Записи"]) ? actEntry["Записи"] : [];
+    
+    // ✅ НОВИЙ ПІДХІД: Створюємо Map для швидкого пошуку попередніх записів за recordId
+    const prevWorksById = new Map<string, any>();
+    for (const pw of prevWorks) {
+      if (pw.recordId) {
+        prevWorksById.set(pw.recordId, pw);
+      }
+    }
+    
     const zapis: Array<{
       Ціна: number;
       Кількість: number;
@@ -297,6 +307,7 @@ async function syncSlyusarsHistoryForAct(params: {
       Зарплата: number;
       Записано: string;
       Розраховано?: string;
+      recordId: string; // ✅ Унікальний ID запису
     }> = [];
     let summaRob = 0;
 
@@ -310,31 +321,36 @@ async function syncSlyusarsHistoryForAct(params: {
         ? expandNameForSave(workName)
         : workName;
 
-      // ✅ ВИПРАВЛЕНО: Пріоритет пошуку для збереження "Розраховано":
-      // 1) СПОЧАТКУ за індексом (найточніший спосіб при однакових роботах)
-      // 2) Fallback за назвою тільки якщо індекс не підходить
+      // ✅ НОВИЙ ПІДХІД: Шукаємо попередній запис за recordId
+      // recordId береться з рядка таблиці (data-record-id атрибут)
+      const currentRecordId = (r as any).recordId || "";
       let sourceForDates: any = null;
       
-      // 1. Пошук за індексом - якщо позиція та ж і назва співпадає
-      const prevByIndex = prevWorks[idx];
-      if (prevByIndex && prevByIndex.Робота === fullWorkName) {
-        sourceForDates = prevByIndex;
+      // 1. ПРІОРИТЕТ: Пошук за recordId (найнадійніший спосіб)
+      if (currentRecordId && prevWorksById.has(currentRecordId)) {
+        sourceForDates = prevWorksById.get(currentRecordId);
       }
       
-      // 2. Fallback: пошук за назвою (тільки якщо кількість записів змінилась)
-      if (!sourceForDates && rows.length !== prevWorks.length) {
-        // Шукаємо запис з такою ж назвою, який ще не використаний
-        // Це потрібно для випадків коли додали/видалили рядки
-        sourceForDates = prevWorks.find((z, prevIdx) => {
-          if (z.Робота !== fullWorkName) return false;
-          // Перевіряємо чи цей запис вже не "зайнятий" попередніми рядками
-          // (простий випадок - якщо індекси співпадають)
-          return prevIdx === idx;
-        });
+      // 2. Fallback: пошук за індексом + назвою (для записів без recordId)
+      if (!sourceForDates) {
+        const prevByIndex = prevWorks[idx];
+        if (prevByIndex && prevByIndex.Робота === fullWorkName) {
+          sourceForDates = prevByIndex;
+        }
       }
 
       let recordedDate = sourceForDates ? sourceForDates.Записано : null;
       let calculatedDate = sourceForDates ? sourceForDates.Розраховано : null;
+      
+      // ✅ Визначаємо recordId: або зберігаємо існуючий, або генеруємо новий
+      let recordId = currentRecordId;
+      if (!recordId && sourceForDates?.recordId) {
+        recordId = sourceForDates.recordId;
+      }
+      if (!recordId) {
+        // Генеруємо новий унікальний ID для нового запису
+        recordId = `${params.actId}_${slyusarName}_${idx}_${Date.now()}`;
+      }
       
       // Якщо робота нова — ставимо нову дату запису
       if (!recordedDate) {
@@ -351,6 +367,7 @@ async function syncSlyusarsHistoryForAct(params: {
         Робота: fullWorkName,
         Зарплата: zp,
         Записано: recordedDate,
+        recordId: recordId, // ✅ Завжди зберігаємо recordId
       };
       
       // Додаємо "Розраховано" якщо воно було в попередньому записі

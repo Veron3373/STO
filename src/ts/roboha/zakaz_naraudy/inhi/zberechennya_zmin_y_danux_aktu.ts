@@ -33,6 +33,7 @@ interface DetailRow {
   Каталог: string | null;
   Кількість: number;
   Ціна: number;
+  recordId?: string; // ✅ Унікальний ID для точного пошуку
 }
 
 interface WorkRow {
@@ -41,6 +42,7 @@ interface WorkRow {
   Кількість: number;
   Ціна: number;
   Зарплата: number;
+  recordId?: string; // ✅ Унікальний ID для точного пошуку
 }
 
 export interface ParsedItem {
@@ -54,6 +56,7 @@ export interface ParsedItem {
   sclad_id: number | null;
   slyusar_id: number | null;
   slyusarSum?: number;
+  recordId?: string; // ✅ Унікальний ID запису роботи для історії слюсаря
 }
 
 interface ActChangeRecord {
@@ -333,6 +336,9 @@ export function parseTableRows(): ParsedItem[] {
     const slyusar_id = nameCell.getAttribute("data-slyusar-id")
       ? Number(nameCell.getAttribute("data-slyusar-id"))
       : null;
+    
+    // ✅ Зчитуємо recordId з атрибута рядка (для точного пошуку при однакових роботах)
+    const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
 
     const item: ParsedItem = {
       type,
@@ -345,6 +351,7 @@ export function parseTableRows(): ParsedItem[] {
       sclad_id,
       slyusar_id,
       slyusarSum,
+      recordId, // ✅ Додаємо recordId до item
     };
 
     items.push(item);
@@ -510,6 +517,7 @@ function processItems(items: ParsedItem[]) {
       sclad_id,
       slyusar_id,
       slyusarSum,
+      recordId, // ✅ Додаємо recordId
     } = item;
 
     const itemBase = { Кількість: quantity, Ціна: price, Сума: sum };
@@ -538,6 +546,7 @@ function processItems(items: ParsedItem[]) {
           Кількість: quantity,
           Ціна: price,
           Зарплата: salary,
+          recordId, // ✅ Передаємо recordId для точного пошуку
         });
       }
     } else {
@@ -553,6 +562,7 @@ function processItems(items: ParsedItem[]) {
         Магазин: pibMagazin,
         Каталог: catalog,
         sclad_id,
+        recordId, // ✅ Додаємо recordId для acts
       });
       totalDetailsSum += sum;
 
@@ -564,6 +574,7 @@ function processItems(items: ParsedItem[]) {
           Каталог: catalog || null,
           Кількість: quantity,
           Ціна: price,
+          recordId, // ✅ Передаємо recordId для історії магазину
         });
       }
       if (sclad_id) newScladIds.add(sclad_id);

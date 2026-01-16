@@ -95,6 +95,7 @@ export interface ActItem {
   sclad_id?: number | null;
   slyusar_id?: number | null;
   slyusarSum?: number; // ✅ Додано для зарплати слюсаря
+  recordId?: string; // ✅ Унікальний ID запису для точного пошуку в історії слюсаря
 }
 
 export interface GlobalDataCache {

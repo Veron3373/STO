@@ -247,9 +247,47 @@ async function syncShopsHistoryForAct(params: {
       );
       continue;
     }
+    
+    // ✅ Отримуємо попередні записи для збереження recordId
+    const history = ensureShopHistoryRoot(shopRow);
+    if (!history[params.dateKey]) history[params.dateKey] = [];
+    const dayBucket = history[params.dateKey] as any[];
+    
+    let actEntry = dayBucket.find(
+      (e: any) => Number(e?.["Акт"]) === Number(params.actId)
+    );
+    
+    const prevDetails = Array.isArray(actEntry?.["Деталі"]) ? actEntry["Деталі"] : [];
+    
+    // ✅ Створюємо Map для пошуку за recordId
+    const prevDetailsById = new Map<string, any>();
+    for (const pd of prevDetails) {
+      if (pd.recordId) {
+        prevDetailsById.set(pd.recordId, pd);
+      }
+    }
+    
     const out: any[] = [];
-    for (const r of rows) {
+    for (let idx = 0; idx < rows.length; idx++) {
+      const r = rows[idx];
       const metaR = r.sclad_id ? meta.get(r.sclad_id) || null : null;
+      
+      // ✅ Визначаємо recordId: з поточного запису, з попереднього, або генеруємо новий
+      let recordId = (r as any).recordId || "";
+      
+      if (!recordId) {
+        // Спробуємо знайти за індексом + назвою
+        const prevByIndex = prevDetails[idx];
+        if (prevByIndex && prevByIndex.Найменування === r.Найменування && prevByIndex.recordId) {
+          recordId = prevByIndex.recordId;
+        }
+      }
+      
+      if (!recordId) {
+        // Генеруємо новий унікальний ID
+        recordId = `${params.actId}_${shopName}_detail_${idx}_${Date.now()}`;
+      }
+      
       out.push({
         sclad_id: r.sclad_id,
         Каталог: r.Каталог
@@ -261,16 +299,10 @@ async function syncShopsHistoryForAct(params: {
         Рахунок: metaR ? metaR.rahunok ?? null : null, // ✅ беремо з колонки rahunok
         Кількість: Number(r.Кількість) || 0,
         Найменування: r.Найменування,
+        recordId, // ✅ Додаємо recordId
       });
     }
 
-    const history = ensureShopHistoryRoot(shopRow);
-    if (!history[params.dateKey]) history[params.dateKey] = [];
-    const dayBucket = history[params.dateKey] as any[];
-
-    let actEntry = dayBucket.find(
-      (e: any) => Number(e?.["Акт"]) === Number(params.actId)
-    );
     if (!actEntry) {
       actEntry = {
         Акт: params.actId,

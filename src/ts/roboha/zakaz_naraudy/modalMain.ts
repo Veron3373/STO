@@ -42,6 +42,7 @@ import {
   updateAllSlyusarSumsFromHistory,
   getSlyusarWorkPercent,
   calculateSlyusarSum,
+  getRecordIdFromHistory, // ✅ Додано для завантаження recordId з історії
 } from "./modalUI";
 import { showModalAllOtherBases } from "../dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 import { formatDate, formatDateTime } from "./inhi/formatuvannya_datu";
@@ -1188,29 +1189,62 @@ function renderModalContent(
   const editableClass = isClosed ? "cursor-not-allowed" : "";
   const photoCellHtml = `<div id="photo-section-slot"></div>`;
 
+  // ✅ Підготовка для підрахунку індексів робіт для кожного слюсаря
+  const slyusarWorkIndexMap = new Map<string, number>();
+  // ✅ Підготовка для підрахунку індексів деталей для кожного магазину
+  const shopDetailIndexMap = new Map<string, number>();
+  
   const allItems = [
-    ...(actDetails?.["Деталі"] || []).map((item: any) => ({
-      type: "detail",
-      name: item["Деталь"] || "",
-      quantity: item["Кількість"] || 0,
-      price: item["Ціна"] || 0,
-      sum: item["Сума"] || 0,
-      person_or_store: showPibMagazin ? item["Магазин"] || "" : "",
-      catalog: showCatalog ? item["Каталог"] || "" : "",
-      sclad_id: showCatalog ? item["sclad_id"] || null : null,
-      slyusar_id: null,
-    })),
-    ...(actDetails?.["Роботи"] || []).map((item: any) => ({
-      type: "work",
-      name: item["Робота"] || "",
-      quantity: item["Кількість"] || 0,
-      price: item["Ціна"] || 0,
-      sum: item["Сума"] || 0,
-      person_or_store: showPibMagazin ? item["Слюсар"] || "" : "",
-      catalog: showCatalog ? item["Каталог"] || "" : "",
-      sclad_id: showCatalog ? null : null,
-      slyusar_id: item["slyusar_id"] || null,
-    })),
+    ...(actDetails?.["Деталі"] || []).map((item: any) => {
+      const shopName = showPibMagazin ? item["Магазин"] || "" : "";
+      const detailName = item["Деталь"] || "";
+      
+      // ✅ Визначаємо індекс деталі для цього магазину
+      const shopKey = shopName.toLowerCase();
+      const detailIndex = shopDetailIndexMap.get(shopKey) ?? 0;
+      shopDetailIndexMap.set(shopKey, detailIndex + 1);
+      
+      // ✅ Беремо recordId з acts.data.Деталі (якщо є) або undefined
+      const recordId = item["recordId"] || undefined;
+      
+      return {
+        type: "detail",
+        name: detailName,
+        quantity: item["Кількість"] || 0,
+        price: item["Ціна"] || 0,
+        sum: item["Сума"] || 0,
+        person_or_store: shopName,
+        catalog: showCatalog ? item["Каталог"] || "" : "",
+        sclad_id: showCatalog ? item["sclad_id"] || null : null,
+        slyusar_id: null,
+        recordId, // ✅ Додаємо recordId для деталей
+      };
+    }),
+    ...(actDetails?.["Роботи"] || []).map((item: any) => {
+      const slyusarName = showPibMagazin ? item["Слюсар"] || "" : "";
+      const workName = item["Робота"] || "";
+      
+      // ✅ Визначаємо індекс роботи для цього слюсаря
+      const slyusarKey = slyusarName.toLowerCase();
+      const workIndex = slyusarWorkIndexMap.get(slyusarKey) ?? 0;
+      slyusarWorkIndexMap.set(slyusarKey, workIndex + 1);
+      
+      // ✅ Отримуємо recordId з історії слюсаря
+      const recordId = slyusarName ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex) : undefined;
+      
+      return {
+        type: "work",
+        name: workName,
+        quantity: item["Кількість"] || 0,
+        price: item["Ціна"] || 0,
+        sum: item["Сума"] || 0,
+        person_or_store: slyusarName,
+        catalog: showCatalog ? item["Каталог"] || "" : "",
+        sclad_id: showCatalog ? null : null,
+        slyusar_id: item["slyusar_id"] || null,
+        recordId, // ✅ Додаємо recordId для точного пошуку при збереженні
+      };
+    }),
   ].filter((item) => item.name.trim() !== "");
 
   if (allItems.length === 0) {

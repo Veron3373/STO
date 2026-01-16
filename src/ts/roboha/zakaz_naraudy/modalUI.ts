@@ -64,6 +64,7 @@ interface SlyusarWorkRecord {
   Зарплата: number;
   Записано?: string;
   Розраховано?: string;
+  recordId?: string; // ✅ Унікальний ID запису для точного пошуку
 }
 
 /**
@@ -72,13 +73,15 @@ interface SlyusarWorkRecord {
  * @param workName - назва роботи
  * @param actId - номер акту
  * @param rowIndex - індекс рядка для точного пошуку при однакових роботах
+ * @param recordId - унікальний ID запису (пріоритетний спосіб пошуку)
  * @returns весь об'єкт запису або null
  */
 function findSlyusarWorkRecord(
   slyusarName: string,
   workName: string,
   actId: number | null,
-  rowIndex?: number
+  rowIndex?: number,
+  recordId?: string
 ): SlyusarWorkRecord | null {
   if (!slyusarName || !workName || !actId) return null;
 
@@ -104,6 +107,14 @@ function findSlyusarWorkRecord(
       const zapisi = actEntry?.["Записи"];
       if (!Array.isArray(zapisi)) continue;
 
+      // ✅ 0. ПРІОРИТЕТ: Пошук за recordId (найточніший спосіб)
+      if (recordId) {
+        const recordById = zapisi.find((z: any) => z.recordId === recordId);
+        if (recordById) {
+          return recordById as SlyusarWorkRecord;
+        }
+      }
+
       // 1. Точний пошук за індексом (якщо передано)
       if (typeof rowIndex === "number" && rowIndex >= 0 && rowIndex < zapisi.length) {
         const record = zapisi[rowIndex];
@@ -128,22 +139,90 @@ function findSlyusarWorkRecord(
 }
 
 /**
+ * ✅ Знаходить recordId для роботи в історії слюсаря
+ * Використовується при завантаженні акту для прив'язки рядків до записів в історії
+ * @param slyusarName - ім'я слюсаря
+ * @param workName - назва роботи
+ * @param actId - номер акту
+ * @param workIndex - індекс роботи серед робіт цього слюсаря в акті (0, 1, 2...)
+ * @returns recordId або undefined
+ */
+export function getRecordIdFromHistory(
+  slyusarName: string,
+  workName: string,
+  actId: number | null,
+  workIndex: number
+): string | undefined {
+  if (!slyusarName || !actId) return undefined;
+
+  const slyusar = globalCache.slyusars.find(
+    (s) => s.Name?.toLowerCase() === slyusarName.toLowerCase()
+  );
+
+  if (!slyusar?.["Історія"]) return undefined;
+
+  const history = slyusar["Історія"];
+  const targetActId = String(actId);
+  const fullWorkName = expandName(workName);
+  const workNameLower = workName.toLowerCase();
+  const fullWorkNameLower = fullWorkName.toLowerCase();
+
+  for (const dateKey in history) {
+    const dayBucket = history[dateKey];
+    if (!Array.isArray(dayBucket)) continue;
+
+    for (const actEntry of dayBucket) {
+      if (String(actEntry?.["Акт"] || "") !== targetActId) continue;
+
+      const zapisi = actEntry?.["Записи"];
+      if (!Array.isArray(zapisi)) continue;
+
+      // Спочатку пробуємо знайти за індексом
+      if (workIndex >= 0 && workIndex < zapisi.length) {
+        const record = zapisi[workIndex];
+        const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
+        
+        if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
+          return record?.recordId;
+        }
+      }
+
+      // Fallback: шукаємо за назвою та рахуємо індекс
+      let matchIndex = 0;
+      for (const record of zapisi) {
+        const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
+        if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
+          if (matchIndex === workIndex) {
+            return record?.recordId;
+          }
+          matchIndex++;
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Отримує зарплату з історії слюсаря для конкретної роботи та акту
  * @param slyusarName - ім'я слюсаря
  * @param workName - назва роботи
  * @param actId - номер акту (ОБОВ'ЯЗКОВИЙ параметр)
  * @param rowIndex - індекс рядка для точного пошуку
+ * @param recordId - унікальний ID запису (пріоритетний спосіб)
  */
 function getSlyusarSalaryFromHistory(
   slyusarName: string,
   workName: string,
   actId: number | null,
-  rowIndex?: number
+  rowIndex?: number,
+  recordId?: string
 ): number | null {
-  const record = findSlyusarWorkRecord(slyusarName, workName, actId, rowIndex);
+  const record = findSlyusarWorkRecord(slyusarName, workName, actId, rowIndex, recordId);
   
   if (record && typeof record.Зарплата === "number") {
-    console.log(`💰 Знайдено зарплату для "${workName}" [idx:${rowIndex}]: ${record.Зарплата}`);
+    console.log(`💰 Знайдено зарплату для "${workName}" [idx:${rowIndex}${recordId ? `, id:${recordId}` : ''}]: ${record.Зарплата}`);
     return record.Зарплата;
   }
   
@@ -246,6 +325,9 @@ async function updateSlyusarSalaryInRow(
   ) as HTMLElement;
 
   if (!workName || !slyusarName || !slyusarSumCell) return;
+  
+  // ✅ Зчитуємо recordId з атрибута рядка
+  const recordId = row.getAttribute("data-record-id") || undefined;
 
   const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
   const totalSum = parseNumber(sumCell?.textContent);
@@ -257,12 +339,13 @@ async function updateSlyusarSalaryInRow(
     return;
   }
 
-  // 1. ПРІОРИТЕТ: Шукаємо в історії для ПОТОЧНОГО акту
+  // 1. ПРІОРИТЕТ: Шукаємо в історії для ПОТОЧНОГО акту (з recordId якщо є)
   const historySalary = getSlyusarSalaryFromHistory(
     slyusarName,
     workName,
     actId,
-    rowIndex // Передаємо індекс для точного пошуку
+    rowIndex, // Передаємо індекс для точного пошуку
+    recordId  // ✅ Передаємо recordId для найточнішого пошуку
   );
 
   if (historySalary !== null) {
@@ -313,9 +396,12 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const totalSum = parseNumber(sumCell?.textContent);
+    
+    // ✅ Зчитуємо recordId з атрибута рядка
+    const recordId = row.getAttribute("data-record-id") || undefined;
 
-    // КРИТИЧНО: Завжди шукаємо в історії ПЕРШИМ, передаємо індекс для точного пошуку
-    const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId, currentIndex);
+    // КРИТИЧНО: Завжди шукаємо в історії ПЕРШИМ, передаємо індекс та recordId
+    const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId, currentIndex, recordId);
 
     if (historySalary !== null) {
       slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
@@ -579,9 +665,15 @@ function createRowHtml(
   const fullName = item?.name || "";
   const displayName = shortenTextToFirstAndLast(fullName);
   const hasShortened = displayName !== fullName;
+  
+  // ✅ Формуємо атрибути рядка
+  const rowAttrs: string[] = [];
+  if (isWorkRowWithEmptyPib) rowAttrs.push('data-partial-edit="true"');
+  if (item?.recordId) rowAttrs.push(`data-record-id="${item.recordId}"`);
+  const rowAttrsStr = rowAttrs.length > 0 ? ' ' + rowAttrs.join(' ') : '';
 
   return `
-    <tr${isWorkRowWithEmptyPib ? ' data-partial-edit="true"' : ""}>
+    <tr${rowAttrsStr}>
       <td class="row-index" style="${item?.type === "work" && showCatalog && !catalogValue
       ? "cursor: pointer;"
       : ""

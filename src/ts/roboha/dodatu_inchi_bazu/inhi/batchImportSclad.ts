@@ -309,13 +309,10 @@ function createBatchImportModal() {
         overflow: hidden; /* Прибираємо ВСІ скроли */
         background-color: #e2e8f0;
         border: 1px solid #cbd5e1;
-        border-bottom: none;
-        margin-bottom: 0;
+        border-top: none;
+        margin-top: 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        /* Додаємо padding-right, щоб компенсувати можливий скролбар в таблиці знизу. 
-           Зазвичай скролбар це ~15-17px. Це грубе, але дієве рішення, щоб заголовки не з'їжджали. */
-        padding-right: 17px; 
-        box-sizing: border-box; /* Щоб padding не збільшував загальну ширину */
+        box-sizing: border-box;
       }
       .static-header-wrapper-Excel.visible {
         display: block;
@@ -325,7 +322,7 @@ function createBatchImportModal() {
         width: 100%;
         border-collapse: separate; 
         border-spacing: 0;
-        margin-bottom: 0;
+        margin-top: 0;
         table-layout: fixed; /* <--- КРИТИЧНО ВАЖЛИВО: фіксуємо ширини */
       }
       .static-table-header-Excel thead th {
@@ -350,7 +347,7 @@ function createBatchImportModal() {
         max-height: 60vh;
         position: relative;
         border: 1px solid #cbd5e1;
-        border-top: none;
+        border-bottom: none;
       }
       .batch-table-Excel {
         border-collapse: separate; 
@@ -386,27 +383,6 @@ function createBatchImportModal() {
         </p>
         <textarea id="batch-textarea-Excel" class="batch-textarea-Excel" placeholder="Вставте дані з Excel сюди (з табуляцією між колонками)..." autocomplete="off"></textarea>
         
-        <!-- Статична шапка таблиці з обгорткою -->
-        <div id="static-header-wrapper-Excel" class="static-header-wrapper-Excel">
-          <table id="static-table-header-Excel" class="static-table-header-Excel">
-            <thead>
-              <tr>
-                <th data-col="date">Дата</th>
-                <th data-col="shop">Магазин</th>
-                <th data-col="catno">Каталожний номер</th>
-                <th data-col="detail">Деталь</th>
-                <th data-col="qty">Кількість</th>
-                <th data-col="price">Ціна</th>
-                <th data-col="clientPrice">Ціна клієнта</th>
-                <th data-col="invoice">Рахунок №</th>
-                <th data-col="actNo">Акт №</th>
-                <th data-col="unit">Одиниця</th>
-                <th data-col="status">Статус</th>
-              </tr>
-            </thead>
-          </table>
-        </div>
-        
         <div id="batch-table-container-Excel" class="batch-table-container-Excel hidden-all_other_bases">
           <table id="batch-table-Excel" class="batch-table-Excel">
             <thead>
@@ -427,6 +403,28 @@ function createBatchImportModal() {
             <tbody></tbody>
           </table>
         </div>
+        
+        <!-- Статична шапка таблиці з обгорткою (тепер внизу) -->
+        <div id="static-header-wrapper-Excel" class="static-header-wrapper-Excel">
+          <table id="static-table-header-Excel" class="static-table-header-Excel">
+            <thead>
+              <tr>
+                <th data-col="date">Дата</th>
+                <th data-col="shop">Магазин</th>
+                <th data-col="catno">Каталожний номер</th>
+                <th data-col="detail">Деталь</th>
+                <th data-col="qty">Кількість</th>
+                <th data-col="price">Ціна</th>
+                <th data-col="clientPrice">Ціна клієнта</th>
+                <th data-col="invoice">Рахунок №</th>
+                <th data-col="actNo">Акт №</th>
+                <th data-col="unit">Одиниця</th>
+                <th data-col="status">Статус</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        
         <div class="batch-buttons-Excel">
           <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Розпарсити</button>
           <button id="batch-upload-btn-Excel" class="batch-btn-Excel upload-Excel hidden-all_other_bases">✅ Завантажити</button>

@@ -310,18 +310,28 @@ async function syncSlyusarsHistoryForAct(params: {
         ? expandNameForSave(workName)
         : workName;
 
-      // Пошук попередньої роботи:
-      // 1) Спочатку за індексом (якщо редагували існуючий рядок на місці)
-      // 2) Потім за назвою роботи (якщо переміщено)
-      // 3) Якщо кількість записів однакова - використовуємо індекс для "Розраховано"
-      //    (важливо для випадків коли назва роботи змінилася, але позиція та же)
-      let prev = prevWorks[idx];
-      let prevByName = prevWorks.find(z => z.Робота === fullWorkName);
+      // ✅ ВИПРАВЛЕНО: Пріоритет пошуку для збереження "Розраховано":
+      // 1) СПОЧАТКУ за індексом (найточніший спосіб при однакових роботах)
+      // 2) Fallback за назвою тільки якщо індекс не підходить
+      let sourceForDates: any = null;
       
-      // Визначаємо звідки брати "Записано" та "Розраховано":
-      // - Якщо знайшли за назвою - використовуємо його
-      // - Інакше якщо є за індексом і кількість позицій та ж - використовуємо індексний
-      let sourceForDates = prevByName || (prev && rows.length === prevWorks.length ? prev : null);
+      // 1. Пошук за індексом - якщо позиція та ж і назва співпадає
+      const prevByIndex = prevWorks[idx];
+      if (prevByIndex && prevByIndex.Робота === fullWorkName) {
+        sourceForDates = prevByIndex;
+      }
+      
+      // 2. Fallback: пошук за назвою (тільки якщо кількість записів змінилась)
+      if (!sourceForDates && rows.length !== prevWorks.length) {
+        // Шукаємо запис з такою ж назвою, який ще не використаний
+        // Це потрібно для випадків коли додали/видалили рядки
+        sourceForDates = prevWorks.find((z, prevIdx) => {
+          if (z.Робота !== fullWorkName) return false;
+          // Перевіряємо чи цей запис вже не "зайнятий" попередніми рядками
+          // (простий випадок - якщо індекси співпадають)
+          return prevIdx === idx;
+        });
+      }
 
       let recordedDate = sourceForDates ? sourceForDates.Записано : null;
       let calculatedDate = sourceForDates ? sourceForDates.Розраховано : null;

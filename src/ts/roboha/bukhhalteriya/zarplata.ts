@@ -50,6 +50,7 @@ export interface PodlegleRecord {
   paymentDate?: string;
   recordedDate?: string; // ✅ Додано: дата створення запису
   customHtmlTotal?: string; // ✅ Додано для кастомного відображення суми
+  workIndex?: number; // ✅ Додано: індекс роботи в масиві Записи для точного пошуку
 }
 
 interface SlyusarData {
@@ -1250,7 +1251,7 @@ export function searchDataInDatabase(
           record.Записи.length > 0
         ) {
           if (podlegleDateFilterMode === "paid") {
-            record.Записи.forEach((entry) => {
+            record.Записи.forEach((entry, entryIndex) => {
               // ✅ ВИПРАВЛЕНО: Якщо кількість 0, але є зарплата - показуємо запис!
               if (
                 entry.Кількість === 0 &&
@@ -1281,6 +1282,7 @@ export function searchDataInDatabase(
                 isPaid: true,
                 paymentDate: payDmy,
                 recordedDate: entry.Записано || "", // ✅ Додано
+                workIndex: entryIndex, // ✅ Додано: індекс для точного пошуку
               });
             });
           } else {
@@ -1291,7 +1293,7 @@ export function searchDataInDatabase(
             if (!targetDmy) return;
             if (!inRangeByIso(targetDmy, dateOpen, toIsoClose)) return;
 
-            record.Записи.forEach((entry) => {
+            record.Записи.forEach((entry, entryIndex) => {
               // ✅ ВИПРАВЛЕНО: Якщо кількість 0, але є зарплата - показуємо запис!
               if (
                 entry.Кількість === 0 &&
@@ -1318,6 +1320,7 @@ export function searchDataInDatabase(
                 isPaid: !!entry.Розраховано,
                 paymentDate: entry.Розраховано || "",
                 recordedDate: entry.Записано || "", // ✅ Додано
+                workIndex: entryIndex, // ✅ Додано: індекс для точного пошуку
               });
             });
           }
@@ -2058,14 +2061,42 @@ export async function togglepodleglePayment(index: number): Promise<void> {
   else if (actRecord.Записи) {
     let workEntry: any;
 
-    if (!record.isPaid) {
-      workEntry = actRecord.Записи!.find(
-        (e) => e.Робота === record.work && !e.Розраховано // Шукаємо тільки неоплачений запис
-      );
+    // ✅ ВИПРАВЛЕНО: Використовуємо workIndex для точного пошуку при однакових роботах
+    if (typeof record.workIndex === "number" && record.workIndex >= 0 && record.workIndex < actRecord.Записи.length) {
+      // Точний пошук за індексом
+      const entryByIndex = actRecord.Записи[record.workIndex];
+      
+      // Перевіряємо що це та сама робота (на випадок якщо порядок змінився)
+      if (entryByIndex && entryByIndex.Робота === record.work) {
+        workEntry = entryByIndex;
+      }
+    }
 
-      if (!workEntry) {
+    // Fallback: пошук за назвою (для старих записів без workIndex)
+    if (!workEntry) {
+      if (!record.isPaid) {
+        workEntry = actRecord.Записи.find(
+          (e) => e.Робота === record.work && !e.Розраховано
+        );
+      } else {
+        workEntry = actRecord.Записи.find(
+          (e) => e.Робота === record.work && e.Розраховано === record.paymentDate
+        );
+      }
+    }
+
+    if (!workEntry) {
+      showNotification(
+        `⚠️ Робота "${record.work}" не знайдена`,
+        "error"
+      );
+      return;
+    }
+
+    if (!record.isPaid) {
+      if (workEntry.Розраховано) {
         showNotification(
-          `⚠️ Робота "${record.work}" не знайдена або вже оплачена`,
+          `⚠️ Робота "${record.work}" вже оплачена`,
           "error"
         );
         return;
@@ -2075,17 +2106,6 @@ export async function togglepodleglePayment(index: number): Promise<void> {
       record.paymentDate = currentDate;
       statusMsg = `💰 Розрахунок встановлено на ${currentDate}`;
     } else {
-      workEntry = actRecord.Записи!.find(
-        (e) => e.Робота === record.work && e.Розраховано === record.paymentDate
-      );
-
-      if (!workEntry) {
-        showNotification(
-          `⚠️ Оплачена робота "${record.work}" не знайдена`,
-          "error"
-        );
-        return;
-      }
       delete workEntry.Розраховано;
       record.isPaid = false;
       record.paymentDate = "";

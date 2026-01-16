@@ -288,7 +288,7 @@ async function syncSlyusarsHistoryForAct(params: {
       dayBucket.push(actEntry);
     }
 
-    // Створюємо новий масив записів, зберігаючи стару дату для незмінних робіт
+    // Створюємо новий масив записів, зберігаючи стару дату та "Розраховано" для незмінних робіт
     const prevWorks = Array.isArray(actEntry["Записи"]) ? actEntry["Записи"] : [];
     const zapis: Array<{
       Ціна: number;
@@ -296,10 +296,12 @@ async function syncSlyusarsHistoryForAct(params: {
       Робота: string;
       Зарплата: number;
       Записано: string;
+      Розраховано?: string;
     }> = [];
     let summaRob = 0;
 
-    for (const r of rows) {
+    for (let idx = 0; idx < rows.length; idx++) {
+      const r = rows[idx];
       const qty = Number(r.Кількість) || 0;
       const price = Number(r.Ціна) || 0;
       const zp = Number(r.Зарплата) || 0;
@@ -308,16 +310,16 @@ async function syncSlyusarsHistoryForAct(params: {
         ? expandNameForSave(workName)
         : workName;
 
-      // Пошук попередньої роботи
-      const prev = prevWorks.find(z =>
-        z.Робота === fullWorkName &&
-        z.Кількість === qty &&
-        z.Ціна === price &&
-        z.Зарплата === zp
-      );
+      // Пошук попередньої роботи: спочатку за індексом, потім за назвою
+      let prev = prevWorks[idx];
+      if (!prev || prev.Робота !== fullWorkName) {
+        prev = prevWorks.find(z => z.Робота === fullWorkName);
+      }
 
       let recordedDate = prev ? prev.Записано : null;
-      // Якщо робота змінилась або нова — ставимо нову дату
+      let calculatedDate = prev ? prev.Розраховано : null;
+      
+      // Якщо робота нова — ставимо нову дату запису
       if (!prev) {
         const now = new Date();
         const day = String(now.getDate()).padStart(2, "0");
@@ -326,13 +328,21 @@ async function syncSlyusarsHistoryForAct(params: {
         recordedDate = `${day}.${month}.${year}`;
       }
 
-      zapis.push({
+      const newRecord: any = {
         Ціна: price,
         Кількість: qty,
         Робота: fullWorkName,
         Зарплата: zp,
         Записано: recordedDate,
-      });
+      };
+      
+      // Додаємо "Розраховано" якщо воно було в попередньому записі
+      // Це гарантує що дата виплати зберігається при редагуванні всіх інших параметрів
+      if (calculatedDate) {
+        newRecord.Розраховано = calculatedDate;
+      }
+
+      zapis.push(newRecord);
       summaRob += price * qty;
     }
 

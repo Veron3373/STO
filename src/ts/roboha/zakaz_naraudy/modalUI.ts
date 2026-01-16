@@ -371,10 +371,10 @@ async function updateSlyusarSalaryInRow(
   }
 
   // 3. Якщо є сума, але немає в історії - рахуємо від відсотка
-  // console.log(`⚙️ Зарплати в історії немає, рахуємо від відсотка`);
+  console.log(`⚙️ Зарплати в історії немає для "${workName}", рахуємо від відсотка. rowIndex=${rowIndex}, recordId=${recordId}`);
   const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-  // console.log(`💰 Розрахована зарплата: ${calculatedSalary} (${percent}%)`);
+  console.log(`💰 ПЕРЕЗАПИСУЄМО зарплату на ${calculatedSalary} (${percent}% від ${totalSum}) для "${workName}"`);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 }
 

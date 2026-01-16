@@ -33,3 +33,24 @@ dist/
 deploy-STO-*.ps1
 .vercel
 .env*.local
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Setup and Documentation Files (not for public repository)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Configuration files with sensitive data
+CURRENT_CONFIG.txt
+
+# Setup scripts and templates
+setup_new_project.ps1
+CONFIG_TEMPLATE.txt
+
+# Documentation files
+README_CLONE.md
+SETUP_README.md
+QUICK_START.md
+SETUP_FILES_INFO.md
+
+# Visual guides (generated images)
+setup_config_guide*.png
+project_clone_workflow*.png

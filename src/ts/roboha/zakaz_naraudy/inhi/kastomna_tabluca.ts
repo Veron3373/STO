@@ -106,6 +106,18 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       };
     });
 
+  // Фільтруємо деталі з бази даних details (пошук по назві)
+  const filteredDetails = globalCache.details
+    .filter((name) => name.toLowerCase().includes(q))
+    .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
+    .map((name) => ({
+      label: name,
+      value: name,
+      fullName: name,
+      itemType: "detail" as const,
+      labelHtml: `<span style="color: #1565c0">${name}</span>`,
+    }));
+
   // Фільтруємо роботи з worksWithId (пошук по work_id або name)
   const filteredWorks = globalCache.worksWithId
     .filter((w) =>
@@ -121,11 +133,11 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     }));
 
   console.log(
-    `📋 Знайдено - Деталей: ${filteredSkladParts.length}, Робіт: ${filteredWorks.length}`
+    `📋 Знайдено - Деталей зі складу: ${filteredSkladParts.length}, Деталей з БД: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`
   );
 
-  // Повертаємо спочатку деталі (синім), потім роботи (зеленим)
-  return [...filteredSkladParts, ...filteredWorks];
+  // Повертаємо в порядку: sclad (зверху), details (посередині), works (внизу)
+  return [...filteredSkladParts, ...filteredDetails, ...filteredWorks];
 }
 
 /* ====================== helpers ====================== */

@@ -306,12 +306,16 @@ function createBatchImportModal() {
       .static-header-wrapper-Excel {
         display: none; /* Спочатку прихована */
         width: 100%;
-        overflow: hidden; /* Прибираємо ВСІ скроли (і вертикальний, і горизонтальний) */
+        overflow: hidden; /* Прибираємо ВСІ скроли */
         background-color: #e2e8f0;
         border: 1px solid #cbd5e1;
         border-bottom: none;
-        margin-bottom: 0; /* Прибираємо відступ, щоб зливалася з таблицею */
+        margin-bottom: 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        /* Додаємо padding-right, щоб компенсувати можливий скролбар в таблиці знизу. 
+           Зазвичай скролбар це ~15-17px. Це грубе, але дієве рішення, щоб заголовки не з'їжджали. */
+        padding-right: 17px; 
+        box-sizing: border-box; /* Щоб padding не збільшував загальну ширину */
       }
       .static-header-wrapper-Excel.visible {
         display: block;
@@ -322,31 +326,37 @@ function createBatchImportModal() {
         border-collapse: separate; 
         border-spacing: 0;
         margin-bottom: 0;
+        table-layout: fixed; /* <--- КРИТИЧНО ВАЖЛИВО: фіксуємо ширини */
       }
       .static-table-header-Excel thead th {
         background-color: #e2e8f0 !important;
-        padding: 10px;
+        padding: 5px 10px; /* Трохи менше вертикального паддінгу */
         color: #1e293b;
         font-weight: bold;
         text-align: left;
         border-right: 1px solid #cbd5e1;
         border-bottom: 2px solid #cbd5e1;
+        /* Щоб текст не налізав, якщо не влізає */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .static-table-header-Excel thead th:last-child {
         border-right: none;
       }
       
       .batch-table-container-Excel {
-        overflow-y: auto;
-        max-height: 60vh; /* slightly less to ensure fit */
+        overflow-y: scroll; /* Завжди показуємо місце під скрол, щоб вирівнювання з шапкою (яка має padding-right) було стабільним */
+        max-height: 60vh;
         position: relative;
         border: 1px solid #cbd5e1;
-        border-top: none; /* Щоб зливалася з шапкою */
+        border-top: none;
       }
       .batch-table-Excel {
         border-collapse: separate; 
         border-spacing: 0;
         width: 100%;
+        table-layout: fixed; /* <--- КРИТИЧНО ВАЖЛИВО: фіксуємо ширини для тіла теж */
       }
       /* Приховуємо оригінальну шапку в таблиці */
       .batch-table-Excel thead {
@@ -579,9 +589,9 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
       if (textWidth > maxWidth) maxWidth = textWidth;
     });
     let limit = 130;
-    if (col === "detail") limit = 250;
-    else if (col === "shop") limit = 160;
-    else if (col === "catno") limit = 150;
+    if (col === "detail") limit = 350;
+    else if (col === "shop") limit = 200;
+    else if (col === "catno") limit = 180;
 
     widths.set(col, Math.min(Math.ceil(maxWidth), limit));
   });

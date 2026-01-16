@@ -55,95 +55,98 @@ function expandName(shortenedName: string): string {
 }
 
 /**
- * Отримує зарплату з історії слюсаря для конкретної роботи та акту
+ * Інтерфейс для запису роботи в історії слюсаря
+ */
+interface SlyusarWorkRecord {
+  Робота: string;
+  Ціна: number;
+  Кількість: number;
+  Зарплата: number;
+  Записано?: string;
+  Розраховано?: string;
+}
+
+/**
+ * Знаходить запис роботи в історії слюсаря для конкретного акту
  * @param slyusarName - ім'я слюсаря
  * @param workName - назва роботи
- * @param actId - номер акту (ОБОВ'ЯЗКОВИЙ параметр)
+ * @param actId - номер акту
+ * @param rowIndex - індекс рядка для точного пошуку при однакових роботах
+ * @returns весь об'єкт запису або null
  */
-function getSlyusarSalaryFromHistory(
+function findSlyusarWorkRecord(
   slyusarName: string,
   workName: string,
-  actId: number | null
-): number | null {
-  if (!slyusarName || !workName || !actId) {
-    console.log(
-      "❌ getSlyusarSalaryFromHistory: відсутні обов'язкові параметри",
-      {
-        slyusarName,
-        workName,
-        actId,
-      }
-    );
-    return null;
-  }
+  actId: number | null,
+  rowIndex?: number
+): SlyusarWorkRecord | null {
+  if (!slyusarName || !workName || !actId) return null;
 
   const slyusar = globalCache.slyusars.find(
     (s) => s.Name?.toLowerCase() === slyusarName.toLowerCase()
   );
 
-  if (!slyusar?.["Історія"]) {
-    console.log(`⚠️ Слюсар "${slyusarName}" не знайдений або немає історії`);
-    return null;
-  }
+  if (!slyusar?.["Історія"]) return null;
 
   const history = slyusar["Історія"];
   const targetActId = String(actId);
-
-  console.log(`🔍 Шукаємо зарплату для:`, {
-    slyusarName,
-    workName,
-    actId: targetActId,
-    isShortened: workName.includes("....."), // ← ДОДАНО
-  });
-
-  // ← ДОДАНО: Розгортаємо скорочену назву
   const fullWorkName = expandName(workName);
-  console.log(`📝 Розгорнута назва: "${fullWorkName}"`);
+  const workNameLower = workName.toLowerCase();
+  const fullWorkNameLower = fullWorkName.toLowerCase();
 
   for (const dateKey in history) {
     const dayBucket = history[dateKey];
     if (!Array.isArray(dayBucket)) continue;
 
     for (const actEntry of dayBucket) {
-      const entryActId = String(actEntry?.["Акт"] || "");
-
-      if (entryActId !== targetActId) continue;
-
-      console.log(`✅ Знайдено акт ${targetActId} в даті ${dateKey}`);
+      if (String(actEntry?.["Акт"] || "") !== targetActId) continue;
 
       const zapisi = actEntry?.["Записи"];
-      if (!Array.isArray(zapisi)) {
-        console.log(`⚠️ Немає записів в акті ${targetActId}`);
-        continue;
-      }
+      if (!Array.isArray(zapisi)) continue;
 
-      // ← ВИПРАВЛЕНО: Порівнюємо як скорочену, так і повну назву
-      const workRecord = zapisi.find((z: any) => {
-        const recordWork = z.Робота?.trim() || "";
-        const recordWorkLower = recordWork.toLowerCase();
-        const workNameLower = workName.toLowerCase();
-        const fullWorkNameLower = fullWorkName.toLowerCase();
-
-        return (
-          recordWorkLower === workNameLower ||
-          recordWorkLower === fullWorkNameLower
-        );
-      });
-
-      if (workRecord) {
-        const salary = workRecord.Зарплата;
-        console.log(`💰 Знайдено зарплату для "${workName}":`, salary);
-
-        if (typeof salary === "number") {
-          return salary;
+      // 1. Точний пошук за індексом (якщо передано)
+      if (typeof rowIndex === "number" && rowIndex >= 0 && rowIndex < zapisi.length) {
+        const record = zapisi[rowIndex];
+        const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
+        
+        if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
+          return record as SlyusarWorkRecord;
         }
       }
+
+      // 2. Fallback: пошук за назвою
+      const record = zapisi.find((z: any) => {
+        const recordWorkLower = (z.Робота?.trim() || "").toLowerCase();
+        return recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower;
+      });
+
+      if (record) return record as SlyusarWorkRecord;
     }
   }
 
-  console.log(
-    `❌ Зарплату не знайдено для акту ${targetActId}, роботи "${workName}"`
-  );
+  return null;
+}
+
+/**
+ * Отримує зарплату з історії слюсаря для конкретної роботи та акту
+ * @param slyusarName - ім'я слюсаря
+ * @param workName - назва роботи
+ * @param actId - номер акту (ОБОВ'ЯЗКОВИЙ параметр)
+ * @param rowIndex - індекс рядка для точного пошуку
+ */
+function getSlyusarSalaryFromHistory(
+  slyusarName: string,
+  workName: string,
+  actId: number | null,
+  rowIndex?: number
+): number | null {
+  const record = findSlyusarWorkRecord(slyusarName, workName, actId, rowIndex);
+  
+  if (record && typeof record.Зарплата === "number") {
+    console.log(`💰 Знайдено зарплату для "${workName}" [idx:${rowIndex}]: ${record.Зарплата}`);
+    return record.Зарплата;
+  }
+  
   return null;
 }
 
@@ -214,7 +217,8 @@ export function calculateSlyusarSum(totalSum: number, percent: number): number {
  * Оновлює зарплату слюсаря в рядку (async версія) - ВИПРАВЛЕНА ВЕРСІЯ 2.0
  */
 async function updateSlyusarSalaryInRow(
-  row: HTMLTableRowElement
+  row: HTMLTableRowElement,
+  rowIndex?: number // Індекс рядка для точного пошуку при однакових роботах
 ): Promise<void> {
   if (!globalCache.settings.showZarplata) return;
 
@@ -235,8 +239,6 @@ async function updateSlyusarSalaryInRow(
   const workName =
     nameCell?.getAttribute("data-full-name") || nameCell?.textContent?.trim();
 
-  // console.log(`🔍 Робота для оновлення зарплати: "${workName}"`);
-
   const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
   const slyusarName = pibCell?.textContent?.trim();
   const slyusarSumCell = row.querySelector(
@@ -255,20 +257,12 @@ async function updateSlyusarSalaryInRow(
     return;
   }
 
-  /*
-  console.log(`🔄 Оновлення зарплати для рядка:`, {
-    actId,
-    slyusarName,
-    workName,
-    totalSum,
-  });
-  */
-
   // 1. ПРІОРИТЕТ: Шукаємо в історії для ПОТОЧНОГО акту
   const historySalary = getSlyusarSalaryFromHistory(
     slyusarName,
     workName,
-    actId
+    actId,
+    rowIndex // Передаємо індекс для точного пошуку
   );
 
   if (historySalary !== null) {
@@ -312,64 +306,73 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
   console.log(`🚀 Ініціалізація зарплат для акту ${actId}`);
 
-  const rows = Array.from(
-    tableBody.querySelectorAll<HTMLTableRowElement>("tr")
-  );
-
-  for (const row of rows) {
-    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
-    const typeFromCell = nameCell?.getAttribute("data-type");
-
-    if (typeFromCell !== "works") continue;
-
-    // ✅ ВИПРАВЛЕНО: беремо повну назву з атрибуту, якщо є
-    const workName =
-      nameCell?.getAttribute("data-full-name") || nameCell?.textContent?.trim();
-
-    const pibCell = row.querySelector(
-      '[data-name="pib_magazin"]'
-    ) as HTMLElement;
-    const slyusarName = pibCell?.textContent?.trim();
-    const slyusarSumCell = row.querySelector(
-      '[data-name="slyusar_sum"]'
-    ) as HTMLElement;
-
-    if (!workName || !slyusarName || !slyusarSumCell) continue;
+  // Використовуємо спільну функцію для обходу рядків з індексами
+  await processWorkRowsWithIndex(tableBody, async (row, slyusarName, workName, currentIndex) => {
+    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+    if (!slyusarSumCell) return;
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const totalSum = parseNumber(sumCell?.textContent);
 
-    // console.log(`🔍 Обробка роботи "${workName}" для "${slyusarName}"`);
-
-    // КРИТИЧНО: Завжди шукаємо в історії ПЕРШИМ
-    const historySalary = getSlyusarSalaryFromHistory(
-      slyusarName,
-      workName,
-      actId
-    );
+    // КРИТИЧНО: Завжди шукаємо в історії ПЕРШИМ, передаємо індекс для точного пошуку
+    const historySalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId, currentIndex);
 
     if (historySalary !== null) {
-      console.log(`✅ Встановлено з історії: ${historySalary}`);
       slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
-      continue; // ← ВАЖЛИВО: переходимо до наступного рядка
+      return;
     }
 
-    // ВИПРАВЛЕННЯ: Якщо немає в історії і сума <= 0 - пропускаємо
-    if (totalSum <= 0) {
-      // console.log(`⏭️ Сума <= 0 і немає в історії - пропускаємо`);
-      continue;
-    }
+    // Якщо немає в історії і сума <= 0 - пропускаємо
+    if (totalSum <= 0) return;
 
     // Якщо немає в історії, але є сума - рахуємо від відсотка
-    // console.log(`⚙️ Розрахунок від відсотка`);
     const percent = await getSlyusarWorkPercent(slyusarName);
     const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-    // console.log(`💰 Розраховано: ${calculatedSalary} (${percent}%)`);
     slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
-  }
+  });
 
   console.log(`✅ Ініціалізація зарплат завершена для акту ${actId}`);
 }
+
+/**
+ * Обходить всі рядки робіт в таблиці з правильним індексом для кожного слюсаря
+ * @param tableBody - tbody таблиці
+ * @param callback - функція для обробки кожного рядка
+ */
+async function processWorkRowsWithIndex(
+  tableBody: HTMLTableSectionElement,
+  callback: (
+    row: HTMLTableRowElement,
+    slyusarName: string,
+    workName: string,
+    slyusarWorkIndex: number
+  ) => void | Promise<void>
+): Promise<void> {
+  const rows = Array.from(tableBody.querySelectorAll<HTMLTableRowElement>("tr"));
+  const slyusarWorkIndexMap = new Map<string, number>();
+
+  for (const row of rows) {
+    const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+    if (!nameCell) continue;
+    
+    const typeFromCell = nameCell.getAttribute("data-type");
+    if (typeFromCell !== "works") continue;
+
+    const workName = nameCell.getAttribute("data-full-name") || nameCell.textContent?.trim() || "";
+    const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
+    const slyusarName = pibCell?.textContent?.trim() || "";
+
+    if (!workName || !slyusarName) continue;
+
+    // Визначаємо індекс роботи для цього слюсаря
+    const slyusarKey = slyusarName.toLowerCase();
+    const currentIndex = slyusarWorkIndexMap.get(slyusarKey) ?? 0;
+    slyusarWorkIndexMap.set(slyusarKey, currentIndex + 1);
+
+    await callback(row, slyusarName, workName, currentIndex);
+  }
+}
+
 /**
  * Оновлює "Зар-та" для всіх робіт у таблиці з урахуванням історії/відсотків
  * Використовується з modalMain.ts одразу після рендеру модалки.
@@ -381,20 +384,10 @@ export function updateAllSlyusarSumsFromHistory(): void {
   );
   if (!tableBody) return;
 
-  const rows = Array.from(
-    tableBody.querySelectorAll<HTMLTableRowElement>("tr")
-  );
-
-  for (const row of rows) {
-    const nameCell = row.querySelector(
-      '[data-name="name"]'
-    ) as HTMLElement | null;
-    if (!nameCell) continue;
-    const typeFromCell = nameCell.getAttribute("data-type");
-    if (typeFromCell !== "works") continue;
-
-    void updateSlyusarSalaryInRow(row);
-  }
+  // Використовуємо спільну функцію для обходу рядків з індексами
+  void processWorkRowsWithIndex(tableBody, (row, _slyusarName, _workName, currentIndex) => {
+    void updateSlyusarSalaryInRow(row, currentIndex);
+  });
 }
 
 /**

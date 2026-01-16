@@ -310,17 +310,24 @@ async function syncSlyusarsHistoryForAct(params: {
         ? expandNameForSave(workName)
         : workName;
 
-      // Пошук попередньої роботи: спочатку за індексом, потім за назвою
+      // Пошук попередньої роботи:
+      // 1) Спочатку за індексом (якщо редагували існуючий рядок на місці)
+      // 2) Потім за назвою роботи (якщо переміщено)
+      // 3) Якщо кількість записів однакова - використовуємо індекс для "Розраховано"
+      //    (важливо для випадків коли назва роботи змінилася, але позиція та же)
       let prev = prevWorks[idx];
-      if (!prev || prev.Робота !== fullWorkName) {
-        prev = prevWorks.find(z => z.Робота === fullWorkName);
-      }
+      let prevByName = prevWorks.find(z => z.Робота === fullWorkName);
+      
+      // Визначаємо звідки брати "Записано" та "Розраховано":
+      // - Якщо знайшли за назвою - використовуємо його
+      // - Інакше якщо є за індексом і кількість позицій та ж - використовуємо індексний
+      let sourceForDates = prevByName || (prev && rows.length === prevWorks.length ? prev : null);
 
-      let recordedDate = prev ? prev.Записано : null;
-      let calculatedDate = prev ? prev.Розраховано : null;
+      let recordedDate = sourceForDates ? sourceForDates.Записано : null;
+      let calculatedDate = sourceForDates ? sourceForDates.Розраховано : null;
       
       // Якщо робота нова — ставимо нову дату запису
-      if (!prev) {
+      if (!recordedDate) {
         const now = new Date();
         const day = String(now.getDate()).padStart(2, "0");
         const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -338,6 +345,7 @@ async function syncSlyusarsHistoryForAct(params: {
       
       // Додаємо "Розраховано" якщо воно було в попередньому записі
       // Це гарантує що дата виплати зберігається при редагуванні всіх інших параметрів
+      // (навіть при зміні назви роботи, ціни, кількості — поки ПІБ слюсаря не змінено)
       if (calculatedDate) {
         newRecord.Розраховано = calculatedDate;
       }

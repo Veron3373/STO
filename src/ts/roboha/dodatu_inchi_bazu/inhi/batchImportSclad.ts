@@ -302,27 +302,62 @@ function createBatchImportModal() {
   modal.className = "modal-overlay-all_other_bases hidden-all_other_bases";
   modal.innerHTML = `
     <style>
+      /* Обгортка для статичної шапки */
+      .static-header-wrapper-Excel {
+        display: none; /* Спочатку прихована */
+        width: 100%;
+        overflow-x: hidden; /* Скролимо через JS */
+        background-color: #e2e8f0;
+        border: 1px solid #cbd5e1;
+        border-bottom: none;
+        margin-bottom: 0; /* Прибираємо відступ, щоб зливалася з таблицею */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .static-header-wrapper-Excel.visible {
+        display: block;
+      }
+      
+      .static-table-header-Excel {
+        width: 100%;
+        border-collapse: separate; 
+        border-spacing: 0;
+        margin-bottom: 0;
+      }
+      .static-table-header-Excel thead th {
+        background-color: #e2e8f0 !important;
+        padding: 10px;
+        color: #1e293b;
+        font-weight: bold;
+        text-align: left;
+        border-right: 1px solid #cbd5e1;
+        border-bottom: 2px solid #cbd5e1;
+      }
+      .static-table-header-Excel thead th:last-child {
+        border-right: none;
+      }
+      
       .batch-table-container-Excel {
         overflow-y: auto;
         max-height: 60vh; /* slightly less to ensure fit */
         position: relative;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #cbd5e1;
+        border-top: none; /* Щоб зливалася з шапкою */
       }
       .batch-table-Excel {
         border-collapse: separate; 
         border-spacing: 0;
         width: 100%;
       }
+      /* Приховуємо оригінальну шапку в таблиці */
+      .batch-table-Excel thead {
+        visibility: hidden;
+        height: 0;
+        line-height: 0;
+      }
       .batch-table-Excel thead th {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 100; /* Increased z-index */
-        background-color: #e2e8f0 !important;
-        border-bottom: 2px solid #cbd5e1;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        padding: 10px; /* Add padding for better look */
-        color: #1e293b;
-        font-weight: bold;
+        padding: 0 !important;
+        height: 0 !important;
+        border: none !important;
       }
       .batch-table-Excel tbody td {
         border-bottom: 1px solid #e2e8f0;
@@ -340,6 +375,28 @@ function createBatchImportModal() {
           <strong>Дата ┃ Магазин ┃ Каталожний номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
         </p>
         <textarea id="batch-textarea-Excel" class="batch-textarea-Excel" placeholder="Вставте дані з Excel сюди (з табуляцією між колонками)..." autocomplete="off"></textarea>
+        
+        <!-- Статична шапка таблиці з обгорткою -->
+        <div id="static-header-wrapper-Excel" class="static-header-wrapper-Excel">
+          <table id="static-table-header-Excel" class="static-table-header-Excel">
+            <thead>
+              <tr>
+                <th data-col="date">Дата</th>
+                <th data-col="shop">Магазин</th>
+                <th data-col="catno">Каталожний номер</th>
+                <th data-col="detail">Деталь</th>
+                <th data-col="qty">Кількість</th>
+                <th data-col="price">Ціна</th>
+                <th data-col="clientPrice">Ціна клієнта</th>
+                <th data-col="invoice">Рахунок №</th>
+                <th data-col="actNo">Акт №</th>
+                <th data-col="unit">Одиниця</th>
+                <th data-col="status">Статус</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        
         <div id="batch-table-container-Excel" class="batch-table-container-Excel hidden-all_other_bases">
           <table id="batch-table-Excel" class="batch-table-Excel">
             <thead>
@@ -531,17 +588,33 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
   return widths;
 }
 function applyColumnWidths(widths: Map<string, number>) {
+  // Застосовуємо ширини до основної таблиці (прихованої шапки)
   const thead = document.querySelector("#batch-table-Excel thead tr");
-  if (!thead) return;
-  thead.querySelectorAll("th").forEach((th) => {
-    const col = (th as HTMLElement).dataset.col;
-    if (col && widths.has(col)) {
-      const width = widths.get(col)!;
-      (th as HTMLElement).style.width = `${width}px`;
-      (th as HTMLElement).style.minWidth = `${width}px`;
-      (th as HTMLElement).style.maxWidth = `${width}px`;
-    }
-  });
+  if (thead) {
+    thead.querySelectorAll("th").forEach((th) => {
+      const col = (th as HTMLElement).dataset.col;
+      if (col && widths.has(col)) {
+        const width = widths.get(col)!;
+        (th as HTMLElement).style.width = `${width}px`;
+        (th as HTMLElement).style.minWidth = `${width}px`;
+        (th as HTMLElement).style.maxWidth = `${width}px`;
+      }
+    });
+  }
+
+  // Застосовуємо ширини до статичної шапки
+  const staticHeader = document.querySelector("#static-table-header-Excel thead tr");
+  if (staticHeader) {
+    staticHeader.querySelectorAll("th").forEach((th) => {
+      const col = (th as HTMLElement).dataset.col;
+      if (col && widths.has(col)) {
+        const width = widths.get(col)!;
+        (th as HTMLElement).style.width = `${width}px`;
+        (th as HTMLElement).style.minWidth = `${width}px`;
+        (th as HTMLElement).style.maxWidth = `${width}px`;
+      }
+    });
+  }
 }
 // ===== Dropdown =====
 let currentDropdownInput: HTMLElement | null = null;
@@ -1654,6 +1727,9 @@ export async function initBatchImport() {
       document
         .getElementById(batchModalId)
         ?.classList.add("hidden-all_other_bases");
+      document
+        .getElementById("static-header-wrapper-Excel")
+        ?.classList.remove("visible");
       closeDropdownList();
     };
   }
@@ -1679,6 +1755,19 @@ export async function initBatchImport() {
         document
           .getElementById("batch-table-container-Excel")
           ?.classList.remove("hidden-all_other_bases");
+        document
+          .getElementById("static-header-wrapper-Excel")
+          ?.classList.add("visible");
+
+        // Синхронізація скролу
+        const tableContainer = document.getElementById("batch-table-container-Excel");
+        const headerWrapper = document.getElementById("static-header-wrapper-Excel");
+        if (tableContainer && headerWrapper) {
+          tableContainer.onscroll = () => {
+            headerWrapper.scrollLeft = tableContainer.scrollLeft;
+          };
+        }
+
         document
           .getElementById("batch-upload-btn-Excel")
           ?.classList.remove("hidden-all_other_bases");

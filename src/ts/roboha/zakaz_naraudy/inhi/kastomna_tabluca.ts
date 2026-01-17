@@ -99,7 +99,7 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
 
       // ✅ НОВИЙ ПОРЯДОК: Назва (синя) - Номер (чорний підкреслений) (К-ть і ціна) Дата
       const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-        ? ` <span style="color: #ff8c00; font-weight: bold;">(${p.scladNomer}-Склад)</span>`
+        ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
         : '';
       const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${skladTag}${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
 

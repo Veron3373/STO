@@ -880,18 +880,20 @@ export async function createSettingsModal(): Promise<void> {
       <div class="percentage-control">
         <label class="percentage-label">
           <span class="percentage-title">Націнка на запчастини</span>
-          <div class="percentage-row" data-setting-id="1">
-            <span class="percentage-number">1</span>
-            <div class="percentage-input-wrapper">
-              <input type="range" id="percentage-slider-1" class="percentage-slider" min="0" max="100" value="0" step="1" />
-              <div class="percentage-value-display">
-                <input type="number" id="percentage-input-1" class="percentage-input" min="0" max="100" value="0" />
-                <span class="percent-sign">%</span>
+          <div class="percentage-rows-wrapper">
+            <div class="percentage-row" data-setting-id="1">
+              <span class="percentage-number">1</span>
+              <div class="percentage-input-wrapper">
+                <input type="range" id="percentage-slider-1" class="percentage-slider" min="0" max="100" value="0" step="1" />
+                <div class="percentage-value-display">
+                  <input type="number" id="percentage-input-1" class="percentage-input" min="0" max="100" value="0" />
+                  <span class="percent-sign">%</span>
+                </div>
               </div>
+              <button type="button" class="add-percentage-btn" id="add-percentage-row" title="Додати ще один склад">+</button>
             </div>
-            <button type="button" class="add-percentage-btn" id="add-percentage-row" title="Додати ще один склад">+</button>
+            <div id="additional-percentage-rows"></div>
           </div>
-          <div id="additional-percentage-rows"></div>
         </label>
       </div>
 

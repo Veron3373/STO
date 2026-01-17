@@ -97,9 +97,7 @@ const ROLE_SETTINGS = {
   Слюсар: [
     { id: 1, label: "📋 Акт Зарплата 💲" },
     { id: 2, label: "📋 Акт Ціна та Сума" },
-    { id: 3, label: "📋 Акт Закриття акту 🗝️" },
-    { id: 4, label: "📋 Акт Закриття акту із зауваженнями ⚠️" },
-    { id: 5, label: "📋 Акт Відкриття акту 🔒" },
+    { id: 3, label: "📋 Акт Завершення робіт 🗝️" },
     { divider: true },
     { id: 6, label: "Планування" },
   ],
@@ -537,15 +535,15 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       if (el?.type === "checkbox") el.checked = false;
     });
 
-    // Збираємо дані про заповнені відсотки
-    const procentData: { settingId: number; value: number }[] = [];
+    // Збираємо дані про відсотки (всі setting_id 1-3)
+    const procentMap = new Map<number, number | null>();
 
     data?.forEach((row: any) => {
       const setting = SETTINGS[row.setting_id as keyof typeof SETTINGS];
       
-      // Обробка відсотків - збираємо всі заповнені
-      if (row.setting_id >= 1 && row.setting_id <= 3 && row.procent !== null && row.procent !== undefined) {
-        procentData.push({ settingId: row.setting_id, value: row.procent });
+      // Зберігаємо всі procent значення (включно з null)
+      if (row.setting_id >= 1 && row.setting_id <= 3) {
+        procentMap.set(row.setting_id, row.procent);
       }
       
       // Обробка чекбоксів
@@ -558,24 +556,35 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       }
     });
 
-    // Відображаємо заповнені відсотки
-    procentData.forEach((item, index) => {
-      if (index === 0) {
+    // Знаходимо останній заповнений procent
+    let lastFilledSettingId = 0;
+    for (let id = 1; id <= 3; id++) {
+      const val = procentMap.get(id);
+      if (val !== null && val !== undefined) {
+        lastFilledSettingId = id;
+      }
+    }
+
+    // Відображаємо рядки до останнього заповненого включно
+    for (let id = 1; id <= lastFilledSettingId; id++) {
+      const value = procentMap.get(id) ?? 0;
+      
+      if (id === 1) {
         // Перший рядок вже існує в HTML
         const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
         const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
-        if (slider1) slider1.value = String(item.value);
-        if (input1) input1.value = String(item.value);
-        initialSettingsState.set(item.settingId, item.value);
+        if (slider1) slider1.value = String(value);
+        if (input1) input1.value = String(value);
+        initialSettingsState.set(id, value);
       } else {
         // Додаткові рядки створюємо динамічно
-        addPercentageRow(modal, item.value, item.settingId);
-        initialSettingsState.set(item.settingId, item.value);
+        addPercentageRow(modal, value, id);
+        initialSettingsState.set(id, value);
       }
-    });
+    }
 
     // Якщо немає жодного заповненого відсотка, встановлюємо 0 для першого
-    if (procentData.length === 0) {
+    if (lastFilledSettingId === 0) {
       const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
       const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
       if (slider1) slider1.value = "0";

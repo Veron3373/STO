@@ -432,12 +432,12 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
   
   if (!container) return;
   
-  // Визначаємо наступний номер рядка (2 або 3)
+  // Визначаємо наступний номер рядка
   const existingRows = container.querySelectorAll(".percentage-row");
   const nextRowNum = settingId || (existingRows.length + 2); // +2 бо перший рядок вже є
   
-  // Максимум 3 рядки
-  if (nextRowNum > 3) return;
+  // Максимум 99 рядків (практично необмежено)
+  if (nextRowNum > 99) return;
   
   // Перевіряємо чи вже існує цей рядок
   if (modal.querySelector(`#percentage-slider-${nextRowNum}`)) {
@@ -449,10 +449,7 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
     return;
   }
   
-  // Ховаємо кнопку плюсика якщо досягли максимуму
-  if (nextRowNum >= 3 && addBtn) {
-    addBtn.style.display = "none";
-  }
+  // Кнопка плюсика завжди видима (можна додавати багато складів)
   
   const rowHtml = `
     <div class="percentage-row" data-setting-id="${nextRowNum}">
@@ -514,7 +511,6 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, data, procent")
-      .in("setting_id", [1, 2, 3, 4, 5])
       .order("setting_id");
 
     if (error) throw error;
@@ -535,14 +531,14 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       if (el?.type === "checkbox") el.checked = false;
     });
 
-    // Збираємо дані про відсотки (всі setting_id 1-3)
+    // Збираємо дані про відсотки (всі setting_id)
     const procentMap = new Map<number, number | null>();
 
     data?.forEach((row: any) => {
       const setting = SETTINGS[row.setting_id as keyof typeof SETTINGS];
       
-      // Зберігаємо всі procent значення (включно з null)
-      if (row.setting_id >= 1 && row.setting_id <= 3) {
+      // Зберігаємо всі procent значення (setting_id >= 1)
+      if (row.setting_id >= 1) {
         procentMap.set(row.setting_id, row.procent);
       }
       
@@ -558,12 +554,11 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
     // Знаходимо останній заповнений procent
     let lastFilledSettingId = 0;
-    for (let id = 1; id <= 3; id++) {
-      const val = procentMap.get(id);
+    procentMap.forEach((val, id) => {
       if (val !== null && val !== undefined) {
-        lastFilledSettingId = id;
+        lastFilledSettingId = Math.max(lastFilledSettingId, id);
       }
-    }
+    });
 
     // Відображаємо рядки до останнього заповненого включно
     for (let id = 1; id <= lastFilledSettingId; id++) {
@@ -716,46 +711,22 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         changesCount++;
       }
 
-      // Відсоток 1 (setting_id=1)
-      const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
-      const raw1 = Number(input1?.value ?? 0);
-      const newValue4 = Math.min(100, Math.max(0, Math.floor(isFinite(raw1) ? raw1 : 0)));
-      if (initialSettingsState.get(1) !== newValue4) {
-        const { error } = await supabase
-          .from("settings")
-          .update({ procent: newValue4 })
-          .eq("setting_id", 1);
-        if (error) throw error;
-        changesCount++;
-      }
-
-      // Відсоток 2 (setting_id=2)
-      const input2 = modal.querySelector("#percentage-input-2") as HTMLInputElement;
-      if (input2) {
-        const raw2 = Number(input2?.value ?? 0);
-        const newValue4_2 = Math.min(100, Math.max(0, Math.floor(isFinite(raw2) ? raw2 : 0)));
-        if (initialSettingsState.get(2) !== newValue4_2) {
-          const { error } = await supabase
-            .from("settings")
-            .update({ procent: newValue4_2 })
-            .eq("setting_id", 2);
-          if (error) throw error;
-          changesCount++;
-        }
-      }
-
-      // Відсоток 3 (setting_id=3)
-      const input3 = modal.querySelector("#percentage-input-3") as HTMLInputElement;
-      if (input3) {
-        const raw3 = Number(input3?.value ?? 0);
-        const newValue4_3 = Math.min(100, Math.max(0, Math.floor(isFinite(raw3) ? raw3 : 0)));
-        if (initialSettingsState.get(3) !== newValue4_3) {
-          const { error } = await supabase
-            .from("settings")
-            .update({ procent: newValue4_3 })
-            .eq("setting_id", 3);
-          if (error) throw error;
-          changesCount++;
+      // Відсотки - динамічно зберігаємо всі наявні рядки
+      const percentageInputs = modal.querySelectorAll<HTMLInputElement>('.percentage-input');
+      for (const input of Array.from(percentageInputs)) {
+        const idMatch = input.id.match(/percentage-input-(\d+)/);
+        if (idMatch) {
+          const settingId = parseInt(idMatch[1]);
+          const raw = Number(input.value ?? 0);
+          const newValue = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
+          if (initialSettingsState.get(settingId) !== newValue) {
+            const { error } = await supabase
+              .from("settings")
+              .update({ procent: newValue })
+              .eq("setting_id", settingId);
+            if (error) throw error;
+            changesCount++;
+          }
         }
       }
 

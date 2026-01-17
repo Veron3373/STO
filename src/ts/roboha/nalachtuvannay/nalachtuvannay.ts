@@ -889,13 +889,20 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         const idMatch = input.id.match(/percentage-input-(\d+)/);
         if (idMatch) {
           const settingId = parseInt(idMatch[1]);
+          const row = modal.querySelector(`.percentage-row[data-setting-id="${settingId}"]`);
+          
+          // Якщо рядок заморожений, пропускаємо (у нього вже -1 в базі)
+          if (row?.classList.contains("frozen")) {
+            continue;
+          }
+          
           const raw = Number(input.value ?? 0);
           const newValue = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
           if (initialSettingsState.get(settingId) !== newValue) {
+            // Використовуємо upsert замість update, щоб створити запис якщо не існує
             const { error } = await supabase
               .from("settings")
-              .update({ procent: newValue })
-              .eq("setting_id", settingId);
+              .upsert({ setting_id: settingId, procent: newValue }, { onConflict: 'setting_id' });
             if (error) throw error;
             changesCount++;
           }

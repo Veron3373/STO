@@ -99,9 +99,9 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
 
       // ✅ НОВИЙ ПОРЯДОК: Назва (синя) - Номер (чорний підкреслений) (К-ть і ціна) Дата
       const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-        ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
+        ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
         : '';
-      const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${skladTag}${timeOn ? ' <span style="color: #000">' + timeOn + '</span>' : ''}`;
+      const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${skladTag}${timeOn ? ' <span style="color: #000; font-weight: normal;">' + timeOn + '</span>' : ''}`;
 
       return {
         value: p.name,
@@ -424,18 +424,7 @@ function showCatalogInfo(target: HTMLElement, sclad_id: number) {
   const box = document.createElement("div");
   box.className = "catalog-info-popover";
   
-  // Форматування дати
-  const timeOn = picked.time_on ? new Date(picked.time_on).toLocaleDateString('uk-UA') : '';
-  
-  // Склад (синій, не жирний)
-  const skladTag = picked.scladNomer !== null && picked.scladNomer !== undefined
-    ? ` <span style="color: #1565c0;">(${picked.scladNomer}-Склад)</span>`
-    : '';
-  
-  // Дата (чорний)
-  const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
-  
-  box.innerHTML = `К-ть: ${qtyHtml} по ${formatUA(Math.round(picked.price))}${skladTag}${dateTag}`;
+  box.innerHTML = `К-ть: ${qtyHtml} по ${formatUA(Math.round(picked.price))}`;
 
   const rect = target.getBoundingClientRect();
   box.style.top = `${rect.bottom + window.scrollY}px`;

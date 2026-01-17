@@ -466,8 +466,8 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
     nextRowNum = maxNum + 1;
   }
   
-  // Максимум 99 рядків (практично необмежено)
-  if (nextRowNum > 99) return;
+  // Максимум 500 рядків (розширений діапазон)
+  if (nextRowNum > 500) return;
   
   // Перевіряємо чи вже існує цей рядок
   if (modal.querySelector(`#percentage-slider-${nextRowNum}`)) {
@@ -757,46 +757,49 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       }
     });
 
-    // Знаходимо останній заповнений procent (включаючи заморожені -1)
-    let lastFilledSettingId = 0;
-    procentMap.forEach((val, id) => {
-      if (val !== null && val !== undefined) {
-        lastFilledSettingId = Math.max(lastFilledSettingId, id);
-      }
-    });
+    // Рендеримо лише заповнені рядки (включаючи заморожені -1), без заповнення прогалин
+    const filledIds = Array.from(procentMap.entries())
+      .filter(([_, val]) => val !== null && val !== undefined)
+      .map(([id, _]) => id)
+      .sort((a, b) => a - b);
 
-    // Відображаємо рядки до останнього заповненого включно
-    for (let id = 1; id <= lastFilledSettingId; id++) {
-      const value = procentMap.get(id);
-      const isFrozen = value === -1; // -1 означає заморожений склад
-      const displayValue = isFrozen ? 0 : (value ?? 0);
-      
-      if (id === 1) {
-        // Перший рядок вже існує в HTML
-        const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
-        const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
-        const row1 = modal.querySelector(".percentage-row[data-setting-id='1']");
-        const percentSign1 = row1?.querySelector(".percent-sign");
-        
-        if (isFrozen) {
-          if (slider1) { slider1.value = "0"; slider1.disabled = true; }
-          if (input1) { input1.value = "0"; input1.disabled = true; }
-          if (row1) row1.classList.add("frozen");
-          if (percentSign1) percentSign1.textContent = ".";
+    if (filledIds.length) {
+      for (const id of filledIds) {
+        const value = procentMap.get(id);
+        const isFrozen = value === -1; // -1 означає заморожений склад
+        const displayValue = isFrozen ? 0 : (value ?? 0);
+
+        if (id === 1) {
+          // Перший рядок вже існує в HTML
+          const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
+          const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
+          const row1 = modal.querySelector(".percentage-row[data-setting-id='1']");
+          const percentSign1 = row1?.querySelector(".percent-sign");
+
+          // Скидаємо стан перед застосуванням
+          if (row1) row1.classList.remove("frozen");
+          if (percentSign1) percentSign1.textContent = "%";
+          if (slider1) slider1.disabled = false;
+          if (input1) input1.disabled = false;
+
+          if (isFrozen) {
+            if (slider1) { slider1.value = "0"; slider1.disabled = true; }
+            if (input1) { input1.value = "0"; input1.disabled = true; }
+            if (row1) row1.classList.add("frozen");
+            if (percentSign1) percentSign1.textContent = ".";
+          } else {
+            if (slider1) slider1.value = String(displayValue);
+            if (input1) input1.value = String(displayValue);
+          }
+          initialSettingsState.set(`procent_${id}`, value ?? 0);
         } else {
-          if (slider1) slider1.value = String(displayValue);
-          if (input1) input1.value = String(displayValue);
+          // Додаткові рядки створюємо динамічно тільки для існуючих ID
+          addPercentageRow(modal, displayValue, id, isFrozen);
+          initialSettingsState.set(`procent_${id}`, value ?? 0);
         }
-        initialSettingsState.set(`procent_${id}`, value ?? 0);
-      } else {
-        // Додаткові рядки створюємо динамічно
-        addPercentageRow(modal, displayValue, id, isFrozen);
-        initialSettingsState.set(`procent_${id}`, value ?? 0);
       }
-    }
-
-    // Якщо немає жодного заповненого відсотка, встановлюємо 0 для першого
-    if (lastFilledSettingId === 0) {
+    } else {
+      // Якщо немає жодного заповненого відсотка, встановлюємо 0 для першого
       const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
       const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
       if (slider1) slider1.value = "0";

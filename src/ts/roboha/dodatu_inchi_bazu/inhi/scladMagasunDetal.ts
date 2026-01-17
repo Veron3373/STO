@@ -220,7 +220,8 @@ async function loadProcentOptions() {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, procent")
-      .in("setting_id", [1, 2, 3])
+      .gte("setting_id", 1)
+      .lte("setting_id", 500)
       .order("setting_id", { ascending: true });
 
     if (error) {
@@ -229,51 +230,21 @@ async function loadProcentOptions() {
       return;
     }
 
-    // Створюємо мапу setting_id -> procent
-    const procentMap = new Map<number, number | null>();
-    (data ?? []).forEach((row: { setting_id: number; procent: number | null }) => {
-      procentMap.set(row.setting_id, row.procent);
-    });
+    // Фільтруємо активні склади: procent >= 0 (виключаємо null та -1)
+    const activeIds = (data ?? [])
+      .filter((row: { setting_id: number; procent: number | null }) => {
+        const val = row.procent;
+        return val !== null && val !== undefined && val >= 0;
+      })
+      .map((row) => row.setting_id);
 
-    // Генеруємо опції - до першого NULL включно
-    let optionsHtml = '';
-    const emptyIds: string[] = []; // id опцій з пустими значеннями
-    
-    for (let id = 1; id <= 3; id++) {
-      const procent = procentMap.get(id);
-      const hasData = procent !== null && procent !== undefined;
-      
-      if (hasData) {
-        // Якщо є дані - звичайна опція
-        optionsHtml += `<option value="${id}">${id}</option>`;
-      } else {
-        // Якщо пусто - додаємо останню опцію і зупиняємося
-        optionsHtml += `<option value="${id}" data-empty="true">${id}</option>`;
-        emptyIds.push(String(id));
-        break; // Більше опцій не показуємо
-      }
-    }
+    // Генеруємо опції для активних ID (можуть бути розріджені, напр. 1,2,3,15)
+    const optionsHtml = activeIds
+      .sort((a, b) => a - b)
+      .map((id) => `<option value="${id}">${id}</option>`)
+      .join("");
 
-    select.innerHTML = optionsHtml || '<option value="">Немає налаштувань</option>';
-    
-    // Додаємо обробник для зміни кольору select при виборі пустої опції
-    select.addEventListener("change", () => {
-      const selectedOption = select.options[select.selectedIndex];
-      if (selectedOption?.dataset.empty === "true") {
-        select.style.backgroundColor = "#ffcccc";
-        select.style.color = "#cc0000";
-      } else {
-        select.style.backgroundColor = "";
-        select.style.color = "";
-      }
-    });
-    
-    // Перевіряємо початковий стан
-    const selectedOption = select.options[select.selectedIndex];
-    if (selectedOption?.dataset.empty === "true") {
-      select.style.backgroundColor = "#ffcccc";
-      select.style.color = "#cc0000";
-    }
+    select.innerHTML = optionsHtml || '<option value="">Немає активних складів</option>';
   } catch (e) {
     console.error("Помилка завантаження відсотків:", e);
     select.innerHTML = '<option value="">Помилка</option>';

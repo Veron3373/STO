@@ -135,6 +135,7 @@ function collectPrevWorkRowsFromCache(): Array<{
   Кількість: number;
   Ціна: number;
   Зарплата?: number;
+  recordId?: string; // ✅ Додано recordId для точного пошуку
 }> {
   const out: Array<{
     slyusarName: string;
@@ -142,6 +143,7 @@ function collectPrevWorkRowsFromCache(): Array<{
     Кількість: number;
     Ціна: number;
     Зарплата?: number;
+    recordId?: string; // ✅ Додано recordId для точного пошуку
   }> = [];
 
   // ВИПРАВЛЕННЯ: беремо дані з initialActItems (початковий стан)
@@ -155,7 +157,8 @@ function collectPrevWorkRowsFromCache(): Array<{
       Найменування: it.name || "",
       Кількість: Number(it.quantity ?? 0),
       Ціна: Number(it.price ?? 0),
-      Зарплата: 0, // Для старих записів зарплата не важлива
+      Зарплата: it.slyusarSum || 0, // ✅ Зберігаємо зарплату з початкових даних
+      recordId: (it as any).recordId, // ✅ Додаємо recordId для точного пошуку
     });
   }
 
@@ -204,9 +207,12 @@ async function syncSlyusarsHistoryForAct(params: {
     Кількість: number;
     Ціна: number;
     Зарплата: number;
+    recordId?: string; // ✅ Додано recordId
   }>;
   prevRows: Array<{
     slyusarName: string;
+    Найменування: string; // ✅ Додано для порівняння
+    recordId?: string; // ✅ Додано recordId
   }>;
 }): Promise<void> {
   const group = (rows: any[]) => {
@@ -393,7 +399,74 @@ async function syncSlyusarsHistoryForAct(params: {
     await updateSlyusarJson(slyRow);
   }
 
-  // ОЧИСТИТИ СТАРИХ
+  // ✅ ВИПРАВЛЕНО: Очищення записів ПРИ ЗМІНІ СЛЮСАРЯ для конкретних робіт
+  // Створюємо Map поточних recordId для швидкого пошуку: recordId -> slyusarName
+  const currentRecordIdToSlyusar = new Map<string, string>();
+  for (const row of params.currentRows) {
+    if (row.recordId) {
+      currentRecordIdToSlyusar.set(row.recordId, row.slyusarName);
+    }
+  }
+
+  // Перевіряємо кожен попередній запис
+  for (const prevRow of params.prevRows) {
+    const prevSlyusarName = prevRow.slyusarName;
+    const prevRecordId = prevRow.recordId;
+    const prevWorkName = prevRow.Найменування;
+
+    // Якщо є recordId - перевіряємо чи змінився слюсар
+    if (prevRecordId && currentRecordIdToSlyusar.has(prevRecordId)) {
+      const currentSlyusar = currentRecordIdToSlyusar.get(prevRecordId);
+      if (currentSlyusar !== prevSlyusarName) {
+        // Слюсар змінився! Видаляємо цей запис у попереднього слюсаря
+        console.log(`🔄 Зміна слюсаря для роботи "${prevWorkName}": "${prevSlyusarName}" → "${currentSlyusar}"`);
+        
+        const slyRow = await fetchSlyusarByName(prevSlyusarName);
+        if (slyRow) {
+          const history = ensureSlyusarHistoryRoot(slyRow);
+          const dayBucket = history[params.dateKey] as any[] | undefined;
+          
+          if (dayBucket) {
+            const actEntry = dayBucket.find(
+              (e: any) => String(e?.["Акт"]) === String(params.actId)
+            );
+            
+            if (actEntry?.["Записи"] && Array.isArray(actEntry["Записи"])) {
+              // Видаляємо конкретний запис за recordId
+              const initialLength = actEntry["Записи"].length;
+              actEntry["Записи"] = actEntry["Записи"].filter(
+                (zap: any) => zap.recordId !== prevRecordId
+              );
+              
+              if (actEntry["Записи"].length < initialLength) {
+                console.log(`🗑️ Видалено запис "${prevWorkName}" (recordId: ${prevRecordId}) у слюсаря "${prevSlyusarName}"`);
+                
+                // Перераховуємо суму
+                let newSum = 0;
+                actEntry["Записи"].forEach((zap: any) => {
+                  newSum += (Number(zap.Ціна) || 0) * (Number(zap.Кількість) || 0);
+                });
+                actEntry["СуммаРоботи"] = Math.max(0, Math.round((newSum + Number.EPSILON) * 100) / 100);
+                
+                // Якщо записів не залишилось - видаляємо весь актовий запис
+                if (actEntry["Записи"].length === 0) {
+                  const actIdx = dayBucket.indexOf(actEntry);
+                  if (actIdx !== -1) {
+                    dayBucket.splice(actIdx, 1);
+                    console.log(`🗑️ Видалено весь актовий запис для слюсаря "${prevSlyusarName}" (немає більше записів)`);
+                  }
+                }
+                
+                await updateSlyusarJson(slyRow);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Видаляємо слюсарів, яких ПОВНІСТЮ немає в поточних даних акту
   for (const [oldName] of prevBySlyusar.entries()) {
     if (curBySlyusar.has(oldName)) continue;
 
@@ -417,6 +490,7 @@ async function syncSlyusarsHistoryForAct(params: {
     }
 
     dayBucket.splice(idx, 1);
+    console.log(`🗑️ Видалено всі записи акту ${params.actId} для слюсаря "${oldName}" (слюсар повністю видалений з акту)`);
     await updateSlyusarJson(slyRow);
   }
 }
@@ -429,6 +503,7 @@ export async function syncSlyusarsOnActSave(
     Кількість: number;
     Ціна: number;
     Зарплата: number;
+    recordId?: string; // ✅ Додано recordId
   }>
 ): Promise<void> {
   try {
@@ -455,7 +530,12 @@ export async function syncSlyusarsOnActSave(
       clientInfo,
       carInfo,
       currentRows: workRowsForSlyusars,
-      prevRows: prevWorkRows.map((r) => ({ slyusarName: r.slyusarName })),
+      // ✅ ВИПРАВЛЕНО: Передаємо повні дані prevRows з Найменування та recordId
+      prevRows: prevWorkRows.map((r) => ({ 
+        slyusarName: r.slyusarName,
+        Найменування: r.Найменування,
+        recordId: r.recordId,
+      })),
     });
   } catch (error: any) {
     console.error("Помилка синхронізації з slyusars:", error);
@@ -595,6 +675,7 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
   Кількість: number;
   Ціна: number;
   Зарплата: number;
+  recordId?: string; // ✅ Додано recordId для точного пошуку
 }> {
   const out: Array<{
     slyusarName: string;
@@ -602,6 +683,7 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
     Кількість: number;
     Ціна: number;
     Зарплата: number;
+    recordId?: string; // ✅ Додано recordId для точного пошуку
   }> = [];
   const rows = document.querySelectorAll(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
@@ -629,6 +711,9 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
     const price = parseNum(priceCell?.textContent);
     const slyusarName = cleanText(pibCell?.textContent);
     const zp = parseNum(slyusarSumCell?.textContent);
+    
+    // ✅ Зчитуємо recordId з атрибута рядка
+    const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
 
     if (!slyusarName) return;
     out.push({
@@ -637,6 +722,7 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
       Кількість: qty,
       Ціна: price,
       Зарплата: zp,
+      recordId, // ✅ Передаємо recordId
     });
   });
 

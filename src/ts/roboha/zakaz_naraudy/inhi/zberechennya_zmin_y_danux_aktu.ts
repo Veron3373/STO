@@ -84,6 +84,71 @@ const purchasePricesCache = new Map<number, number>();
 /* =============================== УТИЛІТИ =============================== */
 
 /**
+ * ✅ ВИПРАВЛЕНО: Отримує ПІБ клієнта та Авто з БАЗИ ДАНИХ за actId
+ * Це гарантує коректні дані навіть якщо DOM застарів
+ */
+async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
+  pib: string;
+  auto: string;
+}> {
+  try {
+    const { data: act, error: actError } = await supabase
+      .from("acts")
+      .select("client_id, cars_id")
+      .eq("act_id", actId)
+      .single();
+
+    if (actError || !act) {
+      console.warn("⚠️ Не вдалося отримати дані акту з БД:", actError?.message);
+      // Fallback до DOM якщо БД недоступна
+      return getClientAndCarInfo();
+    }
+
+    let pib = "";
+    if (act.client_id) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("data")
+        .eq("client_id", act.client_id)
+        .single();
+
+      if (client?.data) {
+        const clientData = typeof client.data === "string" 
+          ? JSON.parse(client.data) 
+          : client.data;
+        pib = clientData?.["ПІБ"] || clientData?.fio || "";
+      }
+    }
+
+    let auto = "";
+    if (act.cars_id) {
+      const { data: car } = await supabase
+        .from("cars")
+        .select("data")
+        .eq("cars_id", act.cars_id)
+        .single();
+
+      if (car?.data) {
+        const carData = typeof car.data === "string" 
+          ? JSON.parse(car.data) 
+          : car.data;
+        const autoName = carData?.["Авто"] || "";
+        const year = carData?.["Рік"] || "";
+        const nomer = carData?.["Номер авто"] || "";
+        auto = `${autoName} ${year} ${nomer}`.trim();
+      }
+    }
+
+    console.log(`✅ Отримано дані з БД для акту #${actId}: Клієнт="${pib}", Авто="${auto}"`);
+    return { pib, auto };
+  } catch (error) {
+    console.warn("⚠️ Помилка при отриманні даних клієнта з БД:", error);
+    // Fallback до DOM
+    return getClientAndCarInfo();
+  }
+}
+
+/**
  * Завантажує закупівельні ціни зі складу для обчислення маржі
  */
 async function loadPurchasePrices(): Promise<void> {
@@ -619,6 +684,7 @@ function updateInitialActItems(details: any[], works: any[]): void {
       person_or_store: d.Магазин || "",
       sclad_id: d.sclad_id ?? null,
       slyusar_id: null,
+      recordId: d.recordId, // ✅ Додано recordId
     })),
     ...works.map((w) => ({
       type: "work" as const,
@@ -631,6 +697,7 @@ function updateInitialActItems(details: any[], works: any[]): void {
       sclad_id: null,
       slyusar_id: w.slyusar_id ?? null,
       slyusarSum: w.Зарплата || 0,
+      recordId: w.recordId, // ✅ Додано recordId
     })),
   ];
 }
@@ -785,8 +852,8 @@ async function logActChanges(
     return currentUser;
   };
 
-  // ✅ ОТРИМАННЯ ПІБ КЛІЄНТА ТА АВТОМОБІЛЯ З DOM
-  const { pib, auto } = getClientAndCarInfo();
+  // ✅ ВИПРАВЛЕНО: Отримуємо ПІБ клієнта та авто з БАЗИ ДАНИХ
+  const { pib, auto } = await fetchActClientAndCarDataFromDB(actId);
 
   // ✅ ВИКОРИСТОВУЄМО ПРИЙМАЛЬНИКА З БД (отриманого вище)
   const pruimalnyk = pruimalnykFromDb;
@@ -1175,75 +1242,90 @@ async function syncPruimalnikHistory(
     });
   }
 
-  // --- ВИДАЛЕННЯ АКТУ З ІНШИХ ПРИЙМАЛЬНИКІВ ---
-  console.log(`🧹 Очищення акту #${actId} з історії інших Приймальників...`);
-
-  // Отримуємо всіх Приймальників
-  const { data: allReceivers, error: receiversError } = await supabase
-    .from("slyusars")
-    .select("slyusar_id, data")
-    .neq("slyusar_id", userData.slyusar_id); // Виключаємо поточного користувача
-
-  if (receiversError) {
-    console.error("❌ Помилка отримання списку Приймальників:", receiversError);
-  } else if (allReceivers && allReceivers.length > 0) {
-    for (const receiver of allReceivers) {
+  // --- ВИДАЛЕННЯ АКТУ З ПОПЕРЕДНЬОГО ПРИЙМАЛЬНИКА (якщо змінився) ---
+  // ✅ ВИПРАВЛЕНО: Шукаємо тільки попереднього приймальника, а не всіх
+  const previousPruimalnyk = localStorage.getItem("current_act_pruimalnyk");
+  
+  console.log(`🔍 Попередній приймальник з localStorage: "${previousPruimalnyk}"`);
+  console.log(`🔍 Поточний приймальник: "${pruimalnykName}"`);
+  
+  // Якщо приймальник змінився - видаляємо акт з історії попереднього
+  if (previousPruimalnyk && previousPruimalnyk !== pruimalnykName) {
+    console.log(`🔄 Приймальник змінився: "${previousPruimalnyk}" → "${pruimalnykName}"`);
+    console.log(`🧹 Видаляємо акт #${actId} з історії попереднього приймальника "${previousPruimalnyk}"...`);
+    
+    // Шукаємо попереднього приймальника в БД
+    const { data: prevReceiverData, error: prevError } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, data")
+      .eq("data->>Name", previousPruimalnyk)
+      .maybeSingle();
+    
+    if (prevError) {
+      console.error(`❌ Помилка пошуку попереднього приймальника "${previousPruimalnyk}":`, prevError);
+    } else if (prevReceiverData) {
       const receiverData =
-        typeof receiver.data === "string"
-          ? JSON.parse(receiver.data)
-          : receiver.data;
+        typeof prevReceiverData.data === "string"
+          ? JSON.parse(prevReceiverData.data)
+          : prevReceiverData.data;
+      
+      // Перевіряємо, чи це дійсно Приймальник
+      if (receiverData.Доступ === "Приймальник") {
+        let receiverHistory = receiverData.Історія || {};
+        let wasModified = false;
 
-      // Перевіряємо, чи це Приймальник
-      if (receiverData.Доступ !== "Приймальник") continue;
-
-      let receiverHistory = receiverData.Історія || {};
-      let wasModified = false;
-
-      // Шукаємо і видаляємо акт з історії
-      for (const dateKey of Object.keys(receiverHistory)) {
-        const dailyActs = receiverHistory[dateKey];
-        if (Array.isArray(dailyActs)) {
-          const idx = dailyActs.findIndex(
-            (item: any) => String(item.Акт) === String(actId)
-          );
-          if (idx !== -1) {
-            console.log(
-              `🗑️ Видалено акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`
+        // Шукаємо і видаляємо акт з історії
+        for (const dateKey of Object.keys(receiverHistory)) {
+          const dailyActs = receiverHistory[dateKey];
+          if (Array.isArray(dailyActs)) {
+            const idx = dailyActs.findIndex(
+              (item: any) => String(item.Акт) === String(actId)
             );
-            dailyActs.splice(idx, 1);
+            if (idx !== -1) {
+              console.log(
+                `🗑️ Видалено акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`
+              );
+              dailyActs.splice(idx, 1);
 
-            // Якщо масив порожній, видаляємо дату
-            if (dailyActs.length === 0) {
-              delete receiverHistory[dateKey];
+              // Якщо масив порожній, видаляємо дату
+              if (dailyActs.length === 0) {
+                delete receiverHistory[dateKey];
+              }
+
+              wasModified = true;
+              break;
             }
+          }
+        }
 
-            wasModified = true;
-            break;
+        // Оновлюємо в БД, якщо були зміни
+        if (wasModified) {
+          receiverData.Історія = receiverHistory;
+          const { error: updateError } = await supabase
+            .from("slyusars")
+            .update({ data: receiverData })
+            .eq("slyusar_id", prevReceiverData.slyusar_id);
+
+          if (updateError) {
+            console.error(
+              `❌ Помилка оновлення історії для "${receiverData.Name}":`,
+              updateError
+            );
+          } else {
+            console.log(`✅ Історію "${receiverData.Name}" оновлено (акт видалено)`);
           }
         }
       }
-
-      // Оновлюємо в БД, якщо були зміни
-      if (wasModified) {
-        receiverData.Історія = receiverHistory;
-        const { error: updateError } = await supabase
-          .from("slyusars")
-          .update({ data: receiverData })
-          .eq("slyusar_id", receiver.slyusar_id);
-
-        if (updateError) {
-          console.error(
-            `❌ Помилка оновлення історії для "${receiverData.Name}":`,
-            updateError
-          );
-        } else {
-          console.log(`✅ Історію "${receiverData.Name}" оновлено`);
-        }
-      }
+    } else {
+      console.log(`ℹ️ Попередній приймальник "${previousPruimalnyk}" не знайдений в БД`);
     }
+  } else if (!previousPruimalnyk) {
+    console.log(`ℹ️ Попередній приймальник не збережено в localStorage (новий акт або перший запис)`);
+  } else {
+    console.log(`ℹ️ Приймальник не змінився, видалення не потрібне`);
   }
 
-  console.log(`✅ Очищення завершено. Зберігаємо акт для "${pruimalnykName}"`);
+  console.log(`✅ Зберігаємо акт для "${pruimalnykName}"`);
 
   let history = slyusarData.Історія || {};
   let actFound = false;
@@ -1266,7 +1348,8 @@ async function syncPruimalnikHistory(
     }
   }
 
-  const { pib, auto } = getClientAndCarInfo();
+  // ✅ ВИПРАВЛЕНО: Отримуємо дані клієнта та авто з БАЗИ ДАНИХ, а не з DOM
+  const { pib, auto } = await fetchActClientAndCarDataFromDB(actId);
 
   const actRecordUpdate = {
     Акт: String(actId),
@@ -1317,6 +1400,9 @@ async function syncPruimalnikHistory(
     );
   } else {
     console.log("✅ syncPruimalnikHistory: Історія успішно оновлена");
+    // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
+    localStorage.setItem("current_act_pruimalnyk", pruimalnykName);
+    console.log(`📦 Оновлено localStorage current_act_pruimalnyk: "${pruimalnykName}"`);
   }
 }
 

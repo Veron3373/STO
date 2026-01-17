@@ -43,6 +43,7 @@ import {
   getSlyusarWorkPercent,
   calculateSlyusarSum,
   getRecordIdFromHistory, // ✅ Додано для завантаження recordId з історії
+  forceRecalculateSlyusarSalary, // ✅ Додано для примусового перерахунку при зміні слюсаря
 } from "./modalUI";
 import { showModalAllOtherBases } from "../dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 import { formatDate, formatDateTime } from "./inhi/formatuvannya_datu";
@@ -1704,9 +1705,32 @@ function handleInputChange(event: Event): void {
     case "pib_magazin": {
       const row = target.closest("tr") as HTMLTableRowElement;
       if (row) {
-        calculateRowSum(row).catch((err) => {
-          console.error("Помилка при розрахунку суми:", err);
-        });
+        const newSlyusar = target.textContent?.trim() || "";
+        const prevSlyusar = target.getAttribute("data-prev-value") || "";
+        
+        // ✅ Зберігаємо нове значення як попереднє для наступного разу
+        target.setAttribute("data-prev-value", newSlyusar);
+        
+        // ✅ Перевіряємо поточну зарплату в інпуті
+        const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+        const currentSalary = parseFloat((slyusarSumCell?.textContent || "0").replace(/\s/g, "")) || 0;
+        
+        // ✅ Якщо слюсар змінився І зарплата = 0 або пусто → примусовий перерахунок від відсотка
+        if (prevSlyusar && prevSlyusar !== newSlyusar && currentSalary === 0) {
+          console.log(`🔄 Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}" і зарплата = 0. Примусовий перерахунок.`);
+          forceRecalculateSlyusarSalary(row).catch((err) => {
+            console.error("Помилка при примусовому перерахунку зарплати:", err);
+          });
+        } else if (prevSlyusar && prevSlyusar !== newSlyusar && currentSalary > 0) {
+          console.log(`ℹ️ Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}", але зарплата вже ${currentSalary} — залишаємо.`);
+          // Не перераховуємо, залишаємо поточне значення
+          updateCalculatedSumsInFooter();
+        } else {
+          // Звичайний розрахунок (з історії якщо є)
+          calculateRowSum(row).catch((err) => {
+            console.error("Помилка при розрахунку суми:", err);
+          });
+        }
       }
       break;
     }

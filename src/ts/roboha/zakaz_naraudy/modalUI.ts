@@ -511,6 +511,51 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
 }
 
 /**
+ * ✅ НОВА ФУНКЦІЯ: Примусово перераховує зарплату слюсаря від відсотка
+ * Використовується коли слюсар змінюється в ПІБ_Магазин - ігнорує історію!
+ * @param row - рядок таблиці
+ */
+export async function forceRecalculateSlyusarSalary(row: HTMLTableRowElement): Promise<void> {
+  if (!globalCache.settings.showZarplata) return;
+
+  const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+  const typeFromCell = nameCell?.getAttribute("data-type");
+
+  // Тільки для робіт
+  if (typeFromCell !== "works") {
+    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+    if (slyusarSumCell) slyusarSumCell.textContent = "";
+    return;
+  }
+
+  const pibCell = row.querySelector('[data-name="pib_magazin"]') as HTMLElement;
+  const slyusarName = pibCell?.textContent?.trim();
+  const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+  const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
+
+  if (!slyusarName || !slyusarSumCell) {
+    if (slyusarSumCell) slyusarSumCell.textContent = "";
+    return;
+  }
+
+  const totalSum = parseNumber(sumCell?.textContent);
+
+  if (totalSum <= 0) {
+    slyusarSumCell.textContent = "";
+    return;
+  }
+
+  // ✅ ПРИМУСОВО рахуємо від відсотка нового слюсаря, ігноруючи історію
+  console.log(`🔄 Примусовий перерахунок зарплати для нового слюсаря "${slyusarName}"`);
+  const percent = await getSlyusarWorkPercent(slyusarName);
+  const calculatedSalary = calculateSlyusarSum(totalSum, percent);
+  console.log(`💰 Нова зарплата: ${calculatedSalary} (${percent}% від ${totalSum})`);
+  slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
+  
+  updateCalculatedSumsInFooter();
+}
+
+/**
  * Перевіряє попередження про зарплату при завантаженні
  */
 export function checkSlyusarSalaryWarnings(): void {
@@ -633,7 +678,7 @@ function createRowHtml(
 
   const pibMagazinCellHTML = showPibMagazin
     ? `<td contenteditable="${isPibMagazinEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${item ? pibMagazinType : ""
-    }">${displayPibMagazinValue}</td>`
+    }" data-prev-value="${displayPibMagazinValue}">${displayPibMagazinValue}</td>`
     : "";
 
   /* ===== ЗМІНИ: відображення пустоти замість 0 ===== */

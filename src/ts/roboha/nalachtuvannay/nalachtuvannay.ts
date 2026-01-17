@@ -900,9 +900,10 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
           const newValue = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
           if (initialSettingsState.get(settingId) !== newValue) {
             // Використовуємо upsert замість update, щоб створити запис якщо не існує
+            // Колонка data обов'язкова, тому передаємо false для нових записів
             const { error } = await supabase
               .from("settings")
-              .upsert({ setting_id: settingId, procent: newValue }, { onConflict: 'setting_id' });
+              .upsert({ setting_id: settingId, procent: newValue, data: false }, { onConflict: 'setting_id' });
             if (error) throw error;
             changesCount++;
           }

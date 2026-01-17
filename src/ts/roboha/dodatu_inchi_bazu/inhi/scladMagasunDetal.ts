@@ -220,7 +220,8 @@ async function loadProcentOptions() {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, procent")
-      .in("setting_id", [1, 2, 3]);
+      .in("setting_id", [1, 2, 3])
+      .order("setting_id", { ascending: true });
 
     if (error) {
       console.error("Помилка завантаження налаштувань відсотків:", error);
@@ -234,8 +235,9 @@ async function loadProcentOptions() {
       procentMap.set(row.setting_id, row.procent);
     });
 
-    // Генеруємо опції
+    // Генеруємо опції - до першого NULL включно
     let optionsHtml = '';
+    const emptyIds: string[] = []; // id опцій з пустими значеннями
     
     for (let id = 1; id <= 3; id++) {
       const procent = procentMap.get(id);
@@ -245,12 +247,33 @@ async function loadProcentOptions() {
         // Якщо є дані - звичайна опція
         optionsHtml += `<option value="${id}">${id}</option>`;
       } else {
-        // Якщо пусто - червоним кольором
-        optionsHtml += `<option value="${id}" class="procent-empty" style="background-color: #ffcccc; color: #cc0000;">${id}</option>`;
+        // Якщо пусто - додаємо останню опцію і зупиняємося
+        optionsHtml += `<option value="${id}" data-empty="true">${id}</option>`;
+        emptyIds.push(String(id));
+        break; // Більше опцій не показуємо
       }
     }
 
     select.innerHTML = optionsHtml || '<option value="">Немає налаштувань</option>';
+    
+    // Додаємо обробник для зміни кольору select при виборі пустої опції
+    select.addEventListener("change", () => {
+      const selectedOption = select.options[select.selectedIndex];
+      if (selectedOption?.dataset.empty === "true") {
+        select.style.backgroundColor = "#ffcccc";
+        select.style.color = "#cc0000";
+      } else {
+        select.style.backgroundColor = "";
+        select.style.color = "";
+      }
+    });
+    
+    // Перевіряємо початковий стан
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption?.dataset.empty === "true") {
+      select.style.backgroundColor = "#ffcccc";
+      select.style.color = "#cc0000";
+    }
   } catch (e) {
     console.error("Помилка завантаження відсотків:", e);
     select.innerHTML = '<option value="">Помилка</option>';

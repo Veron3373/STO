@@ -517,7 +517,11 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
 
       const currentOff = Number(row.kilkist_off ?? 0);
       const delta = Number(deltas.get(id) || 0);
-      const newOff = Math.max(0, currentOff + delta);
+      // ✅ Прибрано Math.max(0, ...) - дозволяємо від'ємні значення kilkist_off
+      // Якщо видаляємо з акту, delta від'ємна → kilkist_off зменшується (повертаємо на склад)
+      const newOff = currentOff + delta;
+      
+      console.log(`📦 sclad_id=${id}: kilkist_off ${currentOff} + delta ${delta} = ${newOff}`);
 
       return { sclad_id: id, kilkist_off: newOff };
     })
@@ -549,8 +553,12 @@ function calculateDeltas(): Map<number, number> {
 
   const deltas = new Map<number, number>();
   for (const id of allIds) {
-    const delta = (newNumbers.get(id) || 0) - (oldNumbers.get(id) || 0);
+    // ✅ ІНВЕРТУЄМО delta:
+    // - Додали в акт (new > old) → delta < 0 → kilkist_off зменшується (списується зі складу)
+    // - Видалили з акту (new < old) → delta > 0 → kilkist_off збільшується (повертається на склад)
+    const delta = (oldNumbers.get(id) || 0) - (newNumbers.get(id) || 0);
     if (delta !== 0) {
+      console.log(`📊 calculateDeltas: id=${id}, old=${oldNumbers.get(id) || 0}, new=${newNumbers.get(id) || 0}, delta=${delta}`);
       deltas.set(id, delta);
     }
   }

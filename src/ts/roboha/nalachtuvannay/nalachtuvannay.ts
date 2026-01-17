@@ -427,6 +427,90 @@ function createRoleToggles(role: string): string {
     .join("");
 }
 
+// Функція для додавання нового рядка відсотків
+function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingId?: number): void {
+  const container = modal.querySelector("#additional-percentage-rows");
+  const addBtn = modal.querySelector("#add-percentage-row") as HTMLButtonElement;
+  
+  if (!container) return;
+  
+  // Визначаємо наступний номер рядка (2 або 3)
+  const existingRows = container.querySelectorAll(".percentage-row");
+  const nextRowNum = settingId || (existingRows.length + 2); // +2 бо перший рядок вже є
+  
+  // Максимум 3 рядки
+  if (nextRowNum > 3) return;
+  
+  // Перевіряємо чи вже існує цей рядок
+  if (modal.querySelector(`#percentage-slider-${nextRowNum}`)) {
+    // Просто оновлюємо значення
+    const slider = modal.querySelector(`#percentage-slider-${nextRowNum}`) as HTMLInputElement;
+    const input = modal.querySelector(`#percentage-input-${nextRowNum}`) as HTMLInputElement;
+    if (slider) slider.value = String(initialValue);
+    if (input) input.value = String(initialValue);
+    return;
+  }
+  
+  // Ховаємо кнопку плюсика якщо досягли максимуму
+  if (nextRowNum >= 3 && addBtn) {
+    addBtn.style.display = "none";
+  }
+  
+  const rowHtml = `
+    <div class="percentage-row" data-setting-id="${nextRowNum}">
+      <span class="percentage-number">${nextRowNum}</span>
+      <div class="percentage-input-wrapper">
+        <input type="range" id="percentage-slider-${nextRowNum}" class="percentage-slider" min="0" max="100" value="${initialValue}" step="1" />
+        <div class="percentage-value-display">
+          <input type="number" id="percentage-input-${nextRowNum}" class="percentage-input" min="0" max="100" value="${initialValue}" />
+          <span class="percent-sign">%</span>
+        </div>
+      </div>
+      <button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Видалити цей склад">−</button>
+    </div>
+  `;
+  
+  container.insertAdjacentHTML("beforeend", rowHtml);
+  
+  // Додаємо обробники для нового рядка
+  const slider = modal.querySelector(`#percentage-slider-${nextRowNum}`) as HTMLInputElement;
+  const input = modal.querySelector(`#percentage-input-${nextRowNum}`) as HTMLInputElement;
+  const removeBtn = modal.querySelector(`#remove-percentage-row-${nextRowNum}`);
+  
+  if (slider && input) {
+    slider.addEventListener("input", () => {
+      input.value = slider.value;
+    });
+    
+    input.addEventListener("input", () => {
+      const numValue = parseInt(input.value) || 0;
+      if (numValue >= 0 && numValue <= 100) {
+        slider.value = String(numValue);
+      } else {
+        input.value = slider.value;
+      }
+    });
+  }
+  
+  // Обробник для видалення рядка
+  if (removeBtn) {
+    removeBtn.addEventListener("click", async () => {
+      const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
+      if (row) row.remove();
+      
+      if (addBtn) {
+        addBtn.style.display = "";
+      }
+      
+      // Очищаємо procent в відповідному setting_id
+      await supabase
+        .from("settings")
+        .update({ procent: null })
+        .eq("setting_id", nextRowNum);
+    });
+  }
+}
+
 async function loadSettings(modal: HTMLElement): Promise<void> {
   try {
     const { data, error } = await supabase
@@ -439,37 +523,65 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
     // 🔹 Очищуємо попередній стан
     initialSettingsState.clear();
+    
+    // Очищаємо додаткові рядки відсотків
+    const additionalRows = modal.querySelector("#additional-percentage-rows");
+    if (additionalRows) additionalRows.innerHTML = "";
+    
+    // Показуємо кнопку плюсика
+    const addBtn = modal.querySelector("#add-percentage-row") as HTMLButtonElement;
+    if (addBtn) addBtn.style.display = "";
 
     Object.values(SETTINGS).forEach((s) => {
       const el = modal.querySelector(`#${s.id}`) as HTMLInputElement;
       if (el?.type === "checkbox") el.checked = false;
     });
 
+    // Збираємо дані про заповнені відсотки
+    const procentData: { settingId: number; value: number }[] = [];
+
     data?.forEach((row: any) => {
       const setting = SETTINGS[row.setting_id as keyof typeof SETTINGS];
-      if (!setting) return;
-
-      if (setting.id === "percentage-value") {
-        const slider = modal.querySelector(
-          "#percentage-slider"
-        ) as HTMLInputElement;
-        const input = modal.querySelector(
-          "#percentage-input"
-        ) as HTMLInputElement;
-        const val = typeof row.procent === "number" ? row.procent : 0;
-        if (slider) slider.value = String(val);
-        if (input) input.value = String(val);
-        // 🔹 Зберігаємо початкове значення
-        initialSettingsState.set(row.setting_id, val);
-      } else {
+      
+      // Обробка відсотків - збираємо всі заповнені
+      if (row.setting_id >= 1 && row.setting_id <= 3 && row.procent !== null && row.procent !== undefined) {
+        procentData.push({ settingId: row.setting_id, value: row.procent });
+      }
+      
+      // Обробка чекбоксів
+      if (setting && setting.id !== "percentage-value") {
         const checkbox = modal.querySelector(
           `#${setting.id}`
         ) as HTMLInputElement;
         if (checkbox) checkbox.checked = !!row.data;
-        // 🔹 Зберігаємо початкове значення
         initialSettingsState.set(row.setting_id, !!row.data);
       }
     });
+
+    // Відображаємо заповнені відсотки
+    procentData.forEach((item, index) => {
+      if (index === 0) {
+        // Перший рядок вже існує в HTML
+        const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
+        const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
+        if (slider1) slider1.value = String(item.value);
+        if (input1) input1.value = String(item.value);
+        initialSettingsState.set(item.settingId, item.value);
+      } else {
+        // Додаткові рядки створюємо динамічно
+        addPercentageRow(modal, item.value, item.settingId);
+        initialSettingsState.set(item.settingId, item.value);
+      }
+    });
+
+    // Якщо немає жодного заповненого відсотка, встановлюємо 0 для першого
+    if (procentData.length === 0) {
+      const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
+      const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
+      if (slider1) slider1.value = "0";
+      if (input1) input1.value = "0";
+      initialSettingsState.set(1, 0);
+    }
 
     modal
       .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
@@ -595,10 +707,10 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         changesCount++;
       }
 
-      // Відсоток
-      const input = modal.querySelector("#percentage-input") as HTMLInputElement;
-      const raw = Number(input?.value ?? 0);
-      const newValue4 = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
+      // Відсоток 1 (setting_id=1)
+      const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
+      const raw1 = Number(input1?.value ?? 0);
+      const newValue4 = Math.min(100, Math.max(0, Math.floor(isFinite(raw1) ? raw1 : 0)));
       if (initialSettingsState.get(1) !== newValue4) {
         const { error } = await supabase
           .from("settings")
@@ -606,6 +718,36 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
           .eq("setting_id", 1);
         if (error) throw error;
         changesCount++;
+      }
+
+      // Відсоток 2 (setting_id=2)
+      const input2 = modal.querySelector("#percentage-input-2") as HTMLInputElement;
+      if (input2) {
+        const raw2 = Number(input2?.value ?? 0);
+        const newValue4_2 = Math.min(100, Math.max(0, Math.floor(isFinite(raw2) ? raw2 : 0)));
+        if (initialSettingsState.get(2) !== newValue4_2) {
+          const { error } = await supabase
+            .from("settings")
+            .update({ procent: newValue4_2 })
+            .eq("setting_id", 2);
+          if (error) throw error;
+          changesCount++;
+        }
+      }
+
+      // Відсоток 3 (setting_id=3)
+      const input3 = modal.querySelector("#percentage-input-3") as HTMLInputElement;
+      if (input3) {
+        const raw3 = Number(input3?.value ?? 0);
+        const newValue4_3 = Math.min(100, Math.max(0, Math.floor(isFinite(raw3) ? raw3 : 0)));
+        if (initialSettingsState.get(3) !== newValue4_3) {
+          const { error } = await supabase
+            .from("settings")
+            .update({ procent: newValue4_3 })
+            .eq("setting_id", 3);
+          if (error) throw error;
+          changesCount++;
+        }
       }
 
       const checkbox5 = modal.querySelector("#toggle-sms") as HTMLInputElement;
@@ -758,13 +900,18 @@ export async function createSettingsModal(): Promise<void> {
       <div class="percentage-control">
         <label class="percentage-label">
           <span class="percentage-title">Націнка на запчастини</span>
-          <div class="percentage-input-wrapper">
-            <input type="range" id="percentage-slider" min="0" max="100" value="0" step="1" />
-            <div class="percentage-value-display">
-              <input type="number" id="percentage-input" min="0" max="100" value="0" />
-              <span class="percent-sign">%</span>
+          <div class="percentage-row" data-setting-id="1">
+            <span class="percentage-number">1</span>
+            <div class="percentage-input-wrapper">
+              <input type="range" id="percentage-slider-1" class="percentage-slider" min="0" max="100" value="0" step="1" />
+              <div class="percentage-value-display">
+                <input type="number" id="percentage-input-1" class="percentage-input" min="0" max="100" value="0" />
+                <span class="percent-sign">%</span>
+              </div>
             </div>
+            <button type="button" class="add-percentage-btn" id="add-percentage-row" title="Додати ще один склад">+</button>
           </div>
+          <div id="additional-percentage-rows"></div>
         </label>
       </div>
 
@@ -780,6 +927,14 @@ export async function createSettingsModal(): Promise<void> {
   // ✅ одразу ініціалізуємо стан під поточну роль і підтягуємо значення
   updateRoleTogglesVisibility(modal, initialRole);
   await loadSettings(modal); // для Адміністратора тягне data/procent
+
+  // Обробник для кнопки додавання нового рядка відсотків
+  const addPercentageBtn = modal.querySelector("#add-percentage-row");
+  if (addPercentageBtn) {
+    addPercentageBtn.addEventListener("click", () => {
+      addPercentageRow(modal);
+    });
+  }
 
   const roleButton = modal.querySelector(
     "#role-toggle-button"
@@ -810,8 +965,8 @@ export async function createSettingsModal(): Promise<void> {
     });
   }
 
-  const slider = modal.querySelector("#percentage-slider") as HTMLInputElement;
-  const input = modal.querySelector("#percentage-input") as HTMLInputElement;
+  const slider = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
+  const input = modal.querySelector("#percentage-input-1") as HTMLInputElement;
 
   const updateInputFromSlider = () => {
     if (input && slider) {

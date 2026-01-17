@@ -210,12 +210,69 @@
     text-align: center;
   }
 
+  .percentage-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .percentage-number {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .add-percentage-btn,
+  .remove-percentage-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .add-percentage-btn {
+    background: #2ecc71;
+    color: white;
+
+    &:hover {
+      background: #27ae60;
+      transform: scale(1.1);
+    }
+  }
+
+  .remove-percentage-btn {
+    background: #e74c3c;
+    color: white;
+
+    &:hover {
+      background: #c0392b;
+      transform: scale(1.1);
+    }
+  }
+
+  #additional-percentage-rows {
+    margin-top: 5px;
+  }
+
   .percentage-input-wrapper {
     display: flex;
     align-items: center;
     gap: 15px;
+    flex: 1;
   }
 
+  .percentage-slider,
   #percentage-slider {
     flex: 1;
     height: 8px;

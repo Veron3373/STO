@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 
 export default defineConfig({
-  base: "/", // бо GitHub Pages публікує з підкаталогу
+  base: "/STO/", // для GitHub Pages (завтра змінити на "/" для Vercel)
   plugins: [react()],
   build: {
     chunkSizeWarningLimit: 1800, // ⬅ підняли ліміт з 500 до 600

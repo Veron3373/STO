@@ -126,6 +126,7 @@ export interface GlobalDataCache {
     unit?: string | null;
     shop?: string | null;
     time_on?: string | null;
+    scladNomer?: number | null;
   }>;
   skladLite: SkladLiteRow[];
   oldNumbers: Map<number, number>;
@@ -622,7 +623,7 @@ export async function ensureSkladLoaded(): Promise<void> {
   const { data, error } = await supabase
     .from("sclad")
     .select(
-      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on"
+      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on, scladNomer"
     )
     .order("sclad_id", { ascending: false });
   if (error) {
@@ -648,6 +649,7 @@ export async function ensureSkladLoaded(): Promise<void> {
         unit: r.unit_measurement ?? null,
         shop: shopName,
         time_on: r.time_on ?? null,
+        scladNomer: r.scladNomer ?? null,
       };
     }) || [];
   globalCache.skladParts = dedupeSklad(mapped);
@@ -738,5 +740,6 @@ function mapScladRecord(r: any) {
     unit: r.unit_measurement ?? null,
     shop: shopName,
     time_on: r.time_on ?? null,
+    scladNomer: r.scladNomer ?? null,
   };
 }

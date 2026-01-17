@@ -1231,7 +1231,6 @@ export async function createSettingsModal(): Promise<void> {
 
   // ✅ одразу ініціалізуємо стан під поточну роль і підтягуємо значення
   updateRoleTogglesVisibility(modal, initialRole);
-  await loadSettings(modal); // для Адміністратора тягне data/procent
 
   // Обробник для кнопки додавання нового рядка відсотків
   const addPercentageBtn = modal.querySelector("#add-percentage-row");
@@ -1305,7 +1304,7 @@ export async function createSettingsModal(): Promise<void> {
       });
     });
 
-  await loadSettings(modal);
+  // початкове завантаження вже викликане через updateRoleTogglesVisibility
 
   modal
     .querySelector("#modal-ok-button")

@@ -222,6 +222,8 @@ async function loadProcentOptions() {
       .select("setting_id, procent")
       .gte("setting_id", 1)
       .lte("setting_id", 500)
+      .not("procent", "is", null)
+      .gte("procent", 0)
       .order("setting_id", { ascending: true });
 
     if (error) {
@@ -230,17 +232,11 @@ async function loadProcentOptions() {
       return;
     }
 
-    // Фільтруємо активні склади: procent >= 0 (виключаємо null та -1)
-    const activeIds = (data ?? [])
-      .filter((row: { setting_id: number; procent: number | null }) => {
-        const val = row.procent;
-        return val !== null && val !== undefined && val >= 0;
-      })
-      .map((row) => row.setting_id);
+    // Активні склади вже відфільтровані на сервері — лишаємо тільки ID
+    const activeIds = (data ?? []).map((row: { setting_id: number }) => row.setting_id);
 
     // Генеруємо опції для активних ID (можуть бути розріджені, напр. 1,2,3,15)
     const optionsHtml = activeIds
-      .sort((a, b) => a - b)
       .map((id) => `<option value="${id}">${id}</option>`)
       .join("");
 

@@ -287,6 +287,55 @@
     }
   }
 
+  .unfreeze-percentage-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    background: #95a5a6;
+    color: white;
+
+    &:hover {
+      background: #7f8c8d;
+      transform: scale(1.1);
+    }
+  }
+
+  // Заморожений (неактивний) склад
+  .percentage-row.frozen {
+    opacity: 0.5;
+    
+    .percentage-number {
+      color: #95a5a6;
+    }
+    
+    .percentage-slider {
+      background: linear-gradient(to right, #bdc3c7 0%, #95a5a6 100%) !important;
+      cursor: not-allowed;
+    }
+    
+    .percentage-value-display {
+      border-color: #95a5a6;
+      background: #ecf0f1;
+    }
+    
+    .percentage-input {
+      color: #95a5a6;
+    }
+    
+    .percent-sign {
+      color: #95a5a6;
+    }
+  }
+
   #additional-percentage-rows {
     margin-top: 5px;
   }

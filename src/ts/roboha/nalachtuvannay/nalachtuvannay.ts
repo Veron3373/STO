@@ -426,15 +426,25 @@ function createRoleToggles(role: string): string {
 }
 
 // Функція для додавання нового рядка відсотків
-function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingId?: number): void {
+function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingId?: number, isFrozen: boolean = false): void {
+  const wrapper = modal.querySelector(".percentage-rows-wrapper");
   const container = modal.querySelector("#additional-percentage-rows");
-  const addBtn = modal.querySelector("#add-percentage-row") as HTMLButtonElement;
   
   if (!container) return;
   
   // Визначаємо наступний номер рядка
-  const existingRows = container.querySelectorAll(".percentage-row");
-  const nextRowNum = settingId || (existingRows.length + 2); // +2 бо перший рядок вже є
+  const allRows = wrapper?.querySelectorAll(".percentage-row") || [];
+  let nextRowNum = settingId;
+  
+  if (!nextRowNum) {
+    // Знаходимо максимальний номер і додаємо 1
+    let maxNum = 1;
+    allRows.forEach(row => {
+      const num = parseInt(row.getAttribute("data-setting-id") || "1");
+      if (num > maxNum) maxNum = num;
+    });
+    nextRowNum = maxNum + 1;
+  }
   
   // Максимум 99 рядків (практично необмежено)
   if (nextRowNum > 99) return;
@@ -450,18 +460,23 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
   }
   
   // Кнопка плюсика завжди видима (можна додавати багато складів)
+  const frozenClass = isFrozen ? " frozen" : "";
+  const disabledAttr = isFrozen ? " disabled" : "";
   
   const rowHtml = `
-    <div class="percentage-row" data-setting-id="${nextRowNum}">
+    <div class="percentage-row${frozenClass}" data-setting-id="${nextRowNum}">
       <span class="percentage-number">${nextRowNum}</span>
       <div class="percentage-input-wrapper">
-        <input type="range" id="percentage-slider-${nextRowNum}" class="percentage-slider" min="0" max="100" value="${initialValue}" step="1" />
+        <input type="range" id="percentage-slider-${nextRowNum}" class="percentage-slider" min="0" max="100" value="${isFrozen ? 0 : initialValue}" step="1"${disabledAttr} />
         <div class="percentage-value-display">
-          <input type="number" id="percentage-input-${nextRowNum}" class="percentage-input" min="0" max="100" value="${initialValue}" />
-          <span class="percent-sign">%</span>
+          <input type="number" id="percentage-input-${nextRowNum}" class="percentage-input" min="0" max="100" value="${isFrozen ? 0 : initialValue}"${disabledAttr} />
+          <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      <button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Видалити цей склад">−</button>
+      ${isFrozen 
+        ? `<button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>`
+        : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+      }
     </div>
   `;
   
@@ -471,8 +486,9 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
   const slider = modal.querySelector(`#percentage-slider-${nextRowNum}`) as HTMLInputElement;
   const input = modal.querySelector(`#percentage-input-${nextRowNum}`) as HTMLInputElement;
   const removeBtn = modal.querySelector(`#remove-percentage-row-${nextRowNum}`);
+  const unfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${nextRowNum}`);
   
-  if (slider && input) {
+  if (slider && input && !isFrozen) {
     slider.addEventListener("input", () => {
       input.value = slider.value;
     });
@@ -487,22 +503,112 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
     });
   }
   
-  // Обробник для видалення рядка
+  // Обробник для заморожування рядка
   if (removeBtn) {
     removeBtn.addEventListener("click", async () => {
-      const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
-      if (row) row.remove();
-      
-      if (addBtn) {
-        addBtn.style.display = "";
-      }
-      
-      // Очищаємо procent в відповідному setting_id
+      // Заморожуємо склад (записуємо -1)
       await supabase
         .from("settings")
-        .update({ procent: null })
+        .update({ procent: -1 })
         .eq("setting_id", nextRowNum);
+      
+      // Оновлюємо UI
+      const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
+      if (row) {
+        row.classList.add("frozen");
+        const sliderEl = row.querySelector(".percentage-slider") as HTMLInputElement;
+        const inputEl = row.querySelector(".percentage-input") as HTMLInputElement;
+        const percentSign = row.querySelector(".percent-sign");
+        if (sliderEl) sliderEl.disabled = true;
+        if (inputEl) inputEl.disabled = true;
+        if (percentSign) percentSign.textContent = ".";
+        
+        // Замінюємо кнопку видалення на кнопку відновлення
+        removeBtn.outerHTML = `<button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>`;
+        
+        // Додаємо обробник для нової кнопки
+        const newUnfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${nextRowNum}`);
+        if (newUnfreezeBtn) {
+          newUnfreezeBtn.addEventListener("click", () => unfreezeRow(modal, nextRowNum!));
+        }
+      }
     });
+  }
+  
+  // Обробник для розморожування рядка
+  if (unfreezeBtn) {
+    unfreezeBtn.addEventListener("click", () => unfreezeRow(modal, nextRowNum!));
+  }
+}
+
+// Функція для розморожування рядка
+async function unfreezeRow(modal: HTMLElement, settingId: number): Promise<void> {
+  // Активуємо склад (записуємо 0)
+  await supabase
+    .from("settings")
+    .update({ procent: 0 })
+    .eq("setting_id", settingId);
+  
+  // Оновлюємо UI
+  const row = modal.querySelector(`.percentage-row[data-setting-id="${settingId}"]`);
+  if (row) {
+    row.classList.remove("frozen");
+    const sliderEl = row.querySelector(".percentage-slider") as HTMLInputElement;
+    const inputEl = row.querySelector(".percentage-input") as HTMLInputElement;
+    const percentSign = row.querySelector(".percent-sign");
+    if (sliderEl) {
+      sliderEl.disabled = false;
+      sliderEl.value = "0";
+    }
+    if (inputEl) {
+      inputEl.disabled = false;
+      inputEl.value = "0";
+    }
+    if (percentSign) percentSign.textContent = "%";
+    
+    // Замінюємо кнопку відновлення на кнопку видалення
+    const unfreezeBtn = row.querySelector(".unfreeze-percentage-btn");
+    if (unfreezeBtn) {
+      unfreezeBtn.outerHTML = `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${settingId}" title="Заморозити склад">−</button>`;
+      
+      // Додаємо обробник для нової кнопки
+      const newRemoveBtn = modal.querySelector(`#remove-percentage-row-${settingId}`);
+      if (newRemoveBtn) {
+        newRemoveBtn.addEventListener("click", async () => {
+          await supabase
+            .from("settings")
+            .update({ procent: -1 })
+            .eq("setting_id", settingId);
+          
+          // Рекурсивно заморожуємо
+          row.classList.add("frozen");
+          if (sliderEl) sliderEl.disabled = true;
+          if (inputEl) inputEl.disabled = true;
+          if (percentSign) percentSign.textContent = ".";
+          newRemoveBtn.outerHTML = `<button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${settingId}" title="Активувати склад">↻</button>`;
+          const newerUnfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${settingId}`);
+          if (newerUnfreezeBtn) {
+            newerUnfreezeBtn.addEventListener("click", () => unfreezeRow(modal, settingId));
+          }
+        });
+      }
+    }
+    
+    // Додаємо обробники для слайдера і інпута
+    if (sliderEl && inputEl) {
+      sliderEl.addEventListener("input", () => {
+        inputEl.value = sliderEl.value;
+      });
+      
+      inputEl.addEventListener("input", () => {
+        const numValue = parseInt(inputEl.value) || 0;
+        if (numValue >= 0 && numValue <= 100) {
+          sliderEl.value = String(numValue);
+        } else {
+          inputEl.value = sliderEl.value;
+        }
+      });
+    }
   }
 }
 
@@ -552,7 +658,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       }
     });
 
-    // Знаходимо останній заповнений procent
+    // Знаходимо останній заповнений procent (включаючи заморожені -1)
     let lastFilledSettingId = 0;
     procentMap.forEach((val, id) => {
       if (val !== null && val !== undefined) {
@@ -562,19 +668,31 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
     // Відображаємо рядки до останнього заповненого включно
     for (let id = 1; id <= lastFilledSettingId; id++) {
-      const value = procentMap.get(id) ?? 0;
+      const value = procentMap.get(id);
+      const isFrozen = value === -1; // -1 означає заморожений склад
+      const displayValue = isFrozen ? 0 : (value ?? 0);
       
       if (id === 1) {
         // Перший рядок вже існує в HTML
         const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
         const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
-        if (slider1) slider1.value = String(value);
-        if (input1) input1.value = String(value);
-        initialSettingsState.set(id, value);
+        const row1 = modal.querySelector(".percentage-row[data-setting-id='1']");
+        const percentSign1 = row1?.querySelector(".percent-sign");
+        
+        if (isFrozen) {
+          if (slider1) { slider1.value = "0"; slider1.disabled = true; }
+          if (input1) { input1.value = "0"; input1.disabled = true; }
+          if (row1) row1.classList.add("frozen");
+          if (percentSign1) percentSign1.textContent = ".";
+        } else {
+          if (slider1) slider1.value = String(displayValue);
+          if (input1) input1.value = String(displayValue);
+        }
+        initialSettingsState.set(id, value ?? 0);
       } else {
         // Додаткові рядки створюємо динамічно
-        addPercentageRow(modal, value, id);
-        initialSettingsState.set(id, value);
+        addPercentageRow(modal, displayValue, id, isFrozen);
+        initialSettingsState.set(id, value ?? 0);
       }
     }
 

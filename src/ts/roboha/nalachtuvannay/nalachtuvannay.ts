@@ -819,19 +819,16 @@ async function loadRoleSettings(
   modal: HTMLElement,
   role: string
 ): Promise<void> {
-  const settings = ROLE_SETTINGS[role as keyof typeof ROLE_SETTINGS];
   const column = ROLE_TO_COLUMN[role as keyof typeof ROLE_TO_COLUMN];
 
-  if (!settings || !column) return;
+  if (!column) return;
 
   try {
     // 🔹 Очищуємо попередній стан
     initialSettingsState.clear();
 
-    // Фільтруємо тільки реальні налаштування (без divider)
-    const settingIds = settings
-      .filter((s: any) => !s.divider && s.id)
-      .map((s: any) => s.id);
+    // Охоплюємо повний діапазон id 1..23
+    const settingIds = Array.from({ length: 23 }, (_, i) => i + 1);
 
     const { data, error } = await supabase
       .from("settings")
@@ -841,14 +838,12 @@ async function loadRoleSettings(
 
     if (error) throw error;
 
-    settings.forEach((s: any) => {
-      if (!s.divider && s.id) {
-        const el = modal.querySelector(
-          `#role-toggle-${s.id}`
-        ) as HTMLInputElement;
-        if (el?.type === "checkbox") el.checked = false;
-      }
-    });
+    // Скидаємо чекбокси поточної розмітки (тільки ті, що відображені)
+    modal
+      .querySelectorAll<HTMLInputElement>('[id^="role-toggle-"]')
+      .forEach((el) => {
+        if (el.type === "checkbox") el.checked = false;
+      });
 
     const presentIds = new Set<number>();
     data?.forEach((row: any) => {
@@ -862,7 +857,7 @@ async function loadRoleSettings(
       presentIds.add(row.setting_id);
     });
 
-    // Для відсутніх у БД налаштувань — фіксуємо дефолт false, щоб уникнути зайвих записів
+    // Для всіх id 1..23, де немає записів у БД — фіксуємо дефолт (стан чекбокса або false)
     settingIds.forEach((id: number) => {
       if (!presentIds.has(id)) {
         const checkbox = modal.querySelector(
@@ -1050,54 +1045,48 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       // Зберегти налаштування для секції "Загальні"
       changesCount = await saveGeneralSettings(modal);
     } else {
-      // Зберегти налаштування для інших ролей - ТІЛЬКИ ЗМІНЕНІ
-      const settings = ROLE_SETTINGS[role as keyof typeof ROLE_SETTINGS];
-      if (settings) {
-        const realSettings = settings.filter((s: any) => !s.divider && s.id);
+      // Зберегти налаштування для інших ролей — покриваємо id 1..23, працюємо лише з наявними чекбоксами
+      for (let id = 1; id <= 23; id++) {
+        const checkbox = modal.querySelector(
+          `#role-toggle-${id}`
+        ) as HTMLInputElement;
+        if (!checkbox) continue; // пропускаємо невідображені у UI
 
-        for (const setting of realSettings) {
-          const checkbox = modal.querySelector(
-            `#role-toggle-${setting.id}`
-          ) as HTMLInputElement;
-          const newValue = checkbox?.checked ?? false;
-          const oldValue = initialSettingsState.get(`role_${setting.id}`);
+        const newValue = checkbox.checked ?? false;
+        const oldValue = (initialSettingsState.get(`role_${id}`) as boolean) ?? false;
 
-          // 🔹 Зберігаємо тільки якщо значення змінилось
-          if (oldValue !== newValue) {
-            // Якщо запис існує — оновлюємо лише колонку ролі; якщо ні — створюємо (data:false)
-            const { data: existingRow, error: selectError } = await supabase
-              .from("settings")
-              .select("setting_id")
-              .eq("setting_id", setting.id)
-              .single();
-            if (selectError && selectError.code !== "PGRST116") {
-              console.error(`Помилка перевірки setting_id ${setting.id}:`, selectError);
-              throw selectError;
-            }
-
-            if (existingRow) {
-              const { error: updateError } = await supabase
-                .from("settings")
-                .update({ [column]: newValue })
-                .eq("setting_id", setting.id);
-              if (updateError) {
-                console.error(`Помилка оновлення setting_id ${setting.id}:`, updateError);
-                throw updateError;
-              }
-            } else {
-              const { error: insertError } = await supabase
-                .from("settings")
-                .insert({ setting_id: setting.id, [column]: newValue, data: false });
-              if (insertError) {
-                console.error(`Помилка створення setting_id ${setting.id}:`, insertError);
-                throw insertError;
-              }
-            }
-            changesCount++;
+        if (oldValue !== newValue) {
+          // Якщо запис існує — оновлюємо лише колонку ролі; якщо ні — створюємо (data:false)
+          const { data: existingRow, error: selectError } = await supabase
+            .from("settings")
+            .select("setting_id")
+            .eq("setting_id", id)
+            .single();
+          if (selectError && selectError.code !== "PGRST116") {
+            console.error(`Помилка перевірки setting_id ${id}:`, selectError);
+            throw selectError;
           }
-        }
 
-        console.log(`Збережено ${changesCount} зміни(н)`);
+          if (existingRow) {
+            const { error: updateError } = await supabase
+              .from("settings")
+              .update({ [column]: newValue })
+              .eq("setting_id", id);
+            if (updateError) {
+              console.error(`Помилка оновлення setting_id ${id}:`, updateError);
+              throw updateError;
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from("settings")
+              .insert({ setting_id: id, [column]: newValue, data: false });
+            if (insertError) {
+              console.error(`Помилка створення setting_id ${id}:`, insertError);
+              throw insertError;
+            }
+          }
+          changesCount++;
+        }
       }
     }
 

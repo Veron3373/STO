@@ -906,11 +906,11 @@ export function setupAutocompleteForEditableCells(
             
             // Склад (синій, не жирний)
             const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-              ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
+              ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
               : '';
             
             // Дата (чорний)
-            const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
+            const dateTag = timeOn ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>` : '';
 
             const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
@@ -1096,11 +1096,11 @@ export function setupAutocompleteForEditableCells(
             
             // Склад (синій, не жирний)
             const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-              ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
+              ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
               : '';
             
             // Дата (чорний)
-            const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
+            const dateTag = timeOn ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>` : '';
 
             const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
@@ -1141,11 +1141,11 @@ export function setupAutocompleteForEditableCells(
             
             // Склад (синій, не жирний)
             const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-              ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
+              ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
               : '';
             
             // Дата (чорний)
-            const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
+            const dateTag = timeOn ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>` : '';
 
             const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 

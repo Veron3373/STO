@@ -1216,8 +1216,9 @@ async function syncPruimalnikHistory(
   const percentWork = Number(slyusarData.ПроцентРоботи) || 0;
   const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
 
-  const salaryWork = Math.round(baseWorkProfit * (percentWork / 100));
-  const salaryParts = Math.round(basePartsProfit * (percentParts / 100));
+  // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - зарплата = 0
+  const salaryWork = baseWorkProfit > 0 ? Math.round(baseWorkProfit * (percentWork / 100)) : 0;
+  const salaryParts = basePartsProfit > 0 ? Math.round(basePartsProfit * (percentParts / 100)) : 0;
 
   // Чистий прибуток після відрахування зарплати приймальника
   const netWorkProfit = baseWorkProfit - salaryWork;
@@ -1365,10 +1366,11 @@ async function syncPruimalnikHistory(
     Автомобіль: auto,
     // Записуємо чистий прибуток (після дисконту, собівартості/зарплати слюсаря і зарплати приймальника)
     // Записуємо Базовий прибуток (ДО відрахування зарплати приймальника), щоб співвідношення ЗП/Сума відповідало відсотку
+    // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - записуємо 0 для зарплати
     СуммаРоботи: baseWorkProfit,
     СуммаЗапчастин: basePartsProfit,
-    ЗарплатаРоботи: salaryWork,
-    ЗарплатаЗапчастин: salaryParts,
+    ЗарплатаРоботи: salaryWork, // Вже = 0 якщо baseWorkProfit <= 0
+    ЗарплатаЗапчастин: salaryParts, // Вже = 0 якщо basePartsProfit <= 0
     Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
     ДатаЗакриття: null, // Буде заповнено при закритті акту
   };

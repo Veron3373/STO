@@ -1353,9 +1353,11 @@ export function searchDataInDatabase(
           }
 
           const sumWork = record.СуммаРоботи || 0;
-          const salaryWork = record.ЗарплатаРоботи || 0;
           const sumParts = record.СуммаЗапчастин || 0;
-          const salaryParts = record.ЗарплатаЗапчастин || 0;
+          
+          // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна → зарплата = 0
+          const salaryWork = sumWork > 0 ? (record.ЗарплатаРоботи || 0) : 0;
+          const salaryParts = sumParts > 0 ? (record.ЗарплатаЗапчастин || 0) : 0;
 
           const totalSum = sumWork + sumParts;
           const totalSalary = salaryWork + salaryParts;
@@ -1364,30 +1366,23 @@ export function searchDataInDatabase(
           // sumWork та sumParts - це вже чистий прибуток після дисконту та зарплат
           const margin = totalSum;
 
+          // ✅ ВИПРАВЛЕНО: Правильне відображення від'ємних значень
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
               ${salaryParts !== 0
-              ? `<div style="color: #dc3545;">⚙️ -${formatNumber(
-                salaryParts
-              )}</div>`
-              : ""
+              ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
+              : (sumParts < 0 ? `<div style="color: #6c757d;">⚙️ 0</div>` : "")
             }
               ${sumParts !== 0
-              ? `<div style="color: #28a745;">⚙️ +${formatNumber(
-                sumParts
-              )}</div>`
+              ? `<div style="color: ${sumParts > 0 ? '#28a745' : '#dc3545'};">⚙️ ${sumParts > 0 ? '+' : ''}${formatNumber(sumParts)}</div>`
               : ""
             }
               ${salaryWork !== 0
-              ? `<div style="color: #dc3545;">🛠️ -${formatNumber(
-                salaryWork
-              )}</div>`
-              : ""
+              ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
+              : (sumWork < 0 ? `<div style="color: #6c757d;">🛠️ 0</div>` : "")
             }
               ${sumWork !== 0
-              ? `<div style="color: #28a745;">🛠️ +${formatNumber(
-                sumWork
-              )}</div>`
+              ? `<div style="color: ${sumWork > 0 ? '#28a745' : '#dc3545'};">🛠️ ${sumWork > 0 ? '+' : ''}${formatNumber(sumWork)}</div>`
               : ""
             }
             </div>`;

@@ -912,7 +912,18 @@ export function setupAutocompleteForEditableCells(
             else if (qty < 0) colorStyle = "color: #e40b0b"; // red
             else colorStyle = "color: #1565c0"; // blue
 
-            const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+            // Форматування дати
+            const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
+            
+            // Склад (синій, не жирний)
+            const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
+              ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
+              : '';
+            
+            // Дата (чорний)
+            const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
+
+            const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
             return {
               value: p.part_number,
@@ -1091,7 +1102,18 @@ export function setupAutocompleteForEditableCells(
             else if (qty < 0) colorStyle = "color: #e40b0b"; // red
             else colorStyle = "color: #1565c0"; // blue
 
-            const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+            // Форматування дати
+            const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
+            
+            // Склад (синій, не жирний)
+            const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
+              ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
+              : '';
+            
+            // Дата (чорний)
+            const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
+
+            const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
             return {
               value: p.part_number,
@@ -1125,7 +1147,18 @@ export function setupAutocompleteForEditableCells(
             else if (qty < 0) colorStyle = "color: #e40b0b"; // red
             else colorStyle = "color: #1565c0"; // blue
 
-            const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>`;
+            // Форматування дати
+            const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
+            
+            // Склад (синій, не жирний)
+            const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
+              ? ` <span style="color: #1565c0;">(${p.scladNomer}-Склад)</span>`
+              : '';
+            
+            // Дата (чорний)
+            const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
+
+            const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
             return {
               value: p.part_number,

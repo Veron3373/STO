@@ -324,10 +324,10 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   for (const { id, value } of newValues) {
     const oldValue = initialSettingsState.get(`general_${id}`);
     if (oldValue !== value) {
+      // Використовуємо upsert: створює запис якщо його немає, і оновлює тільки колонку "Загальні" якщо є
       const { error } = await supabase
         .from("settings")
-        .update({ "Загальні": value })
-        .eq("setting_id", id);
+        .upsert({ setting_id: id, Загальні: value }, { onConflict: "setting_id" });
 
       if (error) {
         console.error(`Помилка при збереженні setting_id ${id}:`, error);
@@ -510,11 +510,17 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
   // Обробник для повного видалення рядка
   if (deleteBtn) {
     deleteBtn.addEventListener("click", async () => {
-      // Видаляємо склад з бази даних
-      await supabase
+      // Повне видалення складу: НЕ видаляємо рядок з таблиці,
+      // а тільки очищаємо поле procent, щоб не втрачати інші колонки
+      const { error } = await supabase
         .from("settings")
-        .delete()
+        .update({ procent: null })
         .eq("setting_id", nextRowNum);
+      if (error) {
+        console.error("Помилка очистки procent для setting_id", nextRowNum, error);
+        showNotification("Помилка видалення складу", "error", 1500);
+        return;
+      }
       
       // Видаляємо рядок з UI
       const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
@@ -560,10 +566,15 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
         
         if (newDeleteBtn) {
           newDeleteBtn.addEventListener("click", async () => {
-            await supabase
+            const { error } = await supabase
               .from("settings")
-              .delete()
+              .update({ procent: null })
               .eq("setting_id", nextRowNum);
+            if (error) {
+              console.error("Помилка очистки procent для setting_id", nextRowNum, error);
+              showNotification("Помилка видалення складу", "error", 1500);
+              return;
+            }
             row.remove();
           });
         }
@@ -638,10 +649,15 @@ async function unfreezeRow(modal: HTMLElement, settingId: number): Promise<void>
         
         if (newerDeleteBtn) {
           newerDeleteBtn.addEventListener("click", async () => {
-            await supabase
+            const { error } = await supabase
               .from("settings")
-              .delete()
+              .update({ procent: null })
               .eq("setting_id", settingId);
+            if (error) {
+              console.error("Помилка очистки procent для setting_id", settingId, error);
+              showNotification("Помилка видалення складу", "error", 1500);
+              return;
+            }
             row.remove();
           });
         }

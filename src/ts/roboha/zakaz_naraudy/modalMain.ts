@@ -1713,17 +1713,21 @@ function handleInputChange(event: Event): void {
         
         // ✅ Перевіряємо поточну зарплату в інпуті
         const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
-        const currentSalary = parseFloat((slyusarSumCell?.textContent || "0").replace(/\s/g, "")) || 0;
+        const currentSalaryText = (slyusarSumCell?.textContent || "").replace(/\s/g, "").trim();
+        const currentSalary = parseFloat(currentSalaryText) || 0;
+        
+        console.log(`📊 pib_magazin change: prev="${prevSlyusar}", new="${newSlyusar}", currentSalary=${currentSalary}, salaryText="${currentSalaryText}"`);
         
         // ✅ Якщо слюсар змінився І зарплата = 0 або пусто → примусовий перерахунок від відсотка
-        if (prevSlyusar && prevSlyusar !== newSlyusar && currentSalary === 0) {
-          console.log(`🔄 Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}" і зарплата = 0. Примусовий перерахунок.`);
+        if (prevSlyusar && prevSlyusar !== newSlyusar && (currentSalary === 0 || currentSalaryText === "")) {
+          console.log(`🔄 Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}" і зарплата = 0/${currentSalaryText === "" ? "пусто" : currentSalary}. Примусовий перерахунок.`);
           forceRecalculateSlyusarSalary(row).catch((err) => {
             console.error("Помилка при примусовому перерахунку зарплати:", err);
           });
         } else if (prevSlyusar && prevSlyusar !== newSlyusar && currentSalary > 0) {
-          console.log(`ℹ️ Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}", але зарплата вже ${currentSalary} — залишаємо.`);
-          // Не перераховуємо, залишаємо поточне значення
+          console.log(`ℹ️ Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}", але зарплата вже ${currentSalary} — НЕ перераховуємо!`);
+          // ✅ Встановлюємо флаг, що зарплату не треба перераховувати
+          row.setAttribute("data-salary-locked", "true");
           updateCalculatedSumsInFooter();
         } else {
           // Звичайний розрахунок (з історії якщо є)

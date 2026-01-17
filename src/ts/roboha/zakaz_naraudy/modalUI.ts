@@ -220,6 +220,7 @@ export function getRecordIdFromHistory(
  * @param actId - номер акту (ОБОВ'ЯЗКОВИЙ параметр)
  * @param rowIndex - індекс рядка для точного пошуку
  * @param recordId - унікальний ID запису (пріоритетний спосіб)
+ * @returns зарплату > 0 або null (якщо 0 або немає - ігноруємо)
  */
 function getSlyusarSalaryFromHistory(
   slyusarName: string,
@@ -230,9 +231,15 @@ function getSlyusarSalaryFromHistory(
 ): number | null {
   const record = findSlyusarWorkRecord(slyusarName, workName, actId, rowIndex, recordId);
   
-  if (record && typeof record.Зарплата === "number") {
+  // ✅ ВИПРАВЛЕНО: Якщо зарплата = 0 — ігноруємо і повертаємо null
+  // Тоді буде перерахунок від відсотка
+  if (record && typeof record.Зарплата === "number" && record.Зарплата > 0) {
     console.log(`💰 Знайдено зарплату для "${workName}" [idx:${rowIndex}${recordId ? `, id:${recordId}` : ''}]: ${record.Зарплата}`);
     return record.Зарплата;
+  }
+  
+  if (record && record.Зарплата === 0) {
+    console.log(`⚠️ Зарплата в історії = 0 для "${workName}" — ігноруємо, буде перерахунок від відсотка`);
   }
   
   return null;
@@ -309,6 +316,13 @@ async function updateSlyusarSalaryInRow(
   rowIndex?: number // Індекс рядка для точного пошуку при однакових роботах
 ): Promise<void> {
   if (!globalCache.settings.showZarplata) return;
+
+  // ✅ НОВИЙ ЗАХИСТ: Якщо зарплата заблокована (слюсар змінився, але зарплата була > 0) - не перераховуємо
+  if (row.getAttribute("data-salary-locked") === "true") {
+    console.log(`🔒 Зарплата заблокована для рядка - пропускаємо перерахунок`);
+    row.removeAttribute("data-salary-locked"); // Знімаємо флаг після одного пропуску
+    return;
+  }
 
   const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
   const typeFromCell = nameCell?.getAttribute("data-type");

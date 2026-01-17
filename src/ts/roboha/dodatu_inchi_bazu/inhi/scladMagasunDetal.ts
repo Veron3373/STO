@@ -142,12 +142,18 @@ export async function renderScladForm() {
       ${field("sclad_detail", "Деталь", "text", '<div id="sclad_detail_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
       ${field("sclad_qty_in", "Кількість надходження", "number")}
       ${field("sclad_price", "Ціна", "number")}
-      ${field("sclad_invoice_no", "Рахунок №")}
-      ${selectField("sclad_unit", "Одиниця виміру", [
-    ["штук", "штук"],
-    ["літр", "літр"],
-    ["комплект", "комплект"],
-  ])}
+      <div class="sclad-row-3">
+        ${field("sclad_invoice_no", "Рахунок №")}
+        ${selectField("sclad_unit", "Одиниця виміру", [
+          ["штук", "штук"],
+          ["літр", "літр"],
+          ["комплект", "комплект"],
+        ])}
+        <div class="form-field">
+          <label class="field-label" for="sclad_procent">Склад</label>
+          <select id="sclad_procent" class="input-all_other_bases"><option value="">Завантаження...</option></select>
+        </div>
+      </div>
     </div>
   `;
   host.classList.remove("hidden-all_other_bases");
@@ -188,6 +194,9 @@ export async function renderScladForm() {
 
   initBatchImport();
 
+  // Завантаження опцій відсотків
+  await loadProcentOptions();
+
   // Налаштування навігації Enter між полями
   setupEnterNavigationForFields([
     "sclad_date",
@@ -198,7 +207,54 @@ export async function renderScladForm() {
     "sclad_price",
     "sclad_invoice_no",
     "sclad_unit",
+    "sclad_procent",
   ]);
+}
+
+/** Завантаження опцій відсотків з таблиці settings */
+async function loadProcentOptions() {
+  const select = document.getElementById("sclad_procent") as HTMLSelectElement | null;
+  if (!select) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("setting_id, procent")
+      .in("setting_id", [1, 2, 3]);
+
+    if (error) {
+      console.error("Помилка завантаження налаштувань відсотків:", error);
+      select.innerHTML = '<option value="">Помилка завантаження</option>';
+      return;
+    }
+
+    // Створюємо мапу setting_id -> procent
+    const procentMap = new Map<number, number | null>();
+    (data ?? []).forEach((row: { setting_id: number; procent: number | null }) => {
+      procentMap.set(row.setting_id, row.procent);
+    });
+
+    // Генеруємо опції
+    let optionsHtml = '';
+    
+    for (let id = 1; id <= 3; id++) {
+      const procent = procentMap.get(id);
+      const hasData = procent !== null && procent !== undefined;
+      
+      if (hasData) {
+        // Якщо є дані - звичайна опція
+        optionsHtml += `<option value="${id}">${id}</option>`;
+      } else {
+        // Якщо пусто - червоним кольором
+        optionsHtml += `<option value="${id}" class="procent-empty" style="background-color: #ffcccc; color: #cc0000;">${id}</option>`;
+      }
+    }
+
+    select.innerHTML = optionsHtml || '<option value="">Немає налаштувань</option>';
+  } catch (e) {
+    console.error("Помилка завантаження відсотків:", e);
+    select.innerHTML = '<option value="">Помилка</option>';
+  }
 }
 
 /* ---------- helpers ---------- */

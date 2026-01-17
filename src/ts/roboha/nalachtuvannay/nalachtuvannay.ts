@@ -174,7 +174,7 @@ const ROLE_TO_COLUMN = {
 };
 
 // 🔹 Зберігає початковий стан налаштувань при відкритті модалки
-let initialSettingsState: Map<number, boolean | number | string> = new Map();
+let initialSettingsState: Map<number | string, boolean | number | string> = new Map();
 
 // Константа за замовчуванням для кольорів
 const DEFAULT_COLOR = "#164D25";
@@ -708,7 +708,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
           `#${setting.id}`
         ) as HTMLInputElement;
         if (checkbox) checkbox.checked = !!row.data;
-        initialSettingsState.set(row.setting_id, !!row.data);
+        initialSettingsState.set(`checkbox_${row.setting_id}`, !!row.data);
       }
     });
 
@@ -742,11 +742,11 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
           if (slider1) slider1.value = String(displayValue);
           if (input1) input1.value = String(displayValue);
         }
-        initialSettingsState.set(id, value ?? 0);
+        initialSettingsState.set(`procent_${id}`, value ?? 0);
       } else {
         // Додаткові рядки створюємо динамічно
         addPercentageRow(modal, displayValue, id, isFrozen);
-        initialSettingsState.set(id, value ?? 0);
+        initialSettingsState.set(`procent_${id}`, value ?? 0);
       }
     }
 
@@ -756,7 +756,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
       if (slider1) slider1.value = "0";
       if (input1) input1.value = "0";
-      initialSettingsState.set(1, 0);
+      initialSettingsState.set(`procent_1`, 0);
     }
 
     modal
@@ -852,7 +852,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       // Перевіряємо і зберігаємо тільки змінені налаштування
       const checkbox1 = modal.querySelector("#toggle-shop") as HTMLInputElement;
       const newValue1 = checkbox1?.checked ?? false;
-      if (initialSettingsState.get(1) !== newValue1) {
+      if (initialSettingsState.get("checkbox_1") !== newValue1) {
         const { error } = await supabase
           .from("settings")
           .update({ [column]: newValue1 })
@@ -863,7 +863,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
 
       const checkbox2 = modal.querySelector("#toggle-receiver") as HTMLInputElement;
       const newValue2 = checkbox2?.checked ?? false;
-      if (initialSettingsState.get(2) !== newValue2) {
+      if (initialSettingsState.get("checkbox_2") !== newValue2) {
         const { error } = await supabase
           .from("settings")
           .update({ [column]: newValue2 })
@@ -874,7 +874,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
 
       const checkbox3 = modal.querySelector("#toggle-zarplata") as HTMLInputElement;
       const newValue3 = checkbox3?.checked ?? false;
-      if (initialSettingsState.get(3) !== newValue3) {
+      if (initialSettingsState.get("checkbox_3") !== newValue3) {
         const { error } = await supabase
           .from("settings")
           .update({ [column]: newValue3 })
@@ -898,13 +898,28 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
           
           const raw = Number(input.value ?? 0);
           const newValue = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
-          if (initialSettingsState.get(settingId) !== newValue) {
-            // Використовуємо upsert замість update, щоб створити запис якщо не існує
-            // Колонка data обов'язкова, тому передаємо false для нових записів
-            const { error } = await supabase
+          if (initialSettingsState.get(`procent_${settingId}`) !== newValue) {
+            // Спочатку перевіряємо чи існує запис
+            const { data: existingRow } = await supabase
               .from("settings")
-              .upsert({ setting_id: settingId, procent: newValue, data: false }, { onConflict: 'setting_id' });
-            if (error) throw error;
+              .select("setting_id")
+              .eq("setting_id", settingId)
+              .single();
+            
+            if (existingRow) {
+              // Запис існує - оновлюємо тільки procent
+              const { error } = await supabase
+                .from("settings")
+                .update({ procent: newValue })
+                .eq("setting_id", settingId);
+              if (error) throw error;
+            } else {
+              // Запис не існує - створюємо новий з data: false
+              const { error } = await supabase
+                .from("settings")
+                .insert({ setting_id: settingId, procent: newValue, data: false });
+              if (error) throw error;
+            }
             changesCount++;
           }
         }
@@ -912,7 +927,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
 
       const checkbox5 = modal.querySelector("#toggle-sms") as HTMLInputElement;
       const newValue5 = checkbox5?.checked ?? false;
-      if (initialSettingsState.get(5) !== newValue5) {
+      if (initialSettingsState.get("checkbox_5") !== newValue5) {
         const { error } = await supabase
           .from("settings")
           .update({ [column]: newValue5 })

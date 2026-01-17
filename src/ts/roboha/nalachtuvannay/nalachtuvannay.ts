@@ -260,7 +260,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
 
     data?.forEach((row: any) => {
       const value = row["Загальні"] || "";
-      initialSettingsState.set(row.setting_id, value);
+      initialSettingsState.set(`general_${row.setting_id}`, value);
 
       switch (row.setting_id) {
         case 1: // Назва СТО
@@ -322,7 +322,7 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   ];
 
   for (const { id, value } of newValues) {
-    const oldValue = initialSettingsState.get(id);
+    const oldValue = initialSettingsState.get(`general_${id}`);
     if (oldValue !== value) {
       const { error } = await supabase
         .from("settings")
@@ -811,8 +811,8 @@ async function loadRoleSettings(
       ) as HTMLInputElement;
       const value = !!row[column];
       if (checkbox) checkbox.checked = value;
-      // 🔹 Зберігаємо початкове значення
-      initialSettingsState.set(row.setting_id, value);
+      // 🔹 Зберігаємо початкове значення з префіксом role_
+      initialSettingsState.set(`role_${row.setting_id}`, value);
     });
 
     modal
@@ -949,7 +949,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
             `#role-toggle-${setting.id}`
           ) as HTMLInputElement;
           const newValue = checkbox?.checked ?? false;
-          const oldValue = initialSettingsState.get(setting.id as number);
+          const oldValue = initialSettingsState.get(`role_${setting.id}`);
 
           // 🔹 Зберігаємо тільки якщо значення змінилось
           if (oldValue !== newValue) {

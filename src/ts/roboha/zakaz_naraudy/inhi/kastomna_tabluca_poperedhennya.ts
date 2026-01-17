@@ -1,5 +1,5 @@
 import { globalCache, ensureSkladLoaded } from "../globalCache";
-import { loadPercentFromSettings } from "./kastomna_tabluca";
+import { loadPercentByWarehouse } from "./kastomna_tabluca";
 import { supabase } from "../../../vxid/supabaseClient";
 import { updateCalculatedSumsInFooter } from "../modalUI";
 import { userAccessLevel } from "../../tablucya/users";
@@ -197,6 +197,7 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
     if (priceCell) {
       setPriceWarningFlag(priceCell, false);
       priceCell.removeAttribute("title");
+      priceCell.style.backgroundColor = "";
     }
     return;
   }
@@ -209,6 +210,7 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
   if (!sclad_id) {
     setPriceWarningFlag(priceCell, false);
     priceCell.removeAttribute("title");
+    priceCell.style.backgroundColor = "";
     return;
   }
 
@@ -216,18 +218,36 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
   if (!picked) {
     setPriceWarningFlag(priceCell, false);
     priceCell.removeAttribute("title");
+    priceCell.style.backgroundColor = "";
     return;
   }
 
-  const percent = await loadPercentFromSettings();
+  // ✅ НОВИЙ КОД: Використовуємо відсоток по складу деталі
+  const scladNomer = picked.scladNomer;
+  const percentInfo = await loadPercentByWarehouse(scladNomer);
   const enteredPrice = parseNumFromNode(priceCell);
   const basePrice = Math.round(Number(picked.price) || 0);
-  const minPrice = Math.round(basePrice * (1 + percent / 100));
-  const warn = enteredPrice > 0 && enteredPrice < minPrice;
+  const minPrice = Math.round(basePrice * (1 + percentInfo.percent / 100));
 
-  setPriceWarningFlag(priceCell, warn);
-  if (warn) priceCell.title = `Вхідна ціна: ${formatUA(basePrice)}`;
-  else priceCell.removeAttribute("title");
+  // ✅ СТИЛІЗАЦІЯ ПО СТАТУСУ СКЛАДУ
+  if (percentInfo.status === "blocked") {
+    // Склад заблокований — червоний фон
+    setPriceWarningFlag(priceCell, false);
+    priceCell.style.backgroundColor = "#ffcdd2";
+    priceCell.title = `⛔ Склад ${scladNomer || 1} заблокований! Вхідна ціна: ${formatUA(basePrice)} грн`;
+  } else if (percentInfo.status === "missing") {
+    // Склад відсутній — синій фон
+    setPriceWarningFlag(priceCell, false);
+    priceCell.style.backgroundColor = "#bbdefb";
+    priceCell.title = `⚠️ Склад ${scladNomer || "?"} відсутній, націнка 0%. Вхідна ціна: ${formatUA(basePrice)} грн`;
+  } else {
+    // Нормальний склад — перевіряємо ціну
+    priceCell.style.backgroundColor = "";
+    const warn = enteredPrice > 0 && enteredPrice < minPrice;
+    setPriceWarningFlag(priceCell, warn);
+    if (warn) priceCell.title = `Вхідна ціна: ${formatUA(basePrice)}`;
+    else priceCell.removeAttribute("title");
+  }
 }
 
 export async function updateSlyusarSumWarningForRow(row: HTMLElement) {

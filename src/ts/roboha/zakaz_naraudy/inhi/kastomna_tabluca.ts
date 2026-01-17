@@ -27,34 +27,75 @@ const LIVE_WARNINGS = false;
 const NAME_AUTOCOMPLETE_MIN_CHARS = 2; // мінімум символів для пошуку (знижено з 3 до 2)
 const NAME_AUTOCOMPLETE_MAX_RESULTS = 50; // максимум результатів
 
-// Кеш для відсотку
-let cachedPercent: number | null = null;
+// Кеш для відсотків по складах: Map<scladNomer, procent>
+// procent може бути: number (нормальний відсоток), -1 (заблокований), null (відсутній)
+let warehousePercentsCache: Map<number, number | null> = new Map();
+let warehousePercentsCacheLoaded = false;
 
-/** Завантажити відсоток з бази даних settings */
-export async function loadPercentFromSettings(): Promise<number> {
-  if (cachedPercent !== null) return cachedPercent;
+/** Статус відсотка складу */
+export interface WarehousePercentStatus {
+  percent: number;
+  status: "normal" | "blocked" | "missing";
+  basePrice: number;
+}
+
+/** Завантажити всі відсотки складів з бази даних settings */
+export async function loadWarehousePercents(): Promise<void> {
+  if (warehousePercentsCacheLoaded) return;
 
   try {
+    // Завантажуємо setting_id 1..500 для відсотків складів
     const { data, error } = await supabase
       .from("settings")
-      .select("procent")
-      .eq("setting_id", 1)
-      .single();
+      .select("setting_id, procent")
+      .gte("setting_id", 1)
+      .lte("setting_id", 500);
 
     if (error) throw error;
 
-    const percent = typeof data?.procent === "number" ? data.procent : 0;
-    cachedPercent = percent;
-    return percent;
+    warehousePercentsCache.clear();
+    if (data) {
+      for (const row of data) {
+        warehousePercentsCache.set(row.setting_id, row.procent);
+      }
+    }
+    warehousePercentsCacheLoaded = true;
+    console.log(`✅ Завантажено відсотки для ${warehousePercentsCache.size} складів`);
   } catch (err) {
-    console.error("Помилка завантаження відсотку:", err);
-    return 0;
+    console.error("Помилка завантаження відсотків складів:", err);
   }
+}
+
+/** Отримати відсоток для конкретного складу */
+export async function loadPercentByWarehouse(scladNomer: number | null | undefined): Promise<WarehousePercentStatus> {
+  await loadWarehousePercents();
+
+  // Якщо склад не вказаний — використовуємо склад 1
+  const warehouseId = (scladNomer !== null && scladNomer !== undefined && scladNomer > 0) ? scladNomer : 1;
+  const procent = warehousePercentsCache.get(warehouseId);
+
+  if (procent === -1) {
+    // Заблокований склад
+    return { percent: 0, status: "blocked", basePrice: 0 };
+  } else if (procent === null || procent === undefined) {
+    // Відсутній склад — націнка 0%
+    return { percent: 0, status: "missing", basePrice: 0 };
+  } else {
+    // Нормальний відсоток
+    return { percent: procent, status: "normal", basePrice: 0 };
+  }
+}
+
+/** Стара функція для сумісності — завантажує відсоток з складу 1 */
+export async function loadPercentFromSettings(): Promise<number> {
+  const result = await loadPercentByWarehouse(1);
+  return result.percent;
 }
 
 /** Скинути кеш відсотку (викликати після збереження налаштувань) */
 export function resetPercentCache(): void {
-  cachedPercent = null;
+  warehousePercentsCache.clear();
+  warehousePercentsCacheLoaded = false;
 }
 
 /**
@@ -1472,10 +1513,12 @@ async function applyCatalogSelectionById(
     '[data-name="catalog"]'
   ) as HTMLElement | null;
 
-  const percent = await loadPercentFromSettings();
+  // ✅ НОВИЙ КОД: Отримуємо відсоток по складу деталі
+  const scladNomer = picked.scladNomer;
+  const percentInfo = await loadPercentByWarehouse(scladNomer);
 
   const basePrice = Math.round(picked.price || 0);
-  const priceWithMarkup = Math.round(basePrice * (1 + percent / 100));
+  const priceWithMarkup = Math.round(basePrice * (1 + percentInfo.percent / 100));
 
   // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
   const nameToSet = fullName || picked.name || "";
@@ -1487,6 +1530,27 @@ async function applyCatalogSelectionById(
     console.log(`✅ Встановлено тип "details" для "${nameToSet}"`);
   }
   setCellText(priceCell, formatUA(priceWithMarkup));
+
+  // ✅ СТИЛІЗАЦІЯ ЯЧЕЙКИ ЦІНИ ПО СТАТУСУ СКЛАДУ
+  if (priceCell) {
+    // Видаляємо попередні стилі та атрибути
+    priceCell.style.backgroundColor = "";
+    priceCell.removeAttribute("data-warehouse-status");
+    priceCell.removeAttribute("title");
+
+    if (percentInfo.status === "blocked") {
+      // Склад заблокований (-1) → червоний фон
+      priceCell.style.backgroundColor = "#ffcdd2"; // світло-червоний
+      priceCell.setAttribute("data-warehouse-status", "blocked");
+      priceCell.title = `⛔ Склад ${scladNomer || 1} заблокований! Вхідна ціна: ${formatUA(basePrice)} грн`;
+    } else if (percentInfo.status === "missing") {
+      // Склад відсутній (null) → синій фон
+      priceCell.style.backgroundColor = "#bbdefb"; // світло-синій
+      priceCell.setAttribute("data-warehouse-status", "missing");
+      priceCell.title = `⚠️ Склад ${scladNomer || "?"} відсутній, націнка 0%. Вхідна ціна: ${formatUA(basePrice)} грн`;
+    }
+  }
+
   if (catalogCell) {
     catalogCell.setAttribute("data-sclad-id", String(picked.sclad_id));
     setCellText(catalogCell, picked.part_number || "");

@@ -314,17 +314,18 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     flex-shrink: 0;
+    position: relative;
   }
 
   // Кнопка повного видалення складу (хрестик)
   .delete-percentage-btn {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: none;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     display: flex;
@@ -335,6 +336,10 @@
     background: #e74c3c;
     color: white;
     line-height: 1;
+    position: absolute;
+    top: -8px;
+    right: -4px;
+    z-index: 1;
 
     &:hover {
       background: #c0392b;

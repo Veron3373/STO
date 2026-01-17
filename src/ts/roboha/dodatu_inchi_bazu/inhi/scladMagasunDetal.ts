@@ -613,7 +613,7 @@ async function wireLinkedAutocomplete() {
 
   const { data, error } = await supabase
     .from("sclad")
-    .select("sclad_id, part_number, name, shops, kilkist_on, price, rahunok, unit_measurement, time_on")
+    .select("sclad_id, part_number, name, shops, kilkist_on, price, rahunok, unit_measurement, time_on, scladNomer")
     .order("sclad_id", { ascending: false });
   if (error) return console.error("Помилка sclad:", error);
 

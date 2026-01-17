@@ -68,6 +68,10 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     return [];
   }
 
+  // Перевіряємо чи кеш має нове поле scladNomer, якщо ні — перезавантажуємо
+  if (globalCache.skladParts.length > 0 && globalCache.skladParts[0].scladNomer === undefined) {
+    globalCache.skladParts = [];
+  }
   await ensureSkladLoaded();
 
   console.log(`🔎 Фільтрація для "${q}" (works: ${globalCache.works.length}, skladParts: ${globalCache.skladParts.length})`);

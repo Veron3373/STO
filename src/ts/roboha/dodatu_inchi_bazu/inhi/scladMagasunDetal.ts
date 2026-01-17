@@ -569,11 +569,25 @@ function fillFormFieldsFromSclad(record: any) {
     sclad_invoice_no: record?.rahunok ?? "",
     sclad_unit: record?.unit_measurement ?? "",
     sclad_detail_catno: record?.part_number ?? "",
+    sclad_procent: record?.scladNomer ?? "",
   };
   Object.entries(fields).forEach(([id, val]) => {
     const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
     if (el) el.value = String(val ?? "");
   });
+
+  // Оновлюємо стиль select sclad_procent при завантаженні даних
+  const procentSelect = document.getElementById("sclad_procent") as HTMLSelectElement | null;
+  if (procentSelect) {
+    const selectedOption = procentSelect.options[procentSelect.selectedIndex];
+    if (selectedOption?.dataset.empty === "true") {
+      procentSelect.style.backgroundColor = "#ffcccc";
+      procentSelect.style.color = "#cc0000";
+    } else {
+      procentSelect.style.backgroundColor = "";
+      procentSelect.style.color = "";
+    }
+  }
 
   const shopInput = document.getElementById("sclad_shop") as HTMLInputElement | null;
   if (shopInput?.value) {

@@ -70,6 +70,7 @@ function populateFormFields(record: ScladRecord) {
     sclad_date: String(record.time_on ?? ""),
     sclad_shop: String(record.shops ?? ""),
     sclad_invoice_no: String(record.rahunok ?? ""),
+    sclad_procent: String((record as any).scladNomer ?? ""),
   };
   Object.entries(fields).forEach(([id, val]) => {
     const el = document.getElementById(id) as
@@ -249,6 +250,7 @@ function readScladFormValues() {
     rahunok: pick("sclad_invoice_no") || null,
     unit_measurement: pick("sclad_unit") || null,
     akt: pick("sclad_akt") || null,
+    scladNomer: toNum(pick("sclad_procent")),
 
     // 🛠️ Безпечна заміна: якщо null → ставимо 0
     kilkist_off: off === null ? 0 : off,

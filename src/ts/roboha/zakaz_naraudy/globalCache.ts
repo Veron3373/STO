@@ -300,6 +300,8 @@ let isScladRealtimeSubscribed: boolean = false; // ← Флаг підписки
 export function invalidateGlobalDataCache(): void {
   globalDataLoaded = false;
   lastGlobalDataLoadTime = 0;
+  // Очищаємо складові частини, щоб ensureSkladLoaded() перезавантажив їх
+  globalCache.skladParts = [];
 }
 
 /* ===================== утиліти ===================== */

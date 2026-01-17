@@ -553,10 +553,10 @@ function calculateDeltas(): Map<number, number> {
 
   const deltas = new Map<number, number>();
   for (const id of allIds) {
-    // ✅ ІНВЕРТУЄМО delta:
-    // - Додали в акт (new > old) → delta < 0 → kilkist_off зменшується (списується зі складу)
-    // - Видалили з акту (new < old) → delta > 0 → kilkist_off збільшується (повертається на склад)
-    const delta = (oldNumbers.get(id) || 0) - (newNumbers.get(id) || 0);
+    // ✅ ПРАВИЛЬНА ЛОГІКА:
+    // - Додали в акт (new > old) → delta > 0 → kilkist_off збільшується (списується зі складу)
+    // - Видалили з акту (new < old) → delta < 0 → kilkist_off зменшується (повертається на склад)
+    const delta = (newNumbers.get(id) || 0) - (oldNumbers.get(id) || 0);
     if (delta !== 0) {
       console.log(`📊 calculateDeltas: id=${id}, old=${oldNumbers.get(id) || 0}, new=${newNumbers.get(id) || 0}, delta=${delta}`);
       deltas.set(id, delta);

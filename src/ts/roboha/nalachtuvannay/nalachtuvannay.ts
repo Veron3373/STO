@@ -599,11 +599,11 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       const input = modal.querySelector("#percentage-input") as HTMLInputElement;
       const raw = Number(input?.value ?? 0);
       const newValue4 = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
-      if (initialSettingsState.get(4) !== newValue4) {
+      if (initialSettingsState.get(1) !== newValue4) {
         const { error } = await supabase
           .from("settings")
           .update({ procent: newValue4 })
-          .eq("setting_id", 4);
+          .eq("setting_id", 1);
         if (error) throw error;
         changesCount++;
       }

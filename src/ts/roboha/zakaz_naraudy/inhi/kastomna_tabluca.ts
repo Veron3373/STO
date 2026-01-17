@@ -38,7 +38,7 @@ export async function loadPercentFromSettings(): Promise<number> {
     const { data, error } = await supabase
       .from("settings")
       .select("procent")
-      .eq("setting_id", 4)
+      .eq("setting_id", 1)
       .single();
 
     if (error) throw error;

@@ -176,6 +176,15 @@ const ROLE_TO_COLUMN = {
 // 🔹 Зберігає початковий стан налаштувань при відкритті модалки
 let initialSettingsState: Map<number | string, boolean | number | string> = new Map();
 
+// 🔹 Масив ID складів, які потрібно видалити (procent → null) при збереженні
+let pendingDeletedWarehouseIds: Set<number> = new Set();
+
+// 🔹 Масив ID складів, які потрібно заморозити (procent → -1) при збереженні
+let pendingFrozenWarehouseIds: Set<number> = new Set();
+
+// 🔹 Масив ID складів, які потрібно активувати (procent → значення з input) при збереженні
+let pendingUnfrozenWarehouseIds: Set<number> = new Set();
+
 // Константа за замовчуванням для кольорів
 const DEFAULT_COLOR = "#164D25";
 
@@ -527,20 +536,13 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
     });
   }
 
-  // Обробник для повного видалення рядка
+  // Обробник для повного видалення рядка (тільки UI, збереження при "ОК")
   if (deleteBtn) {
-    deleteBtn.addEventListener("click", async () => {
-      // Повне видалення складу: НЕ видаляємо рядок з таблиці,
-      // а тільки очищаємо поле procent, щоб не втрачати інші колонки
-      const { error } = await supabase
-        .from("settings")
-        .update({ procent: null })
-        .eq("setting_id", nextRowNum);
-      if (error) {
-        console.error("Помилка очистки procent для setting_id", nextRowNum, error);
-        showNotification("Помилка видалення складу", "error", 1500);
-        return;
-      }
+    deleteBtn.addEventListener("click", () => {
+      // Додаємо ID до списку видалених
+      pendingDeletedWarehouseIds.add(nextRowNum!);
+      pendingFrozenWarehouseIds.delete(nextRowNum!);
+      pendingUnfrozenWarehouseIds.delete(nextRowNum!);
       
       // Видаляємо рядок з UI
       const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
@@ -550,14 +552,13 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
     });
   }
   
-  // Обробник для заморожування рядка
+  // Обробник для заморожування рядка (тільки UI, збереження при "ОК")
   if (removeBtn) {
-    removeBtn.addEventListener("click", async () => {
-      // Заморожуємо склад (записуємо -1)
-      await supabase
-        .from("settings")
-        .update({ procent: -1 })
-        .eq("setting_id", nextRowNum);
+    removeBtn.addEventListener("click", () => {
+      // Додаємо ID до списку заморожених
+      pendingFrozenWarehouseIds.add(nextRowNum!);
+      pendingUnfrozenWarehouseIds.delete(nextRowNum!);
+      pendingDeletedWarehouseIds.delete(nextRowNum!);
       
       // Оновлюємо UI
       const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
@@ -585,16 +586,11 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
         }
         
         if (newDeleteBtn) {
-          newDeleteBtn.addEventListener("click", async () => {
-            const { error } = await supabase
-              .from("settings")
-              .update({ procent: null })
-              .eq("setting_id", nextRowNum);
-            if (error) {
-              console.error("Помилка очистки procent для setting_id", nextRowNum, error);
-              showNotification("Помилка видалення складу", "error", 1500);
-              return;
-            }
+          newDeleteBtn.addEventListener("click", () => {
+            // Додаємо ID до списку видалених
+            pendingDeletedWarehouseIds.add(nextRowNum!);
+            pendingFrozenWarehouseIds.delete(nextRowNum!);
+            pendingUnfrozenWarehouseIds.delete(nextRowNum!);
             row.remove();
           });
         }
@@ -609,12 +605,12 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
 }
 
 // Функція для розморожування рядка
-async function unfreezeRow(modal: HTMLElement, settingId: number): Promise<void> {
-  // Активуємо склад (записуємо 0)
-  await supabase
-    .from("settings")
-    .update({ procent: 0 })
-    .eq("setting_id", settingId);
+// Функція для розморожування рядка (тільки UI, збереження при "ОК")
+function unfreezeRow(modal: HTMLElement, settingId: number): void {
+  // Додаємо ID до списку активованих
+  pendingUnfrozenWarehouseIds.add(settingId);
+  pendingFrozenWarehouseIds.delete(settingId);
+  pendingDeletedWarehouseIds.delete(settingId);
   
   // Оновлюємо UI
   const row = modal.querySelector(`.percentage-row[data-setting-id="${settingId}"]`);
@@ -639,14 +635,14 @@ async function unfreezeRow(modal: HTMLElement, settingId: number): Promise<void>
       buttonsContainer.outerHTML = `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${settingId}" title="Заморозити склад">−</button>`;
     }
     
-    // Додаємо обробник для нової кнопки заморозки
+    // Додаємо обробник для нової кнопки заморозки (тільки UI)
     const newRemoveBtn = modal.querySelector(`#remove-percentage-row-${settingId}`);
     if (newRemoveBtn) {
-      newRemoveBtn.addEventListener("click", async () => {
-        await supabase
-          .from("settings")
-          .update({ procent: -1 })
-          .eq("setting_id", settingId);
+      newRemoveBtn.addEventListener("click", () => {
+        // Додаємо ID до списку заморожених
+        pendingFrozenWarehouseIds.add(settingId);
+        pendingUnfrozenWarehouseIds.delete(settingId);
+        pendingDeletedWarehouseIds.delete(settingId);
         
         // Заморожуємо рядок
         row.classList.add("frozen");
@@ -668,16 +664,11 @@ async function unfreezeRow(modal: HTMLElement, settingId: number): Promise<void>
         }
         
         if (newerDeleteBtn) {
-          newerDeleteBtn.addEventListener("click", async () => {
-            const { error } = await supabase
-              .from("settings")
-              .update({ procent: null })
-              .eq("setting_id", settingId);
-            if (error) {
-              console.error("Помилка очистки procent для setting_id", settingId, error);
-              showNotification("Помилка видалення складу", "error", 1500);
-              return;
-            }
+          newerDeleteBtn.addEventListener("click", () => {
+            // Додаємо ID до списку видалених
+            pendingDeletedWarehouseIds.add(settingId);
+            pendingFrozenWarehouseIds.delete(settingId);
+            pendingUnfrozenWarehouseIds.delete(settingId);
             row.remove();
           });
         }
@@ -713,6 +704,11 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
     // 🔹 Очищуємо попередній стан
     initialSettingsState.clear();
+    
+    // 🔹 Очищуємо списки відкладених змін складів
+    pendingDeletedWarehouseIds.clear();
+    pendingFrozenWarehouseIds.clear();
+    pendingUnfrozenWarehouseIds.clear();
     
     // Очищаємо додаткові рядки відсотків
     const additionalRows = modal.querySelector("#additional-percentage-rows");
@@ -987,8 +983,31 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
           const settingId = parseInt(idMatch[1]);
           const row = modal.querySelector(`.percentage-row[data-setting-id="${settingId}"]`);
           
-          // Якщо рядок заморожений, пропускаємо (у нього вже -1 в базі)
-          if (row?.classList.contains("frozen")) {
+          // Якщо рядок заморожений — зберігаємо -1
+          if (row?.classList.contains("frozen") || pendingFrozenWarehouseIds.has(settingId)) {
+            // Перевіряємо чи це нова зміна
+            const initialValue = initialSettingsState.get(`procent_${settingId}`);
+            if (initialValue !== -1) {
+              const { data: existingRow } = await supabase
+                .from("settings")
+                .select("setting_id")
+                .eq("setting_id", settingId)
+                .single();
+              
+              if (existingRow) {
+                const { error } = await supabase
+                  .from("settings")
+                  .update({ procent: -1 })
+                  .eq("setting_id", settingId);
+                if (error) throw error;
+              } else {
+                const { error } = await supabase
+                  .from("settings")
+                  .insert({ setting_id: settingId, procent: -1, data: false });
+                if (error) throw error;
+              }
+              changesCount++;
+            }
             continue;
           }
           
@@ -1016,6 +1035,22 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
                 .insert({ setting_id: settingId, procent: newValue, data: false });
               if (error) throw error;
             }
+            changesCount++;
+          }
+        }
+      }
+
+      // 🔹 Обробляємо видалені склади (procent → null)
+      for (const deletedId of pendingDeletedWarehouseIds) {
+        const initialValue = initialSettingsState.get(`procent_${deletedId}`);
+        if (initialValue !== null && initialValue !== undefined) {
+          const { error } = await supabase
+            .from("settings")
+            .update({ procent: null })
+            .eq("setting_id", deletedId);
+          if (error) {
+            console.error(`Помилка видалення складу ${deletedId}:`, error);
+          } else {
             changesCount++;
           }
         }

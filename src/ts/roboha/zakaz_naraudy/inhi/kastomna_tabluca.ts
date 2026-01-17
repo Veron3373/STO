@@ -423,7 +423,19 @@ function showCatalogInfo(target: HTMLElement, sclad_id: number) {
 
   const box = document.createElement("div");
   box.className = "catalog-info-popover";
-  box.innerHTML = `К-ть: ${qtyHtml} по ${formatUA(Math.round(picked.price))}`;
+  
+  // Форматування дати
+  const timeOn = picked.time_on ? new Date(picked.time_on).toLocaleDateString('uk-UA') : '';
+  
+  // Склад (синій, не жирний)
+  const skladTag = picked.scladNomer !== null && picked.scladNomer !== undefined
+    ? ` <span style="color: #1565c0;">(${picked.scladNomer}-Склад)</span>`
+    : '';
+  
+  // Дата (чорний)
+  const dateTag = timeOn ? ` <span style="color: #000;">${timeOn}</span>` : '';
+  
+  box.innerHTML = `К-ть: ${qtyHtml} по ${formatUA(Math.round(picked.price))}${skladTag}${dateTag}`;
 
   const rect = target.getBoundingClientRect();
   box.style.top = `${rect.bottom + window.scrollY}px`;

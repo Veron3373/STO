@@ -474,7 +474,10 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
         </div>
       </div>
       ${isFrozen 
-        ? `<button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>`
+        ? `<div class="percentage-buttons-container">
+            <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
+            <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
+          </div>`
         : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
       }
     </div>
@@ -487,6 +490,7 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
   const input = modal.querySelector(`#percentage-input-${nextRowNum}`) as HTMLInputElement;
   const removeBtn = modal.querySelector(`#remove-percentage-row-${nextRowNum}`);
   const unfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${nextRowNum}`);
+  const deleteBtn = modal.querySelector(`#delete-percentage-row-${nextRowNum}`);
   
   if (slider && input && !isFrozen) {
     slider.addEventListener("input", () => {
@@ -499,6 +503,23 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
         slider.value = String(numValue);
       } else {
         input.value = slider.value;
+      }
+    });
+  }
+
+  // Обробник для повного видалення рядка
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", async () => {
+      // Видаляємо склад з бази даних
+      await supabase
+        .from("settings")
+        .delete()
+        .eq("setting_id", nextRowNum);
+      
+      // Видаляємо рядок з UI
+      const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
+      if (row) {
+        row.remove();
       }
     });
   }
@@ -523,13 +544,28 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
         if (inputEl) inputEl.disabled = true;
         if (percentSign) percentSign.textContent = ".";
         
-        // Замінюємо кнопку видалення на кнопку відновлення
-        removeBtn.outerHTML = `<button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>`;
+        // Замінюємо кнопку на контейнер з двома кнопками
+        removeBtn.outerHTML = `<div class="percentage-buttons-container">
+          <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
+          <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
+        </div>`;
         
-        // Додаємо обробник для нової кнопки
+        // Додаємо обробники для нових кнопок
         const newUnfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${nextRowNum}`);
+        const newDeleteBtn = modal.querySelector(`#delete-percentage-row-${nextRowNum}`);
+        
         if (newUnfreezeBtn) {
           newUnfreezeBtn.addEventListener("click", () => unfreezeRow(modal, nextRowNum!));
+        }
+        
+        if (newDeleteBtn) {
+          newDeleteBtn.addEventListener("click", async () => {
+            await supabase
+              .from("settings")
+              .delete()
+              .eq("setting_id", nextRowNum);
+            row.remove();
+          });
         }
       }
     });
@@ -566,32 +602,50 @@ async function unfreezeRow(modal: HTMLElement, settingId: number): Promise<void>
     }
     if (percentSign) percentSign.textContent = "%";
     
-    // Замінюємо кнопку відновлення на кнопку видалення
-    const unfreezeBtn = row.querySelector(".unfreeze-percentage-btn");
-    if (unfreezeBtn) {
-      unfreezeBtn.outerHTML = `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${settingId}" title="Заморозити склад">−</button>`;
-      
-      // Додаємо обробник для нової кнопки
-      const newRemoveBtn = modal.querySelector(`#remove-percentage-row-${settingId}`);
-      if (newRemoveBtn) {
-        newRemoveBtn.addEventListener("click", async () => {
-          await supabase
-            .from("settings")
-            .update({ procent: -1 })
-            .eq("setting_id", settingId);
-          
-          // Рекурсивно заморожуємо
-          row.classList.add("frozen");
-          if (sliderEl) sliderEl.disabled = true;
-          if (inputEl) inputEl.disabled = true;
-          if (percentSign) percentSign.textContent = ".";
-          newRemoveBtn.outerHTML = `<button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${settingId}" title="Активувати склад">↻</button>`;
-          const newerUnfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${settingId}`);
-          if (newerUnfreezeBtn) {
-            newerUnfreezeBtn.addEventListener("click", () => unfreezeRow(modal, settingId));
-          }
-        });
-      }
+    // Видаляємо контейнер з кнопками і додаємо просту кнопку заморозки
+    const buttonsContainer = row.querySelector(".percentage-buttons-container");
+    if (buttonsContainer) {
+      buttonsContainer.outerHTML = `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${settingId}" title="Заморозити склад">−</button>`;
+    }
+    
+    // Додаємо обробник для нової кнопки заморозки
+    const newRemoveBtn = modal.querySelector(`#remove-percentage-row-${settingId}`);
+    if (newRemoveBtn) {
+      newRemoveBtn.addEventListener("click", async () => {
+        await supabase
+          .from("settings")
+          .update({ procent: -1 })
+          .eq("setting_id", settingId);
+        
+        // Заморожуємо рядок
+        row.classList.add("frozen");
+        if (sliderEl) sliderEl.disabled = true;
+        if (inputEl) inputEl.disabled = true;
+        if (percentSign) percentSign.textContent = ".";
+        
+        // Замінюємо кнопку на контейнер з двома кнопками
+        newRemoveBtn.outerHTML = `<div class="percentage-buttons-container">
+          <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${settingId}" title="Видалити склад повністю">×</button>
+          <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${settingId}" title="Активувати склад">↻</button>
+        </div>`;
+        
+        const newerUnfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${settingId}`);
+        const newerDeleteBtn = modal.querySelector(`#delete-percentage-row-${settingId}`);
+        
+        if (newerUnfreezeBtn) {
+          newerUnfreezeBtn.addEventListener("click", () => unfreezeRow(modal, settingId));
+        }
+        
+        if (newerDeleteBtn) {
+          newerDeleteBtn.addEventListener("click", async () => {
+            await supabase
+              .from("settings")
+              .delete()
+              .eq("setting_id", settingId);
+            row.remove();
+          });
+        }
+      });
     }
     
     // Додаємо обробники для слайдера і інпута

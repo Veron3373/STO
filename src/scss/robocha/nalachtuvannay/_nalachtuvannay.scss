@@ -309,6 +309,39 @@
     }
   }
 
+  // Контейнер для кнопок заморозки/видалення
+  .percentage-buttons-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  // Кнопка повного видалення складу (хрестик)
+  .delete-percentage-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    background: #e74c3c;
+    color: white;
+    line-height: 1;
+
+    &:hover {
+      background: #c0392b;
+      transform: scale(1.15);
+    }
+  }
+
   // Заморожений (неактивний) склад
   .percentage-row.frozen {
     opacity: 0.5;

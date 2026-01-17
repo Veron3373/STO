@@ -324,14 +324,34 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   for (const { id, value } of newValues) {
     const oldValue = initialSettingsState.get(`general_${id}`);
     if (oldValue !== value) {
-      // Використовуємо upsert: створює запис якщо його немає, і оновлює тільки колонку "Загальні" якщо є
-      const { error } = await supabase
+      // Безпечно: якщо запис існує — оновлюємо лише "Загальні"; якщо ні — створюємо з data:false
+      const { data: existingRow, error: selectError } = await supabase
         .from("settings")
-        .upsert({ setting_id: id, Загальні: value }, { onConflict: "setting_id" });
+        .select("setting_id")
+        .eq("setting_id", id)
+        .single();
+      if (selectError && selectError.code !== "PGRST116") { // ігноруємо not found
+        console.error(`Помилка перевірки існування setting_id ${id}:`, selectError);
+        throw selectError;
+      }
 
-      if (error) {
-        console.error(`Помилка при збереженні setting_id ${id}:`, error);
-        throw error;
+      if (existingRow) {
+        const { error: updateError } = await supabase
+          .from("settings")
+          .update({ Загальні: value })
+          .eq("setting_id", id);
+        if (updateError) {
+          console.error(`Помилка оновлення setting_id ${id}:`, updateError);
+          throw updateError;
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from("settings")
+          .insert({ setting_id: id, Загальні: value, data: false });
+        if (insertError) {
+          console.error(`Помилка створення setting_id ${id}:`, insertError);
+          throw insertError;
+        }
       }
       changesCount++;
     }
@@ -728,6 +748,15 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       }
     });
 
+    // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
+    [1, 2, 3, 5].forEach((id) => {
+      if (!initialSettingsState.has(`checkbox_${id}`)) {
+        const el = modal.querySelector(`#${SETTINGS[id as keyof typeof SETTINGS].id}`) as HTMLInputElement;
+        const def = !!el?.checked; // як правило false
+        initialSettingsState.set(`checkbox_${id}`, def);
+      }
+    });
+
     // Знаходимо останній заповнений procent (включаючи заморожені -1)
     let lastFilledSettingId = 0;
     procentMap.forEach((val, id) => {
@@ -821,6 +850,7 @@ async function loadRoleSettings(
       }
     });
 
+    const presentIds = new Set<number>();
     data?.forEach((row: any) => {
       const checkbox = modal.querySelector(
         `#role-toggle-${row.setting_id}`
@@ -829,6 +859,18 @@ async function loadRoleSettings(
       if (checkbox) checkbox.checked = value;
       // 🔹 Зберігаємо початкове значення з префіксом role_
       initialSettingsState.set(`role_${row.setting_id}`, value);
+      presentIds.add(row.setting_id);
+    });
+
+    // Для відсутніх у БД налаштувань — фіксуємо дефолт false, щоб уникнути зайвих записів
+    settingIds.forEach((id: number) => {
+      if (!presentIds.has(id)) {
+        const checkbox = modal.querySelector(
+          `#role-toggle-${id}`
+        ) as HTMLInputElement;
+        const value = !!checkbox?.checked; // за замовчуванням false
+        initialSettingsState.set(`role_${id}`, value);
+      }
     });
 
     modal
@@ -869,33 +911,73 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       const checkbox1 = modal.querySelector("#toggle-shop") as HTMLInputElement;
       const newValue1 = checkbox1?.checked ?? false;
       if (initialSettingsState.get("checkbox_1") !== newValue1) {
-        const { error } = await supabase
+        // Якщо запис існує — оновлюємо; якщо ні — створюємо з data:newValue1
+        const { data: existingRow, error: selectError } = await supabase
           .from("settings")
-          .update({ [column]: newValue1 })
-          .eq("setting_id", 1);
-        if (error) throw error;
+          .select("setting_id")
+          .eq("setting_id", 1)
+          .single();
+        if (selectError && selectError.code !== "PGRST116") throw selectError;
+        if (existingRow) {
+          const { error: updateError } = await supabase
+            .from("settings")
+            .update({ [column]: newValue1 })
+            .eq("setting_id", 1);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert({ setting_id: 1, [column]: newValue1, data: newValue1 });
+          if (insertError) throw insertError;
+        }
         changesCount++;
       }
 
       const checkbox2 = modal.querySelector("#toggle-receiver") as HTMLInputElement;
       const newValue2 = checkbox2?.checked ?? false;
       if (initialSettingsState.get("checkbox_2") !== newValue2) {
-        const { error } = await supabase
+        const { data: existingRow, error: selectError } = await supabase
           .from("settings")
-          .update({ [column]: newValue2 })
-          .eq("setting_id", 2);
-        if (error) throw error;
+          .select("setting_id")
+          .eq("setting_id", 2)
+          .single();
+        if (selectError && selectError.code !== "PGRST116") throw selectError;
+        if (existingRow) {
+          const { error: updateError } = await supabase
+            .from("settings")
+            .update({ [column]: newValue2 })
+            .eq("setting_id", 2);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert({ setting_id: 2, [column]: newValue2, data: newValue2 });
+          if (insertError) throw insertError;
+        }
         changesCount++;
       }
 
       const checkbox3 = modal.querySelector("#toggle-zarplata") as HTMLInputElement;
       const newValue3 = checkbox3?.checked ?? false;
       if (initialSettingsState.get("checkbox_3") !== newValue3) {
-        const { error } = await supabase
+        const { data: existingRow, error: selectError } = await supabase
           .from("settings")
-          .update({ [column]: newValue3 })
-          .eq("setting_id", 3);
-        if (error) throw error;
+          .select("setting_id")
+          .eq("setting_id", 3)
+          .single();
+        if (selectError && selectError.code !== "PGRST116") throw selectError;
+        if (existingRow) {
+          const { error: updateError } = await supabase
+            .from("settings")
+            .update({ [column]: newValue3 })
+            .eq("setting_id", 3);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert({ setting_id: 3, [column]: newValue3, data: newValue3 });
+          if (insertError) throw insertError;
+        }
         changesCount++;
       }
 
@@ -944,11 +1026,24 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       const checkbox5 = modal.querySelector("#toggle-sms") as HTMLInputElement;
       const newValue5 = checkbox5?.checked ?? false;
       if (initialSettingsState.get("checkbox_5") !== newValue5) {
-        const { error } = await supabase
+        const { data: existingRow, error: selectError } = await supabase
           .from("settings")
-          .update({ [column]: newValue5 })
-          .eq("setting_id", 5);
-        if (error) throw error;
+          .select("setting_id")
+          .eq("setting_id", 5)
+          .single();
+        if (selectError && selectError.code !== "PGRST116") throw selectError;
+        if (existingRow) {
+          const { error: updateError } = await supabase
+            .from("settings")
+            .update({ [column]: newValue5 })
+            .eq("setting_id", 5);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert({ setting_id: 5, [column]: newValue5, data: newValue5 });
+          if (insertError) throw insertError;
+        }
         changesCount++;
       }
     } else if (role === "Загальні") {
@@ -969,17 +1064,34 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
 
           // 🔹 Зберігаємо тільки якщо значення змінилось
           if (oldValue !== newValue) {
-            const { error } = await supabase
+            // Якщо запис існує — оновлюємо лише колонку ролі; якщо ні — створюємо (data:false)
+            const { data: existingRow, error: selectError } = await supabase
               .from("settings")
-              .update({ [column]: newValue })
-              .eq("setting_id", setting.id);
+              .select("setting_id")
+              .eq("setting_id", setting.id)
+              .single();
+            if (selectError && selectError.code !== "PGRST116") {
+              console.error(`Помилка перевірки setting_id ${setting.id}:`, selectError);
+              throw selectError;
+            }
 
-            if (error) {
-              console.error(
-                `Помилка при збереженні setting_id ${setting.id}:`,
-                error
-              );
-              throw error;
+            if (existingRow) {
+              const { error: updateError } = await supabase
+                .from("settings")
+                .update({ [column]: newValue })
+                .eq("setting_id", setting.id);
+              if (updateError) {
+                console.error(`Помилка оновлення setting_id ${setting.id}:`, updateError);
+                throw updateError;
+              }
+            } else {
+              const { error: insertError } = await supabase
+                .from("settings")
+                .insert({ setting_id: setting.id, [column]: newValue, data: false });
+              if (insertError) {
+                console.error(`Помилка створення setting_id ${setting.id}:`, insertError);
+                throw insertError;
+              }
             }
             changesCount++;
           }
@@ -994,6 +1106,14 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
     } else {
       resetPercentCache();
       showNotification(`Збережено ${changesCount} зміни(н)!`, "success", 1500);
+      // Після збереження оновлюємо стан під поточну роль, щоб синхронізувати initialSettingsState
+      if (role === "Адміністратор") {
+        await loadSettings(modal);
+      } else if (role === "Загальні") {
+        await loadGeneralSettings(modal);
+      } else {
+        await loadRoleSettings(modal, role);
+      }
     }
     return true;
   } catch (err) {

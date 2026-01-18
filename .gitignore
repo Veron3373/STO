@@ -29,12 +29,12 @@ dist/
 .env
 .env.local
 
-vercel_code.txt
-
 # Deploy scripts (sensitive data)
 deploy-STO-*.ps1
+deploy-vercel.ps1
 .vercel
 .env*.local
+SUPABASE_REDIRECT_SETUP.md
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Setup and Documentation Files (not for public repository)

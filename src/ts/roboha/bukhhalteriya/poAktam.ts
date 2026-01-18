@@ -213,6 +213,7 @@ export interface DetailsRecord {
   isPaid: boolean;
   paymentDate?: string;
   sclad_id?: number;
+  scladNomer?: number; // Номер складу з таблиці sclad
   isClosed: boolean;
 }
 
@@ -731,9 +732,9 @@ export function filterDetailsData(): void {
     filtered = filtered.filter((item) => !item.isPaid);
   }
 
-  // Фільтр по складу
+  // Фільтр по складу (використовуємо scladNomer)
   if (currentDetailsScladFilter !== null) {
-    filtered = filtered.filter((item) => item.sclad_id === currentDetailsScladFilter);
+    filtered = filtered.filter((item) => item.scladNomer === currentDetailsScladFilter);
   }
 
   // Сортування за цільовою датою
@@ -797,6 +798,11 @@ async function loadAllDetailsData(): Promise<void> {
           const purchasePrice = scladId
             ? getPurchasePriceBySсladId(scladId)
             : undefined;
+          
+          // Отримуємо номер складу з таблиці sclad
+          const scladNomer = scladId
+            ? getScladNomerByScladId(scladId)
+            : undefined;
 
           // Отримуємо знижку для конкретного акту
           const discountPercent = getDiscountByActId(actId);
@@ -829,6 +835,7 @@ async function loadAllDetailsData(): Promise<void> {
             isPaid: isPaid,
             paymentDate: paymentDate,
             sclad_id: scladId,
+            scladNomer: scladNomer,
             isClosed: closeDate !== null,
           });
         }
@@ -1095,7 +1102,7 @@ export function updateDetailsTable(): void {
             ${salePriceHtml}
           </td>
           <td>${item.total ? formatNumber(item.total) : "-"}${marginHtml}</td>
-          <td class="sklad-cell">${item.sclad_id || "-"}</td>
+          <td class="sklad-cell">${item.scladNomer || "-"}</td>
           <td>
             <button class="Bukhhalter-delete-btn"
                     onclick="event.stopPropagation(); deleteRecord('details', ${originalIndex})">🗑️</button>
@@ -1196,6 +1203,7 @@ function inRangeByIso(
 interface ScladItem {
   sclad_id: number;
   price: number;
+  scladNomer?: number; // Номер складу
   [key: string]: any;
 }
 
@@ -1214,18 +1222,23 @@ async function fetchScladData(): Promise<ScladItem[]> {
 
     if (data && Array.isArray(data)) {
       scladData = data.map((item) => {
+        // Отримуємо scladNomer напряму з запису (не з data)
+        const scladNomer = item.scladNomer !== undefined ? Number(item.scladNomer) : undefined;
+        
         if (typeof item.data === "string") {
           try {
             const parsed = JSON.parse(item.data);
             return {
               sclad_id: item.sclad_id || parsed.sclad_id,
               price: parsed.price || 0,
+              scladNomer: scladNomer,
               ...parsed,
             };
           } catch {
             return {
               sclad_id: item.sclad_id,
               price: item.price || 0,
+              scladNomer: scladNomer,
               ...item,
             };
           }
@@ -1233,6 +1246,7 @@ async function fetchScladData(): Promise<ScladItem[]> {
         return {
           sclad_id: item.sclad_id || item.data?.sclad_id,
           price: item.price || item.data?.price || 0,
+          scladNomer: scladNomer,
           ...(typeof item.data === "object" ? item.data : item),
         };
       });
@@ -1252,6 +1266,12 @@ async function fetchScladData(): Promise<ScladItem[]> {
 function getPurchasePriceBySсladId(scladId: number): number | undefined {
   const item = scladData.find((s) => s.sclad_id === scladId);
   return item?.price;
+}
+
+// Функція для отримання номера складу за sclad_id
+function getScladNomerByScladId(scladId: number): number | undefined {
+  const item = scladData.find((s) => s.sclad_id === scladId);
+  return item?.scladNomer;
 }
 
 // Функція для завантаження знижок з актів
@@ -1339,6 +1359,11 @@ export async function searchDetailsData(): Promise<void> {
           const purchasePrice = scladId
             ? getPurchasePriceBySсladId(scladId)
             : undefined;
+          
+          // Отримуємо номер складу з таблиці sclad
+          const scladNomer = scladId
+            ? getScladNomerByScladId(scladId)
+            : undefined;
 
           // Отримуємо знижку для конкретного акту
           const discountPercent = getDiscountByActId(actId);
@@ -1371,6 +1396,7 @@ export async function searchDetailsData(): Promise<void> {
             isPaid,
             paymentDate,
             sclad_id: scladId,
+            scladNomer: scladNomer,
             isClosed: closeDate !== null,
           });
         }
@@ -1533,8 +1559,8 @@ export function createDetailsPaymentToggle(): void {
 function getUniqueDetailsScladNomers(): number[] {
   const scladSet = new Set<number>();
   allDetailsData.forEach((item) => {
-    if (item.sclad_id && typeof item.sclad_id === "number") {
-      scladSet.add(item.sclad_id);
+    if (item.scladNomer && typeof item.scladNomer === "number") {
+      scladSet.add(item.scladNomer);
     }
   });
   return Array.from(scladSet).sort((a, b) => a - b);

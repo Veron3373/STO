@@ -567,7 +567,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     if (col === "detail") limit = 240;           // Деталь - залишаємо великий
     else if (col === "shop") limit = 160;        // Магазин - текст
     else if (col === "catno") limit = 150;       // Каталог номер
-    else if (col === "date") limit = 105;        // Дата: dd.mm.yyyy
+    else if (col === "date") limit = 110;        // Дата: dd.mm.yyyy
     else if (col === "qty") limit = 90;          // Кількість: числа
     else if (col === "price") limit = 100;       // Ціна: числа
     else if (col === "clientPrice") limit = 100; // Ціна клієнта: числа

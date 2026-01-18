@@ -561,10 +561,21 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
       const textWidth = ctx.measureText(value).width + 40;
       if (textWidth > maxWidth) maxWidth = textWidth;
     });
+    
+    // Ліміти відповідно до типу даних в колонці
     let limit = 130;
-    if (col === "detail") limit = 250;
-    else if (col === "shop") limit = 160;
-    else if (col === "catno") limit = 150;
+    if (col === "detail") limit = 250;           // Деталь - залишаємо великий
+    else if (col === "shop") limit = 160;        // Магазин - текст
+    else if (col === "catno") limit = 150;       // Каталожний номер
+    else if (col === "date") limit = 110;        // Дата: dd.mm.yyyy
+    else if (col === "qty") limit = 90;          // Кількість: числа
+    else if (col === "price") limit = 100;       // Ціна: числа
+    else if (col === "clientPrice") limit = 110; // Ціна клієнта: числа
+    else if (col === "warehouse") limit = 70;    // Склад: 1-3 цифри
+    else if (col === "invoice") limit = 100;     // Рахунок №
+    else if (col === "actNo") limit = 70;        // Акт №: числа
+    else if (col === "unit") limit = 90;         // Одиниця: штук/літр/комплект
+    else if (col === "status") limit = 110;      // Статус
 
     widths.set(col, Math.min(Math.ceil(maxWidth), limit));
   });

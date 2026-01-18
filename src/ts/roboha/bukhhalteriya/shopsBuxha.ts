@@ -286,6 +286,7 @@ interface MagazineRecord {
   povernennya?: string | null;
   isReturned?: boolean;
   xto_povernyv?: string | null;
+  scladNomer?: number | null;
 }
 
 const SCLAD_TABLE = "sclad";
@@ -303,6 +304,7 @@ let currentFilters = {
   shop: "",
   paymentStatus: 2 as 0 | 1 | 2, // 0: розраховано, 1: не розраховано, 2: всі
   availabilityStatus: 4 as 0 | 1 | 2 | 3 | 4, // 0: >0, 1: =0, 2: <0, 3: повернення, 4: всі
+  scladNomer: null as number | null, // null = всі склади
 };
 
 let autoSearchTimer: number | null = null;
@@ -1205,6 +1207,7 @@ function mapRowToMagazineRecord(row: any): MagazineRecord {
     povernennya: row?.povernennya ?? null,
     isReturned: !!row?.povernennya,
     xto_povernyv: row?.xto_povernyv ?? null,
+    scladNomer: row?.scladNomer ?? null,
   };
 }
 
@@ -1287,6 +1290,9 @@ async function autoSearchFromInputs(): Promise<void> {
   applyLocalFilters(allMagazineData);
   updateMagazineTable();
   updateMagazineTotalSum();
+  
+  // Оновлюємо кнопки фільтрації по складах
+  generateScladFilterButtons();
 }
 async function loadScladData(
   filters: {
@@ -1468,6 +1474,9 @@ export async function searchMagazineData(): Promise<void> {
   applyLocalFilters(allMagazineData);
   updateMagazineTable();
   updateMagazineTotalSum();
+  
+  // Генеруємо кнопки фільтрації по складах
+  generateScladFilterButtons();
 
   if (magazineData.length === 0) {
     showNotification("За вказаними критеріями дані не знайдено", "info", 3500);
@@ -1507,6 +1516,13 @@ function applyLocalFilters(base?: MagazineRecord[]): void {
           return true;
       }
     });
+  }
+
+  // Фільтр по складу
+  if (currentFilters.scladNomer !== null) {
+    filtered = filtered.filter(
+      (item) => item.scladNomer === currentFilters.scladNomer
+    );
   }
 
   magazineData = filtered;
@@ -1575,6 +1591,7 @@ export function getMagazineExportData(): any[] {
       price: item.price,
       total: item.kilkist_on * item.price,
       remainder: item.kilkist_on - item.kilkist_off,
+      scladNomer: item.scladNomer ?? "-",
       povernennya: item.povernennya
         ? `${formatDate(dateISO)} ${timeHM}`
         : "Не повернено",
@@ -1588,7 +1605,7 @@ export function updateMagazineTable(): void {
 
   if (magazineData.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="13" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
+      '<tr><td colspan="14" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
     return;
   }
 
@@ -1673,6 +1690,7 @@ export function updateMagazineTable(): void {
           <td>${item.price ? formatNumber(item.price) : "-"}</td>
           <td>${total ? formatNumber(total) : "-"}</td>
           <td class="${stockClass}">${remainder}</td>
+          <td class="sklad-cell">${item.scladNomer != null ? item.scladNomer : "-"}</td>
           <td class="return-cell">
             <div class="return-button-wrapper">
               ${returnBtn}
@@ -1863,6 +1881,96 @@ export async function toggleReturn(index: number): Promise<void> {
   }
 }
 
+// ==== Динамічні кнопки фільтрації по складах ====
+let availableScladNomers: number[] = [];
+
+function getUniqueScladNomers(): number[] {
+  const nomers = new Set<number>();
+  allMagazineData.forEach((item) => {
+    if (item.scladNomer != null && item.scladNomer > 0) {
+      nomers.add(item.scladNomer);
+    }
+  });
+  return Array.from(nomers).sort((a, b) => a - b);
+}
+
+function generateScladFilterButtons(): void {
+  const container = byId<HTMLElement>("magazine-sklad-filter-container");
+  if (!container) return;
+
+  availableScladNomers = getUniqueScladNomers();
+  
+  if (availableScladNomers.length === 0) {
+    container.innerHTML = '<span class="no-sklad-data">Немає даних про склади</span>';
+    return;
+  }
+
+  // Генеруємо кольори для кнопок (від світло-зеленого до темно-зеленого)
+  const generateGreenShade = (index: number, total: number): string => {
+    // Від світло-зеленого (#81c784) до темно-зеленого (#2e7d32)
+    const lightness = 65 - (index / Math.max(total - 1, 1)) * 35; // від 65% до 30%
+    return `hsl(122, 39%, ${lightness}%)`;
+  };
+
+  let buttonsHtml = '';
+  
+  availableScladNomers.forEach((nomer, index) => {
+    const bgColor = generateGreenShade(index, availableScladNomers.length);
+    const isActive = currentFilters.scladNomer === nomer;
+    buttonsHtml += `
+      <button 
+        class="Bukhhalter-sklad-btn ${isActive ? 'active' : ''}" 
+        data-sclad-nomer="${nomer}"
+        style="background-color: ${bgColor};"
+        onclick="filterBySclad(${nomer})"
+        title="Показати склад ${nomer}"
+      >
+        Склад ${nomer}
+      </button>
+    `;
+  });
+
+  // Кнопка "Всі" - помаранчева
+  const isAllActive = currentFilters.scladNomer === null;
+  buttonsHtml += `
+    <button 
+      class="Bukhhalter-sklad-btn Bukhhalter-sklad-btn-all ${isAllActive ? 'active' : ''}" 
+      data-sclad-nomer="all"
+      onclick="filterBySclad(null)"
+      title="Показати всі склади"
+    >
+      Всі
+    </button>
+  `;
+
+  container.innerHTML = buttonsHtml;
+}
+
+function filterBySclad(scladNomer: number | null): void {
+  currentFilters.scladNomer = scladNomer;
+  
+  // Оновлюємо активну кнопку
+  const container = byId<HTMLElement>("magazine-sklad-filter-container");
+  if (container) {
+    const buttons = container.querySelectorAll('.Bukhhalter-sklad-btn');
+    buttons.forEach((btn) => {
+      const btnNomer = btn.getAttribute('data-sclad-nomer');
+      if (scladNomer === null) {
+        btn.classList.toggle('active', btnNomer === 'all');
+      } else {
+        btn.classList.toggle('active', btnNomer === String(scladNomer));
+      }
+    });
+  }
+
+  applyLocalFilters(allMagazineData);
+  updateMagazineTable();
+  updateMagazineTotalSum();
+}
+
+// Експорт для глобального доступу
+(window as any).filterBySclad = filterBySclad;
+
 // ==== Ініціалізація автоповедінки з правильними обробниками ====
 function initMagazineAutoBehaviors(): void {
   ensureSmartDropdowns();
@@ -2030,6 +2138,7 @@ export function clearMagazineForm(): void {
     shop: "",
     paymentStatus: 2,
     availabilityStatus: 4,
+    scladNomer: null,
   };
 
   const paymentToggle = byId<HTMLInputElement>(
@@ -2040,6 +2149,9 @@ export function clearMagazineForm(): void {
   );
   if (paymentToggle) paymentToggle.value = "2";
   if (availabilityToggle) availabilityToggle.value = "4";
+  
+  // Скидаємо фільтр складу
+  generateScladFilterButtons();
 
   magazineData = [];
   allMagazineData = [];

@@ -29,6 +29,8 @@ dist/
 .env
 .env.local
 
+vercel_code.txt
+
 # Deploy scripts (sensitive data)
 deploy-STO-*.ps1
 .vercel

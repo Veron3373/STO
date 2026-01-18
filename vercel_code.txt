@@ -69,10 +69,27 @@ export default defineConfig({
    - Запустити: deploy-STO-Veron.ps1 або deploy-all.ps1
    - Сайт: https://veron3373.github.io/STO/
 
-2. Для Vercel (завтра):
-   - Змінити base: "/"
-   - Запустити: deploy-vercel.ps1
+2. Для Vercel (ОСНОВНИЙ СПОСІБ):
+   - Переконатися що base: "/" в vite.config.ts
+   - Запустити в терміналі:
+     cd "D:\Alim\Проект\Бодя СТО\stoBraclaveVERCEL"
+     npm run build:vercel
+     vercel --prod --yes
+   - АБО запустити скрипт: deploy-vercel.ps1
    - Сайт: https://stobraclavec.vercel.app
+
+════════════════════════════════════════════════════════════════════════════
+📌 ШВИДКИЙ ДЕПЛОЙ НА VERCEL (ОДНА КОМАНДА)
+════════════════════════════════════════════════════════════════════════════
+
+Відкрий PowerShell та виконай:
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "D:\Alim\Проект\Бодя СТО\stoBraclaveVERCEL\deploy-vercel.ps1"
+
+АБО з папки проекту:
+
+cd "D:\Alim\Проект\Бодя СТО\stoBraclaveVERCEL"
+npm run build:vercel && vercel --prod --yes
 
 ════════════════════════════════════════════════════════════════════════════
 ⚠️ ВАЖЛИВО

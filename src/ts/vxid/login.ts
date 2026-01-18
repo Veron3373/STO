@@ -67,10 +67,8 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo: redirectUrl,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
+      // Без prompt - Google автоматично увійде якщо є активна сесія
+      // 'select_account' - показує вибір акаунту але без підтвердження дозволів
     },
   });
 

@@ -23,6 +23,7 @@ let detailsListCache: string[] = [];
 let actsListCache: string[] = [];
 let actsDateOffMap: Map<number, string | null> = new Map();
 let scladIdsMap: Map<string, string> = new Map();
+let warehouseListCache: string[] = []; // Кеш активних складів (номери)
 const UNIT_OPTIONS = [
   { value: "штук", label: "штук" },
   { value: "літр", label: "літр" },
@@ -146,6 +147,31 @@ async function loadActsList(): Promise<{
   const map = new Map(data.map((r: any) => [r.act_id, r.date_off]));
   const list = data.map((r: any) => String(r.act_id)); // список id у вигляді рядків для автодоповнення
   return { list, map };
+}
+
+/** Завантаження списку активних складів з таблиці settings */
+async function loadWarehouseList(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("setting_id, procent")
+      .gte("setting_id", 1)
+      .lte("setting_id", 500)
+      .not("procent", "is", null)
+      .gte("procent", 0)
+      .order("setting_id", { ascending: true });
+
+    if (error || !Array.isArray(data)) {
+      console.error("Error loading warehouses:", error);
+      return [];
+    }
+
+    // Активні склади - повертаємо номери як рядки
+    return data.map((row: { setting_id: number }) => String(row.setting_id));
+  } catch (e) {
+    console.error("Error loading warehouse list:", e);
+    return [];
+  }
 }
 
 // Повертає id магазину або null, якщо не знайдено
@@ -337,7 +363,7 @@ function createBatchImportModal() {
         <h3 class="batch-title-Excel">Імпорт даних з Excel</h3>
         <p class="batch-instructions-Excel">
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
-          <strong>Дата ┃ Магазин ┃ Каталожний номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
+          <strong>Дата ┃ Магазин ┃ Каталожний номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
         </p>
         <textarea id="batch-textarea-Excel" class="batch-textarea-Excel" placeholder="Вставте дані з Excel сюди (з табуляцією між колонками)..." autocomplete="off"></textarea>
         <div id="batch-table-container-Excel" class="batch-table-container-Excel hidden-all_other_bases">
@@ -351,6 +377,7 @@ function createBatchImportModal() {
                 <th data-col="qty">Кількість</th>
                 <th data-col="price">Ціна</th>
                 <th data-col="clientPrice">Ціна клієнта</th>
+                <th data-col="warehouse">Склад</th>
                 <th data-col="invoice">Рахунок №</th>
                 <th data-col="actNo">Акт №</th>
                 <th data-col="unit">Одиниця</th>
@@ -380,16 +407,16 @@ function parseBatchData(text: string) {
     if (index === 0 && (line.includes("Дата") || line.includes("Магазин")))
       return;
     let parts = line.split("\t");
-    if (parts.length < 10) parts = line.split(/\s{2,}/);
-    if (parts.length < 10) parts = line.split(/\s+/);
-    // Pad to 10 parts with empty strings if necessary
-    while (parts.length < 10) {
+    if (parts.length < 11) parts = line.split(/\s{2,}/);
+    if (parts.length < 11) parts = line.split(/\s+/);
+    // Pad to 11 parts with empty strings if necessary
+    while (parts.length < 11) {
       parts.push("");
     }
     // Trim each part, but keep empty strings
     parts = parts.map((part) => part.trim());
-    // No longer filter out empties - we want all 10 fields, even empty
-    if (parts.length < 10) {
+    // No longer filter out empties - we want all 11 fields, even empty
+    if (parts.length < 11) {
       console.warn("⚠️ Пропущено рядок (недостатньо даних):", line);
       return;
     }
@@ -401,15 +428,17 @@ function parseBatchData(text: string) {
       qty: parseFloat(parts[4].replace(",", ".")) || 0,
       price: parseFloat(parts[5].replace(",", ".")) || 0,
       clientPrice: parseFloat(parts[6].replace(",", ".")) || 0,
-      invoice: parts[7],
-      actNo: parts[8],
-      unit: parts[9],
+      warehouse: parts[7], // Нове поле Склад
+      invoice: parts[8],
+      actNo: parts[9],
+      unit: parts[10],
       status: "Готовий",
       unitValid: true,
       shopValid: true,
       detailValid: true,
       actValid: true,
       actClosed: false,
+      warehouseValid: true, // Нова валідація для складу
     };
     try {
       if (row.date.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
@@ -462,8 +491,16 @@ function parseBatchData(text: string) {
       }
     }
 
+    // Склад: обов'язкове поле, перевіряємо чи є в списку активних складів
+    if (!row.warehouse || !row.warehouse.trim()) {
+      row.warehouseValid = false;
+    } else {
+      // Перевіряємо чи номер складу є в списку активних
+      row.warehouseValid = warehouseListCache.includes(row.warehouse.trim());
+    }
+
     // Фінальна перевірка: тільки обов'язкові поля та їх валідність
-    // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця
+    // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця, Склад
     // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
     if (
       isNaN(row.qty) ||
@@ -473,9 +510,10 @@ function parseBatchData(text: string) {
       !row.detail ||
       !row.unit ||
       !row.shop ||
-      !row.unitValid
+      !row.unitValid ||
+      !row.warehouseValid
     ) {
-      row.status = "Помилка";
+      row.status = "Помилка 🗑️";
     }
     data.push(row);
   });
@@ -491,6 +529,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "qty",
     "price",
     "clientPrice",
+    "warehouse",
     "invoice",
     "actNo",
     "unit",
@@ -504,6 +543,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "Кількість",
     "Ціна",
     "Ціна клієнта",
+    "Склад",
     "Рахунок №",
     "Акт №",
     "Одиниця",
@@ -621,6 +661,7 @@ function showDropdownList(input: HTMLElement, options: string[]) {
           "invalid-detail",
           "invalid-unit",
           "invalid-act",
+          "invalid-warehouse",
           "closed-act"
         );
       }
@@ -640,6 +681,8 @@ function showDropdownList(input: HTMLElement, options: string[]) {
         if (parsedDataGlobal[index].actClosed) {
           if (td) td.classList.add("closed-act");
         }
+      } else if (field === "warehouse") {
+        parsedDataGlobal[index].warehouseValid = true;
       }
 
       recalculateAndApplyWidths();
@@ -647,12 +690,12 @@ function showDropdownList(input: HTMLElement, options: string[]) {
 
       // Додатково: якщо всі поля валідні, явно встановлюємо статус (дублюємо логіку з updateDropdownList)
       const row = parsedDataGlobal[index];
-      if (row.status === "Помилка") {
+      if (row.status === "Помилка 🗑️" || row.status === "Помилка") {
         // Перевіряємо чи всі обов'язкові поля заповнені
-        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit;
+        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit && row.warehouse;
         const numbersValid = !isNaN(row.qty) && !isNaN(row.price);
-        // Примітка: unitValid і так перевіряється вище
-        if (allFilled && numbersValid && row.unitValid) {
+        // Примітка: unitValid і warehouseValid перевіряються вище
+        if (allFilled && numbersValid && row.unitValid && row.warehouseValid) {
           // Ще раз викликаємо revalidateRow, щоб вона точно схопила нові дані
           // (іноді дані можуть не встигнути оновитися перед першим викликом)
           revalidateRow(index);
@@ -683,6 +726,7 @@ function recalculateAndApplyWidths() {
     "qty",
     "price",
     "clientPrice",
+    "warehouse",
     "invoice",
     "actNo",
     "unit",
@@ -749,6 +793,8 @@ function renderBatchTable(data: any[]) {
         : row.actClosed
           ? "closed-act"
           : "";
+    // Склад: червоний якщо невалідний
+    const warehouseTdClass = !row.warehouseValid ? "invalid-warehouse" : "";
     tr.innerHTML = `
       <td style="width:${getWidth("date")}px;min-width:${getWidth(
       "date"
@@ -798,6 +844,18 @@ function renderBatchTable(data: any[]) {
       "clientPrice"
     )}px;max-width:${getWidth("clientPrice")}px;">
         ${createInput("number", row.clientPrice, "clientPrice", index)}
+      </td>
+      <td class="${warehouseTdClass}" style="width:${getWidth(
+      "warehouse"
+    )}px;min-width:${getWidth("warehouse")}px;max-width:${getWidth("warehouse")}px;">
+        <input
+          type="text"
+          class="cell-input-Excel cell-input-combo-Excel warehouse-input-Excel"
+          value="${row.warehouse || ""}"
+          data-field="warehouse"
+          data-index="${index}"
+          autocomplete="off"
+        >
       </td>
       <td style="width:${getWidth("invoice")}px;min-width:${getWidth(
       "invoice"
@@ -857,7 +915,7 @@ function revalidateRow(index: number) {
   }
 
   // Перевірка на заповненість обов'язкових полів
-  // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця
+  // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця, Склад
   // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
 
   console.log(`[revalidateRow ${index}] Checking row:`, {
@@ -868,7 +926,9 @@ function revalidateRow(index: number) {
     unit: row.unit,
     qty: row.qty,
     price: row.price,
-    unitValid: row.unitValid
+    warehouse: row.warehouse,
+    unitValid: row.unitValid,
+    warehouseValid: row.warehouseValid
   });
 
   const isFilled =
@@ -881,7 +941,9 @@ function revalidateRow(index: number) {
     row.detail &&
     String(row.detail).trim() &&
     row.unit &&
-    String(row.unit).trim();
+    String(row.unit).trim() &&
+    row.warehouse &&
+    String(row.warehouse).trim();
 
   // Перевірка чисел (ціна клієнта необов'язкова)
   const areNumbersValid =
@@ -890,18 +952,20 @@ function revalidateRow(index: number) {
   console.log(`[revalidateRow ${index}] Validation:`, {
     isFilled,
     areNumbersValid,
-    unitValid: row.unitValid
+    unitValid: row.unitValid,
+    warehouseValid: row.warehouseValid
   });
 
   // Перевірка валідності
   // shopValid і detailValid тепер завжди true якщо заповнені
-  // Перевіряємо тільки unitValid
+  // Перевіряємо unitValid і warehouseValid
   // Акт взагалі не перевіряємо - він необов'язковий
 
   const isValid =
     isFilled &&
     areNumbersValid &&
-    row.unitValid;
+    row.unitValid &&
+    row.warehouseValid;
 
   const statusCell = document.querySelector(
     `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`
@@ -915,9 +979,9 @@ function revalidateRow(index: number) {
     if (statusTextEl) statusTextEl.textContent = "Готовий";
   } else {
     // Якщо не валідно - ставимо помилку
-    row.status = "Помилка";
+    row.status = "Помилка 🗑️";
     statusCell.className = "status-cell-Excel error-Excel";
-    if (statusTextEl) statusTextEl.textContent = "Помилка";
+    if (statusTextEl) statusTextEl.textContent = "Помилка 🗑️";
   }
 }
 
@@ -1164,6 +1228,59 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       revalidateRow(index);
     });
   });
+  // Склад з live-фільтром
+  tbody.querySelectorAll(".warehouse-input-Excel").forEach((input) => {
+    input.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showDropdownList(e.target as HTMLElement, warehouseListCache);
+    });
+    input.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      const value = target.value;
+      parsedDataGlobal[index]["warehouse"] = value;
+      const td = target.closest("td");
+      if (td) {
+        td.classList.remove("invalid-warehouse");
+      }
+      const filter = value.toLowerCase();
+      const filteredOptions = filter
+        ? warehouseListCache.filter((opt) => opt.toLowerCase().includes(filter))
+        : warehouseListCache;
+      if (currentDropdownInput === target && currentDropdownList) {
+        updateDropdownList(filteredOptions, target, index, "warehouse");
+        if (filteredOptions.length)
+          positionDropdown(target, currentDropdownList);
+        else closeDropdownList();
+      }
+      recalculateAndApplyWidths();
+      revalidateRow(index);
+    });
+    input.addEventListener("blur", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      const value = target.value.trim();
+      const td = target.closest("td");
+
+      if (!value) {
+        // Порожній - невалідний
+        parsedDataGlobal[index].warehouseValid = false;
+        if (td) td.classList.add("invalid-warehouse");
+      } else {
+        // Перевіряємо чи є в списку активних складів
+        const existsInCache = warehouseListCache.includes(value);
+        parsedDataGlobal[index].warehouseValid = existsInCache;
+
+        // Колір: червоний якщо не існує
+        if (!existsInCache) {
+          if (td) td.classList.add("invalid-warehouse");
+        } else {
+          if (td) td.classList.remove("invalid-warehouse");
+        }
+      }
+      revalidateRow(index);
+    });
+  });
   // Видалення рядка
   tbody.querySelectorAll(".delete-row-btn-Excel").forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -1205,6 +1322,7 @@ function updateDropdownList(
           "invalid-detail",
           "invalid-unit",
           "invalid-act",
+          "invalid-warehouse",
           "closed-act"
         );
       }
@@ -1227,6 +1345,9 @@ function updateDropdownList(
         if (parsedDataGlobal[index].actClosed) {
           if (td) td.classList.add("closed-act");
         }
+      } else if (field === "warehouse") {
+        parsedDataGlobal[index].warehouse = option; // явно оновлюємо
+        parsedDataGlobal[index].warehouseValid = true;
       }
 
       // Примусово оновлюємо статус
@@ -1235,11 +1356,11 @@ function updateDropdownList(
 
       // Додатково: якщо всі поля валідні, явно встановлюємо статус
       const row = parsedDataGlobal[index];
-      if (row.status === "Помилка") {
+      if (row.status === "Помилка 🗑️" || row.status === "Помилка") {
         // Перевіряємо чи всі обов'язкові поля заповнені
-        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit;
+        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit && row.warehouse;
         const numbersValid = !isNaN(row.qty) && !isNaN(row.price);
-        if (allFilled && numbersValid && row.unitValid) {
+        if (allFilled && numbersValid && row.unitValid && row.warehouseValid) {
           row.status = "Готовий";
           const statusCell = document.querySelector(
             `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`
@@ -1439,6 +1560,7 @@ async function uploadBatchData(data: any[]) {
         sclad_invoice_no: row.invoice,
         sclad_unit: row.unit,
         sclad_shop: row.shop,
+        sclad_procent: String(row.warehouse || ""), // Номер складу
       };
       Object.entries(fields).forEach(([id, val]) => {
         const el = document.getElementById(id) as HTMLInputElement | null;
@@ -1586,10 +1708,12 @@ export async function initBatchImport() {
   const actsData = await loadActsList();
   actsListCache = actsData.list;
   actsDateOffMap = actsData.map;
+  warehouseListCache = await loadWarehouseList();
 
   console.log("Завантажено магазинів:", shopsListCache.length);
   console.log("Завантажено деталей:", detailsListCache.length);
   console.log("Завантажено актів:", actsListCache.length);
+  console.log("Завантажено складів:", warehouseListCache.length);
 
   // Ensure модалки створені один раз
   const existingModal = document.getElementById(batchModalId);
@@ -1635,12 +1759,13 @@ export async function initBatchImport() {
       parsedDataGlobal = [];
 
       // Оновлюємо кеш у фоновому режимі при відкритті
-      Promise.all([loadShopsList(), loadDetailsList(), loadActsList()])
-        .then(([shops, details, acts]) => {
+      Promise.all([loadShopsList(), loadDetailsList(), loadActsList(), loadWarehouseList()])
+        .then(([shops, details, acts, warehouses]) => {
           shopsListCache = shops;
           detailsListCache = details;
           actsListCache = acts.list;
           actsDateOffMap = acts.map;
+          warehouseListCache = warehouses;
         })
         .catch((err) => console.error("Помилка оновлення кешу імпорту:", err));
     };
@@ -1723,11 +1848,13 @@ export async function initBatchImport() {
           price: parseFloat((allInputs[5] as HTMLInputElement).value) || 0,
           clientPrice:
             parseFloat((allInputs[6] as HTMLInputElement).value) || 0,
-          invoice: (allInputs[7] as HTMLInputElement).value,
-          actNo: (allInputs[8] as HTMLInputElement).value,
-          unit: (allInputs[9] as HTMLInputElement).value,
+          warehouse: (allInputs[7] as HTMLInputElement).value, // Номер складу
+          invoice: (allInputs[8] as HTMLInputElement).value,
+          actNo: (allInputs[9] as HTMLInputElement).value,
+          unit: (allInputs[10] as HTMLInputElement).value,
           status: statusText,
           rowNumber: index + 1,
+          warehouseValid: row.warehouseValid,
         };
       });
 
@@ -1757,15 +1884,33 @@ export async function initBatchImport() {
           if (unitTd) unitTd.classList.add("invalid-unit");
         });
       }
+
+      // Перевірка складів
+      const invalidWarehouses = currentData.filter(
+        (row) =>
+          (!row.warehouse || !row.warehouse.trim() || !warehouseListCache.includes(row.warehouse.trim())) && 
+          !row.status.includes("Помилка")
+      );
+      if (invalidWarehouses.length > 0) {
+        showNotification("❌ Невірно вказаний або порожній склад", "error", 4000);
+        hasErrors = true;
+        invalidWarehouses.forEach((row) => {
+          const warehouseTd = document.querySelector(
+            `#batch-table-Excel tbody tr:nth-child(${row.rowNumber}) td:has(.warehouse-input-Excel)`
+          ) as HTMLElement;
+          if (warehouseTd) warehouseTd.classList.add("invalid-warehouse");
+        });
+      }
+
       if (hasErrors) return;
 
       const validData = currentData.filter(
         (row) =>
-          !row.status.includes("Помилка") && row.shop && row.unit && row.detail
+          !row.status.includes("Помилка") && row.shop && row.unit && row.detail && row.warehouse && row.warehouseValid
       );
       if (validData.length === 0) {
         showNotification(
-          "Немає валідних даних для завантаження! Перевірте, чи заповнено магазин, деталь та одиницю виміру.",
+          "Немає валідних даних для завантаження! Перевірте, чи заповнено магазин, деталь, одиницю виміру та склад.",
           "error"
         );
         return;

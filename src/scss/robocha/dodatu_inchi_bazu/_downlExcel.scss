@@ -454,7 +454,8 @@ $radius-xlarge: 16px;
    // box-shadow: inset 0 0 0 2px $warning-orange;
   }
   td.invalid-unit,
-  td.invalid-act {
+  td.invalid-act,
+  td.invalid-warehouse {
     background: $bg-error;
    // box-shadow: inset 0 0 0 2px $danger-red;
   }

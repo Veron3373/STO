@@ -298,6 +298,12 @@
                   <span class="table-header-text">Сума</span>
                 </div>
               </th>
+              <th class="poAktam-sklad">
+                <div class="table-header-cell">
+                  <span class="table-header-emoji">🏬</span>
+                  <span class="table-header-text">Склад</span>
+                </div>
+              </th>
               <th class="poAktam-diya">
                 <div class="table-header-cell">
                   <span class="table-header-emoji">⚡</span>
@@ -308,7 +314,7 @@
           </thead>
           <tbody id="details-tbody">
             <tr>
-              <td colspan="11" class="Bukhhalter-no-data">Немає даних для відображення</td>
+              <td colspan="13" class="Bukhhalter-no-data">Немає даних для відображення</td>
             </tr>
           </tbody>
         </table>
@@ -636,6 +642,13 @@
                 id="poAktam-percentage-filter-toggle">
               <div class="Bukhhalter-toggle-labels"><span>Меньший</span><span>Більший</span><span>Всі</span>
               </div>
+            </div>
+          </div>
+
+          <div class="Bukhhalter-toggle-container">
+            <label class="Bukhhalter-field-label">🏬 Склад</label>
+            <div class="Bukhhalter-sklad-filter-wrapper" id="details-sklad-filter-container">
+              <!-- Кнопки складів будуть згенеровані динамічно -->
             </div>
           </div>
         </div>

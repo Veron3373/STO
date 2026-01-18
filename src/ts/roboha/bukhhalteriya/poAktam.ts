@@ -229,6 +229,10 @@ let hasDetailsDataLoaded = false;
 let autoDetailsSearchTimer: number | null = null;
 const AUTO_DETAILS_SEARCH_DELAY = 350;
 
+// Змінна для фільтру по складу в деталях
+let currentDetailsScladFilter: number | null = null;
+let availableDetailsScladNomers: number[] = [];
+
 function debounceDetailsAutoSearch(fn: () => void) {
   if (autoDetailsSearchTimer !== null) {
     clearTimeout(autoDetailsSearchTimer);
@@ -727,6 +731,11 @@ export function filterDetailsData(): void {
     filtered = filtered.filter((item) => !item.isPaid);
   }
 
+  // Фільтр по складу
+  if (currentDetailsScladFilter !== null) {
+    filtered = filtered.filter((item) => item.sclad_id === currentDetailsScladFilter);
+  }
+
   // Сортування за цільовою датою
   filtered.sort((a, b) => {
     const ka = toIsoDate(getTargetDate(a));
@@ -830,6 +839,9 @@ async function loadAllDetailsData(): Promise<void> {
   allDetailsData.sort((a, b) =>
     toIsoDate(b.dateOpen).localeCompare(toIsoDate(a.dateOpen))
   );
+  
+  // Оновлюємо кнопки фільтрації складів після завантаження даних
+  updateDetailsScladFilterButtons();
 }
 
 // Функція для завантаження даних із бази даних shops
@@ -1003,7 +1015,7 @@ export function updateDetailsTable(): void {
 
   if (filteredData.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="12" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
+      '<tr><td colspan="13" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
 
     updateDetailsTotalSumDisplay(0, 0, 0);
     return;
@@ -1083,6 +1095,7 @@ export function updateDetailsTable(): void {
             ${salePriceHtml}
           </td>
           <td>${item.total ? formatNumber(item.total) : "-"}${marginHtml}</td>
+          <td class="sklad-cell">${item.sclad_id || "-"}</td>
           <td>
             <button class="Bukhhalter-delete-btn"
                     onclick="event.stopPropagation(); deleteRecord('details', ${originalIndex})">🗑️</button>
@@ -1371,6 +1384,9 @@ export async function searchDetailsData(): Promise<void> {
 
   ensureDetailsSmartDropdowns();
   refreshDetailsDropdownOptions();
+  
+  // Оновлюємо кнопки фільтрації складів
+  updateDetailsScladFilterButtons();
 
   // Тепер застосовуємо фільтрацію через нову функцію
   filterDetailsData();
@@ -1510,6 +1526,94 @@ export function createDetailsPaymentToggle(): void {
     updateTotalSum();
   });
 }
+
+// ==================== ФІЛЬТР ПО СКЛАДАХ ДЛЯ ДЕТАЛЕЙ ====================
+
+// Отримати унікальні номери складів з даних деталей
+function getUniqueDetailsScladNomers(): number[] {
+  const scladSet = new Set<number>();
+  allDetailsData.forEach((item) => {
+    if (item.sclad_id && typeof item.sclad_id === "number") {
+      scladSet.add(item.sclad_id);
+    }
+  });
+  return Array.from(scladSet).sort((a, b) => a - b);
+}
+
+// Оновити кнопки фільтрації складів для деталей
+export function updateDetailsScladFilterButtons(): void {
+  const container = byId<HTMLElement>("details-sklad-filter-container");
+  if (!container) return;
+
+  availableDetailsScladNomers = getUniqueDetailsScladNomers();
+  
+  // Якщо немає складів або тільки 1 склад - не показуємо кнопки
+  if (availableDetailsScladNomers.length === 0 || availableDetailsScladNomers.length === 1) {
+    container.innerHTML = '';
+    container.style.display = 'none';
+    return;
+  }
+  
+  container.style.display = 'flex';
+  // Додаємо клас для однакової ширини кнопок
+  container.classList.add('equal-width');
+
+  let buttonsHtml = '';
+  
+  availableDetailsScladNomers.forEach((nomer) => {
+    const isActive = currentDetailsScladFilter === nomer;
+    buttonsHtml += `
+      <button 
+        class="Bukhhalter-sklad-btn ${isActive ? 'active' : ''}" 
+        data-sclad-nomer="${nomer}"
+        onclick="filterDetailsBySclad(${nomer})"
+        title="Показати склад ${nomer}"
+      >
+        Склад ${nomer}
+      </button>
+    `;
+  });
+
+  // Кнопка "Всі" - помаранчева
+  const isAllActive = currentDetailsScladFilter === null;
+  buttonsHtml += `
+    <button 
+      class="Bukhhalter-sklad-btn Bukhhalter-sklad-btn-all ${isAllActive ? 'active' : ''}" 
+      data-sclad-nomer="all"
+      onclick="filterDetailsBySclad(null)"
+      title="Показати всі склади"
+    >
+      Всі
+    </button>
+  `;
+
+  container.innerHTML = buttonsHtml;
+}
+
+// Функція фільтрації по складу для деталей
+function filterDetailsBySclad(scladNomer: number | null): void {
+  currentDetailsScladFilter = scladNomer;
+  
+  // Оновлюємо активну кнопку
+  const container = byId<HTMLElement>("details-sklad-filter-container");
+  if (container) {
+    const buttons = container.querySelectorAll('.Bukhhalter-sklad-btn');
+    buttons.forEach((btn) => {
+      const btnNomer = btn.getAttribute('data-sclad-nomer');
+      if (scladNomer === null) {
+        btn.classList.toggle('active', btnNomer === 'all');
+      } else {
+        btn.classList.toggle('active', btnNomer === String(scladNomer));
+      }
+    });
+  }
+
+  filterDetailsData();
+}
+
+// Експорт для глобального доступу
+(window as any).filterDetailsBySclad = filterDetailsBySclad;
+
 export function initializeDetailsData(): void {
   detailsData = [];
   allDetailsData = [];

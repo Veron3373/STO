@@ -1,5 +1,6 @@
 // src\ts\roboha\tablucya\users.ts (ОНОВЛЕНИЙ КОД - ВИПРАВЛЕНО ДУБЛІКАТИ)
 import { supabase } from "../../vxid/supabaseClient";
+import { redirectToIndex } from "../../utils/gitUtils";
 
 // =============================================================================
 // ГЛОБАЛЬНІ ЗМІННІ ТА КОНСТАНТИ
@@ -559,7 +560,7 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
 
   if (!session) {
     console.warn("⛔ Немає авторизації Google. Модальне вікно пароля приховано.");
-    window.location.href = "/index.html";
+    redirectToIndex();
     return null;
   }
 
@@ -608,7 +609,7 @@ export function logoutFromSystemAndRedirect(): void {
   userAccessLevel = null;
   userName = null;
   console.log("🚪 Вихід з системи та перенаправлення...");
-  window.location.href = "/index.html";
+  redirectToIndex();
 }
 
 export async function initializeAuthSystem(): Promise<void> {

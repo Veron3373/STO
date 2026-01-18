@@ -96,3 +96,37 @@ export async function getFallbackUrl(path: string = ""): Promise<string> {
     return buildGitUrl(getGitNameFallback(), path);
   }
 }
+
+/**
+ * 🔄 Редірект на сторінку з урахуванням середовища (Vercel/GitHub/localhost)
+ * @param page - назва сторінки (наприклад, "main.html", "index.html")
+ */
+export function redirectTo(page: string = "index.html"): void {
+  const hostname = window.location.hostname;
+  let baseUrl: string;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    baseUrl = 'http://localhost:5173';
+  } else if (hostname.includes('vercel.app')) {
+    baseUrl = 'https://stobraclavec.vercel.app';
+  } else {
+    // GitHub Pages
+    baseUrl = 'https://veron3373.github.io/STO';
+  }
+  
+  window.location.href = `${baseUrl}/${page}`;
+}
+
+/**
+ * 🔄 Редірект на головну сторінку (index.html)
+ */
+export function redirectToIndex(): void {
+  redirectTo("index.html");
+}
+
+/**
+ * 🔄 Редірект на main.html
+ */
+export function redirectToMain(): void {
+  redirectTo("main.html");
+}

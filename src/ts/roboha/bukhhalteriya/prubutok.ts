@@ -5,6 +5,7 @@ import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna"
 import { byId, formatNumber, formatDate } from "./bukhhalteriya";
 import { userName, getSavedUserDataFromLocalStorage } from "../tablucya/users";
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
+import { redirectToIndex } from "../../utils/gitUtils";
 
 interface ExpenseRecordLocal {
   id: number;
@@ -1191,7 +1192,7 @@ export async function searchvutratuFromDatabase(): Promise<void> {
   
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
-    window.location.href = "/";
+    redirectToIndex();
     return;
   }
 

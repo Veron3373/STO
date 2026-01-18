@@ -12,6 +12,7 @@ import {
   canUserCancelReturnMagazine,
 } from "../tablucya/users";
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
+import { redirectToIndex } from "../../utils/gitUtils";
 
 // ==== Доступ та підтвердження пароля (для масового розрахунку) ====
 const FULL_ACCESS_ALIASES = ["адміністратор", "full", "admin", "administrator"];
@@ -1402,7 +1403,7 @@ export async function searchMagazineData(): Promise<void> {
   
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
-    window.location.href = "/";
+    redirectToIndex();
     return;
   }
 

@@ -13,6 +13,7 @@ import {
 } from "./prubutok";
 
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import { redirectToIndex } from "../../utils/gitUtils";
 
 import { showModal } from "../zakaz_naraudy/modalMain";
 import {
@@ -290,7 +291,7 @@ export async function addRecord(e?: Event): Promise<void> {
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     setSearchButtonLoadingEl(btn, false);
-    window.location.href = "/";
+    redirectToIndex();
     return;
   }
   

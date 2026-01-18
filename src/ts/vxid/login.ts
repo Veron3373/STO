@@ -35,16 +35,32 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
   }
 }
 
+// 🌐 Функція визначення правильного базового URL
+function getBaseUrl(): string {
+  const hostname = window.location.hostname;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5173';
+  }
+  
+  if (hostname.includes('vercel.app')) {
+    return 'https://stobraclavec.vercel.app';
+  }
+  
+  // GitHub Pages
+  return 'https://veron3373.github.io/STO';
+}
+
 // 🚪 Вхід через Google OAuth
 export async function signInWithGoogle() {
   console.log("🔑 Запуск Google OAuth...");
 
-  // 🔥 ВИПРАВЛЕНО ДЛЯ VERCEL:
-  // Ми просто беремо "origin" (корінь сайту).
-  // На локалхості це буде "http://localhost:5173"
-  // На Vercel це буде "https://sto-gray.vercel.app"
-  // Ніяких зайвих "/" чи перевірок GitHub більше не треба.
-  const redirectUrl = window.location.origin;
+  // 🔥 Визначаємо правильний redirect URL залежно від середовища
+  const baseUrl = getBaseUrl();
+  const redirectUrl = `${baseUrl}/main.html`;
+  
+  console.log("🔗 Redirect URL:", redirectUrl);
+  
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -89,8 +105,9 @@ async function handleAuthenticatedUser(user: any) {
   if (!allowed) {
     console.warn("⛔ Email НЕ в whitelist:", email);
     await supabase.auth.signOut();
-    // 🔥 Якщо вхід заборонено - кидаємо на головну (корінь)
-    window.location.href = "/";
+    // 🔥 Якщо вхід заборонено - кидаємо на головну
+    const baseUrl = getBaseUrl();
+    window.location.href = baseUrl.includes('github.io') ? `${baseUrl}/index.html` : '/';
     return;
   }
 
@@ -99,7 +116,8 @@ async function handleAuthenticatedUser(user: any) {
   // 🔥 Перевіряємо, де ми зараз, щоб не перезавантажувати сторінку вічно
   if (!window.location.pathname.includes("main.html")) {
       console.log("➡️ Перенаправлення на main.html");
-      window.location.href = "/main.html";
+      const baseUrl = getBaseUrl();
+      window.location.href = `${baseUrl}/main.html`;
   }
 }
 

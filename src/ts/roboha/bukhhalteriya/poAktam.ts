@@ -12,6 +12,7 @@ import {
   userAccessLevel,
 } from "../tablucya/users";
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
+import { redirectToIndex } from "../../utils/gitUtils";
 
 const FULL_ACCESS_ALIASES = ["адміністратор", "full", "admin", "administrator"];
 
@@ -1280,7 +1281,7 @@ export async function searchDetailsData(): Promise<void> {
   
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
-    window.location.href = "/";
+    redirectToIndex();
     return;
   }
 

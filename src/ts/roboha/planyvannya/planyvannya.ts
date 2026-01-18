@@ -5,6 +5,7 @@ import { PostModal, type PostData } from "./planyvannya_post";
 import { PostArxiv } from "./planyvannya_arxiv"; // Import new class
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
+import { redirectToIndex } from "../../utils/gitUtils";
 
 interface Post {
   id: number;
@@ -165,7 +166,7 @@ class SchedulerApp {
       
       if (!hasAccess) {
         console.log("⛔ Доступ до Планувальника заборонено - перенаправлення...");
-        window.location.href = "/";
+        redirectToIndex();
         return;
       }
 

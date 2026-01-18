@@ -17,15 +17,14 @@ Write-Host "✅ Sync complete!" -ForegroundColor Green
 
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
 
-# 1. Build & Check
-Write-Host "[1/5] Building & CSS/TS Checking..."
-# Використовуємо npm run build, який у вас запускає "tsc -b && vite build"
-npm run build
+# 1. Build для GitHub
+Write-Host "[1/5] Building for GitHub Pages (base: /STO/)..."
+npm run build:github
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ BUILD FAILED! Fixing required before deploy." -ForegroundColor Red
+    Write-Host "❌ GitHub BUILD FAILED!" -ForegroundColor Red
     exit 1
 }
-Write-Host "✅ Build Success!" -ForegroundColor Green
+Write-Host "✅ GitHub Build Success!" -ForegroundColor Green
 
 # 2. Git Commit & Push (Source Code -> Vercel)
 Write-Host "[2/5] Saving source code to GitHub (main)..."
@@ -43,15 +42,24 @@ if ($LASTEXITCODE -ne 0) {
 
 # 3. Deploy to GitHub Pages (Dist folder)
 Write-Host "[3/5] Deploying to GitHub Pages..."
-# Використовуємо ваш існуючий скрипт, який правильний для React
-npm run deploy
+gh-pages -d dist --no-history
 if ($LASTEXITCODE -ne 0) { 
     Write-Host "❌ GitHub Pages deploy failed!" -ForegroundColor Red
     exit 1 
 }
+Write-Host "✅ GitHub Pages deploy success!" -ForegroundColor Green
 
-# 4. Deploy to Vercel
-Write-Host "[4/5] Deploying to Vercel..."
+# 4. Build для Vercel
+Write-Host "[4/5] Building for Vercel (base: /)..."
+npm run build:vercel
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Vercel BUILD FAILED!" -ForegroundColor Red
+    exit 1
+}
+Write-Host "✅ Vercel Build Success!" -ForegroundColor Green
+
+# 5. Deploy to Vercel
+Write-Host "[5/5] Deploying to Vercel..."
 vercel --prod --yes
 if ($LASTEXITCODE -ne 0) { 
     Write-Host "⚠️ Vercel deploy failed (non-critical)" -ForegroundColor Yellow
@@ -60,7 +68,7 @@ else {
     Write-Host "✅ Vercel deploy success!" -ForegroundColor Green
 }
 
-Write-Host "[5/5] DONE!"
+Write-Host "DONE!"
 Write-Host ""
 Write-Host "========================================"
 Write-Host "  ✅ ALL SYSTEMS GO"

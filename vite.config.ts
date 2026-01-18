@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 
 export default defineConfig({
-  base: "/", // для Vercel
+  base: process.env.DEPLOY_TARGET === "github" ? "/STO/" : "/",
   plugins: [react()],
   build: {
     chunkSizeWarningLimit: 1800, // ⬅ підняли ліміт з 500 до 600

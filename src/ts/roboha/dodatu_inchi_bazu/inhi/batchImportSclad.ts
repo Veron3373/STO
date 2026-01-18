@@ -573,7 +573,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     else if (col === "clientPrice") limit = 100; // Ціна клієнта: числа
     else if (col === "warehouse") limit = 60;    // Склад: 1-3 цифри
     else if (col === "invoice") limit = 90;     // Рахунок №
-    else if (col === "actNo") limit = 60;        // Акт №: числа
+    else if (col === "actNo") limit = 80;        // Акт №: числа
     else if (col === "unit") limit = 80;         // Одиниця: штук/літр/комплект
     else if (col === "status") limit = 100;      // Статус
 

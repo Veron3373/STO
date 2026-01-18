@@ -138,7 +138,7 @@ export async function renderScladForm() {
     <div class="sclad-grid">
       ${field("sclad_date", "Дата", "date")}
       ${field("sclad_shop", "Магазин", "text", '<div id="sclad_shop_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
-      ${field("sclad_detail_catno", "Каталожний номер деталі", "text", '<div id="sclad_part_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
+      ${field("sclad_detail_catno", "Каталог номер деталі", "text", '<div id="sclad_part_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
       ${field("sclad_detail", "Деталь", "text", '<div id="sclad_detail_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
       ${field("sclad_qty_in", "Кількість надходження", "number")}
       ${field("sclad_price", "Ціна", "number")}
@@ -725,7 +725,7 @@ function snapshotToAllBd() {
       Магазин: pick("sclad_shop"),
       "Рахунок №": pick("sclad_invoice_no"),
       Деталь: pick("sclad_detail"),
-      "Каталожний номер деталі": pick("sclad_detail_catno"),
+      "Каталог номер деталі": pick("sclad_detail_catno"),
       "Кількість надходження": pick("sclad_qty_in"),
       Ціна: pick("sclad_price"),
       Найменування: pick("sclad_unit"),

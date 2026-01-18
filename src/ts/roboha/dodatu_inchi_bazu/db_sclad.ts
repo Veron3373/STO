@@ -266,7 +266,7 @@ function validateScladPayload(p: ReturnType<typeof readScladFormValues>) {
   const missing: string[] = [];
   if (!p.time_on) missing.push("Дата");
   if (!p.shops) missing.push("Магазин");
-  if (!p.part_number) missing.push("Каталожний номер");
+  if (!p.part_number) missing.push("Каталог номер");
   if (!p.name) missing.push("Деталь");
   if (p.kilkist_on === null || p.kilkist_on <= 0)
     missing.push("Кількість надходження");

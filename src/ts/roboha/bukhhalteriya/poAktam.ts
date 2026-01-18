@@ -262,7 +262,7 @@ const detailsDropdownConfigs: DetailsDropdownConfig[] = [
   {
     inputId: "Bukhhalter-details-catalog",
     listId: "dl-details-catalog",
-    placeholder: "Введіть або оберіть каталожний номер...",
+    placeholder: "Введіть або оберіть Каталог номер...",
     maxItems: 100,
   },
 ];

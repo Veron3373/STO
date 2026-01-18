@@ -482,7 +482,7 @@ function openActModal(actNumber: number): void {
   document.body.appendChild(modal);
 }
 
-// ==== Карта відповідностей найменування -> каталожний номер ====
+// ==== Карта відповідностей найменування -> Каталог номер ====
 function buildNameToCatalogMap(): Map<string, string> {
   const map = new Map<string, string>();
 
@@ -592,7 +592,7 @@ const dropdownConfigs: DropdownConfig[] = [
   {
     inputId: "Bukhhalter-magazine-catalog",
     listId: "dl-mag-catalog",
-    placeholder: "Введіть або оберіть каталожний номер...",
+    placeholder: "Введіть або оберіть Каталог номер...",
     icon: "",
     maxItems: 100,
   },
@@ -647,7 +647,7 @@ class SmartDropdown {
     this.dropdown.style.cssText = `
       position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;
       background: white; border: 2px solid #e0e0e0; border-top: none;
-      border-radius: 0 0 12px 12px; max-height: 240px; overflow-y: auto; overflow-x: auto;
+      border-radius: 0 0 12px 12px; max-height: 240px; overflow-y: auto; overflow-x: hidden;
       box-shadow: 0 8px 24px rgba(0,0,0,0.12); display: none;
       backdrop-filter: blur(8px); background: rgba(255,255,255,0.95);
     `;
@@ -764,40 +764,10 @@ class SmartDropdown {
   }
 
   private adjustDropdownWidth() {
-    // Створюємо тимчасовий елемент для вимірювання
-    const measurer = document.createElement("div");
-    measurer.style.cssText = `
-      position: absolute;
-      visibility: hidden;
-      white-space: nowrap;
-      font-size: 14px;
-      padding: 12px 16px;
-      font-family: inherit;
-    `;
-    document.body.appendChild(measurer);
-
-    // Знаходимо найдовший текст
-    let maxWidth = this.input.offsetWidth;
-    this.filteredItems.forEach((item) => {
-      measurer.textContent = item;
-      const itemWidth = measurer.offsetWidth;
-      if (itemWidth > maxWidth) {
-        maxWidth = itemWidth;
-      }
-    });
-
-    document.body.removeChild(measurer);
-
-    // Встановлюємо ширину (мінімум як у поля вводу, максимум +50% від поля)
+    // Встановлюємо ширину рівну ширині input (без розширення)
     const inputWidth = this.input.offsetWidth;
-    const finalWidth = Math.min(maxWidth + 20, inputWidth * 1.5);
-
-    if (finalWidth > inputWidth) {
-      this.dropdown.style.width = `${finalWidth}px`;
-      this.dropdown.style.minWidth = `${inputWidth}px`;
-    } else {
-      this.dropdown.style.width = "100%";
-    }
+    this.dropdown.style.width = `${inputWidth}px`;
+    this.dropdown.style.maxWidth = `${inputWidth}px`;
   }
 
   private highlightMatch(text: string, query: string): string {
@@ -899,7 +869,8 @@ function addDropdownStyles() {
       background: rgba(255,255,255,0.98) !important;
       backdrop-filter: blur(8px) !important;
       box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
-      overflow-x: auto !important;
+      overflow-x: hidden !important;
+      max-width: 100% !important;
     }
     
     .dropdown-item {
@@ -911,6 +882,8 @@ function addDropdownStyles() {
       align-items: center !important;
       font-size: 14px !important;
       white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
     }
     
     .dropdown-item:last-child {

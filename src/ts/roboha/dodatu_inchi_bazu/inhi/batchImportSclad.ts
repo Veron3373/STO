@@ -363,7 +363,7 @@ function createBatchImportModal() {
         <h3 class="batch-title-Excel">Імпорт даних з Excel</h3>
         <p class="batch-instructions-Excel">
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
-          <strong>Дата ┃ Магазин ┃ Каталожний номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
+          <strong>Дата ┃ Магазин ┃ Каталог номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
         </p>
         <textarea id="batch-textarea-Excel" class="batch-textarea-Excel" placeholder="Вставте дані з Excel сюди (з табуляцією між колонками)..." autocomplete="off"></textarea>
         <div id="batch-table-container-Excel" class="batch-table-container-Excel hidden-all_other_bases">
@@ -372,7 +372,7 @@ function createBatchImportModal() {
               <tr>
                 <th data-col="date">Дата</th>
                 <th data-col="shop">Магазин</th>
-                <th data-col="catno">Каталожний номер</th>
+                <th data-col="catno">Каталог номер</th>
                 <th data-col="detail">Деталь</th>
                 <th data-col="qty">Кількість</th>
                 <th data-col="price">Ціна</th>
@@ -500,7 +500,7 @@ function parseBatchData(text: string) {
     }
 
     // Фінальна перевірка: тільки обов'язкові поля та їх валідність
-    // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця, Склад
+    // Обов'язкові: Дата, Магазин, Каталог номер, Деталь, Кількість, Ціна, Одиниця, Склад
     // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
     if (
       isNaN(row.qty) ||
@@ -538,7 +538,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
   const headers = [
     "Дата",
     "Магазин",
-    "Каталожний номер",
+    "Каталог номер",
     "Деталь",
     "Кількість",
     "Ціна",
@@ -566,7 +566,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     let limit = 130;
     if (col === "detail") limit = 250;           // Деталь - залишаємо великий
     else if (col === "shop") limit = 160;        // Магазин - текст
-    else if (col === "catno") limit = 150;       // Каталожний номер
+    else if (col === "catno") limit = 150;       // Каталог номер
     else if (col === "date") limit = 110;        // Дата: dd.mm.yyyy
     else if (col === "qty") limit = 90;          // Кількість: числа
     else if (col === "price") limit = 100;       // Ціна: числа
@@ -926,7 +926,7 @@ function revalidateRow(index: number) {
   }
 
   // Перевірка на заповненість обов'язкових полів
-  // Обов'язкові: Дата, Магазин, Каталожний номер, Деталь, Кількість, Ціна, Одиниця, Склад
+  // Обов'язкові: Дата, Магазин, Каталог номер, Деталь, Кількість, Ціна, Одиниця, Склад
   // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
 
   console.log(`[revalidateRow ${index}] Checking row:`, {

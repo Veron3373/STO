@@ -564,7 +564,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     
     // Ліміти відповідно до типу даних в колонці
     let limit = 130;
-    if (col === "detail") limit = 230;           // Деталь - залишаємо великий
+    if (col === "detail") limit = 250;           // Деталь - залишаємо великий
     else if (col === "shop") limit = 160;        // Магазин - текст
     else if (col === "catno") limit = 150;       // Каталог номер
     else if (col === "date") limit = 95;         // Дата: dd.mm.yyyy

@@ -245,7 +245,7 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
     priceCell.style.backgroundColor = "";
     const warn = enteredPrice > 0 && enteredPrice < minPrice;
     setPriceWarningFlag(priceCell, warn);
-    if (warn) priceCell.title = `Вхідна ціна: ${formatUA(basePrice)}`;
+    if (warn) priceCell.title = `Мін. ціна: ${formatUA(minPrice)} грн (вхідна ${formatUA(basePrice)} + ${percentInfo.percent}%)`;
     else priceCell.removeAttribute("title");
   }
 }

@@ -1900,28 +1900,25 @@ function generateScladFilterButtons(): void {
 
   availableScladNomers = getUniqueScladNomers();
   
-  if (availableScladNomers.length === 0) {
-    container.innerHTML = '<span class="no-sklad-data">Немає даних про склади</span>';
+  // Якщо немає складів або тільки 1 склад - не показуємо кнопки
+  if (availableScladNomers.length === 0 || availableScladNomers.length === 1) {
+    container.innerHTML = '';
+    container.style.display = 'none';
     return;
   }
-
-  // Генеруємо кольори для кнопок (від світло-зеленого до темно-зеленого)
-  const generateGreenShade = (index: number, total: number): string => {
-    // Від світло-зеленого (#81c784) до темно-зеленого (#2e7d32)
-    const lightness = 65 - (index / Math.max(total - 1, 1)) * 35; // від 65% до 30%
-    return `hsl(122, 39%, ${lightness}%)`;
-  };
+  
+  container.style.display = 'flex';
+  // Додаємо клас для однакової ширини кнопок
+  container.classList.add('equal-width');
 
   let buttonsHtml = '';
   
-  availableScladNomers.forEach((nomer, index) => {
-    const bgColor = generateGreenShade(index, availableScladNomers.length);
+  availableScladNomers.forEach((nomer) => {
     const isActive = currentFilters.scladNomer === nomer;
     buttonsHtml += `
       <button 
         class="Bukhhalter-sklad-btn ${isActive ? 'active' : ''}" 
         data-sclad-nomer="${nomer}"
-        style="background-color: ${bgColor};"
         onclick="filterBySclad(${nomer})"
         title="Показати склад ${nomer}"
       >

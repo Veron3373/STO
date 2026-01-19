@@ -1,6 +1,7 @@
 // src/ts/vxid/login.ts
 // 🔐 СИСТЕМА ВХОДУ: Google OAuth + Whitelist перевірка
 import { supabase } from "./supabaseClient";
+import { getOAuthRedirectUrl, getPageUrl } from '../../config/project.config';
 
 console.log("🔒 Ініціалізація системи входу...");
 
@@ -36,21 +37,9 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
 }
 
 // 🌐 Визначення адреси перенаправлення залежно від поточного домену
+// 🔧 Використовуємо централізований конфіг з src/config/project.config.ts
 const getRedirectUrl = (): string => {
-  const host = window.location.hostname;
-  
-  // Якщо ми на GitHub Pages
-  if (host.includes('github.io')) {
-    return 'https://veron3373.github.io/STO/main.html';
-  }
-  
-  // Якщо ми на Vercel
-  if (host.includes('vercel.app')) {
-    return 'https://stobraclavec.vercel.app/main.html';
-  }
-  
-  // Якщо локально (localhost)
-  return 'http://localhost:5173/main.html';
+  return getOAuthRedirectUrl('main.html');
 };
 
 // 🚪 Вхід через Google OAuth
@@ -109,15 +98,8 @@ async function handleAuthenticatedUser(user: any) {
   if (!allowed) {
     console.warn("⛔ Email НЕ в whitelist:", email);
     await supabase.auth.signOut();
-    // 🔥 Якщо вхід заборонено - кидаємо на головну
-    const host = window.location.hostname;
-    if (host.includes('github.io')) {
-      window.location.href = 'https://veron3373.github.io/STO/index.html';
-    } else if (host.includes('vercel.app')) {
-      window.location.href = '/';
-    } else {
-      window.location.href = '/';
-    }
+    // � Використовуємо централізований конфіг
+    window.location.href = getPageUrl('index.html');
     return;
   }
 

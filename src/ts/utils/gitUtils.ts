@@ -1,6 +1,8 @@
 // src/ts/utils/gitUtils.ts
 // 🔧 УТИЛІТИ для роботи з гітом
 
+import { getBaseUrl } from '../../config/project.config';
+
 const CACHE_KEY = "gitName_cache";
 
 /**
@@ -102,18 +104,8 @@ export async function getFallbackUrl(path: string = ""): Promise<string> {
  * @param page - назва сторінки (наприклад, "main.html", "index.html")
  */
 export function redirectTo(page: string = "index.html"): void {
-  const hostname = window.location.hostname;
-  let baseUrl: string;
-  
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    baseUrl = 'http://localhost:5173';
-  } else if (hostname.includes('vercel.app')) {
-    baseUrl = 'https://stobraclavec.vercel.app';
-  } else {
-    // GitHub Pages
-    baseUrl = 'https://veron3373.github.io/STO';
-  }
-  
+  // 🔧 Використовуємо централізований конфіг
+  const baseUrl = getBaseUrl();
   window.location.href = `${baseUrl}/${page}`;
 }
 

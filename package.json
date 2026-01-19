@@ -1,5 +1,5 @@
 {
-  "name": "bsmotorsrevis",
+  "name": "stobraclavec",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,8 +11,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "npm run build:github && gh-pages -d dist --no-history",
-    "deploy1": "git status -sb && git add -A && (git commit -m \"опис\" || echo No changes to commit) && git push origin main && npm run deploy",
-    "deploy2": "git fetch origin && git status -sb && git add -A && (git commit -m \"опис\" || echo No changes to commit) && git push --force-with-lease origin main && npm run deploy",
+    "deploy1": "git status -sb && git add -A && (git commit -m \"РѕРїРёСЃ\" || echo No changes to commit) && git push origin main && npm run deploy",
+    "deploy2": "git fetch origin && git status -sb && git add -A && (git commit -m \"РѕРїРёСЃ\" || echo No changes to commit) && git push --force-with-lease origin main && npm run deploy",
     "vercel": "npm run build:vercel && vercel --prod --yes",
     "vercel:test": "npm run build:vercel && vercel --yes",
     "vercel:prod": "npm run build:vercel && vercel --prod --yes"

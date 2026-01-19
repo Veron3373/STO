@@ -2,16 +2,17 @@
 
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
+import { GOOGLE_CONFIG } from "../../../../config/project.config";
 
 // ------- Глобальні декларації -------
 declare let gapi: any;
 declare let google: any;
 
-// ------- Константи -------
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const SCOPES = "https://www.googleapis.com/auth/drive.file";
+// ------- Константи (з централізованого конфігу) -------
+const CLIENT_ID = GOOGLE_CONFIG.clientId;
+const SCOPES = GOOGLE_CONFIG.driveScopes;
 
-if (!CLIENT_ID) {
+if (!GOOGLE_CONFIG.isConfigured) {
   console.error("❌ VITE_GOOGLE_CLIENT_ID не знайдено в .env");
 }
 

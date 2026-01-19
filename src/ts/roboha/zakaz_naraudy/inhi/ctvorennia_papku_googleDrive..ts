@@ -8,9 +8,12 @@ declare let gapi: any;
 declare let google: any;
 
 // ------- Константи -------
-const CLIENT_ID =
-  "480043605958-30g4gmngetf2edddn52t3mhoobs7rh6f.apps.googleusercontent.com";
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
+
+if (!CLIENT_ID) {
+  console.error("❌ VITE_GOOGLE_CLIENT_ID не знайдено в .env");
+}
 
 
 // ------- Стан аутентифікації -------

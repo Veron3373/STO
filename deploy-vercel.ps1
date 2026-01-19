@@ -12,8 +12,11 @@ Write-Host "========================================"
 Write-Host ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# VERCEL ACCOUNT SELECTION
+# VERCEL ACCOUNT SELECTION (GUI Window)
 # ═══════════════════════════════════════════════════════════════════════════════
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
 $vercelAccounts = @(
     @{ Name = "Veron3373 (Main)"; Team = ""; Scope = "" },
@@ -23,26 +26,64 @@ $vercelAccounts = @(
     @{ Name = "Account 5"; Team = "team-name-5"; Scope = "--scope=team-name-5" }
 )
 
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Select Vercel account for deploy:" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
+# Create form
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Vercel Account Selection"
+$form.Size = New-Object System.Drawing.Size(400, 380)
+$form.StartPosition = "CenterScreen"
+$form.FormBorderStyle = "FixedDialog"
+$form.MaximizeBox = $false
+$form.TopMost = $true
 
-for ($i = 0; $i -lt $vercelAccounts.Count; $i++) {
-    $acc = $vercelAccounts[$i]
-    Write-Host "  [$($i + 1)] $($acc.Name)" -ForegroundColor Yellow
+$label = New-Object System.Windows.Forms.Label
+$label.Location = New-Object System.Drawing.Point(20, 15)
+$label.Size = New-Object System.Drawing.Size(350, 25)
+$label.Text = "Select Vercel account for deploy:"
+$label.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+$form.Controls.Add($label)
+
+$listBox = New-Object System.Windows.Forms.ListBox
+$listBox.Location = New-Object System.Drawing.Point(20, 50)
+$listBox.Size = New-Object System.Drawing.Size(350, 150)
+$listBox.Font = New-Object System.Drawing.Font("Consolas", 10)
+
+# Add accounts to list
+$listBox.Items.Add("[Current] - Use current Vercel account")
+foreach ($acc in $vercelAccounts) {
+    $listBox.Items.Add($acc.Name)
 }
-Write-Host ""
-Write-Host "  [0] Use current logged in account" -ForegroundColor Gray
-Write-Host "  [L] Login to different Vercel account" -ForegroundColor Magenta
-Write-Host ""
+$listBox.Items.Add("[Login] - Login to different account")
+$listBox.SelectedIndex = 0
 
-$choice = Read-Host "Your choice (0-5 or L)"
+$form.Controls.Add($listBox)
 
+$okButton = New-Object System.Windows.Forms.Button
+$okButton.Location = New-Object System.Drawing.Point(150, 280)
+$okButton.Size = New-Object System.Drawing.Size(100, 35)
+$okButton.Text = "Deploy"
+$okButton.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+$okButton.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+$okButton.ForeColor = [System.Drawing.Color]::White
+$okButton.FlatStyle = "Flat"
+$okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+$form.AcceptButton = $okButton
+$form.Controls.Add($okButton)
+
+$result = $form.ShowDialog()
+
+if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
+    Write-Host "Cancelled by user." -ForegroundColor Yellow
+    exit 0
+}
+
+$selectedIndex = $listBox.SelectedIndex
 $vercelScope = ""
+$totalItems = $listBox.Items.Count
 
-if ($choice -eq "L" -or $choice -eq "l") {
-    Write-Host ""
+if ($selectedIndex -eq 0) {
+    Write-Host "Using current Vercel account" -ForegroundColor Green
+} elseif ($selectedIndex -eq ($totalItems - 1)) {
+    # Login option (last item)
     Write-Host "Opening Vercel login..." -ForegroundColor Cyan
     vercel logout
     vercel login
@@ -51,17 +92,10 @@ if ($choice -eq "L" -or $choice -eq "l") {
         exit 1
     }
     Write-Host "Logged in successfully!" -ForegroundColor Green
-} elseif ($choice -match "^[1-5]$") {
-    $selected = $vercelAccounts[[int]$choice - 1]
-    Write-Host ""
+} else {
+    $selected = $vercelAccounts[$selectedIndex - 1]
     Write-Host "Selected: $($selected.Name)" -ForegroundColor Green
     $vercelScope = $selected.Scope
-} elseif ($choice -eq "0") {
-    Write-Host ""
-    Write-Host "Using current Vercel account" -ForegroundColor Green
-} else {
-    Write-Host "Invalid choice! Cancelled." -ForegroundColor Red
-    exit 1
 }
 
 Write-Host ""

@@ -39,6 +39,7 @@ deploy-vercel.ps1
 .env*.local
 SUPABASE_REDIRECT_SETUP.md
 
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Setup and Documentation Files (not for public repository)
 # ═══════════════════════════════════════════════════════════════════════════════

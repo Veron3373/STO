@@ -361,36 +361,41 @@ export function parseTableRows(): ParsedItem[] {
     let catalog = "";
     let slyusarSum = 0;
 
-    // Ціна: якщо видима - з DOM, якщо прихована - з кешу
-    if (priceCell && priceCell.offsetParent !== null) {
+    // ✅ ВИПРАВЛЕНО: Ціна завжди береться з DOM (незалежно від видимості колонки)
+    // Причина: При додаванні нової роботи вона ще не в кеші, а ціна вже є в DOM
+    if (priceCell) {
       price = parseNum(priceCell.textContent);
     } else if (cachedData) {
       price = cachedData.price;
     }
 
-    // Сума: якщо видима - з DOM, якщо прихована - з кешу
-    if (sumCell && sumCell.offsetParent !== null) {
+    // ✅ ВИПРАВЛЕНО: Сума завжди береться з DOM (незалежно від видимості колонки)
+    // Причина: При додаванні нової роботи вона ще не в кеші, а сума вже є в DOM
+    if (sumCell) {
       sum = parseNum(sumCell.textContent);
     } else if (cachedData) {
       sum = cachedData.sum;
     }
 
-    // ПІБ_Магазин: якщо видимий - з DOM, якщо прихований - з кешу
-    if (pibMagazinCell && pibMagazinCell.offsetParent !== null) {
+    // ✅ ВИПРАВЛЕНО: ПІБ_Магазин завжди береться з DOM (незалежно від видимості)
+    // Причина: При зміні слюсаря/магазину дані мають оновлюватися
+    if (pibMagazinCell) {
       pibMagazin = getCellText(pibMagazinCell);
     } else if (cachedData) {
       pibMagazin = cachedData.pibMagazin;
     }
 
-    // Каталог: якщо видимий - з DOM, якщо прихований - з кешу
-    if (catalogCell && catalogCell.offsetParent !== null) {
+    // ✅ ВИПРАВЛЕНО: Каталог завжди береться з DOM (незалежно від видимості)
+    // Причина: При зміні каталогу дані мають оновлюватися
+    if (catalogCell) {
       catalog = getCellText(catalogCell);
     } else if (cachedData) {
       catalog = cachedData.catalog;
     }
 
-    // Зарплата: якщо видима - з DOM, якщо прихована - з кешу
-    if (slyusarSumCell && slyusarSumCell.offsetParent !== null) {
+    // ✅ ВИПРАВЛЕНО: Зарплата завжди береться з DOM (незалежно від видимості колонки)
+    // Причина: При додаванні нової роботи вона ще не в кеші, а зарплата вже є в DOM
+    if (slyusarSumCell) {
       slyusarSum = parseNum(slyusarSumCell.textContent);
     } else if (cachedData) {
       slyusarSum = cachedData.slyusarSum || 0;
@@ -404,6 +409,19 @@ export function parseTableRows(): ParsedItem[] {
     
     // ✅ Зчитуємо recordId з атрибута рядка (для точного пошуку при однакових роботах)
     const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
+
+    // 📊 ДІАГНОСТИКА: Логуємо зібрані дані з DOM
+    console.log(`📊 [parseTableRows] Рядок DOM:`, {
+      name,
+      type,
+      quantity,
+      price,
+      sum,
+      pibMagazin,
+      slyusarSum,
+      recordId,
+      fromCache: !priceCell && !!cachedData,
+    });
 
     const item: ParsedItem = {
       type,
@@ -599,6 +617,10 @@ function processItems(items: ParsedItem[]) {
       const salary = Number(slyusarSum || 0);
       const profit = Math.max(0, Number((sum - salary).toFixed(2)));
 
+      // ✅ КРИТИЧНО: Якщо recordId немає - генеруємо новий
+      // Це потрібно для нових рядків, які ще не мають recordId
+      const workRecordId = recordId || `new_${name.substring(0, 20)}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       works.push({
         ...itemBase,
         Робота: name,
@@ -607,21 +629,25 @@ function processItems(items: ParsedItem[]) {
         slyusar_id,
         Зарплата: salary,
         Прибуток: profit,
-        recordId, // ✅ Додаємо recordId для acts.data.Роботи
+        recordId: workRecordId, // ✅ Завжди є recordId
       });
 
       totalWorksSum += sum;
       totalWorksProfit += profit;
 
       if (pibMagazin) {
-        workRowsForSlyusars.push({
+        const workRow: WorkRow = {
           slyusarName: pibMagazin,
           Найменування: name,
           Кількість: quantity,
           Ціна: price,
           Зарплата: salary,
-          recordId, // ✅ Передаємо recordId для точного пошуку
-        });
+          recordId: workRecordId, // ✅ Передаємо recordId для точного пошуку
+        };
+        
+        console.log(`🔧 [processItems] Додано роботу для слюсаря:`, workRow);
+        
+        workRowsForSlyusars.push(workRow);
       }
     } else {
       // Обчислюємо маржу для деталі

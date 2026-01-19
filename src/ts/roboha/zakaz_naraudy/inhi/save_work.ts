@@ -298,13 +298,27 @@ async function syncSlyusarsHistoryForAct(params: {
     // Створюємо новий масив записів, зберігаючи стару дату та "Розраховано" для незмінних робіт
     const prevWorks = Array.isArray(actEntry["Записи"]) ? actEntry["Записи"] : [];
     
-    // ✅ НОВИЙ ПІДХІД: Створюємо Map для швидкого пошуку попередніх записів за recordId
+    console.log(`📚 [save_work] Попередні записи з БД для слюсаря "${slyusarName}", акт #${params.actId}:`, prevWorks);
+    
+    // ✅ КРИТИЧНО: Створюємо Map для ВСІХ методів пошуку попередніх записів
     const prevWorksById = new Map<string, any>();
+    const prevWorksByName = new Map<string, any>();
+    
     for (const pw of prevWorks) {
+      // За recordId (найточніший)
       if (pw.recordId) {
         prevWorksById.set(pw.recordId, pw);
       }
+      // За назвою роботи (fallback)
+      if (pw.Робота) {
+        // Якщо ще немає запису з такою назвою, або цей новіший - зберігаємо
+        if (!prevWorksByName.has(pw.Робота)) {
+          prevWorksByName.set(pw.Робота, pw);
+        }
+      }
     }
+    
+    console.log(`🗺️ [save_work] Карти для пошуку: byId=${prevWorksById.size}, byName=${prevWorksByName.size}`);
     
     const zapis: Array<{
       Ціна: number;
@@ -327,35 +341,92 @@ async function syncSlyusarsHistoryForAct(params: {
         ? expandNameForSave(workName)
         : workName;
 
-      // ✅ НОВИЙ ПІДХІД: Шукаємо попередній запис за recordId
-      // recordId береться з рядка таблиці (data-record-id атрибут)
-      const currentRecordId = (r as any).recordId || "";
+      console.log(`📝 [save_work] Обробка роботи #${idx}:`, {
+        Найменування: fullWorkName,
+        Кількість: qty,
+        Ціна: price,
+        Зарплата: zp,
+        recordId: r.recordId,
+      });
+
+      // ✅ ВИПРАВЛЕНО: recordId береться з об'єкта WorkRow (передається з processItems)
+      const currentRecordId = r.recordId || "";
       let sourceForDates: any = null;
       
-      // 1. ПРІОРИТЕТ: Пошук за recordId (найнадійніший спосіб)
+      console.log(`🔍 [save_work] Пошук попереднього запису для роботи "${fullWorkName}"`);
+      console.log(`   recordId з DOM: "${currentRecordId || 'немає'}"`);
+      console.log(`   Кількість попередніх записів в БД: ${prevWorks.length}`);
+      
+      // ✅ КРИТИЧНО: Шукаємо попередній запис для збереження дат "Записано" та "Розраховано"
+      // ВАЖЛИВО: Дати НІКОЛИ не повинні втрачатися!
+      
+      // 1. ПРІОРИТЕТ №1: Пошук за recordId (найточніший спосіб)
       if (currentRecordId && prevWorksById.has(currentRecordId)) {
         sourceForDates = prevWorksById.get(currentRecordId);
+        console.log(`✅ [save_work] Знайдено за recordId "${currentRecordId}":`, {
+          Записано: sourceForDates?.Записано,
+          Розраховано: sourceForDates?.Розраховано,
+        });
       }
       
-      // 2. Fallback: пошук за індексом + назвою (для записів без recordId)
-      if (!sourceForDates) {
-        const prevByIndex = prevWorks[idx];
-        if (prevByIndex && prevByIndex.Робота === fullWorkName) {
-          sourceForDates = prevByIndex;
+      // 2. ПРІОРИТЕТ №2: Пошук за назвою роботи (для записів без recordId або нових)
+      if (!sourceForDates && fullWorkName) {
+        const prevByName = prevWorksByName.get(fullWorkName);
+        if (prevByName) {
+          sourceForDates = prevByName;
+          console.log(`✅ [save_work] Знайдено за назвою "${fullWorkName}":`, {
+            Записано: sourceForDates?.Записано,
+            Розраховано: sourceForDates?.Розраховано,
+            recordId: sourceForDates?.recordId,
+          });
         }
       }
-
-      let recordedDate = sourceForDates ? sourceForDates.Записано : null;
-      let calculatedDate = sourceForDates ? sourceForDates.Розраховано : null;
       
-      // ✅ Визначаємо recordId: або зберігаємо існуючий, або генеруємо новий
-      let recordId = currentRecordId;
-      if (!recordId && sourceForDates?.recordId) {
-        recordId = sourceForDates.recordId;
+      // 3. ПРІОРИТЕТ №3: Пошук за частковим збігом назви (для скорочених назв)
+      if (!sourceForDates && fullWorkName) {
+        for (const pw of prevWorks) {
+          // Перевіряємо часткове співпадіння (початок назви)
+          if (pw.Робота && (pw.Робота.startsWith(fullWorkName.substring(0, 30)) || 
+                            fullWorkName.startsWith(pw.Робота.substring(0, 30)))) {
+            sourceForDates = pw;
+            console.log(`✅ [save_work] Знайдено за частковим збігом:`, {
+              Записано: sourceForDates?.Записано,
+              Розраховано: sourceForDates?.Розраховано,
+              recordId: sourceForDates?.recordId,
+            });
+            break;
+          }
+        }
       }
-      if (!recordId) {
-        // Генеруємо новий унікальний ID для нового запису
+      
+      if (!sourceForDates) {
+        console.log(`⚠️ [save_work] Попередній запис НЕ знайдено - це нова робота`);
+      }
+
+      // ✅ КРИТИЧНО: Зберігаємо дати з попереднього запису (якщо знайдено)
+      // Це гарантує, що "Записано" та "Розраховано" НІКОЛИ не втрачаються
+      let recordedDate = sourceForDates?.Записано || null;
+      let calculatedDate = sourceForDates?.Розраховано || null;
+      
+      console.log(`📅 [save_work] Дати з попереднього запису: Записано="${recordedDate}", Розраховано="${calculatedDate}"`);
+      
+      // ✅ Визначаємо recordId: ПРІОРИТЕТ - з попереднього запису, потім з DOM, потім генеруємо
+      let recordId = "";
+      
+      // 1. Спочатку беремо з попереднього запису (найнадійніше)
+      if (sourceForDates?.recordId) {
+        recordId = sourceForDates.recordId;
+        console.log(`🔑 [save_work] recordId з попереднього запису: ${recordId}`);
+      }
+      // 2. Якщо немає - беремо з DOM (якщо є)
+      else if (currentRecordId) {
+        recordId = currentRecordId;
+        console.log(`🔑 [save_work] recordId з DOM: ${recordId}`);
+      }
+      // 3. Якщо немає ніде - генеруємо новий
+      else {
         recordId = `${params.actId}_${slyusarName}_${idx}_${Date.now()}`;
+        console.log(`🆕 [save_work] Згенеровано новий recordId: ${recordId}`);
       }
       
       // Якщо робота нова — ставимо нову дату запису
@@ -365,23 +436,30 @@ async function syncSlyusarsHistoryForAct(params: {
         const month = String(now.getMonth() + 1).padStart(2, "0");
         const year = now.getFullYear();
         recordedDate = `${day}.${month}.${year}`;
+        console.log(`📅 [save_work] Нова дата запису: ${recordedDate}`);
       }
 
       const newRecord: any = {
+        recordId: recordId, // ✅ Завжди зберігаємо recordId ПЕРШИМ
         Ціна: price,
         Кількість: qty,
         Робота: fullWorkName,
         Зарплата: zp,
         Записано: recordedDate,
-        recordId: recordId, // ✅ Завжди зберігаємо recordId
       };
       
-      // Додаємо "Розраховано" якщо воно було в попередньому записі
-      // Це гарантує що дата виплати зберігається при редагуванні всіх інших параметрів
-      // (навіть при зміні назви роботи, ціни, кількості — поки ПІБ слюсаря не змінено)
+      // ✅ КРИТИЧНО: Додаємо "Розраховано" якщо воно було в попередньому записі
+      // Це гарантує що дата виплати НІКОЛИ не втрачається при редагуванні
       if (calculatedDate) {
         newRecord.Розраховано = calculatedDate;
+        console.log(`💰 [save_work] Зберігаємо дату виплати: ${calculatedDate}`);
       }
+
+      console.log(`💾 [save_work] === ЗБЕРЕЖЕННЯ ЗАПИСУ #${idx} ===`);
+      console.log(`   📥 Вхідні дані з DOM: Ціна=${price}, Кількість=${qty}, Зарплата=${zp}`);
+      console.log(`   📅 Дати: Записано="${recordedDate}", Розраховано="${calculatedDate || 'немає'}"`);
+      console.log(`   🔑 recordId: ${recordId}`);
+      console.log(`   📤 Новий запис:`, newRecord);
 
       zapis.push(newRecord);
       summaRob += price * qty;

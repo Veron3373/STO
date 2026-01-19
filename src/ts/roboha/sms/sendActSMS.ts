@@ -82,15 +82,15 @@ export async function sendActClosedSMS(
 
 /**
  * Ручна відправка SMS при кліку на кнопку 📭/📨
- * Перевіряє налаштування в таблиці settings (setting_id = 4)
+ * Перевіряє налаштування в таблиці settings (setting_id = 5)
  */
 export async function handleSmsButtonClick(actId: number): Promise<void> {
   try {
-    // 1. Перевірка налаштування (setting_id = 4)
+    // 1. Перевірка налаштування (setting_id = 5)
     const { data: settingData, error: settingError } = await supabase
       .from("settings")
       .select("data")
-      .eq("setting_id", 4)
+      .eq("setting_id", 5)
       .single();
 
     if (settingError) {

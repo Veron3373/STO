@@ -3,14 +3,13 @@
 import { supabase } from "../../../vxid/supabaseClient";
 import {
   showRealtimeActNotification,
-  removeNotificationsForAct,
   removeRealtimeNotification,
   loadAndShowExistingNotifications,
 } from "../../tablucya/povidomlennya_tablucya";
 
 let subscriptionChannel: any = null;
 
-// 🔁 Фолбек: синхронізуємо DOM з реальною БД
+// 🔁 Фолбек: синхронізуємо DOM з реальною БД (видаляємо тости, яких вже немає в БД)
 async function syncNotificationsWithDatabaseAfterDelete() {
   const container = document.getElementById("act-realtime-container");
   if (!container) return;
@@ -20,33 +19,32 @@ async function syncNotificationsWithDatabaseAfterDelete() {
   );
   if (!toastElements.length) return;
 
-  // Унікальні act_id з DOM
-  const actIds = Array.from(
-    new Set(
-      toastElements
-        .map((t) => Number(t.getAttribute("data-act-id")))
-        .filter((id) => !Number.isNaN(id))
-    )
-  );
+  // Унікальні notification_id з DOM
+  const notificationIds = toastElements
+    .map((t) => Number(t.getAttribute("data-id")))
+    .filter((id) => !Number.isNaN(id));
 
-  if (!actIds.length) return;
+  if (!notificationIds.length) return;
 
   const { data, error } = await supabase
     .from("act_changes_notifications")
-    .select("act_id")
-    .in("act_id", actIds);
+    .select("notification_id")
+    .in("notification_id", notificationIds)
+    .eq("delit", false);
 
   if (error) {
     console.error("❌ Помилка при перевірці нотифікацій:", error);
     return;
   }
 
-  const aliveActIds = new Set<number>((data || []).map((row: any) => row.act_id));
+  const aliveNotificationIds = new Set<number>(
+    (data || []).map((row: any) => row.notification_id)
+  );
 
-  // Для тих актів, яких вже немає в таблиці, чистимо всі тости
-  actIds.forEach((actId) => {
-    if (!aliveActIds.has(actId)) {
-      removeNotificationsForAct(actId);
+  // Для тих notification_id, яких вже немає в таблиці або delit=true, видаляємо тост
+  notificationIds.forEach((notificationId) => {
+    if (!aliveNotificationIds.has(notificationId)) {
+      removeRealtimeNotification(notificationId);
     }
   });
 }
@@ -84,22 +82,17 @@ export async function initActChangesSubscription(): Promise<void> {
         console.log("🗑️ Отримано DELETE:", payload);
 
         const oldRow: any = payload.old || {};
-        const actId: number | undefined = oldRow.act_id;
         const deletedId: number | undefined =
           oldRow.notification_id ?? oldRow.id;
 
-        if (actId != null) {
-          // База дала act_id → видаляємо всі тости по цьому акту
-          console.log(`✅ DELETE з act_id=${actId} → чистимо всі тости для акту.`);
-          removeNotificationsForAct(actId);
-        } else if (deletedId != null) {
-          // Є тільки ID рядка → видаляємо один тост
+        if (deletedId != null) {
+          // Є ID рядка → видаляємо тільки один конкретний тост
           console.log(`✅ DELETE з notification_id=${deletedId} → чистимо один тост.`);
           removeRealtimeNotification(deletedId);
         } else {
           // Нічого корисного в payload.old (типова історія без REPLICA IDENTITY FULL)
           console.warn(
-            "⚠️ DELETE без act_id та notification_id → запускаємо синхронізацію з БД."
+            "⚠️ DELETE без notification_id → запускаємо синхронізацію з БД."
           );
           await syncNotificationsWithDatabaseAfterDelete();
         }

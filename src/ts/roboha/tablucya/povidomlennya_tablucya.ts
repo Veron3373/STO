@@ -377,14 +377,19 @@ export function showRealtimeActNotification(
   // клік по картці – закрити її та позначити як видалене в БД
   toast.addEventListener("click", async (e) => {
     e.stopPropagation();
+    
+    // Перевіряємо чи цей тост вже закривається
+    if (toast.classList.contains("closing")) return;
+    
     playCloseSound();
 
-    // Позначаємо повідомлення як видалене в БД перед видаленням з DOM
+    // Спочатку видаляємо з DOM (миттєво)
+    removeToastElement(toast);
+
+    // Потім позначаємо повідомлення як видалене в БД
     if (dbId && typeof dbId === "number") {
       await markNotificationAsDeleted(dbId);
     }
-
-    removeToastElement(toast);
 
     // ✅ Перевіряємо чи залишилися ще повідомлення для цього акту
     await checkAndRemoveActHighlightIfNoNotifications(payload.act_id);
@@ -423,7 +428,8 @@ export function removeRealtimeNotification(dbId: number): void {
   const toast = container.querySelector<HTMLElement>(
     `.act-notification-toast[data-id="${dbId}"]`
   );
-  if (toast) {
+  // Перевіряємо чи тост існує і чи він ще не в процесі закриття
+  if (toast && !toast.classList.contains("closing")) {
     removeToastElement(toast);
   }
 }

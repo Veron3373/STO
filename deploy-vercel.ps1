@@ -19,11 +19,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $vercelAccounts = @(
-    @{ Name = "Veron3373 (Main)"; Team = ""; Scope = "" },
-    @{ Name = "Account 2"; Team = "team-name-2"; Scope = "--scope=team-name-2" },
-    @{ Name = "Account 3"; Team = "team-name-3"; Scope = "--scope=team-name-3" },
-    @{ Name = "Account 4"; Team = "team-name-4"; Scope = "--scope=team-name-4" },
-    @{ Name = "Account 5"; Team = "team-name-5"; Scope = "--scope=team-name-5" }
+    @{ Name = "Veron3373 (Main)"; Team = ""; Scope = "" }
 )
 
 # Create form

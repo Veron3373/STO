@@ -70,6 +70,28 @@ export async function initActChangesSubscription(): Promise<void> {
         showRealtimeActNotification(payload.new as any);
       }
     )
+    // UPDATE → якщо delit = true, видаляємо тост
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "act_changes_notifications",
+      },
+      (payload) => {
+        console.log("📝 Отримано UPDATE:", payload);
+
+        const newRow: any = payload.new || {};
+        const notificationId: number | undefined = newRow.notification_id ?? newRow.id;
+        const isDeleted: boolean = newRow.delit === true;
+
+        if (notificationId != null && isDeleted) {
+          // Повідомлення позначене як видалене → видаляємо тільки цей один тост
+          console.log(`✅ UPDATE delit=true для notification_id=${notificationId} → чистимо один тост.`);
+          removeRealtimeNotification(notificationId);
+        }
+      }
+    )
     // DELETE → прибрати повідомлення
     .on(
       "postgres_changes",

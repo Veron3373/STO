@@ -170,11 +170,10 @@ function generateDeletedItemHtml(change: ChangeRecord, index: number): string {
     ? `<td class="pib-magazin-cell" data-name="pib_magazin">${change.changed_by_surname}</td>`
     : "";
 
-  const zarplataCellHTML = showZarplata
-    ? `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum">${
-        change.zarplata > 0 ? formatNum(change.zarplata) : ""
-      }</td>`
-    : "";
+  // ✅ ВИПРАВЛЕНО: Завжди створюємо комірку зарплати, але приховуємо якщо showZarplata = false
+  const zarplataCellHTML = `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum"${
+      !showZarplata ? ' style="display: none;"' : ''
+    }>${change.zarplata > 0 ? formatNum(change.zarplata) : ""}</td>`;
 
   return `
         <tr class="deleted-item-row">

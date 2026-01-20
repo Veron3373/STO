@@ -315,7 +315,8 @@ async function updateSlyusarSalaryInRow(
   row: HTMLTableRowElement,
   rowIndex?: number // Індекс рядка для точного пошуку при однакових роботах
 ): Promise<void> {
-  if (!globalCache.settings.showZarplata) return;
+  // ✅ ВИПРАВЛЕНО: Зарплата розраховується ЗАВЖДИ, навіть якщо стовпець прихований
+  // Це потрібно для коректного розрахунку прибутку приймальника
 
   // ✅ НОВИЙ ЗАХИСТ: Якщо зарплата заблокована (слюсар змінився, але зарплата була > 0) - не перераховуємо
   if (row.getAttribute("data-salary-locked") === "true") {
@@ -396,7 +397,8 @@ async function updateSlyusarSalaryInRow(
  * Ініціалізує зарплати слюсарів при завантаженні акту - ВИПРАВЛЕНА ВЕРСІЯ 2.0
  */
 export async function initializeSlyusarSalaries(): Promise<void> {
-  if (!globalCache.settings.showZarplata) return;
+  // ✅ ВИПРАВЛЕНО: Зарплата ініціалізується ЗАВЖДИ, навіть якщо стовпець прихований
+  // Це потрібно для коректного збереження даних в базу
 
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
@@ -487,7 +489,8 @@ async function processWorkRowsWithIndex(
  * Використовується з modalMain.ts одразу після рендеру модалки.
  */
 export async function updateAllSlyusarSumsFromHistory(): Promise<void> {
-  if (!globalCache.settings.showZarplata) return;
+  // ✅ ВИПРАВЛЕНО: Зарплата оновлюється ЗАВЖДИ, навіть якщо стовпець прихований
+  // Це потрібно для коректного збереження даних в базу
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
   );
@@ -518,9 +521,8 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
     sumCell.textContent =
       sum === 0 ? "" : formatNumberWithSpaces(Math.round(sum));
 
-  if (globalCache.settings.showZarplata) {
-    await updateSlyusarSalaryInRow(row);
-  }
+  // ✅ ВИПРАВЛЕНО: Зарплата оновлюється ЗАВЖДИ для коректного збереження
+  await updateSlyusarSalaryInRow(row);
   updateCalculatedSumsInFooter();
 }
 
@@ -530,7 +532,8 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
  * @param row - рядок таблиці
  */
 export async function forceRecalculateSlyusarSalary(row: HTMLTableRowElement): Promise<void> {
-  if (!globalCache.settings.showZarplata) return;
+  // ✅ ВИПРАВЛЕНО: Зарплата перераховується ЗАВЖДИ, навіть якщо стовпець прихований
+  // Це потрібно для коректного збереження даних в базу
 
   const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
   const typeFromCell = nameCell?.getAttribute("data-type");
@@ -714,13 +717,14 @@ function createRowHtml(
   const showZarplata = globalCache.settings.showZarplata;
   const canEditZarplata = isZarplataEditable; // акт відкритий і стовпець увімкнено
 
-  const zarplataCellHTML = showZarplata
-    ? `<td contenteditable="${canEditZarplata}"
+  // ✅ ВИПРАВЛЕНО: Завжди створюємо комірку зарплати, але приховуємо якщо showZarplata = false
+  // Це потрібно для коректного збереження даних (parseTableRows читає з DOM)
+  const zarplataCellHTML = `<td contenteditable="${canEditZarplata}"
         class="text-right editable-number slyusar-sum-cell"
-        data-name="slyusar_sum">
+        data-name="slyusar_sum"
+        ${!showZarplata ? 'style="display: none;"' : ''}>
        ${slyusarSumValue}
-     </td>`
-    : "";
+     </td>`;
 
   // 🔽 ЛОГІКА ВИДАЛЕННЯ:
   // Кнопка показується ТІЛЬКИ якщо акт відкритий І користувач має права (canDelete) І може редагувати цей рядок

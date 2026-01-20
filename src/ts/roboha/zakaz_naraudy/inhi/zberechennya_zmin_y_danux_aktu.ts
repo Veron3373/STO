@@ -396,9 +396,14 @@ export function parseTableRows(): ParsedItem[] {
     // ✅ ВИПРАВЛЕНО: Зарплата завжди береться з DOM (незалежно від видимості колонки)
     // Причина: При додаванні нової роботи вона ще не в кеші, а зарплата вже є в DOM
     if (slyusarSumCell) {
-      slyusarSum = parseNum(slyusarSumCell.textContent);
+      const rawSalaryText = slyusarSumCell.textContent;
+      slyusarSum = parseNum(rawSalaryText);
+      console.log(`💰 [parseTableRows] Зарплата з DOM: rawText="${rawSalaryText}", parsed=${slyusarSum}`);
     } else if (cachedData) {
       slyusarSum = cachedData.slyusarSum || 0;
+      console.log(`💰 [parseTableRows] Зарплата з кешу: ${slyusarSum}`);
+    } else {
+      console.log(`⚠️ [parseTableRows] Зарплата: slyusarSumCell=null, cachedData=null, встановлено 0`);
     }
 
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
@@ -620,6 +625,8 @@ function processItems(items: ParsedItem[]) {
       // ✅ КРИТИЧНО: Якщо recordId немає - генеруємо новий
       // Це потрібно для нових рядків, які ще не мають recordId
       const workRecordId = recordId || `new_${name.substring(0, 20)}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      console.log(`💰 [processItems] Робота "${name}": slyusarSum=${slyusarSum}, salary=${salary}, profit=${profit}`);
 
       works.push({
         ...itemBase,

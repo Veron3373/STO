@@ -335,7 +335,12 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
         if (e && e.type === "mousedown") e.preventDefault();
         input.value = val;
         setBaseOnce();
-        if (!shopEditState.baseShopId) shopEditState.baseShopId = nameToId.get(val) ?? null;
+        // Завжди оновлюємо baseShopId при виборі зі списку
+        const selectedId = nameToId.get(val) ?? null;
+        if (selectedId !== null) {
+          shopEditState.baseShopId = selectedId;
+          console.log("Shop selected from dropdown:", { name: val, id: selectedId });
+        }
         updateCurrent(val);
         dd.classList.add("hidden-all_other_bases");
         snapshotToAllBd();
@@ -413,7 +418,12 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
         if (e && e.type === "mousedown") e.preventDefault();
         input.value = val;
         setBaseOnce();
-        if (!detailEditState.baseDetailId) detailEditState.baseDetailId = nameToId.get(val) ?? null;
+        // Завжди оновлюємо baseDetailId при виборі зі списку
+        const selectedId = nameToId.get(val) ?? null;
+        if (selectedId !== null) {
+          detailEditState.baseDetailId = selectedId;
+          console.log("Detail selected from dropdown:", { name: val, id: selectedId });
+        }
         updateCurrent(val);
         dd.classList.add("hidden-all_other_bases");
         snapshotToAllBd();
@@ -519,7 +529,7 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
 }
 
 /* ==== автокомпліт SCLAD по part_number (з дублями) ==== */
-function fillFormFieldsFromSclad(record: any) {
+async function fillFormFieldsFromSclad(record: any) {
   if (record?.sclad_id) {
     setScladId(String(record.sclad_id));
     originalScladId = String(record.sclad_id);
@@ -556,17 +566,65 @@ function fillFormFieldsFromSclad(record: any) {
     }
   }
 
+  // Завантаження ID магазину для правильної роботи CRUD
   const shopInput = document.getElementById("sclad_shop") as HTMLInputElement | null;
   if (shopInput?.value) {
+    const shopName = shopInput.value.trim();
+    // Отримуємо baseShopId з бази даних
+    const { data: shopData } = await supabase
+      .from("shops")
+      .select("shop_id, data")
+      .limit(1000);
+    
+    let foundShopId: number | null = null;
+    if (shopData) {
+      for (const row of shopData) {
+        try {
+          const d = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+          const nm = d?.Name ? String(d.Name).trim() : "";
+          if (nm === shopName) {
+            foundShopId = row.shop_id;
+            break;
+          }
+        } catch (e) {
+          console.error("Парсинг shop.data:", e);
+        }
+      }
+    }
+    
     shopEditState.touched = true;
-    shopEditState.originalName = shopInput.value.trim();
-    shopEditState.currentName = shopInput.value.trim();
+    shopEditState.originalName = shopName;
+    shopEditState.currentName = shopName;
+    shopEditState.baseShopId = foundShopId;
+    console.log("Shop loaded for edit:", { shopName, baseShopId: foundShopId });
   }
+  
+  // Завантаження ID деталі для правильної роботи CRUD
   const detailInput = document.getElementById("sclad_detail") as HTMLInputElement | null;
   if (detailInput?.value) {
+    const detailName = detailInput.value.trim();
+    // Отримуємо baseDetailId з бази даних
+    const { data: detailData } = await supabase
+      .from("details")
+      .select("detail_id, data")
+      .limit(1000);
+    
+    let foundDetailId: number | null = null;
+    if (detailData) {
+      for (const row of detailData) {
+        const nm = typeof row.data === "string" ? row.data.trim() : String(row.data || "").trim();
+        if (nm === detailName) {
+          foundDetailId = row.detail_id;
+          break;
+        }
+      }
+    }
+    
     detailEditState.touched = true;
-    detailEditState.originalName = detailInput.value.trim();
-    detailEditState.currentName = detailInput.value.trim();
+    detailEditState.originalName = detailName;
+    detailEditState.currentName = detailName;
+    detailEditState.baseDetailId = foundDetailId;
+    console.log("Detail loaded for edit:", { detailName, baseDetailId: foundDetailId });
   }
 }
 
@@ -644,9 +702,9 @@ async function wireLinkedAutocomplete() {
       const filtered = all
         .filter((r) => r.part_number && r.part_number.toLowerCase().includes(v.toLowerCase()))
         .sort((a, b) => b.sclad_id - a.sclad_id);
-      renderDropdown(filtered, (rec) => {
+      renderDropdown(filtered, async (rec) => {
         input.value = rec.part_number;
-        fillFormFieldsFromSclad(rec);
+        await fillFormFieldsFromSclad(rec);
         dd.classList.add("hidden-all_other_bases");
         snapshotToAllBd();
       });

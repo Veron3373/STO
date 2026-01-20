@@ -1367,23 +1367,28 @@ export function searchDataInDatabase(
           // sumWork та sumParts - це вже чистий прибуток після дисконту та зарплат
           const margin = totalSum;
 
-          // ✅ ВИПРАВЛЕНО: Правильне відображення від'ємних значень
+          // ✅ ВИПРАВЛЕНО: Виводимо суму мінус зарплата приймальника
+          // Для запчастин: виводимо sumParts - salaryParts
+          const sumPartsAfterSalary = sumParts - salaryParts;
+          // Для робіт: виводимо sumWork - salaryWork
+          const sumWorkAfterSalary = sumWork - salaryWork;
+
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
               ${salaryParts !== 0
               ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
               : (sumParts < 0 ? `<div style="color: #6c757d;">⚙️ 0</div>` : "")
             }
-              ${sumParts !== 0
-              ? `<div style="color: ${sumParts > 0 ? '#28a745' : '#dc3545'};">⚙️ ${sumParts > 0 ? '+' : ''}${formatNumber(sumParts)}</div>`
+              ${sumPartsAfterSalary !== 0
+              ? `<div style="color: ${sumPartsAfterSalary > 0 ? '#28a745' : '#dc3545'};">⚙️ ${sumPartsAfterSalary > 0 ? '+' : ''}${formatNumber(sumPartsAfterSalary)}</div>`
               : ""
             }
               ${salaryWork !== 0
               ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
               : (sumWork < 0 ? `<div style="color: #6c757d;">🛠️ 0</div>` : "")
             }
-              ${sumWork !== 0
-              ? `<div style="color: ${sumWork > 0 ? '#28a745' : '#dc3545'};">🛠️ ${sumWork > 0 ? '+' : ''}${formatNumber(sumWork)}</div>`
+              ${sumWorkAfterSalary !== 0
+              ? `<div style="color: ${sumWorkAfterSalary > 0 ? '#28a745' : '#dc3545'};">🛠️ ${sumWorkAfterSalary > 0 ? '+' : ''}${formatNumber(sumWorkAfterSalary)}</div>`
               : ""
             }
             </div>`;

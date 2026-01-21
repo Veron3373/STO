@@ -474,12 +474,21 @@ function applyClassToRow(
  * Знаходить рядок в таблиці і додає клас підсвітки (Синя ручка)
  */
 /**
- * Отримує ID акту з комірки, ігноруючи бейдж
+ * Отримує ID акту з комірки, надійно ігноруючи бейдж
  */
 function getActIdFromCell(cell: HTMLElement): number {
+  // Спробуємо знайти div, який НЕ є бейджем (це зазвичай div з номером і ключем)
+  const contentDiv = cell.querySelector("div:not(.notification-count-badge)");
+
+  if (contentDiv && contentDiv.textContent) {
+    return parseInt(contentDiv.textContent.replace(/\D/g, ""));
+  }
+
+  // Резервний варіант: клонування і очищення (якщо структура інша)
   const clone = cell.cloneNode(true) as HTMLElement;
   const badge = clone.querySelector(".notification-count-badge");
   if (badge) badge.remove();
+
   const cellText = clone.textContent || "";
   return parseInt(cellText.replace(/\D/g, ""));
 }
@@ -488,7 +497,7 @@ function getActIdFromCell(cell: HTMLElement): number {
  * Знаходить рядок в таблиці і додає клас підсвітки (Синя ручка)
  */
 function highlightRowInDom(actId: number) {
-  console.log(`🔍 [highlightRowInDom] Шукаємо рядок для акту #${actId}`);
+  console.log(`🚀 [Tablucya v2.1] highlightRowInDom: Шукаємо рядок для акту #${actId}`);
 
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"

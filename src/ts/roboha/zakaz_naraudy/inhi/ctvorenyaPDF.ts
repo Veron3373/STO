@@ -140,6 +140,7 @@ export async function printModalToPdf(): Promise<void> {
 
     document.querySelector(".modal-close-button") as HTMLElement,
     document.querySelector(".modal-footer") as HTMLElement,
+    document.querySelector(".act-pruimalnyk-info") as HTMLElement, // <--- Приховуємо ім'я приймальника
   ].filter(Boolean) as HTMLElement[];
 
   // таблиця для приховування колонок

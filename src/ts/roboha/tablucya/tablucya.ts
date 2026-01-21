@@ -473,6 +473,20 @@ function applyClassToRow(
 /**
  * Знаходить рядок в таблиці і додає клас підсвітки (Синя ручка)
  */
+/**
+ * Отримує ID акту з комірки, ігноруючи бейдж
+ */
+function getActIdFromCell(cell: HTMLElement): number {
+  const clone = cell.cloneNode(true) as HTMLElement;
+  const badge = clone.querySelector(".notification-count-badge");
+  if (badge) badge.remove();
+  const cellText = clone.textContent || "";
+  return parseInt(cellText.replace(/\D/g, ""));
+}
+
+/**
+ * Знаходить рядок в таблиці і додає клас підсвітки (Синя ручка)
+ */
 function highlightRowInDom(actId: number) {
   console.log(`🔍 [highlightRowInDom] Шукаємо рядок для акту #${actId}`);
 
@@ -491,12 +505,12 @@ function highlightRowInDom(actId: number) {
   rows.forEach((row, index) => {
     const firstCell = row.querySelector("td");
     if (firstCell) {
-      const cellText = firstCell.textContent || "";
-      const cellActId = parseInt(cellText.replace(/\D/g, ""));
+      // ✅ ВИПРАВЛЕНО: Використовуємо нову функцію для отримання ID
+      const cellActId = getActIdFromCell(firstCell);
 
-      // Детальний лог для кожного рядка
-      if (index < 5) { // Логуємо перші 5 рядків для прикладу
-        console.log(`  Рядок ${index}: текст="${cellText}", parsed=${cellActId}`);
+      // Детальний лог для кожного рядка (перші 5)
+      if (index < 5) {
+        console.log(`  Рядок ${index}: parsed=${cellActId}`);
       }
 
       if (cellActId === actId) {
@@ -532,8 +546,8 @@ export function updateNotificationBadgeInDom(actId: number, count: number) {
   rows.forEach((row) => {
     const firstCell = row.querySelector("td") as HTMLTableCellElement;
     if (firstCell) {
-      const cellText = firstCell.textContent || "";
-      const cellActId = parseInt(cellText.replace(/\D/g, ""));
+      // ✅ ВИПРАВЛЕНО: Використовуємо нову функцію для отримання ID
+      const cellActId = getActIdFromCell(firstCell);
 
       if (cellActId === actId) {
         found = true;
@@ -609,8 +623,9 @@ export async function clearNotificationVisualOnly(actId: number, removeToasts: b
     rows.forEach((row) => {
       const firstCell = row.querySelector("td");
       if (firstCell) {
-        const cellText = firstCell.textContent || "";
-        const cellActId = parseInt(cellText.replace(/\D/g, ""));
+        // ✅ ВИПРАВЛЕНО: Використовуємо нову функцію для отримання ID
+        const cellActId = getActIdFromCell(firstCell);
+
         if (cellActId === actId) {
           row.classList.remove("act-modified-blue-pen");
           console.log(`✅ [clearNotificationVisualOnly] Знято синю підсвітку з акту #${actId}`);

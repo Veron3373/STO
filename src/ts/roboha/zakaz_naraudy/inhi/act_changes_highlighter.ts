@@ -461,8 +461,8 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
     ) {
       await deleteProcessedChanges(actId);
 
-      // Знімаємо синю підсвітку з акту в таблиці
-      clearNotificationVisualOnly(actId);
+      // Знімаємо синю підсвітку з акту в таблиці та видаляємо тости
+      clearNotificationVisualOnly(actId, true);
 
       console.log(
         `✅ Підсвічування завершено, оброблені записи видалено, синя ручка знята (${userAccessLevel})`

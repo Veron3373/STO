@@ -424,9 +424,11 @@ function highlightRowInDom(actId: number) {
 }
 
 /**
- * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці та повідомлення в UI, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
+ * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
+ * @param actId - ID акту
+ * @param removeToasts - чи видаляти тости (за замовчуванням false)
  */
-export function clearNotificationVisualOnly(actId: number) {
+export function clearNotificationVisualOnly(actId: number, removeToasts: boolean = false) {
   // ✅ Працює для Адміністратора та Приймальника
   if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
     return;
@@ -451,8 +453,10 @@ export function clearNotificationVisualOnly(actId: number) {
       });
     }
 
-    // Також видаляємо повідомлення з UI
-    removeNotificationsForAct(actId);
+    // Видаляємо повідомлення з UI тільки якщо явно вказано
+    if (removeToasts) {
+      removeNotificationsForAct(actId);
+    }
   }
 }
 
@@ -561,7 +565,7 @@ function createClientCell(
   td.addEventListener("click", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
-      clearNotificationVisualOnly(actId);
+      clearNotificationVisualOnly(actId, true);
       showModal(actId);
     } else {
       showNoAccessNotification();
@@ -584,7 +588,7 @@ function createCarCell(
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
-      clearNotificationVisualOnly(actId);
+      clearNotificationVisualOnly(actId, true);
       showModal(actId);
     } else {
       showNoAccessNotification();
@@ -607,7 +611,7 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
-      clearNotificationVisualOnly(actId);
+      clearNotificationVisualOnly(actId, true);
       showModal(actId);
     } else {
       showNoAccessNotification();
@@ -666,7 +670,7 @@ function createStandardCell(
   td.addEventListener("dblclick", async () => {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
-      clearNotificationVisualOnly(actId);
+      clearNotificationVisualOnly(actId, true);
       showModal(actId);
     } else {
       showNoAccessNotification();

@@ -759,7 +759,7 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     // Для Адміністратора залишаємо як прийшло з loadGlobalData()
 
     // 🔽 НОВА ЛОГІКА: Контроль видимості "Зар-та" та "ПІБ _ Магазин" залежно від clickSource
-    // Зберігаємо оригінальні значення (вже завантажені з loadGlobalData)
+    // Зберігаємо оригінальні значення для відновлення після рендерингу
     const originalShowPibMagazin = globalCache.settings.showPibMagazin;
     const originalShowZarplata = globalCache.settings.showZarplata;
 
@@ -768,11 +768,8 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
       // Клік по № акту, Дата, Автомобіль, Сума - ховаємо стовпці
       globalCache.settings.showPibMagazin = false;
       globalCache.settings.showZarplata = false;
-    } else {
-      // Клік по "Клієнт 🔽" - відновлюємо оригінальні значення
-      globalCache.settings.showPibMagazin = originalShowPibMagazin;
-      globalCache.settings.showZarplata = originalShowZarplata;
     }
+    // Якщо clickSource === 'client' - залишаємо оригінальні значення
 
     await createRequiredModals();
 
@@ -843,6 +840,10 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
       canShowAddRowBtn,
       canShowSmsBtn
     );
+
+    // ✅ ВІДНОВЛЮЄМО оригінальні значення після рендерингу
+    globalCache.settings.showPibMagazin = originalShowPibMagazin;
+    globalCache.settings.showZarplata = originalShowZarplata;
 
     // 🔽 ТУТ ВЖЕ Є ТАБЛИЦЯ В DOM — МОЖНА ХОВАТИ/ПОКАЗУВАТИ ЦІНА/СУМА
     const canSeePriceCols = await canUserSeePriceColumns();

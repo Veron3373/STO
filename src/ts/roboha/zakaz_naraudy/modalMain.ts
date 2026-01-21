@@ -724,7 +724,7 @@ async function canUserSeeSmsButton(): Promise<boolean> {
   return await getRoleSettingBool(settingId, columnName);
 }
 
-export async function showModal(actId: number): Promise<void> {
+export async function showModal(actId: number, clickSource: 'client' | 'other' = 'other'): Promise<void> {
   const canOpen = await canUserOpenActs();
 
   if (!canOpen) {
@@ -757,6 +757,22 @@ export async function showModal(actId: number): Promise<void> {
       globalCache.settings.showZarplata = canSeeZarplata;
     }
     // Для Адміністратора залишаємо як прийшло з loadGlobalData()
+
+    // 🔽 НОВА ЛОГІКА: Контроль видимості "Зар-та" та "ПІБ _ Магазин" залежно від clickSource
+    // Зберігаємо оригінальні значення (вже завантажені з loadGlobalData)
+    const originalShowPibMagazin = globalCache.settings.showPibMagazin;
+    const originalShowZarplata = globalCache.settings.showZarplata;
+
+    // Тимчасово змінюємо видимість залежно від джерела кліку
+    if (clickSource === 'other') {
+      // Клік по № акту, Дата, Автомобіль, Сума - ховаємо стовпці
+      globalCache.settings.showPibMagazin = false;
+      globalCache.settings.showZarplata = false;
+    } else {
+      // Клік по "Клієнт 🔽" - відновлюємо оригінальні значення
+      globalCache.settings.showPibMagazin = originalShowPibMagazin;
+      globalCache.settings.showZarplata = originalShowZarplata;
+    }
 
     await createRequiredModals();
 
@@ -1196,20 +1212,20 @@ function renderModalContent(
   const slyusarWorkIndexMap = new Map<string, number>();
   // ✅ Підготовка для підрахунку індексів деталей для кожного магазину
   const shopDetailIndexMap = new Map<string, number>();
-  
+
   const allItems = [
     ...(actDetails?.["Деталі"] || []).map((item: any) => {
       const shopName = showPibMagazin ? item["Магазин"] || "" : "";
       const detailName = item["Деталь"] || "";
-      
+
       // ✅ Визначаємо індекс деталі для цього магазину
       const shopKey = shopName.toLowerCase();
       const detailIndex = shopDetailIndexMap.get(shopKey) ?? 0;
       shopDetailIndexMap.set(shopKey, detailIndex + 1);
-      
+
       // ✅ Беремо recordId з acts.data.Деталі (якщо є) або undefined
       const recordId = item["recordId"] || undefined;
-      
+
       return {
         type: "detail",
         name: detailName,
@@ -1226,15 +1242,15 @@ function renderModalContent(
     ...(actDetails?.["Роботи"] || []).map((item: any) => {
       const slyusarName = showPibMagazin ? item["Слюсар"] || "" : "";
       const workName = item["Робота"] || "";
-      
+
       // ✅ Визначаємо індекс роботи для цього слюсаря
       const slyusarKey = slyusarName.toLowerCase();
       const workIndex = slyusarWorkIndexMap.get(slyusarKey) ?? 0;
       slyusarWorkIndexMap.set(slyusarKey, workIndex + 1);
-      
+
       // ✅ ПРІОРИТЕТ: беремо recordId з acts.data.Роботи (якщо є), інакше шукаємо в історії слюсаря
       const recordId = item["recordId"] || (slyusarName ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex) : undefined);
-      
+
       return {
         type: "work",
         name: workName,
@@ -1282,8 +1298,8 @@ function renderModalContent(
     : "zakaz_narayd-header";
 
   // Генеруємо HTML кнопок для header
-  const pruimalnykDisplay = act.pruimalnyk 
-    ? `<span class="act-pruimalnyk-info">${act.pruimalnyk}</span>` 
+  const pruimalnykDisplay = act.pruimalnyk
+    ? `<span class="act-pruimalnyk-info">${act.pruimalnyk}</span>`
     : "";
 
   const headerButtons = `
@@ -1713,17 +1729,17 @@ function handleInputChange(event: Event): void {
       if (row) {
         const newSlyusar = target.textContent?.trim() || "";
         const prevSlyusar = target.getAttribute("data-prev-value") || "";
-        
+
         // ✅ Зберігаємо нове значення як попереднє для наступного разу
         target.setAttribute("data-prev-value", newSlyusar);
-        
+
         // ✅ Перевіряємо поточну зарплату в інпуті
         const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
         const currentSalaryText = (slyusarSumCell?.textContent || "").replace(/\s/g, "").trim();
         const currentSalary = parseFloat(currentSalaryText) || 0;
-        
+
         console.log(`📊 pib_magazin change: prev="${prevSlyusar}", new="${newSlyusar}", currentSalary=${currentSalary}, salaryText="${currentSalaryText}"`);
-        
+
         // ✅ Якщо слюсар змінився І зарплата = 0 або пусто → примусовий перерахунок від відсотка
         if (prevSlyusar && prevSlyusar !== newSlyusar && (currentSalary === 0 || currentSalaryText === "")) {
           console.log(`🔄 Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}" і зарплата = 0/${currentSalaryText === "" ? "пусто" : currentSalary}. Примусовий перерахунок.`);
@@ -1840,7 +1856,7 @@ function toggleActsTableSumaColumn(show: boolean): void {
   // Знаходимо індекс стовпця "Сума" в заголовку
   const headers = actsTable.querySelectorAll('thead th');
   let sumaColumnIndex = -1;
-  
+
   headers.forEach((th, index) => {
     if (th.textContent?.trim() === 'Сума') {
       sumaColumnIndex = index;

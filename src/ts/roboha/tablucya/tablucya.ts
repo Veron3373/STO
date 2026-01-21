@@ -755,7 +755,7 @@ function createClientCell(
     const canOpen = await canUserOpenActs();
     if (canOpen) {
       clearNotificationVisualOnly(actId, true);
-      showModal(actId);
+      showModal(actId, 'client');
     } else {
       showNoAccessNotification();
     }
@@ -778,7 +778,7 @@ function createCarCell(
     const canOpen = await canUserOpenActs();
     if (canOpen) {
       clearNotificationVisualOnly(actId, true);
-      showModal(actId);
+      showModal(actId, 'other');
     } else {
       showNoAccessNotification();
     }
@@ -801,7 +801,7 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
     const canOpen = await canUserOpenActs();
     if (canOpen) {
       clearNotificationVisualOnly(actId, true);
-      showModal(actId);
+      showModal(actId, 'other');
     } else {
       showNoAccessNotification();
     }
@@ -872,7 +872,7 @@ function createStandardCell(
     const canOpen = await canUserOpenActs();
     if (canOpen) {
       clearNotificationVisualOnly(actId, true);
-      showModal(actId);
+      showModal(actId, 'other');
     } else {
       showNoAccessNotification();
     }

@@ -329,7 +329,9 @@ body {
     0 2px 8px rgba(255, 71, 87, 0.4),
     0 0 0 2px rgba(255, 255, 255, 0.8);
   z-index: 10;
-  animation: badge-appear 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation:
+    badge-appear 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+    badge-color-rotate 3s linear infinite;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   &:hover {
@@ -337,7 +339,9 @@ body {
     box-shadow:
       0 4px 12px rgba(255, 71, 87, 0.6),
       0 0 0 2px rgba(255, 255, 255, 1);
-    animation: badge-pulse 1s ease-in-out infinite;
+    animation:
+      badge-pulse 1s ease-in-out infinite,
+      badge-color-rotate 3s linear infinite;
   }
 }
 

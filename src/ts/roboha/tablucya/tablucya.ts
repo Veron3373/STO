@@ -292,6 +292,75 @@ function subscribeToActNotifications() {
         }
       }
     )
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "act_changes_notifications",
+      },
+      async (payload) => {
+        console.log(
+          "📡 [Realtime DELETE] Видалено повідомлення:",
+          payload.old
+        );
+        const deletedNotification = payload.old;
+
+        if (deletedNotification && deletedNotification.act_id) {
+          const actId = Number(deletedNotification.act_id);
+
+          console.log(`🔄 [Realtime DELETE] Перевіряємо акт #${actId}`);
+
+          // Перевіряємо скільки повідомлень залишилось для цього акту
+          const userData = getSavedUserDataFromLocalStorage?.();
+          const currentUserName = userData?.name;
+
+          if (!currentUserName) return;
+
+          // Підраховуємо залишкові повідомлення
+          const { data, error } = await supabase
+            .from("act_changes_notifications")
+            .select("notification_id", { count: "exact" })
+            .eq("act_id", actId)
+            .eq("pruimalnyk", currentUserName)
+            .eq("delit", false);
+
+          if (error) {
+            console.error("❌ [Realtime DELETE] Помилка підрахунку:", error);
+            return;
+          }
+
+          const remainingCount = data?.length || 0;
+          console.log(`📊 [Realtime DELETE] Залишилось повідомлень: ${remainingCount}`);
+
+          // Оновлюємо лічильник
+          actNotificationCounts.set(actId, remainingCount);
+          updateNotificationBadgeInDom(actId, remainingCount);
+
+          // Якщо повідомлень не залишилось - знімаємо підсвітку
+          if (remainingCount === 0) {
+            console.log(`✅ [Realtime DELETE] Знімаємо підсвітку з акту #${actId}`);
+            modifiedActIdsGlobal.delete(actId);
+
+            // Знімаємо синю підсвітку
+            const table = document.querySelector("#table-container-modal-sakaz_narad table");
+            if (table) {
+              const rows = table.querySelectorAll("tbody tr");
+              rows.forEach((row) => {
+                const firstCell = row.querySelector("td");
+                if (firstCell) {
+                  const cellText = firstCell.textContent || "";
+                  const cellActId = parseInt(cellText.replace(/\D/g, ""));
+                  if (cellActId === actId) {
+                    row.classList.remove("act-modified-blue-pen");
+                  }
+                }
+              });
+            }
+          }
+        }
+      }
+    )
     .subscribe();
 
   // 📢 ПІДПИСКА НА ПОВІДОМЛЕННЯ ПРО ЗАВЕРШЕННЯ РОБІТ СЛЮСАРЕМ

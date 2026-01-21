@@ -11,6 +11,7 @@ import { showNotification } from "./vspluvauhe_povidomlenna";
 import { userAccessLevel, updateUIBasedOnAccess } from "../../tablucya/users";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { enforcePageAccess } from "./page_access_guard";
+import { refreshActsTable } from "../../tablucya/tablucya";
 
 let settingsChannel: RealtimeChannel | null = null;
 
@@ -286,31 +287,10 @@ function toggleActsTableSumaColumn(show: boolean): void {
     }
   });
 
-  // Якщо стовпець "Сума" не існує і потрібно показати - додаємо його
+  // Якщо стовпець "Сума" не існує і потрібно показати - перезавантажуємо таблицю
   if (sumaColumnIndex === -1 && show) {
-    const thead = actsTable.querySelector('thead tr');
-    if (thead) {
-      const th = document.createElement('th');
-      th.textContent = 'Сума';
-      // Копіюємо стиль з інших заголовків
-      const firstTh = thead.querySelector('th') as HTMLElement;
-      if (firstTh) {
-        th.style.backgroundColor = firstTh.style.backgroundColor || '#177245';
-        th.style.color = firstTh.style.color || '#fff';
-      }
-      thead.appendChild(th);
-      sumaColumnIndex = headers.length;
-    }
-    
-    // Додаємо комірки з сумами до всіх рядків
-    const rows = actsTable.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-      const td = document.createElement('td');
-      td.textContent = '0 грн'; // Значення за замовчуванням, оновиться при refresh
-      row.appendChild(td);
-    });
-    
-    console.log('✅ Стовпець "Сума" додано до таблиці актів');
+    console.log('🔄 Стовпець "Сума" не існує, перезавантажуємо таблицю актів...');
+    refreshActsTable().catch(err => console.error('Помилка оновлення таблиці:', err));
     return;
   }
 

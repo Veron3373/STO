@@ -329,19 +329,20 @@ body {
     0 2px 8px rgba(255, 71, 87, 0.4),
     0 0 0 2px rgba(255, 255, 255, 0.8);
   z-index: 10;
+  // Без ховера: обертання кольорів + пульсація
   animation:
     badge-appear 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55),
-    badge-color-rotate 3s linear infinite;
+    badge-color-rotate 3s linear infinite,
+    badge-pulse 1.5s ease-in-out infinite;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   &:hover {
+    // При ховері: статичний збільшений бейдж
     transform: scale(1.15) rotate(5deg);
     box-shadow:
       0 4px 12px rgba(255, 71, 87, 0.6),
       0 0 0 2px rgba(255, 255, 255, 1);
-    animation:
-      badge-appear 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55),
-      badge-pulse 1s ease-in-out infinite;
+    animation: none; // Вимикаємо всі анімації
   }
 }
 
@@ -381,5 +382,47 @@ body {
     box-shadow:
       0 6px 16px rgba(255, 71, 87, 0.8),
       0 0 0 3px rgba(255, 255, 255, 1);
+  }
+}
+/* Анімація обертання кольорів по колу (неонове світіння) */
+@keyframes badge-color-rotate {
+  0% {
+    box-shadow:
+      0 0 8px rgba(59, 130, 246, 0.6),
+      0 0 16px rgba(59, 130, 246, 0.4),
+      0 2px 8px rgba(255, 71, 87, 0.4),
+      0 0 0 2px rgba(59, 130, 246, 0.8);
+  }
+  
+  25% {
+    box-shadow:
+      0 0 8px rgba(168, 85, 247, 0.6),
+      0 0 16px rgba(168, 85, 247, 0.4),
+      0 2px 8px rgba(255, 71, 87, 0.4),
+      0 0 0 2px rgba(168, 85, 247, 0.8);
+  }
+  
+  50% {
+    box-shadow:
+      0 0 8px rgba(239, 68, 68, 0.6),
+      0 0 16px rgba(239, 68, 68, 0.4),
+      0 2px 8px rgba(255, 71, 87, 0.4),
+      0 0 0 2px rgba(239, 68, 68, 0.8);
+  }
+  
+  75% {
+    box-shadow:
+      0 0 8px rgba(249, 115, 22, 0.6),
+      0 0 16px rgba(249, 115, 22, 0.4),
+      0 2px 8px rgba(255, 71, 87, 0.4),
+      0 0 0 2px rgba(249, 115, 22, 0.8);
+  }
+  
+  100% {
+    box-shadow:
+      0 0 8px rgba(59, 130, 246, 0.6),
+      0 0 16px rgba(59, 130, 246, 0.4),
+      0 2px 8px rgba(255, 71, 87, 0.4),
+      0 0 0 2px rgba(59, 130, 246, 0.8);
   }
 }

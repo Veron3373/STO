@@ -474,12 +474,20 @@ function applyClassToRow(
  * Знаходить рядок в таблиці і додає клас підсвітки (Синя ручка)
  */
 function highlightRowInDom(actId: number) {
+  console.log(`🔍 [highlightRowInDom] Шукаємо рядок для акту #${actId}`);
+
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"
   );
-  if (!table) return;
+  if (!table) {
+    console.warn(`⚠️ [highlightRowInDom] Таблиця не знайдена`);
+    return;
+  }
 
   const rows = table.querySelectorAll("tbody tr");
+  console.log(`📊 [highlightRowInDom] Знайдено ${rows.length} рядків`);
+
+  let found = false;
   rows.forEach((row) => {
     const firstCell = row.querySelector("td");
     if (firstCell) {
@@ -487,22 +495,35 @@ function highlightRowInDom(actId: number) {
       const cellActId = parseInt(cellText.replace(/\D/g, ""));
 
       if (cellActId === actId) {
+        console.log(`✅ [highlightRowInDom] Знайдено рядок для акту #${actId}, додаємо клас`);
         row.classList.add("act-modified-blue-pen");
+        found = true;
       }
     }
   });
+
+  if (!found) {
+    console.warn(`❌ [highlightRowInDom] Рядок для акту #${actId} НЕ ЗНАЙДЕНО`);
+  }
 }
 
 /**
  * Оновлює бейдж з кількістю повідомлень в комірці з номером акту
  */
 export function updateNotificationBadgeInDom(actId: number, count: number) {
+  console.log(`🔔 [updateBadge] Оновлюємо бейдж для акту #${actId}, кількість: ${count}`);
+
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"
   );
-  if (!table) return;
+  if (!table) {
+    console.warn(`⚠️ [updateBadge] Таблиця не знайдена`);
+    return;
+  }
 
   const rows = table.querySelectorAll("tbody tr");
+  let found = false;
+
   rows.forEach((row) => {
     const firstCell = row.querySelector("td") as HTMLTableCellElement;
     if (firstCell) {
@@ -510,28 +531,39 @@ export function updateNotificationBadgeInDom(actId: number, count: number) {
       const cellActId = parseInt(cellText.replace(/\D/g, ""));
 
       if (cellActId === actId) {
+        found = true;
+        console.log(`✅ [updateBadge] Знайдено рядок для акту #${actId}`);
+
         // Шукаємо існуючий бейдж
         let badge = firstCell.querySelector(".notification-count-badge") as HTMLElement;
 
         if (count > 0) {
           // Якщо бейджа немає - створюємо
           if (!badge) {
+            console.log(`➕ [updateBadge] Створюємо новий бейдж`);
             badge = document.createElement("div");
             badge.className = "notification-count-badge";
             firstCell.style.position = "relative";
             firstCell.appendChild(badge);
+          } else {
+            console.log(`🔄 [updateBadge] Оновлюємо існуючий бейдж`);
           }
           badge.textContent = count.toString();
           badge.style.display = "flex";
         } else {
           // Якщо кількість 0 - ховаємо бейдж
           if (badge) {
+            console.log(`👻 [updateBadge] Ховаємо бейдж (count = 0)`);
             badge.style.display = "none";
           }
         }
       }
     }
   });
+
+  if (!found) {
+    console.warn(`❌ [updateBadge] Рядок для акту #${actId} НЕ ЗНАЙДЕНО`);
+  }
 }
 
 /**

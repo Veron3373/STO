@@ -39,6 +39,8 @@ let clientsGlobal: any[] = [];
 let carsGlobal: any[] = [];
 // Зберігаємо ID змінених актів
 let modifiedActIdsGlobal: Set<number> = new Set();
+// Зберігаємо кількість повідомлень для кожного акту
+let actNotificationCounts: Map<number, number> = new Map();
 let sortByDateStep = 0;
 
 // =============================================================================
@@ -156,6 +158,67 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
 }
 
 /**
+ * Завантажує кількість повідомлень для кожного акту
+ */
+async function fetchActNotificationCounts(): Promise<Map<number, number>> {
+  const counts = new Map<number, number>();
+
+  // ✅ Для Адміністратора - всі повідомлення
+  if (userAccessLevel === "Адміністратор") {
+    const { data, error } = await supabase
+      .from("act_changes_notifications")
+      .select("act_id")
+      .eq("delit", false);
+
+    if (error) {
+      console.error("❌ Помилка завантаження кількості повідомлень:", error);
+      return counts;
+    }
+
+    // Підраховуємо кількість для кожного акту
+    (data || []).forEach((item) => {
+      const actId = Number(item.act_id);
+      counts.set(actId, (counts.get(actId) || 0) + 1);
+    });
+
+    return counts;
+  }
+
+  // ✅ Для Приймальника - фільтруємо по pruimalnyk
+  if (userAccessLevel === "Приймальник") {
+    const userData = getSavedUserDataFromLocalStorage?.();
+    const currentUserName = userData?.name;
+
+    if (!currentUserName) {
+      console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+      return counts;
+    }
+
+    const { data, error } = await supabase
+      .from("act_changes_notifications")
+      .select("act_id")
+      .eq("delit", false)
+      .eq("pruimalnyk", currentUserName);
+
+    if (error) {
+      console.error("❌ Помилка завантаження кількості повідомлень:", error);
+      return counts;
+    }
+
+    // Підраховуємо кількість для кожного акту
+    (data || []).forEach((item) => {
+      const actId = Number(item.act_id);
+      counts.set(actId, (counts.get(actId) || 0) + 1);
+    });
+
+    return counts;
+  }
+
+  // ✅ Для інших ролей - немає повідомлень
+  return counts;
+}
+
+/**
  * 2. Підписується на нові сповіщення (PUSH) без перезавантаження таблиці
  */
 function subscribeToActNotifications() {
@@ -206,10 +269,15 @@ function subscribeToActNotifications() {
           // 1. Додаємо ID в локальний сет для підсвітки
           modifiedActIdsGlobal.add(actId);
 
-          // 2. Миттєво підсвічуємо рядок в DOM (синя ручка)
+          // 2. Оновлюємо лічильник повідомлень
+          const currentCount = actNotificationCounts.get(actId) || 0;
+          actNotificationCounts.set(actId, currentCount + 1);
+          updateNotificationBadgeInDom(actId, currentCount + 1);
+
+          // 3. Миттєво підсвічуємо рядок в DOM (синя ручка)
           highlightRowInDom(actId);
 
-          // 3. 👇 ПОКАЗУЄМО КРАСИВЕ ПОВІДОМЛЕННЯ ВНИЗУ СПРАВА 👇
+          // 4. 👇 ПОКАЗУЄМО КРАСИВЕ ПОВІДОМЛЕННЯ ВНИЗУ СПРАВА 👇
           showRealtimeActNotification({
             act_id: actId,
             notification_id: newNotification.notification_id,
@@ -426,6 +494,57 @@ function highlightRowInDom(actId: number) {
 }
 
 /**
+ * Оновлює бейдж з кількістю повідомлень в комірці з номером акту
+ */
+export function updateNotificationBadgeInDom(actId: number, count: number) {
+  const table = document.querySelector(
+    "#table-container-modal-sakaz_narad table"
+  );
+  if (!table) return;
+
+  const rows = table.querySelectorAll("tbody tr");
+  rows.forEach((row) => {
+    const firstCell = row.querySelector("td") as HTMLTableCellElement;
+    if (firstCell) {
+      const cellText = firstCell.textContent || "";
+      const cellActId = parseInt(cellText.replace(/\D/g, ""));
+
+      if (cellActId === actId) {
+        // Шукаємо існуючий бейдж
+        let badge = firstCell.querySelector(".notification-count-badge") as HTMLElement;
+
+        if (count > 0) {
+          // Якщо бейджа немає - створюємо
+          if (!badge) {
+            badge = document.createElement("div");
+            badge.className = "notification-count-badge";
+            firstCell.style.position = "relative";
+            firstCell.appendChild(badge);
+          }
+          badge.textContent = count.toString();
+          badge.style.display = "flex";
+        } else {
+          // Якщо кількість 0 - ховаємо бейдж
+          if (badge) {
+            badge.style.display = "none";
+          }
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Зменшує лічильник повідомлень для акту на 1
+ */
+export function decrementNotificationCount(actId: number) {
+  const currentCount = actNotificationCounts.get(actId) || 0;
+  const newCount = Math.max(0, currentCount - 1);
+  actNotificationCounts.set(actId, newCount);
+  updateNotificationBadgeInDom(actId, newCount);
+}
+
+/**
  * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
  * @param actId - ID акту
  * @param removeToasts - чи видаляти тости (за замовчуванням false)
@@ -437,6 +556,10 @@ export function clearNotificationVisualOnly(actId: number, removeToasts: boolean
 
   if (modifiedActIdsGlobal.has(actId)) {
     modifiedActIdsGlobal.delete(actId);
+
+    // Скидаємо лічильник повідомлень
+    actNotificationCounts.set(actId, 0);
+    updateNotificationBadgeInDom(actId, 0);
 
     const table = document.querySelector(
       "#table-container-modal-sakaz_narad table"
@@ -633,6 +756,9 @@ function createStandardCell(
   td.classList.add("act-table-cell");
 
   if (isActNumberCell) {
+    // Робимо комірку позиціонованою для абсолютного позиціонування бейджа
+    td.style.position = "relative";
+
     // 1. ЗВЕРХУ: ОУ-123 / 01.12.24 малим темно-помаранчевим
     if (act.contrAgent_act && act.contrAgent_act_data) {
       const actNum = act.contrAgent_act;
@@ -664,6 +790,15 @@ function createStandardCell(
         raxunokLabel.textContent = `СФ-${raxunokNum} / ${raxunokDateFormatted}`;
         td.appendChild(raxunokLabel);
       }
+    }
+
+    // 4. БЕЙДЖ З КІЛЬКІСТЮ ПОВІДОМЛЕНЬ (правий верхній кут)
+    const notificationCount = actNotificationCounts.get(actId) || 0;
+    if (notificationCount > 0) {
+      const badge = document.createElement("div");
+      badge.className = "notification-count-badge";
+      badge.textContent = notificationCount.toString();
+      td.appendChild(badge);
     }
   } else {
     td.innerHTML = content;
@@ -1141,12 +1276,13 @@ export async function loadActsTable(
       }
     }
 
-    // ✅ Завантажуємо акти, клієнтів, машини + СПОВІЩЕННЯ
-    const [acts, clients, cars, modifiedIds] = await Promise.all([
+    // ✅ Завантажуємо акти, клієнтів, машини + СПОВІЩЕННЯ + КІЛЬКІСТЬ ПОВІДОМЛЕНЬ
+    const [acts, clients, cars, modifiedIds, notificationCounts] = await Promise.all([
       loadActsFromDB(finalDateFrom, finalDateTo, finalFilterType),
       loadClientsFromDB(),
       loadCarsFromDB(),
       fetchModifiedActIds(), // <-- Завантажуємо існуючі підсвітки
+      fetchActNotificationCounts(), // <-- Завантажуємо кількість повідомлень
     ]);
 
     if (acts === null || clients === null || cars === null) return;
@@ -1154,6 +1290,7 @@ export async function loadActsTable(
     clientsGlobal = clients;
     carsGlobal = cars;
     modifiedActIdsGlobal = modifiedIds; // Зберігаємо глобально
+    actNotificationCounts = notificationCounts; // Зберігаємо кількість повідомлень
 
     actsGlobal = filterActs(acts, searchTerm ?? "", clients, cars);
 

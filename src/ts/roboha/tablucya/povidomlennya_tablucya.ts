@@ -6,7 +6,7 @@ import {
 } from "./mark_notification_deleted";
 import { supabase } from "../../vxid/supabaseClient";
 import { getSavedUserDataFromLocalStorage } from "./users";
-import { clearNotificationVisualOnly } from "./tablucya";
+import { clearNotificationVisualOnly, decrementNotificationCount } from "./tablucya";
 
 export interface ActNotificationPayload {
   act_id: number; // номер акту (обов'язковий)
@@ -405,6 +405,9 @@ export function showRealtimeActNotification(
     if (dbId && typeof dbId === "number") {
       await markNotificationAsDeleted(dbId);
     }
+
+    // Зменшуємо лічильник повідомлень
+    decrementNotificationCount(payload.act_id);
 
     // ✅ Перевіряємо чи залишилися ще повідомлення для цього акту
     await checkAndRemoveActHighlightIfNoNotifications(payload.act_id);

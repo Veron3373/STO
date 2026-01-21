@@ -577,6 +577,39 @@ export function decrementNotificationCount(actId: number) {
 }
 
 /**
+ * Видаляє повідомлення з бази даних для акту, якщо користувач є приймальником
+ */
+async function deleteNotificationsFromDB(actId: number) {
+  console.log(`🗑️ [deleteNotifications] Видаляємо повідомлення для акту #${actId}`);
+
+  // Отримуємо дані поточного користувача
+  const userData = getSavedUserDataFromLocalStorage?.();
+  const currentUserName = userData?.name;
+
+  if (!currentUserName) {
+    console.warn("⚠️ [deleteNotifications] Не вдалося отримати ПІБ користувача");
+    return;
+  }
+
+  try {
+    // Видаляємо повідомлення де pruimalnyk = поточний користувач
+    const { error } = await supabase
+      .from("act_changes_notifications")
+      .delete()
+      .eq("act_id", actId)
+      .eq("pruimalnyk", currentUserName);
+
+    if (error) {
+      console.error("❌ [deleteNotifications] Помилка видалення:", error);
+    } else {
+      console.log(`✅ [deleteNotifications] Повідомлення видалено успішно`);
+    }
+  } catch (err) {
+    console.error("❌ [deleteNotifications] Виняток:", err);
+  }
+}
+
+/**
  * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
  * @param actId - ID акту
  * @param removeToasts - чи видаляти тости (за замовчуванням false)
@@ -588,6 +621,9 @@ export function clearNotificationVisualOnly(actId: number, removeToasts: boolean
 
   if (modifiedActIdsGlobal.has(actId)) {
     modifiedActIdsGlobal.delete(actId);
+
+    // Видаляємо повідомлення з бази даних для приймальника
+    deleteNotificationsFromDB(actId);
 
     // Скидаємо лічильник повідомлень
     actNotificationCounts.set(actId, 0);

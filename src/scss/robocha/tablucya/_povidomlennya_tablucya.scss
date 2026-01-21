@@ -135,6 +135,15 @@
     transform: scale(1.02) !important;
     z-index: 10;
     background-color: #fff;
+
+    // Анімація бейджа при наведенні на весь тост
+    .notification-count-badge {
+      transform: scale(1.15) rotate(5deg);
+      box-shadow:
+        0 4px 12px rgba(239, 68, 68, 0.6),
+        0 0 0 2px rgba(255, 255, 255, 1);
+      animation: badge-pulse 1s ease-in-out infinite;
+    }
   }
 
   /* Закриття по кліку (клас додається з TS) */

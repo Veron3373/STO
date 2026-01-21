@@ -63,6 +63,15 @@ body {
       &:hover {
         background-color: #f7dfba !important;
         opacity: 1;
+
+        // Анімація бейджа при наведенні на рядок акту
+        .notification-count-badge {
+          transform: scale(1.15) rotate(5deg);
+          box-shadow:
+            0 4px 12px rgba(255, 71, 87, 0.6),
+            0 0 0 2px rgba(255, 255, 255, 1);
+          animation: badge-pulse 1s ease-in-out infinite;
+        }
       }
 
       &.selected {
@@ -169,7 +178,7 @@ body {
 /* Підсвічування змінених актів в списку */
 .act-modified {
   background-color: #e3f2fd !important;
-  box-shadow: inset 0 0 0 2px #2196f3 !important;
+  /*   box-shadow: inset 0 0 0 2px #2196f3 !important; */
   transition: all 0.3s ease;
   position: relative;
   z-index: 1;
@@ -210,7 +219,7 @@ body {
   background-color: rgba(33, 150, 243, 0.12) !important;
   position: relative;
   z-index: 1;
-  box-shadow: inset 0 0 0 2px #2196f3 !important;
+  /*   box-shadow: inset 0 0 0 2px #2196f3 !important; */
   transition: background-color 0.3s ease;
 
   &:hover {
@@ -232,27 +241,22 @@ body {
 @keyframes highlight-added {
   0% {
     background-color: transparent;
-    box-shadow: inset 0 0 0 0 transparent;
   }
 
   25% {
     background-color: #e3f2fd;
-    box-shadow: inset 0 0 0 2px #2196f3;
   }
 
   50% {
     background-color: #bbdefb;
-    box-shadow: inset 0 0 0 2px #2196f3;
   }
 
   75% {
     background-color: #e3f2fd;
-    box-shadow: inset 0 0 0 2px #2196f3;
   }
 
   100% {
     background-color: transparent;
-    box-shadow: inset 0 0 0 0 transparent;
   }
 }
 
@@ -264,27 +268,22 @@ body {
 @keyframes highlight-deleted {
   0% {
     background-color: transparent;
-    box-shadow: inset 0 0 0 0 transparent;
   }
 
   25% {
     background-color: #ffcdd2;
-    box-shadow: inset 0 0 0 2px #f44336;
   }
 
   50% {
     background-color: #ffebee;
-    box-shadow: inset 0 0 0 2px #f44336;
   }
 
   75% {
     background-color: #ffcdd2;
-    box-shadow: inset 0 0 0 2px #f44336;
   }
 
   100% {
     background-color: transparent;
-    box-shadow: inset 0 0 0 0 transparent;
   }
 }
 

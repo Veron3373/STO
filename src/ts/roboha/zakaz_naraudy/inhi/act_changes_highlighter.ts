@@ -379,18 +379,30 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
     return;
   }
 
-  // ✅ Для Адміністратора - видаляємо ТІЛЬКИ записи з пустим pruimalnyk
+  // ✅ Для Адміністратора - видаляємо записи з пустим pruimalnyk АБО де він є приймальником
   if (userAccessLevel === "Адміністратор") {
+    const userData = getSavedUserDataFromLocalStorage();
+    const currentUserName = userData?.name || "";
+
     console.log(
-      `🔍 [deleteProcessedChanges] Адміністратор видаляє записи з пустим pruimalnyk для акту #${actId}`
+      `🔍 [deleteProcessedChanges] Адміністратор "${currentUserName}" видаляє записи (пусті або свої) для акту #${actId}`
     );
 
-    // ✅ Видаляємо ТІЛЬКИ ті записи, де pruimalnyk is null
-    const { error } = await supabase
+    let query = supabase
       .from("act_changes_notifications")
       .delete()
-      .eq("act_id", actId)
-      .is("pruimalnyk", null); // ✅ Видаляємо тільки записи з пустим pruimalnyk
+      .eq("act_id", actId);
+
+    if (currentUserName) {
+      // ✅ Видаляємо де pruimalnyk IS NULL або дорівнює імені адміністратора
+      // Синтаксис: стовпець.оператор.значення,стовпець.оператор.значення (через кому = OR)
+      query = query.or(`pruimalnyk.is.null,pruimalnyk.eq.${currentUserName}`);
+    } else {
+      // Якщо ім'я не знайдено, видаляємо тільки пусті
+      query = query.is("pruimalnyk", null);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error("❌ Помилка видалення оброблених змін:", error);
@@ -398,7 +410,7 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
     }
 
     console.log(
-      `🗑️ Видалено оброблені записи з пустим pruimalnyk для акту #${actId} (Адміністратор)`
+      `🗑️ Видалено оброблені записи для акту #${actId} (Адміністратор: ${currentUserName || "невідомий"})`
     );
     return;
   }

@@ -160,6 +160,11 @@ function showError(errorDiv: HTMLElement, message: string): void {
 const settingsCache = new Map<string, { value: boolean; timestamp: number }>();
 const SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 хвилин - час життя кешу
 
+/**
+ * Очищає кеш налаштувань - потрібно викликати при real-time оновленнях
+ */
+
+
 async function getSettingValue(
   settingId: number,
   roleKey: string

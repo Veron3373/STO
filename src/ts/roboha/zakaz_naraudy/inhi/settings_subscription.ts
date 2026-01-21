@@ -8,7 +8,7 @@
 import { supabase } from "../../../vxid/supabaseClient";
 import { globalCache } from "../globalCache";
 import { showNotification } from "./vspluvauhe_povidomlenna";
-import { userAccessLevel, updateUIBasedOnAccess } from "../../tablucya/users";
+import { userAccessLevel, updateUIBasedOnAccess, clearSettingsCache } from "../../tablucya/users";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { enforcePageAccess } from "./page_access_guard";
 import { refreshActsTable } from "../../tablucya/tablucya";
@@ -109,6 +109,8 @@ function updateSMSButtonVisibility(): void {
 
 async function updateMenuVisibility(): Promise<void> {
   try {
+    // 🔑 КРИТИЧНО: Очищаємо кеш налаштувань перед оновленням меню
+    clearSettingsCache();
     await updateUIBasedOnAccess(userAccessLevel);
     console.log(`✅ Меню оновлено для ролі: ${userAccessLevel}`);
   } catch (error) {

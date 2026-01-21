@@ -12,6 +12,7 @@ import {
   canUserViewActs,
   canUserOpenActs,
   getSavedUserDataFromLocalStorage, // ✅ Додано для фільтрації по приймальнику
+  canUserSeePriceColumns, // ✅ Додано для приховування стовпця "Сума"
 } from "./users";
 
 // 👇 ІМПОРТ НОВОЇ ФУНКЦІЇ ПОВІДОМЛЕНЬ
@@ -709,8 +710,9 @@ function renderActsRows(
   clients: any[],
   cars: any[],
   tbody: HTMLTableSectionElement,
-  accessLevel: string | null,
-  modifiedActIds: Set<number>
+  _accessLevel: string | null,
+  modifiedActIds: Set<number>,
+  showSumaColumn: boolean = true
 ): void {
   tbody.innerHTML = "";
 
@@ -755,7 +757,8 @@ function renderActsRows(
     row.appendChild(createClientCell(clientInfo, act.act_id, act));
     row.appendChild(createCarCell(carInfo, act.act_id));
 
-    if (accessLevel !== "Слюсар") {
+    // ✅ Показуємо "Сума" тільки якщо showSumaColumn = true
+    if (showSumaColumn) {
       row.appendChild(
         createStandardCell(
           `${getActAmount(act).toLocaleString("uk-UA")} грн`,
@@ -957,12 +960,14 @@ async function loadCarsFromDB(): Promise<any[] | null> {
 // =============================================================================
 
 function createTableHeader(
-  accessLevel: string | null
+  _accessLevel: string | null,
+  showSumaColumn: boolean = true
 ): HTMLTableSectionElement {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   const headers = ["№ акту", "Дата", "Клієнт 🔽", "Автомобіль"];
-  if (accessLevel !== "Слюсар") headers.push("Сума");
+  // ✅ Показуємо "Сума" тільки якщо showSumaColumn = true
+  if (showSumaColumn) headers.push("Сума");
   
   // Колір шапки з налаштувань
   const tableColor = globalCache.generalSettings?.tableColor || "#177245";
@@ -989,6 +994,11 @@ function updateTableBody(): void {
     "#table-container-modal-sakaz_narad table"
   );
   if (!table) return;
+  
+  // ✅ Перевіряємо чи є стовпець "Сума" в заголовку таблиці
+  const headers = table.querySelectorAll("thead th");
+  const showSumaColumn = Array.from(headers).some(th => th.textContent?.includes("Сума"));
+  
   const newTbody = document.createElement("tbody");
   renderActsRows(
     actsGlobal,
@@ -996,17 +1006,18 @@ function updateTableBody(): void {
     carsGlobal,
     newTbody,
     userAccessLevel,
-    modifiedActIdsGlobal
+    modifiedActIdsGlobal,
+    showSumaColumn
   );
   const oldTbody = table.querySelector("tbody");
   if (oldTbody) oldTbody.replaceWith(newTbody);
 }
 
-function createTable(accessLevel: string | null): HTMLTableElement {
+function createTable(accessLevel: string | null, showSumaColumn: boolean = true): HTMLTableElement {
   const table = document.createElement("table");
   table.style.width = "100%";
   table.style.borderCollapse = "collapse";
-  const thead = createTableHeader(accessLevel);
+  const thead = createTableHeader(accessLevel, showSumaColumn);
   const tbody = document.createElement("tbody");
   renderActsRows(
     actsGlobal,
@@ -1014,7 +1025,8 @@ function createTable(accessLevel: string | null): HTMLTableElement {
     carsGlobal,
     tbody,
     accessLevel,
-    modifiedActIdsGlobal
+    modifiedActIdsGlobal,
+    showSumaColumn
   );
   table.appendChild(thead);
   table.appendChild(tbody);
@@ -1149,7 +1161,9 @@ export async function loadActsTable(
       return;
     }
 
-    const table = createTable(userAccessLevel);
+    // ✅ Перевіряємо налаштування для приховування стовпця "Сума"
+    const showSumaColumn = await canUserSeePriceColumns();
+    const table = createTable(userAccessLevel, showSumaColumn);
     const container = document.getElementById(
       "table-container-modal-sakaz_narad"
     );

@@ -261,6 +261,70 @@ function togglePriceColumnsVisibility(show: boolean): void {
   if (sumsFooter) {
     sumsFooter.style.display = show ? '' : 'none';
   }
+
+  // ✅ Також оновлюємо стовпець "Сума" в таблиці списку актів
+  toggleActsTableSumaColumn(show);
+}
+
+/**
+ * Приховує/показує стовпець "Сума" в таблиці списку актів (без перезавантаження)
+ */
+function toggleActsTableSumaColumn(show: boolean): void {
+  const actsTable = document.querySelector('#table-container-modal-sakaz_narad table');
+  if (!actsTable) return;
+
+  const displayValue = show ? '' : 'none';
+
+  // Знаходимо індекс стовпця "Сума" в заголовку
+  const headers = actsTable.querySelectorAll('thead th');
+  let sumaColumnIndex = -1;
+  
+  headers.forEach((th, index) => {
+    if (th.textContent?.trim() === 'Сума') {
+      sumaColumnIndex = index;
+      (th as HTMLElement).style.display = displayValue;
+    }
+  });
+
+  // Якщо стовпець "Сума" не існує і потрібно показати - додаємо його
+  if (sumaColumnIndex === -1 && show) {
+    const thead = actsTable.querySelector('thead tr');
+    if (thead) {
+      const th = document.createElement('th');
+      th.textContent = 'Сума';
+      // Копіюємо стиль з інших заголовків
+      const firstTh = thead.querySelector('th') as HTMLElement;
+      if (firstTh) {
+        th.style.backgroundColor = firstTh.style.backgroundColor || '#177245';
+        th.style.color = firstTh.style.color || '#fff';
+      }
+      thead.appendChild(th);
+      sumaColumnIndex = headers.length;
+    }
+    
+    // Додаємо комірки з сумами до всіх рядків
+    const rows = actsTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const td = document.createElement('td');
+      td.textContent = '0 грн'; // Значення за замовчуванням, оновиться при refresh
+      row.appendChild(td);
+    });
+    
+    console.log('✅ Стовпець "Сума" додано до таблиці актів');
+    return;
+  }
+
+  // Якщо стовпець існує - приховуємо/показуємо комірки в рядках
+  if (sumaColumnIndex !== -1) {
+    const rows = actsTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells[sumaColumnIndex]) {
+        (cells[sumaColumnIndex] as HTMLElement).style.display = displayValue;
+      }
+    });
+    console.log(`🔄 Стовпець "Сума" в таблиці актів: ${show ? 'показано' : 'приховано'}`);
+  }
 }
 
 async function updateUIBasedOnSettings(): Promise<void> {

@@ -1816,6 +1816,12 @@ function togglePriceColumnsVisibility(show: boolean): void {
   priceCells.forEach((el) => {
     el.style.display = displayValue;
   });
+
+  // ✅ Також приховуємо/показуємо футер з сумами
+  const sumsFooter = document.querySelector<HTMLElement>('.zakaz_narayd-sums-footer');
+  if (sumsFooter) {
+    sumsFooter.style.display = displayValue;
+  }
 }
 
 // ============================================================================

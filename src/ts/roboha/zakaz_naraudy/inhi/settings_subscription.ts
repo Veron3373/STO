@@ -255,6 +255,12 @@ function togglePriceColumnsVisibility(show: boolean): void {
   sumCells.forEach(cell => {
     (cell as HTMLElement).style.display = show ? '' : 'none';
   });
+
+  // ✅ Також приховуємо/показуємо футер з сумами
+  const sumsFooter = document.querySelector<HTMLElement>('.zakaz_narayd-sums-footer');
+  if (sumsFooter) {
+    sumsFooter.style.display = show ? '' : 'none';
+  }
 }
 
 async function updateUIBasedOnSettings(): Promise<void> {

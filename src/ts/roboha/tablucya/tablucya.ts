@@ -292,75 +292,6 @@ function subscribeToActNotifications() {
         }
       }
     )
-    .on(
-      "postgres_changes",
-      {
-        event: "DELETE",
-        schema: "public",
-        table: "act_changes_notifications",
-      },
-      async (payload) => {
-        console.log(
-          "📡 [Realtime DELETE] Видалено повідомлення:",
-          payload.old
-        );
-        const deletedNotification = payload.old;
-
-        if (deletedNotification && deletedNotification.act_id) {
-          const actId = Number(deletedNotification.act_id);
-
-          console.log(`🔄 [Realtime DELETE] Перевіряємо акт #${actId}`);
-
-          // Перевіряємо скільки повідомлень залишилось для цього акту
-          const userData = getSavedUserDataFromLocalStorage?.();
-          const currentUserName = userData?.name;
-
-          if (!currentUserName) return;
-
-          // Підраховуємо залишкові повідомлення
-          const { data, error } = await supabase
-            .from("act_changes_notifications")
-            .select("notification_id", { count: "exact" })
-            .eq("act_id", actId)
-            .eq("pruimalnyk", currentUserName)
-            .eq("delit", false);
-
-          if (error) {
-            console.error("❌ [Realtime DELETE] Помилка підрахунку:", error);
-            return;
-          }
-
-          const remainingCount = data?.length || 0;
-          console.log(`📊 [Realtime DELETE] Залишилось повідомлень: ${remainingCount}`);
-
-          // Оновлюємо лічильник
-          actNotificationCounts.set(actId, remainingCount);
-          updateNotificationBadgeInDom(actId, remainingCount);
-
-          // Якщо повідомлень не залишилось - знімаємо підсвітку
-          if (remainingCount === 0) {
-            console.log(`✅ [Realtime DELETE] Знімаємо підсвітку з акту #${actId}`);
-            modifiedActIdsGlobal.delete(actId);
-
-            // Знімаємо синю підсвітку
-            const table = document.querySelector("#table-container-modal-sakaz_narad table");
-            if (table) {
-              const rows = table.querySelectorAll("tbody tr");
-              rows.forEach((row) => {
-                const firstCell = row.querySelector("td");
-                if (firstCell) {
-                  const cellText = firstCell.textContent || "";
-                  const cellActId = parseInt(cellText.replace(/\D/g, ""));
-                  if (cellActId === actId) {
-                    row.classList.remove("act-modified-blue-pen");
-                  }
-                }
-              });
-            }
-          }
-        }
-      }
-    )
     .subscribe();
 
   // 📢 ПІДПИСКА НА ПОВІДОМЛЕННЯ ПРО ЗАВЕРШЕННЯ РОБІТ СЛЮСАРЕМ
@@ -557,11 +488,16 @@ function highlightRowInDom(actId: number) {
   console.log(`📊 [highlightRowInDom] Знайдено ${rows.length} рядків`);
 
   let found = false;
-  rows.forEach((row) => {
+  rows.forEach((row, index) => {
     const firstCell = row.querySelector("td");
     if (firstCell) {
       const cellText = firstCell.textContent || "";
       const cellActId = parseInt(cellText.replace(/\D/g, ""));
+
+      // Детальний лог для кожного рядка
+      if (index < 5) { // Логуємо перші 5 рядків для прикладу
+        console.log(`  Рядок ${index}: текст="${cellText}", parsed=${cellActId}`);
+      }
 
       if (cellActId === actId) {
         console.log(`✅ [highlightRowInDom] Знайдено рядок для акту #${actId}, додаємо клас`);
@@ -646,79 +582,46 @@ export function decrementNotificationCount(actId: number) {
 }
 
 /**
- * Видаляє повідомлення з бази даних для акту, якщо користувач є приймальником
- */
-async function deleteNotificationsFromDB(actId: number) {
-  console.log(`🗑️ [deleteNotifications] Видаляємо повідомлення для акту #${actId}`);
-
-  // Отримуємо дані поточного користувача
-  const userData = getSavedUserDataFromLocalStorage?.();
-  const currentUserName = userData?.name;
-
-  if (!currentUserName) {
-    console.warn("⚠️ [deleteNotifications] Не вдалося отримати ПІБ користувача");
-    return;
-  }
-
-  try {
-    // Видаляємо повідомлення де pruimalnyk = поточний користувач
-    const { error } = await supabase
-      .from("act_changes_notifications")
-      .delete()
-      .eq("act_id", actId)
-      .eq("pruimalnyk", currentUserName);
-
-    if (error) {
-      console.error("❌ [deleteNotifications] Помилка видалення:", error);
-    } else {
-      console.log(`✅ [deleteNotifications] Повідомлення видалено успішно`);
-    }
-  } catch (err) {
-    console.error("❌ [deleteNotifications] Виняток:", err);
-  }
-}
-
-/**
  * 3. Очищає ВІЗУАЛЬНУ підсвітку в таблиці, АЛЕ НЕ ВИДАЛЯЄ З БАЗИ.
  * @param actId - ID акту
  * @param removeToasts - чи видаляти тости (за замовчуванням false)
  */
-export function clearNotificationVisualOnly(actId: number, removeToasts: boolean = false) {
+export async function clearNotificationVisualOnly(actId: number, removeToasts: boolean = false) {
+  console.log(`🧹 [clearNotificationVisualOnly] Очищення візуальної підсвітки для акту #${actId}`);
+
   // ✅ Працює для Адміністратора та Приймальника
   if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
     return;
 
-  if (modifiedActIdsGlobal.has(actId)) {
-    modifiedActIdsGlobal.delete(actId);
+  // Видаляємо з сету (якщо є)
+  modifiedActIdsGlobal.delete(actId);
 
-    // Видаляємо повідомлення з бази даних для приймальника
-    deleteNotificationsFromDB(actId);
+  // Скидаємо лічильник повідомлень (ЗАВЖДИ, навіть якщо не було в сеті)
+  actNotificationCounts.set(actId, 0);
+  updateNotificationBadgeInDom(actId, 0);
 
-    // Скидаємо лічильник повідомлень
-    actNotificationCounts.set(actId, 0);
-    updateNotificationBadgeInDom(actId, 0);
-
-    const table = document.querySelector(
-      "#table-container-modal-sakaz_narad table"
-    );
-    if (table) {
-      const rows = table.querySelectorAll("tbody tr");
-      rows.forEach((row) => {
-        const firstCell = row.querySelector("td");
-        if (firstCell) {
-          const cellText = firstCell.textContent || "";
-          const cellActId = parseInt(cellText.replace(/\D/g, ""));
-          if (cellActId === actId) {
-            row.classList.remove("act-modified-blue-pen");
-          }
+  // Знімаємо синю підсвітку (ЗАВЖДИ)
+  const table = document.querySelector(
+    "#table-container-modal-sakaz_narad table"
+  );
+  if (table) {
+    const rows = table.querySelectorAll("tbody tr");
+    rows.forEach((row) => {
+      const firstCell = row.querySelector("td");
+      if (firstCell) {
+        const cellText = firstCell.textContent || "";
+        const cellActId = parseInt(cellText.replace(/\D/g, ""));
+        if (cellActId === actId) {
+          row.classList.remove("act-modified-blue-pen");
+          console.log(`✅ [clearNotificationVisualOnly] Знято синю підсвітку з акту #${actId}`);
         }
-      });
-    }
+      }
+    });
+  }
 
-    // Видаляємо повідомлення з UI тільки якщо явно вказано
-    if (removeToasts) {
-      removeNotificationsForAct(actId);
-    }
+  // Видаляємо повідомлення з UI тільки якщо явно вказано
+  if (removeToasts) {
+    removeNotificationsForAct(actId);
   }
 }
 

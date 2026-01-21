@@ -171,8 +171,7 @@ function generateDeletedItemHtml(change: ChangeRecord, index: number): string {
     : "";
 
   // ✅ ВИПРАВЛЕНО: Завжди створюємо комірку зарплати, але приховуємо якщо showZarplata = false
-  const zarplataCellHTML = `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum"${
-      !showZarplata ? ' style="display: none;"' : ''
+  const zarplataCellHTML = `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum"${!showZarplata ? ' style="display: none;"' : ''
     }>${change.zarplata > 0 ? formatNum(change.zarplata) : ""}</td>`;
 
   return `
@@ -183,11 +182,11 @@ function generateDeletedItemHtml(change: ChangeRecord, index: number): string {
             </td>
             ${catalogCellHTML}
             <td class="text-right qty-cell" data-name="id_count">${formatNum(
-              change.kilkist
-            )}</td>
+    change.kilkist
+  )}</td>
             <td class="text-right price-cell" data-name="price">${formatNum(
-              change.cina
-            )}</td>
+    change.cina
+  )}</td>
             <td class="text-right" data-name="sum">${formatNum(sum)}</td>
             ${zarplataCellHTML}
             ${pibMagazinCellHTML}
@@ -462,7 +461,7 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
       await deleteProcessedChanges(actId);
 
       // Знімаємо синю підсвітку з акту в таблиці та видаляємо тости
-      clearNotificationVisualOnly(actId, true);
+      await clearNotificationVisualOnly(actId, true);
 
       console.log(
         `✅ Підсвічування завершено, оброблені записи видалено, синя ручка знята (${userAccessLevel})`

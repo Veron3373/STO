@@ -19,6 +19,7 @@ export interface ActNotificationPayload {
   data?: string; // запасне поле, якщо час прийде сюди
   pib?: string; // ✅ ПІБ клієнта з акту
   auto?: string; // ✅ Дані автомобіля з акту
+  pruimalnyk?: string; // ✅ Для кого адресовано повідомлення
 }
 
 // ==========================
@@ -335,6 +336,7 @@ export function showRealtimeActNotification(
       <div class="header-left">
         <span class="act-id">Акт №${payload.act_id}</span>
         <span class="status-text">${actionText}</span>
+        ${payload.pruimalnyk ? `<span class="receiver-name">→ ${payload.pruimalnyk}</span>` : ''}
       </div>
       <div class="notification-count-badge">...</div>
     </div>
@@ -342,9 +344,8 @@ export function showRealtimeActNotification(
     ${autoLine}
     <div class="toast-meta-row">
       <span class="meta-time-oval">${timeString}</span>
-      <span class="user-surname">${
-        payload.changed_by_surname || "Користувач"
-      }</span>
+      <span class="user-surname">${payload.changed_by_surname || "Користувач"
+    }</span>
     </div>
     <div class="toast-body-row">
       <span class="item-icon">${icon}</span>
@@ -379,10 +380,10 @@ export function showRealtimeActNotification(
   if (actIdElement) {
     actIdElement.addEventListener('click', async (e) => {
       e.stopPropagation(); // Запобігаємо закриттю toast
-      
+
       // Динамічний імпорт функції showModal
       const { showModal } = await import('../zakaz_naraudy/modalMain');
-      
+
       // Відкриваємо акт
       await showModal(payload.act_id);
     });
@@ -391,10 +392,10 @@ export function showRealtimeActNotification(
   // клік по картці – закрити її та позначити як видалене в БД
   toast.addEventListener("click", async (e) => {
     e.stopPropagation();
-    
+
     // Перевіряємо чи цей тост вже закривається
     if (toast.classList.contains("closing")) return;
-    
+
     playCloseSound();
 
     // Спочатку видаляємо з DOM (миттєво)

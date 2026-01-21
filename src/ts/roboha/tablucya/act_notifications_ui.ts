@@ -7,6 +7,7 @@ interface ActNotificationPayload {
   dodav_vudaluv: boolean;
   created_at?: string;
   notification_count?: number;
+  pruimalnyk?: string;
 }
 
 function getOrCreateContainer(): HTMLElement {
@@ -61,6 +62,7 @@ export function showRealtimeActNotification(payload: ActNotificationPayload): vo
        <div class="header-left">
          <span class="act-id">Акт №${payload.act_id}</span>
          <span class="status-text">${actionText}</span>
+         ${payload.pruimalnyk ? `<span class="receiver-name">→ ${payload.pruimalnyk}</span>` : ''}
        </div>
        <div class="notification-count-badge">...</div>
     </div>

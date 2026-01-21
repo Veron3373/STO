@@ -124,6 +124,7 @@ export async function loadUnseenNotifications(): Promise<
         created_at: row.data ?? row.created_at,
         pib: row.pib, // ✅ ПІБ
         auto: row.auto, // ✅ Авто
+        pruimalnyk: row.pruimalnyk, // ✅ Приймальник
       }));
     }
 
@@ -173,6 +174,7 @@ export async function loadUnseenNotifications(): Promise<
         created_at: row.data ?? row.created_at,
         pib: row.pib, // ✅ ПІБ
         auto: row.auto, // ✅ Авто
+        pruimalnyk: row.pruimalnyk, // ✅ Приймальник
       }));
     }
 

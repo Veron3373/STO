@@ -219,6 +219,7 @@ function subscribeToActNotifications() {
             created_at: newNotification.data || newNotification.created_at, // поле timestamp з БД
             pib: newNotification.pib, // ✅ ПІБ клієнта
             auto: newNotification.auto, // ✅ Автомобіль
+            pruimalnyk: newNotification.pruimalnyk, // ✅ Приймальник
           });
         }
       }
@@ -968,10 +969,10 @@ function createTableHeader(
   const headers = ["№ акту", "Дата", "Клієнт 🔽", "Автомобіль"];
   // ✅ Показуємо "Сума" тільки якщо showSumaColumn = true
   if (showSumaColumn) headers.push("Сума");
-  
+
   // Колір шапки з налаштувань
   const tableColor = globalCache.generalSettings?.tableColor || "#177245";
-  
+
   headers.forEach((header) => {
     const th = document.createElement("th");
     th.textContent = header;
@@ -994,11 +995,11 @@ function updateTableBody(): void {
     "#table-container-modal-sakaz_narad table"
   );
   if (!table) return;
-  
+
   // ✅ Перевіряємо чи є стовпець "Сума" в заголовку таблиці
   const headers = table.querySelectorAll("thead th");
   const showSumaColumn = Array.from(headers).some(th => th.textContent?.includes("Сума"));
-  
+
   const newTbody = document.createElement("tbody");
   renderActsRows(
     actsGlobal,
@@ -1285,7 +1286,7 @@ export async function initializeActsSystem(): Promise<void> {
       await loadGeneralSettingsFromDB();
       markGeneralSettingsAsLoaded();
     }
-    
+
     const accessLevel = await showLoginModalBeforeTable();
     if (!accessLevel) {
       showAuthRequiredMessage();

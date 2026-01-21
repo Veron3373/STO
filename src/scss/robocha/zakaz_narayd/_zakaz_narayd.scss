@@ -126,6 +126,15 @@ body {
   }
 }
 
+// Інформація про приймальника (хто створив/редагував акт)
+.act-pruimalnyk-info {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  align-self: center;
+  margin-right: -10px;
+}
+
 .zakaz_narayd-modal-body {
   padding: 0;
   overflow-y: auto;

@@ -1281,8 +1281,13 @@ function renderModalContent(
     : "zakaz_narayd-header";
 
   // Генеруємо HTML кнопок для header
+  const pruimalnykDisplay = act.pruimalnyk 
+    ? `<span class="act-pruimalnyk-info">${act.pruimalnyk}</span>` 
+    : "";
+
   const headerButtons = `
     <div class="zakaz_narayd-header-buttons">
+      ${pruimalnykDisplay}
       ${showLockButton
       ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}">
                    ${isClosed ? "🔒" : "🗝️"}

@@ -114,8 +114,8 @@ export async function createActInDatabase(
     console.log("✅ Акт створено о", dateOn, "з ID:", newAct.act_id);
 
     // ✅ Записуємо інформацію про приймальника при створенні нового акту
-    // ТІЛЬКИ якщо користувач має рівень доступу "Приймальник"
-    if (userAccessLevel === "Приймальник") {
+    // Для всіх ОКРІМ Слюсаря (Приймальник, Адміністратор, Запчастист, Складовщик)
+    if (userAccessLevel !== "Слюсар") {
       const userData = getSavedUserDataFromLocalStorage?.();
       if (userData && userData.name) {
         const { error: updateError } = await supabase
@@ -135,7 +135,7 @@ export async function createActInDatabase(
       }
     } else {
       console.log(
-        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" - pruimalnyk не записується при створенні акту`
+        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" (Слюсар) - pruimalnyk не записується при створенні акту`
       );
     }
 

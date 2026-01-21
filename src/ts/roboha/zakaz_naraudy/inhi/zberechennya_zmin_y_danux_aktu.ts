@@ -1453,13 +1453,13 @@ async function syncPruimalnikHistory(
 
 /**
  * Записує інформацію про приймальника в таблицю acts
- * ТІЛЬКИ для користувачів з рівнем доступу "Приймальник"
+ * Для всіх користувачів ОКРІМ Слюсаря (Приймальник, Адміністратор, Запчастист, Складовщик)
  * @param actId - ID акту
  */
 async function savePruimalnykToActs(actId: number): Promise<void> {
   try {
-    // ✅ Перевірка рівня доступу - записуємо ТІЛЬКИ для Приймальника
-    if (userAccessLevel !== "Приймальник") {
+    // ✅ Перевірка рівня доступу - НЕ записуємо для Слюсаря
+    if (userAccessLevel === "Слюсар") {
       console.log(
         `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" - pruimalnyk НЕ перезаписується`
       );

@@ -110,6 +110,20 @@ export function showRealtimeActNotification(payload: ActNotificationPayload): vo
     }, 450);
   };
 
+  // Обробник кліку на номер акту для його відкриття
+  const actIdElement = toast.querySelector('.act-id');
+  if (actIdElement) {
+    actIdElement.addEventListener('click', async (e) => {
+      e.stopPropagation(); // Запобігаємо закриттю toast
+
+      // Динамічний імпорт функції showModal
+      const { showModal } = await import('../zakaz_naraudy/modalMain');
+
+      // Відкриваємо акт
+      await showModal(payload.act_id);
+    });
+  }
+
   toast.addEventListener("click", closeToast);
   playNotificationSound(isAdded);
 }

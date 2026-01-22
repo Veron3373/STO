@@ -300,6 +300,9 @@ async function syncSlyusarsHistoryForAct(params: {
     
     console.log(`📚 [save_work] Попередні записи з БД для слюсаря "${slyusarName}", акт #${params.actId}:`, prevWorks);
     
+    // ✅ Хелпер для нормалізації назви (нечутливий до регістру та пробілів)
+    const normalizeName = (name: string) => (name || "").toLowerCase().replace(/\s+/g, " ").trim();
+    
     // ✅ КРИТИЧНО: Створюємо Map для ВСІХ методів пошуку попередніх записів
     const prevWorksById = new Map<string, any>();
     const prevWorksByName = new Map<string, any>();
@@ -309,11 +312,12 @@ async function syncSlyusarsHistoryForAct(params: {
       if (pw.recordId) {
         prevWorksById.set(pw.recordId, pw);
       }
-      // За назвою роботи (fallback)
+      // За назвою роботи (fallback) - НОРМАЛІЗОВАНО
       if (pw.Робота) {
-        // Якщо ще немає запису з такою назвою, або цей новіший - зберігаємо
-        if (!prevWorksByName.has(pw.Робота)) {
-          prevWorksByName.set(pw.Робота, pw);
+        const normalizedName = normalizeName(pw.Робота);
+        // Якщо ще немає запису з такою назвою - зберігаємо
+        if (!prevWorksByName.has(normalizedName)) {
+          prevWorksByName.set(normalizedName, pw);
         }
       }
     }
@@ -353,25 +357,32 @@ async function syncSlyusarsHistoryForAct(params: {
       const currentRecordId = r.recordId || "";
       let sourceForDates: any = null;
       
-      console.log(`🔍 [save_work] Пошук попереднього запису для роботи "${fullWorkName}"`);
-      console.log(`   recordId з DOM: "${currentRecordId || 'немає'}"`);
-      console.log(`   Кількість попередніх записів в БД: ${prevWorks.length}`);
+      console.log(`🔍 [save_work] === ПОШУК ПОПЕРЕДНЬОГО ЗАПИСУ ===`);
+      console.log(`   📝 Робота: "${fullWorkName}"`);
+      console.log(`   🔑 recordId з DOM: "${currentRecordId || 'НЕМАЄ!'}"`);
+      console.log(`   📊 Кількість попередніх записів в БД: ${prevWorks.length}`);
       
-      // ✅ КРИТИЧНО: Шукаємо попередній запис для збереження дат "Записано" та "Розраховано"
-      // ВАЖЛИВО: Дати НІКОЛИ не повинні втрачатися!
+      // ✅ ГОЛОВНИЙ СПОСІБ: Пошук за recordId (унікальний і точний)
+      // recordId гарантує що ми знаходимо саме той запис, який редагуємо
       
       // 1. ПРІОРИТЕТ №1: Пошук за recordId (найточніший спосіб)
       if (currentRecordId && prevWorksById.has(currentRecordId)) {
         sourceForDates = prevWorksById.get(currentRecordId);
-        console.log(`✅ [save_work] Знайдено за recordId "${currentRecordId}":`, {
+        console.log(`✅ [save_work] ЗНАЙДЕНО за recordId "${currentRecordId}":`, {
+          Робота: sourceForDates?.Робота,
           Записано: sourceForDates?.Записано,
           Розраховано: sourceForDates?.Розраховано,
+          Зарплата: sourceForDates?.Зарплата,
         });
+      } else if (currentRecordId) {
+        console.log(`⚠️ [save_work] recordId "${currentRecordId}" НЕ знайдено в попередніх записах!`);
+        console.log(`   Доступні recordId в БД:`, Array.from(prevWorksById.keys()));
       }
       
-      // 2. ПРІОРИТЕТ №2: Пошук за назвою роботи (для записів без recordId або нових)
+      // 2. ПРІОРИТЕТ №2: Пошук за назвою роботи (для записів без recordId або нових) - НОРМАЛІЗОВАНО
       if (!sourceForDates && fullWorkName) {
-        const prevByName = prevWorksByName.get(fullWorkName);
+        const normalizedFullWorkName = normalizeName(fullWorkName);
+        const prevByName = prevWorksByName.get(normalizedFullWorkName);
         if (prevByName) {
           sourceForDates = prevByName;
           console.log(`✅ [save_work] Знайдено за назвою "${fullWorkName}":`, {
@@ -382,12 +393,14 @@ async function syncSlyusarsHistoryForAct(params: {
         }
       }
       
-      // 3. ПРІОРИТЕТ №3: Пошук за частковим збігом назви (для скорочених назв)
+      // 3. ПРІОРИТЕТ №3: Пошук за частковим збігом назви (для скорочених назв) - НОРМАЛІЗОВАНО
       if (!sourceForDates && fullWorkName) {
+        const normalizedFullWorkName = normalizeName(fullWorkName);
         for (const pw of prevWorks) {
-          // Перевіряємо часткове співпадіння (початок назви)
-          if (pw.Робота && (pw.Робота.startsWith(fullWorkName.substring(0, 30)) || 
-                            fullWorkName.startsWith(pw.Робота.substring(0, 30)))) {
+          // Перевіряємо часткове співпадіння (початок назви) - нечутливе до регістру
+          const normalizedPwName = normalizeName(pw.Робота || "");
+          if (normalizedPwName && (normalizedPwName.startsWith(normalizedFullWorkName.substring(0, 30)) || 
+                            normalizedFullWorkName.startsWith(normalizedPwName.substring(0, 30)))) {
             sourceForDates = pw;
             console.log(`✅ [save_work] Знайдено за частковим збігом:`, {
               Записано: sourceForDates?.Записано,
@@ -410,20 +423,21 @@ async function syncSlyusarsHistoryForAct(params: {
       
       console.log(`📅 [save_work] Дати з попереднього запису: Записано="${recordedDate}", Розраховано="${calculatedDate}"`);
       
-      // ✅ Визначаємо recordId: ПРІОРИТЕТ - з попереднього запису, потім з DOM, потім генеруємо
+      // ✅ ВИПРАВЛЕНО v4.0: Визначаємо recordId
+      // ПРІОРИТЕТ: DOM → попередній запис → генерувати новий
       let recordId = "";
       
-      // 1. Спочатку беремо з попереднього запису (найнадійніше)
-      if (sourceForDates?.recordId) {
-        recordId = sourceForDates.recordId;
-        console.log(`🔑 [save_work] recordId з попереднього запису: ${recordId}`);
-      }
-      // 2. Якщо немає - беремо з DOM (якщо є)
-      else if (currentRecordId) {
+      // 1. ГОЛОВНИЙ: беремо з DOM (він вже унікальний і прив'язаний до рядка)
+      if (currentRecordId) {
         recordId = currentRecordId;
         console.log(`🔑 [save_work] recordId з DOM: ${recordId}`);
       }
-      // 3. Якщо немає ніде - генеруємо новий
+      // 2. Якщо в DOM немає - беремо з попереднього запису (для міграції старих даних)
+      else if (sourceForDates?.recordId) {
+        recordId = sourceForDates.recordId;
+        console.log(`🔑 [save_work] recordId з попереднього запису (міграція): ${recordId}`);
+      }
+      // 3. Якщо немає ніде - генеруємо новий (для нових робіт)
       else {
         recordId = `${params.actId}_${slyusarName}_${idx}_${Date.now()}`;
         console.log(`🆕 [save_work] Згенеровано новий recordId: ${recordId}`);

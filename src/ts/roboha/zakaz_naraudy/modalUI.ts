@@ -222,7 +222,7 @@ export function getRecordIdFromHistory(
  * @param recordId - унікальний ID запису (пріоритетний спосіб)
  * @returns зарплату > 0 або null (якщо 0 або немає - ігноруємо)
  */
-function getSlyusarSalaryFromHistory(
+export function getSlyusarSalaryFromHistory(
   slyusarName: string,
   workName: string,
   actId: number | null,

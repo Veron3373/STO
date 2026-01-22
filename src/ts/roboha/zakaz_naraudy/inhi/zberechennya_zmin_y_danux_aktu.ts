@@ -13,7 +13,7 @@ import {
   invalidateGlobalDataCache,
 } from "../globalCache";
 import type { ActItem } from "../globalCache";
-import { updateCalculatedSumsInFooter } from "../modalUI";
+import { updateCalculatedSumsInFooter, getSlyusarSalaryFromHistory } from "../modalUI";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import { refreshQtyWarningsIn } from "./kastomna_tabluca";
 import { syncShopsOnActSave } from "./save_shops";
@@ -393,17 +393,48 @@ export function parseTableRows(): ParsedItem[] {
       catalog = cachedData.catalog;
     }
 
-    // ✅ ВИПРАВЛЕНО: Зарплата завжди береться з DOM (незалежно від видимості колонки)
-    // Причина: При додаванні нової роботи вона ще не в кеші, а зарплата вже є в DOM
-    if (slyusarSumCell) {
-      const rawSalaryText = slyusarSumCell.textContent;
-      slyusarSum = parseNum(rawSalaryText);
-      console.log(`💰 [parseTableRows] Зарплата з DOM: rawText="${rawSalaryText}", parsed=${slyusarSum}`);
-    } else if (cachedData) {
-      slyusarSum = cachedData.slyusarSum || 0;
-      console.log(`💰 [parseTableRows] Зарплата з кешу: ${slyusarSum}`);
+    // ✅ Зчитуємо recordId з атрибута рядка (для точного пошуку при однакових роботах)
+    const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
+
+    // ✅ ВИПРАВЛЕНО v3.0: Для РОБІТ перевіряємо спочатку історію слюсаря!
+    // Якщо в історії є збережена зарплата > 0 - використовуємо її (не перетираємо!)
+    // Це критично важливо коли стовпець "Зар-та" прихований
+    if (type === "work" && pibMagazin && globalCache.currentActId) {
+      const historySalary = getSlyusarSalaryFromHistory(
+        pibMagazin, // слюсар = ПІБ_Магазин
+        name,       // назва роботи
+        globalCache.currentActId,
+        undefined,  // rowIndex - не передаємо бо не маємо індексу тут
+        recordId    // recordId для точного пошуку
+      );
+      
+      if (historySalary !== null && historySalary > 0) {
+        // ✅ В історії є збережена зарплата > 0 - використовуємо її!
+        slyusarSum = historySalary;
+        console.log(`💰 [parseTableRows] Зарплата з ІСТОРІЇ слюсаря "${pibMagazin}": ${slyusarSum} (НЕ перетираємо!)`);
+      } else {
+        // В історії немає або = 0 - беремо з DOM
+        if (slyusarSumCell) {
+          const rawSalaryText = slyusarSumCell.textContent;
+          slyusarSum = parseNum(rawSalaryText);
+          console.log(`💰 [parseTableRows] Зарплата з DOM (історія пуста): rawText="${rawSalaryText}", parsed=${slyusarSum}`);
+        } else if (cachedData) {
+          slyusarSum = cachedData.slyusarSum || 0;
+          console.log(`💰 [parseTableRows] Зарплата з кешу (історія пуста): ${slyusarSum}`);
+        }
+      }
     } else {
-      console.log(`⚠️ [parseTableRows] Зарплата: slyusarSumCell=null, cachedData=null, встановлено 0`);
+      // Для деталей або якщо немає слюсаря - беремо з DOM як раніше
+      if (slyusarSumCell) {
+        const rawSalaryText = slyusarSumCell.textContent;
+        slyusarSum = parseNum(rawSalaryText);
+        console.log(`💰 [parseTableRows] Зарплата з DOM: rawText="${rawSalaryText}", parsed=${slyusarSum}`);
+      } else if (cachedData) {
+        slyusarSum = cachedData.slyusarSum || 0;
+        console.log(`💰 [parseTableRows] Зарплата з кешу: ${slyusarSum}`);
+      } else {
+        console.log(`⚠️ [parseTableRows] Зарплата: slyusarSumCell=null, cachedData=null, встановлено 0`);
+      }
     }
 
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
@@ -411,9 +442,6 @@ export function parseTableRows(): ParsedItem[] {
     const slyusar_id = nameCell.getAttribute("data-slyusar-id")
       ? Number(nameCell.getAttribute("data-slyusar-id"))
       : null;
-    
-    // ✅ Зчитуємо recordId з атрибута рядка (для точного пошуку при однакових роботах)
-    const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
 
     // 📊 ДІАГНОСТИКА: Логуємо зібрані дані з DOM
     console.log(`📊 [parseTableRows] Рядок DOM:`, {

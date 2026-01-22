@@ -309,11 +309,17 @@ export function calculateSlyusarSum(totalSum: number, percent: number): number {
 }
 
 /**
- * Оновлює зарплату слюсаря в рядку (async версія) - ВИПРАВЛЕНА ВЕРСІЯ 2.0
+ * Оновлює зарплату слюсаря в рядку (async версія) - ВИПРАВЛЕНА ВЕРСІЯ 3.0
+ * 
+ * ЛОГІКА:
+ * - Якщо в історії слюсаря для цієї роботи вже є збережена зарплата > 0 → НЕ перераховуємо
+ * - Якщо в історії = 0 або немає запису → перераховуємо за відсотком
+ * - Це дозволяє зберегти вручну введену зарплату при зміні ціни/кількості
  */
 async function updateSlyusarSalaryInRow(
   row: HTMLTableRowElement,
-  rowIndex?: number // Індекс рядка для точного пошуку при однакових роботах
+  rowIndex?: number, // Індекс рядка для точного пошуку при однакових роботах
+  isInitialLoad: boolean = false // ✅ НОВИЙ параметр: true = ініціалізація при завантаженні
 ): Promise<void> {
   // ✅ ВИПРАВЛЕНО: Зарплата розраховується ЗАВЖДИ, навіть якщо стовпець прихований
   // Це потрібно для коректного розрахунку прибутку приймальника
@@ -372,9 +378,18 @@ async function updateSlyusarSalaryInRow(
     recordId  // ✅ Передаємо recordId для найточнішого пошуку
   );
 
-  if (historySalary !== null) {
-    console.log(`✅ Встановлюємо зарплату з історії: ${historySalary}`);
-    slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
+  // ✅ НОВА ЛОГІКА v3.0:
+  // Якщо в історії є збережена зарплата > 0 → НЕ перераховуємо при зміні ціни/кількості
+  // Тільки при ініціалізації (isInitialLoad=true) встановлюємо значення з історії
+  if (historySalary !== null && historySalary > 0) {
+    if (isInitialLoad) {
+      // При завантаженні акту - підтягуємо зарплату з історії
+      console.log(`✅ [Ініціалізація] Встановлюємо зарплату з історії: ${historySalary}`);
+      slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
+    } else {
+      // При зміні ціни/кількості - НЕ перераховуємо, залишаємо поточне значення
+      console.log(`🔒 [Зміна ціни/к-ті] В історії є зарплата ${historySalary} > 0 - НЕ перераховуємо, залишаємо як є`);
+    }
     return;
   }
 
@@ -385,11 +400,11 @@ async function updateSlyusarSalaryInRow(
     return;
   }
 
-  // 3. Якщо є сума, але немає в історії - рахуємо від відсотка
-  console.log(`⚙️ Зарплати в історії немає для "${workName}", рахуємо від відсотка. rowIndex=${rowIndex}, recordId=${recordId}`);
+  // 3. Якщо є сума, але в історії = 0 або немає - рахуємо від відсотка
+  console.log(`⚙️ Зарплати в історії немає (або = 0) для "${workName}", рахуємо від відсотка. rowIndex=${rowIndex}, recordId=${recordId}`);
   const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-  console.log(`💰 ПЕРЕЗАПИСУЄМО зарплату на ${calculatedSalary} (${percent}% від ${totalSum}) для "${workName}"`);
+  console.log(`💰 Перераховуємо зарплату на ${calculatedSalary} (${percent}% від ${totalSum}) для "${workName}"`);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 }
 
@@ -487,6 +502,7 @@ async function processWorkRowsWithIndex(
 /**
  * Оновлює "Зар-та" для всіх робіт у таблиці з урахуванням історії/відсотків
  * Використовується з modalMain.ts одразу після рендеру модалки.
+ * ✅ isInitialLoad=true - підтягує зарплати з історії слюсаря
  */
 export async function updateAllSlyusarSumsFromHistory(): Promise<void> {
   // ✅ ВИПРАВЛЕНО: Зарплата оновлюється ЗАВЖДИ, навіть якщо стовпець прихований
@@ -497,13 +513,15 @@ export async function updateAllSlyusarSumsFromHistory(): Promise<void> {
   if (!tableBody) return;
 
   // ✅ ВИПРАВЛЕНО: тепер чекаємо завершення всіх async операцій
+  // ✅ isInitialLoad=true - при ініціалізації підтягуємо зарплату з історії
   await processWorkRowsWithIndex(tableBody, async (row, _slyusarName, _workName, currentIndex) => {
-    await updateSlyusarSalaryInRow(row, currentIndex);
+    await updateSlyusarSalaryInRow(row, currentIndex, true);
   });
 }
 
 /**
  * Перераховує суму в рядку і оновлює зарплату слюсаря (async)
+ * ✅ isInitialLoad=false - НЕ перераховує зарплату якщо в історії слюсаря вже є збережене значення > 0
  */
 export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
   const price = parseNumber(
@@ -521,8 +539,8 @@ export async function calculateRowSum(row: HTMLTableRowElement): Promise<void> {
     sumCell.textContent =
       sum === 0 ? "" : formatNumberWithSpaces(Math.round(sum));
 
-  // ✅ ВИПРАВЛЕНО: Зарплата оновлюється ЗАВЖДИ для коректного збереження
-  await updateSlyusarSalaryInRow(row);
+  // ✅ isInitialLoad=false - при зміні ціни/к-ті НЕ перераховуємо якщо в історії є зарплата > 0
+  await updateSlyusarSalaryInRow(row, undefined, false);
   updateCalculatedSumsInFooter();
 }
 

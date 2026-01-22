@@ -60,3 +60,6 @@ SETUP_FILES_INFO.md
 # Visual guides (generated images)
 setup_config_guide*.png
 project_clone_workflow*.png
+
+.vercel
+.env*.local

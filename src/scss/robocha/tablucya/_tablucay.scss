@@ -216,14 +216,12 @@ body {
 
 /* Клас для рядків актів (Синя ручка) */
 .act-modified-blue-pen {
-  background-color: transparent !important;
   position: relative;
   z-index: 1;
   /*   box-shadow: inset 0 0 0 2px #2196f3 !important; */
   transition: background-color 0.3s ease;
 
   &:hover {
-    background-color: rgba(33, 150, 243, 0.25) !important;
     cursor: pointer;
   }
 }

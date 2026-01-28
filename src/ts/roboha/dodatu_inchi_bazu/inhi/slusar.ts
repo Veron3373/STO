@@ -396,7 +396,7 @@ const createCustomDropdown = (
       return null;
     })
     .filter((val): val is string => typeof val === "string" && val.length > 0);
-  const uniqueValues = [...new Set(values)].sort();
+  const uniqueValues = [...new Set(values)];
 
   const renderSuggestions = (filter: string) => {
     dropdown.innerHTML = "";
@@ -408,8 +408,18 @@ const createCustomDropdown = (
       return;
     }
 
-    filtered.forEach((val) => {
-      // Знаходимо дані співробітника з currentLoadedData
+    // Порядок рівнів доступу для сортування
+    const accessOrder = {
+      "Адміністратор": 1,
+      "Приймальник": 2,
+      "Слюсар": 3,
+      "Запчастист": 4,
+      "Складовщик": 5,
+    };
+
+    // Створюємо масив з даними для сортування
+    const itemsWithData = filtered.map((val) => {
+      // Знаходимо дані співробітника
       let employeeData: any = null;
       for (const item of currentLoadedData) {
         let parsed = item;
@@ -437,7 +447,27 @@ const createCustomDropdown = (
           }
         }
       }
+      return { name: val, data: employeeData };
+    });
 
+    // Сортуємо: спочатку по рівню доступу, потім по алфавіту
+    itemsWithData.sort((a, b) => {
+      const accessA = a.data?.Доступ || "";
+      const accessB = b.data?.Доступ || "";
+
+      const orderA = accessOrder[accessA as keyof typeof accessOrder] || 999;
+      const orderB = accessOrder[accessB as keyof typeof accessOrder] || 999;
+
+      // Спочатку порівнюємо по рівню доступу
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      // Якщо рівень доступу однаковий, сортуємо по алфавіту
+      return a.name.localeCompare(b.name, 'uk');
+    });
+
+    itemsWithData.forEach(({ name: val, data: employeeData }) => {
       const item = document.createElement("div");
       item.className = "custom-dropdown-item";
       item.style.display = "flex";

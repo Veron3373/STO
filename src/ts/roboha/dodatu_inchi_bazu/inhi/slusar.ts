@@ -407,20 +407,123 @@ const createCustomDropdown = (
       dropdown.classList.add("hidden-all_other_bases");
       return;
     }
+
     filtered.forEach((val) => {
+      // Знаходимо дані співробітника з currentLoadedData
+      let employeeData: any = null;
+      for (const item of currentLoadedData) {
+        let parsed = item;
+        if (needsJsonParsing && typeof item[field] === "string") {
+          try {
+            parsed = { ...item, [field]: JSON.parse(item[field]) };
+          } catch {
+            continue;
+          }
+        }
+        let valueToCheck: string | undefined;
+        if (deepPath) {
+          valueToCheck = extractNestedValue(parsed[field], deepPath);
+        } else {
+          valueToCheck = needsJsonParsing || typeof item[field] === "object"
+            ? parsed[field]
+            : item[field];
+        }
+        if (valueToCheck !== null && valueToCheck !== undefined) {
+          if (String(valueToCheck).trim() === val) {
+            employeeData = needsJsonParsing && typeof item[field] === "string"
+              ? JSON.parse(item[field])
+              : item[field];
+            break;
+          }
+        }
+      }
+
       const item = document.createElement("div");
       item.className = "custom-dropdown-item";
-      item.textContent = val;
+      item.style.display = "flex";
+      item.style.justifyContent = "space-between";
+      item.style.alignItems = "center";
+      item.style.padding = "8px 12px";
+      item.style.cursor = "pointer";
+
+      // Ліва частина - ПІБ
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = val;
+      nameSpan.style.flex = "1";
+
+      // Права частина - Доступ та Пароль
+      const infoSpan = document.createElement("span");
+      infoSpan.style.display = "flex";
+      infoSpan.style.gap = "15px";
+      infoSpan.style.fontSize = "0.9em";
+      infoSpan.style.color = "#666";
+
+      if (employeeData) {
+        const access = employeeData.Доступ || "";
+        const password = employeeData.Пароль || "";
+        const isAdmin = access === "Адміністратор";
+
+        // Показуємо рівень доступу
+        const accessSpan = document.createElement("span");
+        accessSpan.textContent = access;
+        accessSpan.style.fontWeight = "500";
+        accessSpan.style.minWidth = "120px";
+
+        // Показуємо пароль (зірочки для адміністраторів)
+        const passwordSpan = document.createElement("span");
+        passwordSpan.style.minWidth = "80px";
+        passwordSpan.style.fontFamily = "monospace";
+
+        if (isAdmin) {
+          // Для адміністраторів завжди зірочки
+          passwordSpan.textContent = "****";
+          passwordSpan.title = "Пароль адміністратора прихований";
+        } else {
+          // Для інших - зірочки, але при ховері показуємо пароль
+          passwordSpan.textContent = "****";
+          passwordSpan.dataset.realPassword = password;
+        }
+
+        infoSpan.appendChild(accessSpan);
+        infoSpan.appendChild(passwordSpan);
+      }
+
+      item.appendChild(nameSpan);
+      item.appendChild(infoSpan);
 
       item.onmouseenter = () => {
         item.classList.add("selected");
         item.style.backgroundColor = "#e3f2fd";
+
+        // Показуємо реальний пароль при ховері (тільки для не-адміністраторів)
+        const passwordSpan = infoSpan.querySelector("span:last-child") as HTMLElement;
+        if (passwordSpan && passwordSpan.dataset.realPassword) {
+          passwordSpan.textContent = passwordSpan.dataset.realPassword;
+        }
+
         Array.from(dropdown.children).forEach((child) => {
           if (child !== item) {
             child.classList.remove("selected");
             (child as HTMLElement).style.backgroundColor = "white";
+
+            // Ховаємо пароль для інших елементів
+            const otherInfoSpan = (child as HTMLElement).querySelector("span:last-child");
+            if (otherInfoSpan) {
+              const otherPasswordSpan = otherInfoSpan.querySelector("span:last-child") as HTMLElement;
+              if (otherPasswordSpan && otherPasswordSpan.dataset.realPassword) {
+                otherPasswordSpan.textContent = "****";
+              }
+            }
           }
         });
+      };
+
+      item.onmouseleave = () => {
+        // Повертаємо зірочки при виході миші
+        const passwordSpan = infoSpan.querySelector("span:last-child") as HTMLElement;
+        if (passwordSpan && passwordSpan.dataset.realPassword) {
+          passwordSpan.textContent = "****";
+        }
       };
 
       const onSelect = (e?: Event) => {

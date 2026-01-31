@@ -21,7 +21,7 @@ let presenceChannel: any = null;
  */
 export async function subscribeToActPresence(
     actId: number,
-    onUnlock?: () => void
+    onUnlock?: () => Promise<void> | void
 ): Promise<{
     isLocked: boolean;
     lockedBy: string | null;
@@ -115,7 +115,7 @@ export async function subscribeToActPresence(
             console.log("👋 User left:", key, leftPresences);
             handlePresenceChange(); // Викликаємо загальну логіку
         })
-        .on("broadcast", { event: "act_saved" }, (payload: any) => {
+        .on("broadcast", { event: "act_saved" }, async (payload: any) => {
             console.log("📢 Received act_saved broadcast:", payload);
 
             // Перевіряємо, чи ми заблоковані (значить ми не той, хто зберіг)
@@ -125,7 +125,12 @@ export async function subscribeToActPresence(
 
             if (isLocked && onUnlock) {
                 console.log("🔄 Auto-refreshing data due to remote save...");
-                onUnlock();
+                await onUnlock();
+
+                // Після оновлення UI злітає блокування (бо рендериться новий чистий HTML)
+                // Тому примусово викликаємо handlePresenceChange, щоб відновити стан (червоний колір і блокування)
+                console.log("🔒 Re-applying lock state after refresh...");
+                handlePresenceChange();
             }
         })
         .subscribe(async (status: string) => {

@@ -132,36 +132,47 @@ function updateUIBasedOnPresence(): void {
     const otherUsers = Array.from(activeUsers.entries()).filter(([key]) => key !== currentUserName);
 
     if (otherUsers.length > 0) {
-        // Є інші користувачі - треба визначити хто був першим
+        // Є інші користувачі.
 
-        if (!currentUserName) {
-            console.error("❌ Неможливо визначити пріоритет: currentUserName відсутній");
+        // 1. Якщо нас ще немає в списку (ми тільки зайшли), але інші є -> БЛОКУЄМО
+        if (!currentUserName || !activeUsers.has(currentUserName)) {
+            const firstUser = otherUsers[0];
+            const lockedBy = firstUser[1].userName;
+            console.log(`⚠️ Ми тільки зайшли (нас ще немає в списку). Акт вже відкритий користувачем: ${lockedBy}`);
+            setLockedUI(lockedBy);
             return;
         }
 
-        // Отримуємо час приєднання поточного користувача
-        const currentUserData = activeUsers.get(currentUserName);
-        if (!currentUserData) {
-            console.warn("⚠️ Не знайдено дані поточного користувача");
-            return;
-        }
+        const myName = currentUserName; // Гарантуємо що це string для замикання
+
+        // 2. Якщо ми є в списку, порівнюємо час
+        const currentUserData = activeUsers.get(myName);
+        // Ця перевірка тепер зайва бо ми перевірили has() вище, але для TS залишимо
+        if (!currentUserData) return;
 
         const currentUserJoinedAt = new Date(currentUserData.joinedAt).getTime();
 
-        // Перевіряємо чи є хтось хто приєднався раніше
+        // Шукаємо користувачів, які приєдналися раніше за нас
         const earlierUsers = otherUsers.filter(([_, userData]) => {
             const otherUserJoinedAt = new Date(userData.joinedAt).getTime();
+            // Якщо час однаковий (рідкісний випадок), використовуємо сортування по імені для стабільності
+            if (otherUserJoinedAt === currentUserJoinedAt) {
+                return userData.userName < myName;
+            }
             return otherUserJoinedAt < currentUserJoinedAt;
         });
 
         if (earlierUsers.length > 0) {
-            // Є користувачі які приєдналися раніше - МИ другі, блокуємо себе
+            // Хтось зайшов раніше за нас -> БЛОКУЄМО
+            // Сортуємо "ранішніх" по часу, щоб знайти найпершого
+            earlierUsers.sort((a, b) => new Date(a[1].joinedAt).getTime() - new Date(b[1].joinedAt).getTime());
+
             const firstUser = earlierUsers[0];
             const lockedBy = firstUser[1].userName;
-            console.log(`⚠️ Ми приєдналися другими. Акт вже відкритий користувачем: ${lockedBy}`);
+            console.log(`⚠️ Ми приєдналися другими (час ${currentUserJoinedAt}). Акт заблоковано користувачем: ${lockedBy} (час ${new Date(firstUser[1].joinedAt).getTime()})`);
             setLockedUI(lockedBy);
         } else {
-            // Ми приєдналися першими - інші мають бути заблоковані, ми ні
+            // Ми найперші -> РОЗБЛОКОВУЄМО
             console.log("✅ Ми приєдналися першими. Акт доступний для редагування.");
             setUnlockedUI();
         }

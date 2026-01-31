@@ -118,8 +118,9 @@ export function setLockedUI(lockedBy: string): void {
 
 /**
  * Встановлює UI в режим розблокування (зелений header, активна кнопка збереження)
+ * Також записує ПІБ поточного користувача в act_on_off для блокування акту
  */
-export function setUnlockedUI(): void {
+export async function setUnlockedUI(): Promise<void> {
     // Відновлюємо колір header
     const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
     if (header) {
@@ -140,6 +141,28 @@ export function setUnlockedUI(): void {
     headerButtons.forEach((btn) => {
         (btn as HTMLElement).style.backgroundColor = "";
     });
+
+    // 🔒 ВАЖЛИВО: Записуємо ПІБ поточного користувача в act_on_off
+    // Це робить поточного користувача власником блокування
+    const modal = document.getElementById("zakaz_narayd-modal");
+    const actId = modal?.getAttribute("data-act-id");
+
+    if (actId) {
+        try {
+            const { error } = await supabase
+                .from("acts")
+                .update({ act_on_off: currentUserName })
+                .eq("act_id", parseInt(actId));
+
+            if (error) {
+                console.error("Помилка запису act_on_off при розблокуванні:", error);
+            } else {
+                console.log(`✅ Акт ${actId} тепер заблоковано користувачем: ${currentUserName}`);
+            }
+        } catch (error) {
+            console.error("Критична помилка при записі act_on_off:", error);
+        }
+    }
 
     // Показуємо повідомлення
     showNotification("✅ Акт розблоковано. Редагування дозволено.", "success", 3000);

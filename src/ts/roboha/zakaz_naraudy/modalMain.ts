@@ -2,6 +2,7 @@
 import { cacheHiddenColumnsData } from "./inhi/zberechennya_zmin_y_danux_aktu";
 import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "./inhi/vspluvauhe_povidomlenna";
+import { subscribeToActPresence } from "./actPresence";
 import {
   refreshPhotoData,
   safeParseJSON,
@@ -68,7 +69,7 @@ import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
 import { handleSmsButtonClick } from "../sms/sendActSMS";
 import { refreshActsTable } from "../tablucya/tablucya";
-import { joinActPresence } from "./actLockPresence";
+
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -789,8 +790,7 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     globalCache.isActClosed = !!act.date_off;
     globalCache.currentActDateOn = act.date_on || null;
 
-    // 🔒 PRESENCE API: Приєднуємось до Presence каналу для відстеження користувачів
-    await joinActPresence(actId);
+
 
     // ✅ Зберігаємо приймальника в localStorage для використання при логуванні змін
     if (act.pruimalnyk) {
@@ -884,8 +884,14 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     // 📢 ПІДПИСКА НА ЗМІНИ slusarsOn В РЕАЛЬНОМУ ЧАСІ (ОНОВЛЕННЯ ЗАГОЛОВКА)
     setupSlusarsOnRealtimeSubscription(actId);
 
-    // ✅ Presence API автоматично управляє блокуванням та UI
-    // Не потрібно додаткових викликів - все відбувається в joinActPresence()
+    // 🔐 ПІДПИСКА НА PRESENCE API ДЛЯ ВІДСТЕЖЕННЯ ПРИСУТНОСТІ КОРИСТУВАЧІВ
+    // Перевіряємо чи акт вже відкритий іншим користувачем
+    const presenceStatus = await subscribeToActPresence(actId);
+    if (presenceStatus.isLocked) {
+      console.log(`⚠️ Акт ${actId} заблокований користувачем: ${presenceStatus.lockedBy}`);
+    } else {
+      console.log(`✅ Акт ${actId} доступний для редагування`);
+    }
 
     showNotification("Дані успішно завантажено", "success", 1500);
   } catch (error) {

@@ -20,6 +20,7 @@ import {
 } from "../tablucya/users";
 import { supabase } from "../../vxid/supabaseClient";
 import { cleanupSlusarsOnSubscription } from "./modalMain";
+import { unsubscribeFromActPresence } from "./actPresence";
 
 // Утилиты для форматирования чисел с пробелами
 const unformat = (s: string) => s.replace(/\s+/g, "");
@@ -1426,14 +1427,7 @@ export function createModal(): void {
 export function closeZakazNaraydModal(): void {
   const modalOverlay = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
   if (modalOverlay) {
-    // 🔒 Виходимо з Presence каналу
-    const actId = globalCache.currentActId;
-    if (actId) {
-      // Імпортуємо leaveActPresence динамічно
-      import("./actLockPresence").then(({ leaveActPresence }) => {
-        leaveActPresence();
-      });
-    }
+
 
     modalOverlay.classList.add("hidden");
     globalCache.currentActId = null;
@@ -1446,6 +1440,10 @@ export function closeZakazNaraydModal(): void {
     cleanupSlusarsOnSubscription();
     // 🧹 Очищуємо кеш розрахунку знижки
     resetDiscountCache();
+    // 🔐 Відписуємося від Presence API
+    unsubscribeFromActPresence().catch((err: unknown) =>
+      console.error("Помилка при відписці від Presence:", err)
+    );
   }
 }
 

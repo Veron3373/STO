@@ -384,8 +384,8 @@ export function showRealtimeActNotification(
       // Динамічний імпорт функції showModal
       const { showModal } = await import('../zakaz_naraudy/modalMain');
 
-      // Відкриваємо акт
-      await showModal(payload.act_id);
+      // Відкриваємо акт в режимі 'client' (всі стовпці)
+      await showModal(payload.act_id, 'client');
     });
   }
 

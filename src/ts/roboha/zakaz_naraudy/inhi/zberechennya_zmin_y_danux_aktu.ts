@@ -113,8 +113,8 @@ async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
         .single();
 
       if (client?.data) {
-        const clientData = typeof client.data === "string" 
-          ? JSON.parse(client.data) 
+        const clientData = typeof client.data === "string"
+          ? JSON.parse(client.data)
           : client.data;
         pib = clientData?.["ПІБ"] || clientData?.fio || "";
       }
@@ -129,8 +129,8 @@ async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
         .single();
 
       if (car?.data) {
-        const carData = typeof car.data === "string" 
-          ? JSON.parse(car.data) 
+        const carData = typeof car.data === "string"
+          ? JSON.parse(car.data)
           : car.data;
         const autoName = carData?.["Авто"] || "";
         const year = carData?.["Рік"] || "";
@@ -407,7 +407,7 @@ export function parseTableRows(): ParsedItem[] {
         undefined,  // rowIndex - не передаємо бо не маємо індексу тут
         recordId    // recordId для точного пошуку
       );
-      
+
       if (historySalary !== null && historySalary > 0) {
         // ✅ В історії є збережена зарплата > 0 - використовуємо її!
         slyusarSum = historySalary;
@@ -571,7 +571,7 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
       // ✅ Прибрано Math.max(0, ...) - дозволяємо від'ємні значення kilkist_off
       // Якщо видаляємо з акту, delta від'ємна → kilkist_off зменшується (повертаємо на склад)
       const newOff = currentOff + delta;
-      
+
       console.log(`📦 sclad_id=${id}: kilkist_off ${currentOff} + delta ${delta} = ${newOff}`);
 
       return { sclad_id: id, kilkist_off: newOff };
@@ -679,9 +679,9 @@ function processItems(items: ParsedItem[]) {
           Зарплата: salary,
           recordId: workRecordId, // ✅ Передаємо recordId для точного пошуку
         };
-        
+
         console.log(`🔧 [processItems] Додано роботу для слюсаря:`, workRow);
-        
+
         workRowsForSlyusars.push(workRow);
       }
     } else {
@@ -1315,22 +1315,22 @@ async function syncPruimalnikHistory(
   // --- ВИДАЛЕННЯ АКТУ З ПОПЕРЕДНЬОГО ПРИЙМАЛЬНИКА (якщо змінився) ---
   // ✅ ВИПРАВЛЕНО: Шукаємо тільки попереднього приймальника, а не всіх
   const previousPruimalnyk = localStorage.getItem("current_act_pruimalnyk");
-  
+
   console.log(`🔍 Попередній приймальник з localStorage: "${previousPruimalnyk}"`);
   console.log(`🔍 Поточний приймальник: "${pruimalnykName}"`);
-  
+
   // Якщо приймальник змінився - видаляємо акт з історії попереднього
   if (previousPruimalnyk && previousPruimalnyk !== pruimalnykName) {
     console.log(`🔄 Приймальник змінився: "${previousPruimalnyk}" → "${pruimalnykName}"`);
     console.log(`🧹 Видаляємо акт #${actId} з історії попереднього приймальника "${previousPruimalnyk}"...`);
-    
+
     // Шукаємо попереднього приймальника в БД
     const { data: prevReceiverData, error: prevError } = await supabase
       .from("slyusars")
       .select("slyusar_id, data")
       .eq("data->>Name", previousPruimalnyk)
       .maybeSingle();
-    
+
     if (prevError) {
       console.error(`❌ Помилка пошуку попереднього приймальника "${previousPruimalnyk}":`, prevError);
     } else if (prevReceiverData) {
@@ -1338,7 +1338,7 @@ async function syncPruimalnikHistory(
         typeof prevReceiverData.data === "string"
           ? JSON.parse(prevReceiverData.data)
           : prevReceiverData.data;
-      
+
       // Перевіряємо, чи це дійсно Приймальник
       if (receiverData.Доступ === "Приймальник") {
         let receiverHistory = receiverData.Історія || {};
@@ -1726,6 +1726,15 @@ export function addSaveHandler(actId: number, originalActData: any): void {
   newSaveButton.addEventListener("click", async () => {
     try {
       await saveActData(actId, originalActData);
+
+      // ✅ Сповіщаємо про збереження (динамічний імпорт щоб уникнути циклічної залежності)
+      try {
+        const { notifyActSaved } = await import("../actPresence");
+        await notifyActSaved(actId);
+      } catch (notifyErr) {
+        console.warn("Помилка відправки сповіщення:", notifyErr);
+      }
+
       showNotification("Зміни успішно збережено", "success");
     } catch (err: any) {
       console.error("Помилка збереження:", err);

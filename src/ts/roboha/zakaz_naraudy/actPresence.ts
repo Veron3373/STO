@@ -115,6 +115,19 @@ export async function subscribeToActPresence(
             console.log("👋 User left:", key, leftPresences);
             handlePresenceChange(); // Викликаємо загальну логіку
         })
+        .on("broadcast", { event: "act_saved" }, (payload: any) => {
+            console.log("📢 Received act_saved broadcast:", payload);
+
+            // Перевіряємо, чи ми заблоковані (значить ми не той, хто зберіг)
+            // Якщо ми власник - ми і так оновили дані при збереженні
+            const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
+            const isLocked = header && header.hasAttribute("data-locked");
+
+            if (isLocked && onUnlock) {
+                console.log("🔄 Auto-refreshing data due to remote save...");
+                onUnlock();
+            }
+        })
         .subscribe(async (status: string) => {
             if (status === "SUBSCRIBED") {
                 // Відправляємо свою присутність з часом відкриття
@@ -159,6 +172,21 @@ export async function subscribeToActPresence(
     }
 
     return presenceResult;
+}
+
+/**
+ * Відправляє сповіщення всім учасникам, що акт збережено
+ * @param actId - ID акту
+ */
+export async function notifyActSaved(actId: number): Promise<void> {
+    if (presenceChannel) {
+        await presenceChannel.send({
+            type: 'broadcast',
+            event: 'act_saved',
+            payload: { actId }
+        });
+        console.log("📡 Sent act_saved broadcast for act:", actId);
+    }
 }
 
 /**

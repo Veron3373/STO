@@ -68,6 +68,7 @@ import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
 import { handleSmsButtonClick } from "../sms/sendActSMS";
 import { refreshActsTable } from "../tablucya/tablucya";
+import { lockAct, setLockedUI } from "./actLock";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -788,6 +789,10 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     globalCache.isActClosed = !!act.date_off;
     globalCache.currentActDateOn = act.date_on || null;
 
+    // 🔒 БЛОКУВАННЯ АКТУ: Перевіряємо чи акт вже відкритий іншим користувачем
+    const lockResult = await lockAct(actId);
+    const isActLockedByOther = !lockResult.success;
+
     // ✅ Зберігаємо приймальника в localStorage для використання при логуванні змін
     if (act.pruimalnyk) {
       localStorage.setItem("current_act_pruimalnyk", act.pruimalnyk);
@@ -879,6 +884,11 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
 
     // 📢 ПІДПИСКА НА ЗМІНИ slusarsOn В РЕАЛЬНОМУ ЧАСІ (ОНОВЛЕННЯ ЗАГОЛОВКА)
     setupSlusarsOnRealtimeSubscription(actId);
+
+    // 🔒 Встановлюємо UI блокування якщо акт відкритий іншим користувачем
+    if (isActLockedByOther && lockResult.lockedBy) {
+      setLockedUI(lockResult.lockedBy);
+    }
 
     showNotification("Дані успішно завантажено", "success", 1500);
   } catch (error) {

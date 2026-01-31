@@ -129,7 +129,7 @@ function findSlyusarWorkRecord(
       if (typeof rowIndex === "number" && rowIndex >= 0 && rowIndex < zapisi.length) {
         const record = zapisi[rowIndex];
         const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
-        
+
         // Перевіряємо співпадіння назви роботи
         if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
           console.log(`✅ Знайдено за rowIndex ${rowIndex}: ${record.Робота}, Зарплата: ${record.Зарплата}`);
@@ -192,13 +192,13 @@ export function getRecordIdFromHistory(
       if (workIndex >= 0 && workIndex < zapisi.length) {
         const record = zapisi[workIndex];
         const recordWorkLower = (record?.Робота?.trim() || "").toLowerCase();
-        
+
         // Перевіряємо що назва співпадає (для надійності)
         if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
           return record?.recordId;
         }
       }
-      
+
       // Fallback: якщо за індексом не знайшли - шукаємо просто за назвою
       // (для старих записів без recordId)
       for (const record of zapisi) {
@@ -230,18 +230,18 @@ export function getSlyusarSalaryFromHistory(
   recordId?: string
 ): number | null {
   const record = findSlyusarWorkRecord(slyusarName, workName, actId, rowIndex, recordId);
-  
+
   // ✅ ВИПРАВЛЕНО: Якщо зарплата = 0 — ігноруємо і повертаємо null
   // Тоді буде перерахунок від відсотка
   if (record && typeof record.Зарплата === "number" && record.Зарплата > 0) {
     console.log(`💰 Знайдено зарплату для "${workName}" [idx:${rowIndex}${recordId ? `, id:${recordId}` : ''}]: ${record.Зарплата}`);
     return record.Зарплата;
   }
-  
+
   if (record && record.Зарплата === 0) {
     console.log(`⚠️ Зарплата в історії = 0 для "${workName}" — ігноруємо, буде перерахунок від відсотка`);
   }
-  
+
   return null;
 }
 
@@ -355,7 +355,7 @@ async function updateSlyusarSalaryInRow(
   ) as HTMLElement;
 
   if (!workName || !slyusarName || !slyusarSumCell) return;
-  
+
   // ✅ Зчитуємо recordId з атрибута рядка
   const recordId = row.getAttribute("data-record-id") || undefined;
 
@@ -436,7 +436,7 @@ export async function initializeSlyusarSalaries(): Promise<void> {
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const totalSum = parseNumber(sumCell?.textContent);
-    
+
     // ✅ Зчитуємо recordId з атрибута рядка
     const recordId = row.getAttribute("data-record-id") || undefined;
 
@@ -480,7 +480,7 @@ async function processWorkRowsWithIndex(
   for (const row of rows) {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
     if (!nameCell) continue;
-    
+
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") continue;
 
@@ -586,7 +586,7 @@ export async function forceRecalculateSlyusarSalary(row: HTMLTableRowElement): P
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
   console.log(`💰 Нова зарплата: ${calculatedSalary} (${percent}% від ${totalSum})`);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
-  
+
   updateCalculatedSumsInFooter();
 }
 
@@ -755,7 +755,7 @@ function createRowHtml(
   const fullName = item?.name || "";
   const displayName = shortenTextToFirstAndLast(fullName);
   const hasShortened = displayName !== fullName;
-  
+
   // ✅ Формуємо атрибути рядка
   const rowAttrs: string[] = [];
   if (isWorkRowWithEmptyPib) rowAttrs.push('data-partial-edit="true"');
@@ -1426,6 +1426,15 @@ export function createModal(): void {
 export function closeZakazNaraydModal(): void {
   const modalOverlay = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
   if (modalOverlay) {
+    // 🔒 Розблоковуємо акт перед закриттям
+    const actId = globalCache.currentActId;
+    if (actId) {
+      // Імпортуємо unlockAct динамічно щоб уникнути циклічних залежностей
+      import("./actLock").then(({ unlockAct }) => {
+        unlockAct(actId);
+      });
+    }
+
     modalOverlay.classList.add("hidden");
     globalCache.currentActId = null;
     // ✅ Очищуємо приймальника з localStorage при закритті модального вікна

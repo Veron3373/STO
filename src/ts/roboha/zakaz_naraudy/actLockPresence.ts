@@ -188,26 +188,39 @@ function updateUIBasedOnPresence(): void {
  * @param lockedBy - ПІБ користувача, який відкрив акт
  */
 function setLockedUI(lockedBy: string): void {
+    console.log("🔒 setLockedUI викликано для:", lockedBy);
+
     // Змінюємо колір header на червоний
     const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
     if (header) {
-        header.style.backgroundColor = "#8B0000"; // Темно-червоний
+        header.style.setProperty("background-color", "#8B0000", "important"); // Темно-червоний з !important
+        console.log("✅ Header перефарбовано в червоний");
+    } else {
+        console.error("❌ setLockedUI: Header елемент не знайдено!");
     }
 
     // Блокуємо кнопку збереження
     const saveButton = document.getElementById("save-act-data") as HTMLButtonElement;
     if (saveButton) {
         saveButton.disabled = true;
-        saveButton.style.opacity = "0.5";
-        saveButton.style.cursor = "not-allowed";
+        saveButton.style.setProperty("opacity", "0.5", "important");
+        saveButton.style.setProperty("cursor", "not-allowed", "important");
         saveButton.title = `Акт відкритий користувачем: ${lockedBy}`;
+        console.log("✅ Кнопка збереження заблокована");
+    } else {
+        console.error("❌ setLockedUI: Кнопка збереження не знайдена!");
     }
 
     // Змінюємо колір кнопок в header на червоний
     const headerButtons = document.querySelectorAll(".zakaz_narayd-header-buttons .status-lock-icon");
-    headerButtons.forEach((btn) => {
-        (btn as HTMLElement).style.backgroundColor = "#8B0000";
-    });
+    if (headerButtons.length > 0) {
+        headerButtons.forEach((btn) => {
+            (btn as HTMLElement).style.setProperty("background-color", "#8B0000", "important");
+        });
+        console.log(`✅ Перефарбовано ${headerButtons.length} кнопок в header`);
+    } else {
+        console.warn("⚠️ setLockedUI: Кнопки в header не знайдені!");
+    }
 
     // Показуємо повідомлення
     showNotification(`⚠️ Акт відкритий користувачем: ${lockedBy}. Редагування заблоковано.`, "warning", 5000);
@@ -217,17 +230,22 @@ function setLockedUI(lockedBy: string): void {
  * Встановлює UI в режим розблокування (зелений header, активна кнопка збереження)
  */
 function setUnlockedUI(): void {
+    console.log("🔓 setUnlockedUI викликано");
+
     // Відновлюємо колір header
     const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
     if (header) {
-        header.style.backgroundColor = "#1c4a28"; // Оригінальний зелений
+        header.style.removeProperty("background-color"); // Видаляємо inline стиль
+        header.style.backgroundColor = "#1c4a28"; // Повертаємо оригінальний зелений (про всяк випадок)
     }
 
     // Розблоковуємо кнопку збереження
     const saveButton = document.getElementById("save-act-data") as HTMLButtonElement;
     if (saveButton) {
         saveButton.disabled = false;
+        saveButton.style.removeProperty("opacity");
         saveButton.style.opacity = "1";
+        saveButton.style.removeProperty("cursor");
         saveButton.style.cursor = "pointer";
         saveButton.title = "Зберегти зміни";
     }
@@ -235,7 +253,7 @@ function setUnlockedUI(): void {
     // Відновлюємо колір кнопок в header
     const headerButtons = document.querySelectorAll(".zakaz_narayd-header-buttons .status-lock-icon");
     headerButtons.forEach((btn) => {
-        (btn as HTMLElement).style.backgroundColor = "";
+        (btn as HTMLElement).style.removeProperty("background-color");
     });
 
     // Показуємо повідомлення тільки якщо були інші користувачі

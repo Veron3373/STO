@@ -372,8 +372,8 @@ class DetailsSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-          .filter((item) => item.toLowerCase().includes(q))
-          .slice(0, this.config.maxItems)
+        .filter((item) => item.toLowerCase().includes(q))
+        .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -398,9 +398,8 @@ class DetailsSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-      <div class="dropdown-item ${
-        index === this.selectedIndex ? "selected" : ""
-      }" 
+      <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
+          }" 
            data-index="${index}">
         ${this.highlightMatch(item, this.input.value)}
       </div>
@@ -798,7 +797,7 @@ async function loadAllDetailsData(): Promise<void> {
           const purchasePrice = scladId
             ? getPurchasePriceBySсladId(scladId)
             : undefined;
-          
+
           // Отримуємо номер складу з таблиці sclad
           const scladNomer = scladId
             ? getScladNomerByScladId(scladId)
@@ -846,7 +845,7 @@ async function loadAllDetailsData(): Promise<void> {
   allDetailsData.sort((a, b) =>
     toIsoDate(b.dateOpen).localeCompare(toIsoDate(a.dateOpen))
   );
-  
+
   // Оновлюємо кнопки фільтрації складів після завантаження даних
   updateDetailsScladFilterButtons();
 }
@@ -1011,13 +1010,13 @@ function calculateDetailsMarginTotal(): number {
 // Оновлення таблиці з кольоровим кодуванням та фільтрацією
 export function updateDetailsTable(): void {
   const tbody = byId<HTMLTableSectionElement>("details-tbody");
-  
+
   // Перевірка чи елемент існує (може бути null якщо не на сторінці bukhhalteriya.html)
   if (!tbody) {
     console.log("⚠️ Елемент details-tbody не знайдено - пропускаємо оновлення таблиці");
     return;
   }
-  
+
   const filteredData = detailsData;
 
   if (filteredData.length === 0) {
@@ -1043,8 +1042,8 @@ export function updateDetailsTable(): void {
       const purchasePriceHtml =
         item.purchasePrice !== undefined
           ? `<div style="font-size: 0.85em; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">${formatNumber(
-              item.purchasePrice
-            )}</div>`
+            item.purchasePrice
+          )}</div>`
           : '<div style="font-size: 0.85em; color: #999; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">-</div>';
 
       const salePriceHtml = `<div style="font-size: 0.95em; font-weight: 500;">${formatNumber(
@@ -1059,25 +1058,22 @@ export function updateDetailsTable(): void {
 
       const marginHtml =
         item.margin !== undefined
-          ? `<div style="font-size: 0.85em; color: ${
-              item.margin >= 0 ? "#28a745" : "#dc3545"
-            }; font-weight: 500; margin-top: 2px;">+${formatNumber(
-              item.margin
-            )}${discountIndicator}</div>`
+          ? `<div style="font-size: 0.85em; color: ${item.margin >= 0 ? "#28a745" : "#dc3545"
+          }; font-weight: 500; margin-top: 2px;">+${formatNumber(
+            item.margin
+          )}${discountIndicator}</div>`
           : "";
 
       return `
         <tr class="${rowClass} ${paidClass}" onclick="handleRowClick(${index})">
           <td>
-            <button class="Bukhhalter-payment-btn ${
-              item.isPaid ? "paid" : "unpaid"
-            }" 
+            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
+        }" 
                     onclick="event.stopPropagation(); toggleDetailsPaymentWithConfirmation(${originalIndex})" 
-                    title="${
-                      item.isPaid
-                        ? `Розраховано ${item.paymentDate || ""}`
-                        : "Не розраховано"
-                    }">
+                    title="${item.isPaid
+          ? `Розраховано ${item.paymentDate || ""}`
+          : "Не розраховано"
+        }">
               ${paymentButtonText}
             </button>
           </td>
@@ -1085,9 +1081,8 @@ export function updateDetailsTable(): void {
           <td>${formatDate(item.dateClose || "")}</td>
           <td>
             <button class="Bukhhalter-act-btn"
-                    onclick="event.stopPropagation(); openActModal(${
-                      Number(item.act) || 0
-                    })"
+                    onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
+        })"
                     title="Відкрити акт №${item.act}">
               📋 ${item.act || "-"}
             </button>
@@ -1134,16 +1129,15 @@ function updateDetailsTotalSumDisplay(
     totalSumElement.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
         <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-          saleTotal
-        )}</strong> грн</span>
+      saleTotal
+    )}</strong> грн</span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 ${formatNumber(
-          purchaseTotal
-        )}</strong> грн</span>
+      purchaseTotal
+    )}</strong> грн</span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${
-          marginTotal >= 0 ? "#006400 " : "#8B0000"
-        };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
+        <span><strong style="color: ${marginTotal >= 0 ? "#006400 " : "#8B0000"
+      };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
       </div>
     `;
   }
@@ -1224,7 +1218,7 @@ async function fetchScladData(): Promise<ScladItem[]> {
       scladData = data.map((item) => {
         // Отримуємо scladNomer напряму з запису (не з data)
         const scladNomer = item.scladNomer !== undefined ? Number(item.scladNomer) : undefined;
-        
+
         if (typeof item.data === "string") {
           try {
             const parsed = JSON.parse(item.data);
@@ -1311,7 +1305,7 @@ function getDiscountByActId(actId: number): number {
 export async function searchDetailsData(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
   const hasAccess = await checkCurrentPageAccess();
-  
+
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     redirectToIndex();
@@ -1359,7 +1353,7 @@ export async function searchDetailsData(): Promise<void> {
           const purchasePrice = scladId
             ? getPurchasePriceBySсladId(scladId)
             : undefined;
-          
+
           // Отримуємо номер складу з таблиці sclad
           const scladNomer = scladId
             ? getScladNomerByScladId(scladId)
@@ -1410,7 +1404,7 @@ export async function searchDetailsData(): Promise<void> {
 
   ensureDetailsSmartDropdowns();
   refreshDetailsDropdownOptions();
-  
+
   // Оновлюємо кнопки фільтрації складів
   updateDetailsScladFilterButtons();
 
@@ -1572,20 +1566,20 @@ export function updateDetailsScladFilterButtons(): void {
   if (!container) return;
 
   availableDetailsScladNomers = getUniqueDetailsScladNomers();
-  
+
   // Якщо немає складів або тільки 1 склад - не показуємо кнопки
   if (availableDetailsScladNomers.length === 0 || availableDetailsScladNomers.length === 1) {
     container.innerHTML = '';
     container.style.display = 'none';
     return;
   }
-  
+
   container.style.display = 'flex';
   // Додаємо клас для однакової ширини кнопок
   container.classList.add('equal-width');
 
   let buttonsHtml = '';
-  
+
   availableDetailsScladNomers.forEach((nomer) => {
     const isActive = currentDetailsScladFilter === nomer;
     buttonsHtml += `
@@ -1619,7 +1613,7 @@ export function updateDetailsScladFilterButtons(): void {
 // Функція фільтрації по складу для деталей
 function filterDetailsBySclad(scladNomer: number | null): void {
   currentDetailsScladFilter = scladNomer;
-  
+
   // Оновлюємо активну кнопку
   const container = byId<HTMLElement>("details-sklad-filter-container");
   if (container) {

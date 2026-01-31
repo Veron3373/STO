@@ -382,7 +382,7 @@ async function fetchShopData(): Promise<ShopData[]> {
   }
 }
 
-function openActModal(actNumber: number): void {
+export function deprecated_openActModal(actNumber: number): void {
   let foundRec: HistoryRecord | null = null;
   let foundShop: ShopData | null = null;
   let foundDate: string | null = null;
@@ -717,8 +717,8 @@ class SmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-          .filter((item) => item.toLowerCase().includes(q))
-          .slice(0, this.config.maxItems)
+        .filter((item) => item.toLowerCase().includes(q))
+        .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -743,9 +743,8 @@ class SmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${
-          index === this.selectedIndex ? "selected" : ""
-        }" 
+        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
+          }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -1159,8 +1158,8 @@ function mapRowToMagazineRecord(row: any): MagazineRecord {
     typeof row?.akt === "number"
       ? row.akt
       : row?.akt != null
-      ? Number(row.akt) || null
-      : null;
+        ? Number(row.akt) || null
+        : null;
 
   return {
     pkName: pk?.name,
@@ -1263,7 +1262,7 @@ async function autoSearchFromInputs(): Promise<void> {
   applyLocalFilters(allMagazineData);
   updateMagazineTable();
   updateMagazineTotalSum();
-  
+
   // Оновлюємо кнопки фільтрації по складах
   generateScladFilterButtons();
 }
@@ -1354,8 +1353,7 @@ async function loadScladData(
   } catch (err) {
     console.error("Помилка завантаження sclad з Supabase:", err);
     showNotification(
-      `Помилка завантаження даних з бази sclad: ${
-        err instanceof Error ? err.message : "Невідома помилка"
+      `Помилка завантаження даних з бази sclad: ${err instanceof Error ? err.message : "Невідома помилка"
       }`,
       "error",
       5000
@@ -1379,7 +1377,7 @@ export async function initializeMagazineData(): Promise<void> {
 export async function searchMagazineData(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
   const hasAccess = await checkCurrentPageAccess();
-  
+
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     redirectToIndex();
@@ -1447,7 +1445,7 @@ export async function searchMagazineData(): Promise<void> {
   applyLocalFilters(allMagazineData);
   updateMagazineTable();
   updateMagazineTotalSum();
-  
+
   // Генеруємо кнопки фільтрації по складах
   generateScladFilterButtons();
 
@@ -1533,12 +1531,12 @@ export function updateMagazineTotalSum(): void {
   totalSumElement.innerHTML = `
   <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
     <span style="color: #ffffff;">Загальна сума: <strong style="color: #333;">💰 ${formatNumber(
-      totalSum
-    )}</strong> грн</span>
+    totalSum
+  )}</strong> грн</span>
     <span style="color: #666;">|</span>
     <span style="color: #ffffff;">На складі: <strong style="color: #8B0000;">💶 ${formatNumber(
-      remainingSum
-    )}</strong> грн</span>
+    remainingSum
+  )}</strong> грн</span>
   </div>
 `;
 }
@@ -1552,8 +1550,8 @@ export function getMagazineExportData(): any[] {
         item.isPaid && item.rosraxovano
           ? formatDate(item.rosraxovano)
           : item.isPaid
-          ? "Розраховано"
-          : "Не розраховано",
+            ? "Розраховано"
+            : "Не розраховано",
       date_open: formatDate(item.date_open || ""),
       shops: item.shops,
       rahunok: item.rahunok,
@@ -1604,8 +1602,8 @@ export function updateMagazineTable(): void {
         item.isPaid && item.rosraxovano
           ? formatDate(item.rosraxovano)
           : item.isPaid
-          ? "Розраховано"
-          : "Не розраховано";
+            ? "Розраховано"
+            : "Не розраховано";
 
       let stockClass = "";
       if (remainder > 0) {
@@ -1640,15 +1638,14 @@ export function updateMagazineTable(): void {
         : `onclick="event.stopPropagation(); toggleMagazinePayment(${index})"`;
 
       const actBtn = item.akt
-        ? `<button class="Bukhhalter-act-btn" onclick="event.stopPropagation(); openActModal(${item.akt})" title="Відкрити акт №${item.akt}">📋 ${item.akt}</button>`
+        ? `<button class="Bukhhalter-act-btn" onclick="event.stopPropagation(); openActModalWithClient(${item.akt})" title="Відкрити акт №${item.akt}">📋 ${item.akt}</button>`
         : "<span>Склад</span>";
 
       return `
         <tr onclick="handleRowClick(${index})" class="${rowClass}">
           <td>
-            <button class="Bukhhalter-payment-btn ${
-              item.isPaid ? "paid" : "unpaid"
-            }" ${paymentDisabled} ${paymentOnclick}
+            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
+        }" ${paymentDisabled} ${paymentOnclick}
               title="${item.isPaid ? "Розраховано" : "Не розраховано"}">
               ${paymentIcon} ${paymentText}
             </button>
@@ -1872,20 +1869,20 @@ function generateScladFilterButtons(): void {
   if (!container) return;
 
   availableScladNomers = getUniqueScladNomers();
-  
+
   // Якщо немає складів або тільки 1 склад - не показуємо кнопки
   if (availableScladNomers.length === 0 || availableScladNomers.length === 1) {
     container.innerHTML = '';
     container.style.display = 'none';
     return;
   }
-  
+
   container.style.display = 'flex';
   // Додаємо клас для однакової ширини кнопок
   container.classList.add('equal-width');
 
   let buttonsHtml = '';
-  
+
   availableScladNomers.forEach((nomer) => {
     const isActive = currentFilters.scladNomer === nomer;
     buttonsHtml += `
@@ -1918,7 +1915,7 @@ function generateScladFilterButtons(): void {
 
 function filterBySclad(scladNomer: number | null): void {
   currentFilters.scladNomer = scladNomer;
-  
+
   // Оновлюємо активну кнопку
   const container = byId<HTMLElement>("magazine-sklad-filter-container");
   if (container) {
@@ -2119,7 +2116,7 @@ export function clearMagazineForm(): void {
   );
   if (paymentToggle) paymentToggle.value = "2";
   if (availabilityToggle) availabilityToggle.value = "4";
-  
+
   // Скидаємо фільтр складу
   generateScladFilterButtons();
 
@@ -2362,5 +2359,5 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
 (window as any).toggleMagazinePayment = toggleMagazinePayment;
 (window as any).toggleReturn = toggleReturn;
 (window as any).deleteMagazineRecord = deleteMagazineRecord;
-(window as any).openActModal = openActModal;
+
 (window as any).updateMagazineTotalSum = updateMagazineTotalSum;

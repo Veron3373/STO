@@ -1189,7 +1189,7 @@ export function filtervutratuData(): void {
 export async function searchvutratuFromDatabase(): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед пошуком
   const hasAccess = await checkCurrentPageAccess();
-  
+
   if (!hasAccess) {
     console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     redirectToIndex();
@@ -1304,7 +1304,7 @@ export function updatevutratuTable(): void {
     if (isFromAct && expense.actNumber) {
       actCell.innerHTML = `
         <button class="Bukhhalter-act-btn"
-                onclick="event.stopPropagation(); openActModal(${Number(expense.actNumber) || 0
+                onclick="event.stopPropagation(); openActModalWithClient(${Number(expense.actNumber) || 0
         })"
                 title="Відкрити акт №${expense.actNumber}">
           📋 ${expense.actNumber}

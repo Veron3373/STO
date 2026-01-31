@@ -1987,11 +1987,11 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
 }
 
 /**
- * Глобальна функція для відкриття акту з HTML (наприклад, з кнопок в таблиці бухгалтерії)
- * Відкриває акт в режимі 'client' (з усіма стовпцями)
- */
-(window as any).openActModal = (actId: number) => {
-  console.log(`🌍 Global openActModal called for act #${actId}`);
+     * Глобальна функція для відкриття акту з HTML (наприклад, з кнопок в таблиці бухгалтерії)
+     * Відкриває акт в режимі 'client' (з усіма стовпцями)
+     */
+(window as any).openActModalWithClient = (actId: number) => {
+  console.log(`🌍 Global openActModalWithClient called for act #${actId}`);
   showModal(actId, 'client');
 };
 

@@ -1135,7 +1135,7 @@ export function updatepodlegleTable(): void {
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
-                             onclick="event.stopPropagation(); openActModal(${Number(item.act) || 0
+                             onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
         })"
                              title="Відкрити акт №${item.act}">
                        📋 ${item.act || "-"}
@@ -1355,7 +1355,7 @@ export function searchDataInDatabase(
 
           const sumWork = record.СуммаРоботи || 0;
           const sumParts = record.СуммаЗапчастин || 0;
-          
+
           // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна → зарплата = 0
           const salaryWork = sumWork > 0 ? (record.ЗарплатаРоботи || 0) : 0;
           const salaryParts = sumParts > 0 ? (record.ЗарплатаЗапчастин || 0) : 0;
@@ -2075,7 +2075,7 @@ export async function togglepodleglePayment(index: number): Promise<void> {
     if (!workEntry && typeof record.workIndex === "number" && record.workIndex >= 0 && record.workIndex < actRecord.Записи.length) {
       // Точний пошук за індексом
       const entryByIndex = actRecord.Записи[record.workIndex];
-      
+
       // Перевіряємо що це та сама робота (на випадок якщо порядок змінився)
       if (entryByIndex && entryByIndex.Робота === record.work) {
         workEntry = entryByIndex;

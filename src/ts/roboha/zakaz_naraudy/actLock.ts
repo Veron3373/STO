@@ -144,3 +144,61 @@ export function setUnlockedUI(): void {
     // Показуємо повідомлення
     showNotification("✅ Акт розблоковано. Редагування дозволено.", "success", 3000);
 }
+
+// Зберігаємо підписку для можливості очищення
+let actLockSubscription: any = null;
+
+/**
+ * Встановлює Realtime підписку на зміни act_on_off для поточного акту
+ * Коли користувач №1 закриває акт, користувач №2 автоматично отримує розблокування
+ * @param actId - ID акту
+ */
+export function setupActLockRealtimeSubscription(actId: number): void {
+    // Очищаємо попередню підписку якщо є
+    cleanupActLockSubscription();
+
+    console.log(`📡 Встановлення Realtime підписки на act_on_off для акту ${actId}`);
+
+    actLockSubscription = supabase
+        .channel(`act_lock_${actId}`)
+        .on(
+            "postgres_changes",
+            {
+                event: "UPDATE",
+                schema: "public",
+                table: "acts",
+                filter: `act_id=eq.${actId}`,
+            },
+            (payload: any) => {
+                console.log("🔔 Отримано зміну act_on_off:", payload);
+
+                const newActOnOff = payload.new?.act_on_off;
+                const oldActOnOff = payload.old?.act_on_off;
+
+                // Якщо act_on_off очистився (став null або пустим)
+                if (oldActOnOff && (!newActOnOff || newActOnOff.trim() === "")) {
+                    console.log("✅ Акт розблоковано іншим користувачем");
+                    setUnlockedUI();
+                }
+                // Якщо act_on_off заповнився (хтось інший відкрив акт)
+                else if (!oldActOnOff && newActOnOff && newActOnOff.trim() !== "" && newActOnOff !== currentUserName) {
+                    console.log(`⚠️ Акт заблоковано користувачем: ${newActOnOff}`);
+                    setLockedUI(newActOnOff);
+                }
+            }
+        )
+        .subscribe((status) => {
+            console.log(`📡 Статус підписки act_lock_${actId}:`, status);
+        });
+}
+
+/**
+ * Очищає Realtime підписку на act_on_off
+ */
+export function cleanupActLockSubscription(): void {
+    if (actLockSubscription) {
+        console.log("🧹 Очищення Realtime підписки на act_on_off");
+        supabase.removeChannel(actLockSubscription);
+        actLockSubscription = null;
+    }
+}

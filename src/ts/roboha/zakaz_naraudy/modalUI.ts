@@ -1429,9 +1429,10 @@ export function closeZakazNaraydModal(): void {
     // 🔒 Розблоковуємо акт перед закриттям
     const actId = globalCache.currentActId;
     if (actId) {
-      // Імпортуємо unlockAct динамічно щоб уникнути циклічних залежностей
-      import("./actLock").then(({ unlockAct }) => {
+      // Імпортуємо unlockAct та cleanupActLockSubscription динамічно щоб уникнути циклічних залежностей
+      import("./actLock").then(({ unlockAct, cleanupActLockSubscription }) => {
         unlockAct(actId);
+        cleanupActLockSubscription();
       });
     }
 

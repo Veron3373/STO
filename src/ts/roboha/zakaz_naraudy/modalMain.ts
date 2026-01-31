@@ -68,7 +68,7 @@ import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
 import { handleSmsButtonClick } from "../sms/sendActSMS";
 import { refreshActsTable } from "../tablucya/tablucya";
-import { lockAct, setLockedUI } from "./actLock";
+import { lockAct, setLockedUI, setupActLockRealtimeSubscription } from "./actLock";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -884,6 +884,10 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
 
     // 📢 ПІДПИСКА НА ЗМІНИ slusarsOn В РЕАЛЬНОМУ ЧАСІ (ОНОВЛЕННЯ ЗАГОЛОВКА)
     setupSlusarsOnRealtimeSubscription(actId);
+
+    // 🔒 Встановлюємо Realtime підписку на зміни act_on_off
+    // Це дозволяє автоматично розблоковувати акт коли інший користувач його закриває
+    setupActLockRealtimeSubscription(actId);
 
     // 🔒 Встановлюємо UI блокування якщо акт відкритий іншим користувачем
     if (isActLockedByOther && lockResult.lockedBy) {

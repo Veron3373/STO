@@ -27,8 +27,6 @@ export async function subscribeToActPresence(actId: number): Promise<{
         await unsubscribeFromActPresence();
     }
 
-
-
     // Створюємо канал для конкретного акту
     const channelName = `act_presence_${actId}`;
     presenceChannel = supabase.channel(channelName, {
@@ -39,63 +37,81 @@ export async function subscribeToActPresence(actId: number): Promise<{
         },
     });
 
-    // Об'єкт для зберігання результату
+    // Об'єкт для зберігання результату (початкового)
     let presenceResult = {
         isLocked: false,
         lockedBy: null as string | null,
     };
 
+    // Функція для обробки змін присутності
+    const handlePresenceChange = () => {
+        const state = presenceChannel.presenceState();
+        console.log("🔄 Presence sync:", state);
+
+        // Збираємо всіх користувачів з їх часом відкриття
+        const allUsers: ActPresenceState[] = [];
+
+        Object.keys(state).forEach((key) => {
+            const presences = state[key] as ActPresenceState[];
+            if (presences && presences.length > 0) {
+                // Беремо перший запис для користувача (зазвичай один)
+                // Але краще перебрати всі, якщо користувач відкрив у кількох вкладках
+                presences.forEach((p) => {
+                    if (p.userName && p.openedAt) {
+                        allUsers.push(p);
+                    }
+                });
+            }
+        });
+
+        // Якщо нікого немає (дивна ситуація, бо ми там маємо бути), виходимо
+        if (allUsers.length === 0) return;
+
+        // Сортуємо за часом відкриття (хто перший відкрив - той перший у масиві)
+        allUsers.sort((a, b) => {
+            const dateA = new Date(a.openedAt).getTime();
+            const dateB = new Date(b.openedAt).getTime();
+            return dateA - dateB;
+        });
+
+        console.log("👥 All users sorted by open time:", allUsers);
+
+        // Визначаємо власника (перший у списку)
+        const owner = allUsers[0];
+        const ownerName = owner.userName;
+
+        // Перевіряємо, чи ми є власником
+        // Порівнюємо імена, а також можемо порівняти час відкриття,
+        // щоб точно знати, чи це наша сесія (якщо один юзер у кількох вкладках)
+        // Але для простоти поки що порівнюємо імена.
+        // АЛЕ: якщо один юзер відкрив у двох вкладках, то 'currentUserName' однаковий.
+        // Припустимо, що блокування йде "на користувача", а не на сесію.
+        // Тобто якщо я відкрив у 2 вкладках, я можу редагувати в обох.
+
+        if (ownerName === currentUserName) {
+            // Ми - власник (або один з наших екземплярів - перший)
+            // Розблокуємо інтерфейс, якщо він був заблокований
+            unlockActInterface();
+        } else {
+            // Хтось інший відкрив раніше
+            lockActInterface(ownerName);
+        }
+    };
+
     // Підписуємося на зміни присутності
     presenceChannel
-        .on("presence", { event: "sync" }, () => {
-            const state = presenceChannel.presenceState();
-            console.log("🔄 Presence sync:", state);
-
-            // Перевіряємо, чи хтось інший вже відкрив акт
-            const users = Object.keys(state);
-            const otherUsers = users.filter((user) => user !== currentUserName);
-
-            if (otherUsers.length > 0) {
-                // Акт заблокований іншим користувачем
-                const lockedByUser = otherUsers[0];
-                presenceResult.isLocked = true;
-                presenceResult.lockedBy = lockedByUser;
-
-                // Блокуємо інтерфейс
-                lockActInterface(lockedByUser);
-            } else {
-                // Акт розблокований
-                presenceResult.isLocked = false;
-                presenceResult.lockedBy = null;
-
-                // Розблокуємо інтерфейс
-                unlockActInterface();
-            }
-        })
+        .on("presence", { event: "sync" }, handlePresenceChange)
         .on("presence", { event: "join" }, ({ key, newPresences }: { key: string; newPresences: any }) => {
             console.log("👋 User joined:", key, newPresences);
-
-            // Якщо приєднався інший користувач (не поточний)
-            if (key !== currentUserName) {
-                lockActInterface(key);
-            }
+            handlePresenceChange(); // Викликаємо загальну логіку
         })
         .on("presence", { event: "leave" }, ({ key, leftPresences }: { key: string; leftPresences: any }) => {
             console.log("👋 User left:", key, leftPresences);
-
-            // Якщо вийшов інший користувач, перевіряємо чи є ще хтось
-            const state = presenceChannel.presenceState();
-            const users = Object.keys(state);
-            const otherUsers = users.filter((user) => user !== currentUserName);
-
-            if (otherUsers.length === 0) {
-                // Більше немає інших користувачів - розблокуємо
-                unlockActInterface();
-            }
+            handlePresenceChange(); // Викликаємо загальну логіку
         })
         .subscribe(async (status: string) => {
             if (status === "SUBSCRIBED") {
-                // Відправляємо свою присутність
+                // Відправляємо свою присутність з часом відкриття
                 const presenceData: ActPresenceState = {
                     actId: actId,
                     userName: currentUserName || "Unknown",
@@ -110,14 +126,30 @@ export async function subscribeToActPresence(actId: number): Promise<{
     // Чекаємо трохи, щоб отримати початковий стан
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Перевіряємо стан після підписки
+    // Отримуємо початковий стан, щоб повернути результат
+    // Але основна логіка буде в handlePresenceChange
     const state = presenceChannel.presenceState();
-    const users = Object.keys(state);
-    const otherUsers = users.filter((user) => user !== currentUserName);
+    const allUsers: ActPresenceState[] = [];
+    Object.keys(state).forEach((key) => {
+        const presences = state[key] as ActPresenceState[];
+        if (presences && presences.length > 0) {
+            presences.forEach((p) => {
+                if (p.userName && p.openedAt) {
+                    allUsers.push(p);
+                }
+            });
+        }
+    });
 
-    if (otherUsers.length > 0) {
-        presenceResult.isLocked = true;
-        presenceResult.lockedBy = otherUsers[0];
+    if (allUsers.length > 0) {
+        allUsers.sort((a, b) => {
+            return new Date(a.openedAt).getTime() - new Date(b.openedAt).getTime();
+        });
+        const owner = allUsers[0];
+        if (owner.userName !== currentUserName) {
+            presenceResult.isLocked = true;
+            presenceResult.lockedBy = owner.userName;
+        }
     }
 
     return presenceResult;
@@ -140,11 +172,17 @@ export async function unsubscribeFromActPresence(): Promise<void> {
  * @param lockedByUser - ім'я користувача, який заблокував акт
  */
 function lockActInterface(lockedByUser: string): void {
+    // Перевірка, щоб не спамити блокуванням, якщо вже заблоковано тим самим користувачем
+    const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
+    if (header && header.getAttribute("data-locked-by") === lockedByUser) {
+        return; // Вже заблоковано цим користувачем
+    }
+
     console.log(`🔒 Locking interface. Act is opened by: ${lockedByUser}`);
 
     // Показуємо повідомлення
     showNotification(
-        `⚠️ Даний акт відкритий користувачем: ${lockedByUser}`,
+        `⚠️ Даний акт редагується користувачем: ${lockedByUser}. Ви в режимі перегляду.`,
         "warning",
         5000
     );
@@ -159,10 +197,10 @@ function lockActInterface(lockedByUser: string): void {
     }
 
     // Змінюємо колір header на червоний
-    const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
     if (header) {
         header.style.backgroundColor = "#dc3545"; // Червоний колір
         header.setAttribute("data-locked", "true");
+        header.setAttribute("data-locked-by", lockedByUser);
     }
 
     // Блокуємо кнопки в header
@@ -196,6 +234,12 @@ function lockActInterface(lockedByUser: string): void {
  * Розблокує інтерфейс акту
  */
 function unlockActInterface(): void {
+    const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
+    // Якщо не було заблоковано - нічого робити. Але краще перестрахуватися.
+    if (header && !header.hasAttribute("data-locked")) {
+        return;
+    }
+
     console.log("🔓 Unlocking interface");
 
     // Показуємо повідомлення
@@ -211,14 +255,11 @@ function unlockActInterface(): void {
     }
 
     // Відновлюємо колір header
-    const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
     if (header) {
-        const wasLocked = header.getAttribute("data-locked") === "true";
-        if (wasLocked) {
-            // Відновлюємо попередній колір (зелений)
-            header.style.backgroundColor = "#1c4a28";
-            header.removeAttribute("data-locked");
-        }
+        // Відновлюємо попередній колір (зелений)
+        header.style.backgroundColor = "#1c4a28";
+        header.removeAttribute("data-locked");
+        header.removeAttribute("data-locked-by");
     }
 
     // Розблокуємо кнопки в header
@@ -253,32 +294,4 @@ function unlockActInterface(): void {
             element.style.cursor = "text";
         }
     });
-}
-
-/**
- * Перевіряє чи акт заблокований іншим користувачем
- * @returns true якщо акт заблокований
- */
-export function isActLocked(): boolean {
-    if (!presenceChannel) return false;
-
-    const state = presenceChannel.presenceState();
-    const users = Object.keys(state);
-    const otherUsers = users.filter((user) => user !== currentUserName);
-
-    return otherUsers.length > 0;
-}
-
-/**
- * Отримує ім'я користувача, який заблокував акт
- * @returns ім'я користувача або null
- */
-export function getLockedByUser(): string | null {
-    if (!presenceChannel) return null;
-
-    const state = presenceChannel.presenceState();
-    const users = Object.keys(state);
-    const otherUsers = users.filter((user) => user !== currentUserName);
-
-    return otherUsers.length > 0 ? otherUsers[0] : null;
 }

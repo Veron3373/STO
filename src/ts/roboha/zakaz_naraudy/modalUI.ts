@@ -1426,14 +1426,12 @@ export function createModal(): void {
 export function closeZakazNaraydModal(): void {
   const modalOverlay = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
   if (modalOverlay) {
-    // 🔒 Розблоковуємо акт перед закриттям
+    // 🔒 Виходимо з Presence каналу
     const actId = globalCache.currentActId;
     if (actId) {
-      // Імпортуємо unlockAct, cleanupActLockSubscription та cleanupBeforeUnloadHandler динамічно
-      import("./actLock").then(({ unlockAct, cleanupActLockSubscription, cleanupBeforeUnloadHandler }) => {
-        unlockAct(actId);
-        cleanupActLockSubscription();
-        cleanupBeforeUnloadHandler();
+      // Імпортуємо leaveActPresence динамічно
+      import("./actLockPresence").then(({ leaveActPresence }) => {
+        leaveActPresence();
       });
     }
 

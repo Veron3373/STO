@@ -68,7 +68,7 @@ import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
 import { handleSmsButtonClick } from "../sms/sendActSMS";
 import { refreshActsTable } from "../tablucya/tablucya";
-import { lockAct, setLockedUI, setupActLockRealtimeSubscription, setupBeforeUnloadHandler } from "./actLock";
+import { joinActPresence } from "./actLockPresence";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -789,9 +789,8 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     globalCache.isActClosed = !!act.date_off;
     globalCache.currentActDateOn = act.date_on || null;
 
-    // 🔒 БЛОКУВАННЯ АКТУ: Перевіряємо чи акт вже відкритий іншим користувачем
-    const lockResult = await lockAct(actId);
-    const isActLockedByOther = !lockResult.success;
+    // 🔒 PRESENCE API: Приєднуємось до Presence каналу для відстеження користувачів
+    await joinActPresence(actId);
 
     // ✅ Зберігаємо приймальника в localStorage для використання при логуванні змін
     if (act.pruimalnyk) {
@@ -885,18 +884,8 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     // 📢 ПІДПИСКА НА ЗМІНИ slusarsOn В РЕАЛЬНОМУ ЧАСІ (ОНОВЛЕННЯ ЗАГОЛОВКА)
     setupSlusarsOnRealtimeSubscription(actId);
 
-    // 🔒 Встановлюємо Realtime підписку на зміни act_on_off
-    // Це дозволяє автоматично розблоковувати акт коли інший користувач його закриває
-    setupActLockRealtimeSubscription(actId);
-
-    // 🚪 Встановлюємо обробник beforeunload для автоматичного очищення act_on_off
-    // при закритті/перезавантаженні сторінки
-    setupBeforeUnloadHandler(actId);
-
-    // 🔒 Встановлюємо UI блокування якщо акт відкритий іншим користувачем
-    if (isActLockedByOther && lockResult.lockedBy) {
-      setLockedUI(lockResult.lockedBy);
-    }
+    // ✅ Presence API автоматично управляє блокуванням та UI
+    // Не потрібно додаткових викликів - все відбувається в joinActPresence()
 
     showNotification("Дані успішно завантажено", "success", 1500);
   } catch (error) {

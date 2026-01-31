@@ -221,12 +221,34 @@ function lockActInterface(lockedByUser: string): void {
         }
     });
 
-    // Блокуємо всі editable поля
-    const editableElements = document.querySelectorAll(".editable");
-    editableElements.forEach((el) => {
-        (el as HTMLElement).contentEditable = "false";
-        (el as HTMLElement).style.opacity = "0.7";
-        (el as HTMLElement).style.cursor = "not-allowed";
+    // Блокуємо кнопку "Додати рядок"
+    const addRowBtn = document.getElementById("add-row-button") as HTMLButtonElement;
+    if (addRowBtn) {
+        addRowBtn.disabled = true;
+        addRowBtn.style.opacity = "0.5";
+        addRowBtn.style.cursor = "not-allowed";
+        addRowBtn.title = `Акт редагується користувачем: ${lockedByUser}`;
+    }
+
+    // Блокуємо кнопки видалення рядків
+    const deleteButtons = document.querySelectorAll(".delete-row-btn");
+    deleteButtons.forEach((btn) => {
+        const button = btn as HTMLButtonElement;
+        button.disabled = true;
+        button.style.opacity = "0.3";
+        button.style.cursor = "not-allowed";
+        button.style.pointerEvents = "none"; // Додатково блокуємо кліки
+    });
+
+    // Блокуємо всі editable поля та автодоповнення
+    const editableSelectors = [".editable", ".editable-autocomplete"];
+    editableSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((el) => {
+            (el as HTMLElement).contentEditable = "false";
+            (el as HTMLElement).style.opacity = "0.7";
+            (el as HTMLElement).style.cursor = "not-allowed";
+        });
     });
 }
 
@@ -280,18 +302,40 @@ function unlockActInterface(): void {
         }
     });
 
-    // Розблокуємо всі editable поля (якщо акт не закритий)
-    const editableElements = document.querySelectorAll(".editable");
-    editableElements.forEach((el) => {
-        const element = el as HTMLElement;
-        // Перевіряємо чи акт не закритий
-        const modal = document.getElementById("zakaz_narayd-modal");
-        const isActClosed = modal?.getAttribute("data-act-closed") === "true";
+    // Розблокуємо кнопку "Додати рядок"
+    const addRowBtn = document.getElementById("add-row-button") as HTMLButtonElement;
+    if (addRowBtn) {
+        addRowBtn.disabled = false;
+        addRowBtn.style.opacity = "1";
+        addRowBtn.style.cursor = "pointer";
+        addRowBtn.title = "Додати рядок";
+    }
 
-        if (!isActClosed) {
-            element.contentEditable = "true";
-            element.style.opacity = "1";
-            element.style.cursor = "text";
-        }
+    // Розблокуємо кнопки видалення рядків
+    const deleteButtons = document.querySelectorAll(".delete-row-btn");
+    deleteButtons.forEach((btn) => {
+        const button = btn as HTMLButtonElement;
+        button.disabled = false;
+        button.style.opacity = "0.6"; // Повертаємо стандартну opacity
+        button.style.cursor = "pointer";
+        button.style.pointerEvents = "auto";
+    });
+
+    // Розблокуємо всі editable поля та автодоповнення (якщо акт не закритий)
+    const editableSelectors = [".editable", ".editable-autocomplete"];
+    editableSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((el) => {
+            const element = el as HTMLElement;
+            // Перевіряємо чи акт не закритий
+            const modal = document.getElementById("zakaz_narayd-modal");
+            const isActClosed = modal?.getAttribute("data-act-closed") === "true";
+
+            if (!isActClosed) {
+                element.contentEditable = "true";
+                element.style.opacity = "1";
+                element.style.cursor = "text";
+            }
+        });
     });
 }

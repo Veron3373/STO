@@ -192,21 +192,45 @@ export function setupActLockRealtimeSubscription(actId: number): void {
                 table: "acts",
                 filter: `act_id=eq.${actId}`,
             },
-            (payload: any) => {
+            async (payload: any) => {
                 console.log("🔔 Отримано зміну act_on_off:", payload);
+                console.log("🔍 Деталі зміни:", {
+                    old: payload.old?.act_on_off,
+                    new: payload.new?.act_on_off,
+                    currentUser: currentUserName
+                });
 
                 const newActOnOff = payload.new?.act_on_off;
                 const oldActOnOff = payload.old?.act_on_off;
 
-                // Якщо act_on_off очистився (став null або пустим)
+                // Якщо act_on_off очистився (став null або пустим) - розблоковуємо
                 if (oldActOnOff && (!newActOnOff || newActOnOff.trim() === "")) {
-                    console.log("✅ Акт розблоковано іншим користувачем");
-                    setUnlockedUI();
+                    console.log("✅ Акт розблоковано іншим користувачем - автоматично блокуємо для себе");
+                    await setUnlockedUI();
                 }
-                // Якщо act_on_off заповнився (хтось інший відкрив акт)
-                else if (!oldActOnOff && newActOnOff && newActOnOff.trim() !== "" && newActOnOff !== currentUserName) {
-                    console.log(`⚠️ Акт заблоковано користувачем: ${newActOnOff}`);
-                    setLockedUI(newActOnOff);
+                // Якщо act_on_off змінився на іншого користувача - блокуємо
+                else if (newActOnOff && newActOnOff.trim() !== "" && newActOnOff !== currentUserName) {
+                    // Перевіряємо чи це зміна з пустого на заповнене або зміна користувача
+                    if (!oldActOnOff || oldActOnOff !== newActOnOff) {
+                        console.log(`⚠️ Акт заблоковано користувачем: ${newActOnOff}`);
+                        setLockedUI(newActOnOff);
+                    }
+                }
+                // Якщо act_on_off змінився на поточного користувача - розблоковуємо UI
+                else if (newActOnOff === currentUserName && oldActOnOff !== currentUserName) {
+                    console.log("✅ Акт тепер заблоковано нами - розблоковуємо UI");
+                    // Тут не викликаємо setUnlockedUI бо це призведе до повторного запису
+                    // Просто оновлюємо UI
+                    const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
+                    if (header) {
+                        header.style.backgroundColor = "#1c4a28";
+                    }
+                    const saveButton = document.getElementById("save-act-data") as HTMLButtonElement;
+                    if (saveButton) {
+                        saveButton.disabled = false;
+                        saveButton.style.opacity = "1";
+                        saveButton.style.cursor = "pointer";
+                    }
                 }
             }
         )

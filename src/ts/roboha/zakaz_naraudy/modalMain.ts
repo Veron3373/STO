@@ -724,6 +724,126 @@ async function canUserSeeSmsButton(): Promise<boolean> {
   return await getRoleSettingBool(settingId, columnName);
 }
 
+/**
+ * Блокує акт для поточного користувача
+ */
+async function lockAct(actId: number): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("acts")
+      .update({ act_on_off: currentUserName })
+      .eq("act_id", actId);
+
+    if (error) {
+      console.error("❌ Помилка блокування акту:", error);
+      return false;
+    }
+
+    console.log(`🔒 Акт ${actId} заблоковано користувачем ${currentUserName}`);
+    return true;
+  } catch (err) {
+    console.error("❌ Виняток при блокуванні акту:", err);
+    return false;
+  }
+}
+
+/**
+ * Розблоковує акт
+ */
+export async function unlockAct(actId: number): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("acts")
+      .update({ act_on_off: null })
+      .eq("act_id", actId);
+
+    if (error) {
+      console.error("❌ Помилка розблокування акту:", error);
+      return false;
+    }
+
+    console.log(`🔓 Акт ${actId} розблоковано`);
+    return true;
+  } catch (err) {
+    console.error("❌ Виняток при розблокуванні акту:", err);
+    return false;
+  }
+}
+
+/**
+ * Перевіряє чи акт заблокований іншим користувачем
+ */
+async function checkActLock(actId: number): Promise<{ isLocked: boolean; lockedBy: string | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("acts")
+      .select("act_on_off")
+      .eq("act_id", actId)
+      .single();
+
+    if (error) {
+      console.error("❌ Помилка перевірки блокування акту:", error);
+      return { isLocked: false, lockedBy: null };
+    }
+
+    const lockedBy = data?.act_on_off;
+    const isLocked = !!lockedBy && lockedBy !== currentUserName;
+
+    return { isLocked, lockedBy };
+  } catch (err) {
+    console.error("❌ Виняток при перевірці блокування акту:", err);
+    return { isLocked: false, lockedBy: null };
+  }
+}
+
+/**
+ * Застосовує візуальні обмеження для заблокованого акту
+ */
+function applyActLockRestrictions(lockedBy: string): void {
+  // Блокуємо кнопку збереження
+  const saveButton = document.getElementById("save-act-data");
+  if (saveButton) {
+    (saveButton as HTMLButtonElement).disabled = true;
+    saveButton.style.opacity = "0.5";
+    saveButton.style.cursor = "not-allowed";
+    saveButton.title = `Акт редагується користувачем: ${lockedBy}`;
+  }
+
+  // Змінюємо колір header на червоний
+  const headerInfo = document.querySelector(".zakaz_narayd-header-info") as HTMLElement;
+  if (headerInfo) {
+    headerInfo.style.backgroundColor = "#ff0000";
+    headerInfo.style.color = "#ffffff";
+  }
+
+  // Показуємо повідомлення
+  showNotification(`⚠️ Акт відкритий користувачем: ${lockedBy}`, "warning", 5000);
+}
+
+/**
+ * Знімає візуальні обмеження для заблокованого акту
+ */
+export function removeActLockRestrictions(): void {
+  // Розблоковуємо кнопку збереження
+  const saveButton = document.getElementById("save-act-data");
+  if (saveButton) {
+    (saveButton as HTMLButtonElement).disabled = false;
+    saveButton.style.opacity = "1";
+    saveButton.style.cursor = "pointer";
+    saveButton.title = "💾 Зберегти зміни";
+  }
+
+  // Відновлюємо колір header
+  const headerInfo = document.querySelector(".zakaz_narayd-header-info") as HTMLElement;
+  if (headerInfo) {
+    headerInfo.style.backgroundColor = "";
+    headerInfo.style.color = "";
+  }
+
+  // Показуємо повідомлення
+  showNotification("✅ Дозволяється редагувати акт", "success", 3000);
+}
+
 export async function showModal(actId: number, clickSource: 'client' | 'other' = 'other'): Promise<void> {
   const canOpen = await canUserOpenActs();
 
@@ -733,6 +853,9 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     return;
   }
 
+  // Перевіряємо чи акт заблокований іншим користувачем
+  const { isLocked, lockedBy } = await checkActLock(actId);
+
   createModal();
   const modal = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -741,9 +864,20 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     return;
   }
   modal.setAttribute("data-act-id", actId.toString());
+
+  // Зберігаємо інформацію про блокування в атрибуті модального вікна
+  if (isLocked && lockedBy) {
+    modal.setAttribute("data-locked-by", lockedBy);
+  }
+
   showNotification("Завантаження даних акту...", "info", 2000);
   modal.classList.remove("hidden");
   body.innerHTML = "";
+
+  // Блокуємо акт для поточного користувача (якщо не заблокований іншим)
+  if (!isLocked) {
+    await lockAct(actId);
+  }
 
   try {
     // ✅ ВИПРАВЛЕННЯ: Перезавантажуємо дані слюсарів перед відкриттям акту
@@ -863,6 +997,11 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     checkSlyusarSumWarningsOnLoad();
     applyAccessRestrictions();
 
+    // 🔒 Застосовуємо обмеження якщо акт заблокований іншим користувачем
+    if (isLocked && lockedBy) {
+      applyActLockRestrictions(lockedBy);
+    }
+
     // 🔽 Підсвічування змін для Адміністратора та Приймальника (в фоні, не блокуємо)
     if (
       userAccessLevel === "Адміністратор" ||
@@ -879,6 +1018,9 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
 
     // 📢 ПІДПИСКА НА ЗМІНИ slusarsOn В РЕАЛЬНОМУ ЧАСІ (ОНОВЛЕННЯ ЗАГОЛОВКА)
     setupSlusarsOnRealtimeSubscription(actId);
+
+    // 📢 ПІДПИСКА НА ЗМІНИ БЛОКУВАННЯ АКТУ В РЕАЛЬНОМУ ЧАСІ
+    setupActLockRealtimeSubscription(actId);
 
     showNotification("Дані успішно завантажено", "success", 1500);
   } catch (error) {
@@ -1335,8 +1477,8 @@ function renderModalContent(
           }
         }
         return !isSent
-          ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">✉️</button>`
-          : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📨</button>`;
+          ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}"></button>`
+          : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}"></button>`;
       })()
       : ""
     }
@@ -1970,5 +2112,68 @@ export function cleanupSlusarsOnSubscription(): void {
     console.log("🧹 Очищення підписки на slusarsOn");
     slusarsOnSubscription.unsubscribe();
     slusarsOnSubscription = null;
+  }
+}
+
+// Змінна для зберігання підписки на зміни блокування акту
+let actLockSubscription: any = null;
+
+/**
+ * Налаштовує підписку на зміни блокування акту в реальному часі
+ */
+function setupActLockRealtimeSubscription(actId: number): void {
+  // Очищаємо попередню підписку, якщо є
+  if (actLockSubscription) {
+    actLockSubscription.unsubscribe();
+    actLockSubscription = null;
+  }
+
+  console.log(`📡 Підписка на зміни блокування для акту #${actId}`);
+
+  actLockSubscription = supabase
+    .channel(`act-lock-${actId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "acts",
+        filter: `act_id=eq.${actId}`,
+      },
+      async (payload) => {
+        console.log("📡 [Realtime UPDATE] Зміна блокування акту:", payload.new);
+
+        const updatedAct = payload.new;
+        if (!updatedAct) return;
+
+        const actOnOff = updatedAct.act_on_off;
+        const modal = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
+        const currentLockedBy = modal?.getAttribute("data-locked-by");
+
+        // Якщо акт розблоковано (act_on_off стало null)
+        if (!actOnOff && currentLockedBy) {
+          console.log("🔓 Акт розблоковано іншим користувачем");
+          modal?.removeAttribute("data-locked-by");
+          removeActLockRestrictions();
+        }
+        // Якщо акт заблоковано іншим користувачем
+        else if (actOnOff && actOnOff !== currentUserName && !currentLockedBy) {
+          console.log(`🔒 Акт заблоковано користувачем: ${actOnOff}`);
+          modal?.setAttribute("data-locked-by", actOnOff);
+          applyActLockRestrictions(actOnOff);
+        }
+      }
+    )
+    .subscribe();
+}
+
+/**
+ * Очищає підписку на зміни блокування акту
+ */
+export function cleanupActLockSubscription(): void {
+  if (actLockSubscription) {
+    console.log("🧹 Очищення підписки на блокування акту");
+    actLockSubscription.unsubscribe();
+    actLockSubscription = null;
   }
 }

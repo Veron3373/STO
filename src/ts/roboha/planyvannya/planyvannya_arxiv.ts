@@ -680,9 +680,8 @@ export class PostArxiv {
 
     // Move block
     this.movingBlock.style.left = `${e.clientX - this.dragOffsetX}px`;
-    this.movingBlock.style.top = `${
-      e.clientY - this.movingBlock.offsetHeight / 2
-    }px`;
+    this.movingBlock.style.top = `${e.clientY - this.movingBlock.offsetHeight / 2
+      }px`;
 
     // Check validity
     this.movingBlock.className = "post-reservation-block dragging-active"; // Reset classes
@@ -882,7 +881,7 @@ export class PostArxiv {
               if (
                 currentDate &&
                 typeof (window as any).refreshOccupancyIndicatorsForDates ===
-                  "function"
+                "function"
               ) {
                 await (window as any).refreshOccupancyIndicatorsForDates([
                   currentDate,
@@ -1830,11 +1829,11 @@ export class PostArxiv {
     // Finalize
     const start = parseInt(
       this.resizingBlock.dataset.tempStart ||
-        this.resizeOriginalStartMins.toString()
+      this.resizeOriginalStartMins.toString()
     );
     const end = parseInt(
       this.resizingBlock.dataset.tempEnd ||
-        this.resizeOriginalEndMins.toString()
+      this.resizeOriginalEndMins.toString()
     );
 
     // Restore transition
@@ -1933,7 +1932,7 @@ export class PostArxiv {
         if (
           currentDate &&
           typeof (window as any).refreshOccupancyIndicatorsForDates ===
-            "function"
+          "function"
         ) {
           setTimeout(
             () =>
@@ -1988,10 +1987,10 @@ export class PostArxiv {
 
           if (!isAdmin) {
             // Якщо не адмін, перевіряємо чи співпадає прізвище
-            if (!recordCreator || recordCreator !== userName) {
-              const creatorName = recordCreator || "Невідомий";
+            // Дозволяємо видаляти записи без автора (старі записи) або свої власні
+            if (recordCreator && recordCreator !== userName) {
               showNotification(
-                `Ви не можете видалити цей запис. Зверніться до ${creatorName}`,
+                `Ви не можете видалити цей запис. Зверніться до ${recordCreator}`,
                 "error"
               );
               this.closeContextMenu();

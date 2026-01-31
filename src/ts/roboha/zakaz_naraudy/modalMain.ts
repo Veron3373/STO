@@ -726,7 +726,11 @@ async function canUserSeeSmsButton(): Promise<boolean> {
   return await getRoleSettingBool(settingId, columnName);
 }
 
-export async function showModal(actId: number, clickSource: 'client' | 'other' = 'other'): Promise<void> {
+export async function showModal(
+  actId: number,
+  clickSource: 'client' | 'other' = 'other',
+  skipPresence: boolean = false
+): Promise<void> {
   const canOpen = await canUserOpenActs();
 
   if (!canOpen) {
@@ -885,12 +889,20 @@ export async function showModal(actId: number, clickSource: 'client' | 'other' =
     setupSlusarsOnRealtimeSubscription(actId);
 
     // 🔐 ПІДПИСКА НА PRESENCE API ДЛЯ ВІДСТЕЖЕННЯ ПРИСУТНОСТІ КОРИСТУВАЧІВ
-    // Перевіряємо чи акт вже відкритий іншим користувачем
-    const presenceStatus = await subscribeToActPresence(actId);
-    if (presenceStatus.isLocked) {
-      console.log(`⚠️ Акт ${actId} заблокований користувачем: ${presenceStatus.lockedBy}`);
-    } else {
-      console.log(`✅ Акт ${actId} доступний для редагування`);
+    if (!skipPresence) {
+      // Перевіряємо чи акт вже відкритий іншим користувачем
+      // Передаємо колбек для оновлення даних при розблокуванні
+      const presenceStatus = await subscribeToActPresence(actId, async () => {
+        console.log("🔄 Автоматичне оновлення даних акту після розблокування...");
+        // Викликаємо showModal з skipPresence=true, щоб оновити дані і не підписуватися знову
+        await showModal(actId, clickSource, true);
+      });
+
+      if (presenceStatus.isLocked) {
+        console.log(`⚠️ Акт ${actId} заблокований користувачем: ${presenceStatus.lockedBy}`);
+      } else {
+        console.log(`✅ Акт ${actId} доступний для редагування`);
+      }
     }
 
     showNotification("Дані успішно завантажено", "success", 1500);

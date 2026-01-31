@@ -86,6 +86,67 @@ export async function unlockAct(actId: number): Promise<void> {
     }
 }
 
+// Зберігаємо ID поточного відкритого акту для очищення при beforeunload
+let currentOpenActId: number | null = null;
+
+/**
+ * Встановлює обробник beforeunload для автоматичного очищення act_on_off
+ * при закритті/перезавантаженні сторінки
+ * @param actId - ID акту
+ */
+export function setupBeforeUnloadHandler(actId: number): void {
+    currentOpenActId = actId;
+
+    // Видаляємо попередній обробник якщо є
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+
+    // Додаємо новий обробник
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    console.log(`🔒 Встановлено beforeunload обробник для акту ${actId}`);
+}
+
+/**
+ * Обробник beforeunload - очищає act_on_off при закритті сторінки
+ */
+function handleBeforeUnload(): void {
+    if (currentOpenActId) {
+        console.log(`🚪 Закриття сторінки - очищення act_on_off для акту ${currentOpenActId}`);
+
+        // Використовуємо sendBeacon для надійної відправки при закритті сторінки
+        // sendBeacon працює навіть коли сторінка вже закривається
+        const url = `${(supabase as any).supabaseUrl}/rest/v1/acts?act_id=eq.${currentOpenActId}`;
+        const headers = {
+            "apikey": (supabase as any).supabaseKey,
+            "Authorization": `Bearer ${(supabase as any).supabaseKey}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        };
+
+        const blob = new Blob(
+            [JSON.stringify({ act_on_off: null })],
+            { type: "application/json" }
+        );
+
+        // Використовуємо fetch з keepalive для більшої надійності
+        fetch(url, {
+            method: "PATCH",
+            headers: headers,
+            body: blob,
+            keepalive: true // Важливо! Дозволяє запиту завершитися навіть після закриття сторінки
+        }).catch(err => console.error("Помилка очищення act_on_off:", err));
+    }
+}
+
+/**
+ * Очищає обробник beforeunload
+ */
+export function cleanupBeforeUnloadHandler(): void {
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+    currentOpenActId = null;
+    console.log("🧹 Очищено beforeunload обробник");
+}
+
 /**
  * Встановлює UI в режим блокування (червоний header, заблокована кнопка збереження)
  * @param lockedBy - ПІБ користувача, який відкрив акт

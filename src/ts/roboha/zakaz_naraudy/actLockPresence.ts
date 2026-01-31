@@ -129,14 +129,45 @@ export async function leaveActPresence(): Promise<void> {
  * Оновлює UI в залежності від presence стану
  */
 function updateUIBasedOnPresence(): void {
-    const otherUsers = Array.from(activeUsers.keys()).filter(key => key !== currentUserName);
+    const otherUsers = Array.from(activeUsers.entries()).filter(([key]) => key !== currentUserName);
 
     if (otherUsers.length > 0) {
-        // Є інші користувачі - блокуємо
-        const lockedBy = otherUsers[0];
-        setLockedUI(lockedBy);
+        // Є інші користувачі - треба визначити хто був першим
+
+        if (!currentUserName) {
+            console.error("❌ Неможливо визначити пріоритет: currentUserName відсутній");
+            return;
+        }
+
+        // Отримуємо час приєднання поточного користувача
+        const currentUserData = activeUsers.get(currentUserName);
+        if (!currentUserData) {
+            console.warn("⚠️ Не знайдено дані поточного користувача");
+            return;
+        }
+
+        const currentUserJoinedAt = new Date(currentUserData.joinedAt).getTime();
+
+        // Перевіряємо чи є хтось хто приєднався раніше
+        const earlierUsers = otherUsers.filter(([_, userData]) => {
+            const otherUserJoinedAt = new Date(userData.joinedAt).getTime();
+            return otherUserJoinedAt < currentUserJoinedAt;
+        });
+
+        if (earlierUsers.length > 0) {
+            // Є користувачі які приєдналися раніше - МИ другі, блокуємо себе
+            const firstUser = earlierUsers[0];
+            const lockedBy = firstUser[1].userName;
+            console.log(`⚠️ Ми приєдналися другими. Акт вже відкритий користувачем: ${lockedBy}`);
+            setLockedUI(lockedBy);
+        } else {
+            // Ми приєдналися першими - інші мають бути заблоковані, ми ні
+            console.log("✅ Ми приєдналися першими. Акт доступний для редагування.");
+            setUnlockedUI();
+        }
     } else {
         // Немає інших користувачів - розблоковуємо
+        console.log("✅ Немає інших користувачів. Акт доступний для редагування.");
         setUnlockedUI();
     }
 }

@@ -123,14 +123,22 @@ export async function subscribeToActPresence(
             const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
             const isLocked = header && header.hasAttribute("data-locked");
 
-            if (isLocked && onUnlock) {
-                console.log("🔄 Auto-refreshing data due to remote save...");
-                await onUnlock();
-
-                // Після оновлення UI злітає блокування (бо рендериться новий чистий HTML)
-                // Тому примусово викликаємо handlePresenceChange, щоб відновити стан (червоний колір і блокування)
-                console.log("🔒 Re-applying lock state after refresh...");
-                handlePresenceChange();
+            if (isLocked) {
+                console.log("🔄 Auto-refreshing table data due to remote save (silent mode)...");
+                
+                // ✅ Використовуємо "тихе" оновлення тільки таблиці без перезавантаження модалу
+                try {
+                    const { refreshActTableSilently } = await import("./modalMain");
+                    await refreshActTableSilently(payload.payload?.actId || actId);
+                    console.log("✅ Таблиця оновлена без моргання");
+                } catch (err) {
+                    console.error("❌ Помилка тихого оновлення:", err);
+                    // Fallback: використовуємо старий метод якщо щось пішло не так
+                    if (onUnlock) {
+                        await onUnlock();
+                        handlePresenceChange();
+                    }
+                }
             }
         })
         .subscribe(async (status: string) => {

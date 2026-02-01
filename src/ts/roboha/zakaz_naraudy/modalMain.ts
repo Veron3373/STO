@@ -2006,3 +2006,169 @@ export function cleanupSlusarsOnSubscription(): void {
     slusarsOnSubscription = null;
   }
 }
+
+/**
+ * "Тихе" оновлення тільки таблиці акту без перезавантаження всього модалу
+ * Використовується при отриманні broadcast про збереження акту іншим користувачем
+ * @param actId - ID акту для оновлення
+ */
+export async function refreshActTableSilently(actId: number): Promise<void> {
+  console.log(`🔄 [refreshActTableSilently] Тихе оновлення таблиці акту #${actId}...`);
+
+  try {
+    // 1. Отримуємо свіжі дані акту з БД
+    const { data: act, error: actError } = await supabase
+      .from("acts")
+      .select("*")
+      .eq("act_id", actId)
+      .single();
+
+    if (actError || !act) {
+      console.error("❌ Помилка отримання даних акту:", actError);
+      return;
+    }
+
+    // 2. Парсимо деталі акту
+    const actDetails = safeParseJSON(act.info || act.data || act.details) || {};
+
+    // 3. Знаходимо контейнер таблиці
+    const tableContainer = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
+    if (!tableContainer) {
+      console.error("❌ Контейнер таблиці не знайдено");
+      return;
+    }
+
+    // 4. Зберігаємо поточні налаштування
+    const showPibMagazin = globalCache.settings.showPibMagazin;
+    const showCatalog = globalCache.settings.showCatalog;
+
+    // 5. Підготовка індексів для recordId
+    const slyusarWorkIndexMap = new Map<string, number>();
+    const shopDetailIndexMap = new Map<string, number>();
+
+    // 6. Формуємо нові дані
+    const allItems = [
+      ...(actDetails?.["Деталі"] || []).map((item: any) => {
+        const shopName = showPibMagazin ? item["Магазин"] || "" : "";
+        const detailName = item["Деталь"] || "";
+        const shopKey = shopName.toLowerCase();
+        const detailIndex = shopDetailIndexMap.get(shopKey) ?? 0;
+        shopDetailIndexMap.set(shopKey, detailIndex + 1);
+        const recordId = item["recordId"] || undefined;
+
+        return {
+          type: "detail",
+          name: detailName,
+          quantity: item["Кількість"] || 0,
+          price: item["Ціна"] || 0,
+          sum: item["Сума"] || 0,
+          person_or_store: shopName,
+          catalog: showCatalog ? item["Каталог"] || "" : "",
+          sclad_id: showCatalog ? item["sclad_id"] || null : null,
+          slyusar_id: null,
+          recordId,
+        };
+      }),
+      ...(actDetails?.["Роботи"] || []).map((item: any) => {
+        const slyusarName = showPibMagazin ? item["Слюсар"] || "" : "";
+        const workName = item["Робота"] || "";
+        const slyusarKey = slyusarName.toLowerCase();
+        const workIndex = slyusarWorkIndexMap.get(slyusarKey) ?? 0;
+        slyusarWorkIndexMap.set(slyusarKey, workIndex + 1);
+        const recordId = item["recordId"] || (slyusarName ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex) : undefined);
+
+        return {
+          type: "work",
+          name: workName,
+          quantity: item["Кількість"] || 0,
+          price: item["Ціна"] || 0,
+          sum: item["Сума"] || 0,
+          person_or_store: slyusarName,
+          catalog: showCatalog ? item["Каталог"] || "" : "",
+          sclad_id: null,
+          slyusar_id: item["slyusar_id"] || null,
+          recordId,
+        };
+      }),
+    ].filter((item) => item.name.trim() !== "");
+
+    // 7. Оновлюємо кеш початкових даних
+    globalCache.initialActItems = allItems;
+
+    // 8. Оновлюємо oldNumbers для правильного підрахунку delta
+    globalCache.oldNumbers = new Map<number, number>();
+    for (const d of actDetails?.["Деталі"] || []) {
+      const id = Number(d?.sclad_id);
+      const qty = Number(d?.["Кількість"] ?? 0);
+      if (id) globalCache.oldNumbers.set(id, qty);
+    }
+
+    // 9. Знаходимо tbody таблиці
+    const tbody = tableContainer.querySelector("tbody");
+    if (!tbody) {
+      console.error("❌ tbody не знайдено");
+      return;
+    }
+
+    // 10. Очищаємо старі рядки
+    tbody.innerHTML = "";
+
+    // 11. Генеруємо нові рядки
+    const isClosed = globalCache.isActClosed;
+    const showZarplata = globalCache.settings.showZarplata;
+
+    allItems.forEach((item, index) => {
+      const row = document.createElement("tr");
+      const isWork = item.type === "work";
+      const dataType = isWork ? "works" : "details";
+      const icon = isWork ? "🛠️" : "⚙️";
+
+      // Форматування чисел
+      const formatNum = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
+
+      // Генеруємо HTML рядка
+      row.innerHTML = `
+        <td class="row-index">${icon} ${index + 1}</td>
+        <td class="name-cell">
+          <div data-name="name" data-type="${dataType}" class="${!isClosed ? "editable-autocomplete" : ""}" ${!isClosed ? 'contenteditable="true"' : ""} ${item.recordId ? `data-record-id="${item.recordId}"` : ""}>${item.name}</div>
+        </td>
+        ${showCatalog ? `<td class="catalog-cell" data-name="catalog" ${item.sclad_id ? `data-sclad-id="${item.sclad_id}"` : ""}>${item.catalog || ""}</td>` : ""}
+        <td class="text-right qty-cell" data-name="id_count" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.quantity)}</td>
+        <td class="text-right price-cell" data-name="price" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.price)}</td>
+        <td class="text-right" data-name="sum">${formatNum(item.sum)}</td>
+        ${showZarplata ? `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum">${isWork ? "" : ""}</td>` : ""}
+        ${showPibMagazin ? `<td class="pib-magazin-cell" data-name="pib_magazin" ${!isClosed ? 'contenteditable="true"' : ""}>${item.person_or_store}</td>` : ""}
+        ${!isClosed ? `<td class="delete-cell"><button class="delete-row-btn" title="Видалити рядок">🗑️</button></td>` : ""}
+      `;
+
+      tbody.appendChild(row);
+    });
+
+    // 12. Оновлюємо зарплати з історії (якщо показуємо)
+    if (showZarplata) {
+      await updateAllSlyusarSumsFromHistory();
+    }
+
+    // 13. Оновлюємо підсумки
+    updateCalculatedSumsInFooter();
+
+    // 14. Оновлюємо попередження про кількість
+    await refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID);
+
+    // 15. Перевстановлюємо автодоповнення для нових рядків
+    if (!isClosed) {
+      setupAutocompleteForEditableCells(
+        ACT_ITEMS_TABLE_CONTAINER_ID,
+        globalCache,
+        () => {
+          updateCalculatedSumsInFooter();
+        }
+      );
+    }
+
+    console.log(`✅ [refreshActTableSilently] Таблицю акту #${actId} успішно оновлено`);
+
+  } catch (error) {
+    console.error("❌ Помилка тихого оновлення таблиці:", error);
+  }
+}

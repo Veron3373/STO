@@ -422,30 +422,33 @@ body {
   }
 }
 
+/* ✏️ Рядок з телефоном і редактором */
+.phone-editor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 /* ✏️ Інформація про редактора акту */
 .act-editor-info {
-  font-size: 0.78em;
+  font-size: 0.75em;
   color: #7c3aed;
   font-weight: 600;
-  margin-top: 4px;
-  padding: 2px 6px;
+  padding: 1px 5px;
   background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
   border-radius: 4px;
   border: 1px solid #c4b5fd;
-  text-align: right;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-left: 8px;
   animation: editor-pulse 2s ease-in-out infinite;
 }
 
 @keyframes editor-pulse {
   0%, 100% {
     opacity: 1;
-    transform: scale(1);
   }
   50% {
-    opacity: 0.85;
-    transform: scale(1.01);
+    opacity: 0.7;
   }
 }

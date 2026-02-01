@@ -475,23 +475,20 @@ function updateEditorInfoInDom(actId: number, editorName: string | null): void {
     const clientCell = row.querySelectorAll("td")[2];
     if (!clientCell) return;
 
-    // Знаходимо або створюємо div для редактора
-    let editorDiv = clientCell.querySelector(".act-editor-info") as HTMLElement;
+    // Знаходимо span для редактора
+    let editorSpan = clientCell.querySelector(".act-editor-info") as HTMLElement;
 
     if (editorName) {
       // Показуємо інформацію про редактора
-      if (!editorDiv) {
-        editorDiv = document.createElement("div");
-        editorDiv.className = "act-editor-info";
-        clientCell.appendChild(editorDiv);
+      if (editorSpan) {
+        editorSpan.innerHTML = `✏️ ${editorName}`;
+        editorSpan.style.display = "inline";
       }
-      editorDiv.innerHTML = `✏️ ${editorName}`;
-      editorDiv.style.display = "block";
       console.log(`✏️ [updateEditor] Акт #${actId} редагує: ${editorName}`);
     } else {
       // Приховуємо інформацію про редактора
-      if (editorDiv) {
-        editorDiv.style.display = "none";
+      if (editorSpan) {
+        editorSpan.style.display = "none";
       }
       console.log(`✅ [updateEditor] Акт #${actId} більше не редагується`);
     }
@@ -855,6 +852,12 @@ function createClientCell(
     }
   }
 
+  // ✏️ Отримуємо інформацію про редактора
+  const editorName = actEditorsMap.get(actId);
+  const editorHtml = editorName 
+    ? `<span class="act-editor-info">✏️ ${editorName}</span>` 
+    : `<span class="act-editor-info" style="display: none;"></span>`;
+
   // Виводимо телефони і SMS
   if (phones.length > 0) {
     phones.forEach((p) => {
@@ -868,19 +871,14 @@ function createClientCell(
         // Очищаємо smsHtml щоб не дублювати
         smsHtml = "";
       } else {
-        td.innerHTML += `<div class="phone-blue-italic">${p}</div>`;
+        // ✏️ Телефон і редактор на одній лінії
+        td.innerHTML += `<div class="phone-editor-row"><span class="phone-blue-italic">${p}</span>${editorHtml}</div>`;
       }
     });
   } else if (smsHtml) {
     // Якщо телефонів немає, але є SMS
     td.innerHTML += `<div style="margin-top: 4px; text-align: left;">${smsHtml}</div>`;
   }
-
-  // ✏️ Додаємо div для інформації про редактора (спочатку прихований)
-  const editorName = actEditorsMap.get(actId);
-  const editorStyle = editorName ? "display: block;" : "display: none;";
-  const editorContent = editorName ? `✏️ ${editorName}` : "";
-  td.innerHTML += `<div class="act-editor-info" style="${editorStyle}">${editorContent}</div>`;
 
   td.addEventListener("click", async () => {
     const canOpen = await canUserOpenActs();

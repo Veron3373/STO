@@ -425,9 +425,19 @@ body {
 /* ✏️ Рядок з телефоном і редактором */
 .phone-editor-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   width: 100%;
+  position: relative;
+}
+
+.phone-editor-row .phone-blue-italic {
+  text-align: center;
+}
+
+.phone-editor-row .act-editor-info {
+  position: absolute;
+  right: 0;
 }
 
 /* ✏️ Інформація про редактора акту */
@@ -440,7 +450,6 @@ body {
   border-radius: 4px;
   border: 1px solid #c4b5fd;
   white-space: nowrap;
-  margin-left: 8px;
   animation: editor-pulse 2s ease-in-out infinite;
 }
 

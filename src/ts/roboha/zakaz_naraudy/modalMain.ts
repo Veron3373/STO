@@ -2038,9 +2038,16 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       return;
     }
 
-    // 4. Зберігаємо поточні налаштування
-    const showPibMagazin = globalCache.settings.showPibMagazin;
-    const showCatalog = globalCache.settings.showCatalog;
+    // 4. ✅ ВИПРАВЛЕНО: Визначаємо видимість стовпців на основі ПОТОЧНОЇ таблиці (а не globalCache)
+    // Це гарантує, що оновлення покаже ті самі стовпці, що й до оновлення
+    const existingHeaderRow = tableContainer.querySelector("thead tr");
+    const showCatalog = existingHeaderRow?.querySelector('th.catalog-header, th:nth-child(3)')?.textContent?.includes("Каталог") ?? false;
+    const showZarplata = !!existingHeaderRow?.querySelector('th.zarplata-header') || 
+                         Array.from(existingHeaderRow?.querySelectorAll('th') || []).some(th => th.textContent?.includes("Зар-та"));
+    const showPibMagazin = !!existingHeaderRow?.querySelector('th.pib-magazin-header') || 
+                           Array.from(existingHeaderRow?.querySelectorAll('th') || []).some(th => th.textContent?.includes("ПІБ"));
+
+    console.log(`📊 [refreshActTableSilently] Видимість стовпців: Каталог=${showCatalog}, Зар-та=${showZarplata}, ПІБ=${showPibMagazin}`);
 
     // 5. Підготовка індексів для recordId
     const slyusarWorkIndexMap = new Map<string, number>();
@@ -2115,7 +2122,6 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
 
     // 11. Генеруємо нові рядки
     const isClosed = globalCache.isActClosed;
-    const showZarplata = globalCache.settings.showZarplata;
 
     allItems.forEach((item, index) => {
       const row = document.createElement("tr");
@@ -2126,7 +2132,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       // Форматування чисел
       const formatNum = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
 
-      // Генеруємо HTML рядка
+      // Генеруємо HTML рядка (використовуємо showCatalog, showZarplata, showPibMagazin з перевірки header)
       row.innerHTML = `
         <td class="row-index">${icon} ${index + 1}</td>
         <td class="name-cell">

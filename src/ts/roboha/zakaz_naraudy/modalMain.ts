@@ -2191,7 +2191,50 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       );
     }
 
-    console.log(`✅ [refreshActTableSilently] Таблицю акту #${actId} успішно оновлено`);
+    // ✅ 16. Оновлюємо інші поля акту (пробіг, причина звернення, рекомендації, аванс, знижка)
+    // Пробіг
+    const probigEl = document.getElementById(EDITABLE_PROBIG_ID);
+    if (probigEl) {
+      probigEl.textContent = formatNumberWithSpaces(actDetails?.["Пробіг"], 0, 0);
+    }
+
+    // Причина звернення
+    const reasonEl = document.getElementById(EDITABLE_REASON_ID);
+    if (reasonEl) {
+      reasonEl.textContent = actDetails?.["Причина звернення"] || "—";
+    }
+
+    // Рекомендації
+    const recommendationsEl = document.getElementById(EDITABLE_RECOMMENDATIONS_ID);
+    if (recommendationsEl) {
+      recommendationsEl.textContent = actDetails?.["Рекомендації"] || "—";
+    }
+
+    // Аванс
+    const avansInput = document.getElementById("editable-avans") as HTMLInputElement | null;
+    if (avansInput) {
+      const avansValue = Number(act?.avans ?? actDetails?.["Аванс"] ?? 0);
+      avansInput.value = String(avansValue);
+      avansInput.dispatchEvent(new Event("input"));
+    }
+
+    // Знижка (відсоток)
+    const discountInput = document.getElementById("editable-discount") as HTMLInputElement | null;
+    if (discountInput) {
+      const discountValue = Number(act?.discount ?? actDetails?.["Знижка"] ?? 0);
+      discountInput.value = String(discountValue);
+      discountInput.dispatchEvent(new Event("input"));
+    }
+
+    // Знижка (сума)
+    const discountAmountInput = document.getElementById("editable-discount-amount") as HTMLInputElement | null;
+    if (discountAmountInput) {
+      const discountAmountValue = Number(actDetails?.["Знижка сума"] ?? 0);
+      discountAmountInput.value = String(discountAmountValue);
+      discountAmountInput.dispatchEvent(new Event("input"));
+    }
+
+    console.log(`✅ [refreshActTableSilently] Таблицю акту #${actId} успішно оновлено (включаючи додаткові поля)`);
 
   } catch (error) {
     console.error("❌ Помилка тихого оновлення таблиці:", error);

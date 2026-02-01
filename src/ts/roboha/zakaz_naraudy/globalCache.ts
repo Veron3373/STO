@@ -560,6 +560,38 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
   }
 }
 
+/**
+ * ✅ Перезавантажує тільки слюсарів з бази даних
+ * Використовується при отриманні broadcast про збереження акту іншим користувачем
+ * щоб отримати актуальні дані з історії слюсарів (зарплати, тощо)
+ */
+export async function reloadSlyusarsOnly(): Promise<void> {
+  try {
+    console.log("🔄 [reloadSlyusarsOnly] Перезавантаження слюсарів з БД...");
+    
+    const { data: slyusarsData, error } = await supabase
+      .from("slyusars")
+      .select("data");
+    
+    if (error) {
+      console.error("❌ Помилка завантаження слюсарів:", error);
+      return;
+    }
+
+    globalCache.slyusars =
+      slyusarsData
+        ?.map((r: any) => {
+          const d = safeParseJSON(r.data);
+          return d?.Name ? d : null;
+        })
+        .filter(Boolean) || [];
+
+    console.log(`✅ [reloadSlyusarsOnly] Завантажено ${globalCache.slyusars.length} слюсарів`);
+  } catch (err) {
+    console.error("❌ [reloadSlyusarsOnly] Помилка:", err);
+  }
+}
+
 export async function loadSkladLite(): Promise<void> {
   try {
     // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ записів

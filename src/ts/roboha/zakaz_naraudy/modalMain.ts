@@ -2016,6 +2016,10 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
   console.log(`🔄 [refreshActTableSilently] Тихе оновлення таблиці акту #${actId}...`);
 
   try {
+    // ✅ 0. ВАЖЛИВО: Перезавантажуємо слюсарів з БД, щоб мати актуальні дані з історії (зарплати!)
+    const { reloadSlyusarsOnly } = await import("./globalCache");
+    await reloadSlyusarsOnly();
+
     // 1. Отримуємо свіжі дані акту з БД
     const { data: act, error: actError } = await supabase
       .from("acts")

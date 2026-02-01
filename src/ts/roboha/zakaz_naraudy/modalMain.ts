@@ -2147,10 +2147,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       // Форматування чисел
       const formatNum = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
 
-      // Стилі для прихованих стовпців
-      const hiddenStyle = 'style="display: none;"';
-
-      // Генеруємо HTML рядка (використовуємо showCatalog, showZarplata, showPibMagazin, showPrice, showSum з перевірки header)
+      // Генеруємо HTML рядка - стовпці показуємо ТІЛЬКИ якщо вони видимі в заголовках
       row.innerHTML = `
         <td class="row-index">${icon} ${index + 1}</td>
         <td class="name-cell">
@@ -2158,8 +2155,8 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
         </td>
         ${showCatalog ? `<td class="catalog-cell" data-name="catalog" ${item.sclad_id ? `data-sclad-id="${item.sclad_id}"` : ""}>${item.catalog || ""}</td>` : ""}
         <td class="text-right qty-cell" data-name="id_count" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.quantity)}</td>
-        <td class="text-right price-cell" data-name="price" ${!showPrice ? hiddenStyle : ""} ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.price)}</td>
-        <td class="text-right" data-name="sum" ${!showSum ? hiddenStyle : ""}>${formatNum(item.sum)}</td>
+        ${showPrice ? `<td class="text-right price-cell" data-name="price" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.price)}</td>` : ""}
+        ${showSum ? `<td class="text-right" data-name="sum">${formatNum(item.sum)}</td>` : ""}
         ${showZarplata ? `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum">${isWork ? "" : ""}</td>` : ""}
         ${showPibMagazin ? `<td class="pib-magazin-cell" data-name="pib_magazin" ${!isClosed ? 'contenteditable="true"' : ""}>${item.person_or_store}</td>` : ""}
         ${hasDeleteColumnSeparate ? `<td class="delete-cell"><button class="delete-row-btn" title="Видалити рядок">🗑️</button></td>` : ""}

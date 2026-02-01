@@ -1047,7 +1047,8 @@ function getClientAndCarInfo(): { pib: string; auto: string } {
  * Синхронізує історію акту для Приймальника
  * НОВА ЛОГІКА:
  * - Якщо зберігає Приймальник → оновлюємо його історію
- * - Якщо зберігає НЕ Приймальник → шукаємо останнього приймальника з acts.pruimalnyk і оновлюємо його історію
+ * - Якщо зберігає Адміністратор → тільки видаляємо акт з історії попереднього приймальника, нічого не записуємо
+ * - Якщо зберігає інший користувач → шукаємо останнього приймальника з acts.pruimalnyk і оновлюємо його історію
  */
 async function syncPruimalnikHistory(
   actId: number,
@@ -1062,6 +1063,99 @@ async function syncPruimalnikHistory(
   console.log(
     `👤 Поточний користувач: "${userName}" (рівень доступу: "${userAccessLevel}")`
   );
+
+  // ✅ Для Адміністратора: тільки видаляємо з попереднього приймальника, нічого не записуємо
+  if (userAccessLevel === "Адміністратор") {
+    console.log(`👔 Адміністратор: тільки видаляємо акт з історії попереднього приймальника`);
+    
+    // Шукаємо попереднього приймальника з acts.pruimalnyk
+    const { data: actData, error: actError } = await supabase
+      .from("acts")
+      .select("pruimalnyk")
+      .eq("act_id", actId)
+      .single();
+
+    if (actError || !actData || !actData.pruimalnyk) {
+      console.log(`ℹ️ Попередній приймальник не знайдений в acts.pruimalnyk для акту #${actId}`);
+      return;
+    }
+
+    const previousPruimalnyk = actData.pruimalnyk;
+    console.log(`🔍 Попередній приймальник з БД: "${previousPruimalnyk}"`);
+
+    // Шукаємо попереднього приймальника в slyusars
+    const { data: prevReceiverData, error: prevError } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, data")
+      .eq("data->>Name", previousPruimalnyk)
+      .maybeSingle();
+
+    if (prevError) {
+      console.error(`❌ Помилка пошуку приймальника "${previousPruimalnyk}":`, prevError);
+      return;
+    }
+
+    if (!prevReceiverData) {
+      console.log(`ℹ️ Приймальник "${previousPruimalnyk}" не знайдений в БД`);
+      return;
+    }
+
+    const receiverData =
+      typeof prevReceiverData.data === "string"
+        ? JSON.parse(prevReceiverData.data)
+        : prevReceiverData.data;
+
+    // Перевіряємо, чи це дійсно Приймальник
+    if (receiverData.Доступ !== "Приймальник") {
+      console.log(`ℹ️ "${previousPruimalnyk}" не є Приймальником`);
+      return;
+    }
+
+    let receiverHistory = receiverData.Історія || {};
+    let wasModified = false;
+
+    // Шукаємо і видаляємо акт з історії
+    for (const dateKey of Object.keys(receiverHistory)) {
+      const dailyActs = receiverHistory[dateKey];
+      if (Array.isArray(dailyActs)) {
+        const idx = dailyActs.findIndex(
+          (item: any) => String(item.Акт) === String(actId)
+        );
+        if (idx !== -1) {
+          console.log(`🗑️ Видаляємо акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`);
+          dailyActs.splice(idx, 1);
+
+          // Якщо масив порожній, видаляємо дату
+          if (dailyActs.length === 0) {
+            delete receiverHistory[dateKey];
+          }
+
+          wasModified = true;
+          break;
+        }
+      }
+    }
+
+    // Оновлюємо в БД, якщо були зміни
+    if (wasModified) {
+      receiverData.Історія = receiverHistory;
+      const { error: updateError } = await supabase
+        .from("slyusars")
+        .update({ data: receiverData })
+        .eq("slyusar_id", prevReceiverData.slyusar_id);
+
+      if (updateError) {
+        console.error(`❌ Помилка оновлення історії для "${receiverData.Name}":`, updateError);
+      } else {
+        console.log(`✅ Історію "${receiverData.Name}" оновлено (акт видалено)`);
+      }
+    } else {
+      console.log(`ℹ️ Акт #${actId} не знайдено в історії приймальника "${previousPruimalnyk}"`);
+    }
+
+    console.log(`✅ Адміністратор: завершено видалення акту з історії приймальника`);
+    return;
+  }
 
   // ✅ Визначаємо ПІБ приймальника
   let pruimalnykName: string;

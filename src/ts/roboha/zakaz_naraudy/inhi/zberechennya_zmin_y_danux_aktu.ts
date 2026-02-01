@@ -396,28 +396,29 @@ export function parseTableRows(): ParsedItem[] {
     // ✅ Зчитуємо recordId з атрибута рядка (для точного пошуку при однакових роботах)
     const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
 
-    // ✅ ВИПРАВЛЕНО v3.0: Для РОБІТ перевіряємо спочатку історію слюсаря!
-    // Якщо в історії є збережена зарплата > 0 - використовуємо її (не перетираємо!)
-    // Це критично важливо коли стовпець "Зар-та" прихований
+    // ✅ ВИПРАВЛЕНО v4.0: Логіка зарплати:
+    // 1. Якщо стовпець "Зар-та" ВИДИМИЙ (slyusarSumCell існує) - ЗАВЖДИ беремо з DOM
+    //    (користувач міг змінити значення, і воно має зберегтися)
+    // 2. Якщо стовпець ПРИХОВАНИЙ - беремо з історії слюсаря (щоб не втратити)
     if (type === "work" && pibMagazin && globalCache.currentActId) {
-      const historySalary = getSlyusarSalaryFromHistory(
-        pibMagazin, // слюсар = ПІБ_Магазин
-        name,       // назва роботи
-        globalCache.currentActId,
-        undefined,  // rowIndex - не передаємо бо не маємо індексу тут
-        recordId    // recordId для точного пошуку
-      );
-
-      if (historySalary !== null && historySalary > 0) {
-        // ✅ В історії є збережена зарплата > 0 - використовуємо її!
-        slyusarSum = historySalary;
-        console.log(`💰 [parseTableRows] Зарплата з ІСТОРІЇ слюсаря "${pibMagazin}": ${slyusarSum} (НЕ перетираємо!)`);
+      if (slyusarSumCell) {
+        // ✅ Стовпець ВИДИМИЙ - беремо з DOM (користувач міг змінити)
+        const rawSalaryText = slyusarSumCell.textContent;
+        slyusarSum = parseNum(rawSalaryText);
+        console.log(`💰 [parseTableRows] Зарплата з DOM (стовпець видимий): rawText="${rawSalaryText}", parsed=${slyusarSum}`);
       } else {
-        // В історії немає або = 0 - беремо з DOM
-        if (slyusarSumCell) {
-          const rawSalaryText = slyusarSumCell.textContent;
-          slyusarSum = parseNum(rawSalaryText);
-          console.log(`💰 [parseTableRows] Зарплата з DOM (історія пуста): rawText="${rawSalaryText}", parsed=${slyusarSum}`);
+        // ⚠️ Стовпець ПРИХОВАНИЙ - беремо з історії слюсаря
+        const historySalary = getSlyusarSalaryFromHistory(
+          pibMagazin, // слюсар = ПІБ_Магазин
+          name,       // назва роботи
+          globalCache.currentActId,
+          undefined,  // rowIndex - не передаємо бо не маємо індексу тут
+          recordId    // recordId для точного пошуку
+        );
+
+        if (historySalary !== null && historySalary > 0) {
+          slyusarSum = historySalary;
+          console.log(`💰 [parseTableRows] Зарплата з ІСТОРІЇ слюсаря "${pibMagazin}": ${slyusarSum} (стовпець прихований)`);
         } else if (cachedData) {
           slyusarSum = cachedData.slyusarSum || 0;
           console.log(`💰 [parseTableRows] Зарплата з кешу (історія пуста): ${slyusarSum}`);

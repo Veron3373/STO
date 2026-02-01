@@ -2047,9 +2047,13 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     const showCatalog = headerTexts.includes("Каталог");
     const showZarplata = headerTexts.includes("Зар-та");
     const showPibMagazin = headerTexts.some(t => t.includes("ПІБ") && t.includes("Магазин"));
+    
+    // Перевіряємо чи є ОКРЕМА колонка delete-cell (td.delete-cell в окремому td)
+    // Якщо кнопка delete всередині name-cell - це інший варіант верстки, окремий td не потрібен
+    const hasDeleteColumnSeparate = !!tableContainer.querySelector('tbody tr > td.delete-cell');
 
     console.log(`📊 [refreshActTableSilently] Заголовки таблиці: [${headerTexts.join(", ")}]`);
-    console.log(`📊 [refreshActTableSilently] Видимість стовпців: Каталог=${showCatalog}, Зар-та=${showZarplata}, ПІБ=${showPibMagazin}`);
+    console.log(`📊 [refreshActTableSilently] Видимість стовпців: Каталог=${showCatalog}, Зар-та=${showZarplata}, ПІБ=${showPibMagazin}, DeleteCol=${hasDeleteColumnSeparate}`);
 
     // 5. Підготовка індексів для recordId
     const slyusarWorkIndexMap = new Map<string, number>();
@@ -2146,7 +2150,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
         <td class="text-right" data-name="sum">${formatNum(item.sum)}</td>
         ${showZarplata ? `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum">${isWork ? "" : ""}</td>` : ""}
         ${showPibMagazin ? `<td class="pib-magazin-cell" data-name="pib_magazin" ${!isClosed ? 'contenteditable="true"' : ""}>${item.person_or_store}</td>` : ""}
-        ${!isClosed ? `<td class="delete-cell"><button class="delete-row-btn" title="Видалити рядок">🗑️</button></td>` : ""}
+        ${hasDeleteColumnSeparate ? `<td class="delete-cell"><button class="delete-row-btn" title="Видалити рядок">🗑️</button></td>` : ""}
       `;
 
       tbody.appendChild(row);

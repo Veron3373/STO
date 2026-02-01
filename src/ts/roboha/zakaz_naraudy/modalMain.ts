@@ -2041,12 +2041,14 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     // 4. ✅ ВИПРАВЛЕНО: Визначаємо видимість стовпців на основі ПОТОЧНОЇ таблиці (а не globalCache)
     // Це гарантує, що оновлення покаже ті самі стовпці, що й до оновлення
     const existingHeaderRow = tableContainer.querySelector("thead tr");
-    const showCatalog = existingHeaderRow?.querySelector('th.catalog-header, th:nth-child(3)')?.textContent?.includes("Каталог") ?? false;
-    const showZarplata = !!existingHeaderRow?.querySelector('th.zarplata-header') || 
-                         Array.from(existingHeaderRow?.querySelectorAll('th') || []).some(th => th.textContent?.includes("Зар-та"));
-    const showPibMagazin = !!existingHeaderRow?.querySelector('th.pib-magazin-header') || 
-                           Array.from(existingHeaderRow?.querySelectorAll('th') || []).some(th => th.textContent?.includes("ПІБ"));
+    const headerTexts = Array.from(existingHeaderRow?.querySelectorAll('th') || []).map(th => th.textContent?.trim() || "");
+    
+    // Точна перевірка наявності стовпців за текстом заголовків
+    const showCatalog = headerTexts.includes("Каталог");
+    const showZarplata = headerTexts.includes("Зар-та");
+    const showPibMagazin = headerTexts.some(t => t.includes("ПІБ") && t.includes("Магазин"));
 
+    console.log(`📊 [refreshActTableSilently] Заголовки таблиці: [${headerTexts.join(", ")}]`);
     console.log(`📊 [refreshActTableSilently] Видимість стовпців: Каталог=${showCatalog}, Зар-та=${showZarplata}, ПІБ=${showPibMagazin}`);
 
     // 5. Підготовка індексів для recordId

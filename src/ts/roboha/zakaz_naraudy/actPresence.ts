@@ -117,11 +117,17 @@ export async function subscribeToActPresence(
         })
         .on("broadcast", { event: "act_saved" }, async (payload: any) => {
             console.log("📢 Received act_saved broadcast:", payload);
+            
+            // Отримуємо actId з payload (Supabase обгортає в payload.payload)
+            const receivedActId = payload?.payload?.actId || payload?.actId || actId;
+            console.log("📢 Received actId:", receivedActId, "Current actId:", actId);
 
             // Перевіряємо, чи ми заблоковані (значить ми не той, хто зберіг)
             // Якщо ми власник - ми і так оновили дані при збереженні
             const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
             const isLocked = header && header.hasAttribute("data-locked");
+
+            console.log("📢 isLocked:", isLocked, "header data-locked:", header?.getAttribute("data-locked"));
 
             if (isLocked) {
                 console.log("🔄 Auto-refreshing table data due to remote save (silent mode)...");
@@ -129,7 +135,7 @@ export async function subscribeToActPresence(
                 // ✅ Використовуємо "тихе" оновлення тільки таблиці без перезавантаження модалу
                 try {
                     const { refreshActTableSilently } = await import("./modalMain");
-                    await refreshActTableSilently(payload.payload?.actId || actId);
+                    await refreshActTableSilently(receivedActId);
                     console.log("✅ Таблиця оновлена без моргання");
                 } catch (err) {
                     console.error("❌ Помилка тихого оновлення:", err);
@@ -139,6 +145,8 @@ export async function subscribeToActPresence(
                         handlePresenceChange();
                     }
                 }
+            } else {
+                console.log("📢 Акт не заблокований, оновлення не потрібне (ми власник)");
             }
         })
         .subscribe(async (status: string) => {

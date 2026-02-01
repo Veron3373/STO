@@ -160,6 +160,9 @@ export async function subscribeToActPresence(
 
                 await presenceChannel.track(presenceData);
                 console.log("✅ Subscribed to act presence:", actId);
+
+                // ✏️ Також відправляємо на глобальний канал для відображення в таблиці
+                await trackGlobalActPresence(actId);
             }
         });
 
@@ -210,6 +213,47 @@ export async function notifyActSaved(actId: number): Promise<void> {
     }
 }
 
+// ✏️ Глобальний канал для відображення хто редагує акти в таблиці
+let globalPresenceChannel: any = null;
+
+/**
+ * ✏️ Відстежує присутність в глобальному каналі (для відображення в таблиці)
+ */
+async function trackGlobalActPresence(actId: number): Promise<void> {
+    // Створюємо канал, якщо ще не існує
+    if (!globalPresenceChannel) {
+        globalPresenceChannel = supabase.channel("global_acts_presence", {
+            config: {
+                presence: {
+                    key: currentUserName || "Unknown",
+                },
+            },
+        });
+
+        await globalPresenceChannel.subscribe();
+    }
+
+    // Відправляємо присутність з actId
+    const presenceData = {
+        actId: actId,
+        userName: currentUserName || "Unknown",
+        openedAt: new Date().toISOString(),
+    };
+
+    await globalPresenceChannel.track(presenceData);
+    console.log("✏️ [GlobalPresence] Tracked act:", actId);
+}
+
+/**
+ * ✏️ Прибирає присутність з глобального каналу
+ */
+async function untrackGlobalActPresence(): Promise<void> {
+    if (globalPresenceChannel) {
+        await globalPresenceChannel.untrack();
+        console.log("✏️ [GlobalPresence] Untracked presence");
+    }
+}
+
 /**
  * Відписується від присутності акту
  */
@@ -220,6 +264,9 @@ export async function unsubscribeFromActPresence(): Promise<void> {
         presenceChannel = null;
         console.log("✅ Unsubscribed from act presence");
     }
+    
+    // ✏️ Також прибираємо з глобального каналу
+    await untrackGlobalActPresence();
 }
 
 /**

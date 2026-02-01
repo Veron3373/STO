@@ -43,6 +43,11 @@ let modifiedActIdsGlobal: Set<number> = new Set();
 let actNotificationCounts: Map<number, number> = new Map();
 let sortByDateStep = 0;
 
+// ✏️ Глобальна мапа: actId -> ПІБ редактора (для показу хто редагує акт)
+let actEditorsMap: Map<number, string> = new Map();
+// Канал для відстеження присутності в актах
+let globalPresenceChannel: any = null;
+
 // =============================================================================
 // УТИЛІТИ
 // =============================================================================
@@ -371,6 +376,126 @@ function subscribeToSlusarNotifications() {
     .subscribe((status) => {
       console.log(`📡 [slusarsOn] Статус підписки:`, status);
     });
+}
+
+/**
+ * ✏️ Підписка на глобальний канал присутності для відстеження хто редагує які акти
+ * Показує ПІБ редактора в комірці клієнта
+ */
+function subscribeToGlobalActPresence() {
+  console.log("📡 [GlobalPresence] Підключення до глобального каналу присутності...");
+
+  // Відписуємося від попереднього каналу, якщо він існує
+  if (globalPresenceChannel) {
+    supabase.removeChannel(globalPresenceChannel);
+    globalPresenceChannel = null;
+  }
+
+  // Створюємо канал для ВСІХ актів
+  globalPresenceChannel = supabase.channel("global_acts_presence", {
+    config: {
+      presence: {
+        key: currentUserName || "Unknown",
+      },
+    },
+  });
+
+  // Функція для оновлення списку редакторів
+  const handlePresenceSync = () => {
+    const state = globalPresenceChannel.presenceState();
+    console.log("🔄 [GlobalPresence] Sync:", state);
+
+    // Очищаємо попередню мапу редакторів
+    const newEditorsMap = new Map<number, string>();
+
+    // Перебираємо всіх користувачів у стані
+    Object.keys(state).forEach((key) => {
+      const presences = state[key] as any[];
+      if (presences && presences.length > 0) {
+        presences.forEach((p) => {
+          if (p.actId && p.userName) {
+            // Зберігаємо тільки якщо це НЕ поточний користувач
+            if (p.userName !== currentUserName) {
+              newEditorsMap.set(p.actId, p.userName);
+            }
+          }
+        });
+      }
+    });
+
+    // Порівнюємо зі старою мапою та оновлюємо DOM
+    const allActIds = new Set([...actEditorsMap.keys(), ...newEditorsMap.keys()]);
+    
+    allActIds.forEach((actId) => {
+      const oldEditor = actEditorsMap.get(actId);
+      const newEditor = newEditorsMap.get(actId);
+      
+      if (oldEditor !== newEditor) {
+        // Оновлюємо DOM для цього акту
+        updateEditorInfoInDom(actId, newEditor || null);
+      }
+    });
+
+    // Оновлюємо глобальну мапу
+    actEditorsMap = newEditorsMap;
+    console.log("📝 [GlobalPresence] Оновлена мапа редакторів:", actEditorsMap);
+  };
+
+  // Підписуємося на події присутності
+  globalPresenceChannel
+    .on("presence", { event: "sync" }, handlePresenceSync)
+    .on("presence", { event: "join" }, ({ key, newPresences }: { key: string; newPresences: any }) => {
+      console.log("👋 [GlobalPresence] User joined:", key, newPresences);
+    })
+    .on("presence", { event: "leave" }, ({ key, leftPresences }: { key: string; leftPresences: any }) => {
+      console.log("👋 [GlobalPresence] User left:", key, leftPresences);
+    })
+    .subscribe((status: string) => {
+      console.log(`📡 [GlobalPresence] Статус підписки:`, status);
+    });
+}
+
+/**
+ * ✏️ Оновлює інформацію про редактора в DOM для конкретного акту
+ */
+function updateEditorInfoInDom(actId: number, editorName: string | null): void {
+  const table = document.querySelector("#table-container-modal-sakaz_narad table");
+  if (!table) return;
+
+  const rows = table.querySelectorAll("tbody tr");
+  
+  rows.forEach((row) => {
+    const firstCell = row.querySelector("td");
+    if (!firstCell) return;
+
+    const cellActId = getActIdFromCell(firstCell);
+    if (cellActId !== actId) return;
+
+    // Знаходимо комірку клієнта (3-я комірка)
+    const clientCell = row.querySelectorAll("td")[2];
+    if (!clientCell) return;
+
+    // Знаходимо або створюємо div для редактора
+    let editorDiv = clientCell.querySelector(".act-editor-info") as HTMLElement;
+
+    if (editorName) {
+      // Показуємо інформацію про редактора
+      if (!editorDiv) {
+        editorDiv = document.createElement("div");
+        editorDiv.className = "act-editor-info";
+        clientCell.appendChild(editorDiv);
+      }
+      editorDiv.innerHTML = `✏️ ${editorName}`;
+      editorDiv.style.display = "block";
+      console.log(`✏️ [updateEditor] Акт #${actId} редагує: ${editorName}`);
+    } else {
+      // Приховуємо інформацію про редактора
+      if (editorDiv) {
+        editorDiv.style.display = "none";
+      }
+      console.log(`✅ [updateEditor] Акт #${actId} більше не редагується`);
+    }
+  });
 }
 
 /**
@@ -750,6 +875,12 @@ function createClientCell(
     // Якщо телефонів немає, але є SMS
     td.innerHTML += `<div style="margin-top: 4px; text-align: left;">${smsHtml}</div>`;
   }
+
+  // ✏️ Додаємо div для інформації про редактора (спочатку прихований)
+  const editorName = actEditorsMap.get(actId);
+  const editorStyle = editorName ? "display: block;" : "display: none;";
+  const editorContent = editorName ? `✏️ ${editorName}` : "";
+  td.innerHTML += `<div class="act-editor-info" style="${editorStyle}">${editorContent}</div>`;
 
   td.addEventListener("click", async () => {
     const canOpen = await canUserOpenActs();
@@ -1503,6 +1634,9 @@ export async function initializeActsSystem(): Promise<void> {
 
     // ✅ АКТИВУЄМО REALTIME ПІДПИСКУ
     subscribeToActNotifications();
+
+    // ✏️ ПІДПИСКА НА ГЛОБАЛЬНУ ПРИСУТНІСТЬ (хто редагує акти)
+    subscribeToGlobalActPresence();
 
     // 📥 ЗАВАНТАЖУЄМО ІСНУЮЧІ ПОВІДОМЛЕННЯ З БД
     console.log(`🔍 [initializeActsSystem] accessLevel = "${accessLevel}"`);

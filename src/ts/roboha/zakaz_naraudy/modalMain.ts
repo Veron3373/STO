@@ -2041,19 +2041,28 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     // 4. ✅ ВИПРАВЛЕНО: Визначаємо видимість стовпців на основі ПОТОЧНОЇ таблиці (а не globalCache)
     // Це гарантує, що оновлення покаже ті самі стовпці, що й до оновлення
     const existingHeaderRow = tableContainer.querySelector("thead tr");
-    const headerTexts = Array.from(existingHeaderRow?.querySelectorAll('th') || []).map(th => th.textContent?.trim() || "");
+    const headers = Array.from(existingHeaderRow?.querySelectorAll('th') || []);
     
-    // Точна перевірка наявності стовпців за текстом заголовків
-    const showCatalog = headerTexts.includes("Каталог");
-    const showZarplata = headerTexts.includes("Зар-та");
-    const showPibMagazin = headerTexts.some(t => t.includes("ПІБ") && t.includes("Магазин"));
+    // Функція перевірки чи заголовок видимий (не display: none)
+    const isHeaderVisible = (th: Element): boolean => {
+      const style = (th as HTMLElement).style;
+      return style.display !== 'none';
+    };
+    
+    // Точна перевірка наявності та ВИДИМОСТІ стовпців за текстом заголовків
+    const showCatalog = headers.some(th => th.textContent?.trim() === "Каталог" && isHeaderVisible(th));
+    const showZarplata = headers.some(th => th.textContent?.trim() === "Зар-та" && isHeaderVisible(th));
+    const showPibMagazin = headers.some(th => th.textContent?.includes("ПІБ") && th.textContent?.includes("Магазин") && isHeaderVisible(th));
+    
+    // Перевіряємо видимість стовпців Ціна та Сума (можуть бути приховані через display: none)
+    const showPrice = headers.some(th => th.textContent?.trim() === "Ціна" && isHeaderVisible(th));
+    const showSum = headers.some(th => th.textContent?.trim() === "Сума" && isHeaderVisible(th));
     
     // Перевіряємо чи є ОКРЕМА колонка delete-cell (td.delete-cell в окремому td)
     // Якщо кнопка delete всередині name-cell - це інший варіант верстки, окремий td не потрібен
     const hasDeleteColumnSeparate = !!tableContainer.querySelector('tbody tr > td.delete-cell');
 
-    console.log(`📊 [refreshActTableSilently] Заголовки таблиці: [${headerTexts.join(", ")}]`);
-    console.log(`📊 [refreshActTableSilently] Видимість стовпців: Каталог=${showCatalog}, Зар-та=${showZarplata}, ПІБ=${showPibMagazin}, DeleteCol=${hasDeleteColumnSeparate}`);
+    console.log(`📊 [refreshActTableSilently] Видимість: Каталог=${showCatalog}, Ціна=${showPrice}, Сума=${showSum}, Зар-та=${showZarplata}, ПІБ=${showPibMagazin}, DeleteCol=${hasDeleteColumnSeparate}`);
 
     // 5. Підготовка індексів для recordId
     const slyusarWorkIndexMap = new Map<string, number>();
@@ -2138,7 +2147,10 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       // Форматування чисел
       const formatNum = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
 
-      // Генеруємо HTML рядка (використовуємо showCatalog, showZarplata, showPibMagazin з перевірки header)
+      // Стилі для прихованих стовпців
+      const hiddenStyle = 'style="display: none;"';
+
+      // Генеруємо HTML рядка (використовуємо showCatalog, showZarplata, showPibMagazin, showPrice, showSum з перевірки header)
       row.innerHTML = `
         <td class="row-index">${icon} ${index + 1}</td>
         <td class="name-cell">
@@ -2146,8 +2158,8 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
         </td>
         ${showCatalog ? `<td class="catalog-cell" data-name="catalog" ${item.sclad_id ? `data-sclad-id="${item.sclad_id}"` : ""}>${item.catalog || ""}</td>` : ""}
         <td class="text-right qty-cell" data-name="id_count" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.quantity)}</td>
-        <td class="text-right price-cell" data-name="price" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.price)}</td>
-        <td class="text-right" data-name="sum">${formatNum(item.sum)}</td>
+        <td class="text-right price-cell" data-name="price" ${!showPrice ? hiddenStyle : ""} ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.price)}</td>
+        <td class="text-right" data-name="sum" ${!showSum ? hiddenStyle : ""}>${formatNum(item.sum)}</td>
         ${showZarplata ? `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum">${isWork ? "" : ""}</td>` : ""}
         ${showPibMagazin ? `<td class="pib-magazin-cell" data-name="pib_magazin" ${!isClosed ? 'contenteditable="true"' : ""}>${item.person_or_store}</td>` : ""}
         ${hasDeleteColumnSeparate ? `<td class="delete-cell"><button class="delete-row-btn" title="Видалити рядок">🗑️</button></td>` : ""}

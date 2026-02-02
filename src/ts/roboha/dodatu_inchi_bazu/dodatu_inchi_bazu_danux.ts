@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <button id="modeToggleLabel" class="mode-toggle-btn mode--edit" style="cursor: pointer;" type="button">Додати</button>
           </div>
           <div id="global-search-wrap" style="position: relative; width: 100%;">
-            <input type="text" id="search-input-all_other_bases" class="input-all_other_bases" />
+            <input type="text" id="search-input-all_other_bases" class="input-all_other_bases" autocomplete="off" />
             <div id="custom-dropdown-all_other_bases" class="custom-dropdown hidden-all_other_bases"></div>
           </div>
           <div id="sclad-form" class="hidden-all_other_bases"></div>

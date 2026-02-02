@@ -127,18 +127,23 @@ export async function printModalToPdf(): Promise<void> {
   const isBlackAndWhiteMode = !globalCache.generalSettings.printColorMode;
   const header = modalBody.querySelector(".zakaz_narayd-header") as HTMLElement;
   const headerInfo = modalBody.querySelector(".zakaz_narayd-header-info") as HTMLElement;
+  const headerH1 = headerInfo?.querySelector("h1") as HTMLElement;
+  const headerParagraphs = headerInfo?.querySelectorAll("p") as NodeListOf<HTMLElement>;
   
   let originalHeaderBg = "";
-  let originalHeaderInfoColor = "";
+  let originalH1Color = "";
+  let originalPColors: string[] = [];
   
   if (isBlackAndWhiteMode && header && headerInfo) {
     // Зберігаємо оригінальні стилі
     originalHeaderBg = header.style.backgroundColor || "";
-    originalHeaderInfoColor = headerInfo.style.color || "";
+    if (headerH1) originalH1Color = headerH1.style.color || "";
+    headerParagraphs?.forEach(p => originalPColors.push(p.style.color || ""));
     
     // Застосовуємо чорно-білі стилі
     header.style.backgroundColor = "#ffffff";
-    headerInfo.style.color = "#000000";
+    if (headerH1) headerH1.style.color = "#000000";
+    headerParagraphs?.forEach(p => p.style.color = "#000000");
   }
 
   // елементи, які ховаємо
@@ -372,7 +377,8 @@ export async function printModalToPdf(): Promise<void> {
     // Повернути кольори header якщо був чорно-білий режим
     if (isBlackAndWhiteMode && header && headerInfo) {
       header.style.backgroundColor = originalHeaderBg;
-      headerInfo.style.color = originalHeaderInfoColor;
+      if (headerH1) headerH1.style.color = originalH1Color;
+      headerParagraphs?.forEach((p, i) => p.style.color = originalPColors[i] || "");
     }
 
     // повернути відображення елементів та стилі

@@ -13,6 +13,7 @@ const SETTINGS = {
     class: "_percentage",
   },
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
+  6: { id: "toggle-print", label: "Друк в кольорі", class: "_print" },
 };
 
 const ROLES = [
@@ -238,6 +239,16 @@ function createGeneralSettingsHTML(): string {
 <div class="settings-divider"></div>
       
       <div class="general-input-group">
+        <label class="toggle-switch _print">
+          <input type="checkbox" id="toggle-print" />
+          <span class="slider"></span>
+          <span class="label-text" id="print-mode-label">Друк в кольорі</span>
+        </label>
+      </div>
+      
+      <div class="settings-divider"></div>
+      
+      <div class="general-input-group">
         <label class="general-label" for="general-wallpaper-main">
           <span class="general-label-text">🖼️ Шпалери основні (URL)</span>
           <input type="text" id="general-wallpaper-main" class="general-input" placeholder="Введіть URL зображення для основної сторінки" />
@@ -258,8 +269,8 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
   try {
     const { data, error } = await supabase
       .from("settings")
-      .select("setting_id, Загальні")
-      .in("setting_id", [1, 2, 3, 4, 5, 7])
+      .select("setting_id, Загальні, data")
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7])
       .order("setting_id");
 
     if (error) throw error;
@@ -298,6 +309,14 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           if (tableColor) tableColor.value = colorValue5;
           if (tableColorValue) tableColorValue.textContent = colorValue5;
           break;
+        case 6: // Режим друку
+          const printToggle = modal.querySelector("#toggle-print") as HTMLInputElement;
+          const printLabel = modal.querySelector("#print-mode-label") as HTMLElement;
+          const isPrintColor = row.data !== false; // true якщо data не false
+          if (printToggle) printToggle.checked = isPrintColor;
+          if (printLabel) printLabel.textContent = isPrintColor ? "Друк в кольорі" : "Друк чорнобілий";
+          initialSettingsState.set(`general_${row.setting_id}`, isPrintColor);
+          break;
         case 7: // Шпалери основні
           const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
           if (wallpaperMainInput) wallpaperMainInput.value = value;
@@ -319,6 +338,7 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const phoneInput = modal.querySelector("#general-phone") as HTMLInputElement;
   const headerColor = modal.querySelector("#general-header-color") as HTMLInputElement;
   const tableColor = modal.querySelector("#general-table-color") as HTMLInputElement;
+  const printToggle = modal.querySelector("#toggle-print") as HTMLInputElement;
   const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
 
   const newValues = [
@@ -366,6 +386,41 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     }
   }
 
+  // Обробка режиму друку (setting_id 6, data)
+  const newPrintMode = printToggle?.checked ?? true;
+  const oldPrintMode = initialSettingsState.get(`general_6`);
+  if (oldPrintMode !== newPrintMode) {
+    const { data: existingRow, error: selectError } = await supabase
+      .from("settings")
+      .select("setting_id")
+      .eq("setting_id", 6)
+      .single();
+    if (selectError && selectError.code !== "PGRST116") {
+      console.error(`Помилка перевірки існування setting_id 6:`, selectError);
+      throw selectError;
+    }
+
+    if (existingRow) {
+      const { error: updateError } = await supabase
+        .from("settings")
+        .update({ data: newPrintMode })
+        .eq("setting_id", 6);
+      if (updateError) {
+        console.error(`Помилка оновлення setting_id 6:`, updateError);
+        throw updateError;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("settings")
+        .insert({ setting_id: 6, data: newPrintMode });
+      if (insertError) {
+        console.error(`Помилка створення setting_id 6:`, insertError);
+        throw insertError;
+      }
+    }
+    changesCount++;
+  }
+
   // Оновлюємо globalCache та localStorage, якщо були зміни
   if (changesCount > 0) {
     // Оновлюємо globalCache
@@ -374,6 +429,7 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     globalCache.generalSettings.phone = phoneInput?.value || "068 931 24 38";
     globalCache.generalSettings.headerColor = headerColor?.value || DEFAULT_COLOR;
     globalCache.generalSettings.tableColor = tableColor?.value || DEFAULT_COLOR;
+    globalCache.generalSettings.printColorMode = newPrintMode;
     globalCache.generalSettings.wallpaperMain = wallpaperMainInput?.value || "";
     
     // Зберігаємо в localStorage
@@ -406,6 +462,16 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
   if (tableColor && tableColorValue) {
     tableColor.addEventListener("input", () => {
       tableColorValue.textContent = tableColor.value;
+    });
+  }
+
+  // Перемикач режиму друку
+  const printToggle = modal.querySelector("#toggle-print") as HTMLInputElement;
+  const printLabel = modal.querySelector("#print-mode-label") as HTMLElement;
+  if (printToggle && printLabel) {
+    printToggle.addEventListener("change", () => {
+      printLabel.textContent = printToggle.checked ? "Друк в кольорі" : "Друк чорнобілий";
+      printToggle.closest(".toggle-switch")?.classList.toggle("active", printToggle.checked);
     });
   }
 

@@ -102,6 +102,7 @@ function collectColumnCellsToHideByHeaderText(
  *  - "Зарплата"
  *  - "За-та"
  * А також розширює скорочені найменування до повних.
+ * Застосовує чорно-білий режим якщо printColorMode = false.
  * Після — усе повертає як було.
  */
 export async function printModalToPdf(): Promise<void> {
@@ -121,6 +122,24 @@ export async function printModalToPdf(): Promise<void> {
   const originalBodyStyle = modalBody.style.cssText;
   const originalModalWidth = modalContent?.style.width || "";
   const originalModalMaxWidth = modalContent?.style.maxWidth || ""; // елементи, які ховаємо
+
+  // Перевірка режиму друку і застосування чорно-білих стилів
+  const isBlackAndWhiteMode = !globalCache.generalSettings.printColorMode;
+  const header = modalBody.querySelector(".zakaz_narayd-header") as HTMLElement;
+  const headerInfo = modalBody.querySelector(".zakaz_narayd-header-info") as HTMLElement;
+  
+  let originalHeaderBg = "";
+  let originalHeaderInfoColor = "";
+  
+  if (isBlackAndWhiteMode && header && headerInfo) {
+    // Зберігаємо оригінальні стилі
+    originalHeaderBg = header.style.backgroundColor || "";
+    originalHeaderInfoColor = headerInfo.style.color || "";
+    
+    // Застосовуємо чорно-білі стилі
+    header.style.backgroundColor = "#ffffff";
+    headerInfo.style.color = "#000000";
+  }
 
   // елементи, які ховаємо
   // ... (код всередині printModalToPdf) ...
@@ -349,6 +368,12 @@ export async function printModalToPdf(): Promise<void> {
     warnedQtyCells.forEach((el) => el.setAttribute("data-warn", "1"));
     warnedPriceCells.forEach((el) => el.setAttribute("data-warnprice", "1"));
     warnedSlyusarSumCells.forEach((el) => el.setAttribute("data-warnzp", "1"));
+
+    // Повернути кольори header якщо був чорно-білий режим
+    if (isBlackAndWhiteMode && header && headerInfo) {
+      header.style.backgroundColor = originalHeaderBg;
+      headerInfo.style.color = originalHeaderInfoColor;
+    }
 
     // повернути відображення елементів та стилі
     originalDisplays.forEach((disp, el) => (el.style.display = disp));

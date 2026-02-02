@@ -81,6 +81,7 @@ export interface GeneralSettings {
   phone: string;         // Телефон (setting_id: 3)
   headerColor: string;   // Колір шапки акту (setting_id: 4)
   tableColor: string;    // Колір таблиці актів (setting_id: 5)
+  printColorMode: boolean; // Режим друку: true = кольоровий, false = чорнобілий (setting_id: 6, data)
   wallpaperMain: string;  // Шпалери основні (setting_id: 7)
 }
 
@@ -161,6 +162,7 @@ export const globalCache: GlobalDataCache = {
     phone: "068 931 24 38",
     headerColor: "#164D25",
     tableColor: "#164D25",
+    printColorMode: true, // За замовчуванням кольоровий друк
     wallpaperMain: "",
   },
 };
@@ -200,6 +202,7 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         phone: parsed.phone || "068 931 24 38",
         headerColor: parsed.headerColor || "#164D25",
         tableColor: parsed.tableColor || "#164D25",
+        printColorMode: parsed.printColorMode !== undefined ? parsed.printColorMode : true,
         wallpaperMain: parsed.wallpaperMain || "",
       };
       console.log("✅ Загальні налаштування завантажено з localStorage");
@@ -231,9 +234,9 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
   try {
     const { data: generalSettingsRows } = await supabase
       .from("settings")
-      .select("setting_id, Загальні")
-      .in("setting_id", [1, 2, 3, 4, 5, 7])
-      .order("setting_id") as { data: Array<{ setting_id: number; "Загальні": string | null }> | null };
+      .select("setting_id, Загальні, data")
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7])
+      .order("setting_id") as { data: Array<{ setting_id: number; "Загальні": string | null; data: boolean | null }> | null };
 
     if (generalSettingsRows) {
       for (const row of generalSettingsRows) {
@@ -253,6 +256,9 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             break;
           case 5:
             globalCache.generalSettings.tableColor = value || "#164D25";
+            break;
+          case 6:
+            globalCache.generalSettings.printColorMode = (row as any).data !== false; // true якщо data не false
             break;
           case 7:
             globalCache.generalSettings.wallpaperMain = value || "";

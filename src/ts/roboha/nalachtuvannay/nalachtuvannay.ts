@@ -811,7 +811,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     });
 
     // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
-    [1, 2, 3, 5].forEach((id) => {
+    [1, 2, 3, 5, 6].forEach((id) => {
       if (!initialSettingsState.has(`checkbox_${id}`)) {
         const el = modal.querySelector(`#${SETTINGS[id as keyof typeof SETTINGS].id}`) as HTMLInputElement;
         const def = !!el?.checked; // як правило false
@@ -1143,6 +1143,34 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
             .insert({ setting_id: 5, [column]: newValue5, data: newValue5 });
           if (insertError) throw insertError;
         }
+        changesCount++;
+      }
+
+      // 🔹 Збереження toggle-print (setting_id 6)
+      const checkbox6 = modal.querySelector("#toggle-print") as HTMLInputElement;
+      const newValue6 = checkbox6?.checked ?? false;
+      if (initialSettingsState.get("checkbox_6") !== newValue6) {
+        const { data: existingRow, error: selectError } = await supabase
+          .from("settings")
+          .select("setting_id")
+          .eq("setting_id", 6)
+          .single();
+        if (selectError && selectError.code !== "PGRST116") throw selectError;
+        if (existingRow) {
+          const { error: updateError } = await supabase
+            .from("settings")
+            .update({ [column]: newValue6 })
+            .eq("setting_id", 6);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert({ setting_id: 6, [column]: newValue6, data: newValue6 });
+          if (insertError) throw insertError;
+        }
+        // Оновлюємо globalCache
+        globalCache.generalSettings.printColorMode = newValue6;
+        saveGeneralSettingsToLocalStorage();
         changesCount++;
       }
     } else if (role === "Загальні") {

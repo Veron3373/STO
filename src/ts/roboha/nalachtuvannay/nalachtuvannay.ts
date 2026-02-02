@@ -13,7 +13,7 @@ const SETTINGS = {
     class: "_percentage",
   },
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
-  6: { id: "toggle-print", label: "Друк в кольорі", class: "_print" },
+  6: { id: "toggle-print", label: "Шапка акту в кольорі", class: "_print" },
 };
 
 const ROLES = [
@@ -242,7 +242,7 @@ function createGeneralSettingsHTML(): string {
         <label class="toggle-switch _print">
           <input type="checkbox" id="toggle-print" />
           <span class="slider"></span>
-          <span class="label-text" id="print-mode-label">Друк в кольорі</span>
+          <span class="label-text" id="print-mode-label">Шапка акту в кольорі</span>
         </label>
       </div>
       
@@ -314,7 +314,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           const printLabel = modal.querySelector("#print-mode-label") as HTMLElement;
           const isPrintColor = row.data !== false; // true якщо data не false
           if (printToggle) printToggle.checked = isPrintColor;
-          if (printLabel) printLabel.textContent = isPrintColor ? "Друк в кольорі" : "Друк чорнобілий";
+          if (printLabel) printLabel.textContent = isPrintColor ? "Шапка акту в кольорі" : "Друк чорнобілий";
           initialSettingsState.set(`general_${row.setting_id}`, isPrintColor);
           break;
         case 7: // Шпалери основні
@@ -470,7 +470,7 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
   const printLabel = modal.querySelector("#print-mode-label") as HTMLElement;
   if (printToggle && printLabel) {
     printToggle.addEventListener("change", () => {
-      printLabel.textContent = printToggle.checked ? "Друк в кольорі" : "Друк чорнобілий";
+      printLabel.textContent = printToggle.checked ? "Шапка акту в кольорі" : "Друк чорнобілий";
       printToggle.closest(".toggle-switch")?.classList.toggle("active", printToggle.checked);
     });
   }

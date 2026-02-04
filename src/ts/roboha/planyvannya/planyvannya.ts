@@ -144,14 +144,6 @@ class SchedulerApp {
     if (monthNext)
       monthNext.addEventListener("click", () => this.changeMonth(1));
 
-    // Кнопка створення цеху
-    const createWorkshopBtn = document.getElementById("createWorkshopBtn");
-    if (createWorkshopBtn) {
-      createWorkshopBtn.addEventListener("click", () => {
-        this.postModal.open((data) => this.handleCreateWorkshop(data));
-      });
-    }
-
     // Edit Mode (тільки якщо кнопка була створена)
     if (this.editModeBtn) {
       this.editModeBtn.addEventListener("click", () => this.toggleEditMode());

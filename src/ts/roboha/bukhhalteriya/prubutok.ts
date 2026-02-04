@@ -6,7 +6,6 @@ import { byId, formatNumber, formatDate } from "./bukhhalteriya";
 import { userName, getSavedUserDataFromLocalStorage } from "../tablucya/users";
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 import { redirectToIndex } from "../../utils/gitUtils";
-import { calculatePodlegleSalaryTotal } from "./zarplata";
 
 interface ExpenseRecordLocal {
   id: number;
@@ -1583,12 +1582,9 @@ export function updatevutratuDisplayedSums(): void {
   const finalSumCasa =
     totalNetFullDetails + totalNetFullWork + totalAvansSum + totalNegativeSum;
 
-  // Отримуємо загальну зарплату з вкладки "👨🔧 Зарплата"
-  const totalSalary = calculatePodlegleSalaryTotal();
-
-  // Прибуток = (Чиста Маржа Деталі + Чиста Маржа Робота) - Витрати - Зарплата
+  // Прибуток = (Чиста Маржа Деталі + Чиста Маржа Робота) - Витрати
   const finalSumProfit =
-    totalNetDetailsProfit + totalNetWorkProfit + totalNegativeSum - totalSalary;
+    totalNetDetailsProfit + totalNetWorkProfit + totalNegativeSum;
 
   totalSumElement.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 1.1em;">
@@ -1625,10 +1621,6 @@ export function updatevutratuDisplayedSums(): void {
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
       Math.abs(totalNegativeSum)
-    )}</strong></span>
-        <span style="color: #666;">-</span>
-        <span><strong style="color: #8B0000;">💶 ${formatNumber(
-      totalSalary
     )}</strong></span>
         <span style="color: #666;">=</span>
         <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"

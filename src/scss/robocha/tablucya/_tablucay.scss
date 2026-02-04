@@ -119,6 +119,34 @@ body {
     width: 130px;
   }
 
+  /* Стилі для комірки суми зі знижкою */
+  .act-sum-cell {
+    white-space: normal !important;
+    line-height: 1.3;
+    padding: 4px 8px !important;
+    
+    .sum-full-price {
+      font-size: 0.85em;
+      color: #333;
+      position: relative;
+      display: inline-block;
+      
+      .discount-percent {
+        color: #ff8800; // помаранчевий колір для відсотка
+        font-size: 0.75em;
+        font-weight: 600;
+        margin-left: 2px;
+        vertical-align: super;
+      }
+    }
+    
+    .sum-discounted-price {
+      font-size: 1em;
+      color: #333;
+      font-weight: 500;
+    }
+  }
+
   /* Додаткові стилі */
   .phone-blue-italic {
     color: blue;

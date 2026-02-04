@@ -807,6 +807,21 @@ function getActAmount(act: any): number {
   return isNaN(num) ? 0 : num;
 }
 
+// Отримуємо відсоток знижки з акту
+function getActDiscount(act: any): number {
+  const actData = safeParseJSON(act.info || act.data || act.details);
+  const discount = Number(actData?.["Знижка"]) || 0;
+  return discount;
+}
+
+// Отримуємо повну суму ДО знижки (За деталі + За роботу)
+function getActFullAmount(act: any): number {
+  const actData = safeParseJSON(act.info || act.data || act.details);
+  const detailsSum = Number(actData?.["За деталі"]) || 0;
+  const workSum = Number(actData?.["За роботу"]) || 0;
+  return detailsSum + workSum;
+}
+
 function getActDateAsDate(act: any): Date | null {
   if (!act.date_on) return null;
   return new Date(act.date_on);
@@ -936,6 +951,41 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
     }
   });
 
+  return td;
+}
+
+// Створюємо комірку для суми з відображенням знижки
+function createSumCell(act: any, actId: number): HTMLTableCellElement {
+  const td = document.createElement("td");
+  td.classList.add("act-table-cell", "act-sum-cell");
+  
+  const finalAmount = getActAmount(act); // Сума після знижки
+  const discountPercent = getActDiscount(act); // Відсоток знижки
+  const fullAmount = getActFullAmount(act); // Повна сума до знижки
+  
+  if (discountPercent > 0 && fullAmount > 0) {
+    // Є знижка - показуємо в два рядки
+    td.innerHTML = `
+      <div class="sum-full-price">
+        ${fullAmount.toLocaleString("uk-UA")}<sup class="discount-percent">-${discountPercent}%</sup>
+      </div>
+      <div class="sum-discounted-price">${finalAmount.toLocaleString("uk-UA")} грн</div>
+    `;
+  } else {
+    // Без знижки - звичайний вивід
+    td.innerHTML = `${finalAmount.toLocaleString("uk-UA")} грн`;
+  }
+  
+  td.addEventListener("dblclick", async () => {
+    const canOpen = await canUserOpenActs();
+    if (canOpen) {
+      clearNotificationVisualOnly(actId, true);
+      showModal(actId, 'other');
+    } else {
+      showNoAccessNotification();
+    }
+  });
+  
   return td;
 }
 
@@ -1088,14 +1138,7 @@ function renderActsRows(
 
     // ✅ Показуємо "Сума" тільки якщо showSumaColumn = true
     if (showSumaColumn) {
-      row.appendChild(
-        createStandardCell(
-          `${getActAmount(act).toLocaleString("uk-UA")} грн`,
-          act,
-          act.act_id,
-          false
-        )
-      );
+      row.appendChild(createSumCell(act, act.act_id));
     }
 
     tbody.appendChild(row);

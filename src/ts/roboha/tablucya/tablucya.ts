@@ -959,11 +959,13 @@ function createSumCell(act: any, actId: number): HTMLTableCellElement {
   const td = document.createElement("td");
   td.classList.add("act-table-cell", "act-sum-cell");
   
-  const finalAmount = getActAmount(act); // Сума після знижки (Загальна сума)
   const discountPercent = getActDiscount(act); // Відсоток знижки
   const fullAmount = getActFullAmount(act); // Повна сума ДО знижки (За деталі + За роботу)
   
   if (discountPercent > 0 && fullAmount > 0) {
+    // Обчислюємо суму після знижки: 315 - 10% = 284
+    const discountedAmount = Math.round(fullAmount * (1 - discountPercent / 100));
+    
     // Є знижка - показуємо в два рядки
     // Верхній: повна сума (315) з відсотком (-10%)
     // Нижній: сума після знижки (284 грн)
@@ -971,11 +973,11 @@ function createSumCell(act: any, actId: number): HTMLTableCellElement {
       <div class="sum-full-price">
         ${fullAmount.toLocaleString("uk-UA")}<sup class="discount-percent">-${discountPercent}%</sup>
       </div>
-      <div class="sum-discounted-price">${finalAmount.toLocaleString("uk-UA")} грн</div>
+      <div class="sum-discounted-price">${discountedAmount.toLocaleString("uk-UA")} грн</div>
     `;
   } else {
     // Без знижки - звичайний вивід
-    td.innerHTML = `${finalAmount.toLocaleString("uk-UA")} грн`;
+    td.innerHTML = `${fullAmount.toLocaleString("uk-UA")} грн`;
   }
   
   td.addEventListener("dblclick", async () => {

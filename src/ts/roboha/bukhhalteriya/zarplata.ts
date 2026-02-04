@@ -1004,7 +1004,7 @@ export function updatePodlegleDisplayedSums(): void {
       0
     );
     totalSalary = calculatePodlegleSalaryTotal();
-    totalMargin = calculatePodlegleMarginTotal();
+    totalMargin = totalRevenue - totalSalary; // Виправлено: тепер margin = revenue - salary
   }
 
   const marginSign = totalMargin >= 0 ? "+" : "";

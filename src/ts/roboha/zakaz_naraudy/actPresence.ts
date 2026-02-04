@@ -13,6 +13,9 @@ interface ActPresenceState {
 // Канал для Presence
 let presenceChannel: any = null;
 
+// 🔐 Час відкриття акту поточним користувачем (фіксується один раз при підписці)
+let myOpenedAt: string | null = null;
+
 /**
  * Підписується на присутність користувачів для конкретного акту
  * @param actId - ID акту
@@ -30,6 +33,10 @@ export async function subscribeToActPresence(
     if (presenceChannel) {
         await unsubscribeFromActPresence();
     }
+
+    // 🔐 Фіксуємо час відкриття акту ОДИН РАЗ при підписці
+    myOpenedAt = new Date().toISOString();
+    console.log(`🕐 [Presence] Фіксуємо час відкриття: ${myOpenedAt}`);
 
     // Створюємо канал для конкретного акту
     const channelName = `act_presence_${actId}`;
@@ -69,7 +76,10 @@ export async function subscribeToActPresence(
         });
 
         // Якщо нікого немає (дивна ситуація, бо ми там маємо бути), виходимо
-        if (allUsers.length === 0) return;
+        if (allUsers.length === 0) {
+            console.log("⚠️ [Presence] Порожній стан присутності - чекаємо синхронізації");
+            return;
+        }
 
         // Сортуємо за часом відкриття (хто перший відкрив - той перший у масиві)
         allUsers.sort((a, b) => {
@@ -84,8 +94,25 @@ export async function subscribeToActPresence(
         const owner = allUsers[0];
         const ownerName = owner.userName;
 
-        // Перевіряємо, чи ми є власником
-        if (ownerName === currentUserName) {
+        // 🔐 КРИТИЧНО: Перевіряємо чи хтось відкрив РАНІШЕ нас (за нашим зафіксованим часом)
+        // Це захищає від race condition, коли наш track може прийти раніше
+        const someoneOpenedBeforeUs = allUsers.some(user => {
+            if (user.userName === currentUserName) return false; // Пропускаємо себе
+            const userOpenedAt = new Date(user.openedAt).getTime();
+            const myOpenedAtTime = myOpenedAt ? new Date(myOpenedAt).getTime() : Date.now();
+            return userOpenedAt < myOpenedAtTime;
+        });
+
+        // Знаходимо першого користувача, який відкрив раніше нас
+        const firstUserBeforeUs = allUsers.find(user => {
+            if (user.userName === currentUserName) return false;
+            const userOpenedAt = new Date(user.openedAt).getTime();
+            const myOpenedAtTime = myOpenedAt ? new Date(myOpenedAt).getTime() : Date.now();
+            return userOpenedAt < myOpenedAtTime;
+        });
+
+        // Перевіряємо, чи ми є власником АБО ніхто не відкрив раніше нас
+        if (ownerName === currentUserName && !someoneOpenedBeforeUs) {
             // Перевіряємо чи був заблокований (для виклику onUnlock)
             const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
             const wasLocked = header && header.hasAttribute("data-locked");
@@ -98,9 +125,17 @@ export async function subscribeToActPresence(
                 console.log("🔄 Calling onUnlock callback to refresh data");
                 onUnlock();
             }
-        } else {
-            // Хтось інший відкрив раніше
+        } else if (someoneOpenedBeforeUs && firstUserBeforeUs) {
+            // 🔐 Хтось відкрив РАНІШЕ нас - блокуємо
+            console.log(`🔒 [Presence] Користувач ${firstUserBeforeUs.userName} відкрив акт раніше (${firstUserBeforeUs.openedAt} < ${myOpenedAt})`);
+            lockActInterface(firstUserBeforeUs.userName);
+            presenceResult.isLocked = true;
+            presenceResult.lockedBy = firstUserBeforeUs.userName;
+        } else if (ownerName !== currentUserName) {
+            // Хтось інший є власником (за сортуванням)
             lockActInterface(ownerName);
+            presenceResult.isLocked = true;
+            presenceResult.lockedBy = ownerName;
         }
     };
 
@@ -151,26 +186,27 @@ export async function subscribeToActPresence(
         })
         .subscribe(async (status: string) => {
             if (status === "SUBSCRIBED") {
-                // Відправляємо свою присутність з часом відкриття
+                // 🔐 Відправляємо свою присутність з ФІКСОВАНИМ часом відкриття
                 const presenceData: ActPresenceState = {
                     actId: actId,
                     userName: currentUserName || "Unknown",
-                    openedAt: new Date().toISOString(),
+                    openedAt: myOpenedAt!, // Використовуємо зафіксований час
                 };
 
                 await presenceChannel.track(presenceData);
-                console.log("✅ Subscribed to act presence:", actId);
+                console.log("✅ Subscribed to act presence:", actId, "with openedAt:", myOpenedAt);
 
                 // ✏️ Також відправляємо на глобальний канал для відображення в таблиці
                 await trackGlobalActPresence(actId);
             }
         });
 
-    // Чекаємо трохи, щоб отримати початковий стан
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // 🔐 Чекаємо синхронізації (достатньо 800мс для більшості випадків)
+    // presenceState() читає локальний кеш - це НЕ мережевий запит
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    handlePresenceChange();
 
-    // Отримуємо початковий стан, щоб повернути результат
-    // Але основна логіка буде в handlePresenceChange
+    // Отримуємо фінальний стан, щоб повернути результат
     const state = presenceChannel.presenceState();
     const allUsers: ActPresenceState[] = [];
     Object.keys(state).forEach((key) => {
@@ -188,10 +224,32 @@ export async function subscribeToActPresence(
         allUsers.sort((a, b) => {
             return new Date(a.openedAt).getTime() - new Date(b.openedAt).getTime();
         });
-        const owner = allUsers[0];
-        if (owner.userName !== currentUserName) {
+        
+        // 🔐 Перевіряємо чи хтось відкрив раніше нас
+        const someoneOpenedBeforeUs = allUsers.some(user => {
+            if (user.userName === currentUserName) return false;
+            const userOpenedAt = new Date(user.openedAt).getTime();
+            const myOpenedAtTime = myOpenedAt ? new Date(myOpenedAt).getTime() : Date.now();
+            return userOpenedAt < myOpenedAtTime;
+        });
+        
+        const firstUserBeforeUs = allUsers.find(user => {
+            if (user.userName === currentUserName) return false;
+            const userOpenedAt = new Date(user.openedAt).getTime();
+            const myOpenedAtTime = myOpenedAt ? new Date(myOpenedAt).getTime() : Date.now();
+            return userOpenedAt < myOpenedAtTime;
+        });
+        
+        if (someoneOpenedBeforeUs && firstUserBeforeUs) {
             presenceResult.isLocked = true;
-            presenceResult.lockedBy = owner.userName;
+            presenceResult.lockedBy = firstUserBeforeUs.userName;
+            console.log(`🔒 [Presence] Фінальна перевірка: акт заблоковано ${firstUserBeforeUs.userName}`);
+        } else {
+            const owner = allUsers[0];
+            if (owner.userName !== currentUserName) {
+                presenceResult.isLocked = true;
+                presenceResult.lockedBy = owner.userName;
+            }
         }
     }
 
@@ -233,15 +291,15 @@ async function trackGlobalActPresence(actId: number): Promise<void> {
         await globalPresenceChannel.subscribe();
     }
 
-    // Відправляємо присутність з actId
+    // 🔐 Відправляємо присутність з actId та ФІКСОВАНИМ часом відкриття
     const presenceData = {
         actId: actId,
         userName: currentUserName || "Unknown",
-        openedAt: new Date().toISOString(),
+        openedAt: myOpenedAt || new Date().toISOString(), // Використовуємо зафіксований час
     };
 
     await globalPresenceChannel.track(presenceData);
-    console.log("✏️ [GlobalPresence] Tracked act:", actId);
+    console.log("✏️ [GlobalPresence] Tracked act:", actId, "with openedAt:", presenceData.openedAt);
 }
 
 /**
@@ -264,6 +322,9 @@ export async function unsubscribeFromActPresence(): Promise<void> {
         presenceChannel = null;
         console.log("✅ Unsubscribed from act presence");
     }
+    
+    // 🔐 Очищаємо зафіксований час відкриття
+    myOpenedAt = null;
     
     // ✏️ Також прибираємо з глобального каналу
     await untrackGlobalActPresence();

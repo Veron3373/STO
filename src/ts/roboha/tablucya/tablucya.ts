@@ -814,6 +814,14 @@ function getActDiscount(act: any): number {
   return discount;
 }
 
+// Отримуємо повну суму ДО знижки (За деталі + За роботу)
+function getActFullAmount(act: any): number {
+  const actData = safeParseJSON(act.info || act.data || act.details);
+  const detailsSum = Number(actData?.["За деталі"]) || 0;
+  const workSum = Number(actData?.["За роботу"]) || 0;
+  return detailsSum + workSum;
+}
+
 function getActDateAsDate(act: any): Date | null {
   if (!act.date_on) return null;
   return new Date(act.date_on);
@@ -951,14 +959,14 @@ function createSumCell(act: any, actId: number): HTMLTableCellElement {
   const td = document.createElement("td");
   td.classList.add("act-table-cell", "act-sum-cell");
   
-  const finalAmount = getActAmount(act); // Сума після знижки
+  const finalAmount = getActAmount(act); // Сума після знижки (Загальна сума)
   const discountPercent = getActDiscount(act); // Відсоток знижки
+  const fullAmount = getActFullAmount(act); // Повна сума ДО знижки (За деталі + За роботу)
   
-  if (discountPercent > 0 && finalAmount > 0) {
-    // Обчислюємо повну суму ДО знижки: fullAmount = finalAmount / (1 - discount/100)
-    const fullAmount = Math.round(finalAmount / (1 - discountPercent / 100));
-    
+  if (discountPercent > 0 && fullAmount > 0) {
     // Є знижка - показуємо в два рядки
+    // Верхній: повна сума (315) з відсотком (-10%)
+    // Нижній: сума після знижки (284 грн)
     td.innerHTML = `
       <div class="sum-full-price">
         ${fullAmount.toLocaleString("uk-UA")}<sup class="discount-percent">-${discountPercent}%</sup>

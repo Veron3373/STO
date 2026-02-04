@@ -814,14 +814,6 @@ function getActDiscount(act: any): number {
   return discount;
 }
 
-// Отримуємо повну суму ДО знижки (За деталі + За роботу)
-function getActFullAmount(act: any): number {
-  const actData = safeParseJSON(act.info || act.data || act.details);
-  const detailsSum = Number(actData?.["За деталі"]) || 0;
-  const workSum = Number(actData?.["За роботу"]) || 0;
-  return detailsSum + workSum;
-}
-
 function getActDateAsDate(act: any): Date | null {
   if (!act.date_on) return null;
   return new Date(act.date_on);
@@ -961,9 +953,11 @@ function createSumCell(act: any, actId: number): HTMLTableCellElement {
   
   const finalAmount = getActAmount(act); // Сума після знижки
   const discountPercent = getActDiscount(act); // Відсоток знижки
-  const fullAmount = getActFullAmount(act); // Повна сума до знижки
   
-  if (discountPercent > 0 && fullAmount > 0) {
+  if (discountPercent > 0 && finalAmount > 0) {
+    // Обчислюємо повну суму ДО знижки: fullAmount = finalAmount / (1 - discount/100)
+    const fullAmount = Math.round(finalAmount / (1 - discountPercent / 100));
+    
     // Є знижка - показуємо в два рядки
     td.innerHTML = `
       <div class="sum-full-price">

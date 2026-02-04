@@ -27,6 +27,6 @@ export function obfuscateCurrentUrl(): void {
 }
 
 // 👇 2. ДОДАЙ ЦЕЙ КОД В САМИЙ НИЗ
-document.addEventListener("DOMContentLoaded", () => {
-  obfuscateCurrentUrl();
-});
+// document.addEventListener("DOMContentLoaded", () => {
+//   obfuscateCurrentUrl();
+// });

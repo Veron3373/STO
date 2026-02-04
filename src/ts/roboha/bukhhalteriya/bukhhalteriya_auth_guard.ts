@@ -4,7 +4,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { getGitUrl } from "../../utils/gitUtils";
 import { initUrlUpdater } from "../../utils/urlUpdater";
-import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
+// import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 // Перевірка email через базу даних whitelist
@@ -59,7 +59,7 @@ async function checkAuthOnPageLoad(): Promise<void> {
   initUrlUpdater();
 
   // 👇 ЗАПУСКАЄМО ЗМІНУ URL ТУТ (коли вхід успішний)
-  obfuscateCurrentUrl();
+  // obfuscateCurrentUrl();
 
   // 🔐 Перевіряємо доступ до сторінки на основі налаштувань
   await enforcePageAccess();

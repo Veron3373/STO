@@ -4,7 +4,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
 import { initUrlUpdater } from "../../utils/urlUpdater";
-import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
+// import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
 console.log("🔒 [Планування] Перевірка доступу...");
@@ -61,7 +61,7 @@ async function checkPlanningAccess(): Promise<void> {
     initUrlUpdater();
 
     // Змінюємо URL
-    obfuscateCurrentUrl();
+    // obfuscateCurrentUrl();
 
     // 🔐 Перевіряємо доступ до сторінки на основі налаштувань
     await enforcePageAccess();

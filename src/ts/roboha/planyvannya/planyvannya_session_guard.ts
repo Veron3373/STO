@@ -4,7 +4,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
 import { initUrlUpdater } from "../../utils/urlUpdater";
-import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
+// import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 
 console.log("🔒 [Планування] Перевірка Google сесії...");
 
@@ -60,7 +60,7 @@ async function checkPlanningSession() {
     initUrlUpdater();
 
     // Змінюємо URL для безпеки
-    obfuscateCurrentUrl();
+    // obfuscateCurrentUrl();
   } catch (err) {
     console.error("❌ [Планування] Помилка перевірки:", err);
     const fallbackUrl = await getFallbackUrl("index.html");

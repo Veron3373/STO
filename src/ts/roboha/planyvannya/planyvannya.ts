@@ -647,7 +647,57 @@ class SchedulerApp {
 
       // Зберігаємо посилання на кнопку
       this.editModeBtn = editButton;
+
+      // Показуємо кнопку "Створити цех" для адміністратора
+      this.showCreateCehButton();
     }
+  }
+
+  /**
+   * Показує кнопку "Створити цех" в хедері для адміністратора
+   */
+  private showCreateCehButton(): void {
+    const createCehBtn = document.getElementById("postCreateCehBtn");
+    if (createCehBtn) {
+      createCehBtn.style.display = "block";
+      createCehBtn.addEventListener("click", () => this.openCreateCehModal());
+    }
+  }
+
+  /**
+   * Відкриває модалку для створення нового цеху
+   */
+  private openCreateCehModal(): void {
+    this.postModal.openForCehCreation(async (cehName: string) => {
+      try {
+        // Створюємо нову категорію в базі даних
+        const { data, error } = await supabase
+          .from("post_category")
+          .insert({ category: cehName })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Додаємо нову секцію локально
+        const newSection: Section = {
+          id: Date.now(),
+          realCategoryId: String(data.category_id),
+          name: cehName,
+          collapsed: false,
+          posts: [],
+        };
+        this.sections.push(newSection);
+
+        // Перерендерюємо секції
+        this.renderSections();
+
+        showNotification(`Цех "${cehName}" успішно створено!`, "success");
+      } catch (error) {
+        console.error("❌ Помилка створення цеху:", error);
+        showNotification("Не вдалося створити цех. Спробуйте пізніше.", "error");
+      }
+    });
   }
 
   private updateTimeMarker(): void {

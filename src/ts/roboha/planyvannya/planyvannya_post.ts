@@ -772,6 +772,53 @@ export class PostModal {
     }
   }
 
+  // Колбек для створення цеху
+  private onCehSubmitCallback: ((cehName: string) => void) | null = null;
+  private isCehCreationMode: boolean = false;
+
+  /**
+   * Відкриває модалку для створення нового цеху
+   * @param onSubmit Колбек при успішному створенні цеху
+   */
+  public openForCehCreation(onSubmit: (cehName: string) => void): void {
+    this.isCehCreationMode = true;
+    this.onCehSubmitCallback = onSubmit;
+
+    // Сховати непотрібні поля
+    const postGroup = document.getElementById('postPostFormInputTitle')?.closest('.post-form-group');
+    const subtitleGroup = document.getElementById('postPostFormGroupSubtitle');
+    const modalTitle = document.getElementById('postPostModalTitle');
+    const submitBtn = document.getElementById('postPostModalSubmit');
+    const lockBtn = document.getElementById('postModalLockBtn');
+    const modeBtn = document.getElementById('postModalAddBtn');
+
+    if (postGroup) (postGroup as HTMLElement).style.display = 'none';
+    if (subtitleGroup) subtitleGroup.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'Створити новий цех';
+    if (submitBtn) submitBtn.textContent = 'Створити цех';
+    if (lockBtn) (lockBtn as HTMLElement).style.display = 'none';
+    if (modeBtn) (modeBtn as HTMLElement).style.display = 'none';
+
+    // Оновлюємо label для цеху
+    const cehLabel = document.getElementById('postCehFormLabelTitle');
+    if (cehLabel) cehLabel.textContent = 'Назва нового цеху';
+
+    // Очищаємо поля
+    const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
+    if (inputCehTitle) {
+      inputCehTitle.value = '';
+      inputCehTitle.placeholder = 'Наприклад: Малярний цех';
+    }
+
+    // Закриваємо всі dropdown
+    this.closeAllDropdowns();
+
+    if (this.modalOverlay) {
+      this.modalOverlay.style.display = 'flex';
+      setTimeout(() => inputCehTitle?.focus(), 100);
+    }
+  }
+
   /**
    * Закриває модалку
    */
@@ -780,8 +827,39 @@ export class PostModal {
     if (this.modalOverlay) {
       this.modalOverlay.style.display = 'none';
     }
+
+    // Відновлюємо стандартний вигляд модалки
+    if (this.isCehCreationMode) {
+      this.restoreModalToDefault();
+    }
+
     this.onSubmitCallback = null;
+    this.onCehSubmitCallback = null;
     this.selectedCategoryId = null;
+    this.isCehCreationMode = false;
+  }
+
+  /**
+   * Відновлює модалку до стандартного вигляду
+   */
+  private restoreModalToDefault(): void {
+    const postGroup = document.getElementById('postPostFormInputTitle')?.closest('.post-form-group');
+    const subtitleGroup = document.getElementById('postPostFormGroupSubtitle');
+    const modalTitle = document.getElementById('postPostModalTitle');
+    const submitBtn = document.getElementById('postPostModalSubmit');
+    const lockBtn = document.getElementById('postModalLockBtn');
+    const modeBtn = document.getElementById('postModalAddBtn');
+    const cehLabel = document.getElementById('postCehFormLabelTitle');
+    const inputCehTitle = document.getElementById('postCehFormInputTitle') as HTMLInputElement;
+
+    if (postGroup) (postGroup as HTMLElement).style.display = 'flex';
+    if (subtitleGroup) subtitleGroup.style.display = 'flex';
+    if (modalTitle) modalTitle.textContent = 'Новий пост';
+    if (submitBtn) submitBtn.textContent = 'Створити';
+    if (lockBtn) (lockBtn as HTMLElement).style.display = 'block';
+    if (modeBtn) (modeBtn as HTMLElement).style.display = 'block';
+    if (cehLabel) cehLabel.textContent = 'Назва цеху';
+    if (inputCehTitle) inputCehTitle.placeholder = 'Наприклад: ЦЕХ зварювання';
   }
 
   /**
@@ -795,6 +873,29 @@ export class PostModal {
     const cehTitle = inputCehTitle?.value.trim() || '';
     const title = inputTitle?.value.trim() || '';
     const subtitle = inputSubtitle?.value.trim() || '';
+
+    // Режим створення цеху
+    if (this.isCehCreationMode) {
+      if (!cehTitle) {
+        showNotification('Введіть назву цеху!', 'error');
+        return;
+      }
+
+      // Перевіряємо чи вже існує така категорія
+      const existingCategory = this.autocompleteData.categories
+        .find(c => c.category.toLowerCase() === cehTitle.toLowerCase());
+      
+      if (existingCategory) {
+        showNotification('Цех з такою назвою вже існує!', 'error');
+        return;
+      }
+
+      if (this.onCehSubmitCallback) {
+        this.onCehSubmitCallback(cehTitle);
+      }
+      this.close();
+      return;
+    }
 
     // Якщо замок відкритий - дозволяємо операції з одним полем
     if (!this.isLocked) {

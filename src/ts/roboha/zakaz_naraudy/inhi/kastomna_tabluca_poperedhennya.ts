@@ -299,14 +299,22 @@ export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
 async function clearCellsOnNameChange(row: HTMLElement, prevNameLength: number, currentNameLength: number) {
   if (currentNameLength >= prevNameLength) return;
 
-  const cellsToClear = [
-    '[data-name="catalog"]',
-    '[data-name="id_count"]',
-    '[data-name="price"]',
-    '[data-name="sum"]',
-    '[data-name="slyusar_sum"]',
-    '[data-name="pib_magazin"]'
-  ];
+  // Визначаємо тип рядка (works = робота, інше = запчастина)
+  const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+  const rowType = nameCell?.getAttribute("data-type") || "";
+  const isWork = rowType === "works";
+
+  // Для робіт очищаємо тільки каталог, для запчастин - все як раніше
+  const cellsToClear = isWork
+    ? ['[data-name="catalog"]']
+    : [
+        '[data-name="catalog"]',
+        '[data-name="id_count"]',
+        '[data-name="price"]',
+        '[data-name="sum"]',
+        '[data-name="slyusar_sum"]',
+        '[data-name="pib_magazin"]'
+      ];
 
   for (const selector of cellsToClear) {
     const cell = row.querySelector(selector) as HTMLElement | null;

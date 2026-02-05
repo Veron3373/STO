@@ -10,6 +10,7 @@ import {
   ZAKAZ_NARAYD_SAVE_BTN_ID, // <-- Імпортуємо ID кнопки збереження
 } from "../globalCache";
 import { refreshActsTable } from "../../tablucya/tablucya";
+import { deleteActNotificationsOnClose } from "../../tablucya/mark_notification_deleted";
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
@@ -1037,6 +1038,19 @@ export function initStatusLockDelegation(): void {
           console.error(
             "⚠️ Помилка приховування повідомлень (не критично):",
             hideError
+          );
+        }
+
+        // 🗑️ ВИДАЛЕННЯ ПОВІДОМЛЕНЬ ПРО ЗМІНИ В АКТІ (act_changes_notifications)
+        try {
+          await deleteActNotificationsOnClose(actId);
+          console.log(
+            `✅ Повідомлення про зміни акту видалено для акту #${actId}`
+          );
+        } catch (deleteNotifError) {
+          console.error(
+            "⚠️ Помилка видалення повідомлень про зміни (не критично):",
+            deleteNotifError
           );
         }
 

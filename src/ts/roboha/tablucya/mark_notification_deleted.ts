@@ -185,3 +185,44 @@ export async function loadUnseenNotifications(): Promise<
     return [];
   }
 }
+
+/**
+ * Видаляє всі повідомлення для конкретного акту при його закритті
+ * Встановлює delit = TRUE для всіх записів з даним act_id
+ *
+ * @param actId - ID акту, для якого видаляємо повідомлення
+ * @returns true якщо успішно, false якщо помилка
+ */
+export async function deleteActNotificationsOnClose(
+  actId: number
+): Promise<boolean> {
+  try {
+    console.log(
+      `🗑️ [deleteActNotificationsOnClose] Видаляємо всі повідомлення для акту #${actId}...`
+    );
+
+    const { error } = await supabase
+      .from("act_changes_notifications")
+      .delete()
+      .eq("act_id", actId);
+
+    if (error) {
+      console.error(
+        `❌ [deleteActNotificationsOnClose] Помилка видалення повідомлень для акту #${actId}:`,
+        error
+      );
+      return false;
+    }
+
+    console.log(
+      `✅ [deleteActNotificationsOnClose] Повідомлення для акту #${actId} успішно видалено`
+    );
+    return true;
+  } catch (err) {
+    console.error(
+      `❌ [deleteActNotificationsOnClose] Виняток при видаленні повідомлень для акту #${actId}:`,
+      err
+    );
+    return false;
+  }
+}

@@ -676,14 +676,16 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
           );
 
           if (typeToSet === "works") {
-            // Auto-fill Mechanic Name
-            const userName = getUserNameFromLocalStorage();
-            const userLevel = getUserAccessLevelFromLocalStorage();
+            // Auto-fill Mechanic Name ТІЛЬКИ якщо поле порожнє
+            const currentPibValue = pibMagCell.textContent?.trim() || "";
+            if (!currentPibValue) {
+              const userName = getUserNameFromLocalStorage();
+              const userLevel = getUserAccessLevelFromLocalStorage();
 
-            if (userName && userLevel === "Слюсар") {
-              pibMagCell.textContent = userName;
-            } else {
-              pibMagCell.textContent = "";
+              if (userName && userLevel === "Слюсар") {
+                pibMagCell.textContent = userName;
+              }
+              // Якщо не слюсар - залишаємо поле порожнім, НЕ очищаємо якщо вже є значення
             }
 
             // Auto-fill Catalog with Work ID
@@ -702,9 +704,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
             // ✅ ВИПРАВЛЕНО: Якщо вибрано деталь зі складу - підтягуємо всі дані
             if (chosenScladId !== undefined) {
               applyCatalogSelectionById(target, chosenScladId, fullText);
-            } else {
-              pibMagCell.textContent = "";
             }
+            // НЕ очищаємо pib_magazin якщо вибрано деталь
           }
         }
 
@@ -977,7 +978,25 @@ export function setupAutocompleteForEditableCells(
     let suggestions: Suggest[] = [];
 
     if (dataName === "name") {
-      // ← НОВИЙ КОД: використовуємо нову функцію з кешуванням
+      // ✅ При фокусі показуємо повний текст для редагування
+      const currentText = target.textContent?.trim() || "";
+      const fullNameAttr = target.getAttribute("data-full-name");
+      
+      if (fullNameAttr && currentText.includes(".....")) {
+        // Зберігаємо скорочений текст і показуємо повний
+        target.setAttribute("data-shortened-name", currentText);
+        target.textContent = fullNameAttr;
+      } else if (currentText.includes(".....")) {
+        // Намагаємося розгорнути через кеш
+        const expanded = expandName(currentText);
+        if (expanded !== currentText) {
+          target.setAttribute("data-shortened-name", currentText);
+          target.setAttribute("data-full-name", expanded);
+          target.textContent = expanded;
+        }
+      }
+      
+      // ← Використовуємо нову функцію з кешуванням
       const query = target.textContent?.trim() || "";
       suggestions = await getNameSuggestions(query);
     } else if (dataName === "pib_magazin") {
@@ -1390,15 +1409,31 @@ export function setupAutocompleteForEditableCells(
     ) {
       setTimeout(() => {
         const row = target.closest("tr");
-        const nameText = (target.textContent || "").trim();
+        let nameText = (target.textContent || "").trim();
+        
+        // ✅ При blur скорочуємо довгий текст
+        if (nameText && !nameText.includes(".....")) {
+          const shortened = shortenTextToFirstAndLast(nameText);
+          if (shortened !== nameText) {
+            // Зберігаємо повний текст в атрибут
+            target.setAttribute("data-full-name", nameText);
+            target.textContent = shortened;
+            nameText = shortened;
+          }
+        }
+        // Очищаємо тимчасовий атрибут
+        target.removeAttribute("data-shortened-name");
 
         if (row && nameText) {
           const indexCell = row.querySelector(".row-index");
           const currentType = target.getAttribute("data-type");
 
+          // Використовуємо повну назву для перевірки типу
+          const fullNameForCheck = target.getAttribute("data-full-name") || nameText;
+          
           // Check exact matches if type is not set or we want to double check
-          const isDetail = globalCache.details.includes(nameText);
-          const isWork = globalCache.works.includes(nameText);
+          const isDetail = globalCache.details.includes(fullNameForCheck);
+          const isWork = globalCache.works.includes(fullNameForCheck);
 
           let finalType = currentType;
 

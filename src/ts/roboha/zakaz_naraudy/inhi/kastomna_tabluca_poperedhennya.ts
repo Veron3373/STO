@@ -302,7 +302,10 @@ async function clearCellsOnNameChange(row: HTMLElement, prevNameLength: number, 
   // Визначаємо тип рядка (works = робота, інше = запчастина)
   const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
   const rowType = nameCell?.getAttribute("data-type") || "";
-  const isWork = rowType === "works";
+  const nameText = nameCell?.textContent?.trim() || "";
+  
+  // Перевіряємо чи це робота: або за data-type, або за наявністю в списку робіт
+  const isWork = rowType === "works" || globalCache.works.includes(nameText);
 
   // Для робіт очищаємо тільки каталог, для запчастин - все як раніше
   const cellsToClear = isWork

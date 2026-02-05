@@ -19,11 +19,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $gitAccounts = @(
-    @{ Name = "Veron3373 (GitHub)"; Email = "veron3373@gmail.com"; Username = "Veron3373" },
-    @{ Name = "Account 2"; Email = "your-email2@gmail.com"; Username = "username2" },
-    @{ Name = "Account 3"; Email = "your-email3@gmail.com"; Username = "username3" },
-    @{ Name = "Account 4"; Email = "your-email4@gmail.com"; Username = "username4" },
-    @{ Name = "Account 5"; Email = "your-email5@gmail.com"; Username = "username5" }
+    @{ Name = "Veron3373 (GitHub)"; Email = "veron3373@gmail.com"; Username = "Veron3373" }
 )
 
 # Create form

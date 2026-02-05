@@ -16,6 +16,9 @@ let presenceChannel: any = null;
 // 🔐 Час відкриття акту поточним користувачем (фіксується один раз при підписці)
 let myOpenedAt: string | null = null;
 
+// 🔐 Прапорець: чи ми вже відправили свій track
+let hasTrackedPresence: boolean = false;
+
 /**
  * Підписується на присутність користувачів для конкретного акту
  * @param actId - ID акту
@@ -36,6 +39,7 @@ export async function subscribeToActPresence(
 
     // 🔐 Фіксуємо час відкриття акту ОДИН РАЗ при підписці
     myOpenedAt = new Date().toISOString();
+    hasTrackedPresence = false; // 🔐 Скидаємо прапорець
     console.log(`🕐 [Presence] Фіксуємо час відкриття: ${myOpenedAt}`);
 
     // Створюємо канал для конкретного акту
@@ -78,6 +82,18 @@ export async function subscribeToActPresence(
         // Якщо нікого немає (дивна ситуація, бо ми там маємо бути), виходимо
         if (allUsers.length === 0) {
             console.log("⚠️ [Presence] Порожній стан присутності - чекаємо синхронізації");
+            return;
+        }
+
+        // 🔐 КРИТИЧНО: Якщо ми ще НЕ відправили track, але вже бачимо інших користувачів -
+        // це 100% означає що вони були тут ДО нас! Блокуємо одразу.
+        const otherUsersInChannel = allUsers.filter(u => u.userName !== currentUserName);
+        if (!hasTrackedPresence && otherUsersInChannel.length > 0) {
+            const firstOtherUser = otherUsersInChannel[0];
+            console.log(`🔒 [Presence] Виявлено користувача ${firstOtherUser.userName} ДО нашого track - блокуємо!`);
+            lockActInterface(firstOtherUser.userName);
+            presenceResult.isLocked = true;
+            presenceResult.lockedBy = firstOtherUser.userName;
             return;
         }
 
@@ -194,6 +210,7 @@ export async function subscribeToActPresence(
                 };
 
                 await presenceChannel.track(presenceData);
+                hasTrackedPresence = true; // 🔐 Відмічаємо що ми відправили свою присутність
                 console.log("✅ Subscribed to act presence:", actId, "with openedAt:", myOpenedAt);
 
                 // ✏️ Також відправляємо на глобальний канал для відображення в таблиці
@@ -201,9 +218,14 @@ export async function subscribeToActPresence(
             }
         });
 
-    // 🔐 Чекаємо синхронізації (достатньо 800мс для більшості випадків)
+    // 🔐 Чекаємо синхронізації з кількома спробами для надійності
     // presenceState() читає локальний кеш - це НЕ мережевий запит
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    // Спроба 1: чекаємо 1000мс 
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    handlePresenceChange();
+    
+    // 🔐 Спроба 2: додаткова перевірка через 1500мс (на випадок повільної мережі)
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     handlePresenceChange();
 
     // Отримуємо фінальний стан, щоб повернути результат
@@ -325,6 +347,7 @@ export async function unsubscribeFromActPresence(): Promise<void> {
     
     // 🔐 Очищаємо зафіксований час відкриття
     myOpenedAt = null;
+    hasTrackedPresence = false; // 🔐 Скидаємо прапорець
     
     // ✏️ Також прибираємо з глобального каналу
     await untrackGlobalActPresence();

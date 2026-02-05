@@ -60,6 +60,12 @@ export async function subscribeToActPresence(
 
     // Функція для обробки змін присутності
     const handlePresenceChange = () => {
+        // Перевіряємо, чи канал ще існує
+        if (!presenceChannel) {
+            console.log("⚠️ [Presence] Канал вже відключений, пропускаємо обробку");
+            return;
+        }
+        
         const state = presenceChannel.presenceState();
         console.log("🔄 Presence sync:", state);
 
@@ -227,6 +233,12 @@ export async function subscribeToActPresence(
     // 🔐 Спроба 2: додаткова перевірка через 1500мс (на випадок повільної мережі)
     await new Promise((resolve) => setTimeout(resolve, 1500));
     handlePresenceChange();
+
+    // Перевіряємо, чи канал ще існує перед фінальною обробкою
+    if (!presenceChannel) {
+        console.log("⚠️ [Presence] Канал вже відключений після очікування");
+        return presenceResult;
+    }
 
     // Отримуємо фінальний стан, щоб повернути результат
     const state = presenceChannel.presenceState();

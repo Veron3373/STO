@@ -198,30 +198,32 @@ export async function deleteActNotificationsOnClose(
 ): Promise<boolean> {
   try {
     console.log(
-      `🗑️ [deleteActNotificationsOnClose] Видаляємо всі повідомлення для акту #${actId}...`
+      `🗑️ [deleteActNotificationsOnClose] Позначаємо всі повідомлення для акту #${actId} як видалені (delit=true)...`
     );
 
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from("act_changes_notifications")
-      .delete()
-      .eq("act_id", actId);
+      .update({ delit: true })
+      .eq("act_id", actId)
+      .eq("delit", false); // тільки ті, що ще не помічені як видалені
 
     if (error) {
       console.error(
         `❌ [deleteActNotificationsOnClose] Помилка видалення повідомлень для акту #${actId}:`,
+        error.message,
         error
       );
       return false;
     }
 
     console.log(
-      `✅ [deleteActNotificationsOnClose] Повідомлення для акту #${actId} успішно видалено`
+      `✅ [deleteActNotificationsOnClose] Повідомлення для акту #${actId} успішно позначені як видалені (count: ${count ?? 'N/A'})`
     );
     return true;
-  } catch (err) {
+  } catch (err: any) {
     console.error(
       `❌ [deleteActNotificationsOnClose] Виняток при видаленні повідомлень для акту #${actId}:`,
-      err
+      err?.message || err
     );
     return false;
   }

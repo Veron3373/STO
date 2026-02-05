@@ -402,6 +402,12 @@ function subscribeToGlobalActPresence() {
 
   // Функція для оновлення списку редакторів
   const handlePresenceSync = () => {
+    // Перевіряємо, чи канал ще існує
+    if (!globalPresenceChannel) {
+      console.log("✏️ [GlobalPresence] Канал вже відключений, пропускаємо sync");
+      return;
+    }
+    
     const state = globalPresenceChannel.presenceState();
     console.log("🔄 [GlobalPresence] Sync:", state);
 

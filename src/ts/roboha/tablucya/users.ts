@@ -724,7 +724,11 @@ export async function canUserSeePriceColumns(): Promise<boolean> {
   return await getSettingBoolFromSettings(settingId, columnName);
 }
 
-export async function canUserCloseActs(): Promise<boolean> {
+/**
+ * Перевірка чи може поточний користувач закривати акти (без зауважень).
+ * Перевіряє налаштування "📋 Акт Закриття акту 🗝️"
+ */
+export async function canUserCloseActsNormal(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
@@ -741,19 +745,64 @@ export async function canUserCloseActs(): Promise<boolean> {
 
   switch (role) {
     case "Приймальник":
-      settingId = 16;
-      columnName = "Приймальник";
-      break;
+      // Приймальник завжди може закривати акти без зауважень (немає окремого налаштування)
+      return true;
     case "Слюсар":
-      settingId = 4;
-      columnName = "Слюсар";
-      break;
+      // Слюсар не може закривати акти, тільки завершувати роботи
+      return false;
     case "Запчастист":
-      settingId = 17;
+      settingId = 16; // "📋 Акт Зариття акту 🗝️"
       columnName = "Запчастист";
       break;
     case "Складовщик":
-      settingId = 14;
+      settingId = 13; // "📋 Акт Закриття акту 🗝️"
+      columnName = "Складовщик";
+      break;
+    default:
+      console.warn(`Невідома роль "${role}", не обмежуємо закриття акту.`);
+      return true;
+  }
+
+  if (settingId === null || columnName === null) {
+    return true;
+  }
+
+  return await getSettingBoolFromSettings(settingId, columnName);
+}
+
+/**
+ * Перевірка чи може поточний користувач закривати акти ІЗ ЗАУВАЖЕННЯМИ.
+ * Перевіряє налаштування "📋 Акт Закриття акту із зауваженнями ⚠️"
+ */
+export async function canUserCloseActsWithWarnings(): Promise<boolean> {
+  const role = userAccessLevel;
+
+  if (!role) {
+    console.warn("userAccessLevel порожній, не обмежуємо закриття акту.");
+    return true;
+  }
+
+  if (role === "Адміністратор") {
+    return true;
+  }
+
+  let settingId: number | null = null;
+  let columnName: string | null = null;
+
+  switch (role) {
+    case "Приймальник":
+      settingId = 16; // "📋 Акт Закриття акту із зауваженнями ⚠️"
+      columnName = "Приймальник";
+      break;
+    case "Слюсар":
+      // Слюсар не може закривати акти із зауваженнями
+      return false;
+    case "Запчастист":
+      settingId = 17; // "📋 Акт Закриття акту із зауваженнями ⚠️"
+      columnName = "Запчастист";
+      break;
+    case "Складовщик":
+      settingId = 14; // "📋 Акт Закриття акту із зауваженнями ⚠️"
       columnName = "Складовщик";
       break;
     default:

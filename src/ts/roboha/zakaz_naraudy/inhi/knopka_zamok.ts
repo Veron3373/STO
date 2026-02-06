@@ -1,7 +1,7 @@
 // src/ts/roboha/zakaz_naraudy/inhi/knopka_zamok.ts
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
-import { showViknoPidtverdchennayZakruttiaAkty } from "./vikno_pidtverdchennay_zakruttia_akty";
+import { showViknoPidtverdchennayZakruttiaAkty, checkForWarnings } from "./vikno_pidtverdchennay_zakruttia_akty";
 import { showViknoVvodyParolu } from "./vikno_vvody_parolu";
 import {
   globalCache,
@@ -14,7 +14,8 @@ import { deleteActNotificationsOnClose } from "../../tablucya/mark_notification_
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
-  canUserCloseActs,
+  canUserCloseActsNormal,
+  canUserCloseActsWithWarnings,
   canUserOpenClosedActs,
   canSlusarCompleteTasks,
 } from "../../tablucya/users";
@@ -932,25 +933,54 @@ export function initStatusLockDelegation(): void {
 
         // 1️⃣ Перевіряємо право закриття акту через settings (Приймальник/Слюсар/Запчастист/Складовщик)
         //    Адміністратор завжди має право незалежно від settings.
+        //    🔹 ЛОГІКА:
+        //       - Акти БЕЗ попереджень → перевіряємо налаштування "Закриття акту 🗝️"
+        //       - Акти ІЗ попередженнями → перевіряємо налаштування "Закриття акту із зауваженнями ⚠️"
         let canClose = true;
         if (!hasFullAccess()) {
-          try {
-            canClose = await canUserCloseActs();
-          } catch (permErr) {
-            console.error("Помилка перевірки прав закриття акту:", permErr);
-            // Якщо щось пішло не так при читанні settings — МИ НЕ БЛОКУЄМО,
-            // щоб не покласти роботу. Але це можна змінити, якщо хочеш.
-            canClose = true;
-          }
+          // Перевіряємо чи є попередження в таблиці акту
+          const noWarnings = checkForWarnings(); // true = без попереджень
+          
+          if (noWarnings) {
+            // Немає попереджень - перевіряємо право на звичайне закриття
+            console.log("✅ Акт без попереджень - перевіряємо право на звичайне закриття");
+            try {
+              canClose = await canUserCloseActsNormal();
+            } catch (permErr) {
+              console.error("Помилка перевірки прав закриття акту:", permErr);
+              canClose = true;
+            }
+            
+            if (!canClose) {
+              showNotification(
+                "У вас немає права закривати акти. Зверніться до адміністратора.",
+                "warning",
+                4000
+              );
+              btn.disabled = false;
+              return;
+            }
+          } else {
+            // Є попередження - перевіряємо налаштування "Закриття акту із зауваженнями"
+            console.log("⚠️ Виявлено попередження - перевіряємо налаштування доступу");
+            try {
+              canClose = await canUserCloseActsWithWarnings();
+            } catch (permErr) {
+              console.error("Помилка перевірки прав закриття акту:", permErr);
+              // Якщо щось пішло не так при читанні settings — МИ НЕ БЛОКУЄМО,
+              // щоб не покласти роботу. Але це можна змінити, якщо хочеш.
+              canClose = true;
+            }
 
-          if (!canClose) {
-            showNotification(
-              "У вас немає права закривати акти. Зверніться до адміністратора.",
-              "warning",
-              4000
-            );
-            btn.disabled = false;
-            return;
+            if (!canClose) {
+              showNotification(
+                "У вас немає права закривати акти із зауваженнями. Зверніться до адміністратора.",
+                "warning",
+                4000
+              );
+              btn.disabled = false;
+              return;
+            }
           }
         }
 

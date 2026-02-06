@@ -49,7 +49,7 @@ function ensureModalMounted(): HTMLElement {
  * Перевірка наявності попереджень у таблиці акту
  * Повертає true якщо помилок немає, false якщо є попередження
  */
-function checkForWarnings(): boolean {
+export function checkForWarnings(): boolean {
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) return true;
 

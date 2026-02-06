@@ -104,7 +104,6 @@ let currentStatusFilter: StatusFilter = "all";
 
 let lastSearchDateOpen: string = "";
 let lastSearchDateClose: string = "";
-let hasDataForAllEmployees: boolean = false;
 
 // НОВІ ЗМІННІ ДЛЯ АВТОФІЛЬТРАЦІЇ РОБІТ
 let allPodlegleData: PodlegleRecord[] = [];
@@ -907,10 +906,11 @@ export function createNameSelect(): void {
     select.addEventListener("change", (event) => {
       const selectedName = (event.target as HTMLSelectElement).value;
 
-      if (hasDataForAllEmployees) {
+      // ✅ ВИПРАВЛЕННЯ БАГ №2: ЗАВЖДИ оновлюємо дані при зміні імені
+      // Раніше оновлення відбувалось тільки якщо hasDataForAllEmployees === true
+      if (lastSearchDateOpen || lastSearchDateClose) {
         console.log(
-          `🔄 Автоматичне фільтрування по співробітнику: ${selectedName || "всі"
-          }`
+          `🔄 Оновлення даних при зміні співробітника: ${selectedName || "всі"}`
         );
 
         searchDataInDatabase(
@@ -918,6 +918,9 @@ export function createNameSelect(): void {
           lastSearchDateClose,
           selectedName
         );
+        
+        // Оновлюємо таблицю після пошуку
+        updatepodlegleTable();
       }
 
       refreshWorkDropdownOptions();
@@ -927,6 +930,12 @@ export function createNameSelect(): void {
 
 export function getFilteredpodlegleData(): PodlegleRecord[] {
   let filteredData = podlegleData;
+
+  // ✅ ВИПРАВЛЕННЯ БАГ №1: Фільтрація по вибраному імені з селекту
+  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  if (selectedName) {
+    filteredData = filteredData.filter((item) => item.name === selectedName);
+  }
 
   if (currentPaymentFilter === "paid") {
     filteredData = filteredData.filter((item) => item.isPaid);
@@ -1234,9 +1243,6 @@ export function searchDataInDatabase(
 
   lastSearchDateOpen = dateOpen;
   lastSearchDateClose = dateClose;
-
-  const isSearchForAllEmployees = !selectedName;
-  if (isSearchForAllEmployees) hasDataForAllEmployees = true;
 
   const toIsoClose = dateClose || todayIso();
 
@@ -2157,6 +2163,25 @@ export async function runMassPaymentCalculation(): Promise<void> {
   }
 
   const filteredData = getFilteredpodlegleData();
+  
+  // ✅ Додаткове логування для відстеження
+  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  console.log(`🔍 Масовий розрахунок: вибраний працівник = "${selectedName || 'всі'}"`);
+  console.log(`🔍 Масовий розрахунок: знайдено ${filteredData.length} записів для обробки`);
+  
+  // ✅ Логування унікальних імен в filteredData
+  const uniqueNames = [...new Set(filteredData.map(r => r.name))];
+  console.log(`🔍 Унікальні працівники в filteredData:`, uniqueNames);
+  
+  // ✅ Перевірка: якщо вибрано конкретне ім'я, але filteredData містить інші імена - це баг!
+  if (selectedName && uniqueNames.some(name => name !== selectedName)) {
+    console.error(`❌ УВАГА! Вибрано "${selectedName}", але filteredData містить інші імена:`, uniqueNames);
+    showNotification(
+      `⚠️ Помилка фільтрації! Дані містять записи для інших працівників. Перезавантажте сторінку.`,
+      "error"
+    );
+    return;
+  }
 
   if (filteredData.length === 0) {
     showNotification(
@@ -2202,10 +2227,37 @@ export async function runMassPaymentCalculation(): Promise<void> {
           }
           // 2. ЛОГІКА ДЛЯ СЛЮСАРЯ (шукаємо в масиві Записи)
           else if (actRecord.Записи) {
-            // ✅ ВИПРАВЛЕНО: Шукаємо тільки по РОБОТІ
-            const workEntry = actRecord.Записи.find(
-              (e) => e.Робота === record.work && !e.Розраховано
-            );
+            // ✅ ВИПРАВЛЕННЯ БАГ №3: Шукаємо спочатку по recordId (найточніше), потім по workIndex, потім по роботі
+            let workEntry = null;
+            
+            // ПРІОРИТЕТ 1: Пошук за recordId (найточніший)
+            if (record.recordId) {
+              workEntry = actRecord.Записи.find(
+                (e) => e.recordId === record.recordId && !e.Розраховано
+              );
+              if (workEntry) {
+                console.log(`✅ Знайдено запис за recordId: ${record.recordId}`);
+              }
+            }
+            
+            // ПРІОРИТЕТ 2: Пошук за workIndex (якщо recordId не знайдено)
+            if (!workEntry && record.workIndex !== undefined && record.workIndex >= 0) {
+              const entryByIndex = actRecord.Записи[record.workIndex];
+              if (entryByIndex && entryByIndex.Робота === record.work && !entryByIndex.Розраховано) {
+                workEntry = entryByIndex;
+                console.log(`✅ Знайдено запис за workIndex: ${record.workIndex}`);
+              }
+            }
+            
+            // ПРІОРИТЕТ 3: Пошук тільки по назві роботи (fallback)
+            if (!workEntry) {
+              workEntry = actRecord.Записи.find(
+                (e) => e.Робота === record.work && !e.Розраховано
+              );
+              if (workEntry) {
+                console.log(`✅ Знайдено запис за назвою роботи: ${record.work}`);
+              }
+            }
 
             if (workEntry) {
               workEntry.Розраховано = currentDate;
@@ -2342,7 +2394,6 @@ export function clearpodlegleForm(): void {
   podlegleData = [];
   allPodlegleData = [];
   hasPodlegleDataLoaded = false;
-  hasDataForAllEmployees = false;
   lastSearchDateOpen = "";
   lastSearchDateClose = "";
 

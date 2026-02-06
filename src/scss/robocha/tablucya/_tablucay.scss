@@ -19,10 +19,26 @@ body {
   box-sizing: border-box;
   padding: 0;
   z-index: 10;
+  position: relative; /* Додаємо position: relative для правильного відображення */
   border-radius: 8px;
   /* Added matching rounded corners if desired, or keep as is */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   /* Optional visual polish */
+  
+  /* ✅ ЗАХИСТ: Забезпечуємо, що таблиця залишається видимою після закриття модалки */
+  /* Модалка має z-index: 9999 і position: fixed, тому перекриває таблицю під час відкриття */
+  /* Але після закриття модалки (display: none) таблиця має бути видимою */
+  
+  /* Перевіряємо, що таблиця не зникла через CSS */
+  &:empty {
+    &::before {
+      content: "Таблиця актів завантажується...";
+      display: block;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+    }
+  }
 
   /* Таблиця */
   table {

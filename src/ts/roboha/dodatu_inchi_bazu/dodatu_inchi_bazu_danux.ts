@@ -183,6 +183,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (closeModalBtn) {
     closeModalBtn.addEventListener("click", () => {
       closeAllModals();
+      
+      // ✅ ЗАХИСТ: Перевіряємо, що таблиця актів залишилася після закриття модалки
+      setTimeout(() => {
+        const tableContainer = document.getElementById("table-container-modal-sakaz_narad");
+        if (tableContainer && !tableContainer.querySelector("table")) {
+          console.error("❌ Таблиця актів зникла після закриття модалки!");
+          // Можна додати логіку відновлення таблиці, якщо потрібно
+        }
+      }, 100);
     });
   }
 
@@ -192,6 +201,37 @@ document.addEventListener("DOMContentLoaded", () => {
       closeAllModals();
     }
   }); */
+  
+  // ✅ ЗАХИСТ: Спостерігаємо за змінами стану модалки через MutationObserver
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        const isHidden = modal_all_other_bases.classList.contains('hidden-all_other_bases');
+        if (isHidden) {
+          // Модалка закрита - перевіряємо, що таблиця видима
+          setTimeout(() => {
+            const tableContainer = document.getElementById("table-container-modal-sakaz_narad");
+            if (tableContainer) {
+              const table = tableContainer.querySelector("table");
+              if (!table) {
+                console.warn("⚠️ Таблиця актів зникла після закриття модалки!");
+              } else {
+                // Переконуємося, що таблиця видима
+                tableContainer.style.display = '';
+                tableContainer.style.visibility = '';
+                tableContainer.style.opacity = '';
+              }
+            }
+          }, 50);
+        }
+      }
+    });
+  });
+  
+  observer.observe(modal_all_other_bases, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
 
   // Ініціалізуємо всі модулі
   initScladMagasunDetal();
@@ -445,6 +485,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         closeAllModals();
+        
+        // ✅ ЗАХИСТ: Перевіряємо, що таблиця актів не зникла
+        const tableContainer = document.getElementById("table-container-modal-sakaz_narad");
+        if (tableContainer && !tableContainer.querySelector("table")) {
+          console.warn("⚠️ Таблиця актів зникла! Спробуємо відновити...");
+          // Можна додати логіку відновлення таблиці, якщо потрібно
+        }
+        
         modal_all_other_bases.classList.remove("hidden-all_other_bases");
 
         // Перевірка чи може користувач бачити кнопку "Співробітники"

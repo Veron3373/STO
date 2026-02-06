@@ -94,6 +94,19 @@ let currentPercentageFilter: PercentageFilter = "all";
 // Кеш для процентів роботи слюсарів (Name -> ПроцентРоботи)
 let slyusarPercentCache: Map<string, number> = new Map();
 
+// 🔹 Кеш для дат закриття актів (act_id → date_off з таблиці acts)
+let actsDateOffMap: Map<string, string> = new Map();
+
+// 🔹 Хелпер для отримання дати закриття акту (пріоритет: acts.date_off, fallback: slyusars.Історія.ДатаЗакриття)
+function getActDateClose(actId: string, fallbackDate: string | null): string {
+  return actsDateOffMap.get(actId) || fallbackDate || "";
+}
+
+// 🔹 Хелпер для перевірки чи акт закритий
+function isActClosed(actId: string, fallbackDate: string | null): boolean {
+  return !!actsDateOffMap.get(actId) || !!fallbackDate;
+}
+
 // Функція для отримання процента роботи слюсаря за ім'ям
 function getSlyusarPercentByName(name: string): number {
   if (!name) return 0;
@@ -696,7 +709,24 @@ function createPasswordConfirmationModal(
 
 export async function loadSlyusarsData(): Promise<void> {
   try {
-    const { data, error } = await supabase.from("slyusars").select("*");
+    // 🔹 Паралельно завантажуємо slyusars та acts.date_off
+    const [slyusarsResult, actsResult] = await Promise.all([
+      supabase.from("slyusars").select("*"),
+      supabase.from("acts").select("act_id, date_off")
+    ]);
+
+    const { data, error } = slyusarsResult;
+
+    // 🔹 Завантажуємо дати закриття актів в map
+    if (actsResult.data && Array.isArray(actsResult.data)) {
+      actsDateOffMap.clear();
+      actsResult.data.forEach((act: { act_id: number; date_off: string | null }) => {
+        if (act.date_off) {
+          actsDateOffMap.set(String(act.act_id), act.date_off);
+        }
+      });
+      console.log(`📅 Завантажено ${actsDateOffMap.size} дат закриття актів`);
+    }
 
     if (error) {
       console.error("Помилка Supabase:", error);
@@ -1276,7 +1306,7 @@ export function searchDataInDatabase(
               const salary = entry.Зарплата || 0;
               podlegleData.push({
                 dateOpen: openDmy,
-                dateClose: record.ДатаЗакриття || "",
+                dateClose: getActDateClose(record.Акт, record.ДатаЗакриття),
                 name: slyusar.Name,
                 act: record.Акт,
                 client: String(record.Клієнт || ""),
@@ -1287,7 +1317,7 @@ export function searchDataInDatabase(
                 total: totalPrice,
                 salary,
                 margin: totalPrice - salary,
-                isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО: надійна перевірка на існування
+                isClosed: isActClosed(record.Акт, record.ДатаЗакриття), // ✅ ВИПРАВЛЕНО: беремо з acts.date_off
                 isPaid: true,
                 paymentDate: payDmy,
                 recordedDate: entry.Записано || "", // ✅ Додано
@@ -1298,7 +1328,7 @@ export function searchDataInDatabase(
           } else {
             const targetDmy =
               podlegleDateFilterMode === "close"
-                ? record.ДатаЗакриття || ""
+                ? getActDateClose(record.Акт, record.ДатаЗакриття)
                 : openDmy;
             if (!targetDmy) return;
             if (!inRangeByIso(targetDmy, dateOpen, toIsoClose)) return;
@@ -1315,7 +1345,7 @@ export function searchDataInDatabase(
               const salary = entry.Зарплата || 0;
               podlegleData.push({
                 dateOpen: openDmy,
-                dateClose: record.ДатаЗакриття || "",
+                dateClose: getActDateClose(record.Акт, record.ДатаЗакриття),
                 name: slyusar.Name,
                 act: record.Акт,
                 client: String(record.Клієнт || ""),
@@ -1326,7 +1356,7 @@ export function searchDataInDatabase(
                 total: totalPrice,
                 salary,
                 margin: totalPrice - salary,
-                isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО
+                isClosed: isActClosed(record.Акт, record.ДатаЗакриття), // ✅ ВИПРАВЛЕНО: беремо з acts.date_off
                 isPaid: !!entry.Розраховано,
                 paymentDate: entry.Розраховано || "",
                 recordedDate: entry.Записано || "", // ✅ Додано
@@ -1351,7 +1381,7 @@ export function searchDataInDatabase(
           else {
             const targetDmy =
               podlegleDateFilterMode === "close"
-                ? record.ДатаЗакриття || ""
+                ? getActDateClose(record.Акт, record.ДатаЗакриття)
                 : openDmy;
             if (!targetDmy) return;
             // Якщо close-mode і дата закриття пуста - пропускаємо
@@ -1401,7 +1431,7 @@ export function searchDataInDatabase(
 
           podlegleData.push({
             dateOpen: openDmy,
-            dateClose: record.ДатаЗакриття || "",
+            dateClose: getActDateClose(record.Акт, record.ДатаЗакриття),
             name: slyusar.Name,
             act: record.Акт,
             client: String(record.Клієнт || ""),
@@ -1412,7 +1442,7 @@ export function searchDataInDatabase(
             total: totalSum,
             salary: totalSalary,
             margin: margin,
-            isClosed: !!record.ДатаЗакриття, // ✅ ВИПРАВЛЕНО
+            isClosed: isActClosed(record.Акт, record.ДатаЗакриття), // ✅ ВИПРАВЛЕНО: беремо з acts.date_off
             isPaid: isPaid,
             paymentDate: payDate,
             customHtmlTotal: customHtml,

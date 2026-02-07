@@ -6,6 +6,7 @@ import { PostArxiv } from "./planyvannya_arxiv"; // Import new class
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 import { redirectToIndex } from "../../utils/gitUtils";
+import { initPostArxivRealtimeSubscription } from "./planyvannya_realtime";
 
 interface Post {
   id: number;
@@ -157,6 +158,9 @@ class SchedulerApp {
     if (this.postArxiv) {
       this.postArxiv.loadArxivDataForCurrentDate();
     }
+
+    // 📡 Підключаємо Realtime підписку для автоматичного оновлення
+    initPostArxivRealtimeSubscription();
   }
 
   private async loadDataFromDatabase(): Promise<void> {

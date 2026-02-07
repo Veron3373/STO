@@ -160,7 +160,13 @@ class SchedulerApp {
     }
 
     // 📡 Підключаємо Realtime підписку для автоматичного оновлення
-    initPostArxivRealtimeSubscription();
+    console.log("🚀 [SchedulerApp] Викликаю initPostArxivRealtimeSubscription()...");
+    try {
+      initPostArxivRealtimeSubscription();
+      console.log("✅ [SchedulerApp] initPostArxivRealtimeSubscription() викликано успішно");
+    } catch (e) {
+      console.error("❌ [SchedulerApp] Помилка при виклику initPostArxivRealtimeSubscription:", e);
+    }
   }
 
   private async loadDataFromDatabase(): Promise<void> {
@@ -2013,13 +2019,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Глобальна функція для оновлення календаря після створення акту
 (window as any).refreshPlannerCalendar = async () => {
+  console.log("🔄 [refreshPlannerCalendar] Функція викликана");
+  console.log("🔍 [refreshPlannerCalendar] schedulerAppInstance:", !!schedulerAppInstance);
+  console.log("🔍 [refreshPlannerCalendar] postArxiv:", !!schedulerAppInstance?.["postArxiv"]);
+
   if (schedulerAppInstance && schedulerAppInstance["postArxiv"]) {
+    console.log("✅ [refreshPlannerCalendar] Починаємо оновлення...");
     // ⚠️ Спочатку очищаємо старі блоки, потім завантажуємо нові
+    console.log("🧹 [refreshPlannerCalendar] Очищаємо старі блоки...");
     schedulerAppInstance["postArxiv"].clearAllBlocks();
+    console.log("📥 [refreshPlannerCalendar] Завантажуємо нові дані...");
     await schedulerAppInstance["postArxiv"].loadArxivDataForCurrentDate();
+    console.log("📊 [refreshPlannerCalendar] Оновлюємо індикатори...");
     // Оновлюємо індикатори зайнятості
     await schedulerAppInstance.refreshOccupancyIndicators();
     console.log("✅ Календар планувальника оновлено");
+  } else {
+    console.error("❌ [refreshPlannerCalendar] schedulerAppInstance або postArxiv не знайдено!");
   }
 };
 

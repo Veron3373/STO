@@ -14,18 +14,25 @@ let refreshDebounceTimer: number | null = null;
 const REFRESH_DEBOUNCE_MS = 300;
 
 function debouncedRefreshPlanner(): void {
+  console.log("🔄 [PostArxiv Realtime] debouncedRefreshPlanner викликано");
   if (refreshDebounceTimer !== null) {
+    console.log("⏱️ [PostArxiv Realtime] Скидаємо попередній таймер");
     window.clearTimeout(refreshDebounceTimer);
   }
   refreshDebounceTimer = window.setTimeout(() => {
     refreshDebounceTimer = null;
     console.log("🔄 [PostArxiv Realtime] Оновлюю блоки планувальника...");
+    console.log("🔍 [PostArxiv Realtime] Перевірка функції:", typeof (window as any).refreshPlannerCalendar);
     if (typeof (window as any).refreshPlannerCalendar === "function") {
+      console.log("✅ [PostArxiv Realtime] Викликаємо refreshPlannerCalendar()");
       (window as any).refreshPlannerCalendar();
+      console.log("✅ [PostArxiv Realtime] refreshPlannerCalendar() виконано");
     } else {
-      console.warn("⚠️ [PostArxiv Realtime] refreshPlannerCalendar не знайдено!");
+      console.error("❌ [PostArxiv Realtime] refreshPlannerCalendar не знайдено!");
+      console.error("❌ [PostArxiv Realtime] window.refreshPlannerCalendar =", (window as any).refreshPlannerCalendar);
     }
   }, REFRESH_DEBOUNCE_MS);
+  console.log(`⏱️ [PostArxiv Realtime] Таймер встановлено на ${REFRESH_DEBOUNCE_MS}ms`);
 }
 
 // ── Toast-повідомлення про зміни ──
@@ -247,6 +254,10 @@ function refreshOccupancyForRecord(record: any): void {
  * календар планувальника для ВСІХ користувачів.
  */
 export function initPostArxivRealtimeSubscription(): void {
+  // Робимо доступним глобально для налагодження
+  (window as any).restartRealtime = initPostArxivRealtimeSubscription;
+  console.log("🛠️ [PostArxiv Realtime] Функція доступна як window.restartRealtime()");
+
   // Перевіряємо чи ми на сторінці планувальника
   if (!document.getElementById("postSchedulerWrapper")) {
     console.log("📡 [PostArxiv Realtime] Не на сторінці планувальника — підписку не ініціалізуємо");
@@ -275,68 +286,72 @@ export function initPostArxivRealtimeSubscription(): void {
         table: "post_arxiv",
       },
       (payload) => {
-        const eventType = payload.eventType;
-        const record = payload.new as any;
-        const oldRecord = payload.old as any;
+        try {
+          const eventType = payload.eventType;
+          const record = payload.new as any;
+          const oldRecord = payload.old as any;
 
-        console.log(`📡 [PostArxiv Realtime] Подія ${eventType}:`, {
-          new: record,
-          old: oldRecord,
-        });
+          console.log(`📡 [PostArxiv Realtime] Подія ${eventType}:`, {
+            new: record,
+            old: oldRecord,
+          });
 
-        if (eventType === "INSERT") {
-          console.log(`✅ [PostArxiv Realtime] INSERT - Новий запис:`, record);
-          // Toast тільки для ЧУЖИХ змін
-          if (!currentUserName || record?.xto_zapusav !== currentUserName) {
-            console.log(`📨 [PostArxiv Realtime] Показуємо toast для INSERT від ${record?.xto_zapusav}`);
-            showRealtimeToast("insert", record);
-          } else {
-            console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
-          }
+          if (eventType === "INSERT") {
+            console.log(`✅ [PostArxiv Realtime] INSERT - Новий запис:`, record);
+            // Toast тільки для ЧУЖИХ змін
+            if (!currentUserName || record?.xto_zapusav !== currentUserName) {
+              console.log(`📨 [PostArxiv Realtime] Показуємо toast для INSERT від ${record?.xto_zapusav}`);
+              showRealtimeToast("insert", record);
+            } else {
+              console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
+            }
 
-          debouncedRefreshPlanner();
-          refreshOccupancyForRecord(record);
-        } else if (eventType === "UPDATE") {
-          console.log(`✅ [PostArxiv Realtime] UPDATE - Оновлено запис:`, record);
-          if (!currentUserName || record?.xto_zapusav !== currentUserName) {
-            console.log(`📨 [PostArxiv Realtime] Показуємо toast для UPDATE від ${record?.xto_zapusav}`);
-            showRealtimeToast("update", record);
-          } else {
-            console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
-          }
+            debouncedRefreshPlanner();
+            refreshOccupancyForRecord(record);
+          } else if (eventType === "UPDATE") {
+            console.log(`✅ [PostArxiv Realtime] UPDATE - Оновлено запис:`, record);
+            if (!currentUserName || record?.xto_zapusav !== currentUserName) {
+              console.log(`📨 [PostArxiv Realtime] Показуємо toast для UPDATE від ${record?.xto_zapusav}`);
+              showRealtimeToast("update", record);
+            } else {
+              console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
+            }
 
-          debouncedRefreshPlanner();
-          refreshOccupancyForRecord(record);
-          if (oldRecord?.data_on) {
-            refreshOccupancyForRecord(oldRecord);
-          }
-        } else if (eventType === "DELETE") {
-          console.log(`✅ [PostArxiv Realtime] DELETE - Видалено запис:`, oldRecord);
-          // Показуємо toast про видалення
-          showRealtimeToast("delete", oldRecord);
+            debouncedRefreshPlanner();
+            refreshOccupancyForRecord(record);
+            if (oldRecord?.data_on) {
+              refreshOccupancyForRecord(oldRecord);
+            }
+          } else if (eventType === "DELETE") {
+            console.log(`✅ [PostArxiv Realtime] DELETE - Видалено запис:`, oldRecord);
+            // Показуємо toast про видалення
+            showRealtimeToast("delete", oldRecord);
 
-          // Видаляємо блок з DOM, якщо є
-          if (oldRecord?.post_arxiv_id) {
-            const block = document.querySelector(
-              `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
-            );
-            if (block) {
-              console.log(`🗑️ [PostArxiv Realtime] Видаляємо блок з DOM`);
-              block.remove();
+            // Видаляємо блок з DOM, якщо є
+            if (oldRecord?.post_arxiv_id) {
+              const block = document.querySelector(
+                `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
+              );
+              if (block) {
+                console.log(`🗑️ [PostArxiv Realtime] Видаляємо блок з DOM`);
+                block.remove();
+              }
+            }
+
+            debouncedRefreshPlanner();
+
+            if (oldRecord?.data_on) {
+              refreshOccupancyForRecord(oldRecord);
             }
           }
-
-          debouncedRefreshPlanner();
-
-          if (oldRecord?.data_on) {
-            refreshOccupancyForRecord(oldRecord);
-          }
+        } catch (err) {
+          console.error("❌ [PostArxiv Realtime] Критична помилка в обробнику подій:", err);
         }
       }
     )
     .subscribe((status) => {
       console.log("📡 [PostArxiv Realtime] Статус каналу:", status);
-      
+
       if (status === "SUBSCRIBED") {
         console.log("✅ [PostArxiv Realtime] Підписка активна! Очікуємо події від Supabase...");
       } else if (status === "CHANNEL_ERROR") {

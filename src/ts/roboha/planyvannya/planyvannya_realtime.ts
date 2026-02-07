@@ -285,16 +285,24 @@ export function initPostArxivRealtimeSubscription(): void {
         });
 
         if (eventType === "INSERT") {
+          console.log(`✅ [PostArxiv Realtime] INSERT - Новий запис:`, record);
           // Toast тільки для ЧУЖИХ змін
           if (!currentUserName || record?.xto_zapusav !== currentUserName) {
+            console.log(`📨 [PostArxiv Realtime] Показуємо toast для INSERT від ${record?.xto_zapusav}`);
             showRealtimeToast("insert", record);
+          } else {
+            console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
           }
 
           debouncedRefreshPlanner();
           refreshOccupancyForRecord(record);
         } else if (eventType === "UPDATE") {
+          console.log(`✅ [PostArxiv Realtime] UPDATE - Оновлено запис:`, record);
           if (!currentUserName || record?.xto_zapusav !== currentUserName) {
+            console.log(`📨 [PostArxiv Realtime] Показуємо toast для UPDATE від ${record?.xto_zapusav}`);
             showRealtimeToast("update", record);
+          } else {
+            console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
           }
 
           debouncedRefreshPlanner();
@@ -303,6 +311,7 @@ export function initPostArxivRealtimeSubscription(): void {
             refreshOccupancyForRecord(oldRecord);
           }
         } else if (eventType === "DELETE") {
+          console.log(`✅ [PostArxiv Realtime] DELETE - Видалено запис:`, oldRecord);
           // Показуємо toast про видалення
           showRealtimeToast("delete", oldRecord);
 
@@ -311,7 +320,10 @@ export function initPostArxivRealtimeSubscription(): void {
             const block = document.querySelector(
               `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
             );
-            if (block) block.remove();
+            if (block) {
+              console.log(`🗑️ [PostArxiv Realtime] Видаляємо блок з DOM`);
+              block.remove();
+            }
           }
 
           debouncedRefreshPlanner();
@@ -324,6 +336,19 @@ export function initPostArxivRealtimeSubscription(): void {
     )
     .subscribe((status) => {
       console.log("📡 [PostArxiv Realtime] Статус каналу:", status);
+      
+      if (status === "SUBSCRIBED") {
+        console.log("✅ [PostArxiv Realtime] Підписка активна! Очікуємо події від Supabase...");
+      } else if (status === "CHANNEL_ERROR") {
+        console.error("❌ [PostArxiv Realtime] Помилка каналу! Перевірте:");
+        console.error("   1. Чи увімкнений Realtime для таблиці post_arxiv");
+        console.error("   2. Чи правильно налаштовані RLS політики");
+        console.error("   3. Чи є доступ до таблиці");
+      } else if (status === "TIMED_OUT") {
+        console.error("⏱️ [PostArxiv Realtime] Час очікування вичерпано");
+      } else if (status === "CLOSED") {
+        console.warn("🔌 [PostArxiv Realtime] Канал закрито");
+      }
     });
 
   console.log("✅ [PostArxiv Realtime] Підписка створена! Очікуємо події від Supabase...");

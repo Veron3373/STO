@@ -264,91 +264,67 @@ export function initPostArxivRealtimeSubscription(): void {
   const currentUserName = getCurrentUserName();
   console.log("📡 [PostArxiv Realtime] Поточний користувач:", currentUserName || "невідомо");
 
+  // Використовуємо один handler для всіх типів подій, як у працюючому Realtime по складу
   postArxivChannel = supabase
     .channel("post-arxiv-changes")
-
-    // ── INSERT: нове бронювання ──
     .on(
       "postgres_changes",
       {
-        event: "INSERT",
+        event: "*",
         schema: "public",
         table: "post_arxiv",
       },
       (payload) => {
-        console.log("📌 [PostArxiv Realtime] INSERT:", payload.new);
-        const record = payload.new as any;
-
-        // Toast тільки для ЧУЖИХ змін
-        if (!currentUserName || record.xto_zapusav !== currentUserName) {
-          showRealtimeToast("insert", record);
-        }
-
-        // Оновлюємо блоки ЗАВЖДИ
-        debouncedRefreshPlanner();
-        refreshOccupancyForRecord(record);
-      }
-    )
-
-    // ── UPDATE: зміна бронювання (час, статус, ПІБ тощо) ──
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "post_arxiv",
-      },
-      (payload) => {
-        console.log("✏️ [PostArxiv Realtime] UPDATE:", payload.new);
+        const eventType = payload.eventType;
         const record = payload.new as any;
         const oldRecord = payload.old as any;
 
-        // Toast тільки для ЧУЖИХ змін
-        if (!currentUserName || record.xto_zapusav !== currentUserName) {
-          showRealtimeToast("update", record);
-        }
+        console.log(`📡 [PostArxiv Realtime] Подія ${eventType}:`, {
+          new: record,
+          old: oldRecord,
+        });
 
-        // Оновлюємо блоки ЗАВЖДИ
-        debouncedRefreshPlanner();
-        refreshOccupancyForRecord(record);
-        if (oldRecord?.data_on) {
-          refreshOccupancyForRecord(oldRecord);
-        }
-      }
-    )
+        if (eventType === "INSERT") {
+          // Toast тільки для ЧУЖИХ змін
+          if (!currentUserName || record?.xto_zapusav !== currentUserName) {
+            showRealtimeToast("insert", record);
+          }
 
-    // ── DELETE: видалення бронювання ──
-    .on(
-      "postgres_changes",
-      {
-        event: "DELETE",
-        schema: "public",
-        table: "post_arxiv",
-      },
-      (payload) => {
-        console.log("🗑️ [PostArxiv Realtime] DELETE:", payload.old);
-        const oldRecord = payload.old as any;
+          debouncedRefreshPlanner();
+          refreshOccupancyForRecord(record);
+        } else if (eventType === "UPDATE") {
+          if (!currentUserName || record?.xto_zapusav !== currentUserName) {
+            showRealtimeToast("update", record);
+          }
 
-        // Показуємо toast
-        showRealtimeToast("delete", oldRecord);
+          debouncedRefreshPlanner();
+          refreshOccupancyForRecord(record);
+          if (oldRecord?.data_on) {
+            refreshOccupancyForRecord(oldRecord);
+          }
+        } else if (eventType === "DELETE") {
+          // Показуємо toast про видалення
+          showRealtimeToast("delete", oldRecord);
 
-        // Видаляємо блок з DOM, якщо є
-        if (oldRecord.post_arxiv_id) {
-          const block = document.querySelector(
-            `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
-          );
-          if (block) block.remove();
-        }
+          // Видаляємо блок з DOM, якщо є
+          if (oldRecord?.post_arxiv_id) {
+            const block = document.querySelector(
+              `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
+            );
+            if (block) block.remove();
+          }
 
-        // Оновлюємо блоки ЗАВЖДИ
-        debouncedRefreshPlanner();
+          debouncedRefreshPlanner();
 
-        if (oldRecord?.data_on) {
-          refreshOccupancyForRecord(oldRecord);
+          if (oldRecord?.data_on) {
+            refreshOccupancyForRecord(oldRecord);
+          }
         }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log("📡 [PostArxiv Realtime] Статус каналу:", status);
+    });
 
   console.log("✅ [PostArxiv Realtime] Підписка створена! Очікуємо події від Supabase...");
 }

@@ -2014,6 +2014,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // Глобальна функція для оновлення календаря після створення акту
 (window as any).refreshPlannerCalendar = async () => {
   if (schedulerAppInstance && schedulerAppInstance["postArxiv"]) {
+    // ⚠️ Спочатку очищаємо старі блоки, потім завантажуємо нові
+    schedulerAppInstance["postArxiv"].clearAllBlocks();
     await schedulerAppInstance["postArxiv"].loadArxivDataForCurrentDate();
     // Оновлюємо індикатори зайнятості
     await schedulerAppInstance.refreshOccupancyIndicators();

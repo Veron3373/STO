@@ -7,6 +7,24 @@ import { supabase } from "../../vxid/supabaseClient";
 
 let postArxivChannel: any = null;
 
+// ── Debounce для оновлення блоків ──
+// Якщо прилетить 5 подій за 200мс — оновимо лише 1 раз
+let refreshDebounceTimer: number | null = null;
+const REFRESH_DEBOUNCE_MS = 300;
+
+function debouncedRefreshPlanner(): void {
+  if (refreshDebounceTimer !== null) {
+    window.clearTimeout(refreshDebounceTimer);
+  }
+  refreshDebounceTimer = window.setTimeout(() => {
+    refreshDebounceTimer = null;
+    console.log("🔄 [Realtime] Оновлюю блоки планувальника...");
+    if (typeof (window as any).refreshPlannerCalendar === "function") {
+      (window as any).refreshPlannerCalendar();
+    }
+  }, REFRESH_DEBOUNCE_MS);
+}
+
 // ── Toast-повідомлення про зміни ──
 
 const TOAST_CONTAINER_ID = "planyvannya-realtime-toasts";
@@ -34,29 +52,6 @@ function getCurrentUserName(): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Отримує поточну дату з заголовку планувальника (YYYY-MM-DD)
- */
-function getCurrentDateFromHeader(): string | null {
-  const headerEl = document.getElementById("postHeaderDateDisplay");
-  if (!headerEl || !headerEl.textContent) return null;
-
-  const months: Record<string, string> = {
-    січня: "01", лютого: "02", березня: "03", квітня: "04",
-    травня: "05", червня: "06", липня: "07", серпня: "08",
-    вересня: "09", жовтня: "10", листопада: "11", грудня: "12",
-  };
-
-  const match = headerEl.textContent.match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
-  if (!match) return null;
-
-  const day = match[1].padStart(2, "0");
-  const month = months[match[2].toLowerCase()];
-  const year = match[3];
-
-  return month ? `${year}-${month}-${day}` : null;
 }
 
 /**
@@ -98,7 +93,7 @@ function showRealtimeToast(
   record: any
 ): void {
   const container = getOrCreateToastContainer();
-  const toastId = `planyvannya-toast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const toastId = `prt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
   const icons: Record<string, string> = {
     insert: "📌",
@@ -165,7 +160,7 @@ function showRealtimeToast(
   }, 8000);
   toastAutoHideTimers.set(toastId, timer);
 
-  // Зупиняємо таймер якщо hover
+  // Зупиняємо таймер при hover
   toast.addEventListener("mouseenter", () => {
     const t = toastAutoHideTimers.get(toastId);
     if (t) {
@@ -207,10 +202,10 @@ function removeToast(toast: HTMLElement, toastId: string): void {
  */
 function playRealtimeSound(type: "insert" | "update" | "delete"): void {
   try {
-    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
+    const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtxClass) return;
 
-    const ctx = new AudioContextClass();
+    const ctx = new AudioCtxClass();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -231,33 +226,25 @@ function playRealtimeSound(type: "insert" | "update" | "delete"): void {
   }
 }
 
-// ── Головна функція підписки ──
+// ── Оновлення індикаторів зайнятості ──
 
-/**
- * Перевіряє, чи зміна стосується поточної дати в планувальнику
- */
-function isRecordForCurrentDate(record: any): boolean {
-  const currentDate = getCurrentDateFromHeader();
-  if (!currentDate || !record.data_on) return false;
-
-  const recordDate = record.data_on.split("T")[0];
-  return recordDate === currentDate;
-}
-
-/**
- * Оновлює блоки планувальника: очищає і перезавантажує
- */
-function refreshPlannerBlocks(): void {
-  if (typeof (window as any).refreshPlannerCalendar === "function") {
-    (window as any).refreshPlannerCalendar();
+function refreshOccupancyForRecord(record: any): void {
+  if (!record?.data_on) return;
+  const dateStr = record.data_on.split("T")[0];
+  if (dateStr && typeof (window as any).refreshOccupancyIndicatorsForDates === "function") {
+    setTimeout(() => (window as any).refreshOccupancyIndicatorsForDates([dateStr]), 200);
   }
 }
 
+// ── Головна функція підписки ──
+
 /**
- * Ініціалізація Realtime підписки на зміни в post_arxiv
+ * Ініціалізація Realtime підписки на зміни в post_arxiv.
+ * Слухає INSERT / UPDATE / DELETE і автоматично оновлює
+ * календар планувальника для ВСІХ користувачів.
  */
 export function initPostArxivRealtimeSubscription(): void {
-  console.log("📡 Ініціалізація Realtime підписки на post_arxiv...");
+  console.log("📡 [Realtime] Ініціалізація підписки на post_arxiv...");
 
   // Відписуємось від існуючого каналу, якщо є
   if (postArxivChannel) {
@@ -266,6 +253,7 @@ export function initPostArxivRealtimeSubscription(): void {
   }
 
   const currentUserName = getCurrentUserName();
+  console.log("📡 [Realtime] Поточний користувач:", currentUserName || "невідомо");
 
   postArxivChannel = supabase
     .channel("post-arxiv-realtime")
@@ -280,32 +268,20 @@ export function initPostArxivRealtimeSubscription(): void {
       },
       (payload) => {
         console.log("📌 [Realtime] INSERT в post_arxiv:", payload.new);
-
         const record = payload.new as any;
 
-        // Не показуємо toast для власних змін
-        if (currentUserName && record.xto_zapusav === currentUserName) {
-          // Але все одно оновлюємо блоки — може з'явитись в іншому часі
-          if (isRecordForCurrentDate(record)) {
-            refreshPlannerBlocks();
-          }
-          return;
+        // Toast тільки для ЧУЖИХ змін
+        if (!currentUserName || record.xto_zapusav !== currentUserName) {
+          showRealtimeToast("insert", record);
         }
 
-        // Показуємо toast
-        showRealtimeToast("insert", record);
-
-        // Оновлюємо блоки, якщо зміна стосується поточної дати
-        if (isRecordForCurrentDate(record)) {
-          refreshPlannerBlocks();
-        }
-
-        // Оновлюємо індикатори зайнятості
+        // Оновлюємо блоки ЗАВЖДИ (і для себе, і для інших)
+        debouncedRefreshPlanner();
         refreshOccupancyForRecord(record);
       }
     )
 
-    // ── UPDATE: зміна бронювання ──
+    // ── UPDATE: зміна бронювання (час, статус, ПІБ тощо) ──
     .on(
       "postgres_changes",
       {
@@ -315,27 +291,16 @@ export function initPostArxivRealtimeSubscription(): void {
       },
       (payload) => {
         console.log("✏️ [Realtime] UPDATE в post_arxiv:", payload.new);
-
         const record = payload.new as any;
         const oldRecord = payload.old as any;
 
-        // Не показуємо toast для власних змін
-        if (currentUserName && record.xto_zapusav === currentUserName) {
-          if (isRecordForCurrentDate(record)) {
-            refreshPlannerBlocks();
-          }
-          return;
+        // Toast тільки для ЧУЖИХ змін
+        if (!currentUserName || record.xto_zapusav !== currentUserName) {
+          showRealtimeToast("update", record);
         }
 
-        // Показуємо toast
-        showRealtimeToast("update", record);
-
-        // Оновлюємо блоки для поточної дати
-        if (isRecordForCurrentDate(record) || isRecordForCurrentDate(oldRecord || {})) {
-          refreshPlannerBlocks();
-        }
-
-        // Оновлюємо індикатори зайнятості
+        // Оновлюємо блоки ЗАВЖДИ
+        debouncedRefreshPlanner();
         refreshOccupancyForRecord(record);
         if (oldRecord?.data_on) {
           refreshOccupancyForRecord(oldRecord);
@@ -353,65 +318,39 @@ export function initPostArxivRealtimeSubscription(): void {
       },
       (payload) => {
         console.log("🗑️ [Realtime] DELETE в post_arxiv:", payload.old);
-
         const oldRecord = payload.old as any;
 
-        // При DELETE Supabase повертає тільки primary key (якщо нема REPLICA IDENTITY FULL)
-        // Тому ми просто перезавантажуємо блоки для безпеки
+        // Показуємо toast (при DELETE нема xto_zapusav, показуємо завжди)
+        showRealtimeToast("delete", oldRecord);
+
+        // Видаляємо блок з DOM, якщо є
         if (oldRecord.post_arxiv_id) {
-          // Видаляємо блок з DOM напряму за post_arxiv_id
           const block = document.querySelector(
             `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
           );
-
-          if (block) {
-            // Показуємо toast лише якщо блок видно (тобто дата збігається)
-            showRealtimeToast("delete", oldRecord);
-            block.remove();
-          } else {
-            // Якщо блок не знайдений в DOM — можливо інша дата, просто ігноруємо
-            // або перезавантажуємо на всяк випадок
-            showRealtimeToast("delete", oldRecord);
-          }
-
-          // Фолбек: перезавантажуємо всі блоки
-          refreshPlannerBlocks();
-        } else {
-          // Нема ID — перезавантажуємо все
-          refreshPlannerBlocks();
+          if (block) block.remove();
         }
 
-        // Оновлюємо індикатори зайнятості
+        // Оновлюємо блоки ЗАВЖДИ
+        debouncedRefreshPlanner();
+
         if (oldRecord?.data_on) {
           refreshOccupancyForRecord(oldRecord);
-        } else {
-          // Якщо дати нема в payload — оновлюємо для поточної дати
-          const currentDate = getCurrentDateFromHeader();
-          if (currentDate && typeof (window as any).refreshOccupancyIndicatorsForDates === "function") {
-            setTimeout(() => (window as any).refreshOccupancyIndicatorsForDates([currentDate]), 200);
-          }
         }
       }
     )
 
     .subscribe((status: string) => {
       if (status === "SUBSCRIBED") {
-        console.log("✅ Realtime підписка на post_arxiv активна");
+        console.log("✅ [Realtime] Підписка на post_arxiv АКТИВНА! Зміни будуть транслюватися автоматично.");
       } else if (status === "CHANNEL_ERROR") {
-        console.error("❌ Помилка Realtime підписки на post_arxiv");
+        console.error("❌ [Realtime] ПОМИЛКА підписки на post_arxiv! Перевірте чи ввімкнено Realtime для таблиці в Supabase.");
+      } else if (status === "TIMED_OUT") {
+        console.warn("⏱️ [Realtime] Таймаут підписки на post_arxiv. Спроба перепідключення...");
+      } else {
+        console.log("📡 [Realtime] Статус підписки:", status);
       }
     });
-}
-
-/**
- * Оновлює індикатори зайнятості для дати запису
- */
-function refreshOccupancyForRecord(record: any): void {
-  if (!record?.data_on) return;
-  const dateStr = record.data_on.split("T")[0];
-  if (dateStr && typeof (window as any).refreshOccupancyIndicatorsForDates === "function") {
-    setTimeout(() => (window as any).refreshOccupancyIndicatorsForDates([dateStr]), 200);
-  }
 }
 
 /**
@@ -421,6 +360,6 @@ export function unsubscribeFromPostArxivRealtime(): void {
   if (postArxivChannel) {
     postArxivChannel.unsubscribe();
     postArxivChannel = null;
-    console.log("🔌 Realtime підписка на post_arxiv відключена");
+    console.log("🔌 [Realtime] Підписка на post_arxiv відключена");
   }
 }

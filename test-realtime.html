@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Realtime Підписки</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .status-box {
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-box.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .status-box.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .status-box.warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .log {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 2px solid #10b981;
+            padding-left: 10px;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .log-entry.info {
+            border-left-color: #3b82f6;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Тест Realtime Підписки для post_arxiv</h1>
+
+    <div class="status-box" id="connectionStatus">
+        <h3>📡 Статус підключення</h3>
+        <p id="statusText">Ініціалізація...</p>
+    </div>
+
+    <div class="status-box">
+        <h3>🎮 Дії</h3>
+        <button onclick="testConnection()">Перевірити підключення</button>
+        <button onclick="testInsert()">Тестовий INSERT</button>
+        <button onclick="testUpdate()">Тестовий UPDATE</button>
+        <button onclick="clearLog()">Очистити лог</button>
+    </div>
+
+    <div class="status-box">
+        <h3>📊 Лог подій</h3>
+        <div class="log" id="eventLog"></div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+        // Отримуємо дані з .env (замініть на ваші)
+        const SUPABASE_URL = 'https://eksifjzzszcqsufwcbsx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVrc2lmanp6c3pjcXN1ZndjYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4MTU0MjAsImV4cCI6MjA1MTM5MTQyMH0.HGCqmCqTnMYxJZhWOhPJLdGwWZwYKfvJVjZqXXrfSGo';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let channel = null;
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('eventLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString('uk-UA');
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'warning') {
+            const statusBox = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            statusBox.className = `status-box ${type}`;
+            statusText.textContent = message;
+        }
+
+        async function initRealtime() {
+            addLog('🚀 Ініціалізація Realtime підписки...', 'info');
+
+            channel = supabase
+                .channel('test-post-arxiv-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'post_arxiv',
+                    },
+                    (payload) => {
+                        const eventType = payload.eventType;
+                        addLog(`📨 Отримано подію: ${eventType}`, 'info');
+                        addLog(`📦 Дані: ${JSON.stringify(payload.new || payload.old)}`, 'info');
+
+                        if (eventType === 'INSERT') {
+                            addLog('✅ INSERT успішно отримано!', 'info');
+                        } else if (eventType === 'UPDATE') {
+                            addLog('✅ UPDATE успішно отримано!', 'info');
+                        } else if (eventType === 'DELETE') {
+                            addLog('✅ DELETE успішно отримано!', 'info');
+                        }
+                    }
+                )
+                .subscribe((status) => {
+                    addLog(`📡 Статус каналу: ${status}`, 'info');
+
+                    if (status === 'SUBSCRIBED') {
+                        updateStatus('✅ Підключено до Realtime!', 'success');
+                        addLog('✅ Підписка активна! Очікуємо події...', 'info');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        updateStatus('❌ Помилка підключення до Realtime', 'error');
+                        addLog('❌ Перевірте чи увімкнений Realtime для таблиці post_arxiv', 'error');
+                    } else if (status === 'TIMED_OUT') {
+                        updateStatus('⏱️ Час очікування вичерпано', 'error');
+                        addLog('❌ Не вдалося підключитися до Realtime', 'error');
+                    } else if (status === 'CLOSED') {
+                        updateStatus("🔌 З'єднання закрито", 'warning');
+                        addLog("⚠️ Канал закрито", 'warning');
+                    }
+                });
+        }
+
+        window.testConnection = async () => {
+            addLog('🔍 Перевірка підключення до Supabase...', 'info');
+
+            try {
+                const { data, error } = await supabase
+                    .from('post_arxiv')
+                    .select('post_arxiv_id')
+                    .limit(1);
+
+                if (error) {
+                    addLog(`❌ Помилка: ${error.message}`, 'error');
+                    updateStatus('❌ Помилка підключення до БД', 'error');
+                } else {
+                    addLog('✅ Підключення до БД працює!', 'info');
+                    updateStatus('✅ Підключення до БД працює', 'success');
+                }
+            } catch (err) {
+                addLog(`❌ Виняток: ${err.message}`, 'error');
+                updateStatus('❌ Критична помилка', 'error');
+            }
+        };
+
+        window.testInsert = async () => {
+            addLog('📝 Створення тестового запису...', 'info');
+
+            try {
+                const testData = {
+                    slyusar_id: 1,
+                    name_post: 1,
+                    client_id: 'Тест|||380000000000',
+                    cars_id: 'Тестова машина|||AA0000AA',
+                    status: 'Запланований',
+                    data_on: new Date().toISOString(),
+                    data_off: new Date(Date.now() + 3600000).toISOString(),
+                    komentar: 'Тестовий запис для перевірки Realtime',
+                    xto_zapusav: 'Тестовий користувач'
+                };
+
+                const { data, error } = await supabase
+                    .from('post_arxiv')
+                    .insert(testData)
+                    .select()
+                    .single();
+
+                if (error) {
+                    addLog(`❌ Помилка INSERT: ${error.message}`, 'error');
+                } else {
+                    addLog(`✅ Запис створено! ID: ${data.post_arxiv_id}`, 'info');
+                    addLog('⏳ Очікуємо Realtime подію...', 'info');
+                }
+            } catch (err) {
+                addLog(`❌ Виняток: ${err.message}`, 'error');
+            }
+        };
+
+        window.testUpdate = async () => {
+            addLog('🔄 Оновлення останнього запису...', 'info');
+
+            try {
+                // Знаходимо останній запис
+                const { data: lastRecord, error: selectError } = await supabase
+                    .from('post_arxiv')
+                    .select('post_arxiv_id')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (selectError || !lastRecord) {
+                    addLog('❌ Не знайдено записів для оновлення', 'error');
+                    return;
+                }
+
+                // Оновлюємо запис
+                const { data, error } = await supabase
+                    .from('post_arxiv')
+                    .update({
+                        komentar: `Оновлено о ${new Date().toLocaleTimeString('uk-UA')}`,
+                        xto_zapusav: 'Тестовий користувач (оновлення)'
+                    })
+                    .eq('post_arxiv_id', lastRecord.post_arxiv_id)
+                    .select()
+                    .single();
+
+                if (error) {
+                    addLog(`❌ Помилка UPDATE: ${error.message}`, 'error');
+                } else {
+                    addLog(`✅ Запис оновлено! ID: ${data.post_arxiv_id}`, 'info');
+                    addLog('⏳ Очікуємо Realtime подію...', 'info');
+                }
+            } catch (err) {
+                addLog(`❌ Виняток: ${err.message}`, 'error');
+            }
+        };
+
+        window.clearLog = () => {
+            document.getElementById('eventLog').innerHTML = '';
+            addLog('🧹 Лог очищено', 'info');
+        };
+
+        // Ініціалізація при завантаженні
+        initRealtime();
+    </script>
+</body>
+
+</html>

@@ -135,19 +135,23 @@ export class PostArxiv {
 
       console.log(`Завантажено ${arxivRecords.length} записів з БД`);
 
-      // Збираємо унікальні ID клієнтів та машин для окремих запитів
+      // Збираємо тільки числові ID для запиту до clients/cars (зворотна сумісність)
       const clientIds = [
         ...new Set(
-          arxivRecords.map((r) => r.client_id).filter((id) => id != null)
+          arxivRecords
+            .map((r) => r.client_id)
+            .filter((id) => id != null && !isNaN(Number(id)) && !String(id).includes("|||"))
         ),
       ];
       const carIds = [
         ...new Set(
-          arxivRecords.map((r) => r.cars_id).filter((id) => id != null)
+          arxivRecords
+            .map((r) => r.cars_id)
+            .filter((id) => id != null && !isNaN(Number(id)) && !String(id).includes("|||"))
         ),
       ];
 
-      // Завантажуємо дані клієнтів
+      // Завантажуємо дані клієнтів (тільки для старих числових записів)
       let clientsMap = new Map<number, any>();
       if (clientIds.length > 0) {
         const { data: clientsData } = await supabase
@@ -160,7 +164,7 @@ export class PostArxiv {
         }
       }
 
-      // Завантажуємо дані машин
+      // Завантажуємо дані машин (тільки для старих числових записів)
       let carsMap = new Map<number, any>();
       if (carIds.length > 0) {
         const { data: carsData } = await supabase
@@ -175,8 +179,10 @@ export class PostArxiv {
 
       // Відображаємо кожен запис
       for (const record of arxivRecords) {
-        const clientData = clientsMap.get(record.client_id) || {};
-        const carData = carsMap.get(record.cars_id) || {};
+        const numClientId = Number(record.client_id);
+        const numCarId = Number(record.cars_id);
+        const clientData = !isNaN(numClientId) ? (clientsMap.get(numClientId) || {}) : {};
+        const carData = !isNaN(numCarId) ? (carsMap.get(numCarId) || {}) : {};
         this.renderArxivRecord(record, clientData, carData);
       }
     } catch (err) {
@@ -235,19 +241,23 @@ export class PostArxiv {
 
       console.log(`Завантажено ${arxivRecords.length} записів для секції`);
 
-      // Збираємо унікальні ID клієнтів та машин
+      // Збираємо тільки числові ID для запиту (зворотна сумісність)
       const clientIds = [
         ...new Set(
-          arxivRecords.map((r) => r.client_id).filter((id) => id != null)
+          arxivRecords
+            .map((r) => r.client_id)
+            .filter((id) => id != null && !isNaN(Number(id)) && !String(id).includes("|||"))
         ),
       ];
       const carIds = [
         ...new Set(
-          arxivRecords.map((r) => r.cars_id).filter((id) => id != null)
+          arxivRecords
+            .map((r) => r.cars_id)
+            .filter((id) => id != null && !isNaN(Number(id)) && !String(id).includes("|||"))
         ),
       ];
 
-      // Завантажуємо дані клієнтів
+      // Завантажуємо дані клієнтів (тільки для старих числових записів)
       let clientsMap = new Map<number, any>();
       if (clientIds.length > 0) {
         const { data: clientsData } = await supabase
@@ -260,7 +270,7 @@ export class PostArxiv {
         }
       }
 
-      // Завантажуємо дані машин
+      // Завантажуємо дані машин (тільки для старих числових записів)
       let carsMap = new Map<number, any>();
       if (carIds.length > 0) {
         const { data: carsData } = await supabase
@@ -275,8 +285,10 @@ export class PostArxiv {
 
       // Відображаємо кожен запис
       for (const record of arxivRecords) {
-        const clientData = clientsMap.get(record.client_id) || {};
-        const carData = carsMap.get(record.cars_id) || {};
+        const numClientId = Number(record.client_id);
+        const numCarId = Number(record.cars_id);
+        const clientData = !isNaN(numClientId) ? (clientsMap.get(numClientId) || {}) : {};
+        const carData = !isNaN(numCarId) ? (carsMap.get(numCarId) || {}) : {};
         this.renderArxivRecord(record, clientData, carData);
       }
     } catch (err) {
@@ -355,24 +367,44 @@ export class PostArxiv {
       return;
     }
 
-    // Використовуємо передані дані клієнта і авто
-
-    const clientName = clientData["ПІБ"] || "";
-    const carModel = carData["Авто"] || "";
-    const carNumber = carData["Номер авто"] || "";
-
-    // Extract phone
+    // Парсимо дані клієнта та авто
+    // Новий формат: "ПІБ|||Телефон" в client_id, "Модель|||Номер" в cars_id
+    // Старий формат: числовий ID — тоді беремо дані з clientData/carData
+    let clientName = "";
     let clientPhone = "";
-    if (clientData) {
+    let carModel = "";
+    let carNumber = "";
+
+    const clientIdStr = String(record.client_id || "");
+    if (clientIdStr.includes("|||")) {
+      // Новий текстовий формат
+      const parts = clientIdStr.split("|||");
+      clientName = parts[0] || "";
+      clientPhone = parts[1] || "";
+    } else if (clientData && Object.keys(clientData).length > 0) {
+      // Старий числовий формат — дані з таблиці clients
+      clientName = clientData["ПІБ"] || "";
       for (const key in clientData) {
         if (key.toLowerCase().includes("телефон")) {
           const phone = clientData[key];
           if (phone && typeof phone === "string" && phone.trim() !== "") {
             clientPhone = phone;
-            break; // Grab first phone found
+            break;
           }
         }
       }
+    }
+
+    const carsIdStr = String(record.cars_id || "");
+    if (carsIdStr.includes("|||")) {
+      // Новий текстовий формат
+      const parts = carsIdStr.split("|||");
+      carModel = parts[0] || "";
+      carNumber = parts[1] || "";
+    } else if (carData && Object.keys(carData).length > 0) {
+      // Старий числовий формат — дані з таблиці cars
+      carModel = carData["Авто"] || "";
+      carNumber = carData["Номер авто"] || "";
     }
 
     // Формуємо дані для блоку
@@ -386,10 +418,10 @@ export class PostArxiv {
         .getUTCMinutes()
         .toString()
         .padStart(2, "0")}`,
-      clientId: record.client_id,
+      clientId: isNaN(Number(clientIdStr)) ? null : Number(clientIdStr),
       clientName: clientName,
       clientPhone: clientPhone,
-      carId: record.cars_id,
+      carId: isNaN(Number(carsIdStr)) ? null : Number(carsIdStr),
       carModel: carModel,
       carNumber: carNumber,
       comment: record.komentar || "",
@@ -397,7 +429,7 @@ export class PostArxiv {
       postArxivId: record.post_arxiv_id,
       slyusarId: record.slyusar_id,
       namePost: record.name_post,
-      actId: record.act_id, // Pass the act_id
+      actId: record.act_id,
     };
 
     // Створюємо блок з правильним кольором
@@ -1319,95 +1351,6 @@ export class PostArxiv {
       return null;
     }
 
-    // Якщо clientId відсутній — створюємо нового клієнта в БД
-    if (!data.clientId && data.clientName) {
-      try {
-        // Спочатку шукаємо існуючого клієнта за ПІБ (точне співпадіння)
-        const { data: existingClients } = await supabase
-          .from("clients")
-          .select("client_id, data")
-          .ilike("data->>ПІБ", data.clientName.trim());
-
-        if (existingClients && existingClients.length > 0) {
-          // Знайшли існуючого клієнта
-          data.clientId = existingClients[0].client_id;
-          console.log(`✅ Знайдено існуючого клієнта (ID: ${data.clientId})`);
-        } else {
-          // Створюємо нового клієнта
-          const clientPayload: any = {
-            ПІБ: data.clientName.trim(),
-          };
-          if (data.clientPhone) {
-            clientPayload["Телефон"] = data.clientPhone.trim();
-          }
-
-          const { data: newClient, error: clientError } = await supabase
-            .from("clients")
-            .insert({ data: clientPayload })
-            .select("client_id")
-            .single();
-
-          if (clientError || !newClient) {
-            console.error("❌ Помилка створення нового клієнта:", clientError);
-            showNotification("Не вдалося створити нового клієнта", "error");
-            return null;
-          }
-          data.clientId = newClient.client_id;
-          console.log(`✅ Створено нового клієнта (ID: ${data.clientId})`);
-        }
-      } catch (err) {
-        console.error("❌ Помилка при пошуку/створенні клієнта:", err);
-        showNotification("Помилка при збереженні клієнта", "error");
-        return null;
-      }
-    }
-
-    // Якщо carId відсутній — створюємо новий автомобіль в БД
-    if (!data.carId && data.carModel && data.clientId) {
-      try {
-        // Шукаємо існуюче авто цього клієнта за моделлю
-        const { data: existingCars } = await supabase
-          .from("cars")
-          .select("cars_id, data")
-          .eq("client_id", data.clientId)
-          .ilike("data->>Авто", data.carModel.trim());
-
-        if (existingCars && existingCars.length > 0) {
-          data.carId = existingCars[0].cars_id;
-          console.log(`✅ Знайдено існуюче авто (ID: ${data.carId})`);
-        } else {
-          // Створюємо нове авто
-          const carPayload: any = {
-            Авто: data.carModel.trim(),
-          };
-          if (data.carNumber) {
-            carPayload["Номер авто"] = data.carNumber.trim();
-          }
-
-          const { data: newCar, error: carError } = await supabase
-            .from("cars")
-            .insert({
-              client_id: data.clientId,
-              data: carPayload,
-            })
-            .select("cars_id")
-            .single();
-
-          if (carError || !newCar) {
-            console.error("❌ Помилка створення нового авто:", carError);
-            showNotification("Не вдалося створити новий автомобіль", "error");
-            return null;
-          }
-          data.carId = newCar.cars_id;
-          console.log(`✅ Створено нове авто (ID: ${data.carId})`);
-        }
-      } catch (err) {
-        console.error("❌ Помилка при пошуку/створенні авто:", err);
-        showNotification("Помилка при збереженні авто", "error");
-        return null;
-      }
-    }
-
     const startHour = this.startHour + Math.floor(startMins / 60);
     const startMin = startMins % 60;
     const endHour = this.startHour + Math.floor(endMins / 60);
@@ -1420,10 +1363,14 @@ export class PostArxiv {
       .toString()
       .padStart(2, "0")}:${endMin.toString().padStart(2, "0")}:00`;
 
+    // Зберігаємо текстові дані клієнта і авто у форматі "значення|||значення"
+    const clientText = `${data.clientName || ''}|||${data.clientPhone || ''}`;
+    const carText = `${data.carModel || ''}|||${data.carNumber || ''}`;
+
     const payload: any = {
       status: data.status,
-      client_id: data.clientId,
-      cars_id: data.carId,
+      client_id: clientText,
+      cars_id: carText,
       komentar: data.comment,
       data_on: dataOn,
       data_off: dataOff,

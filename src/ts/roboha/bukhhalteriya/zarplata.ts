@@ -513,6 +513,56 @@ function refreshWorkDropdownOptions(): void {
   }
 }
 
+// 🔹 Оновлення випадаючого списку номерів актів
+function refreshActDropdownOptions(): void {
+  const actSelect = byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select");
+  if (!actSelect) return;
+
+  const selectedName =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+
+  let source = allPodlegleData;
+  if (selectedName) {
+    source = source.filter((r) => r.name === selectedName);
+  }
+
+  const actNumbers = new Set<string>();
+  source.forEach((r) => {
+    if (r.act && r.act.trim() && r.act.trim() !== "-") {
+      actNumbers.add(r.act.trim());
+    }
+  });
+
+  const previousValue = actSelect.value;
+  actSelect.innerHTML = "";
+
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = "Всі";
+  actSelect.appendChild(emptyOption);
+
+  // Сортуємо номери актів за спаданням (найбільший зверху)
+  const sortedActs = Array.from(actNumbers).sort((a, b) => {
+    const numA = parseInt(a) || 0;
+    const numB = parseInt(b) || 0;
+    return numB - numA;
+  });
+
+  sortedActs.forEach((actNum) => {
+    const option = document.createElement("option");
+    option.value = actNum;
+    option.textContent = actNum;
+    actSelect.appendChild(option);
+  });
+
+  // Відновлюємо попереднє значення, якщо воно є в оновленому списку
+  if (previousValue && sortedActs.includes(previousValue)) {
+    actSelect.value = previousValue;
+  } else {
+    actSelect.value = "";
+  }
+}
+
 function triggerPodlegleAutoFilter(): void {
   if (hasPodlegleDataLoaded) {
     // коли дані вже є — фільтруємо локально без звернення в базу
@@ -568,6 +618,7 @@ async function autoSearchPodlegleFromInputs(): Promise<void> {
   hasPodlegleDataLoaded = true;
   ensureWorkSmartDropdown();
   refreshWorkDropdownOptions();
+  refreshActDropdownOptions();
 
   updatepodlegleTable();
 }
@@ -954,6 +1005,7 @@ export function createNameSelect(): void {
       }
 
       refreshWorkDropdownOptions();
+      refreshActDropdownOptions();
     });
   } catch (error) { }
 }
@@ -965,6 +1017,12 @@ export function getFilteredpodlegleData(): PodlegleRecord[] {
   const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
   if (selectedName) {
     filteredData = filteredData.filter((item) => item.name === selectedName);
+  }
+
+  // ✅ Фільтрація по номеру акту
+  const selectedAct = byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select")?.value || "";
+  if (selectedAct) {
+    filteredData = filteredData.filter((item) => item.act === selectedAct);
   }
 
   if (currentPaymentFilter === "paid") {
@@ -1493,6 +1551,7 @@ export function searchDataInDatabase(
   hasPodlegleDataLoaded = true;
   ensureWorkSmartDropdown();
   refreshWorkDropdownOptions();
+  refreshActDropdownOptions();
   updatepodlegleTable();
 }
 
@@ -1594,6 +1653,13 @@ export function filterPodlegleData(): void {
     console.log(
       `🔍 Фільтр по роботі "${workInput}": ${before} → ${filtered.length}`
     );
+  }
+
+  // 🔹 Фільтр по номеру акту
+  const selectedAct =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select")?.value || "";
+  if (selectedAct) {
+    filtered = filtered.filter((record) => record.act === selectedAct);
   }
 
   filtered.sort((a, b) => {
@@ -1922,6 +1988,7 @@ export async function handlepodlegleAddRecord(): Promise<void> {
   hasPodlegleDataLoaded = true;
   ensureWorkSmartDropdown();
   refreshWorkDropdownOptions();
+  refreshActDropdownOptions();
 
   let searchInfo = "";
   if (!dateOpen && !dateClose) {
@@ -2380,6 +2447,12 @@ export function clearpodlegleForm(): void {
     workInput.value = "";
   }
 
+  // ✅ 3.1 Очищаємо селект номера акту
+  const actSelect = byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select");
+  if (actSelect) {
+    actSelect.value = "";
+  }
+
   // ✅ 4. Скидаємо перемикач статусу актів на "Всі" (значення "2")
   const statusToggle = byId<HTMLInputElement>("details-status-filter-toggle");
   if (statusToggle) {
@@ -2446,6 +2519,14 @@ document.addEventListener("DOMContentLoaded", () => {
     ensureWorkSmartDropdown();
     initPodlegleDateFilterToggle();
     initPodlegleDateAutoFilter(); // 👈 нове
+
+    // 🔹 Ініціалізація обробника для селекту номера акту
+    const actSelectEl = byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select");
+    if (actSelectEl) {
+      actSelectEl.addEventListener("change", () => {
+        triggerPodlegleAutoFilter();
+      });
+    }
   }, 100);
 });
 

@@ -1059,7 +1059,7 @@ export function updateDetailsTable(): void {
       const marginHtml =
         item.margin !== undefined
           ? `<div style="font-size: 0.85em; color: ${item.margin >= 0 ? "#28a745" : "#dc3545"
-          }; font-weight: 500; margin-top: 2px;">+${formatNumber(
+          }; font-weight: 500; margin-top: 2px;">${item.margin >= 0 ? "+" : ""}${formatNumber(
             item.margin
           )}${discountIndicator}</div>`
           : "";

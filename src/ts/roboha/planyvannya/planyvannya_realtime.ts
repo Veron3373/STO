@@ -57,13 +57,7 @@ function getCurrentUserName(): string | null {
   }
 }
 
-/**
- * Форматує час із timestamp для toast
- */
-function formatTime(timestamp: string): string {
-  const d = new Date(timestamp);
-  return d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-}
+
 
 /**
  * Парсить ПІБ клієнта з поля client_id (формат: "ПІБ|||Телефон" або число)
@@ -132,7 +126,7 @@ async function showRealtimeToast(
   const icons: Record<string, string> = {
     insert: "📌",
     update: "✏️",
-    delete: "❌",
+    delete: "🗑️",
   };
   const labels: Record<string, string> = {
     insert: "Нове бронювання",
@@ -145,11 +139,25 @@ async function showRealtimeToast(
     delete: "#ef4444",
   };
 
-  let changesHtml = "";
+  let slyusarHtml = "";
+  let timeHtml = "";
 
-  // 🕵️‍♂️ Логіка порівняння для UPDATE
+  // Отримуємо поточні (нові) значення
+  const newSlyusarId = String(record.slyusar_id);
+  const newName = await getSlyusarName(newSlyusarId);
+
+  const dateOn = new Date(record.data_on);
+  const dateOff = new Date(record.data_off);
+  const newStartMins = (dateOn.getUTCHours() - START_HOUR) * 60 + dateOn.getUTCMinutes();
+  const newEndMins = (dateOff.getUTCHours() - START_HOUR) * 60 + dateOff.getUTCMinutes();
+  const newTimeStr = `${minutesToTime(newStartMins)} - ${minutesToTime(newEndMins)}`;
+
+  // Default display values
+  slyusarHtml = `<span class="prt-value">${newName}</span>`;
+  timeHtml = `<span class="prt-value">${newTimeStr}</span>`;
+
+  // 🕵️‍♂️ Логіка порівняння для UPDATE (визначаємо чи були зміни)
   if (type === "update") {
-    // Спробуємо знайти старий блок в DOM для отримання попередніх значень
     const block = document.querySelector(
       `.post-reservation-block[data-post-arxiv-id="${record.post_arxiv_id}"]`
     ) as HTMLElement;
@@ -157,61 +165,24 @@ async function showRealtimeToast(
     if (block) {
       // --- Перевірка зміни СЛЮСАРЯ ---
       const oldSlyusarId = block.dataset.slyusarId;
-      const newSlyusarId = String(record.slyusar_id);
-
       if (oldSlyusarId && oldSlyusarId !== newSlyusarId) {
-        // Отримуємо імена
         const oldName = await getSlyusarName(oldSlyusarId);
-        const newName = await getSlyusarName(newSlyusarId);
-
-        changesHtml += `
-          <div class="prt-row" style="margin-top: 4px;">
-            <span class="prt-emoji">👨‍🔧</span>
-            <span class="prt-value">
-              Заміна слюсаря з <span style="color: #ef4444; font-weight: bold;">${oldName}</span> 
-              на <span style="color: #10b981; font-weight: bold;">${newName}</span>
-            </span>
-          </div>
-        `;
+        slyusarHtml = `<span class="prt-value">Заміна <span style="color: #ef4444; font-weight: bold;">${oldName}</span> ➝ <span style="color: #10b981; font-weight: bold;">${newName}</span></span>`;
       }
 
       // --- Перевірка зміни ЧАСУ ---
       const oldStartMins = parseInt(block.dataset.start || "0");
       const oldEndMins = parseInt(block.dataset.end || "0");
 
-      // Новий час (парсимо з ISO)
-      const dateOn = new Date(record.data_on);
-      const dateOff = new Date(record.data_off);
-
-      const newStartMins = (dateOn.getUTCHours() - START_HOUR) * 60 + dateOn.getUTCMinutes();
-      const newEndMins = (dateOff.getUTCHours() - START_HOUR) * 60 + dateOff.getUTCMinutes();
-
-      // Порівнюємо (допускаємо похибку пари хвилин або точне співпадіння)
       if (Math.abs(oldStartMins - newStartMins) > 1 || Math.abs(oldEndMins - newEndMins) > 1) {
         const oldTimeStr = `${minutesToTime(oldStartMins)} - ${minutesToTime(oldEndMins)}`;
-        const newTimeStr = `${minutesToTime(newStartMins)} - ${minutesToTime(newEndMins)}`;
-
-        changesHtml += `
-          <div class="prt-row" style="margin-top: 4px;">
-            <span class="prt-emoji">🕒</span>
-            <span class="prt-value">
-              Зміна з <span style="color: #ef4444; font-weight: bold;">${oldTimeStr}</span> 
-              на <span style="color: #10b981; font-weight: bold;">${newTimeStr}</span>
-            </span>
-          </div>
-        `;
+        timeHtml = `<span class="prt-value">Заміна <span style="color: #ef4444; font-weight: bold;">${oldTimeStr}</span> ➝ <span style="color: #10b981; font-weight: bold;">${newTimeStr}</span></span>`;
       }
     }
   }
 
   const clientName = parseClientName(record.client_id);
   const carInfo = parseCarInfo(record.cars_id);
-  const timeOn = record.data_on ? formatTime(record.data_on) : "";
-  const timeOff = record.data_off ? formatTime(record.data_off) : "";
-
-  // Якщо ми показали детальну зміну часу, стандартний timeRange можна не показувати або залишити
-  // Залишимо як базову інфу
-  const timeRange = timeOn && timeOff ? `${timeOn} – ${timeOff}` : "";
 
   const changedBy = record.xto_zapusav || "Невідомо";
   const status = record.status || "";
@@ -227,12 +198,11 @@ async function showRealtimeToast(
       <span class="prt-label" style="color: ${colors[type]}">${labels[type]}</span>
       <button class="prt-close" title="Закрити">&times;</button>
     </div>
-    ${changesHtml} <!-- Сюди вставляємо наші зміни -->
-    ${(!changesHtml && clientName) ? `<div class="prt-row"><span class="prt-emoji">👤</span><span class="prt-value">${clientName}</span></div>` : ""}
-    ${(!changesHtml && carInfo) ? `<div class="prt-row"><span class="prt-emoji">🚗</span><span class="prt-value">${carInfo}</span></div>` : ""}
-    ${(!changesHtml && timeRange) ? `<div class="prt-row"><span class="prt-emoji">🕐</span><span class="prt-value">${timeRange}</span></div>` : ""}
-    ${(!changesHtml && status) ? `<div class="prt-row"><span class="prt-emoji">📋</span><span class="prt-value">${status}</span></div>` : ""}
-    ${(changesHtml) ? `<div class="prt-row" style="margin-top:5px; border-top:1px solid #eee; padding-top:5px;"><span class="prt-value" style="font-size:11px; color:#888;">${clientName} • ${carInfo}</span></div>` : ""}
+    ${clientName ? `<div class="prt-row"><span class="prt-emoji">👤</span><span class="prt-value">${clientName}</span></div>` : ""}
+    ${carInfo ? `<div class="prt-row"><span class="prt-emoji">🚗</span><span class="prt-value">${carInfo}</span></div>` : ""}
+    <div class="prt-row" style="margin-top: 4px;"><span class="prt-emoji">👨‍🔧</span>${slyusarHtml}</div>
+    <div class="prt-row" style="margin-top: 4px;"><span class="prt-emoji">🕐</span>${timeHtml}</div>
+    ${status ? `<div class="prt-row"><span class="prt-emoji">📋</span><span class="prt-value">${status}</span></div>` : ""}
     <div class="prt-footer">
       <span class="prt-who">${changedBy}</span>
     </div>

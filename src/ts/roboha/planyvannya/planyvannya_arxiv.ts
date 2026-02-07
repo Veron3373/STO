@@ -1379,8 +1379,8 @@ export class PostArxiv {
       act_id: data.actId,
     };
 
-    // Додаємо прізвище користувача тільки при створенні нового запису
-    if (!existingId && userName) {
+    // Записуємо ПІБ користувача який створив/оновив запис
+    if (userName) {
       payload.xto_zapusav = userName;
     }
 
@@ -2022,13 +2022,12 @@ export class PostArxiv {
           const recordCreator = recordData?.xto_zapusav;
 
           if (!isAdmin) {
-            // Якщо не адмін, перевіряємо чи співпадає прізвище
-            // Дозволяємо видаляти записи без автора (старі записи) або свої власні
-            if (recordCreator && recordCreator !== userName) {
-              showNotification(
-                `Ви не можете видалити цей запис. Зверніться до ${recordCreator}`,
-                "error"
-              );
+            // Якщо не адмін — можна видаляти тільки свої записи
+            if (!recordCreator || recordCreator !== userName) {
+              const msg = recordCreator
+                ? `Ви не можете видалити цей запис. Зверніться до ${recordCreator}`
+                : `Ви не можете видалити цей запис. Зверніться до адміністратора`;
+              showNotification(msg, "error");
               this.closeContextMenu();
               return;
             }

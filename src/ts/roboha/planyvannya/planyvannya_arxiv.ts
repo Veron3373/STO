@@ -554,7 +554,8 @@ export class PostArxiv {
       e.preventDefault();
       e.stopPropagation();
       if (!this.canUserEditBlock(block)) {
-        showNotification("Ви не можете редагувати цей запис", "error");
+        const creator = block.dataset.xtoZapusav || "невідомо";
+        showNotification(`Ви не можете редагувати цей запис. Створив: ${creator}`, "error");
         return;
       }
       this.editingBlock = block;
@@ -728,7 +729,9 @@ export class PostArxiv {
 
   private handleBlockMouseDown(e: MouseEvent, block: HTMLElement): void {
     if (!this.canUserEditBlock(block)) {
-      return; // Не дозволяємо переміщати
+      const creator = block.dataset.xtoZapusav || "невідомо";
+      showNotification(`Ви не можете переміщати цей запис. Створив: ${creator}`, "error");
+      return;
     }
     e.preventDefault();
     e.stopPropagation(); // Prevent creation selection
@@ -1706,7 +1709,8 @@ export class PostArxiv {
       e.preventDefault();
       e.stopPropagation();
       if (!this.canUserEditBlock(block)) {
-        showNotification("Ви не можете редагувати цей запис", "error");
+        const creator = block.dataset.xtoZapusav || "невідомо";
+        showNotification(`Ви не можете редагувати цей запис. Створив: ${creator}`, "error");
         return;
       }
       this.editingBlock = block;
@@ -1833,7 +1837,9 @@ export class PostArxiv {
     if (!this.canUserEditBlock(block)) {
       e.preventDefault();
       e.stopPropagation();
-      return; // Не дозволяємо змінювати розмір
+      const creator = block.dataset.xtoZapusav || "невідомо";
+      showNotification(`Ви не можете змінювати розмір запису. Створив: ${creator}`, "error");
+      return;
     }
     this.isResizing = true;
     this.resizingBlock = block;

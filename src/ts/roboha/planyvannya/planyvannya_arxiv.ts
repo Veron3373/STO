@@ -2,11 +2,27 @@
 import "../../../scss/robocha/planyvannya/_planyvannya_arxiv.scss";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { supabase } from "../../vxid/supabaseClient";
-import { userName, userAccessLevel } from "../tablucya/users";
 
 import { PlanyvannyaModal, type ReservationData } from "./planyvannya_modal";
 
 // Removed local ReservationData interface to avoid conflict
+
+/**
+ * Отримує дані користувача з localStorage
+ */
+function getUserFromStorage(): { name: string | null; access: string | null } {
+  try {
+    const stored = localStorage.getItem("userAuthData");
+    if (!stored) return { name: null, access: null };
+    const data = JSON.parse(stored);
+    return {
+      name: data.Name || null,
+      access: data["Доступ"] || null,
+    };
+  } catch {
+    return { name: null, access: null };
+  }
+}
 
 export class PostArxiv {
   private container: HTMLElement;
@@ -1380,8 +1396,9 @@ export class PostArxiv {
     };
 
     // Записуємо ПІБ користувача який створив/оновив запис
-    if (userName) {
-      payload.xto_zapusav = userName;
+    const currentUser = getUserFromStorage();
+    if (currentUser.name) {
+      payload.xto_zapusav = currentUser.name;
     }
 
     if (existingId) {
@@ -2018,12 +2035,13 @@ export class PostArxiv {
           }
 
           // Перевірка прав доступу
-          const isAdmin = userAccessLevel === "Адміністратор";
+          const currentUser = getUserFromStorage();
+          const isAdmin = currentUser.access === "Адміністратор";
           const recordCreator = recordData?.xto_zapusav;
 
           if (!isAdmin) {
             // Якщо не адмін — можна видаляти тільки свої записи
-            if (!recordCreator || recordCreator !== userName) {
+            if (!recordCreator || recordCreator !== currentUser.name) {
               const msg = recordCreator
                 ? `Ви не можете видалити цей запис. Зверніться до ${recordCreator}`
                 : `Ви не можете видалити цей запис. Зверніться до адміністратора`;

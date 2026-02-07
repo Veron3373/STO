@@ -275,9 +275,13 @@ export function initPostArxivRealtimeSubscription(): void {
   const currentUserName = getCurrentUserName();
   console.log("📡 [PostArxiv Realtime] Поточний користувач:", currentUserName || "невідомо");
 
-  // Використовуємо один handler для всіх типів подій, як у працюючому Realtime по складу
+  // Генеруємо унікальну назву каналу, щоб уникнути конфліктів
+  const channelId = `post-arxiv-changes-${Date.now()}`;
+  console.log(`📡 [PostArxiv Realtime] Створюю новий канал: ${channelId}`);
+
+  // Використовуємо один handler для всіх типів подій
   postArxivChannel = supabase
-    .channel("post-arxiv-changes")
+    .channel(channelId)
     .on(
       "postgres_changes",
       {

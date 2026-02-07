@@ -133,7 +133,8 @@ export class PostArxiv {
                     data_on,
                     data_off,
                     komentar,
-                    act_id
+                    act_id,
+                    xto_zapusav
                 `
         )
         .gte("data_on", startOfDay)
@@ -239,7 +240,8 @@ export class PostArxiv {
                     data_on,
                     data_off,
                     komentar,
-                    act_id
+                    act_id,
+                    xto_zapusav
                 `
         )
         .in("slyusar_id", slyusarIds)
@@ -448,13 +450,19 @@ export class PostArxiv {
       actId: record.act_id,
     };
 
+    // Зберігаємо xto_zapusav для перевірки доступу
+    const xtoZapusav = record.xto_zapusav || "";
+
     // Створюємо блок з правильним кольором
-    this.createReservationBlockWithColor(
+    const block = this.createReservationBlockWithColor(
       rowTrack,
       startMins,
       endMins,
       reservationData
     );
+    if (block) {
+      block.dataset.xtoZapusav = xtoZapusav;
+    }
   }
 
   /**
@@ -465,7 +473,7 @@ export class PostArxiv {
     startMins: number,
     endMins: number,
     data: ReservationData
-  ): void {
+  ): HTMLElement {
     const totalMinutes = 12 * 60; // 12 hours (8 to 20)
 
     // Percentage positions
@@ -499,6 +507,10 @@ export class PostArxiv {
     block.dataset.slyusarId = data.slyusarId?.toString() || "";
     block.dataset.namePost = data.namePost?.toString() || "";
     block.dataset.actId = data.actId?.toString() || "";
+
+    // Зберігаємо автора запису в dataset (при створенні нового блоку)
+    const currentUser = getUserFromStorage();
+    block.dataset.xtoZapusav = currentUser.name || "";
 
     // Використовуємо renderBlockContent для формування вмісту
     this.renderBlockContent(block, data);
@@ -541,6 +553,10 @@ export class PostArxiv {
     block.addEventListener("dblclick", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!this.canUserEditBlock(block)) {
+        showNotification("Ви не можете редагувати цей запис", "error");
+        return;
+      }
       this.editingBlock = block;
 
       const startStr = this.minutesToTime(parseInt(block.dataset.start || "0"));
@@ -565,6 +581,7 @@ export class PostArxiv {
     });
 
     row.appendChild(block);
+    return block;
   }
 
   private createSelectionElement(): void {
@@ -698,7 +715,21 @@ export class PostArxiv {
 
   // --- Block Moving Logic ---
 
+  /**
+   * Перевіряє чи поточний користувач може редагувати блок
+   */
+  private canUserEditBlock(block: HTMLElement): boolean {
+    const currentUser = getUserFromStorage();
+    if (currentUser.access === "Адміністратор") return true;
+    const creator = block.dataset.xtoZapusav;
+    if (!creator) return true; // Старі записи без автора — дозволяємо редагувати
+    return creator === currentUser.name;
+  }
+
   private handleBlockMouseDown(e: MouseEvent, block: HTMLElement): void {
+    if (!this.canUserEditBlock(block)) {
+      return; // Не дозволяємо переміщати
+    }
     e.preventDefault();
     e.stopPropagation(); // Prevent creation selection
 
@@ -1622,6 +1653,10 @@ export class PostArxiv {
       block.dataset.actId = data.actId?.toString() || "";
     }
 
+    // Запис автора блоку
+    const currentUser = getUserFromStorage();
+    block.dataset.xtoZapusav = currentUser?.name || "";
+
     block.dataset.comment = comment;
 
     // Встановлюємо колір фону залежно від статусу
@@ -1670,6 +1705,10 @@ export class PostArxiv {
     block.addEventListener("dblclick", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!this.canUserEditBlock(block)) {
+        showNotification("Ви не можете редагувати цей запис", "error");
+        return;
+      }
       this.editingBlock = block;
 
       const startStr = this.minutesToTime(parseInt(block.dataset.start || "0"));
@@ -1791,6 +1830,11 @@ export class PostArxiv {
     block: HTMLElement,
     side: "left" | "right"
   ): void {
+    if (!this.canUserEditBlock(block)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return; // Не дозволяємо змінювати розмір
+    }
     this.isResizing = true;
     this.resizingBlock = block;
     this.resizeHandleSide = side;

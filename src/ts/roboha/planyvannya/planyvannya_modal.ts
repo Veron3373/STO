@@ -1214,8 +1214,8 @@ export class PlanyvannyaModal {
     ) as HTMLInputElement;
 
     if (nameInput) nameInput.value = client.name;
-    // Fill phone if empty or if needed. If we selected by phone, it's already filled.
-    if (phoneInput && !phoneInput.value) {
+    // Завжди заповнюємо телефон при виборі клієнта з випадаючого списку ПІБ
+    if (phoneInput) {
       phoneInput.value = client.phones[0] || "";
     }
 

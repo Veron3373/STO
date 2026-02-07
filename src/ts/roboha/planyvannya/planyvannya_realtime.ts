@@ -139,8 +139,16 @@ async function showRealtimeToast(
     delete: "#ef4444",
   };
 
+  const statusColors: Record<string, string> = {
+    "Запланований": "#e6a700",
+    "В роботі": "#2e7d32",
+    "Відремонтований": "#757575",
+    "Не приїхав": "#e53935",
+  };
+
   let slyusarHtml = "";
   let timeHtml = "";
+  let statusHtml = "";
 
   // Отримуємо поточні (нові) значення
   const newSlyusarId = String(record.slyusar_id);
@@ -151,10 +159,12 @@ async function showRealtimeToast(
   const newStartMins = (dateOn.getUTCHours() - START_HOUR) * 60 + dateOn.getUTCMinutes();
   const newEndMins = (dateOff.getUTCHours() - START_HOUR) * 60 + dateOff.getUTCMinutes();
   const newTimeStr = `${minutesToTime(newStartMins)} - ${minutesToTime(newEndMins)}`;
+  const newStatus = record.status || "Запланований";
 
   // Default display values
   slyusarHtml = `<span class="prt-value">${newName}</span>`;
   timeHtml = `<span class="prt-value">${newTimeStr}</span>`;
+  statusHtml = `<span class="prt-value">${newStatus}</span>`;
 
   // 🕵️‍♂️ Логіка порівняння для UPDATE (визначаємо чи були зміни)
   if (type === "update") {
@@ -178,6 +188,15 @@ async function showRealtimeToast(
         const oldTimeStr = `${minutesToTime(oldStartMins)} - ${minutesToTime(oldEndMins)}`;
         timeHtml = `<span class="prt-value">Заміна <span style="color: #ef4444; font-weight: bold;">${oldTimeStr}</span> ➝ <span style="color: #10b981; font-weight: bold;">${newTimeStr}</span></span>`;
       }
+
+      // --- Перевірка зміни СТАТУСУ ---
+      const oldStatus = block.dataset.status || "Запланований";
+      if (oldStatus !== newStatus) {
+        const oldColor = statusColors[oldStatus] || "#ccc";
+        const newColor = statusColors[newStatus] || "#ccc";
+
+        statusHtml = `<span class="prt-value">Заміна <span style="background-color: ${oldColor}; color: white; padding: 2px 8px; border-radius: 50px; font-weight: bold;">${oldStatus}</span> ➝ <span style="background-color: ${newColor}; color: white; padding: 2px 8px; border-radius: 50px; font-weight: bold;">${newStatus}</span></span>`;
+      }
     }
   }
 
@@ -185,7 +204,6 @@ async function showRealtimeToast(
   const carInfo = parseCarInfo(record.cars_id);
 
   const changedBy = record.xto_zapusav || "Невідомо";
-  const status = record.status || "";
 
   const toast = document.createElement("div");
   toast.className = "planyvannya-realtime-toast";
@@ -202,7 +220,7 @@ async function showRealtimeToast(
     ${carInfo ? `<div class="prt-row"><span class="prt-emoji">🚗</span><span class="prt-value">${carInfo}</span></div>` : ""}
     <div class="prt-row" style="margin-top: 4px;"><span class="prt-emoji">👨‍🔧</span>${slyusarHtml}</div>
     <div class="prt-row" style="margin-top: 4px;"><span class="prt-emoji">🕐</span>${timeHtml}</div>
-    ${status ? `<div class="prt-row"><span class="prt-emoji">📋</span><span class="prt-value">${status}</span></div>` : ""}
+    <div class="prt-row" style="margin-top: 4px;"><span class="prt-emoji">📋</span>${statusHtml}</div>
     <div class="prt-footer">
       <span class="prt-who">${changedBy}</span>
     </div>
@@ -406,24 +424,77 @@ export function initPostArxivRealtimeSubscription(): void {
         try {
           const oldRecord = payload.old as any;
 
+          // Знаходимо блок в DOM перед видаленням, щоб отримати всі дані
+          let enrichedRecord = { ...oldRecord };
 
-          // Показуємо toast про видалення
-          showRealtimeToast("delete", oldRecord);
-
-          // Видаляємо блок з DOM, якщо є
           if (oldRecord?.post_arxiv_id) {
             const block = document.querySelector(
               `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
-            );
+            ) as HTMLElement;
+
             if (block) {
+              // Отримуємо дані з DOM-елемента
+              const clientName = block.dataset.clientName || "";
+              const carModel = block.dataset.carModel || "";
+              const carNumber = block.dataset.carNumber || "";
+
+              // Формуємо client_id та cars_id у форматі "ПІБ|||Телефон" та "Модель|||Номер"
+              enrichedRecord.client_id = clientName ? `${clientName}|||${block.dataset.clientPhone || ""}` : "";
+              enrichedRecord.cars_id = carModel ? `${carModel}|||${carNumber}` : "";
+              enrichedRecord.slyusar_id = block.dataset.slyusarId || "";
+              enrichedRecord.status = block.dataset.status || "Запланований";
+              enrichedRecord.xto_zapusav = block.dataset.xtoZapusav || "Невідомо";
+
+              // Відновлюємо дати з хвилин
+              const startMins = parseInt(block.dataset.start || "0");
+              const endMins = parseInt(block.dataset.end || "0");
+
+              // Отримуємо поточну дату з заголовку
+              const headerEl = document.getElementById("postHeaderDateDisplay");
+              let currentDate = new Date().toISOString().split("T")[0]; // fallback
+
+              if (headerEl) {
+                const text = headerEl.textContent;
+                const months: Record<string, string> = {
+                  "січня": "01", "лютого": "02", "березня": "03", "квітня": "04",
+                  "травня": "05", "червня": "06", "липня": "07", "серпня": "08",
+                  "вересня": "09", "жовтня": "10", "листопада": "11", "грудня": "12"
+                };
+                const match = text?.match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
+                if (match) {
+                  const day = match[1].padStart(2, "0");
+                  const monthName = match[2].toLowerCase();
+                  const year = match[3];
+                  const month = months[monthName];
+                  if (month) {
+                    currentDate = `${year}-${month}-${day}`;
+                  }
+                }
+              }
+
+              // Конвертуємо хвилини назад в UTC час
+              const startHour = Math.floor(startMins / 60) + START_HOUR;
+              const startMin = startMins % 60;
+              const endHour = Math.floor(endMins / 60) + START_HOUR;
+              const endMin = endMins % 60;
+
+              enrichedRecord.data_on = `${currentDate}T${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}:00`;
+              enrichedRecord.data_off = `${currentDate}T${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
+
+              // Тепер видаляємо блок
               block.remove();
             }
           }
 
+          // Показуємо toast про видалення ТІЛЬКИ для ЧУЖИХ змін
+          if (!currentUserName || enrichedRecord?.xto_zapusav !== currentUserName) {
+            showRealtimeToast("delete", enrichedRecord);
+          }
+
           debouncedRefreshPlanner();
 
-          if (oldRecord?.data_on) {
-            refreshOccupancyForRecord(oldRecord);
+          if (enrichedRecord?.data_on) {
+            refreshOccupancyForRecord(enrichedRecord);
           }
         } catch (err) {
         }

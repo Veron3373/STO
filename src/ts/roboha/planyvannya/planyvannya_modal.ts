@@ -11,6 +11,7 @@ import {
 } from "../redahyvatu_klient_machuna/vikno_klient_machuna";
 import { showSaveModalCreate } from "../redahyvatu_klient_machuna/pidtverdutu_sberihannya_zakaz_naryad";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import autoData from "../redahyvatu_klient_machuna/auto.json";
 
 export interface ReservationData {
   date: string;
@@ -68,6 +69,15 @@ export class PlanyvannyaModal {
 
   private selectedClientId: number | null = null;
   private selectedCarId: number | null = null;
+
+  // Дані автомобілів з auto.json для пошуку коли клієнт не обраний з БД
+  private autoJsonSuggestions: {
+    mark_id: string;
+    mark_cyrillic: string;
+    name: string;
+    model_cyrillic: string;
+    display: string;
+  }[] = [];
 
   // Internal State for Date/Time
   private currentDate: Date = new Date();
@@ -949,10 +959,45 @@ export class PlanyvannyaModal {
     });
   }
 
+  private buildAutoJsonSuggestions(): void {
+    if (this.autoJsonSuggestions.length > 0) return; // Вже побудовано
+    const formatDisplayText = (text: string): string => {
+      if (!text) return "";
+      return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+    };
+    this.autoJsonSuggestions = autoData.data.flatMap((mark) =>
+      mark.models.map((model) => ({
+        mark_id: formatDisplayText(mark.id),
+        mark_cyrillic: mark.cyrillic_name || "",
+        name: formatDisplayText(model.name),
+        model_cyrillic: model.cyrillic_name || "",
+        display: `${formatDisplayText(mark.id)} ${formatDisplayText(model.name)}`,
+      }))
+    );
+  }
+
+  private matchesCarSearch(
+    item: { mark_id: string; mark_cyrillic: string; name: string; model_cyrillic: string; display: string },
+    searchValue: string
+  ): boolean {
+    const search = searchValue.toLowerCase();
+    const englishMatch =
+      item.mark_id.toLowerCase().includes(search) ||
+      item.name.toLowerCase().includes(search) ||
+      item.display.toLowerCase().includes(search);
+    const cyrillicMatch =
+      item.mark_cyrillic.toLowerCase().includes(search) ||
+      item.model_cyrillic.toLowerCase().includes(search);
+    return englishMatch || cyrillicMatch;
+  }
+
   private setupCarAutocomplete(): void {
     const input = document.getElementById("postArxivCar") as HTMLInputElement;
     const dropdown = document.getElementById("postArxivCarDropdown");
     if (!input || !dropdown) return;
+
+    // Ініціалізуємо дані з auto.json
+    this.buildAutoJsonSuggestions();
 
     const showClientCars = (filter: string = "") => {
       if (this.selectedClientId && this.carsData.length > 0) {
@@ -970,6 +1015,25 @@ export class PlanyvannyaModal {
       }
     };
 
+    const showAutoJsonCars = (filter: string) => {
+      const matches = this.autoJsonSuggestions
+        .filter((item) => this.matchesCarSearch(item, filter))
+        .slice(0, 15);
+      this.showDropdown(
+        dropdown,
+        matches.map((item) => ({
+          text: item.display,
+          subtext: item.mark_cyrillic
+            ? `${item.mark_cyrillic}${item.model_cyrillic ? " " + item.model_cyrillic : ""}`
+            : "",
+          onClick: () => {
+            input.value = item.display;
+            this.closeAllDropdowns();
+          },
+        }))
+      );
+    };
+
     input.addEventListener("focus", () => {
       // Show all cars if client selected
       if (this.selectedClientId) {
@@ -984,22 +1048,14 @@ export class PlanyvannyaModal {
         // Filter loaded cars
         showClientCars(val);
       } else {
-        // Global search for cars (if needed, otherwise just let them type)
-        // For now, implementing global search via Supabase if no client selected
+        // Клієнт не обраний з БД — показуємо автомобілі з auto.json
+        // з підтримкою пошуку українськими та англійськими літерами
         if (val.length < 2) {
           this.closeAllDropdowns();
           return;
         }
 
-        const { data } = await supabase
-          .from("cars")
-          .select("cars_id, client_id, data")
-          .ilike("data->>Авто", `%${val}%`)
-          .limit(10);
-
-        if (data) {
-          this.showGlobalCarDropdown(dropdown, data);
-        }
+        showAutoJsonCars(val);
       }
     });
   }

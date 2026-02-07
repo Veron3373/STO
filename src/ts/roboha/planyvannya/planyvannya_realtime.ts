@@ -4,11 +4,12 @@
 
 import "../../../scss/robocha/planyvannya/_planyvannya_realtime.scss";
 import { supabase } from "../../vxid/supabaseClient";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
-let postArxivChannel: any = null;
+let postArxivChannel: RealtimeChannel | null = null;
 
 // ── Debounce для оновлення блоків ──
-// Якщо прилетить 5 подій за 200мс — оновимо лише 1 раз
+// Якщо прилетить 5 подій за 300мс — оновимо лише 1 раз
 let refreshDebounceTimer: number | null = null;
 const REFRESH_DEBOUNCE_MS = 300;
 
@@ -18,9 +19,11 @@ function debouncedRefreshPlanner(): void {
   }
   refreshDebounceTimer = window.setTimeout(() => {
     refreshDebounceTimer = null;
-    console.log("🔄 [Realtime] Оновлюю блоки планувальника...");
+    console.log("🔄 [PostArxiv Realtime] Оновлюю блоки планувальника...");
     if (typeof (window as any).refreshPlannerCalendar === "function") {
       (window as any).refreshPlannerCalendar();
+    } else {
+      console.warn("⚠️ [PostArxiv Realtime] refreshPlannerCalendar не знайдено!");
     }
   }, REFRESH_DEBOUNCE_MS);
 }
@@ -244,7 +247,13 @@ function refreshOccupancyForRecord(record: any): void {
  * календар планувальника для ВСІХ користувачів.
  */
 export function initPostArxivRealtimeSubscription(): void {
-  console.log("📡 [Realtime] Ініціалізація підписки на post_arxiv...");
+  // Перевіряємо чи ми на сторінці планувальника
+  if (!document.getElementById("postSchedulerWrapper")) {
+    console.log("📡 [PostArxiv Realtime] Не на сторінці планувальника — підписку не ініціалізуємо");
+    return;
+  }
+
+  console.log("📡 [PostArxiv Realtime] Ініціалізація підписки на post_arxiv...");
 
   // Відписуємось від існуючого каналу, якщо є
   if (postArxivChannel) {
@@ -253,10 +262,10 @@ export function initPostArxivRealtimeSubscription(): void {
   }
 
   const currentUserName = getCurrentUserName();
-  console.log("📡 [Realtime] Поточний користувач:", currentUserName || "невідомо");
+  console.log("📡 [PostArxiv Realtime] Поточний користувач:", currentUserName || "невідомо");
 
   postArxivChannel = supabase
-    .channel("post-arxiv-realtime")
+    .channel("post-arxiv-changes")
 
     // ── INSERT: нове бронювання ──
     .on(
@@ -267,7 +276,7 @@ export function initPostArxivRealtimeSubscription(): void {
         table: "post_arxiv",
       },
       (payload) => {
-        console.log("📌 [Realtime] INSERT в post_arxiv:", payload.new);
+        console.log("📌 [PostArxiv Realtime] INSERT:", payload.new);
         const record = payload.new as any;
 
         // Toast тільки для ЧУЖИХ змін
@@ -275,7 +284,7 @@ export function initPostArxivRealtimeSubscription(): void {
           showRealtimeToast("insert", record);
         }
 
-        // Оновлюємо блоки ЗАВЖДИ (і для себе, і для інших)
+        // Оновлюємо блоки ЗАВЖДИ
         debouncedRefreshPlanner();
         refreshOccupancyForRecord(record);
       }
@@ -290,7 +299,7 @@ export function initPostArxivRealtimeSubscription(): void {
         table: "post_arxiv",
       },
       (payload) => {
-        console.log("✏️ [Realtime] UPDATE в post_arxiv:", payload.new);
+        console.log("✏️ [PostArxiv Realtime] UPDATE:", payload.new);
         const record = payload.new as any;
         const oldRecord = payload.old as any;
 
@@ -317,10 +326,10 @@ export function initPostArxivRealtimeSubscription(): void {
         table: "post_arxiv",
       },
       (payload) => {
-        console.log("🗑️ [Realtime] DELETE в post_arxiv:", payload.old);
+        console.log("🗑️ [PostArxiv Realtime] DELETE:", payload.old);
         const oldRecord = payload.old as any;
 
-        // Показуємо toast (при DELETE нема xto_zapusav, показуємо завжди)
+        // Показуємо toast
         showRealtimeToast("delete", oldRecord);
 
         // Видаляємо блок з DOM, якщо є
@@ -339,27 +348,18 @@ export function initPostArxivRealtimeSubscription(): void {
         }
       }
     )
+    .subscribe();
 
-    .subscribe((status: string) => {
-      if (status === "SUBSCRIBED") {
-        console.log("✅ [Realtime] Підписка на post_arxiv АКТИВНА! Зміни будуть транслюватися автоматично.");
-      } else if (status === "CHANNEL_ERROR") {
-        console.error("❌ [Realtime] ПОМИЛКА підписки на post_arxiv! Перевірте чи ввімкнено Realtime для таблиці в Supabase.");
-      } else if (status === "TIMED_OUT") {
-        console.warn("⏱️ [Realtime] Таймаут підписки на post_arxiv. Спроба перепідключення...");
-      } else {
-        console.log("📡 [Realtime] Статус підписки:", status);
-      }
-    });
+  console.log("✅ [PostArxiv Realtime] Підписка створена! Очікуємо події від Supabase...");
 }
 
 /**
- * Відписка від каналу (використовується при виході зі сторінки)
+ * Відписка від каналу
  */
 export function unsubscribeFromPostArxivRealtime(): void {
   if (postArxivChannel) {
     postArxivChannel.unsubscribe();
     postArxivChannel = null;
-    console.log("🔌 [Realtime] Підписка на post_arxiv відключена");
+    console.log("🔌 [PostArxiv Realtime] Підписка відключена");
   }
 }

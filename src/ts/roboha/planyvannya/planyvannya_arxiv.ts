@@ -1319,6 +1319,95 @@ export class PostArxiv {
       return null;
     }
 
+    // Якщо clientId відсутній — створюємо нового клієнта в БД
+    if (!data.clientId && data.clientName) {
+      try {
+        // Спочатку шукаємо існуючого клієнта за ПІБ (точне співпадіння)
+        const { data: existingClients } = await supabase
+          .from("clients")
+          .select("client_id, data")
+          .ilike("data->>ПІБ", data.clientName.trim());
+
+        if (existingClients && existingClients.length > 0) {
+          // Знайшли існуючого клієнта
+          data.clientId = existingClients[0].client_id;
+          console.log(`✅ Знайдено існуючого клієнта (ID: ${data.clientId})`);
+        } else {
+          // Створюємо нового клієнта
+          const clientPayload: any = {
+            ПІБ: data.clientName.trim(),
+          };
+          if (data.clientPhone) {
+            clientPayload["Телефон"] = data.clientPhone.trim();
+          }
+
+          const { data: newClient, error: clientError } = await supabase
+            .from("clients")
+            .insert({ data: clientPayload })
+            .select("client_id")
+            .single();
+
+          if (clientError || !newClient) {
+            console.error("❌ Помилка створення нового клієнта:", clientError);
+            showNotification("Не вдалося створити нового клієнта", "error");
+            return null;
+          }
+          data.clientId = newClient.client_id;
+          console.log(`✅ Створено нового клієнта (ID: ${data.clientId})`);
+        }
+      } catch (err) {
+        console.error("❌ Помилка при пошуку/створенні клієнта:", err);
+        showNotification("Помилка при збереженні клієнта", "error");
+        return null;
+      }
+    }
+
+    // Якщо carId відсутній — створюємо новий автомобіль в БД
+    if (!data.carId && data.carModel && data.clientId) {
+      try {
+        // Шукаємо існуюче авто цього клієнта за моделлю
+        const { data: existingCars } = await supabase
+          .from("cars")
+          .select("cars_id, data")
+          .eq("client_id", data.clientId)
+          .ilike("data->>Авто", data.carModel.trim());
+
+        if (existingCars && existingCars.length > 0) {
+          data.carId = existingCars[0].cars_id;
+          console.log(`✅ Знайдено існуюче авто (ID: ${data.carId})`);
+        } else {
+          // Створюємо нове авто
+          const carPayload: any = {
+            Авто: data.carModel.trim(),
+          };
+          if (data.carNumber) {
+            carPayload["Номер авто"] = data.carNumber.trim();
+          }
+
+          const { data: newCar, error: carError } = await supabase
+            .from("cars")
+            .insert({
+              client_id: data.clientId,
+              data: carPayload,
+            })
+            .select("cars_id")
+            .single();
+
+          if (carError || !newCar) {
+            console.error("❌ Помилка створення нового авто:", carError);
+            showNotification("Не вдалося створити новий автомобіль", "error");
+            return null;
+          }
+          data.carId = newCar.cars_id;
+          console.log(`✅ Створено нове авто (ID: ${data.carId})`);
+        }
+      } catch (err) {
+        console.error("❌ Помилка при пошуку/створенні авто:", err);
+        showNotification("Помилка при збереженні авто", "error");
+        return null;
+      }
+    }
+
     const startHour = this.startHour + Math.floor(startMins / 60);
     const startMin = startMins % 60;
     const endHour = this.startHour + Math.floor(endMins / 60);

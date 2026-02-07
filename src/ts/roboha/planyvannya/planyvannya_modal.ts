@@ -315,12 +315,12 @@ export class PlanyvannyaModal {
 
 
     if (this.selectedClientId) {
-      this.loadCarsForClient(this.selectedClientId, true).catch(console.error);
+      this.loadCarsForClient(this.selectedClientId, true).catch(() => { });
 
       // Завантажуємо відкриті акти клієнта
       // Якщо акт вже вибраний (є actId) - показуємо на 3 секунди
       const autoHideTime = this.actId ? 3000 : undefined;
-      this.showClientActs(autoHideTime).catch(console.error);
+      this.showClientActs(autoHideTime).catch(() => { });
     }
   }
 
@@ -781,7 +781,7 @@ export class PlanyvannyaModal {
         rawData: row.data,
       }));
     } catch (err) {
-      console.error("Error loading clients:", err);
+
     }
   }
 

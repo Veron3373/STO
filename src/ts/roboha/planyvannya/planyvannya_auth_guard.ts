@@ -7,7 +7,7 @@ import { initUrlUpdater } from "../../utils/urlUpdater";
 // import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 import { enforcePageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 
-console.log("🔒 [Планування] Перевірка доступу...");
+
 
 // Перевірка email через базу даних whitelist
 async function isEmailAllowed(email: string | undefined): Promise<boolean> {
@@ -20,12 +20,10 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
       .single();
     if (error?.code === "PGRST116") return false;
     if (error) {
-      console.error("❌ Помилка whitelist:", error);
       return false;
     }
     return !!data;
   } catch (err) {
-    console.error("❌ Виняток whitelist:", err);
     return false;
   }
 }
@@ -38,7 +36,7 @@ async function checkPlanningAccess(): Promise<void> {
     } = await supabase.auth.getSession();
 
     if (error || !session) {
-      console.warn("⛔ [Планування] Немає Google сесії");
+      // console.warn("⛔ [Планування] Немає Google сесії");
       const indexUrl = await getGitUrl("index.html");
       window.location.replace(indexUrl);
       return;
@@ -48,14 +46,14 @@ async function checkPlanningAccess(): Promise<void> {
     const allowed = await isEmailAllowed(email);
 
     if (!allowed) {
-      console.warn("⛔ [Планування] Email не в whitelist:", email);
+      // console.warn("⛔ [Планування] Email не в whitelist:", email);
       await supabase.auth.signOut();
       const indexUrl = await getGitUrl("index.html");
       window.location.replace(indexUrl);
       return;
     }
 
-    console.log("✅ [Планування] Доступ дозволено:", email);
+
 
     // Оновлюємо посилання на сторінці
     initUrlUpdater();
@@ -69,7 +67,7 @@ async function checkPlanningAccess(): Promise<void> {
     // Показуємо сторінку
     document.body.classList.add("auth-verified");
   } catch (err) {
-    console.error("❌ [Планування] Помилка перевірки:", err);
+    // console.error("❌ [Планування] Помилка перевірки:", err);
     const fallbackUrl = await getFallbackUrl("index.html");
     window.location.replace(fallbackUrl);
   }

@@ -14,25 +14,18 @@ let refreshDebounceTimer: number | null = null;
 const REFRESH_DEBOUNCE_MS = 300;
 
 function debouncedRefreshPlanner(): void {
-  console.log("🔄 [PostArxiv Realtime] debouncedRefreshPlanner викликано");
+
   if (refreshDebounceTimer !== null) {
-    console.log("⏱️ [PostArxiv Realtime] Скидаємо попередній таймер");
+
     window.clearTimeout(refreshDebounceTimer);
   }
   refreshDebounceTimer = window.setTimeout(() => {
     refreshDebounceTimer = null;
-    console.log("🔄 [PostArxiv Realtime] Оновлюю блоки планувальника...");
-    console.log("🔍 [PostArxiv Realtime] Перевірка функції:", typeof (window as any).refreshPlannerCalendar);
     if (typeof (window as any).refreshPlannerCalendar === "function") {
-      console.log("✅ [PostArxiv Realtime] Викликаємо refreshPlannerCalendar()");
       (window as any).refreshPlannerCalendar();
-      console.log("✅ [PostArxiv Realtime] refreshPlannerCalendar() виконано");
     } else {
-      console.error("❌ [PostArxiv Realtime] refreshPlannerCalendar не знайдено!");
-      console.error("❌ [PostArxiv Realtime] window.refreshPlannerCalendar =", (window as any).refreshPlannerCalendar);
     }
   }, REFRESH_DEBOUNCE_MS);
-  console.log(`⏱️ [PostArxiv Realtime] Таймер встановлено на ${REFRESH_DEBOUNCE_MS}ms`);
 }
 
 // ── Toast-повідомлення про зміни ──
@@ -95,20 +88,51 @@ function parseCarInfo(carsId: string | number | null): string {
   return "";
 }
 
+
+
+/**
+ * Отримує ім'я слюсаря по ID з Supabase
+ */
+async function getSlyusarName(id: number | string): Promise<string> {
+  if (!id) return "Невідомий";
+  try {
+    const { data } = await supabase
+      .from("slyusars")
+      .select("data")
+      .eq("slyusar_id", id)
+      .single();
+
+    if (data && data.data && data.data.Name) {
+      return data.data.Name;
+    }
+  } catch (e) {
+    console.error("Error fetching slyusar name:", e);
+  }
+  return String(id);
+}
+
+const START_HOUR = 8;
+function minutesToTime(mins: number): string {
+  const h = Math.floor(mins / 60) + START_HOUR;
+  const m = mins % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
 /**
  * Показує toast-повідомлення про зміну в планувальнику
  */
-function showRealtimeToast(
+async function showRealtimeToast(
   type: "insert" | "update" | "delete",
-  record: any
-): void {
+  record: any,
+  _oldRecord?: any
+): Promise<void> {
   const container = getOrCreateToastContainer();
   const toastId = `prt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
   const icons: Record<string, string> = {
     insert: "📌",
     update: "✏️",
-    delete: "🗑️",
+    delete: "❌",
   };
   const labels: Record<string, string> = {
     insert: "Нове бронювання",
@@ -121,11 +145,74 @@ function showRealtimeToast(
     delete: "#ef4444",
   };
 
+  let changesHtml = "";
+
+  // 🕵️‍♂️ Логіка порівняння для UPDATE
+  if (type === "update") {
+    // Спробуємо знайти старий блок в DOM для отримання попередніх значень
+    const block = document.querySelector(
+      `.post-reservation-block[data-post-arxiv-id="${record.post_arxiv_id}"]`
+    ) as HTMLElement;
+
+    if (block) {
+      // --- Перевірка зміни СЛЮСАРЯ ---
+      const oldSlyusarId = block.dataset.slyusarId;
+      const newSlyusarId = String(record.slyusar_id);
+
+      if (oldSlyusarId && oldSlyusarId !== newSlyusarId) {
+        // Отримуємо імена
+        const oldName = await getSlyusarName(oldSlyusarId);
+        const newName = await getSlyusarName(newSlyusarId);
+
+        changesHtml += `
+          <div class="prt-row" style="margin-top: 4px;">
+            <span class="prt-emoji">👨‍🔧</span>
+            <span class="prt-value">
+              Заміна слюсаря з <span style="color: #ef4444; font-weight: bold;">${oldName}</span> 
+              на <span style="color: #10b981; font-weight: bold;">${newName}</span>
+            </span>
+          </div>
+        `;
+      }
+
+      // --- Перевірка зміни ЧАСУ ---
+      const oldStartMins = parseInt(block.dataset.start || "0");
+      const oldEndMins = parseInt(block.dataset.end || "0");
+
+      // Новий час (парсимо з ISO)
+      const dateOn = new Date(record.data_on);
+      const dateOff = new Date(record.data_off);
+
+      const newStartMins = (dateOn.getUTCHours() - START_HOUR) * 60 + dateOn.getUTCMinutes();
+      const newEndMins = (dateOff.getUTCHours() - START_HOUR) * 60 + dateOff.getUTCMinutes();
+
+      // Порівнюємо (допускаємо похибку пари хвилин або точне співпадіння)
+      if (Math.abs(oldStartMins - newStartMins) > 1 || Math.abs(oldEndMins - newEndMins) > 1) {
+        const oldTimeStr = `${minutesToTime(oldStartMins)} - ${minutesToTime(oldEndMins)}`;
+        const newTimeStr = `${minutesToTime(newStartMins)} - ${minutesToTime(newEndMins)}`;
+
+        changesHtml += `
+          <div class="prt-row" style="margin-top: 4px;">
+            <span class="prt-emoji">🕒</span>
+            <span class="prt-value">
+              Зміна з <span style="color: #ef4444; font-weight: bold;">${oldTimeStr}</span> 
+              на <span style="color: #10b981; font-weight: bold;">${newTimeStr}</span>
+            </span>
+          </div>
+        `;
+      }
+    }
+  }
+
   const clientName = parseClientName(record.client_id);
   const carInfo = parseCarInfo(record.cars_id);
   const timeOn = record.data_on ? formatTime(record.data_on) : "";
   const timeOff = record.data_off ? formatTime(record.data_off) : "";
+
+  // Якщо ми показали детальну зміну часу, стандартний timeRange можна не показувати або залишити
+  // Залишимо як базову інфу
   const timeRange = timeOn && timeOff ? `${timeOn} – ${timeOff}` : "";
+
   const changedBy = record.xto_zapusav || "Невідомо";
   const status = record.status || "";
 
@@ -140,10 +227,12 @@ function showRealtimeToast(
       <span class="prt-label" style="color: ${colors[type]}">${labels[type]}</span>
       <button class="prt-close" title="Закрити">&times;</button>
     </div>
-    ${clientName ? `<div class="prt-row"><span class="prt-emoji">👤</span><span class="prt-value">${clientName}</span></div>` : ""}
-    ${carInfo ? `<div class="prt-row"><span class="prt-emoji">🚗</span><span class="prt-value">${carInfo}</span></div>` : ""}
-    ${timeRange ? `<div class="prt-row"><span class="prt-emoji">🕐</span><span class="prt-value">${timeRange}</span></div>` : ""}
-    ${status ? `<div class="prt-row"><span class="prt-emoji">📋</span><span class="prt-value">${status}</span></div>` : ""}
+    ${changesHtml} <!-- Сюди вставляємо наші зміни -->
+    ${(!changesHtml && clientName) ? `<div class="prt-row"><span class="prt-emoji">👤</span><span class="prt-value">${clientName}</span></div>` : ""}
+    ${(!changesHtml && carInfo) ? `<div class="prt-row"><span class="prt-emoji">🚗</span><span class="prt-value">${carInfo}</span></div>` : ""}
+    ${(!changesHtml && timeRange) ? `<div class="prt-row"><span class="prt-emoji">🕐</span><span class="prt-value">${timeRange}</span></div>` : ""}
+    ${(!changesHtml && status) ? `<div class="prt-row"><span class="prt-emoji">📋</span><span class="prt-value">${status}</span></div>` : ""}
+    ${(changesHtml) ? `<div class="prt-row" style="margin-top:5px; border-top:1px solid #eee; padding-top:5px;"><span class="prt-value" style="font-size:11px; color:#888;">${clientName} • ${carInfo}</span></div>` : ""}
     <div class="prt-footer">
       <span class="prt-who">${changedBy}</span>
     </div>
@@ -256,15 +345,15 @@ function refreshOccupancyForRecord(record: any): void {
 export function initPostArxivRealtimeSubscription(): void {
   // Робимо доступним глобально для налагодження
   (window as any).restartRealtime = initPostArxivRealtimeSubscription;
-  console.log("🛠️ [PostArxiv Realtime] Функція доступна як window.restartRealtime()");
+
 
   // Перевіряємо чи ми на сторінці планувальника
   if (!document.getElementById("postSchedulerWrapper")) {
-    console.log("📡 [PostArxiv Realtime] Не на сторінці планувальника — підписку не ініціалізуємо");
+
     return;
   }
 
-  console.log("📡 [PostArxiv Realtime] Ініціалізація підписки на post_arxiv...");
+
 
   // Відписуємось від існуючого каналу, якщо є
   if (postArxivChannel) {
@@ -273,11 +362,11 @@ export function initPostArxivRealtimeSubscription(): void {
   }
 
   const currentUserName = getCurrentUserName();
-  console.log("📡 [PostArxiv Realtime] Поточний користувач:", currentUserName || "невідомо");
+
 
   // Генеруємо унікальну назву каналу, щоб уникнути конфліктів
   const channelId = `post-arxiv-changes-${Date.now()}`;
-  console.log(`📡 [PostArxiv Realtime] Створюю новий канал: ${channelId}`);
+
 
   // Використовуємо окремі handler-и для кожного типу подій, як у працюючому act_changes_notifications
   postArxivChannel = supabase
@@ -293,20 +382,17 @@ export function initPostArxivRealtimeSubscription(): void {
       (payload) => {
         try {
           const record = payload.new as any;
-          console.log(`✅ [PostArxiv Realtime] INSERT - Новий запис:`, record);
+
 
           // Toast тільки для ЧУЖИХ змін
           if (!currentUserName || record?.xto_zapusav !== currentUserName) {
-            console.log(`📨 [PostArxiv Realtime] Показуємо toast для INSERT від ${record?.xto_zapusav}`);
             showRealtimeToast("insert", record);
           } else {
-            console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
           }
 
           debouncedRefreshPlanner();
           refreshOccupancyForRecord(record);
         } catch (err) {
-          console.error("❌ [PostArxiv Realtime] Помилка в INSERT handler:", err);
         }
       }
     )
@@ -322,13 +408,11 @@ export function initPostArxivRealtimeSubscription(): void {
         try {
           const record = payload.new as any;
           const oldRecord = payload.old as any;
-          console.log(`✅ [PostArxiv Realtime] UPDATE - Оновлено запис:`, record);
+
 
           if (!currentUserName || record?.xto_zapusav !== currentUserName) {
-            console.log(`📨 [PostArxiv Realtime] Показуємо toast для UPDATE від ${record?.xto_zapusav}`);
-            showRealtimeToast("update", record);
+            showRealtimeToast("update", record, oldRecord);
           } else {
-            console.log(`🔇 [PostArxiv Realtime] Пропускаємо toast - це власна зміна`);
           }
 
           debouncedRefreshPlanner();
@@ -337,7 +421,6 @@ export function initPostArxivRealtimeSubscription(): void {
             refreshOccupancyForRecord(oldRecord);
           }
         } catch (err) {
-          console.error("❌ [PostArxiv Realtime] Помилка в UPDATE handler:", err);
         }
       }
     )
@@ -352,7 +435,7 @@ export function initPostArxivRealtimeSubscription(): void {
       (payload) => {
         try {
           const oldRecord = payload.old as any;
-          console.log(`✅ [PostArxiv Realtime] DELETE - Видалено запис:`, oldRecord);
+
 
           // Показуємо toast про видалення
           showRealtimeToast("delete", oldRecord);
@@ -363,7 +446,6 @@ export function initPostArxivRealtimeSubscription(): void {
               `.post-reservation-block[data-post-arxiv-id="${oldRecord.post_arxiv_id}"]`
             );
             if (block) {
-              console.log(`🗑️ [PostArxiv Realtime] Видаляємо блок з DOM`);
               block.remove();
             }
           }
@@ -374,28 +456,17 @@ export function initPostArxivRealtimeSubscription(): void {
             refreshOccupancyForRecord(oldRecord);
           }
         } catch (err) {
-          console.error("❌ [PostArxiv Realtime] Помилка в DELETE handler:", err);
         }
       }
     )
     .subscribe((status) => {
-      console.log("📡 [PostArxiv Realtime] Статус каналу:", status);
 
       if (status === "SUBSCRIBED") {
-        console.log("✅ [PostArxiv Realtime] Підписка активна! Очікуємо події від Supabase...");
       } else if (status === "CHANNEL_ERROR") {
-        console.error("❌ [PostArxiv Realtime] Помилка каналу! Перевірте:");
-        console.error("   1. Чи увімкнений Realtime для таблиці post_arxiv");
-        console.error("   2. Чи правильно налаштовані RLS політики");
-        console.error("   3. Чи є доступ до таблиці");
       } else if (status === "TIMED_OUT") {
-        console.error("⏱️ [PostArxiv Realtime] Час очікування вичерпано");
       } else if (status === "CLOSED") {
-        console.warn("🔌 [PostArxiv Realtime] Канал закрито");
       }
     });
-
-  console.log("✅ [PostArxiv Realtime] Підписка створена! Очікуємо події від Supabase...");
 }
 
 /**
@@ -405,6 +476,6 @@ export function unsubscribeFromPostArxivRealtime(): void {
   if (postArxivChannel) {
     postArxivChannel.unsubscribe();
     postArxivChannel = null;
-    console.log("🔌 [PostArxiv Realtime] Підписка відключена");
+
   }
 }

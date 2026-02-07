@@ -6,7 +6,7 @@ import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
 import { initUrlUpdater } from "../../utils/urlUpdater";
 // import { obfuscateCurrentUrl } from "../../vxid/url_obfuscator";
 
-console.log("🔒 [Планування] Перевірка Google сесії...");
+
 
 // Перевірка email через базу даних whitelist
 async function isEmailAllowed(email: string | undefined): Promise<boolean> {
@@ -19,12 +19,10 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
       .single();
     if (error?.code === "PGRST116") return false;
     if (error) {
-      console.error("❌ Помилка whitelist:", error);
       return false;
     }
     return !!data;
   } catch (err) {
-    console.error("❌ Виняток whitelist:", err);
     return false;
   }
 }
@@ -37,7 +35,7 @@ async function checkPlanningSession() {
     } = await supabase.auth.getSession();
 
     if (error || !session) {
-      console.warn("⛔ [Планування] Немає Google сесії");
+      // console.warn("⛔ [Планування] Немає Google сесії");
       const indexUrl = await getGitUrl("index.html");
       window.location.replace(indexUrl);
       return;
@@ -47,14 +45,14 @@ async function checkPlanningSession() {
     const allowed = await isEmailAllowed(email);
 
     if (!allowed) {
-      console.warn("⛔ [Планування] Email не в whitelist:", email);
+      // console.warn("⛔ [Планування] Email не в whitelist:", email);
       await supabase.auth.signOut();
       const indexUrl = await getGitUrl("index.html");
       window.location.replace(indexUrl);
       return;
     }
 
-    console.log("✅ [Планування] Google сесія підтверджена:", email);
+
 
     // Оновлюємо посилання на сторінці
     initUrlUpdater();
@@ -62,7 +60,7 @@ async function checkPlanningSession() {
     // Змінюємо URL для безпеки
     // obfuscateCurrentUrl();
   } catch (err) {
-    console.error("❌ [Планування] Помилка перевірки:", err);
+    // console.error("❌ [Планування] Помилка перевірки:", err);
     const fallbackUrl = await getFallbackUrl("index.html");
     window.location.replace(fallbackUrl);
   }

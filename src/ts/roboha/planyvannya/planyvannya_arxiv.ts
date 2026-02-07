@@ -111,7 +111,6 @@ export class PostArxiv {
       // Отримуємо поточну дату з елементу заголовку
       const currentDate = this.getCurrentDateFromHeader();
       if (!currentDate) {
-        console.warn("Не вдалося отримати поточну дату");
         return;
       }
 
@@ -141,16 +140,12 @@ export class PostArxiv {
         .lte("data_on", endOfDay);
 
       if (error) {
-        console.error("Помилка завантаження записів з post_arxiv:", error);
         return;
       }
 
       if (!arxivRecords || arxivRecords.length === 0) {
-        console.log("Немає записів для цієї дати");
         return;
       }
-
-      console.log(`Завантажено ${arxivRecords.length} записів з БД`);
 
       // Збираємо тільки числові ID для запиту до clients/cars (зворотна сумісність)
       const clientIds = [
@@ -203,7 +198,6 @@ export class PostArxiv {
         this.renderArxivRecord(record, clientData, carData);
       }
     } catch (err) {
-      console.error("Помилка при завантаженні даних:", err);
     }
   }
 
@@ -218,7 +212,6 @@ export class PostArxiv {
       // Отримуємо поточну дату з елементу заголовку
       const currentDate = this.getCurrentDateFromHeader();
       if (!currentDate) {
-        console.warn("Не вдалося отримати поточну дату");
         return;
       }
 
@@ -249,7 +242,6 @@ export class PostArxiv {
         .lte("data_on", endOfDay);
 
       if (error) {
-        console.error("Помилка завантаження записів:", error);
         return;
       }
 
@@ -257,7 +249,7 @@ export class PostArxiv {
         return;
       }
 
-      console.log(`Завантажено ${arxivRecords.length} записів для секції`);
+
 
       // Збираємо тільки числові ID для запиту (зворотна сумісність)
       const clientIds = [
@@ -310,7 +302,6 @@ export class PostArxiv {
         this.renderArxivRecord(record, clientData, carData);
       }
     } catch (err) {
-      console.error("Помилка при завантаженні даних для секції:", err);
     }
   }
 
@@ -364,7 +355,6 @@ export class PostArxiv {
     ) as HTMLElement;
 
     if (!rowTrack) {
-      console.warn(`Рядок для slyusar_id ${record.slyusar_id} не знайдено`);
       return;
     }
 
@@ -381,7 +371,6 @@ export class PostArxiv {
 
     // Перевіряємо що час в допустимих межах
     if (startMins < 0 || endMins > 12 * 60) {
-      console.warn("Час запису виходить за межі робочого дня");
       return;
     }
 

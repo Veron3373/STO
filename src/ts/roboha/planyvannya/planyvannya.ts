@@ -111,7 +111,7 @@ class SchedulerApp {
     try {
       this.postArxiv = new PostArxiv("postCalendarGrid");
     } catch (e) {
-      console.error("Failed to initialize PostArxiv:", e);
+
       // Fallback or handle error - though strictly TS requires init in constructor if not optional
       // To satisfy TS strict property init, we should probably assign it.
       // If it throws, the app might crash, which is acceptable if critical.
@@ -160,12 +160,9 @@ class SchedulerApp {
     }
 
     // 📡 Підключаємо Realtime підписку для автоматичного оновлення
-    console.log("🚀 [SchedulerApp] Викликаю initPostArxivRealtimeSubscription()...");
     try {
       initPostArxivRealtimeSubscription();
-      console.log("✅ [SchedulerApp] initPostArxivRealtimeSubscription() викликано успішно");
     } catch (e) {
-      console.error("❌ [SchedulerApp] Помилка при виклику initPostArxivRealtimeSubscription:", e);
     }
   }
 
@@ -175,7 +172,7 @@ class SchedulerApp {
       const hasAccess = await checkCurrentPageAccess();
 
       if (!hasAccess) {
-        console.log("⛔ Доступ до Планувальника заборонено - перенаправлення...");
+
         redirectToIndex();
         return;
       }
@@ -261,7 +258,6 @@ class SchedulerApp {
 
       this.transformDataToSections(slyusars, categoryMap);
     } catch (error) {
-      console.error("❌ Помилка завантаження даних з БД:", error);
       this.showError("Не вдалося завантажити дані. Спробуйте пізніше.");
     }
   }
@@ -512,10 +508,6 @@ class SchedulerApp {
               .select();
 
             if (error) {
-              console.error(
-                `❌ Помилка створення слюсаря ${cleanName}:`,
-                error
-              );
               throw error;
             }
             // console.log("✨ Створено нового слюсаря:", data);
@@ -535,10 +527,6 @@ class SchedulerApp {
             .select();
 
           if (error) {
-            console.error(
-              `❌ Помилка оновлення slyusar_id ${realSlyusarId}:`,
-              error
-            );
             throw error;
           }
           if (data && data.length > 0) successCount++;
@@ -576,10 +564,6 @@ class SchedulerApp {
         // console.log(`📋 Результат видалення slyusar_id ${deletedId}:`, { data, error });
 
         if (error) {
-          console.error(
-            `❌ Помилка очищення namber для slyusar_id ${deletedId}:`,
-            error
-          );
           throw error;
         }
       }
@@ -595,7 +579,6 @@ class SchedulerApp {
         // console.warn("⚠️ Змін в базі даних не зафіксовано.");
       }
     } catch (error) {
-      console.error("❌ Помилка збереження позицій:", error);
       this.showError("Не вдалося зберегти налаштування. Спробуйте пізніше.");
     }
   }
@@ -627,10 +610,6 @@ class SchedulerApp {
       if (!storedData) return null;
       return JSON.parse(storedData);
     } catch (error) {
-      console.error(
-        "❌ Помилка при читанні даних користувача з localStorage:",
-        error
-      );
       return null;
     }
   }

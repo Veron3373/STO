@@ -84,9 +84,9 @@ export class PostModal {
       // Видаляємо дублікати для слюсарів
       this.autocompleteData.slyusarNames = [...new Set(this.autocompleteData.slyusarNames)];
 
-      console.log("✅ Дані для автодоповнення завантажено:", this.autocompleteData);
+
     } catch (error) {
-      console.error("❌ Помилка завантаження даних для автодоповнення:", error);
+
     }
   }
 

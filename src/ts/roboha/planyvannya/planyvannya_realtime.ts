@@ -426,6 +426,7 @@ export function initPostArxivRealtimeSubscription(): void {
 
           // Знаходимо блок в DOM перед видаленням, щоб отримати всі дані
           let enrichedRecord = { ...oldRecord };
+          let shouldShowToast = false; // Показуємо toast тільки якщо блок існував (видалив хтось інший)
 
           if (oldRecord?.post_arxiv_id) {
             const block = document.querySelector(
@@ -433,6 +434,9 @@ export function initPostArxivRealtimeSubscription(): void {
             ) as HTMLElement;
 
             if (block) {
+              // Блок існує - значить видалив ІНШИЙ користувач, показуємо toast
+              shouldShowToast = true;
+
               // Отримуємо дані з DOM-елемента
               const clientName = block.dataset.clientName || "";
               const carModel = block.dataset.carModel || "";
@@ -486,8 +490,8 @@ export function initPostArxivRealtimeSubscription(): void {
             }
           }
 
-          // Показуємо toast про видалення ТІЛЬКИ для ЧУЖИХ змін
-          if (!currentUserName || enrichedRecord?.xto_zapusav !== currentUserName) {
+          // Показуємо toast ТІЛЬКИ якщо блок існував (видалив хтось інший)
+          if (shouldShowToast) {
             showRealtimeToast("delete", enrichedRecord);
           }
 

@@ -103,6 +103,7 @@ export interface GlobalDataCache {
   works: string[];
   worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
+  detailsWithId: Array<{ detail_id: number; name: string }>;
   slyusars: Array<{ Name: string;[k: string]: any }>;
   shops: Array<{ Name: string;[k: string]: any }>;
   settings: {
@@ -139,6 +140,7 @@ export const globalCache: GlobalDataCache = {
   works: [],
   worksWithId: [],
   details: [],
+  detailsWithId: [],
   slyusars: [],
   shops: [],
   settings: {
@@ -301,6 +303,8 @@ const GLOBAL_DATA_CACHE_TTL = 5 * 60 * 1000; // 5 хвилин
 let lastGlobalDataLoadTime: number = 0;
 let globalDataLoaded: boolean = false;
 let isScladRealtimeSubscribed: boolean = false; // ← Флаг підписки Realtime
+let isWorksRealtimeSubscribed: boolean = false; // ← Флаг підписки Realtime для works
+let isDetailsRealtimeSubscribed: boolean = false; // ← Флаг підписки Realtime для details
 
 /** Примусово оновити кеш (наприклад, після додавання нових робіт/деталей) */
 export function invalidateGlobalDataCache(): void {
@@ -422,10 +426,10 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
       "sclad_id"
     );
 
-    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ деталей
-    const detailsData = await fetchAllWithPagination<{ data: string }>(
+    // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ деталей з detail_id
+    const detailsData = await fetchAllWithPagination<{ detail_id: number; data: string }>(
       "details",
-      "data",
+      "detail_id, data",
       "detail_id"
     );
 
@@ -472,14 +476,14 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
       .map((w) => w.name)
       .filter(Boolean);
 
-    globalCache.details =
-      detailsData
-        ?.map((r: any) => {
-          // r.data - це просто текстовий рядок
-          const text = String(r.data || "").trim();
-          return text;
-        })
-        .filter(Boolean) || [];
+    // ✅ Зберігаємо detailsWithId для Realtime оновлень
+    globalCache.detailsWithId =
+      detailsData?.map((r: any) => ({
+        detail_id: Number(r.detail_id || 0),
+        name: String(r.data || "").trim(),
+      })).filter((d) => d.name) || [];
+
+    globalCache.details = globalCache.detailsWithId.map((d) => d.name);
 
     console.log(
       `✅ Завантажено - Робіт: ${globalCache.works.length}, Деталей: ${globalCache.details.length}`
@@ -556,8 +560,10 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
     lastGlobalDataLoadTime = Date.now();
     globalDataLoaded = true;
 
-    // 🔥 Активуємо Realtime підписку на зміни складу
+    // 🔥 Активуємо Realtime підписки на зміни складу, робіт та деталей
     initScladRealtimeSubscription();
+    initWorksRealtimeSubscription();
+    initDetailsRealtimeSubscription();
 
     console.log("✅ Глобальні дані завантажено та закешовано");
   } catch (error) {
@@ -782,4 +788,162 @@ function mapScladRecord(r: any) {
     time_on: r.time_on ?? null,
     scladNomer: r.scladNomer ?? null,
   };
+}
+
+/* ===================== REALTIME SUBSCRIPTION (WORKS) ===================== */
+
+/**
+ * Ініціалізує Realtime підписку на таблицю works.
+ * Слухає INSERT, UPDATE, DELETE і синхронізує globalCache.works та globalCache.worksWithId.
+ */
+export function initWorksRealtimeSubscription() {
+  if (isWorksRealtimeSubscribed) {
+    console.log("⚠️ Realtime для works вже активний, пропускаємо ініціалізацію.");
+    return;
+  }
+  isWorksRealtimeSubscribed = true;
+
+  console.log("📡 Ініціалізація Realtime підписки на works...");
+
+  supabase
+    .channel("works-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "works" },
+      (payload) => {
+        console.log(`🔔 Works Realtime event: ${payload.eventType}`, payload);
+        handleWorksChange(payload);
+      }
+    )
+    .subscribe((status) => {
+      console.log(`📡 Works Realtime status: ${status}`);
+    });
+}
+
+function handleWorksChange(payload: any) {
+  const { eventType, new: newRecord, old: oldRecord } = payload;
+
+  if (eventType === "DELETE") {
+    // 🗑️ Видалення роботи
+    if (oldRecord && oldRecord.work_id) {
+      const workIdStr = String(oldRecord.work_id);
+      const index = globalCache.worksWithId.findIndex((w) => w.work_id === workIdStr);
+      if (index !== -1) {
+        const removedName = globalCache.worksWithId[index].name;
+        globalCache.worksWithId.splice(index, 1);
+        // Оновлюємо масив works
+        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+        console.log(`🗑️ Видалено роботу: ${removedName} (ID: ${workIdStr})`);
+      }
+    }
+  } else if (eventType === "INSERT") {
+    // ➕ Додавання роботи
+    if (newRecord) {
+      const mapped = {
+        work_id: String(newRecord.work_id || ""),
+        name: String(newRecord.data || "").trim(),
+      };
+      if (mapped.name) {
+        globalCache.worksWithId.push(mapped);
+        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+        console.log(`➕ Додано роботу: ${mapped.name} (ID: ${mapped.work_id})`);
+      }
+    }
+  } else if (eventType === "UPDATE") {
+    // 🔄 Оновлення роботи
+    if (newRecord) {
+      const workIdStr = String(newRecord.work_id);
+      const index = globalCache.worksWithId.findIndex((w) => w.work_id === workIdStr);
+      const updatedName = String(newRecord.data || "").trim();
+
+      if (index !== -1) {
+        globalCache.worksWithId[index].name = updatedName;
+        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+        console.log(`🔄 Оновлено роботу: ${updatedName} (ID: ${workIdStr})`);
+      } else if (updatedName) {
+        // Якщо немає в кеші — додаємо
+        globalCache.worksWithId.push({ work_id: workIdStr, name: updatedName });
+        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+      }
+    }
+  }
+}
+
+/* ===================== REALTIME SUBSCRIPTION (DETAILS) ===================== */
+
+/**
+ * Ініціалізує Realtime підписку на таблицю details.
+ * Слухає INSERT, UPDATE, DELETE і синхронізує globalCache.details та globalCache.detailsWithId.
+ */
+export function initDetailsRealtimeSubscription() {
+  if (isDetailsRealtimeSubscribed) {
+    console.log("⚠️ Realtime для details вже активний, пропускаємо ініціалізацію.");
+    return;
+  }
+  isDetailsRealtimeSubscribed = true;
+
+  console.log("📡 Ініціалізація Realtime підписки на details...");
+
+  supabase
+    .channel("details-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "details" },
+      (payload) => {
+        console.log(`🔔 Details Realtime event: ${payload.eventType}`, payload);
+        handleDetailsChange(payload);
+      }
+    )
+    .subscribe((status) => {
+      console.log(`📡 Details Realtime status: ${status}`);
+    });
+}
+
+function handleDetailsChange(payload: any) {
+  const { eventType, new: newRecord, old: oldRecord } = payload;
+
+  if (eventType === "DELETE") {
+    // 🗑️ Видалення деталі
+    if (oldRecord && oldRecord.detail_id) {
+      const detailId = Number(oldRecord.detail_id);
+      const index = globalCache.detailsWithId.findIndex((d) => d.detail_id === detailId);
+      if (index !== -1) {
+        const removedName = globalCache.detailsWithId[index].name;
+        globalCache.detailsWithId.splice(index, 1);
+        // Оновлюємо масив details
+        globalCache.details = globalCache.detailsWithId.map((d) => d.name);
+        console.log(`🗑️ Видалено деталь: ${removedName} (ID: ${detailId})`);
+      }
+    }
+  } else if (eventType === "INSERT") {
+    // ➕ Додавання деталі
+    if (newRecord) {
+      const mapped = {
+        detail_id: Number(newRecord.detail_id || 0),
+        name: String(newRecord.data || "").trim(),
+      };
+      if (mapped.name && mapped.detail_id) {
+        globalCache.detailsWithId.push(mapped);
+        globalCache.details = globalCache.detailsWithId.map((d) => d.name);
+        console.log(`➕ Додано деталь: ${mapped.name} (ID: ${mapped.detail_id})`);
+      }
+    }
+  } else if (eventType === "UPDATE") {
+    // 🔄 Оновлення деталі
+    if (newRecord) {
+      const detailId = Number(newRecord.detail_id);
+      const index = globalCache.detailsWithId.findIndex((d) => d.detail_id === detailId);
+      const updatedName = String(newRecord.data || "").trim();
+
+      if (index !== -1) {
+        globalCache.detailsWithId[index].name = updatedName;
+        globalCache.details = globalCache.detailsWithId.map((d) => d.name);
+        console.log(`🔄 Оновлено деталь: ${updatedName} (ID: ${detailId})`);
+      } else if (updatedName && detailId) {
+        // Якщо немає в кеші — додаємо
+        globalCache.detailsWithId.push({ detail_id: detailId, name: updatedName });
+        globalCache.details = globalCache.detailsWithId.map((d) => d.name);
+      }
+    }
+  }
 }

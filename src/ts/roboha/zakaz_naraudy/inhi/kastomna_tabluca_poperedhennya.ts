@@ -39,6 +39,7 @@ function ensureWarningStyles() {
     .slyusar-sum-cell[data-warnzp="1"] {
       background-color: #fff3e0 !important;
       border: 1px solid #ff9800 !important;
+      padding-left: 24px !important;
     }
   `;
   const tag = document.createElement("style");

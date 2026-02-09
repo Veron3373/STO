@@ -592,6 +592,11 @@ body {
   user-select: none;
 }
 
+.qty-cell[data-warn="1"],
+.price-cell[data-warnprice="1"] {
+  padding-left: 24px !important;
+}
+
 /* ===== Popover (Каталог) ===== */
 .catalog-info-popover {
   position: absolute;

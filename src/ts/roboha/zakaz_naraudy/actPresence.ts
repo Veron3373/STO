@@ -13,11 +13,63 @@ interface ActPresenceState {
 // Канал для Presence
 let presenceChannel: any = null;
 
+// ✏️ Глобальний канал для відображення хто редагує акти в таблиці
+let globalPresenceChannel: any = null;
+
 // 🔐 Час відкриття акту поточним користувачем (фіксується один раз при підписці)
 let myOpenedAt: string | null = null;
 
 // 🔐 Прапорець: чи ми вже відправили свій track
 let hasTrackedPresence: boolean = false;
+
+// ⏰ Максимальний час "життя" присутності (2 години в мілісекундах)
+// Присутності старші за цей час будуть ігноруватись як "застарілі"
+const PRESENCE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * 🧹 Перевіряє чи присутність "застаріла" (старше PRESENCE_MAX_AGE_MS)
+ */
+function isPresenceStale(openedAt: string): boolean {
+    const openedTime = new Date(openedAt).getTime();
+    const now = Date.now();
+    return (now - openedTime) > PRESENCE_MAX_AGE_MS;
+}
+
+// 🔐 Обробник для закриття сторінки - відписуємось від presence
+function handlePageUnload(): void {
+    if (presenceChannel) {
+        // Використовуємо синхронний untrack через sendBeacon якщо можливо
+        try {
+            presenceChannel.untrack();
+            supabase.removeChannel(presenceChannel);
+            presenceChannel = null;
+            console.log("🔐 [beforeunload] Відписались від presence");
+        } catch (err) {
+            console.error("🔐 [beforeunload] Помилка відписки:", err);
+        }
+    }
+    if (globalPresenceChannel) {
+        try {
+            globalPresenceChannel.untrack();
+            supabase.removeChannel(globalPresenceChannel);
+            globalPresenceChannel = null;
+            console.log("🔐 [beforeunload] Відписались від global presence");
+        } catch (err) {
+            console.error("🔐 [beforeunload] Помилка відписки global:", err);
+        }
+    }
+}
+
+// 🔐 Реєструємо обробники для закриття сторінки
+window.addEventListener("beforeunload", handlePageUnload);
+window.addEventListener("pagehide", handlePageUnload);
+// Також для випадку коли сторінка стає "прихованою" (мобільні браузери)
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && presenceChannel) {
+        // Не відписуємось повністю, але робимо untrack щоб сервер знав що ми "пішли"
+        presenceChannel.untrack().catch(() => {});
+    }
+});
 
 /**
  * Підписується на присутність користувачів для конкретного акту
@@ -79,6 +131,11 @@ export async function subscribeToActPresence(
                 // Але краще перебрати всі, якщо користувач відкрив у кількох вкладках
                 presences.forEach((p) => {
                     if (p.userName && p.openedAt) {
+                        // 🧹 Ігноруємо "застарілі" присутності (старше 2 годин)
+                        if (isPresenceStale(p.openedAt)) {
+                            console.log(`⏰ [Presence] Ігноруємо застарілу присутність: ${p.userName} (${p.openedAt})`);
+                            return;
+                        }
                         allUsers.push(p);
                     }
                 });
@@ -248,6 +305,11 @@ export async function subscribeToActPresence(
         if (presences && presences.length > 0) {
             presences.forEach((p) => {
                 if (p.userName && p.openedAt) {
+                    // 🧹 Ігноруємо "застарілі" присутності (старше 2 годин)
+                    if (isPresenceStale(p.openedAt)) {
+                        console.log(`⏰ [Presence Final] Ігноруємо застарілу присутність: ${p.userName} (${p.openedAt})`);
+                        return;
+                    }
                     allUsers.push(p);
                 }
             });
@@ -304,9 +366,6 @@ export async function notifyActSaved(actId: number): Promise<void> {
         console.log("📡 Sent act_saved broadcast for act:", actId);
     }
 }
-
-// ✏️ Глобальний канал для відображення хто редагує акти в таблиці
-let globalPresenceChannel: any = null;
 
 /**
  * ✏️ Відстежує присутність в глобальному каналі (для відображення в таблиці)

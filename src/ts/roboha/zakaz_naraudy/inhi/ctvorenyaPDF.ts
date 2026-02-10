@@ -273,6 +273,27 @@ export async function printModalToPdf(): Promise<void> {
       ".zakaz_narayd-sums-footer"
     );
 
+    // межі блоку тексту претензій та підписів (тільки для закритого акту)
+    const closedActInfoBounds = getElementBoundsPx(
+      modalBody,
+      ".closed-act-info"
+    );
+
+    // Об'єднуємо footer та closedActInfo в один комбінований блок
+    // Це потрібно, щоб сума, текст і підписи не розривалися
+    let combinedFooterBounds: { top: number; bottom: number; height: number } | null = null;
+    if (footerBounds && closedActInfoBounds) {
+      combinedFooterBounds = {
+        top: footerBounds.top,
+        bottom: closedActInfoBounds.bottom,
+        height: closedActInfoBounds.bottom - footerBounds.top,
+      };
+    } else if (footerBounds) {
+      combinedFooterBounds = footerBounds;
+    } else if (closedActInfoBounds) {
+      combinedFooterBounds = closedActInfoBounds;
+    }
+
     // Якщо все влазить — одним зображенням
     if (imgHeightMm <= contentHeightMm) {
       pdf.addImage(
@@ -306,16 +327,24 @@ export async function printModalToPdf(): Promise<void> {
           safeCutDomY = Math.min(pageMaxDomY, domHeightPx);
         }
 
-        // 2) якщо підсумки починаються у межах цієї сторінки і ПОВНІСТЮ вміщаються — додаємо їх у поточний зріз
-        if (footerBounds) {
+        // 2) якщо комбінований блок (підсумки + текст + підписи) починається у межах цієї сторінки
+        //    і ПОВНІСТЮ вміщається — додаємо його у поточний зріз
+        //    якщо НЕ вміщається — переносимо ВЕСЬ блок на наступну сторінку (не розриваємо)
+        if (combinedFooterBounds) {
           const footerStartsOnThisPage =
-            footerBounds.top >= currentDomY && footerBounds.top <= pageMaxDomY;
+            combinedFooterBounds.top >= currentDomY && combinedFooterBounds.top <= pageMaxDomY;
           if (footerStartsOnThisPage) {
             const remainingDomSpace = pageMaxDomY - safeCutDomY; // залишок після останнього рядка
-            const footerFitsHere = footerBounds.height <= remainingDomSpace;
+            const footerFitsHere = combinedFooterBounds.height <= remainingDomSpace;
             if (footerFitsHere) {
-              // тягнемо зріз до низу підсумків — підсумки не підуть на наступну сторінку
-              safeCutDomY = footerBounds.bottom;
+              // тягнемо зріз до низу комбінованого блоку — він не підуть на наступну сторінку
+              safeCutDomY = combinedFooterBounds.bottom;
+            } else {
+              // Блок не вміщається повністю - переносимо ВЕСЬ блок на наступну сторінку
+              // Якщо safeCutDomY вже включає частину блоку, обрізаємо до початку блоку
+              if (safeCutDomY > combinedFooterBounds.top) {
+                safeCutDomY = combinedFooterBounds.top;
+              }
             }
           }
         }

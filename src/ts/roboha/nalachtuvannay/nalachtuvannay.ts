@@ -2,7 +2,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { resetPercentCache } from "../zakaz_naraudy/inhi/kastomna_tabluca";
 import { invalidateGlobalDataCache, globalCache, saveGeneralSettingsToLocalStorage, applyWallpapers } from "../zakaz_naraudy/globalCache";
-import { loadAISettings, saveAISettings, resetAISettingsCache } from "../ai/aiService";
+import { resetAISettingsCache } from "../ai/aiService";
 
 const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
@@ -15,6 +15,7 @@ const SETTINGS = {
   },
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
   6: { id: "toggle-print", label: "Шапка акту в кольорі", class: "_print" },
+  7: { id: "toggle-ai", label: "🤖 ШІ підказки", class: "_ai" },
 };
 
 const ROLES = [
@@ -747,7 +748,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     });
 
     // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
-    [1, 2, 3, 5, 6].forEach((id) => {
+    [1, 2, 3, 5, 6, 7].forEach((id) => {
       if (!initialSettingsState.has(`checkbox_${id}`)) {
         const setting = SETTINGS[id as keyof typeof SETTINGS];
         if (setting) {
@@ -757,14 +758,6 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
         }
       }
     });
-
-    // 🤖 Завантажуємо AI налаштування
-    const aiSettings = await loadAISettings();
-    const aiToggle = modal.querySelector("#toggle-ai") as HTMLInputElement;
-    if (aiToggle) {
-      aiToggle.checked = aiSettings.enabled;
-      initialSettingsState.set("checkbox_10", aiSettings.enabled);
-    }
 
     // Рендеримо лише заповнені рядки (включаючи заморожені -1), без заповнення прогалин
     const filledIds = Array.from(procentMap.entries())
@@ -1121,11 +1114,29 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         changesCount++;
       }
 
-      // 🤖 Збереження toggle-ai (setting_id 10)
+      // 🤖 Збереження toggle-ai (setting_id 7)
       const checkboxAI = modal.querySelector("#toggle-ai") as HTMLInputElement;
       const newValueAI = checkboxAI?.checked ?? false;
-      if (initialSettingsState.get("checkbox_10") !== newValueAI) {
-        await saveAISettings({ enabled: newValueAI });
+      if (initialSettingsState.get("checkbox_7") !== newValueAI) {
+        const { data: existing7 } = await supabase
+          .from("settings")
+          .select("setting_id")
+          .eq("setting_id", 7)
+          .single();
+        if (existing7) {
+          const { error: updateError7 } = await supabase
+            .from("settings")
+            .update({ [column]: newValueAI })
+            .eq("setting_id", 7);
+          if (updateError7) throw updateError7;
+        } else {
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert({ setting_id: 7, [column]: newValueAI });
+          if (insertError) throw insertError;
+        }
+        globalCache.generalSettings.aiEnabled = newValueAI;
+        saveGeneralSettingsToLocalStorage();
         resetAISettingsCache();
         changesCount++;
       }
@@ -1204,7 +1215,6 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
   const container = modal.querySelector("#role-toggles-container");
   const mainToggles = modal.querySelector("#main-toggles-container");
   const percentageControl = modal.querySelector(".percentage-control");
-  const aiSection = modal.querySelector("#ai-settings-section");
   const modalWindow = modal.querySelector(".modal-window") as HTMLElement;
   const roleButton = modal.querySelector("#role-toggle-button") as HTMLElement;
 
@@ -1229,14 +1239,12 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
     if (mainToggles) (mainToggles as HTMLElement).style.display = "";
     if (percentageControl)
       (percentageControl as HTMLElement).style.display = "";
-    if (aiSection) (aiSection as HTMLElement).style.display = "";
     loadSettings(modal);
   } else if (role === "Загальні") {
     // Обробка секції "Загальні"
     if (mainToggles) (mainToggles as HTMLElement).style.display = "none";
     if (percentageControl)
       (percentageControl as HTMLElement).style.display = "none";
-    if (aiSection) (aiSection as HTMLElement).style.display = "none";
 
     container.innerHTML = createGeneralSettingsHTML();
     initGeneralSettingsHandlers(modal);
@@ -1245,7 +1253,6 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
     if (mainToggles) (mainToggles as HTMLElement).style.display = "none";
     if (percentageControl)
       (percentageControl as HTMLElement).style.display = "none";
-    if (aiSection) (aiSection as HTMLElement).style.display = "none";
 
     const togglesHTML = createRoleToggles(role);
     container.innerHTML = togglesHTML;
@@ -1309,26 +1316,6 @@ export async function createSettingsModal(): Promise<void> {
         </label>
       </div>
 
-      <div class="ai-settings-section" id="ai-settings-section">
-        <div class="ai-settings-header">
-          <span class="ai-icon">🤖</span>
-          <span class="ai-title">Штучний Інтелект</span>
-        </div>
-        <div class="ai-toggle-wrapper">
-          <span class="ai-toggle-label">Увімкнути ШІ підказки</span>
-          <label class="ai-toggle-switch">
-            <input type="checkbox" id="toggle-ai" />
-            <span class="ai-toggle-slider"></span>
-          </label>
-        </div>
-        <button type="button" id="ai-configure-btn" class="ai-configure-btn" disabled style="display: none;">
-          ⚙️ Налаштувати API ключ
-        </button>
-        <div class="ai-info-text">
-          💡 Підказки працюють на основі вашої історії актів (безплатно)
-        </div>
-      </div>
-
       <div class="modal-actions">
         <button id="modal-cancel-button" type="button">Вийти</button>
         <button id="modal-ok-button" type="button">ОК</button>
@@ -1340,6 +1327,15 @@ export async function createSettingsModal(): Promise<void> {
 
   // ✅ одразу ініціалізуємо стан під поточну роль і підтягуємо значення
   updateRoleTogglesVisibility(modal, initialRole);
+
+  // Обробник для AI toggle
+  const aiToggle = modal.querySelector("#toggle-ai") as HTMLInputElement;
+  if (aiToggle) {
+    aiToggle.addEventListener("change", () => {
+      console.log(`🤖 AI toggle changed: ${aiToggle.checked}`);
+      resetAISettingsCache();
+    });
+  }
 
   // Обробник для кнопки додавання нового рядка відсотків
   const addPercentageBtn = modal.querySelector("#add-percentage-row");

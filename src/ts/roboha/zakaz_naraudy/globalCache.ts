@@ -82,7 +82,8 @@ export interface GeneralSettings {
   headerColor: string;   // Колір шапки акту (setting_id: 4)
   tableColor: string;    // Колір таблиці актів (setting_id: 5)
   printColorMode: boolean; // Режим друку: true = кольоровий, false = чорнобілий (setting_id: 6, data)
-  wallpaperMain: string;  // Шпалери основні (setting_id: 7)
+  wallpaperMain: string;  // Шпалери основні (setting_id: 7, Загальні)
+  aiEnabled: boolean;     // ШІ підказки (setting_id: 7, data)
 }
 
 export interface ActItem {
@@ -166,6 +167,7 @@ export const globalCache: GlobalDataCache = {
     tableColor: "#164D25",
     printColorMode: true, // За замовчуванням кольоровий друк
     wallpaperMain: "",
+    aiEnabled: false, // За замовчуванням ШІ вимкнено
   },
 };
 
@@ -206,6 +208,7 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         tableColor: parsed.tableColor || "#164D25",
         printColorMode: parsed.printColorMode !== undefined ? parsed.printColorMode : true,
         wallpaperMain: parsed.wallpaperMain || "",
+        aiEnabled: parsed.aiEnabled !== undefined ? parsed.aiEnabled : false,
       };
       console.log("✅ Загальні налаштування завантажено з localStorage");
       // Застосовуємо шпалери після завантаження
@@ -264,6 +267,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             break;
           case 7:
             globalCache.generalSettings.wallpaperMain = value || "";
+            globalCache.generalSettings.aiEnabled = (row as any).data === true || (row as any).data === "true"; // ШІ підказки
             break;
         }
       }

@@ -2,6 +2,7 @@
 // Модуль штучного інтелекту для СТО
 import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import { globalCache } from "../zakaz_naraudy/globalCache";
 
 // ============================================================================
 // ТИПИ ТА ІНТЕРФЕЙСИ
@@ -47,52 +48,25 @@ const salaryCacheMap = new Map<string, SalarySuggestion>();
 // ============================================================================
 
 /**
- * Завантажує налаштування AI з бази даних
+ * Завантажує налаштування AI з globalCache
+ * Тепер AI toggle зберігається в setting_id=7, data колонці
  */
 export async function loadAISettings(): Promise<AISettings> {
   if (aiSettingsCacheLoaded && aiSettingsCache) {
     return aiSettingsCache;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from("settings")
-      .select('setting_id, "Загальні"')
-      .in("setting_id", [10, 11, 12])
-      .order("setting_id");
+  const settings: AISettings = {
+    enabled: globalCache.generalSettings.aiEnabled || false,
+    apiToken: "",
+    model: "gpt-4o-mini",
+  };
 
-    if (error) throw error;
-
-    const settings: AISettings = {
-      enabled: false,
-      apiToken: "",
-      model: "gpt-4o-mini",
-    };
-
-    data?.forEach((row: any) => {
-      const value = row["Загальні"] || "";
-      switch (row.setting_id) {
-        case 10:
-          settings.enabled = value === "true" || value === true;
-          break;
-        case 11:
-          settings.apiToken = value;
-          break;
-        case 12:
-          settings.model = value || "gpt-4o-mini";
-          break;
-      }
-    });
-
-    aiSettingsCache = settings;
-    aiSettingsCacheLoaded = true;
-    
-    console.log("🤖 AI налаштування завантажено:", { enabled: settings.enabled, hasToken: !!settings.apiToken });
-    return settings;
-  } catch (err) {
-    console.error("❌ Помилка завантаження AI налаштувань:", err);
-    return { enabled: false, apiToken: "", model: "gpt-4o-mini" };
-  }
+  aiSettingsCache = settings;
+  aiSettingsCacheLoaded = true;
+  
+  console.log("🤖 AI налаштування завантажено з globalCache:", { enabled: settings.enabled });
+  return settings;
 }
 
 /**

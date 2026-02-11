@@ -168,7 +168,7 @@ export async function getAveragePriceFromHistory(
       .from("acts")
       .select("data")
       .not("data", "is", null)
-      .order("id", { ascending: false })
+      .order("act_id", { ascending: false })
       .limit(500); // Останні 500 актів
 
     if (error) throw error;

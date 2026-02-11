@@ -171,56 +171,64 @@ export async function getAveragePriceFromHistory(
       .order("act_id", { ascending: false })
       .limit(500); // Останні 500 актів
 
-    if (error) throw error;
-
-    const prices: number[] = [];
-    const itemNameLower = itemName.toLowerCase();
-
-    acts?.forEach((act: any) => {
-      const actData = typeof act.data === "string" ? JSON.parse(act.data) : act.data;
-      if (!actData?.items) return;
-
-      actData.items.forEach((item: any) => {
-        if (!item.name) return;
-        
-        const nameLower = item.name.toLowerCase();
-        const matchesName = nameLower.includes(itemNameLower) || itemNameLower.includes(nameLower);
-        const matchesType = itemType === "work" ? item.type === "work" : item.type === "detail";
-        
-        if (matchesName && matchesType && item.price > 0) {
-          prices.push(Number(item.price));
-          console.log(`💡 Знайдено ціну для "${item.name}": ${item.price} грн (тип: ${item.type})`);
-        }
-      });
-    });
-
-    console.log(`📊 Всього знайдено цін для "${itemName}": ${prices.length} шт.`, prices);
-
-    if (prices.length < 1) {
-      console.log(`⚠️ Недостатньо даних для "${itemName}" (потрібно мінімум 1 запис)`);
-      return null; // Недостатньо даних
+    if (error) {
+        console.error("Помилка отримання історії цін:", error);
+        showNotification(`Помилка отримання історії цін: ${error.message}`, 'error');
+        return null;
     }
 
-    // Розраховуємо статистику
-    const sum = prices.reduce((a, b) => a + b, 0);
-    const avgPrice = Math.round(sum / prices.length);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
+    if (acts) {
+        const prices: number[] = [];
+        const itemNameLower = itemName.toLowerCase(); // Для порівняння без урахування регістру
 
-    const suggestion: PriceSuggestion = {
-      avgPrice,
-      minPrice,
-      maxPrice,
-      count: prices.length,
-      source: "history",
-      confirmed: false,
-    };
+        acts.forEach(act => {
+            const data = act.data;
+            if (data && Array.isArray(data)) {
+                data.forEach((item: any) => {
+                    // Перевіряємо, що є назва, ціна більша за 0 і тип збігається
+                    if (item && item.name && typeof item.name === 'string' && item.price > 0 && item.type === itemType) {
+                        const nameLower = item.name.toLowerCase();
+                        // Перевірка на частковий збіг в обидві сторони
+                        if (nameLower.includes(itemNameLower) || itemNameLower.includes(nameLower)) {
+                            console.log(`💡 Знайдено ціну для "${item.name}": ${item.price} грн (тип: ${item.type})`);
+                            prices.push(item.price);
+                        }
+                    }
+                });
+            }
+        });
 
-    // Зберігаємо в кеш
-    avgPriceCache.set(cacheKey, suggestion);
+        console.log(`📊 Всього знайдено цін для "${itemName}": ${prices.length} шт.`, prices);
 
-    console.log(`💰 Середня ціна для "${itemName}": ${avgPrice} грн (з ${prices.length} записів)`);
-    return suggestion;
+        if (prices.length < 1) {
+            console.log(`⚠️ Недостатньо даних для "${itemName}" (потрібно мінімум 1 запис)`);
+            return null; // Недостатньо даних
+        }
+
+        // Розраховуємо статистику
+        const sum = prices.reduce((a, b) => a + b, 0);
+        const avgPrice = Math.round(sum / prices.length);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+
+        const suggestion: PriceSuggestion = {
+          avgPrice,
+          minPrice,
+          maxPrice,
+          count: prices.length,
+          source: "history",
+          confirmed: false,
+        };
+
+        // Зберігаємо в кеш
+        avgPriceCache.set(cacheKey, suggestion);
+
+        console.log(`💰 Середня ціна для "${itemName}": ${avgPrice} грн (з ${prices.length} записів)`);
+        return suggestion;
+    }
+
+    // Якщо `acts` не існує, але помилки не було (малоймовірно, але можливо)
+    return null;
   } catch (err) {
     console.error("❌ Помилка отримання середньої ціни:", err);
     return null;

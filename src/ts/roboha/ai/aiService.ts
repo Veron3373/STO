@@ -182,20 +182,48 @@ export async function getAveragePriceFromHistory(
         const itemNameLower = itemName.toLowerCase(); // Для порівняння без урахування регістру
 
         acts.forEach(act => {
-            const data = act.data;
-            if (data && Array.isArray(data)) {
-                data.forEach((item: any) => {
-                    // Перевіряємо, що є назва, ціна більша за 0 і тип збігається
-                    if (item && item.name && typeof item.name === 'string' && item.price > 0 && item.type === itemType) {
-                        const nameLower = item.name.toLowerCase();
-                        // Перевірка на частковий збіг в обидві сторони
-                        if (nameLower.includes(itemNameLower) || itemNameLower.includes(nameLower)) {
-                            console.log(`💡 Знайдено ціну для "${item.name}": ${item.price} грн (тип: ${item.type})`);
-                            prices.push(item.price);
-                        }
-                    }
-                });
+            let actData = act.data;
+            
+            // Парсимо JSON, якщо це рядок
+            if (typeof actData === 'string') {
+                try {
+                    actData = JSON.parse(actData);
+                } catch(e) {
+                    return; // Пропускаємо некоректний JSON
+                }
             }
+            
+            if (!actData || typeof actData !== 'object') {
+                return; // Пропускаємо, якщо дані відсутні або некоректні
+            }
+
+            // Визначаємо масив для пошуку залежно від типу
+            let itemsArray: any[] = [];
+            if (itemType === 'work') {
+                itemsArray = Array.isArray(actData["Роботи"]) ? actData["Роботи"] : [];
+            } else if (itemType === 'detail') {
+                itemsArray = Array.isArray(actData["Деталі"]) ? actData["Деталі"] : [];
+            }
+
+            // Шукаємо ціни в відповідному масиві
+            itemsArray.forEach((item: any) => {
+                // Для робіт: item["Робота"], для деталей: item["Найменування"]
+                const itemName = itemType === 'work' 
+                    ? item["Робота"] 
+                    : item["Найменування"];
+                const itemPrice = itemType === 'work'
+                    ? Number(item["Ціна"] || 0)
+                    : Number(item["Ціна"] || 0);
+
+                if (itemName && typeof itemName === 'string' && itemPrice > 0) {
+                    const nameLower = itemName.toLowerCase();
+                    // Перевірка на частковий збіг в обидві сторони
+                    if (nameLower.includes(itemNameLower) || itemNameLower.includes(nameLower)) {
+                        console.log(`💡 Знайдено ціну для "${itemName}": ${itemPrice} грн (тип: ${itemType})`);
+                        prices.push(itemPrice);
+                    }
+                }
+            });
         });
 
         console.log(`📊 Всього знайдено цін для "${itemName}": ${prices.length} шт.`, prices);

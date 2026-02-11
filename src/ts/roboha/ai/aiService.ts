@@ -21,6 +21,10 @@ export interface PriceSuggestion {
   count: number;              // Кількість записів для розрахунку
   source: "history" | "ai";   // Джерело даних
   confirmed: boolean;         // Чи підтверджено користувачем
+  // Додаткові підказки для робіт
+  avgQuantity?: number;       // Середня кількість
+  avgSalary?: number;         // Середня зарплата
+  mostFrequentSlyusar?: string; // Найчастіший виконавець
 }
 
 export interface SalarySuggestion {
@@ -179,6 +183,9 @@ export async function getAveragePriceFromHistory(
 
     if (acts) {
         const prices: number[] = [];
+        const quantities: number[] = [];
+        const salaries: number[] = [];
+        const slyusarNames: string[] = [];
         const itemNameLower = itemName.toLowerCase(); // Для порівняння без урахування регістру
 
         acts.forEach(act => {
@@ -211,16 +218,20 @@ export async function getAveragePriceFromHistory(
                 const itemName = itemType === 'work' 
                     ? item["Робота"] 
                     : item["Найменування"];
-                const itemPrice = itemType === 'work'
-                    ? Number(item["Ціна"] || 0)
-                    : Number(item["Ціна"] || 0);
+                const itemPrice = Number(item["Ціна"] || 0);
+                const itemQuantity = Number(item["Кількість"] || 1);
+                const itemSalary = itemType === 'work' ? Number(item["Зар-та"] || 0) : 0;
+                const itemSlyusar = itemType === 'work' ? (item["ПІБ _ Магазин"] || "").trim() : "";
 
                 if (itemName && typeof itemName === 'string' && itemPrice > 0) {
                     const nameLower = itemName.toLowerCase();
                     // Перевірка на частковий збіг в обидві сторони
                     if (nameLower.includes(itemNameLower) || itemNameLower.includes(nameLower)) {
-                        console.log(`💡 Знайдено ціну для "${itemName}": ${itemPrice} грн (тип: ${itemType})`);
+                        console.log(`💡 Знайдено ціну для "${itemName}": ${itemPrice} грн, к-ть: ${itemQuantity}, зарплата: ${itemSalary}, слюсар: ${itemSlyusar}`);
                         prices.push(itemPrice);
+                        quantities.push(itemQuantity);
+                        if (itemSalary > 0) salaries.push(itemSalary);
+                        if (itemSlyusar) slyusarNames.push(itemSlyusar);
                     }
                 }
             });
@@ -239,6 +250,32 @@ export async function getAveragePriceFromHistory(
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
 
+        // Середня кількість
+        const avgQuantity = quantities.length > 0 
+            ? Math.round(quantities.reduce((a, b) => a + b, 0) / quantities.length)
+            : undefined;
+
+        // Середня зарплата
+        const avgSalary = salaries.length > 0
+            ? Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length)
+            : undefined;
+
+        // Найчастіший слюсар
+        let mostFrequentSlyusar: string | undefined;
+        if (slyusarNames.length > 0) {
+            const slyusarCounts = new Map<string, number>();
+            slyusarNames.forEach(name => {
+                slyusarCounts.set(name, (slyusarCounts.get(name) || 0) + 1);
+            });
+            let maxCount = 0;
+            slyusarCounts.forEach((count, name) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostFrequentSlyusar = name;
+                }
+            });
+        }
+
         const suggestion: PriceSuggestion = {
           avgPrice,
           minPrice,
@@ -246,12 +283,15 @@ export async function getAveragePriceFromHistory(
           count: prices.length,
           source: "history",
           confirmed: false,
+          avgQuantity,
+          avgSalary,
+          mostFrequentSlyusar,
         };
 
         // Зберігаємо в кеш
         avgPriceCache.set(cacheKey, suggestion);
 
-        console.log(`💰 Середня ціна для "${itemName}": ${avgPrice} грн (з ${prices.length} записів)`);
+        console.log(`💰 Підказка для "${itemName}": ціна ${avgPrice} грн, к-ть ${avgQuantity || 'N/A'}, зарплата ${avgSalary || 'N/A'} грн, слюсар: ${mostFrequentSlyusar || 'N/A'} (з ${prices.length} записів)`);
         return suggestion;
     }
 

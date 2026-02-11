@@ -15,7 +15,6 @@ const SETTINGS = {
   },
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
   6: { id: "toggle-print", label: "Шапка акту в кольорі", class: "_print" },
-  10: { id: "toggle-ai", label: "🤖 Штучний Інтелект", class: "_ai" },
 };
 
 const ROLES = [
@@ -748,7 +747,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     });
 
     // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
-    [1, 2, 3, 5, 6, 10].forEach((id) => {
+    [1, 2, 3, 5, 6].forEach((id) => {
       if (!initialSettingsState.has(`checkbox_${id}`)) {
         const setting = SETTINGS[id as keyof typeof SETTINGS];
         if (setting) {

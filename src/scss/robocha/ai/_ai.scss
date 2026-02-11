@@ -1,0 +1,434 @@
+// src/scss/robocha/ai/_ai.scss
+// Стилі для компонентів штучного інтелекту
+
+// ============================================================================
+// МОДАЛЬНЕ ВІКНО ТОКЕНА
+// ============================================================================
+
+.ai-token-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  &.visible {
+    opacity: 1;
+  }
+
+  &.closing {
+    opacity: 0;
+  }
+}
+
+.ai-token-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 450px;
+  overflow: hidden;
+  animation: aiModalSlideIn 0.2s ease;
+}
+
+@keyframes aiModalSlideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.ai-token-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+
+.ai-token-close-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 8px;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.ai-token-modal-body {
+  padding: 20px;
+}
+
+.ai-token-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+
+  a {
+    color: #667eea;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.ai-token-input-group {
+  margin-bottom: 16px;
+  position: relative;
+
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #333;
+  }
+
+  input {
+    width: 100%;
+    padding: 12px 40px 12px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    &::placeholder {
+      color: #aaa;
+    }
+  }
+}
+
+.ai-token-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 32px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+}
+
+.ai-token-model-group {
+  margin-bottom: 16px;
+
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #333;
+  }
+
+  select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+  }
+}
+
+.ai-token-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+}
+
+.ai-token-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &.cancel {
+    background: #e0e0e0;
+    color: #666;
+
+    &:hover {
+      background: #d0d0d0;
+    }
+  }
+
+  &.save {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// ============================================================================
+// ПЕРЕМИКАЧ ШІ В НАЛАШТУВАННЯХ
+// ============================================================================
+
+.ai-settings-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px dashed #667eea;
+}
+
+.ai-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  
+  .ai-icon {
+    font-size: 24px;
+  }
+  
+  .ai-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+  }
+}
+
+.ai-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.ai-toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.ai-toggle-switch {
+  position: relative;
+  width: 52px;
+  height: 28px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+
+    &:checked + .ai-toggle-slider {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+      &::before {
+        transform: translateX(24px);
+      }
+    }
+  }
+}
+
+.ai-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #ccc;
+  border-radius: 28px;
+  transition: 0.3s;
+
+  &::before {
+    content: "";
+    position: absolute;
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.ai-configure-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================================================
+// ПІДКАЗКА ЦІНИ В ТАБЛИЦІ АКТУ
+// ============================================================================
+
+.ai-price-suggestion {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #999;
+  pointer-events: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.price-cell-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+// Інпут ціни з підказкою
+.editable-price-with-suggestion {
+  position: relative;
+
+  &.has-suggestion {
+    input {
+      color: #999;
+      font-style: italic;
+    }
+
+    &.confirmed input {
+      color: #333;
+      font-style: normal;
+    }
+  }
+}
+
+// Сіра ціна до підтвердження
+.price-input-suggested {
+  color: #999 !important;
+  font-style: italic;
+}
+
+.price-input-confirmed {
+  color: #333 !important;
+  font-style: normal;
+}
+
+// Підказка зарплати
+.ai-salary-suggestion {
+  font-size: 10px;
+  color: #999;
+  font-style: italic;
+  margin-left: 4px;
+}
+
+.salary-input-suggested {
+  color: #999 !important;
+  font-style: italic;
+}
+
+.salary-input-confirmed {
+  color: #333 !important;
+  font-style: normal;
+}
+
+// ============================================================================
+// ІНДИКАТОР AI АКТИВНИЙ
+// ============================================================================
+
+.ai-active-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+
+  .ai-pulse {
+    width: 6px;
+    height: 6px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: aiPulse 1.5s infinite;
+  }
+}
+
+@keyframes aiPulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -21,6 +21,10 @@ import {
   getUserAccessLevelFromLocalStorage,
 } from "../modalMain";
 import { calculateRowSum } from "../modalUI";
+import {
+  handleItemSelection,
+  setupPriceConfirmationHandler,
+} from "../../ai/aiPriceHelper";
 
 /* ====================== настройки ====================== */
 const LIVE_WARNINGS = false;
@@ -700,6 +704,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
                 setCellText(catalogCell, workObj.work_id);
               }
             }
+            
+            // 🤖 AI: Підказка середньої ціни для роботи
+            handleItemSelection(row, fullText, "work");
           } else {
             // ✅ ВИПРАВЛЕНО: Якщо вибрано деталь зі складу - підтягуємо всі дані
             if (chosenScladId !== undefined) {
@@ -1521,6 +1528,9 @@ export function setupAutocompleteForEditableCells(
   container.addEventListener("mouseleave", () => {
     removeCatalogInfo();
   });
+
+  // 🤖 AI: Встановлюємо обробник підтвердження ціни при кліку
+  setupPriceConfirmationHandler(container);
 }
 
 /** підтягування даних по вибраному sclad_id */

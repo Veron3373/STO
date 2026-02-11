@@ -21,6 +21,7 @@ import {
 import { supabase } from "../../vxid/supabaseClient";
 import { cleanupSlusarsOnSubscription } from "./modalMain";
 import { unsubscribeFromActPresence } from "./actPresence";
+import { getAISalarySuggestion, checkAIEnabled } from "../ai/aiPriceHelper";
 
 // Утилиты для форматирования чисел с пробелами
 const unformat = (s: string) => s.replace(/\s+/g, "");
@@ -244,6 +245,47 @@ export function getSlyusarSalaryFromHistory(
   }
 
   return null;
+}
+
+/**
+ * 🤖 Асинхронний пошук зарплати з AI fallback
+ * Якщо зарплату не знайдено в історії поточного акту - шукає в загальній історії через AI
+ * @param slyusarName - ім'я слюсаря
+ * @param workName - назва роботи
+ * @param actId - номер акту
+ * @param price - ціна роботи (для розрахунку)
+ * @param rowIndex - індекс рядка для точного пошуку
+ * @param recordId - унікальний ID запису
+ * @returns зарплата або null
+ */
+export async function getSlyusarSalaryWithAI(
+  slyusarName: string,
+  workName: string,
+  actId: number | null,
+  price: number,
+  rowIndex?: number,
+  recordId?: string
+): Promise<{ salary: number | null; isAISuggested: boolean }> {
+  // Спочатку пробуємо стандартний пошук
+  const standardSalary = getSlyusarSalaryFromHistory(slyusarName, workName, actId, rowIndex, recordId);
+  
+  if (standardSalary !== null && standardSalary > 0) {
+    return { salary: standardSalary, isAISuggested: false };
+  }
+  
+  // Якщо не знайшли - пробуємо AI
+  const aiEnabled = await checkAIEnabled();
+  if (!aiEnabled || price <= 0) {
+    return { salary: null, isAISuggested: false };
+  }
+  
+  const aiSuggestion = await getAISalarySuggestion(slyusarName, workName, price);
+  if (aiSuggestion && aiSuggestion.amount > 0) {
+    console.log(`🤖 AI знайшов зарплату для "${workName}": ${aiSuggestion.amount} грн (${aiSuggestion.percent}%)`);
+    return { salary: aiSuggestion.amount, isAISuggested: true };
+  }
+  
+  return { salary: null, isAISuggested: false };
 }
 
 /**

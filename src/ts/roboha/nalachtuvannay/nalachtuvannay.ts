@@ -2,7 +2,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { resetPercentCache } from "../zakaz_naraudy/inhi/kastomna_tabluca";
 import { invalidateGlobalDataCache, globalCache, saveGeneralSettingsToLocalStorage, applyWallpapers } from "../zakaz_naraudy/globalCache";
-import { loadAISettings, saveAISettings, showAITokenModal, resetAISettingsCache } from "../ai/aiService";
+import { loadAISettings, saveAISettings, resetAISettingsCache } from "../ai/aiService";
 
 const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
@@ -765,11 +765,6 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       aiToggle.checked = aiSettings.enabled;
       initialSettingsState.set("checkbox_10", aiSettings.enabled);
     }
-    // Оновлюємо стан кнопки налаштування AI
-    const aiConfigBtn = modal.querySelector("#ai-configure-btn") as HTMLButtonElement;
-    if (aiConfigBtn) {
-      aiConfigBtn.disabled = !aiSettings.enabled;
-    }
 
     // Рендеримо лише заповнені рядки (включаючи заморожені -1), без заповнення прогалин
     const filledIds = Array.from(procentMap.entries())
@@ -1133,19 +1128,6 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         await saveAISettings({ enabled: newValueAI });
         resetAISettingsCache();
         changesCount++;
-        
-        // Якщо ввімкнули AI і ще немає токена - показуємо модалку
-        if (newValueAI) {
-          const aiSettings = await loadAISettings();
-          if (!aiSettings.apiToken) {
-            // Відкриваємо модалку для введення токена
-            setTimeout(() => {
-              showAITokenModal(() => {
-                showNotification("✅ AI налаштовано успішно!", "success", 2000);
-              });
-            }, 500);
-          }
-        }
       }
     } else if (role === "Загальні") {
       // Зберегти налаштування для секції "Загальні"
@@ -1339,9 +1321,12 @@ export async function createSettingsModal(): Promise<void> {
             <span class="ai-toggle-slider"></span>
           </label>
         </div>
-        <button type="button" id="ai-configure-btn" class="ai-configure-btn" disabled>
+        <button type="button" id="ai-configure-btn" class="ai-configure-btn" disabled style="display: none;">
           ⚙️ Налаштувати API ключ
         </button>
+        <div class="ai-info-text">
+          💡 Підказки працюють на основі вашої історії актів (безплатно)
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -1355,22 +1340,6 @@ export async function createSettingsModal(): Promise<void> {
 
   // ✅ одразу ініціалізуємо стан під поточну роль і підтягуємо значення
   updateRoleTogglesVisibility(modal, initialRole);
-
-  // 🤖 Обробники для AI секції
-  const aiToggle = modal.querySelector("#toggle-ai") as HTMLInputElement;
-  const aiConfigBtn = modal.querySelector("#ai-configure-btn") as HTMLButtonElement;
-  
-  if (aiToggle && aiConfigBtn) {
-    aiToggle.addEventListener("change", () => {
-      aiConfigBtn.disabled = !aiToggle.checked;
-    });
-    
-    aiConfigBtn.addEventListener("click", () => {
-      showAITokenModal(() => {
-        showNotification("✅ API ключ збережено!", "success", 2000);
-      });
-    });
-  }
 
   // Обробник для кнопки додавання нового рядка відсотків
   const addPercentageBtn = modal.querySelector("#add-percentage-row");

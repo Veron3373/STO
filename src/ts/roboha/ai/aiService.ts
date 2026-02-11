@@ -151,10 +151,11 @@ export async function saveAISettings(settings: Partial<AISettings>): Promise<boo
 
 /**
  * Перевіряє чи увімкнено AI
+ * Для базових підказок з історії токен НЕ потрібен
  */
 export async function isAIEnabled(): Promise<boolean> {
   const settings = await loadAISettings();
-  return settings.enabled && !!settings.apiToken;
+  return settings.enabled;
 }
 
 /**

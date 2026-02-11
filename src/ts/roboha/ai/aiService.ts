@@ -189,11 +189,15 @@ export async function getAveragePriceFromHistory(
         
         if (matchesName && matchesType && item.price > 0) {
           prices.push(Number(item.price));
+          console.log(`💡 Знайдено ціну для "${item.name}": ${item.price} грн (тип: ${item.type})`);
         }
       });
     });
 
-    if (prices.length < 2) {
+    console.log(`📊 Всього знайдено цін для "${itemName}": ${prices.length} шт.`, prices);
+
+    if (prices.length < 1) {
+      console.log(`⚠️ Недостатньо даних для "${itemName}" (потрібно мінімум 1 запис)`);
       return null; // Недостатньо даних
     }
 

@@ -22,9 +22,9 @@ let myOpenedAt: string | null = null;
 // 🔐 Прапорець: чи ми вже відправили свій track
 let hasTrackedPresence: boolean = false;
 
-// ⏰ Максимальний час "життя" присутності (2 години в мілісекундах)
+// ⏰ Максимальний час "життя" присутності (8 годин в мілісекундах - робочий день)
 // Присутності старші за цей час будуть ігноруватись як "застарілі"
-const PRESENCE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+const PRESENCE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
 
 /**
  * 🧹 Перевіряє чи присутність "застаріла" (старше PRESENCE_MAX_AGE_MS)
@@ -127,8 +127,9 @@ export async function subscribeToActPresence(
                 // Але краще перебрати всі, якщо користувач відкрив у кількох вкладках
                 presences.forEach((p) => {
                     if (p.userName && p.openedAt) {
-                        // 🧹 Ігноруємо "застарілі" присутності (старше 2 годин)
+                        // 🧹 Ігноруємо "застарілі" присутності (старше 8 годин)
                         if (isPresenceStale(p.openedAt)) {
+                            console.log(`🔐 [Presence] Ігноруємо застарілу присутність: ${p.userName} (відкрито: ${p.openedAt})`);
                             return;
                         }
                         allUsers.push(p);
@@ -143,11 +144,17 @@ export async function subscribeToActPresence(
             return;
         }
 
+        console.log(`🔐 [Presence] Виявлено ${allUsers.length} користувачів:`, allUsers.map(u => `${u.userName} (${u.openedAt})`));
+        console.log(`🔐 [Presence] Поточний користувач: ${currentUserName}, hasTrackedPresence: ${hasTrackedPresence}`);
+
         // 🔐 КРИТИЧНО: Якщо ми ще НЕ відправили track, але вже бачимо інших користувачів -
         // це 100% означає що вони були тут ДО нас! Блокуємо одразу.
         const otherUsersInChannel = allUsers.filter(u => u.userName !== currentUserName);
+        console.log(`🔐 [Presence] Інші користувачі в каналі: ${otherUsersInChannel.length}`, otherUsersInChannel.map(u => u.userName));
+        
         if (!hasTrackedPresence && otherUsersInChannel.length > 0) {
             const firstOtherUser = otherUsersInChannel[0];
+            console.log(`🔒 [Presence] Блокуємо (до track): акт редагується ${firstOtherUser.userName}`);
             lockActInterface(firstOtherUser.userName);
             presenceResult.isLocked = true;
             presenceResult.lockedBy = firstOtherUser.userName;
@@ -189,6 +196,8 @@ export async function subscribeToActPresence(
             const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
             const wasLocked = header && header.hasAttribute("data-locked");
 
+            console.log(`✅ [Presence] Ми власник акту (${currentUserName}), розблоковуємо`);
+
             // Ми - власник (або один з наших екземплярів - перший)
             // Розблокуємо інтерфейс, якщо він був заблокований
             unlockActInterface();
@@ -198,11 +207,13 @@ export async function subscribeToActPresence(
             }
         } else if (someoneOpenedBeforeUs && firstUserBeforeUs) {
             // 🔐 Хтось відкрив РАНІШЕ нас - блокуємо
+            console.log(`🔒 [Presence] Блокуємо (за часом): ${firstUserBeforeUs.userName} відкрив раніше`);
             lockActInterface(firstUserBeforeUs.userName);
             presenceResult.isLocked = true;
             presenceResult.lockedBy = firstUserBeforeUs.userName;
         } else if (ownerName !== currentUserName) {
             // Хтось інший є власником (за сортуванням)
+            console.log(`🔒 [Presence] Блокуємо (за owner): ${ownerName} є власником`);
             lockActInterface(ownerName);
             presenceResult.isLocked = true;
             presenceResult.lockedBy = ownerName;
@@ -247,6 +258,7 @@ export async function subscribeToActPresence(
             }
         })
         .subscribe(async (status: string) => {
+            console.log(`🔐 [Presence] Статус каналу: ${status}`);
             if (status === "SUBSCRIBED") {
                 // 🔐 Відправляємо свою присутність з ФІКСОВАНИМ часом відкриття
                 const presenceData: ActPresenceState = {
@@ -255,6 +267,7 @@ export async function subscribeToActPresence(
                     openedAt: myOpenedAt!, // Використовуємо зафіксований час
                 };
 
+                console.log(`🔐 [Presence] Відправляємо track:`, presenceData);
                 await presenceChannel.track(presenceData);
                 hasTrackedPresence = true; // 🔐 Відмічаємо що ми відправили свою присутність
 

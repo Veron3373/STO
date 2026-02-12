@@ -69,7 +69,6 @@ export async function loadAISettings(): Promise<AISettings> {
   aiSettingsCache = settings;
   aiSettingsCacheLoaded = true;
   
-  console.log("🤖 AI налаштування завантажено з globalCache:", { enabled: settings.enabled });
   return settings;
 }
 
@@ -119,7 +118,6 @@ export async function saveAISettings(settings: Partial<AISettings>): Promise<boo
       if (settings.model !== undefined) aiSettingsCache.model = settings.model;
     }
 
-    console.log("✅ AI налаштування збережено");
     return true;
   } catch (err) {
     console.error("❌ Помилка збереження AI налаштувань:", err);
@@ -227,7 +225,6 @@ export async function getAveragePriceFromHistory(
                     const nameLower = itemName.toLowerCase();
                     // Перевірка на частковий збіг в обидві сторони
                     if (nameLower.includes(itemNameLower) || itemNameLower.includes(nameLower)) {
-                        console.log(`💡 Знайдено ціну для "${itemName}": ${itemPrice} грн, к-ть: ${itemQuantity}, зарплата: ${itemSalary}, слюсар: ${itemSlyusar}`);
                         prices.push(itemPrice);
                         quantities.push(itemQuantity);
                         if (itemSalary > 0) salaries.push(itemSalary);
@@ -237,10 +234,7 @@ export async function getAveragePriceFromHistory(
             });
         });
 
-        console.log(`📊 Всього знайдено цін для "${itemName}": ${prices.length} шт.`, prices);
-
         if (prices.length < 1) {
-            console.log(`⚠️ Недостатньо даних для "${itemName}" (потрібно мінімум 1 запис)`);
             return null; // Недостатньо даних
         }
 
@@ -291,7 +285,6 @@ export async function getAveragePriceFromHistory(
         // Зберігаємо в кеш
         avgPriceCache.set(cacheKey, suggestion);
 
-        console.log(`💰 Підказка для "${itemName}": ціна ${avgPrice} грн, к-ть ${avgQuantity || 'N/A'}, зарплата ${avgSalary || 'N/A'} грн, слюсар: ${mostFrequentSlyusar || 'N/A'} (з ${prices.length} записів)`);
         return suggestion;
     }
 
@@ -384,7 +377,6 @@ export async function findSalaryInHistory(
 
     salaryCacheMap.set(cacheKey, suggestion);
 
-    console.log(`👷 Зарплата для "${slyusarName}" на "${workName}": ${calculatedSalary} грн (${Math.round(avgPercent)}%)`);
     return suggestion;
   } catch (err) {
     console.error("❌ Помилка пошуку зарплати в історії:", err);

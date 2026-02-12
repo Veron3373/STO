@@ -754,7 +754,6 @@ export async function showModal(
   try {
     // ✅ ВИПРАВЛЕННЯ: Перезавантажуємо дані слюсарів перед відкриттям акту
     // щоб зарплата завжди була актуальною
-    console.log("🔄 Оновлення даних слюсарів перед відкриттям акту...");
     await loadGlobalData();
 
     // 🔽 Доступ до колонки "Зар-та" по ролі (по settings)
@@ -799,12 +798,8 @@ export async function showModal(
     // ✅ Зберігаємо приймальника в localStorage для використання при логуванні змін
     if (act.pruimalnyk) {
       localStorage.setItem("current_act_pruimalnyk", act.pruimalnyk);
-      console.log(
-        `✅ Збережено приймальника в localStorage: "${act.pruimalnyk}"`
-      );
     } else {
       localStorage.removeItem("current_act_pruimalnyk");
-      console.log(`ℹ️ Приймальник не вказано в акті ${actId}`);
     }
 
     const [clientData, carData] = await Promise.all([
@@ -892,17 +887,10 @@ export async function showModal(
     if (!skipPresence) {
       // Перевіряємо чи акт вже відкритий іншим користувачем
       // Передаємо колбек для оновлення даних при розблокуванні
-      const presenceStatus = await subscribeToActPresence(actId, async () => {
-        console.log("🔄 Автоматичне оновлення даних акту після розблокування...");
+      await subscribeToActPresence(actId, async () => {
         // Викликаємо showModal з skipPresence=true, щоб оновити дані і не підписуватися знову
         await showModal(actId, clickSource, true);
       });
-
-      if (presenceStatus.isLocked) {
-        console.log(`⚠️ Акт ${actId} заблокований користувачем: ${presenceStatus.lockedBy}`);
-      } else {
-        console.log(`✅ Акт ${actId} доступний для редагування`);
-      }
     }
 
     showNotification("Дані успішно завантажено", "success", 1500);
@@ -1697,11 +1685,6 @@ function handleInputChange(event: Event): void {
 
       target.setAttribute("data-type", type);
 
-      console.log(`🔧 Тип для "${displayedName}" → "${fullName}": ${type}`, {
-        isInDetails,
-        isInWorks,
-      });
-
       // ⬇️ ВИПРАВЛЕНО: Завжди підтягуємо ім'я для робіт, навіть якщо є значення
       if (displayedName && globalCache.settings.showPibMagazin) {
         const row = target.closest("tr") as HTMLTableRowElement;
@@ -1764,16 +1747,12 @@ function handleInputChange(event: Event): void {
         const currentSalaryText = (slyusarSumCell?.textContent || "").replace(/\s/g, "").trim();
         const currentSalary = parseFloat(currentSalaryText) || 0;
 
-        console.log(`📊 pib_magazin change: prev="${prevSlyusar}", new="${newSlyusar}", currentSalary=${currentSalary}, salaryText="${currentSalaryText}"`);
-
         // ✅ Якщо слюсар змінився І зарплата = 0 або пусто → примусовий перерахунок від відсотка
         if (prevSlyusar && prevSlyusar !== newSlyusar && (currentSalary === 0 || currentSalaryText === "")) {
-          console.log(`🔄 Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}" і зарплата = 0/${currentSalaryText === "" ? "пусто" : currentSalary}. Примусовий перерахунок.`);
           forceRecalculateSlyusarSalary(row).catch((err) => {
             console.error("Помилка при примусовому перерахунку зарплати:", err);
           });
         } else if (prevSlyusar && prevSlyusar !== newSlyusar && currentSalary > 0) {
-          console.log(`ℹ️ Слюсар змінився: "${prevSlyusar}" → "${newSlyusar}", але зарплата вже ${currentSalary} — НЕ перераховуємо!`);
           // ✅ Встановлюємо флаг, що зарплату не треба перераховувати
           row.setAttribute("data-salary-locked", "true");
           updateCalculatedSumsInFooter();
@@ -1951,8 +1930,6 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
         filter: `act_id=eq.${actId}`,
       },
       async (payload) => {
-        console.log("📡 [Realtime UPDATE] Зміна slusarsOn:", payload.new);
-
         const updatedAct = payload.new;
         if (!updatedAct) return;
 
@@ -1976,9 +1953,6 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
             console.log("✅ Заголовок пофарбовано в золотий (slusarsOn=true)");
           } else {
             header.classList.remove("zakaz_narayd-header-slusar-on");
-            console.log(
-              "✅ Золоте фарбування заголовка знято (slusarsOn=false)"
-            );
           }
         }
       }
@@ -1991,7 +1965,6 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
      * Відкриває акт в режимі 'client' (з усіма стовпцями)
      */
 (window as any).openActModalWithClient = (actId: number) => {
-  console.log(`🌍 Global openActModalWithClient called for act #${actId}`);
   showModal(actId, 'client');
 };
 
@@ -2001,7 +1974,6 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
  */
 export function cleanupSlusarsOnSubscription(): void {
   if (slusarsOnSubscription) {
-    console.log("🧹 Очищення підписки на slusarsOn");
     slusarsOnSubscription.unsubscribe();
     slusarsOnSubscription = null;
   }
@@ -2013,8 +1985,6 @@ export function cleanupSlusarsOnSubscription(): void {
  * @param actId - ID акту для оновлення
  */
 export async function refreshActTableSilently(actId: number): Promise<void> {
-  console.log(`🔄 [refreshActTableSilently] Тихе оновлення таблиці акту #${actId}...`);
-
   try {
     // ✅ 0. ВАЖЛИВО: Перезавантажуємо слюсарів з БД, щоб мати актуальні дані з історії (зарплати!)
     const { reloadSlyusarsOnly } = await import("./globalCache");

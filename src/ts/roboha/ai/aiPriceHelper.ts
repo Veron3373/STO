@@ -198,27 +198,22 @@ export async function handleItemSelection(
   itemType: "work" | "detail"
 ): Promise<void> {
   const aiEnabled = await checkAIEnabled();
-  console.log(`🤖 AI enabled: ${aiEnabled}, item: "${itemName}", type: ${itemType}`);
   if (!aiEnabled) return;
   
   const priceCell = row.querySelector('[data-name="price"]') as HTMLElement | null;
   if (!priceCell) {
-    console.log("❌ Price cell not found");
     return;
   }
   
   // Якщо ціна вже встановлена (не пуста і не 0) - не перезаписуємо
   const currentPrice = parseFloat((priceCell.textContent || "0").replace(/\s/g, ""));
   if (currentPrice > 0) {
-    console.log(`⏭️ Price already set: ${currentPrice}`);
     return;
   }
   
   // Отримуємо AI підказку
-  console.log(`🔍 Fetching price suggestion for "${itemName}"...`);
   const suggestion = await getAIPriceSuggestion(itemName, itemType);
   if (suggestion && suggestion.avgPrice > 0) {
-    console.log(`✅ Suggestion found: ${suggestion.avgPrice} грн (from ${suggestion.count} records)`);
     showPriceSuggestion(priceCell, suggestion);
     
     // Знаходимо потрібні ячейки
@@ -271,8 +266,6 @@ export async function handleItemSelection(
     //     slyusarCell.title = "💡 Найчастіший виконавець. Клацніть для підтвердження";
     //   }
     // }
-  } else {
-    console.log(`⚠️ No price suggestion found for "${itemName}"`);
   }
 }
 

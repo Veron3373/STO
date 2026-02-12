@@ -64,7 +64,6 @@ export async function loadWarehousePercents(): Promise<void> {
       }
     }
     warehousePercentsCacheLoaded = true;
-    console.log(`✅ Завантажено відсотки для ${warehousePercentsCache.size} складів`);
   } catch (err) {
     console.error("Помилка завантаження відсотків складів:", err);
   }
@@ -118,8 +117,6 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
     globalCache.skladParts = [];
   }
   await ensureSkladLoaded();
-
-  console.log(`🔎 Фільтрація для "${q}" (works: ${globalCache.works.length}, skladParts: ${globalCache.skladParts.length})`);
 
   // Фільтруємо деталі зі складу (по part_number або name)
   const filteredSkladParts = globalCache.skladParts
@@ -183,10 +180,6 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       fullName: w.name,
       itemType: "work" as const,
     }));
-
-  console.log(
-    `📋 Знайдено - Деталей зі складу: ${filteredSkladParts.length}, Деталей з БД: ${filteredDetails.length}, Робіт: ${filteredWorks.length}`
-  );
 
   // Повертаємо в порядку: sclad (зверху), details (посередині), works (внизу)
   return [...filteredSkladParts, ...filteredDetails, ...filteredWorks];
@@ -1572,7 +1565,6 @@ async function applyCatalogSelectionById(
   // КРИТИЧНО: Встановлюємо тип "details" для деталей зі складу
   if (nameCell) {
     nameCell.setAttribute("data-type", "details");
-    console.log(`✅ Встановлено тип "details" для "${nameToSet}"`);
   }
   setCellText(priceCell, formatUA(priceWithMarkup));
 
@@ -1653,11 +1645,6 @@ function updatePibMagazinDataType(pibMagazinCell: HTMLElement): string {
     (w) => w.toLowerCase() === nameQueryLower
   );
 
-  console.log(`🔍 Перевірка типу для "${nameQuery}":`, {
-    isInDetails,
-    isInWorks,
-  });
-
   let targetType: "shops" | "slyusars";
 
   if (isInDetails && !isInWorks) {
@@ -1669,7 +1656,6 @@ function updatePibMagazinDataType(pibMagazinCell: HTMLElement): string {
   }
 
   pibMagazinCell.setAttribute("data-type", targetType);
-  console.log(`✅ Встановлено тип: ${targetType}`);
 
   return targetType;
 }

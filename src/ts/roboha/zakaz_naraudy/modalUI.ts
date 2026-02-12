@@ -22,6 +22,7 @@ import { supabase } from "../../vxid/supabaseClient";
 import { cleanupSlusarsOnSubscription } from "./modalMain";
 import { unsubscribeFromActPresence } from "./actPresence";
 import { getAISalarySuggestion, checkAIEnabled } from "../ai/aiPriceHelper";
+import { showNotification } from "./inhi/vspluvauhe_povidomlenna";
 
 // Утилиты для форматирования чисел с пробелами
 const unformat = (s: string) => s.replace(/\s+/g, "");
@@ -29,10 +30,6 @@ const format = (num: number) => {
   const str = String(num);
   return str.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 };
-
-function showNotification(message: string, type: string): void {
-  console.log(`[${type}] ${message}`);
-}
 
 function expandName(shortenedName: string): string {
   if (!shortenedName || !shortenedName.includes(".....")) return shortenedName;
@@ -102,8 +99,6 @@ function findSlyusarWorkRecord(
   const workNameLower = workName.toLowerCase();
   const fullWorkNameLower = fullWorkName.toLowerCase();
 
-  console.log(`🔍 findSlyusarWorkRecord: шукаємо "${workName}" для "${slyusarName}", акт ${actId}, rowIndex=${rowIndex}, recordId=${recordId}`);
-
   for (const dateKey in history) {
     const dayBucket = history[dateKey];
     if (!Array.isArray(dayBucket)) continue;
@@ -120,10 +115,8 @@ function findSlyusarWorkRecord(
       if (recordId) {
         const recordById = zapisi.find((z: any) => z.recordId === recordId);
         if (recordById) {
-          console.log(`✅ Знайдено за recordId: ${recordId}, Зарплата: ${recordById.Зарплата}`);
           return recordById as SlyusarWorkRecord;
         }
-        console.log(`⚠️ recordId "${recordId}" не знайдено в записах!`);
       }
 
       // ✅ 1. ВАЖЛИВО: Пошук за rowIndex (індекс запису в масиві Записи)
@@ -134,20 +127,16 @@ function findSlyusarWorkRecord(
 
         // Перевіряємо співпадіння назви роботи
         if (recordWorkLower === workNameLower || recordWorkLower === fullWorkNameLower) {
-          console.log(`✅ Знайдено за rowIndex ${rowIndex}: ${record.Робота}, Зарплата: ${record.Зарплата}`);
           return record as SlyusarWorkRecord;
         }
-        console.log(`⚠️ За rowIndex ${rowIndex} назва не співпала: "${record?.Робота}" != "${workName}"`);
       }
 
       // ❌ ВИДАЛЕНО FALLBACK ЗА НАЗВОЮ - він повертає неправильний запис при однакових назвах!
       // Якщо recordId і rowIndex не допомогли - повертаємо null
-      console.log(`❌ Не знайдено запис ні за recordId, ні за rowIndex`);
       return null;
     }
   }
 
-  console.log(`❌ findSlyusarWorkRecord: актовий запис не знайдено в історії!`);
   return null;
 }
 
@@ -236,12 +225,11 @@ export function getSlyusarSalaryFromHistory(
   // ✅ ВИПРАВЛЕНО: Якщо зарплата = 0 — ігноруємо і повертаємо null
   // Тоді буде перерахунок від відсотка
   if (record && typeof record.Зарплата === "number" && record.Зарплата > 0) {
-    console.log(`💰 Знайдено зарплату для "${workName}" [idx:${rowIndex}${recordId ? `, id:${recordId}` : ''}]: ${record.Зарплата}`);
     return record.Зарплата;
   }
 
   if (record && record.Зарплата === 0) {
-    console.log(`⚠️ Зарплата в історії = 0 для "${workName}" — ігноруємо, буде перерахунок від відсотка`);
+    // Зарплата в історії = 0 - ігноруємо
   }
 
   return null;
@@ -281,7 +269,6 @@ export async function getSlyusarSalaryWithAI(
   
   const aiSuggestion = await getAISalarySuggestion(slyusarName, workName, price);
   if (aiSuggestion && aiSuggestion.amount > 0) {
-    console.log(`🤖 AI знайшов зарплату для "${workName}": ${aiSuggestion.amount} грн (${aiSuggestion.percent}%)`);
     return { salary: aiSuggestion.amount, isAISuggested: true };
   }
   
@@ -408,7 +395,6 @@ async function updateSlyusarSalaryInRow(
   const actId = globalCache.currentActId;
 
   if (!actId) {
-    console.warn("⚠️ globalCache.currentActId не встановлено!");
     return;
   }
 
@@ -427,11 +413,9 @@ async function updateSlyusarSalaryInRow(
   if (historySalary !== null && historySalary > 0) {
     if (isInitialLoad) {
       // При завантаженні акту - підтягуємо зарплату з історії
-      console.log(`✅ [Ініціалізація] Встановлюємо зарплату з історії: ${historySalary}`);
       slyusarSumCell.textContent = formatNumberWithSpaces(historySalary);
     } else {
       // При зміні ціни/кількості - НЕ перераховуємо, залишаємо поточне значення
-      console.log(`🔒 [Зміна ціни/к-ті] В історії є зарплата ${historySalary} > 0 - НЕ перераховуємо, залишаємо як є`);
     }
     return;
   }
@@ -444,10 +428,8 @@ async function updateSlyusarSalaryInRow(
   }
 
   // 3. Якщо є сума, але в історії = 0 або немає - рахуємо від відсотка
-  console.log(`⚙️ Зарплати в історії немає (або = 0) для "${workName}", рахуємо від відсотка. rowIndex=${rowIndex}, recordId=${recordId}`);
   const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-  console.log(`💰 Перераховуємо зарплату на ${calculatedSalary} (${percent}% від ${totalSum}) для "${workName}"`);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 }
 
@@ -466,11 +448,8 @@ export async function initializeSlyusarSalaries(): Promise<void> {
   const actId = globalCache.currentActId;
 
   if (!actId) {
-    console.warn("⚠️ initializeSlyusarSalaries: actId не встановлено");
     return;
   }
-
-  console.log(`🚀 Ініціалізація зарплат для акту ${actId}`);
 
   // Використовуємо спільну функцію для обходу рядків з індексами
   await processWorkRowsWithIndex(tableBody, async (row, slyusarName, workName, currentIndex) => {
@@ -624,10 +603,8 @@ export async function forceRecalculateSlyusarSalary(row: HTMLTableRowElement): P
   }
 
   // ✅ ПРИМУСОВО рахуємо від відсотка нового слюсаря, ігноруючи історію
-  console.log(`🔄 Примусовий перерахунок зарплати для нового слюсаря "${slyusarName}"`);
   const percent = await getSlyusarWorkPercent(slyusarName);
   const calculatedSalary = calculateSlyusarSum(totalSum, percent);
-  console.log(`💰 Нова зарплата: ${calculatedSalary} (${percent}% від ${totalSum})`);
   slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
 
   updateCalculatedSumsInFooter();

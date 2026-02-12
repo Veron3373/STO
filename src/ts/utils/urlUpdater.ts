@@ -29,12 +29,10 @@ export async function updateDynamicLinks(): Promise<void> {
       // Замінюємо посилання на main.html
       if (href.includes('/main.html') || link.id === 'postNavLinkHome') {
         link.setAttribute('href', mainUrl);
-        console.log("🔗 Оновлено посилання на main.html:", mainUrl);
       }
       // Замінюємо посилання на index.html
       else if (href.includes('/index.html')) {
         link.setAttribute('href', indexUrl);
-        console.log("🔗 Оновлено посилання на index.html:", indexUrl);
       }
       // Замінюємо базові посилання на домен
       else if (href.includes('.github.io/')) {
@@ -42,17 +40,13 @@ export async function updateDynamicLinks(): Promise<void> {
         const path = pathMatch ? pathMatch[1] : '';
         getGitUrl(path).then(newUrl => {
           link.setAttribute('href', newUrl);
-          console.log("🔗 Оновлено посилання:", newUrl);
         });
       }
       // Замінюємо просто базовий URL
       else if (href.includes('.github.io/STO')) {
         link.setAttribute('href', baseUrl);
-        console.log("🔗 Оновлено базове посилання:", baseUrl);
       }
     });
-    
-    console.log("✅ Посилання оновлено динамічно");
   } catch (error) {
     console.error("❌ Помилка оновлення посилань:", error);
   }

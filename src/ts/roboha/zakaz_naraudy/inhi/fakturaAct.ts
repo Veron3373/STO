@@ -573,7 +573,6 @@ async function generateActPdf(actNumber: string): Promise<void> {
 
       while (currentDomY < domHeightPx - 1) {
         if (pageIndex > 0) {
-          console.log(`➕ Додаємо сторінку ${pageIndex + 1}`);
           pdf.addPage();
         }
 

@@ -227,7 +227,6 @@ export function saveGeneralSettingsToLocalStorage(): void {
       GENERAL_SETTINGS_STORAGE_KEY,
       JSON.stringify(globalCache.generalSettings)
     );
-    console.log("✅ Загальні налаштування збережено в localStorage");
   } catch (e) {
     console.warn("⚠️ Помилка збереження загальних налаштувань в localStorage:", e);
   }
@@ -294,7 +293,6 @@ export function applyWallpapers(): void {
       document.head.appendChild(styleEl);
     }
     styleEl.textContent = `body.page-2 { background-image: url("${wallpaperMain}") !important; }`;
-    console.log("🖼️ Шпалери основні застосовано:", wallpaperMain);
   }
 }
 
@@ -400,7 +398,6 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
   // ✅ Кешування: якщо дані вже завантажені і TTL не вийшов - не перезавантажуємо
   const now = Date.now();
   if (!forceReload && globalDataLoaded && (now - lastGlobalDataLoadTime < GLOBAL_DATA_CACHE_TTL)) {
-    console.log("✅ Використовуємо кешовані глобальні дані");
     return;
   }
 
@@ -450,10 +447,8 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
     if (isGeneralSettingsLoadedThisSession()) {
       // Дані вже актуальні в цій сесії - просто читаємо з localStorage
       loadGeneralSettingsFromLocalStorage();
-      console.log("✅ Загальні налаштування з localStorage (сесія активна)");
     } else {
       // Новий вхід або перезавантаження - завантажуємо з БД
-      console.log("📥 Завантаження загальних налаштувань з БД (новий вхід/перезавантаження)...");
       await loadGeneralSettingsFromDB();
       markGeneralSettingsAsLoaded();
     }
@@ -465,8 +460,6 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
     const settingCatalog = settingsRows?.find((s: any) => s.setting_id === 2);
     const settingZarplata = settingsRows?.find((s: any) => s.setting_id === 3);
     const settingSMS = settingsRows?.find((s: any) => s.setting_id === 5);
-
-    console.log(`✅ Завантажено складу: ${skladRows.length} записів`);
 
     // ========== ВИПРАВЛЕНО: works і details - TEXT колонка, просто рядки ==========
     globalCache.worksWithId =
@@ -487,10 +480,6 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
       })).filter((d) => d.name) || [];
 
     globalCache.details = globalCache.detailsWithId.map((d) => d.name);
-
-    console.log(
-      `✅ Завантажено - Робіт: ${globalCache.works.length}, Деталей: ${globalCache.details.length}`
-    );
 
     // слюсарі: нормально парсимо, як і раніше
     globalCache.slyusars =
@@ -567,8 +556,6 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
     initScladRealtimeSubscription();
     initWorksRealtimeSubscription();
     initDetailsRealtimeSubscription();
-
-    console.log("✅ Глобальні дані завантажено та закешовано");
   } catch (error) {
     console.error("❌ Помилка завантаження глобальних даних:", error);
     showNotification("Помилка завантаження базових даних", "error");
@@ -582,8 +569,6 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
  */
 export async function reloadSlyusarsOnly(): Promise<void> {
   try {
-    console.log("🔄 [reloadSlyusarsOnly] Перезавантаження слюсарів з БД...");
-    
     const { data: slyusarsData, error } = await supabase
       .from("slyusars")
       .select("data");
@@ -600,8 +585,6 @@ export async function reloadSlyusarsOnly(): Promise<void> {
           return d?.Name ? d : null;
         })
         .filter(Boolean) || [];
-
-    console.log(`✅ [reloadSlyusarsOnly] Завантажено ${globalCache.slyusars.length} слюсарів`);
   } catch (err) {
     console.error("❌ [reloadSlyusarsOnly] Помилка:", err);
   }
@@ -632,8 +615,6 @@ export async function loadSkladLite(): Promise<void> {
         diff: off - on,
       };
     });
-
-    console.log(`✅ loadSkladLite: завантажено ${globalCache.skladLite.length} записів`);
   } catch (e) {
     console.error("💥 loadSkladLite(): критична помилка:", e);
     globalCache.skladLite = [];
@@ -738,7 +719,6 @@ function handleScladChange(payload: any) {
       globalCache.skladParts = globalCache.skladParts.filter(
         (p) => p.sclad_id !== oldRecord.sclad_id
       );
-      console.log(`🗑️ Видалено зі складу (ID: ${oldRecord.sclad_id})`);
     }
   } else if (eventType === "INSERT") {
     // ➕ Додавання запису
@@ -820,11 +800,9 @@ function handleWorksChange(payload: any) {
       const workIdStr = String(oldRecord.work_id);
       const index = globalCache.worksWithId.findIndex((w) => w.work_id === workIdStr);
       if (index !== -1) {
-        const removedName = globalCache.worksWithId[index].name;
         globalCache.worksWithId.splice(index, 1);
         // Оновлюємо масив works
         globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
-        console.log(`🗑️ Видалено роботу: ${removedName} (ID: ${workIdStr})`);
       }
     }
   } else if (eventType === "INSERT") {
@@ -837,7 +815,6 @@ function handleWorksChange(payload: any) {
       if (mapped.name) {
         globalCache.worksWithId.push(mapped);
         globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
-        console.log(`➕ Додано роботу: ${mapped.name} (ID: ${mapped.work_id})`);
       }
     }
   } else if (eventType === "UPDATE") {
@@ -850,7 +827,6 @@ function handleWorksChange(payload: any) {
       if (index !== -1) {
         globalCache.worksWithId[index].name = updatedName;
         globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
-        console.log(`🔄 Оновлено роботу: ${updatedName} (ID: ${workIdStr})`);
       } else if (updatedName) {
         // Якщо немає в кеші — додаємо
         globalCache.worksWithId.push({ work_id: workIdStr, name: updatedName });
@@ -879,12 +855,10 @@ export function initDetailsRealtimeSubscription() {
       "postgres_changes",
       { event: "*", schema: "public", table: "details" },
       (payload) => {
-        console.log(`🔔 Details Realtime event: ${payload.eventType}`, payload);
         handleDetailsChange(payload);
       }
     )
-    .subscribe((status) => {
-      console.log(`📡 Details Realtime status: ${status}`);
+    .subscribe(() => {
     });
 }
 
@@ -897,11 +871,9 @@ function handleDetailsChange(payload: any) {
       const detailId = Number(oldRecord.detail_id);
       const index = globalCache.detailsWithId.findIndex((d) => d.detail_id === detailId);
       if (index !== -1) {
-        const removedName = globalCache.detailsWithId[index].name;
         globalCache.detailsWithId.splice(index, 1);
         // Оновлюємо масив details
         globalCache.details = globalCache.detailsWithId.map((d) => d.name);
-        console.log(`🗑️ Видалено деталь: ${removedName} (ID: ${detailId})`);
       }
     }
   } else if (eventType === "INSERT") {
@@ -914,7 +886,6 @@ function handleDetailsChange(payload: any) {
       if (mapped.name && mapped.detail_id) {
         globalCache.detailsWithId.push(mapped);
         globalCache.details = globalCache.detailsWithId.map((d) => d.name);
-        console.log(`➕ Додано деталь: ${mapped.name} (ID: ${mapped.detail_id})`);
       }
     }
   } else if (eventType === "UPDATE") {
@@ -927,7 +898,6 @@ function handleDetailsChange(payload: any) {
       if (index !== -1) {
         globalCache.detailsWithId[index].name = updatedName;
         globalCache.details = globalCache.detailsWithId.map((d) => d.name);
-        console.log(`🔄 Оновлено деталь: ${updatedName} (ID: ${detailId})`);
       } else if (updatedName && detailId) {
         // Якщо немає в кеші — додаємо
         globalCache.detailsWithId.push({ detail_id: detailId, name: updatedName });

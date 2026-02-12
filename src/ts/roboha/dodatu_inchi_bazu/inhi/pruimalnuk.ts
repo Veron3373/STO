@@ -264,5 +264,4 @@ export const handlePruimalnikClick = async () => {
 };
 
 export const initPruimalnik = () => {
-  console.log("Ініціалізовано модуль приймальника");
 };

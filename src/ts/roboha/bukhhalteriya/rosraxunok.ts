@@ -245,7 +245,6 @@ async function saveSlyusarsDataToDatabase(
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
     
-    console.log(`📌 Знайдено primary key: ${primaryKey}`);
 
     // ✅ ОПТИМІЗАЦІЯ: Збираємо всі оновлення в масив промісів
     const updatePromises: Promise<any>[] = [];
@@ -281,7 +280,6 @@ async function saveSlyusarsDataToDatabase(
             console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
             throw updErr;
           }
-          console.log(`✅ Оновлено ${slyusar.Name}`);
           return upd;
         })();
         
@@ -298,7 +296,6 @@ async function saveSlyusarsDataToDatabase(
             console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
             throw updErr;
           }
-          console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
           return upd;
         })();
         
@@ -309,7 +306,6 @@ async function saveSlyusarsDataToDatabase(
     // ✅ Чекаємо завершення ВСІХ оновлень
     await Promise.all(updatePromises);
     
-    console.log(`✅ Збережено ${updatePromises.length} записів слюсарів`);
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
     console.error("❌ Помилка збереження в базу slyusars:", error);

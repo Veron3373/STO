@@ -90,7 +90,6 @@ async function addCarToDatabase(
     console.error("❌ Помилка додавання автомобіля:", error.message);
     return null;
   } else {
-    console.log("✅ Автомобіль успішно додано");
     return data?.cars_id || null;
   }
 }
@@ -134,9 +133,6 @@ export async function saveClientAndCarToDatabase(): Promise<{
       finalClientId = existingClient.client_id;
       finalCarId = await addCarToDatabase(finalClientId!, values);
 
-      console.log(
-        `✅ Автомобіль додано до існуючого клієнта (ID: ${finalClientId})`
-      );
       return { client_id: finalClientId, cars_id: finalCarId };
     } else {
       // Якщо клієнта немає, створюємо нового
@@ -164,9 +160,6 @@ export async function saveClientAndCarToDatabase(): Promise<{
       finalClientId = insertedClient.client_id;
       finalCarId = await addCarToDatabase(finalClientId!, values);
 
-      console.log(
-        `✅ Створено нового клієнта (ID: ${finalClientId}) та додано автомобіль`
-      );
       return { client_id: finalClientId, cars_id: finalCarId };
     }
   }
@@ -188,7 +181,6 @@ export async function saveClientAndCarToDatabase(): Promise<{
     if (clientError) {
       console.error("❌ Помилка оновлення клієнта:", clientError.message);
     } else {
-      console.log("✅ Клієнт оновлений");
     }
 
     if (values.cars_id) {
@@ -210,7 +202,6 @@ export async function saveClientAndCarToDatabase(): Promise<{
       if (carError) {
         console.error("❌ Помилка оновлення авто:", carError.message);
       } else {
-        console.log("✅ Авто оновлено");
       }
     }
     return { client_id: values.client_id, cars_id: values.cars_id || null };

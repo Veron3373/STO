@@ -427,7 +427,6 @@ export function removeNotificationsForAct(actId: number): void {
   );
 
   if (toasts.length > 0) {
-    console.log(`🧹 Видаляємо всі нотифікації для Акту №${actId}`);
     toasts.forEach((toast) => {
       if (!toast.classList.contains("closing")) {
         removeToastElement(toast);

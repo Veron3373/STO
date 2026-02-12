@@ -893,12 +893,6 @@ export class PostArxiv {
       const postArxivId = movedBlock.dataset.postArxivId;
       const newSlyusarId = track.dataset.slyusarId;
 
-      console.log("Переміщення блоку:", {
-        postArxivId,
-        newSlyusarId,
-        startMins,
-        endMins,
-      });
 
       if (postArxivId && newSlyusarId) {
         try {
@@ -919,12 +913,6 @@ export class PostArxiv {
               .toString()
               .padStart(2, "0")}:${endMin.toString().padStart(2, "0")}:00`;
 
-            console.log("Оновлення БД:", {
-              postArxivId,
-              newSlyusarId,
-              dataOn,
-              dataOff,
-            });
 
             // Оновлюємо запис в БД
             const { error } = await supabase
@@ -1233,15 +1221,6 @@ export class PostArxiv {
     const startMins = this.timeToMinutesFromStart(data.startTime);
     const endMins = this.timeToMinutesFromStart(data.endTime);
 
-    console.log("📌 handleModalSubmit:", {
-      isSameDate,
-      currentViewDate,
-      dataDate: data.date,
-      startMins,
-      endMins,
-      effectiveSlyusarId,
-      hasActiveRow: !!this.activeRow,
-    });
 
     if (endMins <= startMins) {
       showNotification("Час закінчення має бути пізніше часу початку", "error");
@@ -1256,10 +1235,6 @@ export class PostArxiv {
     }
     if (!targetRow && this.activeRow) targetRow = this.activeRow;
 
-    console.log("📌 targetRow:", {
-      hasTargetRow: !!targetRow,
-      targetRowSlyusarId: targetRow?.dataset?.slyusarId,
-    });
 
     if (targetRow) {
       // Обчислюємо вільні діапазони
@@ -1270,13 +1245,6 @@ export class PostArxiv {
         this.editingBlock
       );
 
-      console.log("🔍 Перевірка діапазонів:", {
-        startMins,
-        endMins,
-        validRanges,
-        validRangesCount: validRanges.length,
-        isEditing: !!this.editingBlock,
-      });
 
       // Перевірка: чи весь виділений діапазон зайнятий?
       if (validRanges.length === 0) {

@@ -457,9 +457,6 @@ async function syncSlyusarsHistoryForAct(params: {
   dateClose: string | null;
 }): Promise<void> {
   try {
-    console.log(
-      `🔍 Синхронізація slyusars для акту ${params.actId}, дата закриття: ${params.dateClose}`
-    );
 
     // Отримуємо всіх приймальників з таблиці slyusars
     const { data: slyusarsData, error: fetchError } = await supabase
@@ -472,17 +469,12 @@ async function syncSlyusarsHistoryForAct(params: {
     }
 
     if (!slyusarsData || slyusarsData.length === 0) {
-      console.log("Немає даних у таблиці slyusars");
       return;
     }
 
-    console.log(
-      `📊 Знайдено ${slyusarsData.length} записів у таблиці slyusars`
-    );
 
     // Спочатку виводимо всі доступні ключі для діагностики
     const availableKeys = Object.keys(slyusarsData[0] || {});
-    console.log("🔑 Доступні ключі в таблиці slyusars:", availableKeys);
 
     // Визначаємо первинний ключ - перевіряємо всі можливі варіанти
     const primaryKeyCandidates = [
@@ -497,7 +489,6 @@ async function syncSlyusarsHistoryForAct(params: {
     for (const candidate of primaryKeyCandidates) {
       if (availableKeys.includes(candidate)) {
         primaryKey = candidate;
-        console.log(`✅ Знайдено первинний ключ: "${primaryKey}"`);
         break;
       }
     }
@@ -509,7 +500,6 @@ async function syncSlyusarsHistoryForAct(params: {
       return;
     }
 
-    console.log(`🔑 Використовується первинний ключ: ${primaryKey}`);
 
     let updatedCount = 0;
     let receiverCount = 0;
@@ -543,15 +533,10 @@ async function syncSlyusarsHistoryForAct(params: {
       const normalizedAccess = access.toLowerCase().normalize("NFKC").trim();
 
       if (normalizedAccess !== "приймальник") {
-        console.log(
-          `⏭️ Пропускаємо ${slyusarData["Name"] || "Невідомий"
-          } - роль: ${access}`
-        );
         continue;
       }
 
       receiverCount++;
-      console.log(`👤 Знайдено приймальника: ${slyusarData["Name"]}`);
 
       // Перевіряємо наявність історії
       if (
@@ -563,13 +548,8 @@ async function syncSlyusarsHistoryForAct(params: {
       }
 
       const history = slyusarData["Історія"];
-      const historyDates = Object.keys(history);
-      console.log(
-        `📅 Дати в історії ${slyusarData["Name"]}: ${historyDates.join(", ")}`
-      );
 
       let actFound = false;
-      let foundInDate = "";
 
       // Шукаємо акт по ВСІХ датах в історії (не тільки по dateKey)
       for (const dateKey in history) {
@@ -579,28 +559,16 @@ async function syncSlyusarsHistoryForAct(params: {
         }
 
         const dayBucket = history[dateKey];
-        console.log(
-          `🔍 Перевіряємо дату ${dateKey} - актів: ${dayBucket.length}`
-        );
 
         // Шукаємо запис з потрібним актом
         for (const actEntry of dayBucket) {
           const actNumber = actEntry?.["Акт"];
-          console.log(
-            `  📋 Перевіряємо акт: ${actNumber} (шукаємо ${params.actId})`
-          );
 
           if (Number(actNumber) === Number(params.actId)) {
             // Оновлюємо дату закриття
-            console.log(
-              `✅ Знайдено акт ${params.actId} у приймальника ${slyusarData["Name"]} за датою ${dateKey}`
-            );
-            console.log(`   Поточна ДатаЗакриття: ${actEntry["ДатаЗакриття"]}`);
-            console.log(`   Нова ДатаЗакриття: ${params.dateClose}`);
 
             actEntry["ДатаЗакриття"] = params.dateClose;
             actFound = true;
-            foundInDate = dateKey;
             break;
           }
         }
@@ -609,7 +577,6 @@ async function syncSlyusarsHistoryForAct(params: {
       }
 
       if (actFound) {
-        console.log(`💾 Зберігаємо зміни для ${slyusarData["Name"]}`);
 
         // Зберігаємо оновлені дані назад у базу
         const { error: updateError } = await supabase
@@ -624,9 +591,6 @@ async function syncSlyusarsHistoryForAct(params: {
           );
         } else {
           updatedCount++;
-          console.log(
-            `✅ Оновлено ДатаЗакриття="${params.dateClose}" для акту ${params.actId} у приймальника ${slyusarData["Name"]} (дата: ${foundInDate})`
-          );
         }
       } else {
         console.log(
@@ -635,14 +599,8 @@ async function syncSlyusarsHistoryForAct(params: {
       }
     }
 
-    console.log(
-      `📊 Підсумок: знайдено ${receiverCount} приймальників, оновлено ${updatedCount}`
-    );
 
     if (updatedCount > 0) {
-      console.log(
-        `✅ Оновлено ${updatedCount} записів у slyusars для акту ${params.actId}`
-      );
       showNotification(
         `✅ Історія приймальника оновлена (${updatedCount})`,
         "success",
@@ -809,7 +767,6 @@ export function initStatusLockDelegation(): void {
             userFullName,
             pruimalnyk
           );
-          console.log(`✅ Push-повідомлення створено для акту #${actId}`);
         } catch (notifError) {
           console.error(
             "⚠️ Помилка створення повідомлення (не критично):",
@@ -943,7 +900,6 @@ export function initStatusLockDelegation(): void {
           
           if (noWarnings) {
             // Немає попереджень - перевіряємо право на звичайне закриття
-            console.log("✅ Акт без попереджень - перевіряємо право на звичайне закриття");
             try {
               canClose = await canUserCloseActsNormal();
             } catch (permErr) {
@@ -1005,11 +961,9 @@ export function initStatusLockDelegation(): void {
             return;
           }
         } else {
-          console.log("🔓 Адміністратор: валідація пропущена");
         }
 
         // 3️⃣ Автозбереження перед закриттям
-        console.log("Автоматичне збереження перед закриттям...");
         (
           document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLButtonElement
         )?.click();
@@ -1061,9 +1015,6 @@ export function initStatusLockDelegation(): void {
         // 🗑️ ПРИХОВУВАННЯ PUSH-ПОВІДОМЛЕНЬ ПРО slusarsOn ПРИ ЗАКРИТТІ АКТУ
         try {
           await hideSlusarNotificationsForAct(actId);
-          console.log(
-            `✅ Повідомлення про завершення робіт приховано для акту #${actId}`
-          );
         } catch (hideError) {
           console.error(
             "⚠️ Помилка приховування повідомлень (не критично):",
@@ -1074,9 +1025,6 @@ export function initStatusLockDelegation(): void {
         // 🗑️ ВИДАЛЕННЯ ПОВІДОМЛЕНЬ ПРО ЗМІНИ В АКТІ (act_changes_notifications)
         try {
           await deleteActNotificationsOnClose(actId);
-          console.log(
-            `✅ Повідомлення про зміни акту видалено для акту #${actId}`
-          );
         } catch (deleteNotifError) {
           console.error(
             "⚠️ Помилка видалення повідомлень про зміни (не критично):",

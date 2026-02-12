@@ -43,7 +43,6 @@ function handlePageUnload(): void {
             presenceChannel.untrack();
             supabase.removeChannel(presenceChannel);
             presenceChannel = null;
-            console.log("🔐 [beforeunload] Відписались від presence");
         } catch (err) {
             console.error("🔐 [beforeunload] Помилка відписки:", err);
         }
@@ -53,7 +52,6 @@ function handlePageUnload(): void {
             globalPresenceChannel.untrack();
             supabase.removeChannel(globalPresenceChannel);
             globalPresenceChannel = null;
-            console.log("🔐 [beforeunload] Відписались від global presence");
         } catch (err) {
             console.error("🔐 [beforeunload] Помилка відписки global:", err);
         }
@@ -92,7 +90,6 @@ export async function subscribeToActPresence(
     // 🔐 Фіксуємо час відкриття акту ОДИН РАЗ при підписці
     myOpenedAt = new Date().toISOString();
     hasTrackedPresence = false; // 🔐 Скидаємо прапорець
-    console.log(`🕐 [Presence] Фіксуємо час відкриття: ${myOpenedAt}`);
 
     // Створюємо канал для конкретного акту
     const channelName = `act_presence_${actId}`;
@@ -119,7 +116,6 @@ export async function subscribeToActPresence(
         }
         
         const state = presenceChannel.presenceState();
-        console.log("🔄 Presence sync:", state);
 
         // Збираємо всіх користувачів з їх часом відкриття
         const allUsers: ActPresenceState[] = [];
@@ -133,7 +129,6 @@ export async function subscribeToActPresence(
                     if (p.userName && p.openedAt) {
                         // 🧹 Ігноруємо "застарілі" присутності (старше 2 годин)
                         if (isPresenceStale(p.openedAt)) {
-                            console.log(`⏰ [Presence] Ігноруємо застарілу присутність: ${p.userName} (${p.openedAt})`);
                             return;
                         }
                         allUsers.push(p);
@@ -153,7 +148,6 @@ export async function subscribeToActPresence(
         const otherUsersInChannel = allUsers.filter(u => u.userName !== currentUserName);
         if (!hasTrackedPresence && otherUsersInChannel.length > 0) {
             const firstOtherUser = otherUsersInChannel[0];
-            console.log(`🔒 [Presence] Виявлено користувача ${firstOtherUser.userName} ДО нашого track - блокуємо!`);
             lockActInterface(firstOtherUser.userName);
             presenceResult.isLocked = true;
             presenceResult.lockedBy = firstOtherUser.userName;
@@ -167,7 +161,6 @@ export async function subscribeToActPresence(
             return dateA - dateB;
         });
 
-        console.log("👥 All users sorted by open time:", allUsers);
 
         // Визначаємо власника (перший у списку)
         const owner = allUsers[0];
@@ -201,12 +194,10 @@ export async function subscribeToActPresence(
             unlockActInterface();
 
             if (wasLocked && onUnlock) {
-                console.log("🔄 Calling onUnlock callback to refresh data");
                 onUnlock();
             }
         } else if (someoneOpenedBeforeUs && firstUserBeforeUs) {
             // 🔐 Хтось відкрив РАНІШЕ нас - блокуємо
-            console.log(`🔒 [Presence] Користувач ${firstUserBeforeUs.userName} відкрив акт раніше (${firstUserBeforeUs.openedAt} < ${myOpenedAt})`);
             lockActInterface(firstUserBeforeUs.userName);
             presenceResult.isLocked = true;
             presenceResult.lockedBy = firstUserBeforeUs.userName;
@@ -221,36 +212,29 @@ export async function subscribeToActPresence(
     // Підписуємося на зміни присутності
     presenceChannel
         .on("presence", { event: "sync" }, handlePresenceChange)
-        .on("presence", { event: "join" }, ({ key, newPresences }: { key: string; newPresences: any }) => {
-            console.log("👋 User joined:", key, newPresences);
+        .on("presence", { event: "join" }, () => {
             handlePresenceChange(); // Викликаємо загальну логіку
         })
-        .on("presence", { event: "leave" }, ({ key, leftPresences }: { key: string; leftPresences: any }) => {
-            console.log("👋 User left:", key, leftPresences);
+        .on("presence", { event: "leave" }, () => {
             handlePresenceChange(); // Викликаємо загальну логіку
         })
         .on("broadcast", { event: "act_saved" }, async (payload: any) => {
-            console.log("📢 Received act_saved broadcast:", payload);
             
             // Отримуємо actId з payload (Supabase обгортає в payload.payload)
             const receivedActId = payload?.payload?.actId || payload?.actId || actId;
-            console.log("📢 Received actId:", receivedActId, "Current actId:", actId);
 
             // Перевіряємо, чи ми заблоковані (значить ми не той, хто зберіг)
             // Якщо ми власник - ми і так оновили дані при збереженні
             const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
             const isLocked = header && header.hasAttribute("data-locked");
 
-            console.log("📢 isLocked:", isLocked, "header data-locked:", header?.getAttribute("data-locked"));
 
             if (isLocked) {
-                console.log("🔄 Auto-refreshing table data due to remote save (silent mode)...");
                 
                 // ✅ Використовуємо "тихе" оновлення тільки таблиці без перезавантаження модалу
                 try {
                     const { refreshActTableSilently } = await import("./modalMain");
                     await refreshActTableSilently(receivedActId);
-                    console.log("✅ Таблиця оновлена без моргання");
                 } catch (err) {
                     console.error("❌ Помилка тихого оновлення:", err);
                     // Fallback: використовуємо старий метод якщо щось пішло не так
@@ -260,7 +244,6 @@ export async function subscribeToActPresence(
                     }
                 }
             } else {
-                console.log("📢 Акт не заблокований, оновлення не потрібне (ми власник)");
             }
         })
         .subscribe(async (status: string) => {
@@ -274,7 +257,6 @@ export async function subscribeToActPresence(
 
                 await presenceChannel.track(presenceData);
                 hasTrackedPresence = true; // 🔐 Відмічаємо що ми відправили свою присутність
-                console.log("✅ Subscribed to act presence:", actId, "with openedAt:", myOpenedAt);
 
                 // ✏️ Також відправляємо на глобальний канал для відображення в таблиці
                 await trackGlobalActPresence(actId);
@@ -307,7 +289,6 @@ export async function subscribeToActPresence(
                 if (p.userName && p.openedAt) {
                     // 🧹 Ігноруємо "застарілі" присутності (старше 2 годин)
                     if (isPresenceStale(p.openedAt)) {
-                        console.log(`⏰ [Presence Final] Ігноруємо застарілу присутність: ${p.userName} (${p.openedAt})`);
                         return;
                     }
                     allUsers.push(p);
@@ -339,7 +320,6 @@ export async function subscribeToActPresence(
         if (someoneOpenedBeforeUs && firstUserBeforeUs) {
             presenceResult.isLocked = true;
             presenceResult.lockedBy = firstUserBeforeUs.userName;
-            console.log(`🔒 [Presence] Фінальна перевірка: акт заблоковано ${firstUserBeforeUs.userName}`);
         } else {
             const owner = allUsers[0];
             if (owner.userName !== currentUserName) {
@@ -363,7 +343,6 @@ export async function notifyActSaved(actId: number): Promise<void> {
             event: 'act_saved',
             payload: { actId }
         });
-        console.log("📡 Sent act_saved broadcast for act:", actId);
     }
 }
 
@@ -392,7 +371,6 @@ async function trackGlobalActPresence(actId: number): Promise<void> {
     };
 
     await globalPresenceChannel.track(presenceData);
-    console.log("✏️ [GlobalPresence] Tracked act:", actId, "with openedAt:", presenceData.openedAt);
 }
 
 /**
@@ -401,7 +379,6 @@ async function trackGlobalActPresence(actId: number): Promise<void> {
 async function untrackGlobalActPresence(): Promise<void> {
     if (globalPresenceChannel) {
         await globalPresenceChannel.untrack();
-        console.log("✏️ [GlobalPresence] Untracked presence");
     }
 }
 
@@ -413,7 +390,6 @@ export async function unsubscribeFromActPresence(): Promise<void> {
         await presenceChannel.untrack();
         await supabase.removeChannel(presenceChannel);
         presenceChannel = null;
-        console.log("✅ Unsubscribed from act presence");
     }
     
     // 🔐 Очищаємо зафіксований час відкриття
@@ -435,7 +411,6 @@ function lockActInterface(lockedByUser: string): void {
         return; // Вже заблоковано цим користувачем
     }
 
-    console.log(`🔒 Locking interface. Act is opened by: ${lockedByUser}`);
 
     // Показуємо повідомлення
     showNotification(
@@ -519,7 +494,6 @@ function unlockActInterface(): void {
         return;
     }
 
-    console.log("🔓 Unlocking interface");
 
     // Показуємо повідомлення
     showNotification("✅ Акт тепер доступний для редагування", "success", 3000);

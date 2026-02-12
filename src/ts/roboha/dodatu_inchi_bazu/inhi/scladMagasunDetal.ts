@@ -87,7 +87,6 @@ async function loadDetailsFromDB(): Promise<string[]> {
   let offset = 0;
   const batchSize = 1000; // Завантажуємо по 1000 записів за раз
 
-  console.log("Початок завантаження деталей з БД...");
 
   while (hasMore) {
     const { data, error, count } = await supabase
@@ -109,7 +108,6 @@ async function loadDetailsFromDB(): Promise<string[]> {
       offset += batchSize;
       hasMore = data.length === batchSize;
 
-      console.log(`Завантажено ${names.length} деталей...`);
     } else {
       hasMore = false;
     }
@@ -120,7 +118,6 @@ async function loadDetailsFromDB(): Promise<string[]> {
     }
   }
 
-  console.log(`Завершено завантаження ${names.length} деталей з БД`);
 
   return Array.from(new Set(names)).sort();
 }
@@ -339,7 +336,6 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
         const selectedId = nameToId.get(val) ?? null;
         if (selectedId !== null) {
           shopEditState.baseShopId = selectedId;
-          console.log("Shop selected from dropdown:", { name: val, id: selectedId });
         }
         updateCurrent(val);
         dd.classList.add("hidden-all_other_bases");
@@ -422,7 +418,6 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
         const selectedId = nameToId.get(val) ?? null;
         if (selectedId !== null) {
           detailEditState.baseDetailId = selectedId;
-          console.log("Detail selected from dropdown:", { name: val, id: selectedId });
         }
         updateCurrent(val);
         dd.classList.add("hidden-all_other_bases");
@@ -456,7 +451,6 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
 
     if (needsReload) {
       // Завантажуємо ВСІ дані з бази (з пагінацією)
-      console.log("Завантаження ВСІХ деталей з БД...");
       const allDetails = await loadDetailsFromDB();
 
       // Завантажуємо ID для ВСІХ деталей (також з пагінацією)
@@ -486,7 +480,6 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
 
       detailsCache = allDetails;
       lastDetailQuery = trimmedQuery;
-      console.log(`Завантажено і закешовано ${detailsCache.length} деталей`);
     } else {
       // Просто оновлюємо останній запит
       lastDetailQuery = trimmedQuery;
@@ -497,7 +490,6 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
       name.toLowerCase().includes(trimmedQuery.toLowerCase())
     );
 
-    console.log(`Знайдено ${filtered.length} деталей за запитом "${trimmedQuery}"`);
     render(filtered);
   };
 
@@ -596,7 +588,6 @@ async function fillFormFieldsFromSclad(record: any) {
     shopEditState.originalName = shopName;
     shopEditState.currentName = shopName;
     shopEditState.baseShopId = foundShopId;
-    console.log("Shop loaded for edit:", { shopName, baseShopId: foundShopId });
   }
   
   // Завантаження ID деталі для правильної роботи CRUD
@@ -624,7 +615,6 @@ async function fillFormFieldsFromSclad(record: any) {
     detailEditState.originalName = detailName;
     detailEditState.currentName = detailName;
     detailEditState.baseDetailId = foundDetailId;
-    console.log("Detail loaded for edit:", { detailName, baseDetailId: foundDetailId });
   }
 }
 
@@ -823,9 +813,7 @@ export function clearScladForm() {
 
 export const handleScladClick = async () => {
   await renderScladForm();
-  console.log("Склад форма відкрита, поточний ID:", getCurrentScladId());
 };
 
 export const initScladMagasunDetal = () => {
-  console.log("Склад модуль ініціалізовано");
 };

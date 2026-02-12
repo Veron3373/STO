@@ -21,15 +21,12 @@ import { supabase } from "../../../vxid/supabaseClient";
 export async function recordSlusarCompletion(
   actId: number,
   actNumber: string,
-  slusarsOn: boolean,
+  _slusarsOn: boolean,
   completedBySurname: string,
   completedByName?: string,
   pruimalnyk?: string
 ): Promise<void> {
   try {
-    console.log(
-      `📝 [SlusarNotification] Запис повідомлення: акт #${actId}, slusarsOn=${slusarsOn}`
-    );
 
     // Якщо slusarsOn = false (скасування), можна або не записувати,
     // або видаляти попередні повідомлення. Зараз записуємо завжди.
@@ -57,9 +54,6 @@ export async function recordSlusarCompletion(
       throw new Error(`Не вдалося записати повідомлення: ${error.message}`);
     }
 
-    console.log(
-      `✅ [SlusarNotification] Повідомлення успішно записано для акту #${actId}`
-    );
   } catch (error) {
     console.error("❌ [SlusarNotification] Критична помилка:", error);
     throw error;
@@ -76,9 +70,6 @@ export async function hideSlusarNotificationsForAct(
   actId: number
 ): Promise<void> {
   try {
-    console.log(
-      `🗑️ [SlusarNotification] Приховування повідомлень для акту #${actId}`
-    );
 
     const { error } = await supabase
       .from("slusar_complete_notifications")
@@ -95,9 +86,6 @@ export async function hideSlusarNotificationsForAct(
       return;
     }
 
-    console.log(
-      `✅ [SlusarNotification] Повідомлення приховано для акту #${actId}`
-    );
   } catch (error) {
     console.error("❌ [SlusarNotification] Критична помилка:", error);
   }

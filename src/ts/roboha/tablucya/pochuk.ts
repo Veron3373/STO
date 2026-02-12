@@ -109,7 +109,6 @@ export class SearchHandler {
         if (!this.searchInput) return;
 
         const searchTerm = this.searchInput.value.trim();
-        console.log('🔍 Термін пошуку:', searchTerm);
         
         if (this.onSearchCallback) {
             this.onSearchCallback(searchTerm);

@@ -12,7 +12,6 @@ import { modalOverlayId } from "./vikno_klient_machuna";
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
-  userName,
 } from "../tablucya/users";
 
 // Створення окремої модалки
@@ -111,7 +110,6 @@ export async function createActInDatabase(
       return null;
     }
 
-    console.log("✅ Акт створено о", dateOn, "з ID:", newAct.act_id);
 
     // ✅ Записуємо інформацію про приймальника при створенні нового акту
     // Для всіх ОКРІМ Слюсаря (Приймальник, Адміністратор, Запчастист, Складовщик)
@@ -128,15 +126,9 @@ export async function createActInDatabase(
             `⚠️ Помилка при записуванні приймальника: ${updateError.message}`
           );
         } else {
-          console.log(
-            `✅ Приймальник "${userData.name}" успішно записаний в новий акт ${newAct.act_id}`
-          );
         }
       }
     } else {
-      console.log(
-        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" (Слюсар) - pruimalnyk не записується при створенні акту`
-      );
     }
 
     // Якщо передано postArxivId, зберігаємо act_id в post_arxiv
@@ -152,7 +144,6 @@ export async function createActInDatabase(
           updateError.message
         );
       } else {
-        console.log("✅ act_id збережено в post_arxiv:", postArxivId);
       }
     }
 

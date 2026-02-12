@@ -1493,8 +1493,6 @@ class SchedulerApp {
     const startStr = startDate.toISOString().split("T")[0];
     const endStr = endDate.toISOString().split("T")[0];
 
-    console.log("🗓️ Завантаження статистики за місяць:", year, month);
-    console.log("📅 Період:", startStr, "-", endStr);
 
     try {
       const { data, error } = await supabase
@@ -1508,9 +1506,7 @@ class SchedulerApp {
         return;
       }
 
-      console.log("📦 Завантажено записів:", data?.length || 0);
       if (data && data.length > 0) {
-        console.log("🔍 Перший запис:", data[0]);
       }
 
       // Рахуємо загальну кількість постів з усіх цехів
@@ -1519,7 +1515,6 @@ class SchedulerApp {
         totalPosts += section.posts.length;
       }
 
-      console.log("🏭 Всього постів в системі:", totalPosts);
 
       // Групуємо по датах і постах
       const statsMap = new Map<string, Map<number, number>>();
@@ -1549,8 +1544,6 @@ class SchedulerApp {
         dayStats.set(postId, currentMinutes + durationMinutes);
       }
 
-      console.log("📊 Згруповано даних по датах:", statsMap.size);
-      console.log("🗓️ Дати зі статистикою:", Array.from(statsMap.keys()));
 
       this.monthOccupancyStats.clear();
       for (const [dateKey, postOccupancy] of statsMap) {
@@ -1569,7 +1562,6 @@ class SchedulerApp {
   public async refreshOccupancyIndicatorsForDates(
     dates: string[]
   ): Promise<void> {
-    console.log("🔄 Оновлення індикаторів для дат:", dates);
 
     // Збираємо унікальні місяці які треба перезавантажити
     const monthsToLoad = new Set<string>();
@@ -1650,11 +1642,6 @@ class SchedulerApp {
               isFullyOccupied
             );
             container.insertBefore(indicator, span);
-            console.log(
-              `✅ Оновлено індикатор для ${dateKey}: ${occupancyPercent.toFixed(
-                1
-              )}%`
-            );
           }
         }
       });
@@ -1896,7 +1883,6 @@ class SchedulerApp {
       const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
       const stats = this.monthOccupancyStats.get(dateKey);
 
-      console.log("📅 День:", day, "Дата:", dateKey, "Статистика:", stats);
 
       if (stats && stats.totalPosts > 0) {
         // Рахуємо загальну зайнятість (робочий день = 12 годин = 720 хв)
@@ -1904,14 +1890,8 @@ class SchedulerApp {
         let totalMinutes = 0;
         let fullyOccupiedPosts = 0;
 
-        console.log("🔢 Всього постів:", stats.totalPosts);
-        console.log(
-          "📊 Завантаження постів:",
-          Array.from(stats.postOccupancy.entries())
-        );
 
         for (const [, minutes] of stats.postOccupancy) {
-          console.log("⏱️ Хвилин для поста:", minutes);
           totalMinutes += minutes;
           if (minutes >= workDayMinutes) {
             fullyOccupiedPosts++;
@@ -1923,12 +1903,6 @@ class SchedulerApp {
         const occupancyPercent = (totalMinutes / maxMinutes) * 100;
         const isFullyOccupied = fullyOccupiedPosts === stats.totalPosts;
 
-        console.log("⏱️ Всього хвилин:", totalMinutes, "з", maxMinutes);
-        console.log("✅ Повністю завантажені пости:", fullyOccupiedPosts);
-        console.log(
-          "📈 Відсоток зайнятості:",
-          occupancyPercent.toFixed(1) + "%"
-        );
 
         if (occupancyPercent > 0) {
           const indicator = this.createOccupancyIndicator(
@@ -1936,7 +1910,6 @@ class SchedulerApp {
             isFullyOccupied
           );
           dayContainer.appendChild(indicator);
-          console.log("🎨 Індикатор додано");
         } else {
           console.log("⚠️ Відсоток 0, індикатор не додається");
         }
@@ -1998,21 +1971,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Глобальна функція для оновлення календаря після створення акту
 (window as any).refreshPlannerCalendar = async () => {
-  console.log("🔄 [refreshPlannerCalendar] Функція викликана");
-  console.log("🔍 [refreshPlannerCalendar] schedulerAppInstance:", !!schedulerAppInstance);
-  console.log("🔍 [refreshPlannerCalendar] postArxiv:", !!schedulerAppInstance?.["postArxiv"]);
 
   if (schedulerAppInstance && schedulerAppInstance["postArxiv"]) {
-    console.log("✅ [refreshPlannerCalendar] Починаємо оновлення...");
     // ⚠️ Спочатку очищаємо старі блоки, потім завантажуємо нові
-    console.log("🧹 [refreshPlannerCalendar] Очищаємо старі блоки...");
     schedulerAppInstance["postArxiv"].clearAllBlocks();
-    console.log("📥 [refreshPlannerCalendar] Завантажуємо нові дані...");
     await schedulerAppInstance["postArxiv"].loadArxivDataForCurrentDate();
-    console.log("📊 [refreshPlannerCalendar] Оновлюємо індикатори...");
     // Оновлюємо індикатори зайнятості
     await schedulerAppInstance.refreshOccupancyIndicators();
-    console.log("✅ Календар планувальника оновлено");
   } else {
     console.error("❌ [refreshPlannerCalendar] schedulerAppInstance або postArxiv не знайдено!");
   }
@@ -2022,7 +1987,6 @@ document.addEventListener("DOMContentLoaded", () => {
 (window as any).refreshOccupancyIndicators = async () => {
   if (schedulerAppInstance) {
     await schedulerAppInstance.refreshOccupancyIndicators();
-    console.log("✅ Індикатори зайнятості оновлено");
   }
 };
 
@@ -2032,7 +1996,6 @@ document.addEventListener("DOMContentLoaded", () => {
 ) => {
   if (schedulerAppInstance) {
     await schedulerAppInstance.refreshOccupancyIndicatorsForDates(dates);
-    console.log("✅ Індикатори зайнятості оновлено для дат:", dates);
   }
 };
 

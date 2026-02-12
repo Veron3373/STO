@@ -89,7 +89,6 @@ function findSlyusarWorkRecord(
   );
 
   if (!slyusar?.["Історія"]) {
-    console.log(`❌ findSlyusarWorkRecord: Історія не знайдена для слюсаря "${slyusarName}"`);
     return null;
   }
 
@@ -108,8 +107,6 @@ function findSlyusarWorkRecord(
 
       const zapisi = actEntry?.["Записи"];
       if (!Array.isArray(zapisi)) continue;
-
-      console.log(`📋 Знайдено записи для акту ${actId}:`, zapisi.map((z: any, i: number) => `[${i}] ${z.Робота} - Зарплата:${z.Зарплата} (recordId: ${z.recordId})`));
 
       // ✅ 0. ПРІОРИТЕТ: Пошук за recordId (найточніший спосіб)
       if (recordId) {
@@ -356,7 +353,6 @@ async function updateSlyusarSalaryInRow(
 
   // ✅ НОВИЙ ЗАХИСТ: Якщо зарплата заблокована (слюсар змінився, але зарплата була > 0) - не перераховуємо
   if (row.getAttribute("data-salary-locked") === "true") {
-    console.log(`🔒 Зарплата заблокована для рядка - пропускаємо перерахунок`);
     row.removeAttribute("data-salary-locked"); // Знімаємо флаг після одного пропуску
     return;
   }
@@ -478,8 +474,6 @@ export async function initializeSlyusarSalaries(): Promise<void> {
     const calculatedSalary = calculateSlyusarSum(totalSum, percent);
     slyusarSumCell.textContent = formatNumberWithSpaces(calculatedSalary);
   });
-
-  console.log(`✅ Ініціалізація зарплат завершена для акту ${actId}`);
 }
 
 /**
@@ -1083,9 +1077,6 @@ export async function toggleAddRowButtonVisibility(): Promise<void> {
       if (saveButton) {
         saveButton.style.display = "none";
       }
-      console.log(
-        "🚫 Кнопки 'Додати рядок' та 'Зберегти зміни' приховано (немає прав доступу)"
-      );
     } else {
       // Показуємо обидві кнопки
       if (addRowButton) {
@@ -1094,7 +1085,6 @@ export async function toggleAddRowButtonVisibility(): Promise<void> {
       if (saveButton) {
         saveButton.style.display = "";
       }
-      console.log("✅ Кнопки 'Додати рядок' та 'Зберегти зміни' доступні");
     }
   } catch (error) {
     console.error("❌ Помилка при перевірці прав на додавання рядків:", error);
@@ -1448,9 +1438,6 @@ export function closeZakazNaraydModal(): void {
     globalCache.currentActId = null;
     // ✅ Очищуємо приймальника з localStorage при закритті модального вікна
     localStorage.removeItem("current_act_pruimalnyk");
-    console.log(
-      "🗑️ Очищено приймальника з localStorage при закритті модального вікна"
-    );
     // 🧹 Очищуємо Realtime підписку на slusarsOn
     cleanupSlusarsOnSubscription();
     // 🧹 Очищуємо кеш розрахунку знижки

@@ -52,8 +52,6 @@ async function checkMainPageSession() {
       return;
     }
 
-    console.log("✅ [Main] Доступ дозволено:", email);
-    
     // Оновлюємо посилання на сторінці
     initUrlUpdater();
   } catch (err) {

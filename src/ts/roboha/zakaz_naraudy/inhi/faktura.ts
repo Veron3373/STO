@@ -115,7 +115,6 @@ async function checkPasswordFromLocalStorage(
     }
 
     if (inputPassword === savedPassword) {
-      console.log("✅ Пароль підтверджено з localStorage");
       return true;
     }
 
@@ -141,7 +140,6 @@ async function checkPasswordFromLocalStorage(
     });
 
     if (foundUser) {
-      console.log("✅ Пароль підтверджено з БД");
       return true;
     }
 
@@ -368,7 +366,6 @@ export function initModalActRaxunokHandlers(): void {
           actData.foundContrAgentRaxunok = dbData.contrAgent_raxunok; // Зберігаємо номер
           actData.foundContrAgentRaxunokData = dbData.contrAgent_raxunok_data; // Зберігаємо дату
 
-          console.log("✅ Дані з БД отримано:", dbData);
         }
       }
 

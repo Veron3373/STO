@@ -55,7 +55,6 @@ async function refreshSettingsCache(): Promise<void> {
       preferredLanguage: globalCache.settings.preferredLanguage,
       saveMargins: globalCache.settings.saveMargins,
     };
-    console.log("✅ Settings cache оновлено:", globalCache.settings);
   } catch (error) {
     console.error("❌ Помилка оновлення settings:", error);
   }
@@ -76,7 +75,6 @@ function updatePibMagazinVisibility(): void {
   const cells = document.querySelectorAll('td.pib-magazin-cell, td[data-name="pib_magazin"]');
   headers.forEach(h => h.style.display = show ? '' : 'none');
   cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 ПІБ/Магазин: ${show ? 'показано' : 'приховано'}`);
 }
 
 function updateCatalogVisibility(): void {
@@ -85,7 +83,6 @@ function updateCatalogVisibility(): void {
   const cells = document.querySelectorAll('td.catalog-cell, td[data-name="catalog"]');
   headers.forEach(h => h.style.display = show ? '' : 'none');
   cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 Каталог: ${show ? 'показано' : 'приховано'}`);
 }
 
 function updateZarplataVisibility(): void {
@@ -94,7 +91,6 @@ function updateZarplataVisibility(): void {
   const cells = document.querySelectorAll('td.slyusar-sum-cell, td[data-name="slyusar_sum"]');
   headers.forEach(h => h.style.display = show ? '' : 'none');
   cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 Зарплата: ${show ? 'показано' : 'приховано'}`);
 }
 
 function updateSMSButtonVisibility(): void {
@@ -104,7 +100,6 @@ function updateSMSButtonVisibility(): void {
   const show = globalCache.settings.showSMS;
   const btns = document.querySelectorAll('[data-action="send-sms"]:not(#sms-btn), .sms-button:not(#sms-btn)');
   btns.forEach(b => (b as HTMLElement).style.display = show ? '' : 'none');
-  console.log(`🔄 Глобальні SMS кнопки: ${show ? 'показано' : 'приховано'}`);
 }
 
 async function updateMenuVisibility(): Promise<void> {
@@ -112,7 +107,6 @@ async function updateMenuVisibility(): Promise<void> {
     // 🔑 КРИТИЧНО: Очищаємо кеш налаштувань перед оновленням меню
     clearSettingsCache();
     await updateUIBasedOnAccess(userAccessLevel);
-    console.log(`✅ Меню оновлено для ролі: ${userAccessLevel}`);
   } catch (error) {
     console.error("❌ Помилка оновлення меню:", error);
   }
@@ -196,7 +190,6 @@ async function updateActButtonsVisibility(): Promise<void> {
           buttons.forEach(btn => {
             (btn as HTMLElement).style.display = allowed ? '' : 'none';
           });
-          console.log(`🔄 Кнопка ${action.value}: ${allowed ? 'показано' : 'приховано'} (setting_id=${settingId})`);
         }
       } else if (action.type === 'column') {
         // Приховування/показ колонок
@@ -205,11 +198,9 @@ async function updateActButtonsVisibility(): Promise<void> {
         } else if (action.value === 'price') {
           togglePriceColumnsVisibility(allowed);
         }
-        console.log(`🔄 Колонка ${action.value}: ${allowed ? 'показано' : 'приховано'} (setting_id=${settingId})`);
       }
     });
 
-    console.log(`✅ Кнопки та колонки актів оновлено для ролі ${roleColumn}`);
   } catch (error) {
     console.error("❌ Помилка оновлення кнопок актів:", error);
   }
@@ -291,7 +282,6 @@ function toggleActsTableSumaColumn(show: boolean): void {
 
   // Якщо стовпець "Сума" не існує і потрібно показати - перезавантажуємо таблицю
   if (sumaColumnIndex === -1 && show) {
-    console.log('🔄 Стовпець "Сума" не існує, перезавантажуємо таблицю актів...');
     refreshActsTable().catch(err => console.error('Помилка оновлення таблиці:', err));
     return;
   }
@@ -305,7 +295,6 @@ function toggleActsTableSumaColumn(show: boolean): void {
         (cells[sumaColumnIndex] as HTMLElement).style.display = displayValue;
       }
     });
-    console.log(`🔄 Стовпець "Сума" в таблиці актів: ${show ? 'показано' : 'приховано'}`);
   }
 }
 
@@ -316,11 +305,9 @@ async function updateUIBasedOnSettings(): Promise<void> {
   updateSMSButtonVisibility();
   await updateActButtonsVisibility();
   await updateMenuVisibility();
-  console.log("🔄 UI оновлено для всіх елементів");
 }
 
 async function handleSettingsChange(payload: any): Promise<void> {
-  console.log("📡 Settings change:", payload);
   const { eventType, new: newRecord, old: oldRecord } = payload;
   if (eventType !== "UPDATE" && eventType !== "INSERT") return;
   const settingId = newRecord?.setting_id;
@@ -336,14 +323,10 @@ async function handleSettingsChange(payload: any): Promise<void> {
     }
   }
   
-  console.log(`🔍 setting_id=${settingId}, колонка="${changedColumn || '?'}", роль="${userAccessLevel}"`);
-  
   if (!shouldUpdateForCurrentUser(settingId, changedColumn)) {
-    console.log(`ℹ️ Зміна не стосується ролі ${userAccessLevel}`);
     return;
   }
   
-  console.log(`✅ Оновлюємо UI для ролі ${userAccessLevel}...`);
   await refreshSettingsCache();
   await updateUIBasedOnSettings();
   
@@ -359,13 +342,11 @@ export function initializeSettingsSubscription(): void {
     settingsChannel = null;
   }
   try {
-    console.log(`🔌 Підписка на settings для ролі: ${userAccessLevel}`);
     settingsChannel = supabase
       .channel("settings-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, handleSettingsChange)
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") console.log("✅ Підписка активна");
-        else if (status === "CHANNEL_ERROR") console.error("❌ Помилка підписки");
+        if (status === "CHANNEL_ERROR") console.error("❌ Помилка підписки");
       });
   } catch (error) {
     console.error("❌ Помилка ініціалізації:", error);

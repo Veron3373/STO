@@ -231,7 +231,6 @@ function subscribeToActNotifications() {
   if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
     return;
 
-  console.log(`📡 Підключення до Realtime повідомлень (${userAccessLevel})...`);
 
   // ✅ Отримуємо ПІБ поточного користувача для фільтрації
   const userData = getSavedUserDataFromLocalStorage?.();
@@ -247,10 +246,6 @@ function subscribeToActNotifications() {
         table: "act_changes_notifications",
       },
       (payload) => {
-        console.log(
-          "📡 [Realtime INSERT] Отримано нове повідомлення:",
-          payload.new
-        );
         const newNotification = payload.new;
 
         if (newNotification && newNotification.act_id) {
@@ -259,14 +254,8 @@ function subscribeToActNotifications() {
             const notificationPruimalnyk = newNotification.pruimalnyk;
 
             if (notificationPruimalnyk !== currentUserName) {
-              console.log(
-                `⏭️ Повідомлення не для поточного приймальника (${currentUserName} != ${notificationPruimalnyk})`
-              );
               return; // Пропускаємо
             }
-            console.log(
-              `✅ Повідомлення для поточного приймальника: ${currentUserName}`
-            );
           }
 
           const actId = Number(newNotification.act_id);
@@ -316,9 +305,6 @@ function subscribeToSlusarNotifications() {
   )
     return;
 
-  console.log(
-    `📡 [slusarsOn] Підключення до Realtime для ${userAccessLevel}...`
-  );
 
   const userData = getSavedUserDataFromLocalStorage?.();
   const currentUserName = userData?.name;
@@ -334,7 +320,6 @@ function subscribeToSlusarNotifications() {
         table: "acts",
       },
       (payload) => {
-        console.log("📡 [slusarsOn] Realtime UPDATE отримано:", payload);
 
         const updatedAct = payload.new;
         if (!updatedAct || updatedAct.act_id === undefined) {
@@ -347,16 +332,10 @@ function subscribeToSlusarNotifications() {
         const isClosed = !!updatedAct.date_off;
         const pruimalnyk = updatedAct.pruimalnyk;
 
-        console.log(
-          `📡 [slusarsOn] Акт #${actId}: slusarsOn=${newSlusarsOn}, closed=${isClosed}, pruimalnyk=${pruimalnyk}`
-        );
 
         // ✅ ФІЛЬТРАЦІЯ ДЛЯ ПРИЙМАЛЬНИКА
         if (userAccessLevel === "Приймальник") {
           if (pruimalnyk !== currentUserName) {
-            console.log(
-              `⏭️ [slusarsOn] Пропускаємо: не для ${currentUserName}`
-            );
             return;
           }
         }
@@ -373,8 +352,7 @@ function subscribeToSlusarNotifications() {
         }
       }
     )
-    .subscribe((status) => {
-      console.log(`📡 [slusarsOn] Статус підписки:`, status);
+    .subscribe(() => {
     });
 }
 
@@ -383,7 +361,6 @@ function subscribeToSlusarNotifications() {
  * Показує ПІБ редактора в комірці клієнта
  */
 function subscribeToGlobalActPresence() {
-  console.log("📡 [GlobalPresence] Підключення до глобального каналу присутності...");
 
   // Відписуємося від попереднього каналу, якщо він існує
   if (globalPresenceChannel) {
@@ -404,12 +381,10 @@ function subscribeToGlobalActPresence() {
   const handlePresenceSync = () => {
     // Перевіряємо, чи канал ще існує
     if (!globalPresenceChannel) {
-      console.log("✏️ [GlobalPresence] Канал вже відключений, пропускаємо sync");
       return;
     }
     
     const state = globalPresenceChannel.presenceState();
-    console.log("🔄 [GlobalPresence] Sync:", state);
 
     // Очищаємо попередню мапу редакторів
     const newEditorsMap = new Map<number, string>();
@@ -444,20 +419,16 @@ function subscribeToGlobalActPresence() {
 
     // Оновлюємо глобальну мапу
     actEditorsMap = newEditorsMap;
-    console.log("📝 [GlobalPresence] Оновлена мапа редакторів:", actEditorsMap);
   };
 
   // Підписуємося на події присутності
   globalPresenceChannel
     .on("presence", { event: "sync" }, handlePresenceSync)
-    .on("presence", { event: "join" }, ({ key, newPresences }: { key: string; newPresences: any }) => {
-      console.log("👋 [GlobalPresence] User joined:", key, newPresences);
+    .on("presence", { event: "join" }, () => {
     })
-    .on("presence", { event: "leave" }, ({ key, leftPresences }: { key: string; leftPresences: any }) => {
-      console.log("👋 [GlobalPresence] User left:", key, leftPresences);
+    .on("presence", { event: "leave" }, () => {
     })
-    .subscribe((status: string) => {
-      console.log(`📡 [GlobalPresence] Статус підписки:`, status);
+    .subscribe(() => {
     });
 }
 
@@ -490,13 +461,11 @@ function updateEditorInfoInDom(actId: number, editorName: string | null): void {
         editorSpan.innerHTML = `✏️ ${editorName}`;
         editorSpan.style.display = "inline";
       }
-      console.log(`✏️ [updateEditor] Акт #${actId} редагує: ${editorName}`);
     } else {
       // Приховуємо інформацію про редактора
       if (editorSpan) {
         editorSpan.style.display = "none";
       }
-      console.log(`✅ [updateEditor] Акт #${actId} більше не редагується`);
     }
   });
 }
@@ -510,7 +479,6 @@ function updateSlusarsOnRowInDom(
   isClosed: boolean,
   pruimalnyk?: string
 ): void {
-  console.log(`🎨 [updateSlusarsOn] Шукаємо рядок для акту #${actId}...`);
 
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"
@@ -524,7 +492,6 @@ function updateSlusarsOnRowInDom(
   const currentUserName = userData?.name;
 
   const rows = table.querySelectorAll("tbody tr");
-  console.log(`🎨 [updateSlusarsOn] Знайдено ${rows.length} рядків`);
 
   let found = false;
   rows.forEach((row) => {
@@ -580,7 +547,7 @@ function applyClassToRow(
   isClosed: boolean,
   pruimalnyk: string | undefined,
   currentUserName: string | undefined,
-  actId: number
+  _actId: number
 ): void {
   const shouldShowSlusarsOn =
     slusarsOn &&
@@ -591,10 +558,8 @@ function applyClassToRow(
 
   if (shouldShowSlusarsOn) {
     row.classList.add("row-slusar-on");
-    console.log(`✅ [updateSlusarsOn] Додано row-slusar-on для акту #${actId}`);
   } else {
     row.classList.remove("row-slusar-on");
-    console.log(`✅ [updateSlusarsOn] Знято row-slusar-on з акту #${actId}`);
   }
 }
 
@@ -625,7 +590,6 @@ function getActIdFromCell(cell: HTMLElement): number {
  * Знаходить рядок в таблиці і додає клас підсвітки (Синя ручка)
  */
 function highlightRowInDom(actId: number) {
-  console.log(`🚀 [Tablucya v2.1] highlightRowInDom: Шукаємо рядок для акту #${actId}`);
 
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"
@@ -636,7 +600,6 @@ function highlightRowInDom(actId: number) {
   }
 
   const rows = table.querySelectorAll("tbody tr");
-  console.log(`📊 [highlightRowInDom] Знайдено ${rows.length} рядків`);
 
   let found = false;
   rows.forEach((row, index) => {
@@ -647,11 +610,9 @@ function highlightRowInDom(actId: number) {
 
       // Детальний лог для кожного рядка (перші 5)
       if (index < 5) {
-        console.log(`  Рядок ${index}: parsed=${cellActId}`);
       }
 
       if (cellActId === actId) {
-        console.log(`✅ [highlightRowInDom] Знайдено рядок для акту #${actId}, додаємо клас`);
         row.classList.add("act-modified-blue-pen");
         found = true;
       }
@@ -667,7 +628,6 @@ function highlightRowInDom(actId: number) {
  * Оновлює бейдж з кількістю повідомлень в комірці з номером акту
  */
 export function updateNotificationBadgeInDom(actId: number, count: number) {
-  console.log(`🔔 [updateBadge] Оновлюємо бейдж для акту #${actId}, кількість: ${count}`);
 
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table"
@@ -688,7 +648,6 @@ export function updateNotificationBadgeInDom(actId: number, count: number) {
 
       if (cellActId === actId) {
         found = true;
-        console.log(`✅ [updateBadge] Знайдено рядок для акту #${actId}`);
 
         // Шукаємо існуючий бейдж
         let badge = firstCell.querySelector(".notification-count-badge") as HTMLElement;
@@ -696,20 +655,17 @@ export function updateNotificationBadgeInDom(actId: number, count: number) {
         if (count > 0) {
           // Якщо бейджа немає - створюємо
           if (!badge) {
-            console.log(`➕ [updateBadge] Створюємо новий бейдж`);
             badge = document.createElement("div");
             badge.className = "notification-count-badge";
             firstCell.style.position = "relative";
             firstCell.appendChild(badge);
           } else {
-            console.log(`🔄 [updateBadge] Оновлюємо існуючий бейдж`);
           }
           badge.textContent = count.toString();
           badge.style.display = "flex";
         } else {
           // Якщо кількість 0 - ховаємо бейдж
           if (badge) {
-            console.log(`👻 [updateBadge] Ховаємо бейдж (count = 0)`);
             badge.style.display = "none";
           }
         }
@@ -738,7 +694,6 @@ export function decrementNotificationCount(actId: number) {
  * @param removeToasts - чи видаляти тости (за замовчуванням false)
  */
 export async function clearNotificationVisualOnly(actId: number, removeToasts: boolean = false) {
-  console.log(`🧹 [clearNotificationVisualOnly] Очищення візуальної підсвітки для акту #${actId}`);
 
   // ✅ Працює для Адміністратора та Приймальника
   if (userAccessLevel !== "Адміністратор" && userAccessLevel !== "Приймальник")
@@ -765,7 +720,6 @@ export async function clearNotificationVisualOnly(actId: number, removeToasts: b
 
         if (cellActId === actId) {
           row.classList.remove("act-modified-blue-pen");
-          console.log(`✅ [clearNotificationVisualOnly] Знято синю підсвітку з акту #${actId}`);
         }
       }
     });
@@ -1656,16 +1610,13 @@ function watchDateRangeChanges(): void {
 }
 
 export async function initializeActsSystem(): Promise<void> {
-  console.log("Ініціалізація системи актів...");
   try {
     // 📦 Завантажуємо загальні налаштування:
     // - Якщо вже завантажено в цій сесії → просто беремо з localStorage
     // - Інакше (перезавантаження/новий вхід) → завантажуємо з БД і позначаємо прапором
     if (isGeneralSettingsLoadedThisSession()) {
       loadGeneralSettingsFromLocalStorage();
-      console.log("✅ Загальні налаштування з localStorage (сесія активна)");
     } else {
-      console.log("📥 Завантаження загальних налаштувань з БД (новий вхід/перезавантаження)...");
       await loadGeneralSettingsFromDB();
       markGeneralSettingsAsLoaded();
     }
@@ -1690,24 +1641,13 @@ export async function initializeActsSystem(): Promise<void> {
     subscribeToGlobalActPresence();
 
     // 📥 ЗАВАНТАЖУЄМО ІСНУЮЧІ ПОВІДОМЛЕННЯ З БД
-    console.log(`🔍 [initializeActsSystem] accessLevel = "${accessLevel}"`);
     if (accessLevel === "Адміністратор" || accessLevel === "Приймальник") {
-      console.log(
-        "📥 [initializeActsSystem] Викликаємо loadAndShowExistingNotifications..."
-      );
       await loadAndShowExistingNotifications();
-      console.log(
-        "✅ [initializeActsSystem] loadAndShowExistingNotifications завершено"
-      );
     } else {
-      console.log(
-        `⏭️ [initializeActsSystem] Пропускаємо loadAndShowExistingNotifications (accessLevel = "${accessLevel}")`
-      );
     }
 
     watchDateRangeChanges();
 
-    console.log("✅ Система ініціалізована.");
   } catch (error) {
     console.error("💥 Помилка ініціалізації:", error);
     showNoDataMessage("❌ Помилка");

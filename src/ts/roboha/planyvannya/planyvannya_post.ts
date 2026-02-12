@@ -890,7 +890,6 @@ export class PostModal {
         // Категорія вже існує
         categoryId = existingCategory.category_id;
         categoryMessage = 'існує';
-        console.log(`ℹ️ Категорія "${cehTitle}" вже існує`);
       } else {
         // Спочатку знаходимо максимальний category_id
         const { data: maxIdData, error: maxIdError } = await supabase
@@ -918,7 +917,6 @@ export class PostModal {
         if (categoryInsertError) throw categoryInsertError;
         categoryId = newCategory.category_id;
         categoryMessage = 'додана';
-        console.log(`✅ Категорія "${cehTitle}" додана з ID ${categoryId}`);
       }
     }
 
@@ -1092,7 +1090,6 @@ export class PostModal {
 
           if (postDeleteError) throw postDeleteError;
           messages.push('Пост видалено');
-          console.log(`✅ Пост видалено: ${existingPosts[0].name}`);
         }
       }
 

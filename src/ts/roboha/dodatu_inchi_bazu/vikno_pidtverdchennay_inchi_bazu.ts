@@ -270,9 +270,6 @@ async function handleEdit(
         return false;
       }
 
-      console.log(
-        `Успішно відредаговано: ${tableName}, ID: ${idValue} (захищений акаунт - Name та Доступ не змінено)`
-      );
       showNotification(
         "Дані оновлено. Name та Доступ адміністратора захищені від змін",
         "info"
@@ -343,9 +340,6 @@ async function handleEdit(
       return false;
     }
 
-    console.log(
-      `Успішно відредаговано: ${tableName}, ID: ${idValue}, нове значення: "${newValue}"`
-    );
     return true;
   } catch (error) {
     console.error("Помилка при редагуванні:", error);
@@ -389,7 +383,6 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
       return false;
     }
 
-    console.log(`Успішно видалено: ${tableName}, ID: ${idValue}`);
     return true;
   } catch (error) {
     console.error("Помилка при видаленні:", error);
@@ -436,15 +429,12 @@ async function handleAdd(
     }
 
     if (tableName === "shops" && (await shopExistsByName(newValue))) {
-      console.log("Магазин уже існує (fallback). Пропускаємо створення.");
       return true;
     }
     if (tableName === "details" && (await detailExistsByName(newValue))) {
-      console.log("Деталь уже існує (fallback). Пропускаємо створення.");
       return true;
     }
     if (tableName === "slyusars" && (await slusarExistsByName(newValue))) {
-      console.log("Слюсар з таким іменем уже існує. Пропускаємо створення.");
       return true;
     }
 
@@ -483,7 +473,6 @@ async function handleAdd(
       return false;
     }
 
-    console.log(`✅ Успішно додано: ${tableName}, значення: "${newValue}"`);
     return true;
   } catch (error) {
     console.error("❌ Помилка при додаванні:", error);
@@ -531,7 +520,6 @@ export function showSavePromptModal(): Promise<boolean> {
 
       // Отримуємо дані поточного користувача з localStorage
       let currentUserName = "";
-      let currentUserAccess = "";
       let currentUserPassword: number | null = null;
 
       try {
@@ -539,7 +527,6 @@ export function showSavePromptModal(): Promise<boolean> {
         if (userDataStr) {
           const userData = JSON.parse(userDataStr);
           currentUserName = userData.Name || "";
-          currentUserAccess = userData.Доступ || "";
           currentUserPassword = userData.Пароль
             ? Number(userData.Пароль)
             : null;
@@ -570,22 +557,11 @@ export function showSavePromptModal(): Promise<boolean> {
       }
 
       // Якщо дійшли сюди - пароль правильний, продовжуємо
-      console.log("✅ Пароль перевірено успішно з localStorage");
-
-      // Перевірка прав доступу
-      const isAdmin = currentUserAccess === "Адміністратор";
-
-      console.log("🔍 Перевірка прав:", {
-        isAdmin,
-        CRUD,
-        currentUserAccess,
-        currentUserName,
-      });
 
 
 
 
-      console.log("Starting CRUD operations...");
+
       let success = false;
       let errorMessage = "";
 
@@ -596,7 +572,6 @@ export function showSavePromptModal(): Promise<boolean> {
           if (all_bd) {
             const parsed = JSON.parse(all_bd);
             tableFromDraft = parsed?.table ?? "";
-            console.log("Table from draft:", tableFromDraft);
           }
         } catch (err) {
           console.error("Error parsing all_bd:", err);
@@ -655,9 +630,6 @@ export function showSavePromptModal(): Promise<boolean> {
         if (!tableFromDraft) {
           const contragentForm = document.getElementById("contragent-form");
           if (contragentForm) {
-            console.log(
-              "🔵 Detected contragent form - setting table to 'faktura'"
-            );
             tableFromDraft = "faktura";
           }
         }
@@ -693,21 +665,13 @@ export function showSavePromptModal(): Promise<boolean> {
           "sclad_detail_catno"
         ) as HTMLInputElement;
         const catalogNumber = catalogInput?.value?.trim() || "";
-        console.log("Catalog number:", catalogNumber);
 
         if (CRUD === "Редагувати") {
-          console.log("Edit mode: processing operations...");
 
           if (catalogNumber && tableFromDraft === "sclad") {
-            console.log(
-              "Catalog number present: processing only sclad operations..."
-            );
             const scladOk = await handleScladCrud();
             results.push(scladOk);
           } else if (!catalogNumber) {
-            console.log(
-              "Catalog number empty: processing ONLY shops and details..."
-            );
 
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
@@ -715,9 +679,7 @@ export function showSavePromptModal(): Promise<boolean> {
             if (shopsHandled !== null) results.push(shopsHandled);
             if (detailsHandled !== null) results.push(detailsHandled);
 
-            console.log("Skipping sclad operations - catalog number is empty");
           } else {
-            console.log("Unknown edit scenario, using fallback...");
             success = await performCrudOperation();
             cleanup();
             if (success) {
@@ -736,12 +698,8 @@ export function showSavePromptModal(): Promise<boolean> {
             return;
           }
         } else if (CRUD === "Видалити") {
-          console.log("Delete mode: checking catalog number...");
 
           if (!catalogNumber) {
-            console.log(
-              "Catalog number empty: deleting ONLY from shops and details..."
-            );
 
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
@@ -749,13 +707,10 @@ export function showSavePromptModal(): Promise<boolean> {
             if (shopsHandled !== null) results.push(shopsHandled);
             if (detailsHandled !== null) results.push(detailsHandled);
 
-            console.log("Skipping sclad deletion - catalog number is empty");
           } else if (catalogNumber && tableFromDraft === "sclad") {
-            console.log("Catalog number present: deleting only from sclad...");
             const scladOk = await handleScladCrud();
             results.push(scladOk);
           } else {
-            console.log("Unknown delete scenario, using fallback...");
             success = await performCrudOperation();
             cleanup();
             if (success) {
@@ -774,12 +729,8 @@ export function showSavePromptModal(): Promise<boolean> {
             return;
           }
         } else if (CRUD === "Додати") {
-          console.log("Add mode: processing operations...");
 
           if (!catalogNumber) {
-            console.log(
-              "Catalog number empty: adding to shops and details only..."
-            );
 
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
@@ -787,11 +738,7 @@ export function showSavePromptModal(): Promise<boolean> {
             if (shopsHandled !== null) results.push(shopsHandled);
             if (detailsHandled !== null) results.push(detailsHandled);
 
-            console.log("Skipping sclad addition - catalog number is empty");
           } else if (catalogNumber && tableFromDraft === "sclad") {
-            console.log(
-              "Catalog number present: adding to all relevant databases..."
-            );
 
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
@@ -799,11 +746,9 @@ export function showSavePromptModal(): Promise<boolean> {
             if (shopsHandled !== null) results.push(shopsHandled);
             if (detailsHandled !== null) results.push(detailsHandled);
 
-            console.log("Also handling sclad operations...");
             const scladOk = await handleScladCrud();
             results.push(scladOk);
           } else {
-            console.log("Unknown add scenario, using fallback...");
             success = await performCrudOperation();
             cleanup();
             if (success) {
@@ -824,11 +769,9 @@ export function showSavePromptModal(): Promise<boolean> {
         }
 
         if (results.length === 0) {
-          console.log("No specific handlers matched, using fallback...");
           success = await performCrudOperation();
         } else {
           success = results.every(Boolean);
-          console.log("CRUD results summary:", results, "success:", success);
 
           if (!success) {
             const failedOps = results
@@ -860,9 +803,6 @@ export function showSavePromptModal(): Promise<boolean> {
           passwordInput.value = "";
         }
 
-        console.log(
-          "CRUD operation completed successfully, keeping main modal open"
-        );
         resolve(true);
       } else {
         closeAllModals();

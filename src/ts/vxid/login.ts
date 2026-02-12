@@ -3,8 +3,6 @@
 import { supabase } from "./supabaseClient";
 import { getOAuthRedirectUrl, getPageUrl } from '../../config/project.config';
 
-console.log("🔒 Ініціалізація системи входу...");
-
 // 🔍 Перевірка email через базу даних whitelist
 async function isEmailAllowed(email: string | undefined): Promise<boolean> {
   if (!email) return false;
@@ -44,13 +42,9 @@ const getRedirectUrl = (): string => {
 
 // 🚪 Вхід через Google OAuth
 export async function signInWithGoogle() {
-  console.log("🔑 Запуск Google OAuth...");
 
   // 🔥 Визначаємо правильний redirect URL залежно від середовища
   const redirectUrl = getRedirectUrl();
-  
-  console.log("🌐 Поточний домен:", window.location.hostname);
-  console.log("🔗 Redirect URL:", redirectUrl);
   
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -63,14 +57,11 @@ export async function signInWithGoogle() {
 
   if (error) {
     console.error("❌ Помилка Google OAuth:", error);
-  } else {
-    console.log("✅ Google OAuth ініційовано з redirectTo:", redirectUrl);
   }
 }
 
 // 🔍 Перевірка сесії при завантаженні сторінки
 async function checkExistingSession() {
-  console.log("🔍 Перевірка існуючої сесії...");
 
   const {
     data: { session },
@@ -83,10 +74,7 @@ async function checkExistingSession() {
   }
 
   if (session?.user) {
-    console.log("👤 Знайдено сесію:", session.user.email);
     await handleAuthenticatedUser(session.user);
-  } else {
-    console.log("✉️ Немає активної сесії");
   }
 }
 
@@ -102,12 +90,9 @@ async function handleAuthenticatedUser(user: any) {
     window.location.href = getPageUrl('index.html');
     return;
   }
-
-  console.log("✅ Email дозволено:", email);
   
   // 🔥 Перевіряємо, де ми зараз, щоб не перезавантажувати сторінку вічно
   if (!window.location.pathname.includes("main.html")) {
-    console.log("➡️ Перенаправлення на main.html");
     const redirectUrl = getRedirectUrl();
     window.location.href = redirectUrl;
   }
@@ -115,19 +100,13 @@ async function handleAuthenticatedUser(user: any) {
 
 // 🎯 Відстеження змін авторизації
 supabase.auth.onAuthStateChange(async (event, session) => {
-  console.log("🔔 Auth event:", event);
-
   if (event === "SIGNED_IN" && session?.user) {
     await handleAuthenticatedUser(session.user);
-  } else if (event === "SIGNED_OUT") {
-    console.log("🚪 Користувач вийшов");
   }
 });
 
 // 🧠 Ініціалізація при завантаженні - перевірка сесії
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("📄 DOM завантажено");
-
   // Перевіряємо чи вже є сесія
   await checkExistingSession();
 });

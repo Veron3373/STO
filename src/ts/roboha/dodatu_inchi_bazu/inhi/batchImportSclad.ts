@@ -929,18 +929,6 @@ function revalidateRow(index: number) {
   // Обов'язкові: Дата, Магазин, Каталог номер, Деталь, Кількість, Ціна, Одиниця, Склад
   // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
 
-  console.log(`[revalidateRow ${index}] Checking row:`, {
-    date: row.date,
-    shop: row.shop,
-    catno: row.catno,
-    detail: row.detail,
-    unit: row.unit,
-    qty: row.qty,
-    price: row.price,
-    warehouse: row.warehouse,
-    unitValid: row.unitValid,
-    warehouseValid: row.warehouseValid
-  });
 
   const isFilled =
     row.date &&
@@ -960,12 +948,6 @@ function revalidateRow(index: number) {
   const areNumbersValid =
     !isNaN(row.qty) && !isNaN(row.price);
 
-  console.log(`[revalidateRow ${index}] Validation:`, {
-    isFilled,
-    areNumbersValid,
-    unitValid: row.unitValid,
-    warehouseValid: row.warehouseValid
-  });
 
   // Перевірка валідності
   // shopValid і detailValid тепер завжди true якщо заповнені
@@ -1465,17 +1447,14 @@ async function uploadBatchData(data: any[]) {
     const existingDetails = new Map<string, number>();
 
     // 3) Shops - з перевіркою на дублікати
-    console.log(`🏪 Обробка ${uniqueShops.length} унікальних магазинів...`);
     for (const shopName of uniqueShops) {
       // Спочатку перевіряємо чи вже є в кеші (створений раніше в цьому ж батчі)
       if (existingShops.has(shopName)) {
-        console.log(`✓ Магазин "${shopName}" вже в кеші, пропускаємо`);
         continue;
       }
 
       let shopId = await getShopIdByName(shopName);
       if (!shopId) {
-        console.log(`➕ Створюємо новий магазин: "${shopName}"`);
         resetShopState();
         shopEditState.currentName = shopName;
         shopEditState.touched = true;
@@ -1486,12 +1465,10 @@ async function uploadBatchData(data: any[]) {
 
         shopId = await getShopIdByName(shopName);
         if (shopId) {
-          console.log(`✅ Магазин "${shopName}" створено з ID: ${shopId}`);
         } else {
           console.warn(`⚠️ Не вдалося отримати ID для магазину "${shopName}"`);
         }
       } else {
-        console.log(`✓ Магазин "${shopName}" вже існує з ID: ${shopId}`);
       }
 
       if (shopId) {
@@ -1501,17 +1478,14 @@ async function uploadBatchData(data: any[]) {
     }
 
     // 4) Details - з перевіркою на дублікати
-    console.log(`📦 Обробка ${uniqueDetails.length} унікальних деталей...`);
     for (const detailName of uniqueDetails) {
       // Спочатку перевіряємо чи вже є в кеші (створена раніше в цьому ж батчі)
       if (existingDetails.has(detailName)) {
-        console.log(`✓ Деталь "${detailName}" вже в кеші, пропускаємо`);
         continue;
       }
 
       let detailId = await getDetailIdByName(detailName);
       if (!detailId) {
-        console.log(`➕ Створюємо нову деталь: "${detailName}"`);
         resetDetailState();
         detailEditState.currentName = detailName;
         detailEditState.touched = true;
@@ -1522,12 +1496,10 @@ async function uploadBatchData(data: any[]) {
 
         detailId = await getDetailIdByName(detailName);
         if (detailId) {
-          console.log(`✅ Деталь "${detailName}" створено з ID: ${detailId}`);
         } else {
           console.warn(`⚠️ Не вдалося отримати ID для деталі "${detailName}"`);
         }
       } else {
-        console.log(`✓ Деталь "${detailName}" вже існує з ID: ${detailId}`);
       }
 
       if (detailId) {
@@ -1721,10 +1693,6 @@ export async function initBatchImport() {
   actsDateOffMap = actsData.map;
   warehouseListCache = await loadWarehouseList();
 
-  console.log("Завантажено магазинів:", shopsListCache.length);
-  console.log("Завантажено деталей:", detailsListCache.length);
-  console.log("Завантажено актів:", actsListCache.length);
-  console.log("Завантажено складів:", warehouseListCache.length);
 
   // Ensure модалки створені один раз
   const existingModal = document.getElementById(batchModalId);

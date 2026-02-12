@@ -16,6 +16,5 @@ export async function requireAuth() {
     return;
   }
 
-  console.log("✅ Сесія підтверджена:", session.user.email);
   return session;
 }

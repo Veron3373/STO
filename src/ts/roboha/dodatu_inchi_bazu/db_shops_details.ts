@@ -101,7 +101,6 @@ async function updateShopNameById(
   newName: string
 ): Promise<boolean> {
   try {
-    console.log(`Оновлення магазину ID=${shop_id}, нове ім'я="${newName}"`);
 
     const { data: rec, error: fe } = await supabase
       .from("shops")
@@ -142,7 +141,6 @@ async function updateShopNameById(
       return false;
     }
 
-    console.log("Магазин успішно оновлено");
     showToast("✅ Магазин успішно відредаговано", "#4caf50");
     return true;
   } catch (error) {
@@ -153,7 +151,6 @@ async function updateShopNameById(
 
 async function deleteShopById(shop_id: number): Promise<boolean> {
   try {
-    console.log(`Видалення магазину ID=${shop_id}`);
 
     const { error } = await supabase
       .from("shops")
@@ -165,7 +162,6 @@ async function deleteShopById(shop_id: number): Promise<boolean> {
       return false;
     }
 
-    console.log("Магазин успішно видалено");
     showToast("✅ Магазин успішно видалено", "#4caf50");
     return true;
   } catch (error) {
@@ -177,10 +173,8 @@ async function deleteShopById(shop_id: number): Promise<boolean> {
 // Додавання магазину — формуємо правильний JSON-об’єкт
 async function addShopWithName(newName: string): Promise<boolean> {
   try {
-    console.log(`Додавання нового магазину: "${newName}"`);
 
     if (await shopExistsByName(newName)) {
-      console.log("Магазин уже існує. Пропускаємо створення.");
       showToast("ℹ️ Магазин уже існує", "#2196F3");
       return true;
     }
@@ -208,7 +202,6 @@ async function addShopWithName(newName: string): Promise<boolean> {
       return false;
     }
 
-    console.log("Магазин успішно додано");
     showToast("✅ Магазин успішно додано", "#4caf50");
     return true;
   } catch (error) {
@@ -222,14 +215,9 @@ async function addShopWithName(newName: string): Promise<boolean> {
  */
 export async function tryHandleShopsCrud(): Promise<boolean | null> {
   if (!shopEditState.touched) {
-    console.log("Shop state not touched, skipping");
     return null;
   }
 
-  console.log("Handling shops CRUD:", {
-    mode: CRUD,
-    shopEditState,
-  });
 
   const mode = CRUD;
   const currentName = (shopEditState.currentName ?? "").trim();
@@ -246,7 +234,6 @@ export async function tryHandleShopsCrud(): Promise<boolean | null> {
       return false;
     }
     if (originalName && originalName === currentName) {
-      console.log("Ім'я магазину не змінилось");
       showToast("ℹ️ Ім'я магазину не змінилось", "#2196F3");
       return true;
     }
@@ -280,7 +267,6 @@ async function updateDetailById(
   newName: string
 ): Promise<boolean> {
   try {
-    console.log(`Оновлення деталі ID=${detail_id}, нове ім'я="${newName}"`);
 
     const { error } = await supabase
       .from("details")
@@ -292,7 +278,6 @@ async function updateDetailById(
       return false;
     }
 
-    console.log("Деталь успішно оновлено");
     showToast("✅ Деталь успішно відредаговано", "#4caf50");
     return true;
   } catch (error) {
@@ -303,7 +288,6 @@ async function updateDetailById(
 
 async function deleteDetailById(detail_id: number): Promise<boolean> {
   try {
-    console.log(`Видалення деталі ID=${detail_id}`);
 
     const { error } = await supabase
       .from("details")
@@ -315,7 +299,6 @@ async function deleteDetailById(detail_id: number): Promise<boolean> {
       return false;
     }
 
-    console.log("Деталь успішно видалено");
     showToast("✅ Деталь успішно видалено", "#4caf50");
     return true;
   } catch (error) {
@@ -340,10 +323,8 @@ async function detailExistsByName(name: string): Promise<boolean> {
 
 async function addDetailWithName(newName: string): Promise<boolean> {
   try {
-    console.log(`Додавання нової деталі: "${newName}"`);
 
     if (await detailExistsByName(newName)) {
-      console.log("Деталь уже існує. Пропускаємо створення.");
       showToast("ℹ️ Деталь уже існує", "#2196F3");
       return true;
     }
@@ -364,7 +345,6 @@ async function addDetailWithName(newName: string): Promise<boolean> {
       return false;
     }
 
-    console.log("Деталь успішно додано");
     showToast("✅ Деталь успішно додано", "#4caf50");
     return true;
   } catch (error) {
@@ -378,14 +358,9 @@ async function addDetailWithName(newName: string): Promise<boolean> {
  */
 export async function tryHandleDetailsCrud(): Promise<boolean | null> {
   if (!detailEditState.touched) {
-    console.log("Detail state not touched, skipping");
     return null;
   }
 
-  console.log("Handling details CRUD:", {
-    mode: CRUD,
-    detailEditState,
-  });
 
   const mode = CRUD;
   const currentName = (detailEditState.currentName ?? "").trim();
@@ -402,7 +377,6 @@ export async function tryHandleDetailsCrud(): Promise<boolean | null> {
       return false;
     }
     if (originalName && originalName === currentName) {
-      console.log("Ім'я деталі не змінилось");
       showToast("ℹ️ Ім'я деталі не змінилось", "#2196F3");
       return true;
     }

@@ -17,9 +17,6 @@ export async function markNotificationAsDeleted(
   try {
     // ⚠️ КРИТИЧНО: Тільки Приймальник може видаляти записи
     if (userAccessLevel !== "Приймальник") {
-      console.log(
-        `⏭️ [markNotificationAsDeleted] ${userAccessLevel} не може видаляти записи - тільки Приймальник`
-      );
       return false;
     }
 
@@ -32,9 +29,6 @@ export async function markNotificationAsDeleted(
       return false;
     }
 
-    console.log(
-      `🗑️ Позначаємо повідомлення ${notificationId} як видалене (Приймальник: ${currentUserName})...`
-    );
 
     // Спочатку перевіряємо, чи це повідомлення належить цьому Приймальнику
     const { data: notificationData, error: fetchError } = await supabase
@@ -49,9 +43,6 @@ export async function markNotificationAsDeleted(
     }
 
     if (notificationData?.pruimalnyk !== currentUserName) {
-      console.log(
-        `⏭️ Повідомлення ${notificationId} не належить приймальнику ${currentUserName} (pruimalnyk: ${notificationData?.pruimalnyk})`
-      );
       return false;
     }
 
@@ -70,9 +61,6 @@ export async function markNotificationAsDeleted(
       return false;
     }
 
-    console.log(
-      `✅ Повідомлення ${notificationId} позначено як видалене (Приймальник: ${currentUserName})`
-    );
     return true;
   } catch (err) {
     console.error("❌ Виняток при позначенні повідомлення:", err);
@@ -88,9 +76,6 @@ export async function loadUnseenNotifications(): Promise<
   ActNotificationPayload[]
 > {
   try {
-    console.log(
-      "📥 Завантажуємо невидалені (delit = FALSE) повідомлення з БД..."
-    );
 
     // ✅ Для Адміністратора - всі повідомлення
     if (userAccessLevel === "Адміністратор") {
@@ -106,13 +91,9 @@ export async function loadUnseenNotifications(): Promise<
       }
 
       if (!data || data.length === 0) {
-        console.log("ℹ️ Невидалених повідомлень не знайдено");
         return [];
       }
 
-      console.log(
-        `✅ Завантажено ${data.length} невидалених повідомлень (Адміністратор)`
-      );
 
       // Конвертуємо дані з БД в формат ActNotificationPayload
       return data.map((row: any) => ({
@@ -139,9 +120,6 @@ export async function loadUnseenNotifications(): Promise<
         return [];
       }
 
-      console.log(
-        `📋 Фільтруємо повідомлення для приймальника: "${currentUserName}"`
-      );
 
       const { data, error } = await supabase
         .from("act_changes_notifications")
@@ -156,13 +134,9 @@ export async function loadUnseenNotifications(): Promise<
       }
 
       if (!data || data.length === 0) {
-        console.log(`ℹ️ Повідомлень для ${currentUserName} не знайдено`);
         return [];
       }
 
-      console.log(
-        `✅ Завантажено ${data.length} повідомлень для ${currentUserName}`
-      );
 
       // Конвертуємо дані з БД в формат ActNotificationPayload
       return data.map((row: any) => ({
@@ -197,11 +171,8 @@ export async function deleteActNotificationsOnClose(
   actId: number
 ): Promise<boolean> {
   try {
-    console.log(
-      `🗑️ [deleteActNotificationsOnClose] Позначаємо всі повідомлення для акту #${actId} як видалені (delit=true)...`
-    );
 
-    const { error, count } = await supabase
+    const { error } = await supabase
       .from("act_changes_notifications")
       .update({ delit: true })
       .eq("act_id", actId)
@@ -216,9 +187,6 @@ export async function deleteActNotificationsOnClose(
       return false;
     }
 
-    console.log(
-      `✅ [deleteActNotificationsOnClose] Повідомлення для акту #${actId} успішно позначені як видалені (count: ${count ?? 'N/A'})`
-    );
     return true;
   } catch (err: any) {
     console.error(

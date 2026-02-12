@@ -250,9 +250,6 @@ async function saveInvoiceNumber(
   fakturaId: number | null
 ): Promise<boolean> {
   try {
-    console.log(
-      `🔄 Збереження: №${invoiceNumber}, Дата: ${isoDateString}, FakturaID: ${fakturaId} для act_id=${currentActId}`
-    );
 
     const { data: masterAct, error: readError } = await supabase
       .from("acts")
@@ -271,7 +268,6 @@ async function saveInvoiceNumber(
           .from("acts")
           .update({ contrAgent_raxunok: newNum })
           .eq("act_id", 1);
-        console.log("✅ Мастер-акт оновлено");
       }
     }
 
@@ -288,7 +284,6 @@ async function saveInvoiceNumber(
       console.error("❌ Помилка оновлення поточного акту:", currentError);
       return false;
     }
-    console.log("✅ Поточний акт оновлено успішно");
 
     return true;
   } catch (error) {
@@ -615,13 +610,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
         console.error("Помилка пошуку фактури клієнта:", clientError);
       } else if (clientFaktura) {
         foundFakturaId = clientFaktura.faktura_id;
-        console.log(
-          `✅ Знайдено faktura_id для клієнта "${actData.client}": ${foundFakturaId}`
-        );
       } else {
-        console.log(
-          `ℹ️ Клієнта "${actData.client}" в таблиці faktura не знайдено.`
-        );
       }
     } catch (err) {
       console.error("Помилка при пошуку клієнта:", err);

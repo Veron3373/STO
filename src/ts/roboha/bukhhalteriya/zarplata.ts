@@ -600,7 +600,6 @@ async function autoSearchPodlegleFromInputs(): Promise<void> {
     dateOpen < lastSearchDateOpen ||
     (dateClose && dateClose > (lastSearchDateClose || todayIso()))
   ) {
-    console.log("Авто-пошук: розширення діапазону, оновлення даних...");
     showNotification("🔄 Оновлення даних...", "info", 1500);
     await loadSlyusarsData();
     if (slyusarsData.length === 0) {
@@ -608,7 +607,6 @@ async function autoSearchPodlegleFromInputs(): Promise<void> {
       return;
     }
   } else {
-    console.log("Авто-пошук: використання кешованих даних.");
   }
   // ▲▲▲ Кінець блоку змін ▲▲▲
 
@@ -776,7 +774,6 @@ export async function loadSlyusarsData(): Promise<void> {
           actsDateOffMap.set(String(act.act_id), act.date_off);
         }
       });
-      console.log(`📅 Завантажено ${actsDateOffMap.size} дат закриття актів`);
     }
 
     if (error) {
@@ -877,7 +874,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
 
-    console.log(`📌 Знайдено primary key: ${primaryKey}`);
 
     // ✅ ОПТИМІЗАЦІЯ: Збираємо всі оновлення в масив промісів
     const updatePromises: Promise<any>[] = [];
@@ -911,7 +907,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
             console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
             throw updErr;
           }
-          console.log(`✅ Оновлено ${slyusar.Name}`);
           return upd;
         })();
 
@@ -927,7 +922,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
             console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
             throw updErr;
           }
-          console.log(`✅ Оновлено за JSON Name для ${slyusar.Name}`);
           return upd;
         })();
 
@@ -938,7 +932,6 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
     // ✅ Чекаємо завершення ВСІХ оновлень
     await Promise.all(updatePromises);
 
-    console.log(`✅ Збережено ${updatePromises.length} записів слюсарів`);
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
     console.error("❌ Помилка збереження в базу slyusars:", error);
@@ -990,9 +983,6 @@ export function createNameSelect(): void {
       // ✅ ВИПРАВЛЕННЯ БАГ №2: ЗАВЖДИ оновлюємо дані при зміні імені
       // Раніше оновлення відбувалось тільки якщо hasDataForAllEmployees === true
       if (lastSearchDateOpen || lastSearchDateClose) {
-        console.log(
-          `🔄 Оновлення даних при зміні співробітника: ${selectedName || "всі"}`
-        );
 
         searchDataInDatabase(
           lastSearchDateOpen,
@@ -1318,7 +1308,6 @@ export function searchDataInDatabase(
   podlegleData = [];
   if (!dateOpen && !dateClose) {
     dateOpen = "01.01.2020"; // ✅ ВИПРАВЛЕНО: використовуємо більш ранню дату за замовчуванням
-    console.log("📅 Використано дату за замовчуванням: 01.01.2020");
   }
   if (slyusarsData.length === 0) {
     showNotification(
@@ -1334,7 +1323,6 @@ export function searchDataInDatabase(
 
   const toIsoClose = dateClose || todayIso();
 
-  console.log(`🔍 Пошук в базі slyusars:`);
 
   slyusarsData.forEach((slyusar) => {
     if (selectedName && slyusar.Name !== selectedName) return;
@@ -1510,7 +1498,6 @@ export function searchDataInDatabase(
     });
   });
 
-  console.log(`📊 Знайдено ${podlegleData.length} записів в базі slyusars`);
 
   // Фільтр по роботі - для приймальників work = "-", тому вони можуть відсіятись, якщо юзер щось ввів
   const workInput =
@@ -1646,12 +1633,8 @@ export function filterPodlegleData(): void {
   }
 
   if (workInput) {
-    const before = filtered.length;
     filtered = filtered.filter((record) =>
       (record.work || "").toLowerCase().includes(workInput.toLowerCase())
-    );
-    console.log(
-      `🔍 Фільтр по роботі "${workInput}": ${before} → ${filtered.length}`
     );
   }
 
@@ -1737,9 +1720,6 @@ function initPodlegleDateFilterToggle(): void {
 
       podlegleDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
 
-      console.log(
-        `🔄 Підлеглі: змінено режим фільтрації дат на "${podlegleDateFilterMode}"`
-      );
 
       // ✅ ВИПРАВЛЕНО: Завжди використовуємо локальну фільтрацію
       if (hasPodlegleDataLoaded) {
@@ -1764,7 +1744,6 @@ export function createStatusToggle(): void {
     const target = e.target as HTMLInputElement;
     const value = target.value;
 
-    console.log("🔄 Зміна фільтра статусу актів:", value);
 
     switch (value) {
       case "0":
@@ -1791,7 +1770,6 @@ export function createStatusToggle(): void {
     const target = e.target as HTMLInputElement;
     const value = target.value;
 
-    console.log("🔄 Зміна фільтра статусу актів:", value);
 
     switch (value) {
       case "0":
@@ -1846,9 +1824,6 @@ export function createPaymentToggle(): void {
       updatepodlegleTable();
     }
 
-    console.log(
-      `✅ Фільтр застосовано. Поточний розрахунок: ${currentPaymentFilter}`
-    );
   });
 
   // ✅ ЗАЛИШАЄМО: Обробник input (для сумісності)
@@ -1875,9 +1850,6 @@ export function createPaymentToggle(): void {
       updatepodlegleTable();
     }
 
-    console.log(
-      `✅ Фільтр застосовано. Поточний розрахунок: ${currentPaymentFilter}`
-    );
   });
 }
 
@@ -1913,9 +1885,6 @@ export function createPercentageToggle(): void {
       updatepodlegleTable();
     }
 
-    console.log(
-      `✅ Фільтр по процентам застосовано: ${currentPercentageFilter}`
-    );
   });
 
   // Обробник input (для сумісності)
@@ -1942,9 +1911,6 @@ export function createPercentageToggle(): void {
       updatepodlegleTable();
     }
 
-    console.log(
-      `✅ Фільтр по процентам застосовано: ${currentPercentageFilter}`
-    );
   });
 }
 
@@ -1954,7 +1920,6 @@ export async function handlepodlegleAddRecord(): Promise<void> {
   const hasAccess = await checkCurrentPageAccess();
 
   if (!hasAccess) {
-    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     redirectToIndex();
     return;
   }
@@ -2005,7 +1970,6 @@ export async function handlepodlegleAddRecord(): Promise<void> {
     searchInfo += ` для ${selectedName}`;
   }
 
-  console.log(searchInfo);
 }
 
 function initPodlegleDateAutoFilter(): void {
@@ -2263,12 +2227,9 @@ export async function runMassPaymentCalculation(): Promise<void> {
   
   // ✅ Додаткове логування для відстеження
   const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
-  console.log(`🔍 Масовий розрахунок: вибраний працівник = "${selectedName || 'всі'}"`);
-  console.log(`🔍 Масовий розрахунок: знайдено ${filteredData.length} записів для обробки`);
   
   // ✅ Логування унікальних імен в filteredData
   const uniqueNames = [...new Set(filteredData.map(r => r.name))];
-  console.log(`🔍 Унікальні працівники в filteredData:`, uniqueNames);
   
   // ✅ Перевірка: якщо вибрано конкретне ім'я, але filteredData містить інші імена - це баг!
   if (selectedName && uniqueNames.some(name => name !== selectedName)) {
@@ -2333,7 +2294,6 @@ export async function runMassPaymentCalculation(): Promise<void> {
                 (e) => e.recordId === record.recordId && !e.Розраховано
               );
               if (workEntry) {
-                console.log(`✅ Знайдено запис за recordId: ${record.recordId}`);
               }
             }
             
@@ -2342,7 +2302,6 @@ export async function runMassPaymentCalculation(): Promise<void> {
               const entryByIndex = actRecord.Записи[record.workIndex];
               if (entryByIndex && entryByIndex.Робота === record.work && !entryByIndex.Розраховано) {
                 workEntry = entryByIndex;
-                console.log(`✅ Знайдено запис за workIndex: ${record.workIndex}`);
               }
             }
             
@@ -2352,7 +2311,6 @@ export async function runMassPaymentCalculation(): Promise<void> {
                 (e) => e.Робота === record.work && !e.Розраховано
               );
               if (workEntry) {
-                console.log(`✅ Знайдено запис за назвою роботи: ${record.work}`);
               }
             }
 
@@ -2503,7 +2461,6 @@ export function clearpodlegleForm(): void {
   // ✅ 8. Оновлюємо таблицю
   updatepodlegleTable();
 
-  console.log("✅ Форма повністю очищена, всі фільтри скинуті");
   showNotification("🗑️ Фільтри та дані очищено", "info", 1500);
 }
 

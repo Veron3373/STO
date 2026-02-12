@@ -31,14 +31,12 @@ export async function sendActClosedSMS(
       smsEnabledData?.data === 1;
 
     if (!smsEnabled) {
-      console.log("ℹ️ SMS вимкнено в налаштуваннях (settings.setting_id = 5)");
       return false;
     }
 
     // 2) Якщо сума ≈ 0 — НЕ відправляємо SMS
     const sum = Number(totalSum);
     if (!Number.isFinite(sum) || Math.abs(sum) < 0.01) {
-      console.log("ℹ️ totalSum = 0 => SMS не відправляємо");
       showNotification("ℹ️Сума = 0 грн. SMS не відправлено", "warning", 3000); // помаранчевим
       return false; // повертаємо false, щоб вище по коду знали: SMS не відправлялось
     }

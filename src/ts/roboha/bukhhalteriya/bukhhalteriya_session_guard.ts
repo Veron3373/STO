@@ -5,7 +5,6 @@ import { supabase } from "../../vxid/supabaseClient";
 import { getGitUrl, getFallbackUrl } from "../../utils/gitUtils";
 import { initUrlUpdater } from "../../utils/urlUpdater";
 
-console.log("🔒 [Бухгалтерія] Перевірка Google сесії...");
 
 // Перевірка email через базу даних whitelist
 async function isEmailAllowed(email: string | undefined): Promise<boolean> {
@@ -53,7 +52,6 @@ async function checkGoogleSession() {
       return;
     }
 
-    console.log("✅ [Бухгалтерія] Google сесія підтверджена:", email);
     
     // Оновлюємо посилання на сторінці
     initUrlUpdater();

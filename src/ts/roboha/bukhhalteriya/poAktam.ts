@@ -1245,7 +1245,6 @@ async function fetchScladData(): Promise<ScladItem[]> {
         };
       });
 
-      console.log(`✅ Завантажено ${scladData.length} товарів зі складу`);
       return scladData;
     }
 
@@ -1289,7 +1288,6 @@ async function fetchActsDiscounts(): Promise<void> {
           actsDiscountCache.set(act.act_id, discountPercent);
         }
       }
-      console.log(`✅ Завантажено знижки для ${actsDiscountCache.size} актів`);
     }
   } catch (error) {
     console.error("Помилка завантаження знижок:", error);
@@ -1307,7 +1305,6 @@ export async function searchDetailsData(): Promise<void> {
   const hasAccess = await checkCurrentPageAccess();
 
   if (!hasAccess) {
-    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     redirectToIndex();
     return;
   }
@@ -1320,7 +1317,6 @@ export async function searchDetailsData(): Promise<void> {
   // Якщо не вказано жодної дати - встановлюємо дату за замовчуванням БЕЗ відображення користувачу
   if (!dateOpen && !dateClose) {
     dateOpen = "01.01.2025"; // Встановлюємо внутрішню дату за замовчуванням
-    console.log("📅 Використано дату за замовчуванням: 01.01.2025");
   }
 
   await fetchScladData();
@@ -1329,7 +1325,6 @@ export async function searchDetailsData(): Promise<void> {
   const shops = await fetchShopData();
   const rawData: DetailsRecord[] = [];
 
-  console.log(`🔍 Завантаження всіх деталей з бази...`);
 
   for (const shop of shops) {
     const history = shop.Історія || {};
@@ -1642,7 +1637,6 @@ export function initializeDetailsData(): void {
   initDetailsAutoBehaviors();
   createDetailsStatusToggle();
   createDetailsPaymentToggle();
-  console.log("✅ initializeDetailsData() виконана");
 }
 
 // Глобальна змінна для зберігання поточного фільтра дат
@@ -1665,9 +1659,6 @@ function initDetailsDateFilterToggle(): void {
 
       detailsDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
 
-      console.log(
-        `🔄 Деталі: змінено режим фільтрації дат на "${detailsDateFilterMode}"`
-      );
 
       // ЗМІНЕНО: просто застосовуємо фільтр до вже завантажених даних
       if (hasDetailsDataLoaded) {
@@ -1971,9 +1962,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ) as HTMLInputElement;
 
     if (statusToggle) {
-      console.log(
-        "✅ DOMContentLoaded: Перемикач статусу Po Aktam знайдено, ініціалізуємо..."
-      );
       createDetailsStatusToggle();
     } else {
       console.warn(
@@ -1982,9 +1970,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (paymentToggle) {
-      console.log(
-        "✅ DOMContentLoaded: Перемикач розрахунків Po Aktam знайдено, ініціалізуємо..."
-      );
       createDetailsPaymentToggle();
     } else {
       console.warn(

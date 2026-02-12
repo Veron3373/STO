@@ -252,10 +252,6 @@ async function syncSlyusarsHistoryForAct(params: {
       );
     });
 
-    console.log(`🔄 Розгортання назви:`, {
-      скорочена: shortenedName,
-      повна: fullName || shortenedName,
-    });
 
     return fullName || shortenedName;
   }
@@ -298,7 +294,6 @@ async function syncSlyusarsHistoryForAct(params: {
     // Створюємо новий масив записів, зберігаючи стару дату та "Розраховано" для незмінних робіт
     const prevWorks = Array.isArray(actEntry["Записи"]) ? actEntry["Записи"] : [];
     
-    console.log(`📚 [save_work] Попередні записи з БД для слюсаря "${slyusarName}", акт #${params.actId}:`, prevWorks);
     
     // ✅ Хелпер для нормалізації назви (нечутливий до регістру та пробілів)
     const normalizeName = (name: string) => (name || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -322,7 +317,6 @@ async function syncSlyusarsHistoryForAct(params: {
       }
     }
     
-    console.log(`🗺️ [save_work] Карти для пошуку: byId=${prevWorksById.size}, byName=${prevWorksByName.size}`);
     
     const zapis: Array<{
       Ціна: number;
@@ -345,22 +339,11 @@ async function syncSlyusarsHistoryForAct(params: {
         ? expandNameForSave(workName)
         : workName;
 
-      console.log(`📝 [save_work] Обробка роботи #${idx}:`, {
-        Найменування: fullWorkName,
-        Кількість: qty,
-        Ціна: price,
-        Зарплата: zp,
-        recordId: r.recordId,
-      });
 
       // ✅ ВИПРАВЛЕНО: recordId береться з об'єкта WorkRow (передається з processItems)
       const currentRecordId = r.recordId || "";
       let sourceForDates: any = null;
       
-      console.log(`🔍 [save_work] === ПОШУК ПОПЕРЕДНЬОГО ЗАПИСУ ===`);
-      console.log(`   📝 Робота: "${fullWorkName}"`);
-      console.log(`   🔑 recordId з DOM: "${currentRecordId || 'НЕМАЄ!'}"`);
-      console.log(`   📊 Кількість попередніх записів в БД: ${prevWorks.length}`);
       
       // ✅ ГОЛОВНИЙ СПОСІБ: Пошук за recordId (унікальний і точний)
       // recordId гарантує що ми знаходимо саме той запис, який редагуємо
@@ -368,15 +351,8 @@ async function syncSlyusarsHistoryForAct(params: {
       // 1. ПРІОРИТЕТ №1: Пошук за recordId (найточніший спосіб)
       if (currentRecordId && prevWorksById.has(currentRecordId)) {
         sourceForDates = prevWorksById.get(currentRecordId);
-        console.log(`✅ [save_work] ЗНАЙДЕНО за recordId "${currentRecordId}":`, {
-          Робота: sourceForDates?.Робота,
-          Записано: sourceForDates?.Записано,
-          Розраховано: sourceForDates?.Розраховано,
-          Зарплата: sourceForDates?.Зарплата,
-        });
       } else if (currentRecordId) {
         console.log(`⚠️ [save_work] recordId "${currentRecordId}" НЕ знайдено в попередніх записах!`);
-        console.log(`   Доступні recordId в БД:`, Array.from(prevWorksById.keys()));
       }
       
       // 2. ПРІОРИТЕТ №2: Пошук за назвою роботи (для записів без recordId або нових) - НОРМАЛІЗОВАНО
@@ -385,11 +361,6 @@ async function syncSlyusarsHistoryForAct(params: {
         const prevByName = prevWorksByName.get(normalizedFullWorkName);
         if (prevByName) {
           sourceForDates = prevByName;
-          console.log(`✅ [save_work] Знайдено за назвою "${fullWorkName}":`, {
-            Записано: sourceForDates?.Записано,
-            Розраховано: sourceForDates?.Розраховано,
-            recordId: sourceForDates?.recordId,
-          });
         }
       }
       
@@ -402,11 +373,6 @@ async function syncSlyusarsHistoryForAct(params: {
           if (normalizedPwName && (normalizedPwName.startsWith(normalizedFullWorkName.substring(0, 30)) || 
                             normalizedFullWorkName.startsWith(normalizedPwName.substring(0, 30)))) {
             sourceForDates = pw;
-            console.log(`✅ [save_work] Знайдено за частковим збігом:`, {
-              Записано: sourceForDates?.Записано,
-              Розраховано: sourceForDates?.Розраховано,
-              recordId: sourceForDates?.recordId,
-            });
             break;
           }
         }
@@ -421,7 +387,6 @@ async function syncSlyusarsHistoryForAct(params: {
       let recordedDate = sourceForDates?.Записано || null;
       let calculatedDate = sourceForDates?.Розраховано || null;
       
-      console.log(`📅 [save_work] Дати з попереднього запису: Записано="${recordedDate}", Розраховано="${calculatedDate}"`);
       
       // ✅ ВИПРАВЛЕНО v4.0: Визначаємо recordId
       // ПРІОРИТЕТ: DOM → попередній запис → генерувати новий
@@ -430,17 +395,14 @@ async function syncSlyusarsHistoryForAct(params: {
       // 1. ГОЛОВНИЙ: беремо з DOM (він вже унікальний і прив'язаний до рядка)
       if (currentRecordId) {
         recordId = currentRecordId;
-        console.log(`🔑 [save_work] recordId з DOM: ${recordId}`);
       }
       // 2. Якщо в DOM немає - беремо з попереднього запису (для міграції старих даних)
       else if (sourceForDates?.recordId) {
         recordId = sourceForDates.recordId;
-        console.log(`🔑 [save_work] recordId з попереднього запису (міграція): ${recordId}`);
       }
       // 3. Якщо немає ніде - генеруємо новий (для нових робіт)
       else {
         recordId = `${params.actId}_${slyusarName}_${idx}_${Date.now()}`;
-        console.log(`🆕 [save_work] Згенеровано новий recordId: ${recordId}`);
       }
       
       // Якщо робота нова — ставимо нову дату запису
@@ -450,7 +412,6 @@ async function syncSlyusarsHistoryForAct(params: {
         const month = String(now.getMonth() + 1).padStart(2, "0");
         const year = now.getFullYear();
         recordedDate = `${day}.${month}.${year}`;
-        console.log(`📅 [save_work] Нова дата запису: ${recordedDate}`);
       }
 
       const newRecord: any = {
@@ -466,14 +427,8 @@ async function syncSlyusarsHistoryForAct(params: {
       // Це гарантує що дата виплати НІКОЛИ не втрачається при редагуванні
       if (calculatedDate) {
         newRecord.Розраховано = calculatedDate;
-        console.log(`💰 [save_work] Зберігаємо дату виплати: ${calculatedDate}`);
       }
 
-      console.log(`💾 [save_work] === ЗБЕРЕЖЕННЯ ЗАПИСУ #${idx} ===`);
-      console.log(`   📥 Вхідні дані з DOM: Ціна=${price}, Кількість=${qty}, Зарплата=${zp}`);
-      console.log(`   📅 Дати: Записано="${recordedDate}", Розраховано="${calculatedDate || 'немає'}"`);
-      console.log(`   🔑 recordId: ${recordId}`);
-      console.log(`   📤 Новий запис:`, newRecord);
 
       zapis.push(newRecord);
       summaRob += price * qty;
@@ -504,14 +459,12 @@ async function syncSlyusarsHistoryForAct(params: {
   for (const prevRow of params.prevRows) {
     const prevSlyusarName = prevRow.slyusarName;
     const prevRecordId = prevRow.recordId;
-    const prevWorkName = prevRow.Найменування;
 
     // Якщо є recordId - перевіряємо чи змінився слюсар
     if (prevRecordId && currentRecordIdToSlyusar.has(prevRecordId)) {
       const currentSlyusar = currentRecordIdToSlyusar.get(prevRecordId);
       if (currentSlyusar !== prevSlyusarName) {
         // Слюсар змінився! Видаляємо цей запис у попереднього слюсаря
-        console.log(`🔄 Зміна слюсаря для роботи "${prevWorkName}": "${prevSlyusarName}" → "${currentSlyusar}"`);
         
         const slyRow = await fetchSlyusarByName(prevSlyusarName);
         if (slyRow) {
@@ -531,7 +484,6 @@ async function syncSlyusarsHistoryForAct(params: {
               );
               
               if (actEntry["Записи"].length < initialLength) {
-                console.log(`🗑️ Видалено запис "${prevWorkName}" (recordId: ${prevRecordId}) у слюсаря "${prevSlyusarName}"`);
                 
                 // Перераховуємо суму
                 let newSum = 0;
@@ -545,7 +497,6 @@ async function syncSlyusarsHistoryForAct(params: {
                   const actIdx = dayBucket.indexOf(actEntry);
                   if (actIdx !== -1) {
                     dayBucket.splice(actIdx, 1);
-                    console.log(`🗑️ Видалено весь актовий запис для слюсаря "${prevSlyusarName}" (немає більше записів)`);
                   }
                 }
                 
@@ -582,7 +533,6 @@ async function syncSlyusarsHistoryForAct(params: {
     }
 
     dayBucket.splice(idx, 1);
-    console.log(`🗑️ Видалено всі записи акту ${params.actId} для слюсаря "${oldName}" (слюсар повністю видалений з акту)`);
     await updateSlyusarJson(slyRow);
   }
 }

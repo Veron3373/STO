@@ -149,7 +149,6 @@ export function showViknoPidtverdchennayZakruttiaAkty(
         ) as HTMLSelectElement | null;
         const selectedPaymentType = paymentSelect?.value || "Готівка";
 
-        console.log(`💳 Обрано тип оплати: ${selectedPaymentType}`);
 
         showNotification("Закриваємо акт...", "info", 1200);
 
@@ -168,9 +167,6 @@ export function showViknoPidtverdchennayZakruttiaAkty(
             updatePaymentError
           );
         } else {
-          console.log(
-            `✅ Тип оплати "${selectedPaymentType}" збережено для акту ${actId}`
-          );
         }
 
         // SMS відправка видалена звідси за запитом користувача

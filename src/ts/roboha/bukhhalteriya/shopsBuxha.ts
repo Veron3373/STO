@@ -558,7 +558,6 @@ async function loadAvailableShops(): Promise<void> {
     populateShopsSelectOptions();
 
     shopsLoaded = true;
-    console.log(`Завантажено ${availableShops.length} магазинів для вибору`);
   } catch (error) {
     console.error("Помилка завантаження магазинів:", error);
     showNotification("Помилка завантаження списку магазинів", "error", 3000);
@@ -1103,9 +1102,6 @@ function initMagazineDateFilterToggle(): void {
       // Перезапускаємо фільтрацію
       triggerAutoFilter();
 
-      console.log(
-        `🔄 Магазин: змінено режим фільтрації дат на "${magazineDateFilterMode}"`
-      );
 
       // Перезапускаємо фільтрацію
       triggerAutoFilter();
@@ -1379,7 +1375,6 @@ export async function searchMagazineData(): Promise<void> {
   const hasAccess = await checkCurrentPageAccess();
 
   if (!hasAccess) {
-    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     redirectToIndex();
     return;
   }
@@ -1813,17 +1808,9 @@ export async function toggleReturn(index: number): Promise<void> {
   if (item.isReturned) {
     item.kilkist_off = item.kilkist_off + item.kilkist_on;
     item.xto_povernyv = userName;
-    console.log("Локально встановлено xto_povernyv:", userName);
-    console.log(
-      `Повернення: kilkist_off = ${prevKilkistOff} + ${item.kilkist_on} = ${item.kilkist_off}`
-    );
   } else {
     item.kilkist_off = item.kilkist_off - item.kilkist_on;
     item.xto_povernyv = null;
-    console.log("Локально очищено xto_povernyv");
-    console.log(
-      `Скасування повернення: kilkist_off = ${prevKilkistOff} - ${item.kilkist_on} = ${item.kilkist_off}`
-    );
   }
 
   try {
@@ -1989,7 +1976,6 @@ function initMagazineAutoBehaviors(): void {
 
     paymentToggle.addEventListener("input", function () {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2;
-      console.log("Payment filter changed to:", newValue);
       currentFilters.paymentStatus = newValue;
       applyLocalFilters(allMagazineData);
       updateMagazineTable();
@@ -2016,7 +2002,6 @@ function initMagazineAutoBehaviors(): void {
 
     availabilityToggle.addEventListener("input", function () {
       const newValue = parseInt(this.value, 10) as 0 | 1 | 2 | 3 | 4;
-      console.log("Availability filter changed to:", newValue);
       currentFilters.availabilityStatus = newValue;
       applyLocalFilters(allMagazineData);
       updateMagazineTable();

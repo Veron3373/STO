@@ -139,7 +139,6 @@ async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
       }
     }
 
-    console.log(`✅ Отримано дані з БД для акту #${actId}: Клієнт="${pib}", Авто="${auto}"`);
     return { pib, auto };
   } catch (error) {
     console.warn("⚠️ Помилка при отриманні даних клієнта з БД:", error);
@@ -170,8 +169,6 @@ async function loadPurchasePrices(): Promise<void> {
         purchasePricesCache.set(scladId, price);
       }
     });
-
-    console.log(`✅ Завантажено ${purchasePricesCache.size} закупівельних цін`);
   } catch (err) {
     console.error("⚠️ Помилка при завантаженні цін:", err);
   }
@@ -223,8 +220,6 @@ const validateActId = (actId: number): void => {
 export function cacheHiddenColumnsData(actDetails: any): void {
   fullRowDataCache.clear();
 
-  console.log("💾 Кешування повних даних рядків...");
-
   const details = Array.isArray(actDetails?.["Деталі"])
     ? actDetails["Деталі"]
     : [];
@@ -271,8 +266,6 @@ export function cacheHiddenColumnsData(actDetails: any): void {
       slyusar_id: w["slyusar_id"] || null,
     });
   });
-
-  console.log(`📦 Закешовано ${fullRowDataCache.size} позицій.`);
 }
 
 /* =============================== РОБОТА З ТАБЛИЦЕЮ =============================== */
@@ -311,8 +304,6 @@ function readTableNewNumbers(): Map<number, number> {
 }
 
 export function parseTableRows(): ParsedItem[] {
-  console.log(`📊 Збір даних таблиці. Рівень доступу: ${userAccessLevel}`);
-
   const tableRows = document.querySelectorAll(
     `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
   );
@@ -405,7 +396,6 @@ export function parseTableRows(): ParsedItem[] {
         // ✅ Стовпець ВИДИМИЙ - беремо з DOM (користувач міг змінити)
         const rawSalaryText = slyusarSumCell.textContent;
         slyusarSum = parseNum(rawSalaryText);
-        console.log(`💰 [parseTableRows] Зарплата з DOM (стовпець видимий): rawText="${rawSalaryText}", parsed=${slyusarSum}`);
       } else {
         // ⚠️ Стовпець ПРИХОВАНИЙ - беремо з історії слюсаря
         const historySalary = getSlyusarSalaryFromHistory(
@@ -418,10 +408,8 @@ export function parseTableRows(): ParsedItem[] {
 
         if (historySalary !== null && historySalary > 0) {
           slyusarSum = historySalary;
-          console.log(`💰 [parseTableRows] Зарплата з ІСТОРІЇ слюсаря "${pibMagazin}": ${slyusarSum} (стовпець прихований)`);
         } else if (cachedData) {
           slyusarSum = cachedData.slyusarSum || 0;
-          console.log(`💰 [parseTableRows] Зарплата з кешу (історія пуста): ${slyusarSum}`);
         }
       }
     } else {
@@ -429,12 +417,8 @@ export function parseTableRows(): ParsedItem[] {
       if (slyusarSumCell) {
         const rawSalaryText = slyusarSumCell.textContent;
         slyusarSum = parseNum(rawSalaryText);
-        console.log(`💰 [parseTableRows] Зарплата з DOM: rawText="${rawSalaryText}", parsed=${slyusarSum}`);
       } else if (cachedData) {
         slyusarSum = cachedData.slyusarSum || 0;
-        console.log(`💰 [parseTableRows] Зарплата з кешу: ${slyusarSum}`);
-      } else {
-        console.log(`⚠️ [parseTableRows] Зарплата: slyusarSumCell=null, cachedData=null, встановлено 0`);
       }
     }
 
@@ -443,19 +427,6 @@ export function parseTableRows(): ParsedItem[] {
     const slyusar_id = nameCell.getAttribute("data-slyusar-id")
       ? Number(nameCell.getAttribute("data-slyusar-id"))
       : null;
-
-    // 📊 ДІАГНОСТИКА: Логуємо зібрані дані з DOM
-    console.log(`📊 [parseTableRows] Рядок DOM:`, {
-      name,
-      type,
-      quantity,
-      price,
-      sum,
-      pibMagazin,
-      slyusarSum,
-      recordId,
-      fromCache: !priceCell && !!cachedData,
-    });
 
     const item: ParsedItem = {
       type,
@@ -477,7 +448,6 @@ export function parseTableRows(): ParsedItem[] {
     fullRowDataCache.set(cacheKey, item);
   });
 
-  console.log(`✅ Зібрано ${items.length} позицій з таблиці`);
   return items;
 }
 
@@ -573,8 +543,6 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
       // Якщо видаляємо з акту, delta від'ємна → kilkist_off зменшується (повертаємо на склад)
       const newOff = currentOff + delta;
 
-      console.log(`📦 sclad_id=${id}: kilkist_off ${currentOff} + delta ${delta} = ${newOff}`);
-
       return { sclad_id: id, kilkist_off: newOff };
     })
     .filter((update): update is NonNullable<typeof update> => update !== null);
@@ -610,7 +578,6 @@ function calculateDeltas(): Map<number, number> {
     // - Видалили з акту (new < old) → delta < 0 → kilkist_off зменшується (повертається на склад)
     const delta = (newNumbers.get(id) || 0) - (oldNumbers.get(id) || 0);
     if (delta !== 0) {
-      console.log(`📊 calculateDeltas: id=${id}, old=${oldNumbers.get(id) || 0}, new=${newNumbers.get(id) || 0}, delta=${delta}`);
       deltas.set(id, delta);
     }
   }
@@ -655,8 +622,6 @@ function processItems(items: ParsedItem[]) {
       // Це потрібно для нових рядків, які ще не мають recordId
       const workRecordId = recordId || `new_${name.substring(0, 20)}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      console.log(`💰 [processItems] Робота "${name}": slyusarSum=${slyusarSum}, salary=${salary}, profit=${profit}`);
-
       works.push({
         ...itemBase,
         Робота: name,
@@ -680,8 +645,6 @@ function processItems(items: ParsedItem[]) {
           Зарплата: salary,
           recordId: workRecordId, // ✅ Передаємо recordId для точного пошуку
         };
-
-        console.log(`🔧 [processItems] Додано роботу для слюсаря:`, workRow);
 
         workRowsForSlyusars.push(workRow);
       }
@@ -802,15 +765,6 @@ function compareActChanges(
   // Конвертуємо ActItem[] в ParsedItem[] для порівняння
   const initialParsed = convertActItemsToParsedItems(initialItems);
 
-  console.log(
-    `🔍 [compareActChanges] Початкові елементи (${initialParsed.length}):`,
-    initialParsed
-  );
-  console.log(
-    `🔍 [compareActChanges] Поточні елементи (${currentItems.length}):`,
-    currentItems
-  );
-
   // Створюємо унікальний ключ для кожної позиції (тип + назва)
   const createKey = (item: ParsedItem) => `${item.type}:${item.name}`;
 
@@ -832,7 +786,6 @@ function compareActChanges(
     const key = createKey(item);
     if (!initialMap.has(key)) {
       added.push(item);
-      console.log(`➕ [compareActChanges] Додано: ${key}`, item);
     }
   });
 
@@ -842,13 +795,8 @@ function compareActChanges(
     const key = createKey(item);
     if (!currentMap.has(key)) {
       deleted.push(item);
-      console.log(`➖ [compareActChanges] Видалено: ${key}`, item);
     }
   });
-
-  console.log(
-    `📊 [compareActChanges] Результат: додано ${added.length}, видалено ${deleted.length}`
-  );
 
   return { added, deleted };
 }
@@ -865,23 +813,11 @@ async function logActChanges(
   added: ParsedItem[],
   deleted: ParsedItem[]
 ): Promise<void> {
-  // ⚠️ КРИТИЧНО: Перевірка ролі користувача
-  console.log(
-    `🔍 [logActChanges] Перевірка ролі користувача: "${userAccessLevel}"`
-  );
-
   // ✅ Записуємо зміни ТІЛЬКИ для Слюсаря, Запчастиста, Складовщика
   const allowedRoles = ["Слюсар", "Запчастист", "Складовщик"];
   if (!userAccessLevel || !allowedRoles.includes(userAccessLevel)) {
-    console.log(
-      `⏭️ Користувач ${userAccessLevel} - логування змін пропущено (записуємо тільки для Слюсар/Запчастист/Складовщик)`
-    );
     return;
   }
-
-  console.log(
-    `✅ [logActChanges] Користувач ${userAccessLevel} - продовжуємо логування`
-  );
 
   // ✅ ОТРИМУЄМО ПРИЙМАЛЬНИКА З БД (acts.pruimalnyk)
   let pruimalnykFromDb: string | undefined;
@@ -896,7 +832,6 @@ async function logActChanges(
       console.error("❌ Помилка отримання pruimalnyk з acts:", actError);
     } else if (actData?.pruimalnyk) {
       pruimalnykFromDb = actData.pruimalnyk;
-      console.log(`📋 [logActChanges] Приймальник з БД: "${pruimalnykFromDb}"`);
     }
   } catch (err) {
     console.error("❌ Виняток при отриманні pruimalnyk:", err);
@@ -927,7 +862,6 @@ async function logActChanges(
 
   // ✅ ВИКОРИСТОВУЄМО ПРИЙМАЛЬНИКА З БД (отриманого вище)
   const pruimalnyk = pruimalnykFromDb;
-  console.log(`📋 [logActChanges] Приймальник з БД: "${pruimalnyk}"`);
 
   const records: ActChangeRecord[] = [];
 
@@ -969,49 +903,17 @@ async function logActChanges(
   });
 
   if (records.length === 0) {
-    console.log("📝 Змін не виявлено");
     return;
   }
 
-  console.log(
-    `📝 [logActChanges] Підготовлено ${records.length} записів для вставки:`,
-    records
-  );
-
-  // 🔍 ДІАГНОСТИКА: Перевіряємо поточного користувача
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) {
-    console.error("❌ Помилка отримання користувача:", userError);
-  } else {
-    console.log(`👤 [logActChanges] Поточний користувач:`, {
-      email: user?.email,
-      id: user?.id,
-      role: user?.role,
-    });
-  }
-
   // Запис в БД
-  const { data: insertedData, error } = await supabase
+  const { error } = await supabase
     .from("act_changes_notifications")
-    .insert(records)
-    .select(); // ✅ Додано select() щоб побачити вставлені дані
+    .insert(records);
 
   if (error) {
     console.error("❌ ПОМИЛКА ЗАПИСУ ЗМІН:", error);
-    console.error("📋 Деталі помилки:", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-    });
-    console.error("📝 Записи що не вдалося вставити:", records);
     throw error;
-  } else {
-    console.log(`✅ Записано ${records.length} змін в БД (з клієнтом та авто)`);
-    console.log(`✅ Вставлені записи:`, insertedData);
   }
 }
 
@@ -1058,17 +960,8 @@ async function syncPruimalnikHistory(
   actDateOn: string | null = null,
   discountPercent: number = 0
 ): Promise<void> {
-  console.log(
-    `\n🔄 syncPruimalnikHistory: Початок синхронізації для акту #${actId}`
-  );
-  console.log(
-    `👤 Поточний користувач: "${userName}" (рівень доступу: "${userAccessLevel}")`
-  );
-
   // ✅ Для Адміністратора: тільки видаляємо з попереднього приймальника, нічого не записуємо
   if (userAccessLevel === "Адміністратор") {
-    console.log(`👔 Адміністратор: тільки видаляємо акт з історії попереднього приймальника`);
-    
     // Шукаємо попереднього приймальника з acts.pruimalnyk
     const { data: actData, error: actError } = await supabase
       .from("acts")
@@ -1077,12 +970,10 @@ async function syncPruimalnikHistory(
       .single();
 
     if (actError || !actData || !actData.pruimalnyk) {
-      console.log(`ℹ️ Попередній приймальник не знайдений в acts.pruimalnyk для акту #${actId}`);
       return;
     }
 
     const previousPruimalnyk = actData.pruimalnyk;
-    console.log(`🔍 Попередній приймальник з БД: "${previousPruimalnyk}"`);
 
     // Шукаємо попереднього приймальника в slyusars
     const { data: prevReceiverData, error: prevError } = await supabase
@@ -1097,7 +988,6 @@ async function syncPruimalnikHistory(
     }
 
     if (!prevReceiverData) {
-      console.log(`ℹ️ Приймальник "${previousPruimalnyk}" не знайдений в БД`);
       return;
     }
 
@@ -1108,7 +998,6 @@ async function syncPruimalnikHistory(
 
     // Перевіряємо, чи це дійсно Приймальник
     if (receiverData.Доступ !== "Приймальник") {
-      console.log(`ℹ️ "${previousPruimalnyk}" не є Приймальником`);
       return;
     }
 
@@ -1123,7 +1012,6 @@ async function syncPruimalnikHistory(
           (item: any) => String(item.Акт) === String(actId)
         );
         if (idx !== -1) {
-          console.log(`🗑️ Видаляємо акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`);
           dailyActs.splice(idx, 1);
 
           // Якщо масив порожній, видаляємо дату
@@ -1147,14 +1035,9 @@ async function syncPruimalnikHistory(
 
       if (updateError) {
         console.error(`❌ Помилка оновлення історії для "${receiverData.Name}":`, updateError);
-      } else {
-        console.log(`✅ Історію "${receiverData.Name}" оновлено (акт видалено)`);
       }
-    } else {
-      console.log(`ℹ️ Акт #${actId} не знайдено в історії приймальника "${previousPruimalnyk}"`);
     }
 
-    console.log(`✅ Адміністратор: завершено видалення акту з історії приймальника`);
     return;
   }
 
@@ -1169,9 +1052,6 @@ async function syncPruimalnikHistory(
       return;
     }
     pruimalnykName = userData.name;
-    console.log(
-      `✅ Зберігає Приймальник "${pruimalnykName}" - оновлюємо його історію`
-    );
   } else {
     // Якщо зберігає НЕ Приймальник - шукаємо останнього приймальника з acts.pruimalnyk
     const { data: actData, error: actError } = await supabase
@@ -1188,14 +1068,7 @@ async function syncPruimalnikHistory(
     }
 
     pruimalnykName = actData.pruimalnyk;
-    console.log(
-      `✅ Зберігає "${userName}" (${userAccessLevel}) - оновлюємо історію приймальника "${pruimalnykName}"`
-    );
   }
-
-  console.log(
-    `🔍 syncPruimalnikHistory: Обробка для приймальника "${pruimalnykName}" (акт #${actId})`
-  );
 
   // --- ЗБІР ДАНИХ З DOM ---
   const tableBody = document.querySelector<HTMLTableSectionElement>(
@@ -1236,8 +1109,6 @@ async function syncPruimalnikHistory(
 
       worksTotalSale += sumValue;
       worksTotalSlusarSalary += slusarSalary;
-
-      console.log(`🛠️ Робота: Sale=${sumValue}, Salary=${slusarSalary}`);
     }
     // ДЕТАЛІ
     else if (dataType === "details") {
@@ -1250,19 +1121,7 @@ async function syncPruimalnikHistory(
 
       partsTotalSale += sumValue;
       partsList.push({ scladId, qty, sale: sumValue });
-
-      console.log(
-        `⚙️ Деталь: scladId=${scladId}, Qty=${qty}, Sale=${sumValue}`
-      );
     }
-  });
-
-  console.log("📊 Підсумки збору даних:", {
-    worksTotalSale,
-    worksTotalSlusarSalary,
-    partsTotalSale,
-    partsListLength: partsList.length,
-    partsList,
   });
 
   // --- ОТРИМАННЯ ВХІДНИХ ЦІН ---
@@ -1271,15 +1130,11 @@ async function syncPruimalnikHistory(
     .map((p) => p.scladId)
     .filter((id): id is number => id !== null && !isNaN(id));
 
-  console.log("🔍 ID для запиту до sclad:", scladIdsToFetch);
-
   if (scladIdsToFetch.length > 0) {
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
       .select("sclad_id, price")
       .in("sclad_id", scladIdsToFetch);
-
-    console.log("📦 Відповідь від sclad:", { scladItems, scladError });
 
     if (scladError) {
       console.error(
@@ -1311,14 +1166,6 @@ async function syncPruimalnikHistory(
         if (part.scladId && priceMap.has(part.scladId)) {
           const buyPrice = priceMap.get(part.scladId) || 0;
           partsTotalBuy += buyPrice * part.qty;
-          console.log(
-            `🛒 Деталь ID=${part.scladId}: Qty=${part.qty
-            }, BuyPrice=${buyPrice}, TotalBuy=${buyPrice * part.qty}`
-          );
-        } else {
-          console.log(
-            `ℹ️ Не знайдено вхідну ціну для sclad_id=${part.scladId}, беремо 0 (Вхідна ціна не враховується)`
-          );
         }
       });
     }
@@ -1376,49 +1223,12 @@ async function syncPruimalnikHistory(
   const salaryWork = baseWorkProfit > 0 ? Math.round(baseWorkProfit * (percentWork / 100)) : 0;
   const salaryParts = basePartsProfit > 0 ? Math.round(basePartsProfit * (percentParts / 100)) : 0;
 
-  // Чистий прибуток після відрахування зарплати приймальника
-  const netWorkProfit = baseWorkProfit - salaryWork;
-  const netPartsProfit = basePartsProfit - salaryParts;
-
-  console.log("📊 Розрахунок ЗП Приймальника:", {
-    discountPercent,
-    discountMultiplier,
-    worksTotalSale,
-    workSaleAfterDiscount,
-    worksTotalSlusarSalary,
-    baseWorkProfit,
-    salaryWork,
-    netWorkProfit,
-    partsTotalSale,
-    partsSaleAfterDiscount,
-    partsTotalBuy,
-    basePartsProfit,
-    salaryParts,
-    netPartsProfit,
-  });
-
-  // ДЕБАГ для акту 34
-  if (actId === 34) {
-    console.log(`🔍 [DEBUG] Акт 34 - ЗБЕРЕЖЕННЯ В ІСТОРІЮ:`, {
-      baseWorkProfit,
-      salaryWork,
-      basePartsProfit,
-      salaryParts,
-    });
-  }
-
   // --- ВИДАЛЕННЯ АКТУ З ПОПЕРЕДНЬОГО ПРИЙМАЛЬНИКА (якщо змінився) ---
   // ✅ ВИПРАВЛЕНО: Шукаємо тільки попереднього приймальника, а не всіх
   const previousPruimalnyk = localStorage.getItem("current_act_pruimalnyk");
 
-  console.log(`🔍 Попередній приймальник з localStorage: "${previousPruimalnyk}"`);
-  console.log(`🔍 Поточний приймальник: "${pruimalnykName}"`);
-
   // Якщо приймальник змінився - видаляємо акт з історії попереднього
   if (previousPruimalnyk && previousPruimalnyk !== pruimalnykName) {
-    console.log(`🔄 Приймальник змінився: "${previousPruimalnyk}" → "${pruimalnykName}"`);
-    console.log(`🧹 Видаляємо акт #${actId} з історії попереднього приймальника "${previousPruimalnyk}"...`);
-
     // Шукаємо попереднього приймальника в БД
     const { data: prevReceiverData, error: prevError } = await supabase
       .from("slyusars")
@@ -1447,9 +1257,6 @@ async function syncPruimalnikHistory(
               (item: any) => String(item.Акт) === String(actId)
             );
             if (idx !== -1) {
-              console.log(
-                `🗑️ Видалено акт #${actId} з історії "${receiverData.Name}" (дата: ${dateKey})`
-              );
               dailyActs.splice(idx, 1);
 
               // Якщо масив порожній, видаляємо дату
@@ -1476,21 +1283,11 @@ async function syncPruimalnikHistory(
               `❌ Помилка оновлення історії для "${receiverData.Name}":`,
               updateError
             );
-          } else {
-            console.log(`✅ Історію "${receiverData.Name}" оновлено (акт видалено)`);
           }
         }
       }
-    } else {
-      console.log(`ℹ️ Попередній приймальник "${previousPruimalnyk}" не знайдений в БД`);
     }
-  } else if (!previousPruimalnyk) {
-    console.log(`ℹ️ Попередній приймальник не збережено в localStorage (новий акт або перший запис)`);
-  } else {
-    console.log(`ℹ️ Приймальник не змінився, видалення не потрібне`);
   }
-
-  console.log(`✅ Зберігаємо акт для "${pruimalnykName}"`);
 
   let history = slyusarData.Історія || {};
   let actFound = false;
@@ -1532,15 +1329,9 @@ async function syncPruimalnikHistory(
   };
 
   if (actFound) {
-    console.log(
-      `📝 syncPruimalnikHistory: Оновлення існуючого запису акту #${actId}`
-    );
     const oldRecord = history[foundDateKey][foundIndex];
     history[foundDateKey][foundIndex] = { ...oldRecord, ...actRecordUpdate };
   } else {
-    console.log(
-      `➕ syncPruimalnikHistory: Створення нового запису акту #${actId}`
-    );
     // Використовуємо дату створення акту, а не поточну дату
     const actDate = actDateOn
       ? actDateOn.split("T")[0]
@@ -1565,10 +1356,8 @@ async function syncPruimalnikHistory(
       updateError
     );
   } else {
-    console.log("✅ syncPruimalnikHistory: Історія успішно оновлена");
     // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
     localStorage.setItem("current_act_pruimalnyk", pruimalnykName);
-    console.log(`📦 Оновлено localStorage current_act_pruimalnyk: "${pruimalnykName}"`);
   }
 }
 
@@ -1583,9 +1372,6 @@ async function savePruimalnykToActs(actId: number): Promise<void> {
   try {
     // ✅ Перевірка рівня доступу - НЕ записуємо для Слюсаря
     if (userAccessLevel === "Слюсар") {
-      console.log(
-        `ℹ️ Користувач "${userName}" має рівень доступу "${userAccessLevel}" - pruimalnyk НЕ перезаписується`
-      );
       return;
     }
 
@@ -1610,9 +1396,6 @@ async function savePruimalnykToActs(actId: number): Promise<void> {
         `❌ Помилка при записуванні приймальника: ${error.message}`
       );
     } else {
-      console.log(
-        `✅ Приймальник "${userData.name}" успішно записаний в акт ${actId}`
-      );
     }
   } catch (err: any) {
     console.error("❌ Помилка savePruimalnykToActs:", err?.message || err);

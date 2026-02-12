@@ -1148,8 +1148,6 @@ async function createRequiredModals(): Promise<void> {
   document.body.appendChild(actRaxunokModal);
 
   initModalActRaxunokHandlers();
-
-  console.log("✅ Модальне вікно actRaxunok створено та ініціалізовано");
 }
 
 async function fetchClientData(clientId: number | null): Promise<any> {
@@ -1513,7 +1511,6 @@ async function addModalHandlers(
   if (!isRestricted) {
     setTimeout(() => {
       initCreateActRaxunokButton();
-      console.log("✅ Кнопка Акт/Рахунок ініціалізована");
     }, 100);
 
     const printButton = document.getElementById("print-act-button");
@@ -1871,7 +1868,6 @@ function toggleActsTableSumaColumn(show: boolean): void {
 
   // Якщо стовпець "Сума" не існує і потрібно показати - перемальовуємо таблицю
   if (sumaColumnIndex === -1 && show) {
-    console.log('🔄 Стовпець "Сума" не існує - перемальовуємо таблицю актів');
     refreshActsTable();
     return;
   }
@@ -1885,7 +1881,6 @@ function toggleActsTableSumaColumn(show: boolean): void {
         (cells[sumaColumnIndex] as HTMLElement).style.display = displayValue;
       }
     });
-    console.log(`🔄 Стовпець "Сума" в таблиці актів: ${show ? 'показано' : 'приховано'}`);
   }
 }
 
@@ -1914,10 +1909,6 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
   ) {
     return;
   }
-
-  console.log(
-    `📡 Підписка на зміни slusarsOn для акту #${actId} (${userAccessLevel})`
-  );
 
   slusarsOnSubscription = supabase
     .channel(`slusarsOn-act-${actId}`)
@@ -1950,7 +1941,6 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
 
           if (shouldShowSlusarsOn) {
             header.classList.add("zakaz_narayd-header-slusar-on");
-            console.log("✅ Заголовок пофарбовано в золотий (slusarsOn=true)");
           } else {
             header.classList.remove("zakaz_narayd-header-slusar-on");
           }
@@ -2035,8 +2025,6 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     // Перевіряємо чи є ОКРЕМА колонка delete-cell (td.delete-cell в окремому td)
     // Якщо кнопка delete всередині name-cell - це інший варіант верстки, окремий td не потрібен
     const hasDeleteColumnSeparate = !!tableContainer.querySelector('tbody tr > td.delete-cell');
-
-    console.log(`📊 [refreshActTableSilently] Видимість: Каталог=${showCatalog}, Ціна=${showPrice}, Сума=${showSum}, Зар-та=${showZarplata}, ПІБ=${showPibMagazin}, DeleteCol=${hasDeleteColumnSeparate}`);
 
     // 5. Підготовка індексів для recordId
     const slyusarWorkIndexMap = new Map<string, number>();
@@ -2203,8 +2191,6 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       discountAmountInput.value = String(discountAmountValue);
       discountAmountInput.dispatchEvent(new Event("input"));
     }
-
-    console.log(`✅ [refreshActTableSilently] Таблицю акту #${actId} успішно оновлено (включаючи додаткові поля)`);
 
   } catch (error) {
     console.error("❌ Помилка тихого оновлення таблиці:", error);

@@ -28,13 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Запобігаємо подвійному кліку
         if (isLoggingIn) {
-          console.log("⏳ Вже виконується вхід...");
           return;
         }
         
         isLoggingIn = true;
         loginButton.setAttribute("disabled", "true");
-        console.log("🔑 Клік по кнопці входу!");
         
         try {
           await signInWithGoogle();
@@ -46,7 +44,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }, 3000);
         }
       });
-      console.log("🔘 Кнопка входу підключена");
     } else {
       console.warn("⚠️ Кнопка login не знайдена в DOM");
     }

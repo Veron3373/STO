@@ -72,14 +72,6 @@ function isMobile(): boolean {
   return isIOS() || isAndroid() || /Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i.test(navigator.userAgent);
 }
 
-// Визначення типу пристрою для логування
-function getDeviceType(): string {
-  if (isIOS()) return "iOS";
-  if (isAndroid()) return "Android";
-  if (isMobile()) return "Mobile (Other)";
-  return "Desktop";
-}
-
 // ================= ЗАВАНТАЖЕННЯ API =================
 
 async function loadGoogleAPIs(): Promise<void> {
@@ -115,22 +107,15 @@ async function loadGoogleAPIs(): Promise<void> {
 
 export async function initGoogleApi(): Promise<void> {
   try {
-    console.log("🔐 [iOS Debug] Початок ініціалізації Google API");
-    console.log("🔐 [iOS Debug] User Agent:", navigator.userAgent);
-    console.log("🔐 [iOS Debug] Origin:", window.location.origin);
 
     // Перевірка домену виконується Google Cloud Console автоматично
     // Тому ми не робимо додаткову перевірку тут
 
-    console.log("🔐 [iOS Debug] Завантаження Google API скриптів...");
     await loadGoogleAPIs();
-    console.log("✅ [iOS Debug] Google API скрипти завантажені");
 
-    console.log("🔐 [iOS Debug] Ініціалізація GAPI client...");
     await new Promise<void>((resolve, reject) => {
       gapi.load("client", {
         callback: () => {
-          console.log("✅ [iOS Debug] GAPI client завантажений");
           resolve();
         },
         onerror: () => {
@@ -140,13 +125,11 @@ export async function initGoogleApi(): Promise<void> {
       });
     });
 
-    console.log("🔐 [iOS Debug] Запит OAuth токену...");
     await new Promise<void>((resolve, reject) => {
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: async (response: any) => {
-          console.log("🔐 [iOS Debug] OAuth callback отримано:", response);
 
           if (response.error || !response.access_token) {
             console.error("❌ [iOS Debug] Помилка OAuth:", response.error);
@@ -154,21 +137,16 @@ export async function initGoogleApi(): Promise<void> {
             return;
           }
 
-          console.log("✅ [iOS Debug] Токен отримано");
           accessToken = response.access_token;
           gapi.client.setToken(response);
 
           try {
-            console.log("🔐 [iOS Debug] Ініціалізація Drive API...");
             await gapi.client.init({});
 
-            console.log("🔐 [iOS Debug] Завантаження Drive v3...");
             await gapi.client.load("drive", "v3");
 
-            console.log("🔐 [iOS Debug] Тест підключення до Drive...");
             await testDriveConnection();
 
-            console.log("✅ [iOS Debug] Google API повністю ініціалізовано");
             resolve();
           } catch (err) {
             console.error("❌ [iOS Debug] Помилка ініціалізації Drive:", err);
@@ -181,7 +159,6 @@ export async function initGoogleApi(): Promise<void> {
         },
       });
 
-      console.log("🔐 [iOS Debug] Відкриття OAuth popup...");
       tokenClient.requestAccessToken();
     });
   } catch (error) {
@@ -310,7 +287,6 @@ export async function findAndRestoreFolderLink(
   }
 ): Promise<string | null> {
   try {
-    console.log(`🔍 Пошук існуючої папки для акту ${actId}...`);
 
     const date = new Date(actInfo.date_on);
     const yyyy = String(date.getFullYear());
@@ -355,7 +331,6 @@ export async function findAndRestoreFolderLink(
 
     // Знайдено! Записуємо в БД
     const driveUrl = `https://drive.google.com/drive/folders/${actFolderId}`;
-    console.log(`✅ Знайдено існуючу папку: ${driveUrl}`);
 
     await updateActPhotoLinkWithRetry(actId, driveUrl);
 
@@ -468,13 +443,10 @@ async function updateActPhotoLinkWithRetry(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`📝 Спроба ${attempt}/${maxRetries} запису photo_url в БД...`);
-      console.log(`📝 [Debug] actId=${actId}, driveUrl=${driveUrl}`);
 
       // Затримка перед повторними спробами (експоненційна)
       if (attempt > 1) {
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 4000);
-        console.log(`⏳ Очікування ${delay}ms перед спробою ${attempt}...`);
         await sleep(delay);
       }
 
@@ -510,7 +482,6 @@ async function updateActPhotoLinkWithRetry(
         }
       }
 
-      console.log("✅ photo_url успішно записано в БД:", driveUrl);
 
       // Локально перемикаємо UI в режим "відкрити"
       updatePhotoSection(driveUrl, false);
@@ -598,16 +569,12 @@ export function addGoogleDriveHandler(isActClosed = false): void {
     // 🍎 ДЛЯ iOS: Авторизація має бути ПЕРШОЮ дією в обробнику кліку
     // Інакше Safari заблокує popup як "not user initiated"
     if (isCreateMode && !accessToken) {
-      console.log(
-        `📱 [${getDeviceType()}] Pre-flight Auth check (Create Mode detected)...`
-      );
       isCreatingFolder = true; // Блокуємо повторні кліки
       photoCell.style.pointerEvents = "none";
       showNotification("Підключення до Google Drive...", "info");
 
       try {
         await initGoogleApi();
-        console.log(`✅ [${getDeviceType()}] Авторизація успішна`);
       } catch (authErr) {
         console.error("❌ Auth cancelled/failed:", authErr);
         isCreatingFolder = false;
@@ -635,13 +602,9 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 
       // Якщо посилання вже є — відкриваємо його
       if (hasLink) {
-        console.log(`📂 [${getDeviceType()}] Відкриваємо існуючу папку:`, photoUrl);
 
         // 📱 Для мобільних пристроїв (iOS/Android) використовуємо прямий редірект
         if (isMobile()) {
-          console.log(
-            `📱 [${getDeviceType()}] Використовуємо window.location.href для переходу`
-          );
 
           // Показуємо повідомлення
           showNotification("Відкриваємо папку Google Drive...", "info");
@@ -652,7 +615,6 @@ export function addGoogleDriveHandler(isActClosed = false): void {
           }, 300);
         } else {
           // Для desktop - звичайне нове вікно
-          console.log("💻 [Desktop] Відкриваємо в новому вікні");
           window.open(photoUrl, "_blank", "noopener,noreferrer");
         }
         return;
@@ -676,17 +638,12 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 
       // (Auth double-check для всіх платформ)
       if (!accessToken) {
-        console.log(
-          `📱 [${getDeviceType()}] Повторна авторизація (accessToken відсутній)...`
-        );
         showNotification("Підключення до Google Drive...", "info");
         await initGoogleApi();
       }
 
       // Тільки після авторизації робимо запити до БД
-      console.log(`📱 [${getDeviceType()}] Отримання інформації про акт...`);
       const actInfo = await getActFullInfo(actId);
-      console.log(`📱 [${getDeviceType()}] Інформація про акт отримана:`, actInfo);
 
       showNotification("Пошук існуючої папки в Google Drive...", "info");
 
@@ -726,7 +683,6 @@ export function addGoogleDriveHandler(isActClosed = false): void {
           "warning"
         );
       } else {
-        console.log("✅ Верифікація: посилання успішно збережено:", verifyAct.photo_url);
         showNotification("Готово. Посилання додано у форму.", "success");
       }
     } catch (err) {
@@ -773,7 +729,6 @@ export function addGoogleDriveHandler(isActClosed = false): void {
 /** Підтягує свіжі дані з БД і оновлює розмітку блоку “Фото”. */
 export async function refreshPhotoData(actId: number): Promise<void> {
   try {
-    console.log(`🔄 [Refresh] Оновлення даних фото для акту ${actId}...`);
 
     const { data: act, error } = await supabase
       .from("acts")
@@ -788,17 +743,10 @@ export async function refreshPhotoData(actId: number): Promise<void> {
 
     const photoUrl = act.photo_url;
 
-    console.log(
-      `📊 [Refresh] photo_url:`,
-      photoUrl || "(порожньо)"
-    );
 
     const isActClosed = !!act.date_off;
     updatePhotoSection(photoUrl, isActClosed);
 
-    console.log(
-      `✅ [Refresh] UI оновлено, акт ${isActClosed ? "закритий" : "відкритий"}`
-    );
   } catch (error) {
     console.error("❌ [Refresh] Критична помилка при оновленні фото:", error);
   }
@@ -832,7 +780,6 @@ export async function createDriveFolderStructure({
 
     // 1) Папка року в корені диску (проста структура: рік/акт)
     const yearFolderId = await findOrCreateFolder(yyyy, null);
-    console.log(`📁 Папка року: ${yyyy} (ID: ${yearFolderId})`);
 
     // 2) Спочатку шукаємо папку за appProperties.act_id
     let actFolderId = await findFolderByActId(act_id, yearFolderId);
@@ -869,10 +816,8 @@ export async function createDriveFolderStructure({
     // 5) URL → БД → оновити UI
     const driveUrl = `https://drive.google.com/drive/folders/${actFolderId}`;
 
-    console.log(`📍 Папка створена/знайдена: ${driveUrl}`);
     await updateActPhotoLinkWithRetry(act_id, driveUrl);
 
-    console.log("✅ Структура папок успішно створена та записана в БД");
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : "Невідома помилка";
     console.error("❌ Помилка створення структури папок:", e);

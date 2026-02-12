@@ -48,20 +48,17 @@ export async function checkCurrentPageAccess(): Promise<boolean> {
   
   // Якщо це не захищена сторінка - дозволяємо
   if (!pageName || !PAGE_ACCESS_SETTINGS[pageName]) {
-    console.log(`ℹ️ Сторінка ${pageName} не потребує перевірки доступу`);
     return true;
   }
 
   // Адміністратор завжди має доступ
   if (userAccessLevel === "Адміністратор") {
-    console.log("✅ Адміністратор має доступ до всіх сторінок");
     return true;
   }
 
   // Перевіряємо чи роль існує в мапі
   const pageSettings = PAGE_ACCESS_SETTINGS[pageName];
   if (!pageSettings || !userAccessLevel) {
-    console.log(`ℹ️ Немає налаштувань для ролі ${userAccessLevel}`);
     return true;
   }
 
@@ -69,7 +66,6 @@ export async function checkCurrentPageAccess(): Promise<boolean> {
 
   // Якщо для ролі немає налаштування - дозволяємо (стара логіка)
   if (settingId === null || settingId === undefined) {
-    console.log(`ℹ️ Роль ${userAccessLevel} не має налаштування для ${pageName}`);
     return true;
   }
 
@@ -78,7 +74,6 @@ export async function checkCurrentPageAccess(): Promise<boolean> {
     const roleColumn = userAccessLevel; // "Приймальник", "Слюсар", "Запчастист", "Складовщик"
     
     if (!roleColumn) {
-      console.log("ℹ️ Роль не визначена");
       return true;
     }
     
@@ -95,10 +90,6 @@ export async function checkCurrentPageAccess(): Promise<boolean> {
 
     const hasAccess = data && roleColumn in data ? !!(data as any)[roleColumn] : false;
     
-    console.log(
-      `🔍 Доступ до ${pageName} для ${userAccessLevel}: ` +
-      `setting_id=${settingId}, ${roleColumn}=${hasAccess}`
-    );
 
     return hasAccess;
   } catch (err) {

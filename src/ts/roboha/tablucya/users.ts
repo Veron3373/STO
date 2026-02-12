@@ -584,7 +584,6 @@ export function logoutFromSystemAndRedirect(): void {
   try {
     localStorage.removeItem("sto_general_settings"); // Загальні налаштування СТО
     localStorage.removeItem("current_act_pruimalnyk"); // Тимчасові дані акту
-    console.log("🗑️ Додаткові дані очищено з localStorage");
   } catch (e) {
     console.warn("⚠️ Помилка при очищенні додаткових даних localStorage:", e);
   }

@@ -877,12 +877,6 @@ export const getSlusarAdditionalData = () => {
     }
   }
 
-  console.log("getSlusarAdditionalData викликано:", {
-    password: passwordInput?.value ? Number(passwordInput.value) : 1111,
-    access: accessSelect?.value || "Слюсар",
-    percent: percentValue,
-    percentParts: percentPartsValue,
-  });
   return {
     password: passwordInput?.value ? Number(passwordInput.value) : 1111,
     access: accessSelect?.value || "Слюсар",
@@ -982,7 +976,6 @@ export const saveSlusarData = async (): Promise<boolean> => {
       console.warn(`Редагування по ID: ${lastValidSlyusarId}, нове ім'я: ${name}`);
       query = query.eq("slyusar_id", lastValidSlyusarId);
     } else {
-      console.log(`Пошук по імені: ${name}`);
       query = query.eq("data->>Name", name);
     }
 
@@ -1026,9 +1019,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
     }
 
     if (isSlyusarId1) {
-      console.log(`✅ Успішно оновлено дані для ${currentData.Name} (захищений акаунт - Name та Доступ не змінено)`);
     } else {
-      console.log(`✅ Успішно оновлено дані для ${name}`);
     }
 
     // Якщо користувач змінив свій власний пароль, оновлюємо localStorage
@@ -1038,7 +1029,6 @@ export const saveSlusarData = async (): Promise<boolean> => {
         const userData = JSON.parse(userDataStr);
         userData.Пароль = String(password);
         localStorage.setItem("userAuthData", JSON.stringify(userData));
-        console.log("🔄 Пароль оновлено в localStorage");
       }
     }
 

@@ -146,7 +146,6 @@ export function setExpenseMode(mode: ExpenseMode): void {
   if (saveBtn) {
     saveBtn.textContent = config.buttonText;
   }
-  console.log("🔄 Режим змінено на:", mode);
 }
 
 export function getCurrentExpenseMode(): ExpenseMode {
@@ -479,9 +478,6 @@ async function loadReceipterSalaries(): Promise<void> {
 
               // Додаткове логування для дебагу
               if (actId === 34) {
-                console.log(
-                  `🔍 [DEBUG] Акт 34: СумаРоботи=${record.СуммаРоботи}, ЗарплатаРоботи=${salaryWork}, СумаЗапчастин=${record.СуммаЗапчастин}, ЗарплатаЗапчастин=${salaryParts}`
-                );
               }
             }
           }
@@ -489,9 +485,6 @@ async function loadReceipterSalaries(): Promise<void> {
       }
     }
 
-    console.log(
-      `✅ Завантажено зарплати приймальника для ${receipterSalaryCache.size} актів`
-    );
   } catch (err: any) {
     console.error("❌ Помилка завантаження зарплат приймальника:", err);
   }
@@ -505,9 +498,6 @@ function getReceipterSalaryForAct(actId: number): {
   const salary = receipterSalaryCache.get(actId);
 
   if (salary) {
-    console.log(
-      `💰 Акт ${actId}: Приймальник - Деталі: ${salary.salaryParts}, Робота: ${salary.salaryWork}`
-    );
     return salary;
   }
 
@@ -526,9 +516,6 @@ function calculateDetailsMarginFromAct(
   // Віднімаємо зарплату приймальника щоб показати чистий прибуток компанії
   const receipterSalary = getReceipterSalaryForAct(actId);
   totalMargin -= receipterSalary.salaryParts;
-  console.log(
-    `📊 Акт ${actId}: Маржа деталей (збережена: ${actData["Прибуток за деталі"]}) після відрахування зарплати приймальника (${receipterSalary.salaryParts}): ${totalMargin}`
-  );
 
   return Number(totalMargin.toFixed(2));
 }
@@ -543,9 +530,6 @@ function calculateWorkProfitFromAct(actData: ActData, actId: number): number {
   const receipterSalary = getReceipterSalaryForAct(actId);
   profit -= receipterSalary.salaryWork;
 
-  console.log(
-    `📊 Акт ${actId}: Прибуток робіт (збережений: ${actData["Прибуток за роботу"]}) після відрахування зарплати приймальника (${receipterSalary.salaryWork}): ${profit}`
-  );
   return Number(profit.toFixed(2));
 }
 
@@ -656,9 +640,6 @@ function initvutratuDateFilterToggle(): void {
       // Зберігаємо режим фільтрації
       vutratuDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
 
-      console.log(
-        `🔄 Витрати: змінено режим фільтрації дат на "${vutratuDateFilterMode}"`
-      );
 
       // ЗМІНЕНО: Просто фільтруємо вже завантажені дані, НЕ перезавантажуємо з бази
       filtervutratuData();
@@ -668,7 +649,6 @@ function initvutratuDateFilterToggle(): void {
 
 async function loadvutratuFromDatabase(): Promise<void> {
   try {
-    console.log("🔄 Завантаження витрат з бази даних...");
 
     // Якщо дата не вказана - використовуємо 01.01.2025 як дефолт (не показуємо користувачу)
     const dateFromInput =
@@ -689,15 +669,6 @@ async function loadvutratuFromDatabase(): Promise<void> {
     const includeCarInNotes =
       byId<HTMLInputElement>("include-car-notes")?.checked || false;
 
-    console.log("📋 Фільтри:", {
-      dateFrom,
-      dateTo,
-      category,
-      paymentMethod,
-      mode: vutratuDateFilterMode,
-      includeClientInDescription,
-      includeCarInNotes,
-    });
 
     // Завантажуємо дані з vutratu
     let queryVutratu = supabase
@@ -879,9 +850,6 @@ async function loadvutratuFromDatabase(): Promise<void> {
       paid: "розрахунку",
     };
 
-    console.log(
-      `✅ Завантажено ${vutratuData.length} записів (фільтр по даті ${modeLabels[vutratuDateFilterMode]})`
-    );
     showNotification(
       `📊 Знайдено ${vutratuData.length} записів (${modeLabels[vutratuDateFilterMode]})`,
       "success",
@@ -920,7 +888,6 @@ async function saveExpenseToDatabase(
       prymitky: expense.notes || null,
       xto_zapusav: currentUser,
     };
-    console.log("📤 Відправка даних до бази:", dbRecord);
 
     if (isNew) {
       const { data, error } = await supabase
@@ -935,7 +902,6 @@ async function saveExpenseToDatabase(
       }
 
       expense.id = data.vutratu_id;
-      console.log("✅ Витрату додано до бази:", data);
     } else {
       if (!expense.id) throw new Error("Немає ID для оновлення запису");
 
@@ -949,7 +915,6 @@ async function saveExpenseToDatabase(
         throw error;
       }
 
-      console.log("✅ Витрату оновлено в базі:", expense.id);
     }
 
     return true;
@@ -963,7 +928,6 @@ async function saveExpenseToDatabase(
 // ==================== ІНІЦІАЛІЗАЦІЯ ====================
 
 export async function initializevutratuData(): Promise<void> {
-  console.log("🔄 Ініціалізація даних витрат...");
   vutratuData = [];
   filteredvutratuData = [];
   createExpenseCategorySelect();
@@ -1010,7 +974,6 @@ export async function initializevutratuData(): Promise<void> {
   // ДОДАТИ В КІНЕЦЬ ФУНКЦІЇ:
   initvutratuDateFilterToggle();
 
-  console.log("✅ Дані витрат ініціалізовано");
 }
 
 function createExpenseTypeToggle(): void {
@@ -1191,7 +1154,6 @@ export async function searchvutratuFromDatabase(): Promise<void> {
   const hasAccess = await checkCurrentPageAccess();
 
   if (!hasAccess) {
-    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     redirectToIndex();
     return;
   }
@@ -1945,7 +1907,6 @@ function populateModalPaymentMethodSelect(): void {
 
 export async function saveExpenseFromModal(): Promise<void> {
   const mode = getCurrentExpenseMode();
-  console.log(`💾 Збереження в режимі: ${mode}`);
   const date = byId<HTMLInputElement>("expense-modal-date")?.value || "";
   const category =
     byId<HTMLSelectElement>("expense-modal-category")?.value || "";

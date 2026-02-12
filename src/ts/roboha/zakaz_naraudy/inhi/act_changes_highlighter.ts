@@ -100,9 +100,6 @@ function findRowByItemName(itemName: string): HTMLTableRowElement | null {
 async function highlightAddedItems(
   addedChanges: ChangeRecord[]
 ): Promise<void> {
-  console.log(
-    `🔵 Підсвічування ${addedChanges.length} доданих позицій ОДНОЧАСНО...`
-  );
 
   // Знаходимо всі рядки одразу
   const rowsToHighlight: HTMLTableRowElement[] = [];
@@ -139,7 +136,6 @@ async function highlightAddedItems(
   // Прибираємо підсвічування у ВСІХ рядків
   rowsToHighlight.forEach((row) => row.classList.remove("highlight-added"));
 
-  console.log(`✅ Підсвічено ${rowsToHighlight.length} доданих позицій`);
 }
 
 /* =============================== ПІДСВІЧУВАННЯ ВИДАЛЕНИХ =============================== */
@@ -200,9 +196,6 @@ function generateDeletedItemHtml(change: ChangeRecord, index: number): string {
 async function highlightDeletedItems(
   deletedChanges: ChangeRecord[]
 ): Promise<void> {
-  console.log(
-    `🔴 Підсвічування ${deletedChanges.length} видалених позицій ОДНОЧАСНО...`
-  );
 
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) {
@@ -268,7 +261,6 @@ async function highlightDeletedItems(
   // Видаляємо ВСІ рядки
   rowsToHighlight.forEach((row) => row.remove());
 
-  console.log(`✅ Підсвічено та видалено ${rowsToHighlight.length} позицій`);
 }
 
 /* =============================== РОБОТА З БД =============================== */
@@ -296,9 +288,6 @@ async function loadChangesForAct(actId: number): Promise<{
     const added = changes.filter((c) => c.dodav_vudaluv === true);
     const deleted = changes.filter((c) => c.dodav_vudaluv === false);
 
-    console.log(
-      `📊 Завантажено змін для акту #${actId}: додано=${added.length}, видалено=${deleted.length}`
-    );
     return { added, deleted };
   }
 
@@ -328,9 +317,6 @@ async function loadChangesForAct(actId: number): Promise<{
     const added = changes.filter((c) => c.dodav_vudaluv === true);
     const deleted = changes.filter((c) => c.dodav_vudaluv === false);
 
-    console.log(
-      `📊 Завантажено змін для акту #${actId} (приймальник: ${currentUserName}): додано=${added.length}, видалено=${deleted.length}`
-    );
     return { added, deleted };
   }
 
@@ -357,9 +343,6 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
       return;
     }
 
-    console.log(
-      `🔍 [deleteProcessedChanges] Приймальник: "${currentUserName}", видаляємо записи для акту #${actId}`
-    );
 
     // ✅ Видаляємо ТІЛЬКИ ті записи, де pruimalnyk = ПІБ поточного Приймальника
     const { error } = await supabase
@@ -373,17 +356,11 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
       throw error;
     }
 
-    console.log(
-      `🗑️ Видалено оброблені записи для акту #${actId} (Приймальник: ${currentUserName})`
-    );
     return;
   }
 
   // ✅ Для Адміністратора - видаляємо ВСІ записи для даного акту
   if (userAccessLevel === "Адміністратор") {
-    console.log(
-      `🔍 [deleteProcessedChanges] Адміністратор видаляє ВСІ записи для акту #${actId}`
-    );
 
     const { error } = await supabase
       .from("act_changes_notifications")
@@ -395,16 +372,10 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
       throw error;
     }
 
-    console.log(
-      `🗑️ Видалено ВСІ записи для акту #${actId} (Адміністратор)`
-    );
     return;
   }
 
   // ⚠️ Для інших ролей - видалення недоступне
-  console.log(
-    `⏭️ [deleteProcessedChanges] ${userAccessLevel} не може видаляти записи`
-  );
 }
 
 /* =============================== ГОЛОВНА ФУНКЦІЯ =============================== */
@@ -418,14 +389,10 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
     userAccessLevel !== "Адміністратор" &&
     userAccessLevel !== "Приймальник"
   ) {
-    console.log(
-      `⏭️ Підсвічування змін недоступне для ролі "${userAccessLevel}"`
-    );
     return;
   }
 
   try {
-    console.log(`🔍 Перевірка змін для акту #${actId} (${userAccessLevel})...`);
 
     // Додаємо CSS стилі
     injectHighlightStyles();
@@ -435,11 +402,9 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
 
     // Якщо змін немає - виходимо
     if (added.length === 0 && deleted.length === 0) {
-      console.log("📝 Змін не виявлено");
       return;
     }
 
-    console.log(`✨ Початок підсвічування змін...`);
 
     // Підсвічуємо додані позиції (синім)
     if (added.length > 0) {
@@ -461,13 +426,7 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
       // Знімаємо синю підсвітку з акту в таблиці та видаляємо тости
       await clearNotificationVisualOnly(actId, true);
 
-      console.log(
-        `✅ Підсвічування завершено, оброблені записи видалено, синя ручка знята (${userAccessLevel})`
-      );
     } else {
-      console.log(
-        `✅ Підсвічування завершено (${userAccessLevel} - записи НЕ видалено)`
-      );
     }
   } catch (error) {
     console.error("❌ Помилка при підсвічуванні змін:", error);

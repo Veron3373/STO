@@ -35,7 +35,6 @@ function ensureModalMounted(): HTMLElement {
 }
 /** Функція для перевірки пароля поточного користувача */
 async function verifyPassword(enteredPassword: string): Promise<boolean> {
-  console.log("🔐 Почато перевірку пароля. Введено:", enteredPassword);
 
   // Отримуємо дані поточного користувача з localStorage
   const currentUser = getSavedUserDataFromLocalStorage();
@@ -48,7 +47,6 @@ async function verifyPassword(enteredPassword: string): Promise<boolean> {
     return false;
   }
 
-  console.log("👤 Поточний користувач:", currentUser.name);
 
   // Отримуємо пароль поточного користувача
   const userPassword = currentUser.password;
@@ -67,19 +65,8 @@ async function verifyPassword(enteredPassword: string): Promise<boolean> {
   const enteredStr = enteredPassword.toString().trim();
   const userPasswordStr = userPassword.toString().trim();
 
-  console.log("🔍 Порівняння паролів:");
-  console.log(" Користувач:", currentUser.name);
-  console.log(" Введений:", `"${enteredStr}"`, "Довжина:", enteredStr.length);
-  console.log(
-    " З localStorage:",
-    `"${userPasswordStr}"`,
-    "Довжина:",
-    userPasswordStr.length
-  );
-  console.log(" Співпадають:", enteredStr === userPasswordStr);
 
   if (enteredStr === userPasswordStr) {
-    console.log("✅ Пароль вірний!");
     return true;
   } else {
     console.log("❌ Пароль невірний!");

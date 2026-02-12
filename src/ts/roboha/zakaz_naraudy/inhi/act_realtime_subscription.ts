@@ -50,7 +50,6 @@ async function syncNotificationsWithDatabaseAfterDelete() {
 }
 
 export async function initActChangesSubscription(): Promise<void> {
-  console.log("🔔 Ініціалізація Realtime підписки...");
 
   if (subscriptionChannel) {
     subscriptionChannel.unsubscribe();
@@ -79,7 +78,6 @@ export async function initActChangesSubscription(): Promise<void> {
         table: "act_changes_notifications",
       },
       (payload) => {
-        console.log("📝 Отримано UPDATE:", payload);
 
         const newRow: any = payload.new || {};
         const notificationId: number | undefined = newRow.notification_id ?? newRow.id;
@@ -87,7 +85,6 @@ export async function initActChangesSubscription(): Promise<void> {
 
         if (notificationId != null && isDeleted) {
           // Повідомлення позначене як видалене → видаляємо тільки цей один тост
-          console.log(`✅ UPDATE delit=true для notification_id=${notificationId} → чистимо один тост.`);
           removeRealtimeNotification(notificationId);
         }
       }
@@ -101,7 +98,6 @@ export async function initActChangesSubscription(): Promise<void> {
         table: "act_changes_notifications",
       },
       async (payload) => {
-        console.log("🗑️ Отримано DELETE:", payload);
 
         const oldRow: any = payload.old || {};
         const deletedId: number | undefined =
@@ -109,7 +105,6 @@ export async function initActChangesSubscription(): Promise<void> {
 
         if (deletedId != null) {
           // Є ID рядка → видаляємо тільки один конкретний тост
-          console.log(`✅ DELETE з notification_id=${deletedId} → чистимо один тост.`);
           removeRealtimeNotification(deletedId);
         } else {
           // Нічого корисного в payload.old (типова історія без REPLICA IDENTITY FULL)
@@ -123,7 +118,6 @@ export async function initActChangesSubscription(): Promise<void> {
     .subscribe();
 
   // 📥 Завантажуємо існуючі повідомлення після підписки
-  console.log("📥 Завантажуємо існуючі невидалені повідомлення...");
   await loadAndShowExistingNotifications();
 }
 

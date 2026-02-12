@@ -416,7 +416,6 @@ function removeActButton() {
   const actButton = document.querySelector(".contragent-act-record-button");
   if (actButton) {
     actButton.remove();
-    console.log("✅ Act button removed");
 
     // ✅ ВИПРАВЛЕННЯ: Повертаємо стандартне вирівнювання для кнопки "Ok"
     const buttonsDiv = document.querySelector(".yes-no-buttons-all_other_bases") as HTMLElement;
@@ -776,12 +775,10 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
   const mode = CRUD;
   const payload = readFakturaFormPayload();
 
-  console.log("🔵 tryHandleFakturaCrud called:", { mode, payload });
 
   try {
     // ========== ДОДАВАННЯ ==========
     if (mode === "Додати") {
-      console.log("➕ Processing ADD operation...");
 
       if (!payload.name) {
         toast("⚠️ Заповніть назву контрагента", "#ff9800");
@@ -795,7 +792,6 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
       }
 
       const ins = { faktura_id: nextId, ...payload };
-      console.log("Inserting into faktura:", ins);
 
       const { error } = await supabase.from("faktura").insert(ins).select();
 
@@ -805,7 +801,6 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
         return false;
       }
 
-      console.log("✅ Successfully added to faktura");
       toast("✅ Контрагента успішно додано", "#4caf50");
       contragentData = await loadContragentData();
       return true;
@@ -821,7 +816,6 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
     }
 
     if (mode === "Редагувати") {
-      console.log("✏️ Processing EDIT operation for ID:", faktura_id);
 
       const { error } = await supabase
         .from("faktura")
@@ -835,14 +829,12 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
         return false;
       }
 
-      console.log("✅ Successfully edited faktura");
       toast("✅ Контрагента успішно відредаговано", "#4caf50");
       contragentData = await loadContragentData();
       return true;
     }
 
     if (mode === "Видалити") {
-      console.log("🗑️ Processing DELETE operation for ID:", faktura_id);
 
       const { error } = await supabase
         .from("faktura")
@@ -855,7 +847,6 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
         return false;
       }
 
-      console.log("✅ Successfully deleted from faktura");
       toast("✅ Контрагента успішно видалено", "#4caf50");
       contragentData = await loadContragentData();
       return true;

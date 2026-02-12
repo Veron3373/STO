@@ -1108,7 +1108,6 @@ export async function showModalCreateSakazNarad() {
         if (car.id) selectedCarId = car.id;
         if (car.client_id) selectedClientId = car.client_id;
       } else {
-        console.log("🔓 Замок відкритий — ID не збережено");
       }
       const clientCars = getCarsForClient(car.client_id);
       const clientPhones = getPhonesForClient(car.client_id);
@@ -1131,7 +1130,6 @@ export async function showModalCreateSakazNarad() {
         if (isEditUnlocked) {
           clientInput.value = selectedClient.fullName;
           autoResizeTextarea(clientInput); // Оновлюємо висоту при виборі клієнта
-          console.log("🔓 Відкрито: дані не підтягуються автоматично");
           return;
         }
         await fillClientInfo(selectedClient.id);

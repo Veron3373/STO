@@ -145,11 +145,9 @@ export async function recordActChanges(
     const changes = detectActChanges(oldData, newData);
 
     if (changes.length === 0) {
-        console.log('📝 Змін в акті не виявлено');
         return;
     }
 
-    console.log(`📝 Виявлено ${changes.length} змін в акті #${actId}`);
 
     // Заповнюємо act_id та прізвище користувача
     const recordsToInsert = changes.map(change => ({
@@ -174,5 +172,4 @@ export async function recordActChanges(
         throw new Error(`Не вдалося записати зміни: ${error.message}`);
     }
 
-    console.log(`✅ Успішно записано ${recordsToInsert.length} змін в базу даних`);
 }

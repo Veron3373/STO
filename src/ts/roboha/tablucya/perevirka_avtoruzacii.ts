@@ -27,7 +27,6 @@ function setupBukhhalteriyaGuard(): void {
             e.preventDefault(); // Блокуємо стандартну поведінку
             e.stopPropagation(); // Зупиняємо всплиття події
 
-            console.log("🔒 Перевірка доступу до Бухгалтерії...");
 
             try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -38,7 +37,6 @@ function setupBukhhalteriyaGuard(): void {
                     return;
                 }
 
-                console.log("✅ Авторизація підтверджена, перехід дозволено");
                 // Якщо авторизований - переходимо на сторінку
                 window.location.href = "bukhhalteriya.html";
             } catch (error) {
@@ -57,7 +55,6 @@ function setupHomeGuard(): void {
 
     if (homeLink) {
         homeLink.addEventListener("click", async (e: Event) => {
-            console.log("🔒 Перевірка доступу до Наряду...");
 
             try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -90,7 +87,6 @@ function setupClientGuard(): void {
     if (clientLink) {
         // Додаємо перевірку на CAPTURE фазі, щоб спрацювала ПЕРЕД існуючими обробниками
         clientLink.addEventListener("click", async (e: Event) => {
-            console.log("🔒 Перевірка доступу до Додати...");
 
             try {
                 const { data: { session } } = await supabase.auth.getSession();

@@ -20,17 +20,12 @@ export async function sendSMS(
       throw new Error(`Невірний формат номера: ${phone}`);
     }
 
-    console.log("📤 Відправка SMS через Edge Function:", {
-      phone: formattedPhone,
-      message,
-    });
 
     const { data, error } = await supabase.functions.invoke("smsclub-send", {
       body: { phone: formattedPhone, message },
     });
 
     // ← ДОДАНО: Детальне логування
-    console.log("📥 Відповідь від Edge Function:", { data, error });
 
     if (error) {
       console.error("❌ Помилка виклику Edge Function:", error);
@@ -50,7 +45,6 @@ export async function sendSMS(
     }
 
     if (data?.result?.success_request) {
-      console.log("✅ SMS успішно відправлено:", data.result.success_request);
       return {
         success: true,
         messageId: data.result.success_request.id_sms?.[0],

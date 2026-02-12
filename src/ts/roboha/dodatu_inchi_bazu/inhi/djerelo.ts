@@ -264,5 +264,4 @@ export const handleDhereloClick = async () => {
 };
 
 export const initDherelo = () => {
-  console.log("Ініціалізовано модуль джерела");
 };

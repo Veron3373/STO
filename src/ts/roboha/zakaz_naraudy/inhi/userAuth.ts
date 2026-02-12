@@ -15,7 +15,6 @@ export function setUserData(name: string, access: string): void {
   userName = name;
   userAccessLevel = access;
   isAuthenticated = true;
-  console.log("✅ Дані користувача встановлено:", { name, access });
 }
 
 /**
@@ -25,7 +24,6 @@ export function clearUserData(): void {
   userName = null;
   userAccessLevel = null;
   isAuthenticated = false;
-  console.log("🗑️ Дані користувача очищено");
 }
 
 /**

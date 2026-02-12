@@ -29,7 +29,6 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
 }
 
 async function checkAuthOnPageLoad(): Promise<void> {
-  console.log("🔒 Перевірка авторизації...");
 
   const {
     data: { session },
@@ -53,7 +52,6 @@ async function checkAuthOnPageLoad(): Promise<void> {
     return;
   }
 
-  console.log("✅ Авторизовано:", session.user.email);
 
   // Оновлюємо посилання на сторінці
   initUrlUpdater();

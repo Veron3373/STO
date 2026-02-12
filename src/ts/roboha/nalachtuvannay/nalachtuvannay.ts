@@ -1332,7 +1332,6 @@ export async function createSettingsModal(): Promise<void> {
   const aiToggle = modal.querySelector("#toggle-ai") as HTMLInputElement;
   if (aiToggle) {
     aiToggle.addEventListener("change", () => {
-      console.log(`🤖 AI toggle changed: ${aiToggle.checked}`);
       resetAISettingsCache();
     });
   }

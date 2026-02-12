@@ -289,7 +289,6 @@ export async function addRecord(e?: Event): Promise<void> {
   // 🔐 Перевіряємо доступ до сторінки перед оновленням даних
   const hasAccess = await checkCurrentPageAccess();
   if (!hasAccess) {
-    console.log("⛔ Доступ до Бухгалтерії заборонено - перенаправлення...");
     setSearchButtonLoadingEl(btn, false);
     redirectToIndex();
     return;
@@ -441,14 +440,12 @@ let xlsxLoadingPromise: Promise<boolean> | null = null;
 function loadXLSXIfNeeded(): Promise<boolean> {
   // Перевіряємо чи бібліотека вже завантажена
   if (typeof (window as any).XLSX !== "undefined") {
-    console.log("✅ XLSX вже доступна");
     return Promise.resolve(true);
   }
 
   // Якщо вже йде завантаження - повертаємо існуючий Promise
   if (xlsxLoadingPromise) return xlsxLoadingPromise;
 
-  console.log("🔄 Початок завантаження XLSX...");
 
   xlsxLoadingPromise = new Promise<boolean>((resolve) => {
     try {
@@ -458,7 +455,6 @@ function loadXLSXIfNeeded(): Promise<boolean> {
       ) as HTMLScriptElement | null;
 
       if (existing) {
-        console.log("📜 Скрипт XLSX знайдено в DOM");
 
         // Скрипт є, але бібліотека ще не завантажилась - чекаємо
         let attempts = 0;
@@ -468,7 +464,6 @@ function loadXLSXIfNeeded(): Promise<boolean> {
           attempts++;
 
           if (typeof (window as any).XLSX !== "undefined") {
-            console.log("✅ XLSX завантажена після очікування");
             clearInterval(checkInterval);
             resolve(true);
             return;
@@ -485,13 +480,11 @@ function loadXLSXIfNeeded(): Promise<boolean> {
       }
 
       // Скрипта немає - додаємо його динамічно
-      console.log("➕ Додавання нового скрипта XLSX");
       const script = document.createElement("script");
       script.src =
         "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
       script.async = false;
       script.onload = () => {
-        console.log("📥 Скрипт XLSX завантажено");
         setTimeout(() => {
           const loaded = typeof (window as any).XLSX !== "undefined";
           console.log(
@@ -540,7 +533,6 @@ function downloadpodlegleToExcel(): void {
         );
         return;
       }
-      console.log("✅ XLSX успішно завантажена");
       downloadpodlegleToExcel();
     });
     return;
@@ -637,7 +629,6 @@ function downloadMagazineToExcel(): void {
         );
         return;
       }
-      console.log("✅ XLSX успішно завантажена");
       downloadMagazineToExcel();
     });
     return;
@@ -736,7 +727,6 @@ function downloadDetailsToExcel(): void {
         );
         return;
       }
-      console.log("✅ XLSX успішно завантажена");
       downloadDetailsToExcel();
     });
     return;
@@ -838,7 +828,6 @@ function downloadvutratuToExcel(): void {
         );
         return;
       }
-      console.log("✅ XLSX успішно завантажена");
       downloadvutratuToExcel();
     });
     return;
@@ -918,10 +907,6 @@ function downloadvutratuToExcel(): void {
 
 export function downloadToExcel(): void {
   try {
-    console.log(
-      "📥 Експорт в Excel - перевірка наявності XLSX:",
-      typeof (window as any).XLSX
-    );
 
     // ВИПРАВЛЕНО: правильний клас кнопки
     const activeTab = document.querySelector(
@@ -933,7 +918,6 @@ export function downloadToExcel(): void {
     }
 
     const tabText = activeTab.textContent?.trim() || "";
-    console.log("📊 Активна вкладка:", tabText);
 
     if (tabText.includes("Співробітники") || tabText.includes("Зарплата")) {
       downloadpodlegleToExcel();
@@ -995,16 +979,12 @@ export async function runMassPaymentCalculation(e?: Event): Promise<void> {
 
   try {
     if (isPodlegleVisible) {
-      console.log("🔄 Масовий розрахунок: підлеглі");
       await runMassPaymentCalculationForPodlegle();
     } else if (isMagazineVisible) {
-      console.log("🔄 Масовий розрахунок: магазин");
       await runMassPaymentCalculationForMagazine();
     } else if (isDetailsVisible) {
-      console.log("🔄 Масовий розрахунок: деталі");
       await runMassPaymentCalculationForDetails();
     } else if (isvutratuVisible) {
-      console.log("🔄 Масовий розрахунок: витрати");
       await runMassPaymentCalculationForvutratu();
     } else {
       showNotification(
@@ -1036,7 +1016,6 @@ function initializeDateInputs(): void {
     // Removed focus listener to prevent NotAllowedError
 
     input.addEventListener("change", function () {
-      console.log(`Дата змінена: ${this.id} = ${this.value}`);
     });
   });
 }
@@ -1047,15 +1026,12 @@ window.addEventListener("load", async function () {
   // Перевіряємо чи це сторінка бухгалтерії - якщо ні, виходимо
   const currentPath = window.location.pathname;
   if (!currentPath.includes("bukhhalteriya.html") && !currentPath.endsWith("bukhhalteriya")) {
-    console.log("ℹ️ Не сторінка бухгалтерії - пропускаємо ініціалізацію");
     return;
   }
   
-  console.log("🚀 Початок ініціалізації бухгалтерії...");
 
   // Перевірка наявності XLSX
   if (typeof (window as any).XLSX !== "undefined") {
-    console.log("✅ Бібліотека XLSX завантажена успішно");
   } else {
     console.warn("⚠️ Бібліотека XLSX НЕ завантажена при ініціалізації");
   }
@@ -1069,7 +1045,6 @@ window.addEventListener("load", async function () {
     // 1. Авторизація та визначення ролі
     await attemptAutoLogin();
     const role = userAccessLevel;
-    console.log("👤 Поточна роль:", role);
 
     // 2. Отримуємо посилання на кнопки
     const btnSklad = document.getElementById("tab-btn-magazine");
@@ -1132,7 +1107,6 @@ window.addEventListener("load", async function () {
     }
 
     if (firstVisibleTab) {
-      console.log(`🔘 Авто-клік по вкладці: "${firstVisibleTab.innerText}"`);
 
       // [FIX] Якщо є доступні вкладки, показуємо ВЕСЬ контейнер
       if (mainContainer) {
@@ -1143,7 +1117,6 @@ window.addEventListener("load", async function () {
       firstVisibleTab.click();
 
       // 6. Додаткова ініціалізація перемикачів (тільки якщо доступ дозволено)
-      console.log("🔧 Ініціалізація перемикачів фільтрації...");
       setTimeout(() => {
         if (typeof (window as any).initMagazineDateFilterToggle === "function")
           (window as any).initMagazineDateFilterToggle();

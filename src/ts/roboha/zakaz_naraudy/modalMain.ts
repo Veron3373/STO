@@ -2,7 +2,7 @@
 import { cacheHiddenColumnsData } from "./inhi/zberechennya_zmin_y_danux_aktu";
 import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "./inhi/vspluvauhe_povidomlenna";
-import { subscribeToActPresence } from "./actPresence";
+import { subscribeToActPresence, lockActInterface } from "./actPresence";
 import {
   refreshPhotoData,
   safeParseJSON,
@@ -68,7 +68,7 @@ import {
 import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
 import { handleSmsButtonClick } from "../sms/sendActSMS";
-import { refreshActsTable } from "../tablucya/tablucya";
+import { refreshActsTable, getActEditorFromPresence } from "../tablucya/tablucya";
 
 
 function initDeleteRowHandler(): void {
@@ -885,6 +885,14 @@ export async function showModal(
 
     // 🔐 ПІДПИСКА НА PRESENCE API ДЛЯ ВІДСТЕЖЕННЯ ПРИСУТНОСТІ КОРИСТУВАЧІВ
     if (!skipPresence) {
+      // 🔐 ПОПЕРЕДНЯ ПЕРЕВІРКА: чи акт вже відкритий іншим користувачем (за глобальною мапою присутності)
+      // Це спрацьовує коли комп'ютер іншого користувача "заснув" і не зробив untrack
+      const existingEditor = getActEditorFromPresence(actId);
+      if (existingEditor) {
+        // Акт вже відкритий іншим користувачем - блокуємо одразу
+        lockActInterface(existingEditor);
+      }
+      
       // Перевіряємо чи акт вже відкритий іншим користувачем
       // Передаємо колбек для оновлення даних при розблокуванні
       await subscribeToActPresence(actId, async () => {

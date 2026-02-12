@@ -48,8 +48,9 @@ let actEditorsMap: Map<number, string> = new Map();
 // Канал для відстеження присутності в актах
 let globalPresenceChannel: any = null;
 
-// ⏰ Максимальний час "життя" присутності (8 годин - повинен співпадати з actPresence.ts)
-const PRESENCE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
+// ⏰ Максимальний час "життя" присутності (30 хвилин - повинен співпадати з actPresence.ts)
+// Heartbeat в actPresence.ts оновлює присутність кожні 5 хвилин
+const PRESENCE_MAX_AGE_MS = 30 * 60 * 1000;
 
 /**
  * 🧹 Перевіряє чи присутність "застаріла" (старше PRESENCE_MAX_AGE_MS)
@@ -58,6 +59,15 @@ function isPresenceStale(openedAt: string): boolean {
     const openedTime = new Date(openedAt).getTime();
     const now = Date.now();
     return (now - openedTime) > PRESENCE_MAX_AGE_MS;
+}
+
+/**
+ * ✏️ Отримує ім'я редактора для акту з глобальної мапи присутності
+ * @param actId - ID акту
+ * @returns Ім'я редактора або null якщо ніхто не редагує
+ */
+export function getActEditorFromPresence(actId: number): string | null {
+    return actEditorsMap.get(actId) || null;
 }
 
 // =============================================================================

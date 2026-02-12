@@ -19,12 +19,22 @@ let globalPresenceChannel: any = null;
 // 🔐 Час відкриття акту поточним користувачем (фіксується один раз при підписці)
 let myOpenedAt: string | null = null;
 
+// 🔐 ID поточного акту (для wake-up обробки)
+let currentActId: number | null = null;
+
 // 🔐 Прапорець: чи ми вже відправили свій track
 let hasTrackedPresence: boolean = false;
 
-// ⏰ Максимальний час "життя" присутності (8 годин в мілісекундах - робочий день)
+// ⏰ Heartbeat інтервал для оновлення присутності
+let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
+// ⏰ Максимальний час "життя" присутності (30 хвилин в мілісекундах)
 // Присутності старші за цей час будуть ігноруватись як "застарілі"
-const PRESENCE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
+// Heartbeat оновлює openedAt кожні 5 хвилин, тому 30 хвилин гарантує детекцію "мертвих" присутностей
+const PRESENCE_MAX_AGE_MS = 30 * 60 * 1000;
+
+// ⏰ Інтервал heartbeat (5 хвилин)
+const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
  * 🧹 Перевіряє чи присутність "застаріла" (старше PRESENCE_MAX_AGE_MS)
@@ -35,8 +45,54 @@ function isPresenceStale(openedAt: string): boolean {
     return (now - openedTime) > PRESENCE_MAX_AGE_MS;
 }
 
+/**
+ * 💓 Запускає heartbeat для оновлення openedAt кожні HEARTBEAT_INTERVAL_MS
+ * Це дозволяє виявляти "мертві" присутності (комп в сні, браузер закритий без unload)
+ */
+function startHeartbeat(actId: number): void {
+    // Зупиняємо попередній heartbeat
+    stopHeartbeat();
+    
+    heartbeatInterval = setInterval(async () => {
+        if (!presenceChannel) {
+            stopHeartbeat();
+            return;
+        }
+        
+        // Оновлюємо myOpenedAt на поточний час
+        myOpenedAt = new Date().toISOString();
+        
+        const presenceData: ActPresenceState = {
+            actId: actId,
+            userName: currentUserName || "Unknown",
+            openedAt: myOpenedAt,
+        };
+        
+        try {
+            await presenceChannel.track(presenceData);
+            // Також оновлюємо глобальний канал
+            if (globalPresenceChannel) {
+                await globalPresenceChannel.track(presenceData);
+            }
+        } catch (err) {
+            // Ігноруємо помилки heartbeat
+        }
+    }, HEARTBEAT_INTERVAL_MS);
+}
+
+/**
+ * 💓 Зупиняє heartbeat
+ */
+function stopHeartbeat(): void {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+}
+
 // 🔐 Обробник для закриття сторінки - відписуємось від presence
 function handlePageUnload(): void {
+    stopHeartbeat(); // 💓 Зупиняємо heartbeat
     if (presenceChannel) {
         // Використовуємо синхронний untrack через sendBeacon якщо можливо
         try {
@@ -61,11 +117,44 @@ function handlePageUnload(): void {
 // 🔐 Реєструємо обробники для закриття сторінки
 window.addEventListener("beforeunload", handlePageUnload);
 window.addEventListener("pagehide", handlePageUnload);
-// Також для випадку коли сторінка стає "прихованою" (мобільні браузери)
-document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden" && presenceChannel) {
-        // Не відписуємось повністю, але робимо untrack щоб сервер знав що ми "пішли"
-        presenceChannel.untrack().catch(() => {});
+
+// 🔐 Змінна для відстеження коли сторінка стала прихованою
+let hiddenSince: number | null = null;
+
+// Також для випадку коли сторінка стає "прихованою" (мобільні браузери, сон комп'ютера)
+document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "hidden") {
+        hiddenSince = Date.now();
+        if (presenceChannel) {
+            // Не відписуємось повністю, але робимо untrack щоб сервер знав що ми "пішли"
+            presenceChannel.untrack().catch(() => {});
+        }
+        if (globalPresenceChannel) {
+            globalPresenceChannel.untrack().catch(() => {});
+        }
+    } else if (document.visibilityState === "visible") {
+        // 🔓 Сторінка знову видима - комп прокинувся
+        // Якщо ми були приховані довше ніж половина max age - оновити присутність одразу
+        const wasHiddenFor = hiddenSince ? Date.now() - hiddenSince : 0;
+        hiddenSince = null;
+        
+        if (wasHiddenFor > PRESENCE_MAX_AGE_MS / 2 && presenceChannel && myOpenedAt && currentActId) {
+            // Оновлюємо openedAt одразу - не чекаємо на heartbeat
+            myOpenedAt = new Date().toISOString();
+            try {
+                const presenceData: ActPresenceState = {
+                    actId: currentActId,
+                    userName: currentUserName || "Unknown",
+                    openedAt: myOpenedAt,
+                };
+                await presenceChannel.track(presenceData);
+                if (globalPresenceChannel) {
+                    await globalPresenceChannel.track(presenceData);
+                }
+            } catch (err) {
+                // Ігноруємо помилки
+            }
+        }
     }
 });
 
@@ -89,6 +178,7 @@ export async function subscribeToActPresence(
 
     // 🔐 Фіксуємо час відкриття акту ОДИН РАЗ при підписці
     myOpenedAt = new Date().toISOString();
+    currentActId = actId; // 🔐 Зберігаємо ID акту для wake-up обробки
     hasTrackedPresence = false; // 🔐 Скидаємо прапорець
 
     // Створюємо канал для конкретного акту
@@ -259,6 +349,9 @@ export async function subscribeToActPresence(
 
                 // ✏️ Також відправляємо на глобальний канал для відображення в таблиці
                 await trackGlobalActPresence(actId);
+                
+                // 💓 Запускаємо heartbeat для підтримки "живої" присутності
+                startHeartbeat(actId);
             }
         });
 
@@ -384,14 +477,18 @@ async function untrackGlobalActPresence(): Promise<void> {
  * Відписується від присутності акту
  */
 export async function unsubscribeFromActPresence(): Promise<void> {
+    // 💓 Зупиняємо heartbeat
+    stopHeartbeat();
+    
     if (presenceChannel) {
         await presenceChannel.untrack();
         await supabase.removeChannel(presenceChannel);
         presenceChannel = null;
     }
     
-    // 🔐 Очищаємо зафіксований час відкриття
+    // 🔐 Очищаємо зафіксований час відкриття та ID акту
     myOpenedAt = null;
+    currentActId = null;
     hasTrackedPresence = false; // 🔐 Скидаємо прапорець
     
     // ✏️ Також прибираємо з глобального каналу
@@ -402,7 +499,7 @@ export async function unsubscribeFromActPresence(): Promise<void> {
  * Блокує інтерфейс акту
  * @param lockedByUser - ім'я користувача, який заблокував акт
  */
-function lockActInterface(lockedByUser: string): void {
+export function lockActInterface(lockedByUser: string): void {
     // Перевірка, щоб не спамити блокуванням, якщо вже заблоковано тим самим користувачем
     const header = document.querySelector(".zakaz_narayd-header") as HTMLElement;
     if (header && header.getAttribute("data-locked-by") === lockedByUser) {

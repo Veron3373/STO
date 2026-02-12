@@ -487,11 +487,6 @@ function loadXLSXIfNeeded(): Promise<boolean> {
       script.onload = () => {
         setTimeout(() => {
           const loaded = typeof (window as any).XLSX !== "undefined";
-          console.log(
-            loaded
-              ? "✅ XLSX доступна"
-              : "❌ XLSX недоступна після завантаження"
-          );
           resolve(loaded);
         }, 100);
       };

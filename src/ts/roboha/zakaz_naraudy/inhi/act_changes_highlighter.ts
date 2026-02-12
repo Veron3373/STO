@@ -118,7 +118,6 @@ async function highlightAddedItems(
   }
 
   if (rowsToHighlight.length === 0) {
-    console.log("⚠️ Немає рядків для підсвічування");
     return;
   }
 
@@ -243,7 +242,6 @@ async function highlightDeletedItems(
   }
 
   if (rowsToHighlight.length === 0) {
-    console.log("⚠️ Немає рядків для підсвічування");
     return;
   }
 

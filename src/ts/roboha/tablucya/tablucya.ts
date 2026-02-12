@@ -335,7 +335,6 @@ function subscribeToSlusarNotifications() {
 
         const updatedAct = payload.new;
         if (!updatedAct || updatedAct.act_id === undefined) {
-          console.log("⚠️ [slusarsOn] Немає act_id в payload");
           return;
         }
 

@@ -1910,11 +1910,7 @@ class SchedulerApp {
             isFullyOccupied
           );
           dayContainer.appendChild(indicator);
-        } else {
-          console.log("⚠️ Відсоток 0, індикатор не додається");
         }
-      } else {
-        console.log("❌ Немає статистики або постів для цієї дати");
       }
 
       dayContainer.appendChild(span);

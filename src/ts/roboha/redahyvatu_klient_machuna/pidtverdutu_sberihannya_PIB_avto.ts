@@ -61,7 +61,6 @@ export function showSavePromptModal(): Promise<boolean> {
 async function deleteCarFromDatabase(carsId: string): Promise<void> {
   const { error } = await supabase.from("cars").delete().eq("cars_id", carsId);
   if (error) console.error("❌ Помилка видалення автомобіля:", error.message);
-  else console.log("✅ Автомобіль успішно видалений");
 }
 
 // Додає авто до клієнта

@@ -1115,7 +1115,6 @@ export function updatePodlegleDisplayedSums(): void {
 export function updatepodlegleTable(): void {
   const tbody = byId<HTMLTableSectionElement>("podlegle-tbody");
   if (!tbody) {
-    console.log("⚠️ Елемент podlegle-tbody не знайдено - пропускаємо оновлення таблиці");
     return;
   }
 

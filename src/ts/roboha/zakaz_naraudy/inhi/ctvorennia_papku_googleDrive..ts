@@ -294,7 +294,6 @@ export async function findAndRestoreFolderLink(
     // Шукаємо папку року в корені диску
     const yearFolderId = await findFolder(yyyy, null);
     if (!yearFolderId) {
-      console.log(`❌ Папку року ${yyyy} не знайдено`);
       return null;
     }
 
@@ -325,7 +324,6 @@ export async function findAndRestoreFolderLink(
     }
 
     if (!actFolderId) {
-      console.log("❌ Папку акту не знайдено");
       return null;
     }
 

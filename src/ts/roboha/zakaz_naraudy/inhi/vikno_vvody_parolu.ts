@@ -69,7 +69,6 @@ async function verifyPassword(enteredPassword: string): Promise<boolean> {
   if (enteredStr === userPasswordStr) {
     return true;
   } else {
-    console.log("❌ Пароль невірний!");
     return false;
   }
 }

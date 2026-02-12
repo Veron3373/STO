@@ -1013,7 +1013,6 @@ export function updateDetailsTable(): void {
 
   // Перевірка чи елемент існує (може бути null якщо не на сторінці bukhhalteriya.html)
   if (!tbody) {
-    console.log("⚠️ Елемент details-tbody не знайдено - пропускаємо оновлення таблиці");
     return;
   }
 

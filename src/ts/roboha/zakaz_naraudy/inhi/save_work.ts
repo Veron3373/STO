@@ -351,8 +351,6 @@ async function syncSlyusarsHistoryForAct(params: {
       // 1. ПРІОРИТЕТ №1: Пошук за recordId (найточніший спосіб)
       if (currentRecordId && prevWorksById.has(currentRecordId)) {
         sourceForDates = prevWorksById.get(currentRecordId);
-      } else if (currentRecordId) {
-        console.log(`⚠️ [save_work] recordId "${currentRecordId}" НЕ знайдено в попередніх записах!`);
       }
       
       // 2. ПРІОРИТЕТ №2: Пошук за назвою роботи (для записів без recordId або нових) - НОРМАЛІЗОВАНО
@@ -376,10 +374,6 @@ async function syncSlyusarsHistoryForAct(params: {
             break;
           }
         }
-      }
-      
-      if (!sourceForDates) {
-        console.log(`⚠️ [save_work] Попередній запис НЕ знайдено - це нова робота`);
       }
 
       // ✅ КРИТИЧНО: Зберігаємо дати з попереднього запису (якщо знайдено)

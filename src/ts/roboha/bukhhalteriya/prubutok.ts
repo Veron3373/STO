@@ -430,7 +430,6 @@ async function loadReceipterSalaries(): Promise<void> {
 
     const data = rawData as any[];
     if (!data || data.length === 0) {
-      console.log("⚠️ Користувачів (slyusars) не знайдено у базі");
       return;
     }
 
@@ -1745,9 +1744,6 @@ function selectExpenseRow(index: number, event?: MouseEvent): void {
   }
 
   if (expense.amount >= 0) {
-    console.log(
-      "⚠️ Редагування доступне тільки для витрат (від'ємні значення)"
-    );
     showNotification(
       "⚠️ Редагування доступне тільки для витрат",
       "warning",

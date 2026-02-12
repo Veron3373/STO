@@ -543,7 +543,6 @@ async function syncSlyusarsHistoryForAct(params: {
         !slyusarData["Історія"] ||
         typeof slyusarData["Історія"] !== "object"
       ) {
-        console.log(`⚠️ У приймальника ${slyusarData["Name"]} немає історії`);
         continue;
       }
 
@@ -554,7 +553,6 @@ async function syncSlyusarsHistoryForAct(params: {
       // Шукаємо акт по ВСІХ датах в історії (не тільки по dateKey)
       for (const dateKey in history) {
         if (!Array.isArray(history[dateKey])) {
-          console.log(`⚠️ Історія за датою ${dateKey} не є масивом`);
           continue;
         }
 
@@ -592,10 +590,6 @@ async function syncSlyusarsHistoryForAct(params: {
         } else {
           updatedCount++;
         }
-      } else {
-        console.log(
-          `⚠️ Акт ${params.actId} не знайдено в історії приймальника ${slyusarData["Name"]}`
-        );
       }
     }
 
@@ -918,7 +912,6 @@ export function initStatusLockDelegation(): void {
             }
           } else {
             // Є попередження - перевіряємо налаштування "Закриття акту із зауваженнями"
-            console.log("⚠️ Виявлено попередження - перевіряємо налаштування доступу");
             try {
               canClose = await canUserCloseActsWithWarnings();
             } catch (permErr) {

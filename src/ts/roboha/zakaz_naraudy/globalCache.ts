@@ -693,7 +693,6 @@ export async function ensureSkladLoaded(): Promise<void> {
  */
 export function initScladRealtimeSubscription() {
   if (isScladRealtimeSubscribed) {
-    console.log("⚠️ Realtime для sclad вже активний, пропускаємо ініціалізацію.");
     return;
   }
   isScladRealtimeSubscribed = true;
@@ -774,7 +773,6 @@ function mapScladRecord(r: any) {
  */
 export function initWorksRealtimeSubscription() {
   if (isWorksRealtimeSubscribed) {
-    console.log("⚠️ Realtime для works вже активний, пропускаємо ініціалізацію.");
     return;
   }
   isWorksRealtimeSubscribed = true;
@@ -844,7 +842,6 @@ function handleWorksChange(payload: any) {
  */
 export function initDetailsRealtimeSubscription() {
   if (isDetailsRealtimeSubscribed) {
-    console.log("⚠️ Realtime для details вже активний, пропускаємо ініціалізацію.");
     return;
   }
   isDetailsRealtimeSubscribed = true;

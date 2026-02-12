@@ -224,8 +224,8 @@ export async function handleItemSelection(
     // Знаходимо потрібні ячейки
     const idCountCell = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement | null;
-    const salaryCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
-    const slyusarCell = row.querySelector('[data-name="person_or_store"]') as HTMLElement | null;
+    //const salaryCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
+    //const slyusarCell = row.querySelector('[data-name="person_or_store"]') as HTMLElement | null;
     
     // Автозаповнення кількості (тільки для робіт)
     if (suggestion.avgQuantity && idCountCell && itemType === 'work') {
@@ -247,30 +247,30 @@ export async function handleItemSelection(
       sumCell.style.fontStyle = "italic";
     }
     
-    // Автозаповнення зарплати (тільки для робіт)
-    if (suggestion.avgSalary && salaryCell && itemType === 'work') {
-      const currentSalary = parseFloat((salaryCell.textContent || "0").replace(/\s/g, ""));
-      if (currentSalary === 0) {
-        salaryCell.textContent = formatPrice(suggestion.avgSalary);
-        salaryCell.style.color = "#999";
-        salaryCell.style.fontStyle = "italic";
-        salaryCell.setAttribute("data-ai-suggested", "true");
-        salaryCell.setAttribute("data-ai-salary", String(suggestion.avgSalary));
-        salaryCell.title = "💡 Підказка з історії. Клацніть для підтвердження";
-      }
-    }
+    // ❌ ВІДКЛЮЧЕНО: Автозаповнення зарплати (тільки для робіт)
+    // if (suggestion.avgSalary && salaryCell && itemType === 'work') {
+    //   const currentSalary = parseFloat((salaryCell.textContent || "0").replace(/\s/g, ""));
+    //   if (currentSalary === 0) {
+    //     salaryCell.textContent = formatPrice(suggestion.avgSalary);
+    //     salaryCell.style.color = "#999";
+    //     salaryCell.style.fontStyle = "italic";
+    //     salaryCell.setAttribute("data-ai-suggested", "true");
+    //     salaryCell.setAttribute("data-ai-salary", String(suggestion.avgSalary));
+    //     salaryCell.title = "💡 Підказка з історії. Клацніть для підтвердження";
+    //   }
+    // }
     
-    // Автозаповнення ПІБ слюсаря (тільки для робіт)
-    if (suggestion.mostFrequentSlyusar && slyusarCell && itemType === 'work') {
-      const currentSlyusar = (slyusarCell.textContent || "").trim();
-      if (!currentSlyusar) {
-        slyusarCell.textContent = suggestion.mostFrequentSlyusar;
-        slyusarCell.style.color = "#999";
-        slyusarCell.style.fontStyle = "italic";
-        slyusarCell.setAttribute("data-ai-suggested", "true");
-        slyusarCell.title = "💡 Найчастіший виконавець. Клацніть для підтвердження";
-      }
-    }
+    // ❌ ВІДКЛЮЧЕНО: Автозаповнення ПІБ слюсаря (тільки для робіт)
+    // if (suggestion.mostFrequentSlyusar && slyusarCell && itemType === 'work') {
+    //   const currentSlyusar = (slyusarCell.textContent || "").trim();
+    //   if (!currentSlyusar) {
+    //     slyusarCell.textContent = suggestion.mostFrequentSlyusar;
+    //     slyusarCell.style.color = "#999";
+    //     slyusarCell.style.fontStyle = "italic";
+    //     slyusarCell.setAttribute("data-ai-suggested", "true");
+    //     slyusarCell.title = "💡 Найчастіший виконавець. Клацніть для підтвердження";
+    //   }
+    // }
   } else {
     console.log(`⚠️ No price suggestion found for "${itemName}"`);
   }
@@ -304,17 +304,17 @@ export function setupPriceConfirmationHandler(container: HTMLElement): void {
       target.removeAttribute("title");
     }
     
-    // Обробка кліку на ячейку зарплати
-    if (target.getAttribute("data-name") === "slyusar_sum" && isAISuggested(target)) {
-      confirmSalarySuggestion(target);
-    }
+    // ❌ ВІДКЛЮЧЕНО: Обробка кліку на ячейку зарплати
+    // if (target.getAttribute("data-name") === "slyusar_sum" && isAISuggested(target)) {
+    //   confirmSalarySuggestion(target);
+    // }
     
-    // Обробка кліку на ячейку ПІБ слюсаря
-    if (target.getAttribute("data-name") === "person_or_store" && isAISuggested(target)) {
-      target.style.color = "#333";
-      target.style.fontStyle = "normal";
-      target.removeAttribute("data-ai-suggested");
-      target.removeAttribute("title");
-    }
+    // ❌ ВІДКЛЮЧЕНО: Обробка кліку на ячейку ПІБ слюсаря
+    // if (target.getAttribute("data-name") === "person_or_store" && isAISuggested(target)) {
+    //   target.style.color = "#333";
+    //   target.style.fontStyle = "normal";
+    //   target.removeAttribute("data-ai-suggested");
+    //   target.removeAttribute("title");
+    // }
   });
 }

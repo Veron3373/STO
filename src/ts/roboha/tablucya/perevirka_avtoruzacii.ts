@@ -7,8 +7,6 @@ import { supabase } from "../../vxid/supabaseClient";
  * Ініціалізація захисту для кнопок, які потребують авторизації через Google
  */
 export function initializeAuthGuards(): void {
-    console.log("🔒 Ініціалізація auth guards...");
-
     // Чекаємо поки DOM завантажиться
     document.addEventListener("DOMContentLoaded", () => {
         setupBukhhalteriyaGuard();
@@ -48,8 +46,6 @@ function setupBukhhalteriyaGuard(): void {
                 alert("⛔ Помилка перевірки авторизації");
             }
         }, true); // true = capture phase
-
-        console.log("✅ Auth guard для Бухгалтерії встановлено");
     }
 }
 
@@ -74,16 +70,13 @@ function setupHomeGuard(): void {
                     return;
                 }
 
-                console.log("✅ Авторизація підтверджена для Наряду");
             } catch (error) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.error("❌ Помилка перевірки авторизації:", error);
+                console.error("❌ Помилка перевірки авторізації:", error);
                 alert("⛔ Помилка перевірки авторизації");
             }
         }, true);
-
-        console.log("✅ Auth guard для Наряду встановлено");
     }
 }
 
@@ -110,7 +103,6 @@ function setupClientGuard(): void {
                     return;
                 }
 
-                console.log("✅ Авторизація підтверджена для Додати");
             } catch (error) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
@@ -118,8 +110,6 @@ function setupClientGuard(): void {
                 alert("⛔ Помилка перевірки авторизації");
             }
         }, true);
-
-        console.log("✅ Auth guard для Додати встановлено");
     }
 }
 

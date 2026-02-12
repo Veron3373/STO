@@ -5,8 +5,6 @@ import { supabase } from "../vxid/supabaseClient";
 import { getGitUrl, getFallbackUrl } from "../utils/gitUtils";
 import { initUrlUpdater } from "../utils/urlUpdater";
 
-console.log("🔒 [Main] Перевірка Google сесії...");
-
 // Перевірка email через базу даних whitelist
 async function isEmailAllowed(email: string | undefined): Promise<boolean> {
   if (!email) return false;

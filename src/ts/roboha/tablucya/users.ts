@@ -39,7 +39,6 @@ function saveUserDataToLocalStorage(
     };
 
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
-    console.log("✅ Дані користувача збережено в localStorage");
   } catch (error) {
     console.error("❌ Помилка при збереженні в localStorage:", error);
   }
@@ -80,7 +79,6 @@ function getSavedUserDataFromLocalStorage(): {
 function clearSavedUserDataFromLocalStorage(): void {
   try {
     localStorage.removeItem(USER_DATA_KEY);
-    console.log("🗑️ Дані користувача видалено з localStorage");
   } catch (error) {
     console.error("❌ Помилка при видаленні з localStorage:", error);
   }
@@ -209,7 +207,6 @@ async function getSettingValue(
  */
 export function clearSettingsCache(): void {
   settingsCache.clear();
-  console.log("🗑️ Кеш налаштувань очищено");
 }
 
 // =============================================================================
@@ -372,14 +369,6 @@ export async function updateUIBasedOnAccess(
   setVisibility(homeMenuItem, shouldRenderHome);
   setVisibility(buhhalteriyaMenuItem, shouldRenderBuhhalteriya);
   setVisibility(planuvanyaMenuItem, shouldRenderPlanuvannya);
-
-  console.log(`✅ UI оновлено для рівня доступу: ${accessLevel}`, {
-    Налаштування: shouldRenderSettings,
-    Додати: shouldRenderAdd,
-    Наряд: shouldRenderHome,
-    Бухгалтерія: shouldRenderBuhhalteriya,
-    Планування: shouldRenderPlanuvannya,
-  });
 }
 
 // =============================================================================
@@ -406,7 +395,6 @@ export async function attemptAutoLogin(): Promise<{
       isAuthenticated = true;
       userAccessLevel = accessLevel;
       userName = fetchedUserName || savedData.name;
-      console.log("✅ Автоматична автентифікація успішна");
       return { accessLevel: userAccessLevel, userName: userName };
     } else {
       clearSavedUserDataFromLocalStorage();
@@ -573,7 +561,6 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
   const { accessLevel: autoAccessLevel } = await attemptAutoLogin();
 
   if (autoAccessLevel) {
-    console.log("🎉 Автоматичний вхід успішний, accessLevel:", autoAccessLevel);
     return autoAccessLevel;
   }
 
@@ -605,7 +592,6 @@ export function logoutFromSystemAndRedirect(): void {
   // Очищаємо sessionStorage (прапори сесії)
   try {
     sessionStorage.clear();
-    console.log("🗑️ sessionStorage очищено");
   } catch (e) {
     console.warn("⚠️ Помилка при очищенні sessionStorage:", e);
   }
@@ -613,14 +599,11 @@ export function logoutFromSystemAndRedirect(): void {
   isAuthenticated = false;
   userAccessLevel = null;
   userName = null;
-  console.log("🚪 Вихід з системи та перенаправлення...");
   redirectToIndex();
 }
 
 export async function initializeAuthSystem(): Promise<void> {
-  console.log(
-    "ℹ️ initializeAuthSystem - функція більше не використовується для головної ініціалізації."
-  );
+  // Функція більше не використовується для головної ініціалізації
 }
 
 export async function canUserSeeZarplataColumn(): Promise<boolean> {

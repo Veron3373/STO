@@ -272,6 +272,4 @@ export const handleRobotaClick = async () => {
   await loadDatabaseData("Робота");
 };
 
-export const initRobota = () => {
-  console.log("Ініціалізовано модуль роботи");
-};
+export const initRobota = () => {};

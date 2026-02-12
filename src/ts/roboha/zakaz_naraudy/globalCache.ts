@@ -210,7 +210,6 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         wallpaperMain: parsed.wallpaperMain || "",
         aiEnabled: parsed.aiEnabled !== undefined ? parsed.aiEnabled : false,
       };
-      console.log("✅ Загальні налаштування завантажено з localStorage");
       // Застосовуємо шпалери після завантаження
       applyWallpapers();
       return true;
@@ -718,21 +717,16 @@ export function initScladRealtimeSubscription() {
   }
   isScladRealtimeSubscribed = true;
 
-  console.log("📡 Ініціалізація Realtime підписки на sclad...");
-
   supabase
     .channel("sclad-changes")
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "sclad" },
       (payload) => {
-        console.log(`🔔 Sclad Realtime event: ${payload.eventType}`, payload);
         handleScladChange(payload);
       }
     )
-    .subscribe((status) => {
-      console.log(`📡 Sclad Realtime status: ${status}`);
-    });
+    .subscribe();
 }
 
 function handleScladChange(payload: any) {
@@ -753,7 +747,6 @@ function handleScladChange(payload: any) {
       // Додаємо в початок або кінець? В ensureSkladLoaded order desc, але тут можна просто push, 
       // бо автодоповнення все одно фільтрує.
       globalCache.skladParts.push(mapped);
-      console.log(`➕ Додано на склад: ${mapScladRecord.name} (ID: ${newRecord.sclad_id})`);
     }
   } else if (eventType === "UPDATE") {
     // 🔄 Оновлення запису
@@ -765,7 +758,6 @@ function handleScladChange(payload: any) {
 
       if (index !== -1) {
         globalCache.skladParts[index] = updated;
-        console.log(`🔄 Оновлено на складі: ${updated.name} (ID: ${newRecord.sclad_id})`);
       } else {
         // Якщо раптом немає в кеші (наприклад, було додано поки ми були офлайн?), додаємо
         globalCache.skladParts.push(updated);
@@ -807,21 +799,16 @@ export function initWorksRealtimeSubscription() {
   }
   isWorksRealtimeSubscribed = true;
 
-  console.log("📡 Ініціалізація Realtime підписки на works...");
-
   supabase
     .channel("works-changes")
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "works" },
       (payload) => {
-        console.log(`🔔 Works Realtime event: ${payload.eventType}`, payload);
         handleWorksChange(payload);
       }
     )
-    .subscribe((status) => {
-      console.log(`📡 Works Realtime status: ${status}`);
-    });
+    .subscribe();
 }
 
 function handleWorksChange(payload: any) {
@@ -885,8 +872,6 @@ export function initDetailsRealtimeSubscription() {
     return;
   }
   isDetailsRealtimeSubscribed = true;
-
-  console.log("📡 Ініціалізація Realtime підписки на details...");
 
   supabase
     .channel("details-changes")

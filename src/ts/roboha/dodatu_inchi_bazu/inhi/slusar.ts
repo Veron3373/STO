@@ -901,7 +901,6 @@ export const initYesButtonHandler = () => {
 };
 
 export const initSlusar = () => {
-  console.log("Ініціалізовано модуль слюсаря");
   initYesButtonHandler();
   document.addEventListener("table-changed", (event: any) => {
     if (event.detail?.table !== "slyusars") {

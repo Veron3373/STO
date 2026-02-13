@@ -121,7 +121,7 @@ async function checkPassword(inputPassword: string): Promise<{
   try {
     const { data: slyusars, error } = await supabase
       .from("slyusars")
-      .select("id, data");
+      .select("*");
 
     // console.log("📦 Supabase response:", { slyusars, error });
 

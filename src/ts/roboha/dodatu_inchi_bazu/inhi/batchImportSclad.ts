@@ -203,7 +203,7 @@ async function getDetailIdByName(name: string): Promise<number | null> {
 async function getScladId(
   date: string,
   catno: string,
-  detail: string
+  detail: string,
 ): Promise<string | null> {
   const isoDate = toIsoDate(date);
   if (!isoDate) return null;
@@ -222,7 +222,7 @@ async function getScladId(
 // Функція для оновлення акта
 async function updateActWithDetails(
   actNo: string,
-  detailData: any
+  detailData: any,
 ): Promise<boolean> {
   try {
     const { data: actData, error: fetchError } = await supabase
@@ -406,15 +406,48 @@ function parseBatchData(text: string) {
   lines.forEach((line, index) => {
     if (index === 0 && (line.includes("Дата") || line.includes("Магазин")))
       return;
+
+    // Спробуємо розділити по табуляції (найбільш надійний метод з Excel)
     let parts = line.split("\t");
-    if (parts.length < 11) parts = line.split(/\s{2,}/);
-    if (parts.length < 11) parts = line.split(/\s+/);
+
+    // Якщо табуляція не працює, спробуємо розділити розумніше
+    if (parts.length < 11) {
+      // Розділяємо по пробілам, але обережно з деталями що можуть мати пробіли
+      const tokens = line.split(/\s+/);
+
+      if (tokens.length >= 11) {
+        // Логіка:
+        // Токени: Дата, Магазин, Каталог, <Деталь>, ..., Кількість, Ціна, ЦініаКлієнта, Склад, Рахунок, Акт, Одиниця
+        // Останні 7 елементів це: Кількість, Ціна, Ціна клієнта, Склад, Рахунок, Акт, Одиниця
+
+        const daysCount = tokens.length - 10; // кількість токенів для деталі
+        parts = [
+          tokens[0], // Дата
+          tokens[1], // Магазин
+          tokens[2], // Каталог номер
+          tokens.slice(3, 3 + daysCount).join(" "), // Деталь (усі проміжні слова)
+          tokens[tokens.length - 7], // Кількість
+          tokens[tokens.length - 6], // Ціна
+          tokens[tokens.length - 5], // Ціна клієнта
+          tokens[tokens.length - 4], // Склад
+          tokens[tokens.length - 3], // Рахунок №
+          tokens[tokens.length - 2], // Акт №
+          tokens[tokens.length - 1], // Одиниця виміру
+        ];
+      } else {
+        parts = tokens;
+      }
+    }
+
     // Pad to 11 parts with empty strings if necessary
     while (parts.length < 11) {
       parts.push("");
     }
     // Trim each part, but keep empty strings
     parts = parts.map((part) => part.trim());
+    // Take only first 11 parts
+    parts = parts.slice(0, 11);
+
     // No longer filter out empties - we want all 11 fields, even empty
     if (parts.length < 11) {
       console.warn("⚠️ Пропущено рядок (недостатньо даних):", line);
@@ -561,21 +594,32 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
       const textWidth = ctx.measureText(value).width + 40;
       if (textWidth > maxWidth) maxWidth = textWidth;
     });
-    
+
     // Ліміти відповідно до типу даних в колонці
     let limit = 130;
-    if (col === "detail") limit = 240;           // Деталь - залишаємо великий
-    else if (col === "shop") limit = 160;        // Магазин - текст
-    else if (col === "catno") limit = 150;       // Каталог номер
-    else if (col === "date") limit = 110;        // Дата: dd.mm.yyyy
-    else if (col === "qty") limit = 90;          // Кількість: числа
-    else if (col === "price") limit = 100;       // Ціна: числа
-    else if (col === "clientPrice") limit = 100; // Ціна клієнта: числа
-    else if (col === "warehouse") limit = 60;    // Склад: 1-3 цифри
-    else if (col === "invoice") limit = 90;     // Рахунок №
-    else if (col === "actNo") limit = 80;        // Акт №: числа
-    else if (col === "unit") limit = 80;         // Одиниця: штук/літр/комплект
-    else if (col === "status") limit = 100;      // Статус
+    if (col === "detail")
+      limit = 240; // Деталь - залишаємо великий
+    else if (col === "shop")
+      limit = 160; // Магазин - текст
+    else if (col === "catno")
+      limit = 150; // Каталог номер
+    else if (col === "date")
+      limit = 110; // Дата: dd.mm.yyyy
+    else if (col === "qty")
+      limit = 90; // Кількість: числа
+    else if (col === "price")
+      limit = 100; // Ціна: числа
+    else if (col === "clientPrice")
+      limit = 100; // Ціна клієнта: числа
+    else if (col === "warehouse")
+      limit = 60; // Склад: 1-3 цифри
+    else if (col === "invoice")
+      limit = 90; // Рахунок №
+    else if (col === "actNo")
+      limit = 80; // Акт №: числа
+    else if (col === "unit")
+      limit = 80; // Одиниця: штук/літр/комплект
+    else if (col === "status") limit = 100; // Статус
 
     widths.set(col, Math.min(Math.ceil(maxWidth), limit));
   });
@@ -621,7 +665,10 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
         if (textWidth > maxContentWidth) maxContentWidth = textWidth;
       });
     }
-    const finalWidth = Math.min(Math.max(maxContentWidth, rect.width, 200), 500);
+    const finalWidth = Math.min(
+      Math.max(maxContentWidth, rect.width, 200),
+      500,
+    );
     list.style.width = `${finalWidth}px`;
   }
 
@@ -641,10 +688,11 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
 
   list.style.maxHeight = `${listHeight}px`;
 
-  list.style.top = `${useAbove
-    ? scrollY + rect.top - listHeight - gap
-    : scrollY + rect.bottom + gap
-    }px`;
+  list.style.top = `${
+    useAbove
+      ? scrollY + rect.top - listHeight - gap
+      : scrollY + rect.bottom + gap
+  }px`;
   list.style.left = `${scrollX + rect.left}px`;
 }
 function showDropdownList(input: HTMLElement, options: string[]) {
@@ -673,7 +721,7 @@ function showDropdownList(input: HTMLElement, options: string[]) {
           "invalid-unit",
           "invalid-act",
           "invalid-warehouse",
-          "closed-act"
+          "closed-act",
         );
       }
       if (field === "unit") {
@@ -703,7 +751,13 @@ function showDropdownList(input: HTMLElement, options: string[]) {
       const row = parsedDataGlobal[index];
       if (row.status === "Помилка" || row.status === "Помилка") {
         // Перевіряємо чи всі обов'язкові поля заповнені
-        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit && row.warehouse;
+        const allFilled =
+          row.date &&
+          row.shop &&
+          row.catno &&
+          row.detail &&
+          row.unit &&
+          row.warehouse;
         const numbersValid = !isNaN(row.qty) && !isNaN(row.price);
         // Примітка: unitValid і warehouseValid перевіряються вище
         if (allFilled && numbersValid && row.unitValid && row.warehouseValid) {
@@ -761,7 +815,7 @@ function createInput(
   value: string,
   field: string,
   index: number,
-  className: string = ""
+  className: string = "",
 ): string {
   return `<input
     type="${type}"
@@ -776,7 +830,7 @@ function createInput(
 }
 function renderBatchTable(data: any[]) {
   const tbody = document.querySelector(
-    "#batch-table-Excel tbody"
+    "#batch-table-Excel tbody",
   ) as HTMLTableSectionElement;
   if (!tbody) return;
   const widths = calculateDynamicWidths(data);
@@ -794,9 +848,11 @@ function renderBatchTable(data: any[]) {
             : "";
     const getWidth = (col: string) => widths.get(col) || 100;
     // Магазин: жовтий якщо не існує в базі (буде створено)
-    const shopTdClass = row.shop && !(row as any).shopExists ? "invalid-shop" : "";
+    const shopTdClass =
+      row.shop && !(row as any).shopExists ? "invalid-shop" : "";
     // Деталь: жовтий якщо не існує в базі (буде створено)
-    const detailTdClass = row.detail && !(row as any).detailExists ? "invalid-detail" : "";
+    const detailTdClass =
+      row.detail && !(row as any).detailExists ? "invalid-detail" : "";
     const unitTdClass = !row.unitValid ? "invalid-unit" : "";
     const actTdClass =
       row.actNo && !row.actValid
@@ -808,13 +864,13 @@ function renderBatchTable(data: any[]) {
     const warehouseTdClass = !row.warehouseValid ? "invalid-warehouse" : "";
     tr.innerHTML = `
       <td style="width:${getWidth("date")}px;min-width:${getWidth(
-      "date"
-    )}px;max-width:${getWidth("date")}px;">
+        "date",
+      )}px;max-width:${getWidth("date")}px;">
         ${createInput("date", toIsoDate(row.date), "date", index)}
       </td>
       <td class="${shopTdClass}" style="width:${getWidth(
-      "shop"
-    )}px;min-width:${getWidth("shop")}px;max-width:${getWidth("shop")}px;">
+        "shop",
+      )}px;min-width:${getWidth("shop")}px;max-width:${getWidth("shop")}px;">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel shop-input-Excel"
@@ -825,13 +881,13 @@ function renderBatchTable(data: any[]) {
         >
       </td>
       <td style="width:${getWidth("catno")}px;min-width:${getWidth(
-      "catno"
-    )}px;max-width:${getWidth("catno")}px;">
+        "catno",
+      )}px;max-width:${getWidth("catno")}px;">
         ${createInput("text", row.catno, "catno", index)}
       </td>
       <td class="${detailTdClass}" style="width:${getWidth(
-      "detail"
-    )}px;min-width:${getWidth("detail")}px;max-width:${getWidth("detail")}px;">
+        "detail",
+      )}px;min-width:${getWidth("detail")}px;max-width:${getWidth("detail")}px;">
         <textarea
           class="cell-input-Excel cell-input-combo-Excel detail-input-Excel"
           data-field="detail"
@@ -842,23 +898,23 @@ function renderBatchTable(data: any[]) {
         >${row.detail}</textarea>
       </td>
       <td style="width:${getWidth("qty")}px;min-width:${getWidth(
-      "qty"
-    )}px;max-width:${getWidth("qty")}px;">
+        "qty",
+      )}px;max-width:${getWidth("qty")}px;">
         ${createInput("number", row.qty, "qty", index)}
       </td>
       <td style="width:${getWidth("price")}px;min-width:${getWidth(
-      "price"
-    )}px;max-width:${getWidth("price")}px;">
+        "price",
+      )}px;max-width:${getWidth("price")}px;">
         ${createInput("number", row.price, "price", index)}
       </td>
       <td style="width:${getWidth("clientPrice")}px;min-width:${getWidth(
-      "clientPrice"
-    )}px;max-width:${getWidth("clientPrice")}px;">
+        "clientPrice",
+      )}px;max-width:${getWidth("clientPrice")}px;">
         ${createInput("number", row.clientPrice, "clientPrice", index)}
       </td>
       <td class="${warehouseTdClass}" style="width:${getWidth(
-      "warehouse"
-    )}px;min-width:${getWidth("warehouse")}px;max-width:${getWidth("warehouse")}px;">
+        "warehouse",
+      )}px;min-width:${getWidth("warehouse")}px;max-width:${getWidth("warehouse")}px;">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel warehouse-input-Excel"
@@ -869,13 +925,13 @@ function renderBatchTable(data: any[]) {
         >
       </td>
       <td style="width:${getWidth("invoice")}px;min-width:${getWidth(
-      "invoice"
-    )}px;max-width:${getWidth("invoice")}px;">
+        "invoice",
+      )}px;max-width:${getWidth("invoice")}px;">
         ${createInput("text", row.invoice, "invoice", index)}
       </td>
       <td class="${actTdClass}" style="width:${getWidth(
-      "actNo"
-    )}px;min-width:${getWidth("actNo")}px;max-width:${getWidth("actNo")}px;">
+        "actNo",
+      )}px;min-width:${getWidth("actNo")}px;max-width:${getWidth("actNo")}px;">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel act-input-Excel"
@@ -886,8 +942,8 @@ function renderBatchTable(data: any[]) {
         >
       </td>
       <td class="${unitTdClass}" style="width:${getWidth(
-      "unit"
-    )}px;min-width:${getWidth("unit")}px;max-width:${getWidth("unit")}px;">
+        "unit",
+      )}px;min-width:${getWidth("unit")}px;max-width:${getWidth("unit")}px;">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel unit-input-Excel"
@@ -899,13 +955,14 @@ function renderBatchTable(data: any[]) {
         >
       </td>
       <td class="status-cell-Excel ${statusClass}" style="width:${getWidth(
-      "status"
-    )}px;min-width:${getWidth("status")}px;max-width:${getWidth("status")}px;">
+        "status",
+      )}px;min-width:${getWidth("status")}px;max-width:${getWidth("status")}px;">
         <span class="status-text-Excel">${row.status}</span>
-        ${row.status !== "✅ Успішно"
-        ? `<button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>`
-        : ""
-      }
+        ${
+          row.status !== "✅ Успішно"
+            ? `<button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>`
+            : ""
+        }
       </td>
     `;
     tbody.appendChild(tr);
@@ -929,7 +986,6 @@ function revalidateRow(index: number) {
   // Обов'язкові: Дата, Магазин, Каталог номер, Деталь, Кількість, Ціна, Одиниця, Склад
   // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
 
-
   const isFilled =
     row.date &&
     String(row.date).trim() &&
@@ -945,9 +1001,7 @@ function revalidateRow(index: number) {
     String(row.warehouse).trim();
 
   // Перевірка чисел (ціна клієнта необов'язкова)
-  const areNumbersValid =
-    !isNaN(row.qty) && !isNaN(row.price);
-
+  const areNumbersValid = !isNaN(row.qty) && !isNaN(row.price);
 
   // Перевірка валідності
   // shopValid і detailValid тепер завжди true якщо заповнені
@@ -955,13 +1009,10 @@ function revalidateRow(index: number) {
   // Акт взагалі не перевіряємо - він необов'язковий
 
   const isValid =
-    isFilled &&
-    areNumbersValid &&
-    row.unitValid &&
-    row.warehouseValid;
+    isFilled && areNumbersValid && row.unitValid && row.warehouseValid;
 
   const statusCell = document.querySelector(
-    `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`
+    `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`,
   );
   if (!statusCell) return;
   const statusTextEl = statusCell.querySelector(".status-text-Excel");
@@ -1007,7 +1058,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
   });
   tbody
     .querySelectorAll(
-      ".cell-input-Excel:not(.cell-input-combo-Excel):not([data-field='date'])"
+      ".cell-input-Excel:not(.cell-input-combo-Excel):not([data-field='date'])",
     )
     .forEach((input) => {
       input.addEventListener("input", (e) => {
@@ -1162,8 +1213,8 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
 
     // Авто-розширення висоти
     const autoResize = () => {
-      input.style.height = 'auto';
-      input.style.height = input.scrollHeight + 'px';
+      input.style.height = "auto";
+      input.style.height = input.scrollHeight + "px";
     };
     // Ініціалізація висоти
     setTimeout(autoResize, 0);
@@ -1278,7 +1329,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
   tbody.querySelectorAll(".delete-row-btn-Excel").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const index = parseInt(
-        (e.target as HTMLButtonElement).dataset.index || "0"
+        (e.target as HTMLButtonElement).dataset.index || "0",
       );
       parsedDataGlobal.splice(index, 1);
       renderBatchTable(parsedDataGlobal);
@@ -1293,7 +1344,7 @@ function updateDropdownList(
   options: string[],
   target: HTMLInputElement,
   index: number,
-  field: string
+  field: string,
 ) {
   if (!currentDropdownList) return;
   currentDropdownList.innerHTML = "";
@@ -1316,7 +1367,7 @@ function updateDropdownList(
           "invalid-unit",
           "invalid-act",
           "invalid-warehouse",
-          "closed-act"
+          "closed-act",
         );
       }
       if (field === "unit") {
@@ -1351,12 +1402,18 @@ function updateDropdownList(
       const row = parsedDataGlobal[index];
       if (row.status === "Помилка" || row.status === "Помилка") {
         // Перевіряємо чи всі обов'язкові поля заповнені
-        const allFilled = row.date && row.shop && row.catno && row.detail && row.unit && row.warehouse;
+        const allFilled =
+          row.date &&
+          row.shop &&
+          row.catno &&
+          row.detail &&
+          row.unit &&
+          row.warehouse;
         const numbersValid = !isNaN(row.qty) && !isNaN(row.price);
         if (allFilled && numbersValid && row.unitValid && row.warehouseValid) {
           row.status = "Готовий";
           const statusCell = document.querySelector(
-            `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`
+            `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`,
           );
           if (statusCell) {
             statusCell.className = "status-cell-Excel ready-Excel";
@@ -1373,10 +1430,10 @@ function updateDropdownList(
 }
 function resetModalState() {
   const textarea = document.getElementById(
-    "batch-textarea-Excel"
+    "batch-textarea-Excel",
   ) as HTMLTextAreaElement;
   const instructions = document.querySelector(
-    ".batch-instructions-Excel"
+    ".batch-instructions-Excel",
   ) as HTMLElement;
   if (textarea) {
     textarea.style.display = "block";
@@ -1629,16 +1686,17 @@ async function uploadBatchData(data: any[]) {
 
   if (errorCount === 0) {
     showNotification(
-      `Успішно завантажено ${successCount} ${successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
+      `Успішно завантажено ${successCount} ${
+        successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
       }`,
       "success",
-      4000
+      4000,
     );
   } else {
     showNotification(
       `Завантажено: ${successCount}, Помилок: ${errorCount}`,
       "warning",
-      5000
+      5000,
     );
   }
 }
@@ -1647,15 +1705,15 @@ async function uploadBatchData(data: any[]) {
 function updateRowStatus(
   rowIndex: number,
   success: boolean,
-  statusText: string
+  statusText: string,
 ) {
   const row = document.querySelector(
-    `#batch-table-Excel tbody tr:nth-child(${rowIndex + 1})`
+    `#batch-table-Excel tbody tr:nth-child(${rowIndex + 1})`,
   );
 
   if (!row) return;
 
-  const statusCell = row.querySelector('.status-cell-Excel');
+  const statusCell = row.querySelector(".status-cell-Excel");
 
   if (statusCell) {
     const statusTextEl = statusCell.querySelector(".status-text-Excel");
@@ -1668,14 +1726,15 @@ function updateRowStatus(
       deleteBtn?.remove();
 
       // 🔒 Блокуємо АБСОЛЮТНО ВСІ інпути (включно з dropdown)
-      const inputs = row.querySelectorAll<HTMLInputElement>('.cell-input-Excel');
-      inputs.forEach(input => {
+      const inputs =
+        row.querySelectorAll<HTMLInputElement>(".cell-input-Excel");
+      inputs.forEach((input) => {
         input.readOnly = true;
         input.disabled = true; // Для надійності
-        input.style.backgroundColor = '#f5f5f5';
-        input.style.cursor = 'not-allowed';
-        input.style.color = '#666';
-        input.style.pointerEvents = 'none'; // Забороняємо кліки (щоб dropdown не відкривався)
+        input.style.backgroundColor = "#f5f5f5";
+        input.style.cursor = "not-allowed";
+        input.style.color = "#666";
+        input.style.pointerEvents = "none"; // Забороняємо кліки (щоб dropdown не відкривався)
       });
     }
   }
@@ -1692,7 +1751,6 @@ export async function initBatchImport() {
   actsListCache = actsData.list;
   actsDateOffMap = actsData.map;
   warehouseListCache = await loadWarehouseList();
-
 
   // Ensure модалки створені один раз
   const existingModal = document.getElementById(batchModalId);
@@ -1727,7 +1785,7 @@ export async function initBatchImport() {
 
   // === КНОПКИ: призначаємо через onclick, щоб НЕ накопичувалось ===
   const importBtn = document.getElementById(
-    "import-excel-btn"
+    "import-excel-btn",
   ) as HTMLButtonElement | null;
   if (importBtn) {
     importBtn.onclick = () => {
@@ -1738,7 +1796,12 @@ export async function initBatchImport() {
       parsedDataGlobal = [];
 
       // Оновлюємо кеш у фоновому режимі при відкритті
-      Promise.all([loadShopsList(), loadDetailsList(), loadActsList(), loadWarehouseList()])
+      Promise.all([
+        loadShopsList(),
+        loadDetailsList(),
+        loadActsList(),
+        loadWarehouseList(),
+      ])
         .then(([shops, details, acts, warehouses]) => {
           shopsListCache = shops;
           detailsListCache = details;
@@ -1751,7 +1814,7 @@ export async function initBatchImport() {
   }
 
   const closeBtn = document.querySelector(
-    `#${batchModalId} .modal-close-all_other_bases`
+    `#${batchModalId} .modal-close-all_other_bases`,
   ) as HTMLButtonElement | null;
   if (closeBtn) {
     closeBtn.onclick = () => {
@@ -1763,15 +1826,15 @@ export async function initBatchImport() {
   }
 
   const parseBtn = document.getElementById(
-    "batch-parse-btn-Excel"
+    "batch-parse-btn-Excel",
   ) as HTMLButtonElement | null;
   if (parseBtn) {
     parseBtn.onclick = () => {
       const textarea = document.getElementById(
-        "batch-textarea-Excel"
+        "batch-textarea-Excel",
       ) as HTMLTextAreaElement;
       const instructions = document.querySelector(
-        ".batch-instructions-Excel"
+        ".batch-instructions-Excel",
       ) as HTMLElement;
 
       const data = parseBatchData(textarea.value);
@@ -1787,33 +1850,34 @@ export async function initBatchImport() {
           .getElementById("batch-upload-btn-Excel")
           ?.classList.remove("hidden-all_other_bases");
         showNotification(
-          `Розпарсовано ${data.length} ${data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
+          `Розпарсовано ${data.length} ${
+            data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
           }`,
-          "success"
+          "success",
         );
       } else {
         showNotification(
           "Немає валідних даних для парсингу! Перевірте формат.",
           "error",
-          4000
+          4000,
         );
       }
     };
   }
 
   const uploadBtn = document.getElementById(
-    "batch-upload-btn-Excel"
+    "batch-upload-btn-Excel",
   ) as HTMLButtonElement | null;
   if (uploadBtn) {
     uploadBtn.onclick = async () => {
       const currentData = parsedDataGlobal.map((row, index) => {
         const tr = document.querySelector(
-          `#batch-table-Excel tbody tr:nth-child(${index + 1})`
+          `#batch-table-Excel tbody tr:nth-child(${index + 1})`,
         );
         if (!tr) return row as any;
 
         const allInputs = tr.querySelectorAll(
-          ".cell-input-Excel, .cell-input-combo-Excel"
+          ".cell-input-Excel, .cell-input-combo-Excel",
         );
         const statusText =
           tr.querySelector(".status-text-Excel")?.textContent || row.status;
@@ -1840,7 +1904,7 @@ export async function initBatchImport() {
       const allSuccessful = currentData.every(
         (row) =>
           row.status === "✅ Успішно" ||
-          row.status === "⚠️ Збережено (акт не оновлено)"
+          row.status === "⚠️ Збережено (акт не оновлено)",
       );
       if (allSuccessful && currentData.length > 0) {
         showNotification("Дані успішно додані до бази даних", "success", 3000);
@@ -1851,14 +1915,14 @@ export async function initBatchImport() {
       let hasErrors = false;
       const invalidUnits = currentData.filter(
         (row) =>
-          !VALID_UNITS.includes(row.unit) && !row.status.includes("Помилка")
+          !VALID_UNITS.includes(row.unit) && !row.status.includes("Помилка"),
       );
       if (invalidUnits.length > 0) {
         showNotification("❌ Невірно вказана одиниця виміру", "error", 4000);
         hasErrors = true;
         invalidUnits.forEach((row) => {
           const unitTd = document.querySelector(
-            `#batch-table-Excel tbody tr:nth-child(${row.rowNumber}) td:has(.unit-input-Excel)`
+            `#batch-table-Excel tbody tr:nth-child(${row.rowNumber}) td:has(.unit-input-Excel)`,
           ) as HTMLElement;
           if (unitTd) unitTd.classList.add("invalid-unit");
         });
@@ -1867,15 +1931,21 @@ export async function initBatchImport() {
       // Перевірка складів
       const invalidWarehouses = currentData.filter(
         (row) =>
-          (!row.warehouse || !row.warehouse.trim() || !warehouseListCache.includes(row.warehouse.trim())) && 
-          !row.status.includes("Помилка")
+          (!row.warehouse ||
+            !row.warehouse.trim() ||
+            !warehouseListCache.includes(row.warehouse.trim())) &&
+          !row.status.includes("Помилка"),
       );
       if (invalidWarehouses.length > 0) {
-        showNotification("❌ Невірно вказаний або порожній склад", "error", 4000);
+        showNotification(
+          "❌ Невірно вказаний або порожній склад",
+          "error",
+          4000,
+        );
         hasErrors = true;
         invalidWarehouses.forEach((row) => {
           const warehouseTd = document.querySelector(
-            `#batch-table-Excel tbody tr:nth-child(${row.rowNumber}) td:has(.warehouse-input-Excel)`
+            `#batch-table-Excel tbody tr:nth-child(${row.rowNumber}) td:has(.warehouse-input-Excel)`,
           ) as HTMLElement;
           if (warehouseTd) warehouseTd.classList.add("invalid-warehouse");
         });
@@ -1885,12 +1955,17 @@ export async function initBatchImport() {
 
       const validData = currentData.filter(
         (row) =>
-          !row.status.includes("Помилка") && row.shop && row.unit && row.detail && row.warehouse && row.warehouseValid
+          !row.status.includes("Помилка") &&
+          row.shop &&
+          row.unit &&
+          row.detail &&
+          row.warehouse &&
+          row.warehouseValid,
       );
       if (validData.length === 0) {
         showNotification(
           "Немає валідних даних для завантаження! Перевірте, чи заповнено магазин, деталь, одиницю виміру та склад.",
-          "error"
+          "error",
         );
         return;
       }
@@ -1918,12 +1993,15 @@ export async function initBatchImport() {
       if (hasClosedActs) {
         showNotification(
           "Номер акту закритий і ми неможемо вписати деталь в даний акт",
-          "error"
+          "error",
         );
         return;
       }
 
-      const confirmed = await showConfirmModal(validData.length, currentData.length);
+      const confirmed = await showConfirmModal(
+        validData.length,
+        currentData.length,
+      );
       if (confirmed) {
         await uploadBatchData(validData); // ⬅️ тепер захищено isUploading
       }

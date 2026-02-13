@@ -47,7 +47,7 @@ let selectedResultIndex = -1;
 
 /* ==== автокомпліт part_number ==== */
 async function searchScladByPartNumber(
-  partNumber: string
+  partNumber: string,
 ): Promise<ScladRecord[]> {
   const { data, error } = await supabase
     .from("sclad")
@@ -81,14 +81,14 @@ function populateFormFields(record: ScladRecord) {
   });
 
   const hidden = document.getElementById(
-    "hidden-sclad-id"
+    "hidden-sclad-id",
   ) as HTMLInputElement | null;
   if (hidden) hidden.value = String(record.sclad_id ?? "");
 }
 
 function createAutocompleteDropdown(
   results: ScladRecord[],
-  input: HTMLInputElement
+  input: HTMLInputElement,
 ) {
   document.getElementById("part-number-dropdown")?.remove();
   if (!results.length) return;
@@ -148,7 +148,7 @@ function updateDropdownSelection() {
 
 function handleDropdownKeyNavigation(
   e: KeyboardEvent,
-  input: HTMLInputElement
+  input: HTMLInputElement,
 ) {
   const dd = document.getElementById("part-number-dropdown");
   if (!dd || !currentAutocompleteResults.length) return;
@@ -158,7 +158,7 @@ function handleDropdownKeyNavigation(
       e.preventDefault();
       selectedResultIndex = Math.min(
         selectedResultIndex + 1,
-        currentAutocompleteResults.length - 1
+        currentAutocompleteResults.length - 1,
       );
       updateDropdownSelection();
       break;
@@ -186,7 +186,7 @@ function handleDropdownKeyNavigation(
 
 export function initPartNumberAutocomplete() {
   const input = document.getElementById(
-    "sclad_detail_catno"
+    "sclad_detail_catno",
   ) as HTMLInputElement | null;
   if (!input) return;
 
@@ -209,7 +209,7 @@ export function initPartNumberAutocomplete() {
   });
 
   input.addEventListener("keydown", (e) =>
-    handleDropdownKeyNavigation(e, input)
+    handleDropdownKeyNavigation(e, input),
   );
 
   document.addEventListener("click", (e) => {
@@ -240,6 +240,21 @@ function readScladFormValues() {
 
   const off = toNum(pick("sclad_kilkist_off")); // читаємо значення поля kilkist_off
 
+  // Отримуємо slyusar_id поточного користувача з localStorage
+  let slyusarId: number | null = null;
+  try {
+    const userDataStr = localStorage.getItem("userAuthData");
+    if (userDataStr) {
+      const userData = JSON.parse(userDataStr);
+      const id = userData.slyusar_id;
+      if (id) {
+        slyusarId = Number(id);
+      }
+    }
+  } catch (e) {
+    console.error("Помилка отримання slyusar_id з localStorage:", e);
+  }
+
   return {
     time_on: pick("sclad_date") || null,
     shops: pick("sclad_shop") || null,
@@ -251,12 +266,12 @@ function readScladFormValues() {
     unit_measurement: pick("sclad_unit") || null,
     akt: pick("sclad_akt") || null,
     scladNomer: toNum(pick("sclad_procent")),
+    xto_zamovuv: slyusarId, // ID користувача, який завантажив деталь
 
     // 🛠️ Безпечна заміна: якщо null → ставимо 0
     kilkist_off: off === null ? 0 : off,
   };
 }
-
 
 function validateCatalogNumber(part_number: string | null) {
   return !!(part_number && part_number.trim());

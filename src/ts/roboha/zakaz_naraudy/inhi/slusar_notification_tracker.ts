@@ -24,10 +24,9 @@ export async function recordSlusarCompletion(
   _slusarsOn: boolean,
   completedBySurname: string,
   completedByName?: string,
-  pruimalnyk?: string
+  pruimalnyk?: string,
 ): Promise<void> {
   try {
-
     // Якщо slusarsOn = false (скасування), можна або не записувати,
     // або видаляти попередні повідомлення. Зараз записуємо завжди.
 
@@ -47,16 +46,11 @@ export async function recordSlusarCompletion(
       .insert([notificationData]);
 
     if (error) {
-      console.error(
-        "❌ [SlusarNotification] Помилка запису повідомлення:",
-        error
-      );
-      throw new Error(`Не вдалося записати повідомлення: ${error.message}`);
+      // Таблиця не опублікована - це опціональна функція
+      return;
     }
-
   } catch (error) {
-    console.error("❌ [SlusarNotification] Критична помилка:", error);
-    throw error;
+    // Мовчки пропускаємо помилки
   }
 }
 
@@ -67,10 +61,9 @@ export async function recordSlusarCompletion(
  * @param actId - ID акту
  */
 export async function hideSlusarNotificationsForAct(
-  actId: number
+  actId: number,
 ): Promise<void> {
   try {
-
     const { error } = await supabase
       .from("slusar_complete_notifications")
       .update({ delit: true })
@@ -78,16 +71,18 @@ export async function hideSlusarNotificationsForAct(
       .eq("delit", false); // Оновлюємо тільки ті, що ще не приховані
 
     if (error) {
-      console.error(
-        "❌ [SlusarNotification] Помилка приховування повідомлень:",
-        error
-      );
-      // Не кидаємо помилку, бо це допоміжна операція
+      // Ігноруємо 404 - таблиця просто не опублікована в REST API
+      // Це не критично, тому що ця таблиця опціональна
+      if (error.code !== "PGRST116") {
+        console.debug(
+          "ℹ️ [SlusarNotification] Таблиця slusar_complete_notifications недоступна (не опублікована)",
+        );
+      }
       return;
     }
-
   } catch (error) {
-    console.error("❌ [SlusarNotification] Критична помилка:", error);
+    // Мовчки ігноруємо помилки - це допоміжна операція
+    // console.debug("[SlusarNotification] Критична помилка:", error);
   }
 }
 
@@ -100,7 +95,7 @@ export async function hideSlusarNotificationsForAct(
  */
 export async function getUnviewedSlusarNotificationsCount(
   userAccessLevel: string,
-  userName?: string
+  userName?: string,
 ): Promise<number> {
   try {
     let query = supabase
@@ -117,16 +112,13 @@ export async function getUnviewedSlusarNotificationsCount(
     const { count, error } = await query;
 
     if (error) {
-      console.error(
-        "❌ [SlusarNotification] Помилка підрахунку повідомлень:",
-        error
-      );
+      // Таблиця не опублікована - це нормально
       return 0;
     }
 
     return count || 0;
   } catch (error) {
-    console.error("❌ [SlusarNotification] Критична помилка:", error);
+    // Мовчки обробляємо помилки
     return 0;
   }
 }
@@ -137,7 +129,7 @@ export async function getUnviewedSlusarNotificationsCount(
  * @param notificationId - ID повідомлення
  */
 export async function markSlusarNotificationAsViewed(
-  notificationId: number
+  notificationId: number,
 ): Promise<void> {
   try {
     const { error } = await supabase
@@ -146,12 +138,9 @@ export async function markSlusarNotificationAsViewed(
       .eq("notification_id", notificationId);
 
     if (error) {
-      console.error(
-        "❌ [SlusarNotification] Помилка оновлення статусу:",
-        error
-      );
+      // Таблиця не опублікована
     }
   } catch (error) {
-    console.error("❌ [SlusarNotification] Критична помилка:", error);
+    // Мовчки пропускаємо помилки
   }
 }

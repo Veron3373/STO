@@ -319,23 +319,43 @@ const updatePasswordVisibility = (selectedRole: string) => {
 
 // Функція для керування видимістю інпутів
 const updatePercentInputsVisibility = (role: string) => {
+  const percentWrapper = document.getElementById("slusar-percent");
   const partsWrapper = document.getElementById("slusar-percent-parts-wrapper");
   const warehouseWrapper = document.getElementById("slusar-warehouse-wrapper");
 
-  // Показуємо поле з запчастинами для Приймальник
-  if (partsWrapper) {
-    if (role === "Приймальник") {
+  // Для Запчастиста: показуємо % з запчастин та Склад (ховаємо % роботи)
+  if (role === "Запчастист") {
+    if (percentWrapper) {
+      percentWrapper.parentElement?.classList.add("hidden-all_other_bases");
+    }
+    if (partsWrapper) {
       partsWrapper.classList.remove("hidden-all_other_bases");
-    } else {
-      partsWrapper.classList.add("hidden-all_other_bases");
+    }
+    if (warehouseWrapper) {
+      warehouseWrapper.classList.remove("hidden-all_other_bases");
     }
   }
-
-  // Показуємо поле зі складом для Приймальник та Запчастист
-  if (warehouseWrapper) {
-    if (role === "Приймальник" || role === "Запчастист") {
+  // Для Приймальника: показуємо % з запчастин та Склад (разом з % роботи)
+  else if (role === "Приймальник") {
+    if (percentWrapper) {
+      percentWrapper.parentElement?.classList.remove("hidden-all_other_bases");
+    }
+    if (partsWrapper) {
+      partsWrapper.classList.remove("hidden-all_other_bases");
+    }
+    if (warehouseWrapper) {
       warehouseWrapper.classList.remove("hidden-all_other_bases");
-    } else {
+    }
+  }
+  // Для інших ролей: показуємо тільки % роботи (ховаємо запчастини та склад)
+  else {
+    if (percentWrapper) {
+      percentWrapper.parentElement?.classList.remove("hidden-all_other_bases");
+    }
+    if (partsWrapper) {
+      partsWrapper.classList.add("hidden-all_other_bases");
+    }
+    if (warehouseWrapper) {
       warehouseWrapper.classList.add("hidden-all_other_bases");
     }
   }
@@ -764,7 +784,7 @@ const createSlusarAdditionalInputs = async () => {
       </select>
     </div>
     <div class="slusar-percent-container">
-      <div class="slusar-input-group slusar-percent-half">
+      <div class="slusar-input-group slusar-percent-half" id="slusar-percent-wrapper">
         <label for="slusar-percent" class="label-all_other_bases">% роботи:</label>
         <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${
           !isAdmin ? "disabled" : ""
@@ -1108,16 +1128,16 @@ export const saveSlusarData = async (): Promise<boolean> => {
       ...currentData,
       Name: isSlyusarId1 ? currentData.Name : name, // Для ID=1 зберігаємо оригінальне ім'я
       Пароль: password, // Всі можуть змінювати пароль
+      ПроцентРоботи: percentValue, // Всі можуть змінювати % роботи
+      ПроцентЗапчастин: percentPartsValue, // Зберігаємо % запчастин для всіх
+      Склад: warehouseValue, // Зберігаємо склад для всіх
     };
 
-    // Адміністратор може змінювати ВСІ поля (крім Name та Доступ для slyusar_id = 1)
+    // Адміністратор може змінювати ПОЛЕ ДОСТУПУ
     if (isAdmin) {
       updatedData.Доступ = isSlyusarId1 ? currentData.Доступ : access; // Для ID=1 зберігаємо оригінальний доступ
-      updatedData.ПроцентРоботи = percentValue;
-      updatedData.ПроцентЗапчастин = percentPartsValue;
-      updatedData.Склад = warehouseValue;
     }
-    // Не-адміністратори можуть змінювати ТІЛЬКИ пароль
+    // Не-адміністратори не можуть змінювати Доступ
 
     // Оновлюємо запис у базі даних
     const { error: updateError } = await supabase

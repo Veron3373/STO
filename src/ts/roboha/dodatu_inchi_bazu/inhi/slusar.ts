@@ -765,13 +765,13 @@ const createSlusarAdditionalInputs = async () => {
     </div>
     <div class="slusar-percent-container">
       <div class="slusar-input-group slusar-percent-half">
-        <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
+        <label for="slusar-percent" class="label-all_other_bases">% роботи:</label>
         <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${
           !isAdmin ? "disabled" : ""
         }>
       </div>
       <div class="slusar-input-group slusar-percent-half hidden-all_other_bases" id="slusar-percent-parts-wrapper">
-        <label for="slusar-percent-parts" class="label-all_other_bases">Процент з запчастин:</label>
+        <label for="slusar-percent-parts" class="label-all_other_bases">% з запчастин:</label>
         <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="0" ${
           !isAdmin ? "disabled" : ""
         }>

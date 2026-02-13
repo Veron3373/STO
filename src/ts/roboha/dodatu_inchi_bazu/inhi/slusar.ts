@@ -1128,10 +1128,18 @@ export const saveSlusarData = async (): Promise<boolean> => {
       ...currentData,
       Name: isSlyusarId1 ? currentData.Name : name, // Для ID=1 зберігаємо оригінальне ім'я
       Пароль: password, // Всі можуть змінювати пароль
-      ПроцентРоботи: percentValue, // Всі можуть змінювати % роботи
       ПроцентЗапчастин: percentPartsValue, // Зберігаємо % запчастин для всіх
       Склад: warehouseValue, // Зберігаємо склад для всіх
     };
+
+    // Для Запчастиста НЕ зберігаємо ПроцентРоботи (інпута немає)
+    // Для інших ролей зберігаємо ПроцентРоботи
+    if (access !== "Запчастист") {
+      updatedData.ПроцентРоботи = percentValue;
+    } else {
+      // Для Запчастиста встановлюємо 0
+      updatedData.ПроцентРоботи = 0;
+    }
 
     // Адміністратор може змінювати ПОЛЕ ДОСТУПУ
     if (isAdmin) {

@@ -254,13 +254,21 @@ async function handleEdit(
             currentData?.Історія && typeof currentData.Історія === "object"
               ? currentData.Історія
               : {},
-          ПроцентРоботи: additionalData.percent,
           ПроцентЗапчастин: additionalData.percentParts,
           Склад: additionalData.warehouse,
           Пароль: additionalData.password,
           Доступ: currentData?.Доступ || "Адміністратор", // Зберігаємо оригінальний доступ
         },
       };
+
+      // Для Запчастиста встановлюємо ПроцентРоботи = 0
+      // Для інших ролей зберігаємо ПроцентРоботи з форми
+      const currentAccess = currentData?.Доступ;
+      if (currentAccess !== "Запчастист") {
+        updateData.data.ПроцентРоботи = additionalData.percent;
+      } else {
+        updateData.data.ПроцентРоботи = 0;
+      }
 
       const { error } = await supabase
         .from(tableName)
@@ -314,12 +322,19 @@ async function handleEdit(
           currentData?.Історія && typeof currentData.Історія === "object"
             ? currentData.Історія
             : {},
-        ПроцентРоботи: additionalData.percent,
         ПроцентЗапчастин: additionalData.percentParts,
         Склад: additionalData.warehouse,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
+
+      // Для Запчастиста встановлюємо ПроцентРоботи = 0 (інпута немає)
+      // Для інших ролей зберігаємо ПроцентРоботи з форми
+      if (additionalData.access !== "Запчастист") {
+        updateData.data.ПроцентРоботи = additionalData.percent;
+      } else {
+        updateData.data.ПроцентРоботи = 0;
+      }
     } else if (
       tableName === "incomes" ||
       tableName === "receivers" ||
@@ -447,17 +462,23 @@ async function handleAdd(
 
     if (tableName === "slyusars") {
       const additionalData = getSlusarAdditionalData();
-
       insertData.data = {
         Name: (newValue || "").trim(),
         Опис: {},
         Історія: {},
-        ПроцентРоботи: additionalData.percent,
         ПроцентЗапчастин: additionalData.percentParts,
         Склад: additionalData.warehouse,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
+
+      // Для Запчастиста НЕ додаємо ПроцентРоботи (встановлюємо 0)
+      // Для інших ролей додаємо ПроцентРоботи
+      if (additionalData.access !== "Запчастист") {
+        insertData.data.ПроцентРоботи = additionalData.percent;
+      } else {
+        insertData.data.ПроцентРоботи = 0;
+      }
     } else if (["incomes", "receivers", "shops"].includes(tableName)) {
       insertData.data = { Name: newValue };
     } else if (["works", "details"].includes(tableName)) {

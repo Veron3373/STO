@@ -51,7 +51,7 @@ function getCurrentDate(): string {
 }
 
 function createPasswordConfirmationModal(
-  action: "pay" | "unpay"
+  action: "pay" | "unpay",
 ): Promise<boolean> {
   return new Promise((resolve) => {
     const modal = document.createElement("div");
@@ -372,8 +372,8 @@ class DetailsSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -398,12 +398,13 @@ class DetailsSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-      <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+      <div class="dropdown-item ${
+        index === this.selectedIndex ? "selected" : ""
+      }" 
            data-index="${index}">
         ${this.highlightMatch(item, this.input.value)}
       </div>
-    `
+    `,
       )
       .join("");
 
@@ -454,7 +455,7 @@ class DetailsSmartDropdown {
     if (!query.trim()) return text;
     const regex = new RegExp(
       `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-      "gi"
+      "gi",
     );
     return text.replace(regex, "<mark>$1</mark>");
   }
@@ -478,7 +479,7 @@ class DetailsSmartDropdown {
   private selectNext() {
     this.selectedIndex = Math.min(
       this.selectedIndex + 1,
-      this.filteredItems.length - 1
+      this.filteredItems.length - 1,
     );
     this.render();
     this.scrollToSelected();
@@ -617,13 +618,13 @@ function ensureDetailsSmartDropdowns(): void {
         } catch (error) {
           console.warn(
             `Failed to create details dropdown for ${config.inputId}:`,
-            error
+            error,
           );
           return null;
         }
       })
       .filter(
-        (dropdown): dropdown is DetailsSmartDropdown => dropdown !== null
+        (dropdown): dropdown is DetailsSmartDropdown => dropdown !== null,
       );
   }
 }
@@ -682,11 +683,11 @@ export function filterDetailsData(): void {
   // КРИТИЧНО: Якщо режим "close" або "paid", показуємо ТІЛЬКИ записи з відповідною датою
   if (detailsDateFilterMode === "close") {
     filtered = filtered.filter(
-      (r) => r.dateClose !== null && r.dateClose !== ""
+      (r) => r.dateClose !== null && r.dateClose !== "",
     );
   } else if (detailsDateFilterMode === "paid") {
     filtered = filtered.filter(
-      (r) => r.paymentDate !== undefined && r.paymentDate !== ""
+      (r) => r.paymentDate !== undefined && r.paymentDate !== "",
     );
   }
 
@@ -706,14 +707,14 @@ export function filterDetailsData(): void {
   // Фільтр по найменуванню
   if (item) {
     filtered = filtered.filter((r) =>
-      (r.item || "").toLowerCase().includes(item.toLowerCase())
+      (r.item || "").toLowerCase().includes(item.toLowerCase()),
     );
   }
 
   // Фільтр по каталогу
   if (catalog) {
     filtered = filtered.filter((r) =>
-      (r.catalog || "").toLowerCase().includes(catalog.toLowerCase())
+      (r.catalog || "").toLowerCase().includes(catalog.toLowerCase()),
     );
   }
 
@@ -733,7 +734,9 @@ export function filterDetailsData(): void {
 
   // Фільтр по складу (використовуємо scladNomer)
   if (currentDetailsScladFilter !== null) {
-    filtered = filtered.filter((item) => item.scladNomer === currentDetailsScladFilter);
+    filtered = filtered.filter(
+      (item) => item.scladNomer === currentDetailsScladFilter,
+    );
   }
 
   // Сортування за цільовою датою
@@ -843,7 +846,7 @@ async function loadAllDetailsData(): Promise<void> {
   }
 
   allDetailsData.sort((a, b) =>
-    toIsoDate(b.dateOpen).localeCompare(toIsoDate(a.dateOpen))
+    toIsoDate(b.dateOpen).localeCompare(toIsoDate(a.dateOpen)),
   );
 
   // Оновлюємо кнопки фільтрації складів після завантаження даних
@@ -872,7 +875,7 @@ async function fetchShopData(): Promise<ShopData[]> {
             } else {
               console.warn(
                 `Пропущений запис ${index}: невірний формат data`,
-                item
+                item,
               );
               return null;
             }
@@ -880,7 +883,7 @@ async function fetchShopData(): Promise<ShopData[]> {
             if (!parsedData || !parsedData.Name) {
               console.warn(
                 `Пропущений запис ${index}: немає поля Name`,
-                parsedData
+                parsedData,
               );
               return null;
             }
@@ -890,7 +893,7 @@ async function fetchShopData(): Promise<ShopData[]> {
             console.error(
               `Помилка парсингу запису ${index}:`,
               parseError,
-              item
+              item,
             );
             return null;
           }
@@ -985,7 +988,7 @@ async function saveShopsDataToDatabase(): Promise<void> {
     showNotification(
       `⚠️ Помилка збереження в базу даних: ${errorMessage}`,
       "error",
-      5000
+      5000,
     );
     throw error;
   }
@@ -1041,12 +1044,12 @@ export function updateDetailsTable(): void {
       const purchasePriceHtml =
         item.purchasePrice !== undefined
           ? `<div style="font-size: 0.85em; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">${formatNumber(
-            item.purchasePrice
-          )}</div>`
+              item.purchasePrice,
+            )}</div>`
           : '<div style="font-size: 0.85em; color: #999; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">-</div>';
 
       const salePriceHtml = `<div style="font-size: 0.95em; font-weight: 500;">${formatNumber(
-        item.price
+        item.price,
       )}</div>`;
 
       // Показуємо маржу з індикатором знижки якщо вона є
@@ -1057,22 +1060,25 @@ export function updateDetailsTable(): void {
 
       const marginHtml =
         item.margin !== undefined
-          ? `<div style="font-size: 0.85em; color: ${item.margin >= 0 ? "#28a745" : "#dc3545"
-          }; font-weight: 500; margin-top: 2px;">${item.margin >= 0 ? "+" : ""}${formatNumber(
-            item.margin
-          )}${discountIndicator}</div>`
+          ? `<div style="font-size: 0.85em; color: ${
+              item.margin >= 0 ? "#28a745" : "#dc3545"
+            }; font-weight: 500; margin-top: 2px;">${item.margin >= 0 ? "+" : ""}${formatNumber(
+              item.margin,
+            )}${discountIndicator}</div>`
           : "";
 
       return `
         <tr class="${rowClass} ${paidClass}" onclick="handleRowClick(${index})">
           <td>
-            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
-        }" 
+            <button class="Bukhhalter-payment-btn ${
+              item.isPaid ? "paid" : "unpaid"
+            }" 
                     onclick="event.stopPropagation(); toggleDetailsPaymentWithConfirmation(${originalIndex})" 
-                    title="${item.isPaid
-          ? `Розраховано ${item.paymentDate || ""}`
-          : "Не розраховано"
-        }">
+                    title="${
+                      item.isPaid
+                        ? `Розраховано ${item.paymentDate || ""}`
+                        : "Не розраховано"
+                    }">
               ${paymentButtonText}
             </button>
           </td>
@@ -1080,8 +1086,9 @@ export function updateDetailsTable(): void {
           <td>${formatDate(item.dateClose || "")}</td>
           <td>
             <button class="Bukhhalter-act-btn"
-                    onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
-        })"
+                    onclick="event.stopPropagation(); openActModalWithClient(${
+                      Number(item.act) || 0
+                    })"
                     title="Відкрити акт №${item.act}">
               📋 ${item.act || "-"}
             </button>
@@ -1118,7 +1125,7 @@ export function updateDetailsTable(): void {
 function updateDetailsTotalSumDisplay(
   purchaseTotal: number,
   saleTotal: number,
-  marginTotal: number
+  marginTotal: number,
 ): void {
   const totalSumElement = byId<HTMLElement>("total-sum");
 
@@ -1128,15 +1135,16 @@ function updateDetailsTotalSumDisplay(
     totalSumElement.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
         <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-      saleTotal
-    )}</strong> грн</span>
+          saleTotal,
+        )}</strong> грн</span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 ${formatNumber(
-      purchaseTotal
-    )}</strong> грн</span>
+          purchaseTotal,
+        )}</strong> грн</span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${marginTotal >= 0 ? "#006400 " : "#8B0000"
-      };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
+        <span><strong style="color: ${
+          marginTotal >= 0 ? "#006400 " : "#8B0000"
+        };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
       </div>
     `;
   }
@@ -1184,7 +1192,7 @@ function todayIso(): string {
 function inRangeByIso(
   targetDmy: string,
   fromDmy?: string,
-  toDmy?: string
+  toDmy?: string,
 ): boolean {
   const t = toIsoDate(targetDmy);
   if (!t) return false;
@@ -1216,7 +1224,8 @@ async function fetchScladData(): Promise<ScladItem[]> {
     if (data && Array.isArray(data)) {
       scladData = data.map((item) => {
         // Отримуємо scladNomer напряму з запису (не з data)
-        const scladNomer = item.scladNomer !== undefined ? Number(item.scladNomer) : undefined;
+        const scladNomer =
+          item.scladNomer !== undefined ? Number(item.scladNomer) : undefined;
 
         if (typeof item.data === "string") {
           try {
@@ -1310,7 +1319,7 @@ export async function searchDetailsData(): Promise<void> {
 
   let dateOpen = byId<HTMLInputElement>("Bukhhalter-details-date-open").value;
   const dateClose = byId<HTMLInputElement>(
-    "Bukhhalter-details-date-close"
+    "Bukhhalter-details-date-close",
   ).value;
 
   // Якщо не вказано жодної дати - встановлюємо дату за замовчуванням БЕЗ відображення користувачу
@@ -1323,7 +1332,6 @@ export async function searchDetailsData(): Promise<void> {
 
   const shops = await fetchShopData();
   const rawData: DetailsRecord[] = [];
-
 
   for (const shop of shops) {
     const history = shop.Історія || {};
@@ -1407,7 +1415,7 @@ export async function searchDetailsData(): Promise<void> {
 
   showNotification(
     `✅ Завантажено ${allDetailsData.length} записів. Застосовано фільтри.`,
-    "success"
+    "success",
   );
 }
 
@@ -1425,10 +1433,10 @@ function initDetailsAutoBehaviors(): void {
   };
 
   const openEl = document.getElementById(
-    "Bukhhalter-details-date-open"
+    "Bukhhalter-details-date-open",
   ) as HTMLInputElement | null;
   const closeEl = document.getElementById(
-    "Bukhhalter-details-date-close"
+    "Bukhhalter-details-date-close",
   ) as HTMLInputElement | null;
   openEl?.addEventListener("change", trigger);
   closeEl?.addEventListener("change", trigger);
@@ -1562,23 +1570,26 @@ export function updateDetailsScladFilterButtons(): void {
   availableDetailsScladNomers = getUniqueDetailsScladNomers();
 
   // Якщо немає складів або тільки 1 склад - не показуємо кнопки
-  if (availableDetailsScladNomers.length === 0 || availableDetailsScladNomers.length === 1) {
-    container.innerHTML = '';
-    container.style.display = 'none';
+  if (
+    availableDetailsScladNomers.length === 0 ||
+    availableDetailsScladNomers.length === 1
+  ) {
+    container.innerHTML = "";
+    container.style.display = "none";
     return;
   }
 
-  container.style.display = 'flex';
+  container.style.display = "flex";
   // Додаємо клас для однакової ширини кнопок
-  container.classList.add('equal-width');
+  container.classList.add("equal-width");
 
-  let buttonsHtml = '';
+  let buttonsHtml = "";
 
   availableDetailsScladNomers.forEach((nomer) => {
     const isActive = currentDetailsScladFilter === nomer;
     buttonsHtml += `
       <button 
-        class="Bukhhalter-sklad-btn ${isActive ? 'active' : ''}" 
+        class="Bukhhalter-sklad-btn ${isActive ? "active" : ""}" 
         data-sclad-nomer="${nomer}"
         onclick="filterDetailsBySclad(${nomer})"
         title="Показати склад ${nomer}"
@@ -1592,7 +1603,7 @@ export function updateDetailsScladFilterButtons(): void {
   const isAllActive = currentDetailsScladFilter === null;
   buttonsHtml += `
     <button 
-      class="Bukhhalter-sklad-btn Bukhhalter-sklad-btn-all ${isAllActive ? 'active' : ''}" 
+      class="Bukhhalter-sklad-btn Bukhhalter-sklad-btn-all ${isAllActive ? "active" : ""}" 
       data-sclad-nomer="all"
       onclick="filterDetailsBySclad(null)"
       title="Показати всі склади"
@@ -1611,13 +1622,13 @@ function filterDetailsBySclad(scladNomer: number | null): void {
   // Оновлюємо активну кнопку
   const container = byId<HTMLElement>("details-sklad-filter-container");
   if (container) {
-    const buttons = container.querySelectorAll('.Bukhhalter-sklad-btn');
+    const buttons = container.querySelectorAll(".Bukhhalter-sklad-btn");
     buttons.forEach((btn) => {
-      const btnNomer = btn.getAttribute('data-sclad-nomer');
+      const btnNomer = btn.getAttribute("data-sclad-nomer");
       if (scladNomer === null) {
-        btn.classList.toggle('active', btnNomer === 'all');
+        btn.classList.toggle("active", btnNomer === "all");
       } else {
-        btn.classList.toggle('active', btnNomer === String(scladNomer));
+        btn.classList.toggle("active", btnNomer === String(scladNomer));
       }
     });
   }
@@ -1644,7 +1655,7 @@ let detailsDateFilterMode: "open" | "close" | "paid" = "open";
 // Функція для ініціалізації перемикача фільтрації дат для деталей
 function initDetailsDateFilterToggle(): void {
   const toggleContainer = document.querySelector(
-    "#Bukhhalter-details-section .Bukhhalter-date-filter-toggle"
+    "#Bukhhalter-details-section .Bukhhalter-date-filter-toggle",
   );
   if (!toggleContainer) return;
 
@@ -1657,7 +1668,6 @@ function initDetailsDateFilterToggle(): void {
       this.classList.add("active");
 
       detailsDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
-
 
       // ЗМІНЕНО: просто застосовуємо фільтр до вже завантажених даних
       if (hasDetailsDataLoaded) {
@@ -1684,7 +1694,7 @@ export function deleteDetailsRecord(index: number): void {
 
 // Функція для зміни статусу оплати з підтвердженням
 export async function toggleDetailsPaymentWithConfirmation(
-  index: number
+  index: number,
 ): Promise<void> {
   if (!detailsData[index]) {
     console.error(`Запис з індексом ${index} не знайдено`);
@@ -1697,7 +1707,7 @@ export async function toggleDetailsPaymentWithConfirmation(
   if (!hasFullAccess()) {
     showNotification(
       "⚠️ У вас немає прав для зміни статусу розрахунку",
-      "warning"
+      "warning",
     );
     return;
   }
@@ -1733,21 +1743,21 @@ export function toggleDetailsPayment(index: number): void {
       console.error(`❌ Магазин ${record.shop} не знайдено`);
       showNotification(
         `⚠️ Помилка: магазин ${record.shop} не знайдено`,
-        "error"
+        "error",
       );
       return;
     }
 
     if (!shop.Історія[record.dateOpen]) {
       console.error(
-        `❌ Дата ${record.dateOpen} не знайдена в історії магазину ${record.shop}`
+        `❌ Дата ${record.dateOpen} не знайдена в історії магазину ${record.shop}`,
       );
       showNotification(`⚠️ Помилка: дата не знайдена в історії`, "error");
       return;
     }
 
     const actRecord = shop.Історія[record.dateOpen].find(
-      (a) => a.Акт.toString() === record.act
+      (a) => a.Акт.toString() === record.act,
     );
     if (!actRecord) {
       console.error(`❌ Акт ${record.act} не знайдений`);
@@ -1764,7 +1774,7 @@ export function toggleDetailsPayment(index: number): void {
     const shop = shopsData.find((s) => s.Name === record.shop);
     if (shop && shop.Історія[record.dateOpen]) {
       const actRecord = shop.Історія[record.dateOpen].find(
-        (a) => a.Акт.toString() === record.act
+        (a) => a.Акт.toString() === record.act,
       );
       if (actRecord) {
         delete actRecord.Розрахунок;
@@ -1779,7 +1789,7 @@ export function toggleDetailsPayment(index: number): void {
         record.isPaid
           ? `💰 Розрахунок встановлено на ${record.paymentDate}`
           : "❌ Розрахунок скасовано",
-        "success"
+        "success",
       );
     })
     .catch((error) => {
@@ -1796,7 +1806,7 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
   if (!hasFullAccess()) {
     showNotification(
       "⚠️ У вас немає прав для виконання масового розрахунку",
-      "warning"
+      "warning",
     );
     return;
   }
@@ -1812,7 +1822,7 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
   if (filteredData.length === 0) {
     showNotification(
       "ℹ️ Немає записів для обробки в поточному фільтрі",
-      "info"
+      "info",
     );
     return;
   }
@@ -1844,7 +1854,7 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
         const shop = shopsData.find((s) => s.Name === record.shop);
         if (shop && shop.Історія[record.dateOpen]) {
           const actRecord = shop.Історія[record.dateOpen].find(
-            (a) => a.Акт.toString() === record.act
+            (a) => a.Акт.toString() === record.act,
           );
           if (actRecord) {
             actRecord.Розрахунок = currentDate;
@@ -1858,7 +1868,7 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
   if (updatedCount === 0) {
     showNotification(
       "ℹ️ Усі записи в поточному фільтрі вже розраховані",
-      "info"
+      "info",
     );
     return;
   }
@@ -1868,7 +1878,7 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
     updateDetailsTable();
     showNotification(
       `✅ Масовий розрахунок виконано (${updatedCount} записів з відфільтрованих)`,
-      "success"
+      "success",
     );
   } catch (error) {
     console.error("❌ Помилка масового розрахунку:", error);
@@ -1883,7 +1893,7 @@ export function clearDetailsForm(): void {
 
   // Очищаємо всі інпути
   const inputs = detailsSection.querySelectorAll<HTMLInputElement>(
-    "input:not([readonly])"
+    "input:not([readonly])",
   );
   inputs.forEach((input) => {
     input.value = "";
@@ -1912,7 +1922,7 @@ export function clearDetailsForm(): void {
   // Скидаємо режим фільтрації дат на "Відкриття"
   detailsDateFilterMode = "open";
   const dateFilterButtons = document.querySelectorAll(
-    "#Bukhhalter-details-section .date-filter-btn"
+    "#Bukhhalter-details-section .date-filter-btn",
   );
   dateFilterButtons.forEach((btn) => {
     if ((btn as HTMLButtonElement).dataset.filter === "open") {
@@ -1954,26 +1964,18 @@ export function updateDetailsDisplayedSums(): void {
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
     const statusToggle = document.getElementById(
-      "poAktam-status-filter-toggle"
+      "poAktam-status-filter-toggle",
     ) as HTMLInputElement;
     const paymentToggle = document.getElementById(
-      "poAktam-payment-filter-toggle"
+      "poAktam-payment-filter-toggle",
     ) as HTMLInputElement;
 
     if (statusToggle) {
       createDetailsStatusToggle();
-    } else {
-      console.warn(
-        "⚠️ DOMContentLoaded: Перемикач poAktam-status-filter-toggle не знайдено"
-      );
     }
 
     if (paymentToggle) {
       createDetailsPaymentToggle();
-    } else {
-      console.warn(
-        "⚠️ DOMContentLoaded: Перемикач poAktam-payment-filter-toggle не знайдено"
-      );
     }
   }, 100);
 });

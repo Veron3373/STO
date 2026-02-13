@@ -274,7 +274,8 @@ const getWarehouseNumbers = async (): Promise<number[]> => {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id")
-      .not("setting_id", "is", null);
+      .not("setting_id", "is", null)
+      .not("procent", "is", null);
 
     if (error) {
       console.error("Помилка завантаження складів:", error);

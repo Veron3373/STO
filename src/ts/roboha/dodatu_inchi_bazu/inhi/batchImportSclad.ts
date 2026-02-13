@@ -480,6 +480,8 @@ function parseBatchData(text: string) {
       actValid: true,
       actClosed: false,
       warehouseValid: true, // Нова валідація для складу
+      qtyValid: true, // Нова валідація для Кількості
+      priceValid: true, // Нова валідація для Ціни
     };
     try {
       if (row.date.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
@@ -532,6 +534,20 @@ function parseBatchData(text: string) {
       }
     }
 
+    // Кількість: обов'язкове поле, повинна бути > 0
+    if (isNaN(row.qty) || row.qty <= 0) {
+      row.qtyValid = false;
+    } else {
+      row.qtyValid = true;
+    }
+
+    // Ціна: обов'язкове поле, повинна бути > 0
+    if (isNaN(row.price) || row.price <= 0) {
+      row.priceValid = false;
+    } else {
+      row.priceValid = true;
+    }
+
     // Склад: обов'язкове поле, перевіряємо чи є в списку активних складів
     if (!row.warehouse || !row.warehouse.trim()) {
       row.warehouseValid = false;
@@ -544,8 +560,8 @@ function parseBatchData(text: string) {
     // Обов'язкові: Дата, Магазин, Каталог номер, Деталь, Кількість, Ціна, Одиниця, Склад
     // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
     if (
-      isNaN(row.qty) ||
-      isNaN(row.price) ||
+      !row.qtyValid ||
+      !row.priceValid ||
       !row.date ||
       !row.catno ||
       !row.detail ||
@@ -870,6 +886,10 @@ function renderBatchTable(data: any[]) {
           : "";
     // Склад: червоний якщо невалідний
     const warehouseTdClass = !row.warehouseValid ? "invalid-warehouse" : "";
+    // Кількість: червоний якщо невалідна
+    const qtyTdClass = !row.qtyValid ? "invalid-qty" : "";
+    // Ціна: червоний якщо невалідна
+    const priceTdClass = !row.priceValid ? "invalid-price" : "";
     tr.innerHTML = `
       <td style="width:${getWidth("date")}px;min-width:${getWidth(
         "date",
@@ -905,12 +925,12 @@ function renderBatchTable(data: any[]) {
           style="overflow:hidden; resize:none; min-height:30px; width:100%; box-sizing:border-box; white-space: pre-wrap; line-height: 1.3; padding-top: 6px;"
         >${row.detail}</textarea>
       </td>
-      <td style="width:${getWidth("qty")}px;min-width:${getWidth(
+      <td class="${qtyTdClass}" style="width:${getWidth("qty")}px;min-width:${getWidth(
         "qty",
       )}px;max-width:${getWidth("qty")}px;">
         ${createInput("number", row.qty, "qty", index)}
       </td>
-      <td style="width:${getWidth("price")}px;min-width:${getWidth(
+      <td class="${priceTdClass}" style="width:${getWidth("price")}px;min-width:${getWidth(
         "price",
       )}px;max-width:${getWidth("price")}px;">
         ${createInput("number", row.price, "price", index)}
@@ -1017,7 +1037,12 @@ function revalidateRow(index: number) {
   // Акт взагалі не перевіряємо - він необов'язковий
 
   const isValid =
-    isFilled && areNumbersValid && row.unitValid && row.warehouseValid;
+    isFilled &&
+    areNumbersValid &&
+    row.unitValid &&
+    row.warehouseValid &&
+    row.qtyValid &&
+    row.priceValid;
 
   const statusCell = document.querySelector(
     `#batch-table-Excel tbody tr:nth-child(${index + 1}) .status-cell-Excel`,
@@ -1078,6 +1103,17 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         } else {
           parsedDataGlobal[index][field] = target.value;
         }
+
+        // Видалити клас invalid при редагуванні для qty та price
+        const td = target.closest("td");
+        if (td) {
+          if (field === "qty") {
+            td.classList.remove("invalid-qty");
+          } else if (field === "price") {
+            td.classList.remove("invalid-price");
+          }
+        }
+
         recalculateAndApplyWidths();
         revalidateRow(index);
       });
@@ -1333,6 +1369,45 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       revalidateRow(index);
     });
   });
+
+  // Кількість (qty) з валідацією > 0
+  tbody.querySelectorAll('[data-field="qty"]').forEach((input) => {
+    input.addEventListener("blur", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      const value = parseFloat(target.value) || 0;
+      const td = target.closest("td");
+
+      parsedDataGlobal[index].qtyValid = value > 0;
+
+      if (value <= 0) {
+        if (td) td.classList.add("invalid-qty");
+      } else {
+        if (td) td.classList.remove("invalid-qty");
+      }
+      revalidateRow(index);
+    });
+  });
+
+  // Ціна (price) з валідацією > 0
+  tbody.querySelectorAll('[data-field="price"]').forEach((input) => {
+    input.addEventListener("blur", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      const value = parseFloat(target.value) || 0;
+      const td = target.closest("td");
+
+      parsedDataGlobal[index].priceValid = value > 0;
+
+      if (value <= 0) {
+        if (td) td.classList.add("invalid-price");
+      } else {
+        if (td) td.classList.remove("invalid-price");
+      }
+      revalidateRow(index);
+    });
+  });
+
   // Видалення рядка
   tbody.querySelectorAll(".delete-row-btn-Excel").forEach((btn) => {
     btn.addEventListener("click", (e) => {

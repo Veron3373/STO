@@ -410,39 +410,47 @@ function parseBatchData(text: string) {
     // Спробуємо розділити по табуляції (найбільш надійний метод з Excel)
     let parts = line.split("\t");
 
-    // Якщо табуляція не працює, спробуємо розділити розумніше
-    if (parts.length < 11) {
-      // Розділяємо по пробілам, але обережно з деталями що можуть мати пробіли
+    // Якщо табуляція не працює (менше 6 полів), спробуємо розділити по пробілам
+    if (parts.length < 6) {
+      // Розділяємо по пробілам - це крайній випадок
       const tokens = line.split(/\s+/);
 
-      if (tokens.length >= 11) {
-        // Логіка:
-        // Токени: Дата, Магазин, Каталог, <Деталь>, ..., Кількість, Ціна, ЦініаКлієнта, Склад, Рахунок, Акт, Одиниця
-        // Останні 7 елементів це: Кількість, Ціна, Ціна клієнта, Склад, Рахунок, Акт, Одиниця
+      if (tokens.length >= 8) {
+        // Стратегія: беремо перші 3 токена як дату, магазин, каталог
+        // Потім шукаємо останні числові поля
+        // Все що посередині - це деталь
 
-        const daysCount = tokens.length - 10; // кількість токенів для деталі
+        // Останні 7 полів мають бути: Кількість, Ціна, Ціна клієнта, Склад, Рахунок, Акт, Одиниця
+        const detailEndIdx = tokens.length - 7;
         parts = [
           tokens[0], // Дата
           tokens[1], // Магазин
           tokens[2], // Каталог номер
-          tokens.slice(3, 3 + daysCount).join(" "), // Деталь (усі проміжні слова)
+          tokens.slice(3, detailEndIdx).join(" "), // Деталь
           tokens[tokens.length - 7], // Кількість
           tokens[tokens.length - 6], // Ціна
           tokens[tokens.length - 5], // Ціна клієнта
           tokens[tokens.length - 4], // Склад
           tokens[tokens.length - 3], // Рахунок №
           tokens[tokens.length - 2], // Акт №
-          tokens[tokens.length - 1], // Одиниця виміру
+          tokens[tokens.length - 1], // Одиниця
         ];
       } else {
         parts = tokens;
       }
     }
 
-    // Pad to 11 parts with empty strings if necessary
+    // Розірвемо пусті поля в кінці і доповнимо до 11 полів
+    // Спочатку видалимо пусті поля з кінця
+    while (parts.length > 0 && parts[parts.length - 1].trim() === "") {
+      parts.pop();
+    }
+
+    // Потім доповнимо до 11 полів пустими строками
     while (parts.length < 11) {
       parts.push("");
     }
+
     // Trim each part, but keep empty strings
     parts = parts.map((part) => part.trim());
     // Take only first 11 parts

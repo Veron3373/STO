@@ -1,7 +1,10 @@
 // src/ts/roboha/zakaz_naraudy/inhi/knopka_zamok.ts
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
-import { showViknoPidtverdchennayZakruttiaAkty, checkForWarnings } from "./vikno_pidtverdchennay_zakruttia_akty";
+import {
+  showViknoPidtverdchennayZakruttiaAkty,
+  checkForWarnings,
+} from "./vikno_pidtverdchennay_zakruttia_akty";
 import { showViknoVvodyParolu } from "./vikno_vvody_parolu";
 import {
   globalCache,
@@ -53,7 +56,7 @@ function toISODateOnly(dt: string | Date | null | undefined): string | null {
 }
 
 async function fetchActDates(
-  actId: number
+  actId: number,
 ): Promise<{ date_on: string | null; date_off: string | null }> {
   const { data, error } = await supabase
     .from("acts")
@@ -68,7 +71,7 @@ async function fetchActDates(
 }
 
 async function fetchScladMeta(
-  scladIds: number[]
+  scladIds: number[],
 ): Promise<
   Map<number, { rahunok: string | number | null; time_off: string | null }>
 > {
@@ -119,7 +122,7 @@ async function updateShopJson(shop: ShopRow): Promise<void> {
     .eq("shop_id", shop.shop_id);
   if (error)
     throw new Error(
-      `Не вдалося оновити shops#${shop.shop_id}: ${error.message}`
+      `Не вдалося оновити shops#${shop.shop_id}: ${error.message}`,
     );
 }
 
@@ -149,11 +152,11 @@ function collectDetailRowsFromDom(): Array<{
   }> = [];
 
   const tableRows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   tableRows.forEach((tr) => {
     const nameCell = tr.querySelector(
-      '[data-name="name"]'
+      '[data-name="name"]',
     ) as HTMLElement | null;
     if (!nameCell) return;
 
@@ -170,16 +173,16 @@ function collectDetailRowsFromDom(): Array<{
     if (type !== "details") return;
 
     const qtyCell = tr.querySelector(
-      '[data-name="id_count"]'
+      '[data-name="id_count"]',
     ) as HTMLElement | null;
     const priceCell = tr.querySelector(
-      '[data-name="price"]'
+      '[data-name="price"]',
     ) as HTMLElement | null;
     const catalogCell = tr.querySelector(
-      '[data-name="catalog"]'
+      '[data-name="catalog"]',
     ) as HTMLElement | null;
     const pibMagazinCell = tr.querySelector(
-      '[data-name="pib_magazin"]'
+      '[data-name="pib_magazin"]',
     ) as HTMLElement | null;
 
     const Каталог = cleanText(catalogCell?.textContent) || null;
@@ -221,11 +224,11 @@ function collectWorkRowsFromDom(): Array<{
   }> = [];
 
   const tableRows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   tableRows.forEach((tr) => {
     const nameCell = tr.querySelector(
-      '[data-name="name"]'
+      '[data-name="name"]',
     ) as HTMLElement | null;
     if (!nameCell) return;
 
@@ -242,16 +245,16 @@ function collectWorkRowsFromDom(): Array<{
     if (type !== "works") return;
 
     const qtyCell = tr.querySelector(
-      '[data-name="id_count"]'
+      '[data-name="id_count"]',
     ) as HTMLElement | null;
     const priceCell = tr.querySelector(
-      '[data-name="price"]'
+      '[data-name="price"]',
     ) as HTMLElement | null;
     const slyusarSumCell = tr.querySelector(
-      '[data-name="slyusar_sum"]'
+      '[data-name="slyusar_sum"]',
     ) as HTMLElement | null;
     const pibMagazinCell = tr.querySelector(
-      '[data-name="pib_magazin"]'
+      '[data-name="pib_magazin"]',
     ) as HTMLElement | null;
 
     const Кількість = parseNum(qtyCell?.textContent);
@@ -302,7 +305,7 @@ function validateActTableBeforeClosing(): {
 
     // Перевірка Зарплати тільки якщо стовпець відображається
     const slyusarSumCell = document.querySelector(
-      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="slyusar_sum"]`
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="slyusar_sum"]`,
     ) as HTMLElement | null;
     if (slyusarSumCell && slyusarSumCell.offsetParent !== null) {
       if (!row.Зарплата || row.Зарплата === 0) {
@@ -312,7 +315,7 @@ function validateActTableBeforeClosing(): {
 
     // Перевірка ПІБ (Слюсара) тільки якщо стовпець відображається
     const pibMagazinCell = document.querySelector(
-      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="pib_magazin"]`
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="pib_magazin"]`,
     ) as HTMLElement | null;
     if (pibMagazinCell && pibMagazinCell.offsetParent !== null) {
       if (!row.slyusarName || row.slyusarName.trim() === "") {
@@ -341,7 +344,7 @@ function validateActTableBeforeClosing(): {
 
     // Перевірка ПІБ_Магазину тільки якщо стовпець відображається
     const pibMagazinCell = document.querySelector(
-      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="pib_magazin"]`
+      `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr [data-name="pib_magazin"]`,
     ) as HTMLElement | null;
     if (pibMagazinCell && pibMagazinCell.offsetParent !== null) {
       if (!row.shopName || row.shopName.trim() === "") {
@@ -405,7 +408,7 @@ async function syncShopsHistoryForAct(params: {
       showNotification(
         `Магазин "${shopName}" не знайдено у shops — пропущено`,
         "warning",
-        1800
+        1800,
       );
       continue;
     }
@@ -421,7 +424,7 @@ async function syncShopsHistoryForAct(params: {
             : Number(r.Каталог)
           : null,
         Ціна: Number(r.Ціна) || 0,
-        Рахунок: metaR ? metaR.rahunok ?? null : null,
+        Рахунок: metaR ? (metaR.rahunok ?? null) : null,
         Кількість: Number(r.Кількість) || 0,
         Найменування: r.Найменування,
       });
@@ -432,7 +435,7 @@ async function syncShopsHistoryForAct(params: {
     const dayBucket = history[params.dateKey] as any[];
 
     let actEntry = dayBucket.find(
-      (e: any) => Number(e?.["Акт"]) === Number(params.actId)
+      (e: any) => Number(e?.["Акт"]) === Number(params.actId),
     );
     if (!actEntry) {
       actEntry = {
@@ -457,7 +460,6 @@ async function syncSlyusarsHistoryForAct(params: {
   dateClose: string | null;
 }): Promise<void> {
   try {
-
     // Отримуємо всіх приймальників з таблиці slyusars
     const { data: slyusarsData, error: fetchError } = await supabase
       .from("slyusars")
@@ -471,7 +473,6 @@ async function syncSlyusarsHistoryForAct(params: {
     if (!slyusarsData || slyusarsData.length === 0) {
       return;
     }
-
 
     // Спочатку виводимо всі доступні ключі для діагностики
     const availableKeys = Object.keys(slyusarsData[0] || {});
@@ -500,7 +501,6 @@ async function syncSlyusarsHistoryForAct(params: {
       return;
     }
 
-
     let updatedCount = 0;
     let receiverCount = 0;
 
@@ -514,7 +514,7 @@ async function syncSlyusarsHistoryForAct(params: {
           slyusarData = JSON.parse(slyusarRow.data);
         } catch (e) {
           console.warn(
-            `⚠️ Не вдалося розпарсити дані для запису ${slyusarRow[primaryKey]}`
+            `⚠️ Не вдалося розпарсити дані для запису ${slyusarRow[primaryKey]}`,
           );
           continue;
         }
@@ -575,7 +575,6 @@ async function syncSlyusarsHistoryForAct(params: {
       }
 
       if (actFound) {
-
         // Зберігаємо оновлені дані назад у базу
         const { error: updateError } = await supabase
           .from("slyusars")
@@ -585,7 +584,7 @@ async function syncSlyusarsHistoryForAct(params: {
         if (updateError) {
           console.error(
             `❌ Помилка оновлення slyusars#${slyusarRow[primaryKey]}:`,
-            updateError.message
+            updateError.message,
           );
         } else {
           updatedCount++;
@@ -593,21 +592,20 @@ async function syncSlyusarsHistoryForAct(params: {
       }
     }
 
-
     if (updatedCount > 0) {
       showNotification(
         `✅ Історія приймальника оновлена (${updatedCount})`,
         "success",
-        2000
+        2000,
       );
     } else {
       console.warn(
-        `⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`
+        `⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`,
       );
       showNotification(
         `⚠️ Акт ${params.actId} не знайдено у приймальників`,
         "info",
-        3000
+        3000,
       );
     }
   } catch (err) {
@@ -651,7 +649,7 @@ export function initStatusLockDelegation(): void {
   document.addEventListener("click", async (ev) => {
     const target = ev.target as HTMLElement | null;
     const btn = target?.closest?.(
-      "#status-lock-btn"
+      "#status-lock-btn",
     ) as HTMLButtonElement | null;
     if (!btn) return;
 
@@ -674,7 +672,7 @@ export function initStatusLockDelegation(): void {
           showNotification(
             "Акт закритий. У Вас відсутні права доступу на відкриття акту. Зверніться до Адміністратора.",
             "warning",
-            4000
+            4000,
           );
           btn.disabled = false;
           return;
@@ -692,7 +690,7 @@ export function initStatusLockDelegation(): void {
           showNotification(
             "❌ У вас немає права для цієї функції. Зверніться до адміністратора.",
             "warning",
-            4000
+            4000,
           );
           btn.disabled = false;
           return;
@@ -720,7 +718,7 @@ export function initStatusLockDelegation(): void {
         let confirmed = false;
         if (!currentSlusarsOn) {
           confirmed = await showSlusarConfirm(
-            "Підтвердити виконання всіх робіт?"
+            "Підтвердити виконання всіх робіт?",
           );
         } else {
           confirmed = await showSlusarConfirm("Відмінити завершення робіт?");
@@ -759,12 +757,12 @@ export function initStatusLockDelegation(): void {
             newSlusarsOn,
             userSurname,
             userFullName,
-            pruimalnyk
+            pruimalnyk,
           );
         } catch (notifError) {
           console.error(
             "⚠️ Помилка створення повідомлення (не критично):",
-            notifError
+            notifError,
           );
           // Не блокуємо операцію, якщо повідомлення не створилось
         }
@@ -786,7 +784,7 @@ export function initStatusLockDelegation(): void {
             ? "✅ Роботи завершено"
             : "✅ Завершення робіт відмінено",
           "success",
-          2000
+          2000,
         );
         btn.disabled = false;
         return; // ⚠️ ВАЖЛИВО: виходимо з функції, не закриваємо акт
@@ -811,7 +809,7 @@ export function initStatusLockDelegation(): void {
             showNotification(
               "❌ У вас ця функція недоступна. Зверніться до адміністратора.",
               "warning",
-              4000
+              4000,
             );
             btn.disabled = false;
             return;
@@ -834,7 +832,7 @@ export function initStatusLockDelegation(): void {
 
         if (scladError)
           throw new Error(
-            "Не вдалося отримати записи складу: " + scladError.message
+            "Не вдалося отримати записи складу: " + scladError.message,
           );
 
         if (scladRows && scladRows.length > 0) {
@@ -844,7 +842,7 @@ export function initStatusLockDelegation(): void {
             .eq("akt", actId);
           if (updateScladError)
             throw new Error(
-              "Не вдалося очистити time_off: " + updateScladError.message
+              "Не вдалося очистити time_off: " + updateScladError.message,
             );
         }
 
@@ -868,14 +866,14 @@ export function initStatusLockDelegation(): void {
           showNotification(
             "Не вдалось визначити дату відкриття акту — Історія в shops не оновлена",
             "warning",
-            2000
+            2000,
           );
         }
 
         globalCache.isActClosed = false;
         await loadGlobalData();
 
-        await showModal(actId);
+        await showModal(actId, "client");
 
         refreshActsTable();
         showNotification("Акт успішно відкрито", "success");
@@ -891,7 +889,7 @@ export function initStatusLockDelegation(): void {
         if (!hasFullAccess()) {
           // Перевіряємо чи є попередження в таблиці акту
           const noWarnings = checkForWarnings(); // true = без попереджень
-          
+
           if (noWarnings) {
             // Немає попереджень - перевіряємо право на звичайне закриття
             try {
@@ -900,12 +898,12 @@ export function initStatusLockDelegation(): void {
               console.error("Помилка перевірки прав закриття акту:", permErr);
               canClose = true;
             }
-            
+
             if (!canClose) {
               showNotification(
                 "У вас немає права закривати акти. Зверніться до адміністратора.",
                 "warning",
-                4000
+                4000,
               );
               btn.disabled = false;
               return;
@@ -925,7 +923,7 @@ export function initStatusLockDelegation(): void {
               showNotification(
                 "У вас немає права закривати акти із зауваженнями. Зверніться до адміністратора.",
                 "warning",
-                4000
+                4000,
               );
               btn.disabled = false;
               return;
@@ -941,11 +939,11 @@ export function initStatusLockDelegation(): void {
             showNotification(
               "❌ Закриття відмінено, заповніть всі поля таблиці",
               "error",
-              5000
+              5000,
             );
             console.warn(
               "Помилки валідації таблиці перед закриттям:",
-              validationResult.errors
+              validationResult.errors,
             );
             validationResult.errors.forEach((err) => {
               console.warn(`  • ${err}`);
@@ -979,7 +977,7 @@ export function initStatusLockDelegation(): void {
 
         if (scladError)
           throw new Error(
-            "Не вдалося отримати записи складу: " + scladError.message
+            "Не вдалося отримати записи складу: " + scladError.message,
           );
 
         const currentDateTime = new Date().toISOString();
@@ -991,7 +989,7 @@ export function initStatusLockDelegation(): void {
             .eq("akt", actId);
           if (updateScladError)
             throw new Error(
-              "Не вдалося оновити time_off: " + updateScladError.message
+              "Не вдалося оновити time_off: " + updateScladError.message,
             );
         }
 
@@ -1011,7 +1009,7 @@ export function initStatusLockDelegation(): void {
         } catch (hideError) {
           console.error(
             "⚠️ Помилка приховування повідомлень (не критично):",
-            hideError
+            hideError,
           );
         }
 
@@ -1021,7 +1019,7 @@ export function initStatusLockDelegation(): void {
         } catch (deleteNotifError) {
           console.error(
             "⚠️ Помилка видалення повідомлень про зміни (не критично):",
-            deleteNotifError
+            deleteNotifError,
           );
         }
 
@@ -1041,14 +1039,14 @@ export function initStatusLockDelegation(): void {
           showNotification(
             "Не вдалось визначити дату відкриття акту — Історія в shops не оновлена",
             "warning",
-            2000
+            2000,
           );
         }
 
         globalCache.isActClosed = true;
         await loadGlobalData();
 
-        await showModal(actId);
+        await showModal(actId, "client");
 
         refreshActsTable();
         showNotification("Акт успішно закрито", "success");

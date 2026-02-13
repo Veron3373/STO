@@ -16,6 +16,7 @@ interface UserData {
   Name: string;
   Доступ: string;
   Пароль: string;
+  slyusar_id: number | null;
   timestamp: number;
   version: string;
 }
@@ -27,13 +28,15 @@ interface UserData {
 function saveUserDataToLocalStorage(
   name: string,
   access: string,
-  password: string
+  password: string,
+  slyusar_id: number | null = null,
 ): void {
   try {
     const userData: UserData = {
       Name: name,
       Доступ: access,
       Пароль: password,
+      slyusar_id: slyusar_id,
       timestamp: Date.now(),
       version: "1.0",
     };
@@ -48,6 +51,7 @@ function getSavedUserDataFromLocalStorage(): {
   name: string;
   access: string;
   password: string;
+  slyusar_id: number | null;
 } | null {
   try {
     const storedData = localStorage.getItem(USER_DATA_KEY);
@@ -65,6 +69,7 @@ function getSavedUserDataFromLocalStorage(): {
         name: userData.Name,
         access: userData.Доступ,
         password: userData.Пароль,
+        slyusar_id: userData.slyusar_id || null,
       };
     } else {
       clearSavedUserDataFromLocalStorage();
@@ -111,17 +116,23 @@ async function checkPassword(inputPassword: string): Promise<{
   isValid: boolean;
   accessLevel: string | null;
   userName: string | null;
+  slyusar_id: number | null;
 }> {
   try {
     const { data: slyusars, error } = await supabase
       .from("slyusars")
-      .select("data");
+      .select("id, data");
 
     // console.log("📦 Supabase response:", { slyusars, error });
 
     if (error || !slyusars) {
       console.error("❌ Помилка:", error);
-      return { isValid: false, accessLevel: null, userName: null };
+      return {
+        isValid: false,
+        accessLevel: null,
+        userName: null,
+        slyusar_id: null,
+      };
     }
 
     // console.log("✅ Отримано записів:", slyusars.length);
@@ -135,13 +146,28 @@ async function checkPassword(inputPassword: string): Promise<{
       const userData = safeParseJSON(foundUser.data);
       const access = userData?.["Доступ"] || "Адміністратор";
       const name = userData?.["Name"] || userData?.["Ім'я"] || "Користувач";
-      return { isValid: true, accessLevel: access, userName: name };
+      return {
+        isValid: true,
+        accessLevel: access,
+        userName: name,
+        slyusar_id: foundUser.id,
+      };
     }
 
-    return { isValid: false, accessLevel: null, userName: null };
+    return {
+      isValid: false,
+      accessLevel: null,
+      userName: null,
+      slyusar_id: null,
+    };
   } catch (error) {
     console.error("💥 Критична помилка при перевірці пароля:", error);
-    return { isValid: false, accessLevel: null, userName: null };
+    return {
+      isValid: false,
+      accessLevel: null,
+      userName: null,
+      slyusar_id: null,
+    };
   }
 }
 
@@ -162,15 +188,14 @@ const SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 хвилин - час життя 
  * Очищає кеш налаштувань - потрібно викликати при real-time оновленнях
  */
 
-
 async function getSettingValue(
   settingId: number,
-  roleKey: string
+  roleKey: string,
 ): Promise<boolean> {
   // Перевіряємо кеш
   const cacheKey = `${settingId}:${roleKey}`;
   const cached = settingsCache.get(cacheKey);
-  
+
   if (cached && Date.now() - cached.timestamp < SETTINGS_CACHE_TTL) {
     return cached.value;
   }
@@ -185,16 +210,16 @@ async function getSettingValue(
     if (error) {
       console.error(
         `❌ Помилка при отриманні налаштування (ID:${settingId}, Key:${roleKey}):`,
-        error
+        error,
       );
       return false;
     }
 
     const value = Boolean((data as { [key: string]: any })?.[roleKey]);
-    
+
     // Зберігаємо в кеш
     settingsCache.set(cacheKey, { value, timestamp: Date.now() });
-    
+
     return value;
   } catch (error) {
     console.error("💥 Критична помилка запиту налаштувань:", error);
@@ -284,9 +309,8 @@ export async function canUserOpenActs(): Promise<boolean> {
  * Ця функція викликається ТІЛЬКИ ПІСЛЯ успішного входу з main.html
  */
 export async function updateUIBasedOnAccess(
-  accessLevel: string | null
+  accessLevel: string | null,
 ): Promise<void> {
-
   const settingsMenuItem = document
     .querySelector('[data-action="openSettings"]')
     ?.closest("li") as HTMLElement | null;
@@ -456,15 +480,15 @@ export function createLoginModal(): Promise<string | null> {
 
     button.addEventListener(
       "mouseenter",
-      () => (button.style.background = "#45a049")
+      () => (button.style.background = "#45a049"),
     );
     button.addEventListener(
       "mouseleave",
-      () => (button.style.background = "#4CAF50")
+      () => (button.style.background = "#4CAF50"),
     );
     input.addEventListener(
       "focus",
-      () => (input.style.borderColor = "#4CAF50")
+      () => (input.style.borderColor = "#4CAF50"),
     );
     input.addEventListener("blur", () => (input.style.borderColor = "#ddd"));
 
@@ -485,6 +509,7 @@ export function createLoginModal(): Promise<string | null> {
           isValid,
           accessLevel,
           userName: fetchedUserName,
+          slyusar_id,
         } = await checkPassword(loginValue);
 
         if (isValid) {
@@ -493,7 +518,12 @@ export function createLoginModal(): Promise<string | null> {
           userName = fetchedUserName;
 
           if (userName && accessLevel) {
-            saveUserDataToLocalStorage(userName, accessLevel, loginValue);
+            saveUserDataToLocalStorage(
+              userName,
+              accessLevel,
+              loginValue,
+              slyusar_id,
+            );
           }
 
           modal.remove();
@@ -549,10 +579,14 @@ export function createLoginModal(): Promise<string | null> {
 
 export async function showLoginModalBeforeTable(): Promise<string | null> {
   // 1. 🔥 ПЕРЕВІРКА ГЛОБАЛЬНОЇ СЕСІЇ (Google)
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session) {
-    console.warn("⛔ Немає авторизації Google. Модальне вікно пароля приховано.");
+    console.warn(
+      "⛔ Немає авторизації Google. Модальне вікно пароля приховано.",
+    );
     redirectToIndex();
     return null;
   }
@@ -579,7 +613,7 @@ export function isUserAuthenticated(): boolean {
 export function logoutFromSystemAndRedirect(): void {
   // Очищаємо всі дані користувача з localStorage
   clearSavedUserDataFromLocalStorage();
-  
+
   // Очищаємо додаткові ключі localStorage
   try {
     localStorage.removeItem("sto_general_settings"); // Загальні налаштування СТО
@@ -587,14 +621,14 @@ export function logoutFromSystemAndRedirect(): void {
   } catch (e) {
     console.warn("⚠️ Помилка при очищенні додаткових даних localStorage:", e);
   }
-  
+
   // Очищаємо sessionStorage (прапори сесії)
   try {
     sessionStorage.clear();
   } catch (e) {
     console.warn("⚠️ Помилка при очищенні sessionStorage:", e);
   }
-  
+
   isAuthenticated = false;
   userAccessLevel = null;
   userName = null;
@@ -628,7 +662,7 @@ export async function canUserSeeZarplataColumn(): Promise<boolean> {
 
 async function getSettingBoolFromSettings(
   settingId: number,
-  columnName: string
+  columnName: string,
 ): Promise<boolean> {
   try {
     const { data, error } = await supabase
@@ -666,7 +700,9 @@ export async function canUserSeePriceColumns(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню.",
+    );
     return true;
   }
 
@@ -806,7 +842,9 @@ export async function canUserOpenClosedActs(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню.",
+    );
     return true;
   }
 
@@ -853,7 +891,9 @@ export async function canUserAddRowToAct(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню.",
+    );
     return true;
   }
 
@@ -892,7 +932,9 @@ export async function canUserSeeEmployeeButton(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню.",
+    );
     return true;
   }
 
@@ -1008,7 +1050,9 @@ export async function canUserPayMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, дозволяємо розрахунок по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, дозволяємо розрахунок по замовчуванню.",
+    );
     return true;
   }
 
@@ -1051,7 +1095,9 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, дозволяємо відміну розрахунку по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, дозволяємо відміну розрахунку по замовчуванню.",
+    );
     return true;
   }
 
@@ -1076,7 +1122,9 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не дозволяємо відміну розрахунку.`);
+      console.warn(
+        `Невідома роль "${role}", не дозволяємо відміну розрахунку.`,
+      );
       return false;
   }
 
@@ -1094,7 +1142,9 @@ export async function canUserReturnMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, дозволяємо повернення по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, дозволяємо повернення по замовчуванню.",
+    );
     return true;
   }
 
@@ -1137,7 +1187,9 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, дозволяємо відміну повернення по замовчуванню.");
+    console.warn(
+      "userAccessLevel порожній, дозволяємо відміну повернення по замовчуванню.",
+    );
     return true;
   }
 
@@ -1162,7 +1214,9 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не дозволяємо відміну повернення.`);
+      console.warn(
+        `Невідома роль "${role}", не дозволяємо відміну повернення.`,
+      );
       return false;
   }
 

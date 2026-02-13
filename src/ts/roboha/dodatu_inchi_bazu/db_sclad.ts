@@ -80,6 +80,34 @@ function populateFormFields(record: ScladRecord) {
     if (el) el.value = val;
   });
 
+  // Заповнюємо ПІБ запчастиста за xto_zamovuv
+  const xtoZamovuv = (record as any).xto_zamovuv;
+  if (xtoZamovuv) {
+    supabase
+      .from("slyusars")
+      .select("data")
+      .eq("id", xtoZamovuv)
+      .single()
+      .then(({ data: slyusar, error }) => {
+        if (!error && slyusar) {
+          try {
+            const userData =
+              typeof slyusar.data === "string"
+                ? JSON.parse(slyusar.data)
+                : slyusar.data;
+            const pibInput = document.getElementById(
+              "sclad_zapchastyst_pib",
+            ) as HTMLInputElement | null;
+            if (pibInput && userData?.Name) {
+              pibInput.value = userData.Name;
+            }
+          } catch (e) {
+            console.error("Помилка заповнення ПІБ запчастиста:", e);
+          }
+        }
+      });
+  }
+
   const hidden = document.getElementById(
     "hidden-sclad-id",
   ) as HTMLInputElement | null;
@@ -240,19 +268,39 @@ function readScladFormValues() {
 
   const off = toNum(pick("sclad_kilkist_off")); // читаємо значення поля kilkist_off
 
-  // Отримуємо slyusar_id поточного користувача з localStorage
+  // Отримуємо slyusar_id: спочатку з інпуту ПІБ, якщо він заповнений, або з localStorage
   let slyusarId: number | null = null;
-  try {
-    const userDataStr = localStorage.getItem("userAuthData");
-    if (userDataStr) {
-      const userData = JSON.parse(userDataStr);
-      const id = userData.slyusar_id;
-      if (id) {
-        slyusarId = Number(id);
+  const selectedPib = pick("sclad_zapchastyst_pib");
+
+  if (selectedPib) {
+    // Спочатку пробуємо отримати з вибраного ПІБ (синхронно це неможливо, тому використовуватимемо localStorage)
+    const currentUserData = localStorage.getItem("userAuthData");
+    if (currentUserData) {
+      try {
+        const userData = JSON.parse(currentUserData);
+        if (userData.Name === selectedPib) {
+          slyusarId = userData.slyusar_id || null;
+        }
+      } catch (e) {
+        console.error("Помилка отримання slyusar_id з вибраного ПІБ:", e);
       }
     }
-  } catch (e) {
-    console.error("Помилка отримання slyusar_id з localStorage:", e);
+  }
+
+  // Якщо не вдалось отримати з вибраного ПІБ, використовуємо дефолтний slyusar_id поточного користувача
+  if (!slyusarId) {
+    try {
+      const userDataStr = localStorage.getItem("userAuthData");
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        const id = userData.slyusar_id;
+        if (id) {
+          slyusarId = Number(id);
+        }
+      }
+    } catch (e) {
+      console.error("Помилка отримання slyusar_id з localStorage:", e);
+    }
   }
 
   return {
@@ -266,7 +314,7 @@ function readScladFormValues() {
     unit_measurement: pick("sclad_unit") || null,
     akt: pick("sclad_akt") || null,
     scladNomer: toNum(pick("sclad_procent")),
-    xto_zamovuv: slyusarId, // ID користувача, який завантажив деталь
+    xto_zamovuv: slyusarId, // ID користувача (запчастиста), який завантажив деталь
 
     // 🛠️ Безпечна заміна: якщо null → ставимо 0
     kilkist_off: off === null ? 0 : off,

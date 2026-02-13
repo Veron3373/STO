@@ -53,7 +53,9 @@ function setScladId(id: string | null) {
   if (id) {
     persistentScladId = id;
   }
-  const hidden = document.getElementById("hidden-sclad-id") as HTMLInputElement | null;
+  const hidden = document.getElementById(
+    "hidden-sclad-id",
+  ) as HTMLInputElement | null;
   if (hidden) hidden.value = id ?? "";
 }
 
@@ -72,7 +74,9 @@ function clearAllScladIds() {
   persistentScladId = null;
   originalScladId = null;
   originalPartNumber = null;
-  const hidden = document.getElementById("hidden-sclad-id") as HTMLInputElement | null;
+  const hidden = document.getElementById(
+    "hidden-sclad-id",
+  ) as HTMLInputElement | null;
   if (hidden) hidden.value = "";
 }
 
@@ -86,7 +90,6 @@ async function loadDetailsFromDB(): Promise<string[]> {
   let hasMore = true;
   let offset = 0;
   const batchSize = 1000; // Завантажуємо по 1000 записів за раз
-
 
   while (hasMore) {
     const { data, error, count } = await supabase
@@ -107,7 +110,6 @@ async function loadDetailsFromDB(): Promise<string[]> {
 
       offset += batchSize;
       hasMore = data.length === batchSize;
-
     } else {
       hasMore = false;
     }
@@ -118,8 +120,123 @@ async function loadDetailsFromDB(): Promise<string[]> {
     }
   }
 
-
   return Array.from(new Set(names)).sort();
+}
+
+/** Завантаження запчастистів та їх ID */
+let zapchastystCache: Array<{ name: string; id: number }> = [];
+
+async function loadZapchastystFromDB(): Promise<
+  Array<{ name: string; id: number }>
+> {
+  if (zapchastystCache.length > 0) return zapchastystCache;
+
+  try {
+    const { data: slyusars, error } = await supabase
+      .from("slyusars")
+      .select("id, data");
+
+    if (error) {
+      console.error("Помилка завантаження запчастистів:", error);
+      return [];
+    }
+
+    const result: Array<{ name: string; id: number }> = [];
+
+    (slyusars ?? []).forEach((slyusar: any) => {
+      try {
+        const userData =
+          typeof slyusar.data === "string"
+            ? JSON.parse(slyusar.data)
+            : slyusar.data;
+
+        const access = userData?.["Доступ"] || "";
+        const name = userData?.["Name"] || userData?.["Ім'я"] || "";
+
+        // Фільтруємо тільки Запчастистів
+        if (access === "Запчастист" && name) {
+          result.push({ name, id: slyusar.id });
+        }
+      } catch (e) {
+        console.error("Помилка парсингу запчастиста:", e);
+      }
+    });
+
+    zapchastystCache = result.sort((a, b) =>
+      a.name.localeCompare(b.name, "uk"),
+    );
+    return zapchastystCache;
+  } catch (e) {
+    console.error("Критична помилка завантаження запчастистів:", e);
+    return [];
+  }
+}
+
+/* ==== автокомпліт запчастистів ==== */
+async function wireZapchastystAutocomplete(
+  inputId: string,
+  dropdownId: string,
+) {
+  const input = document.getElementById(inputId) as HTMLInputElement | null;
+  const dd = document.getElementById(dropdownId) as HTMLDivElement | null;
+  if (!input || !dd) return;
+
+  // Setup keyboard navigation
+  setupDropdownKeyboard(input, dd);
+
+  const zapchastysts = await loadZapchastystFromDB();
+  const names = zapchastysts.map((z) => z.name);
+
+  const render = (filter: string) => {
+    dd.innerHTML = "";
+    const filtered = filter
+      ? names.filter((o) => o.toLowerCase().includes(filter.toLowerCase()))
+      : names;
+    if (!filtered.length) return dd.classList.add("hidden-all_other_bases");
+
+    dd.classList.remove("hidden-all_other_bases");
+    filtered.forEach((val) => {
+      const item = document.createElement("div");
+      item.className = "custom-dropdown-item";
+      item.textContent = val;
+
+      item.onmouseenter = () => {
+        item.style.backgroundColor = "#cce5ff";
+      };
+      item.onmouseleave = () => {
+        item.style.backgroundColor = "";
+      };
+      item.onclick = (e: any) => {
+        e.stopPropagation();
+        input.value = val;
+        dd.classList.add("hidden-all_other_bases");
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+
+      dd.appendChild(item);
+    });
+  };
+
+  const onInput = () => {
+    const val = (input.value ?? "").trim();
+    render(val);
+  };
+
+  const onFocus = () => {
+    const val = (input.value ?? "").trim();
+    render(val);
+  };
+
+  const onClickAway = (e: any) => {
+    if (!input.contains(e.target as Node) && !dd.contains(e.target as Node)) {
+      dd.remove();
+      document.removeEventListener("click", onClickAway);
+    }
+  };
+
+  input.addEventListener("input", onInput);
+  input.addEventListener("focus", onFocus);
+  document.addEventListener("click", onClickAway);
 }
 
 /** Рендер форми «Склад» */
@@ -151,11 +268,18 @@ export async function renderScladForm() {
           <select id="sclad_procent" class="input-all_other_bases"><option value="">Завантаження...</option></select>
         </div>
       </div>
+      <div class="form-field">
+        <label class="field-label" for="sclad_zapchastyst_pib">Запчастист</label>
+        <input id="sclad_zapchastyst_pib" type="text" class="input-all_other_bases" autocomplete="off">
+        <div id="sclad_zapchastyst_dd" class="custom-dropdown hidden-all_other_bases"></div>
+      </div>
     </div>
   `;
   host.classList.remove("hidden-all_other_bases");
 
-  const hidden = document.getElementById("hidden-sclad-id") as HTMLInputElement | null;
+  const hidden = document.getElementById(
+    "hidden-sclad-id",
+  ) as HTMLInputElement | null;
   if (hidden && persistentScladId) {
     hidden.value = persistentScladId;
     currentScladId = persistentScladId;
@@ -165,12 +289,37 @@ export async function renderScladForm() {
   await wireDetailsAutocompleteWithLiveLoad("sclad_detail", "sclad_detail_dd");
   await wireLinkedAutocomplete();
 
+  // Налаштування автокомпліту для запчастистів
+  await wireZapchastystAutocomplete(
+    "sclad_zapchastyst_pib",
+    "sclad_zapchastyst_dd",
+  );
+
+  // Автозаповнення ПІБ поточного користувача
+  const currentUserData = localStorage.getItem("userAuthData");
+  if (currentUserData) {
+    try {
+      const userData = JSON.parse(currentUserData);
+      const currentPib = userData.Name || "";
+      if (currentPib) {
+        const pibInput = document.getElementById(
+          "sclad_zapchastyst_pib",
+        ) as HTMLInputElement | null;
+        if (pibInput) {
+          pibInput.value = currentPib;
+        }
+      }
+    } catch (e) {
+      console.error("Помилка автозаповнення ПІБ:", e);
+    }
+  }
+
   const dateInput = host.querySelector<HTMLInputElement>("#sclad_date");
   if (dateInput && !dateInput.dataset.pickerBound) {
     const openPicker = () => {
       try {
         (dateInput as any).showPicker?.();
-      } catch { }
+      } catch {}
     };
     dateInput.dataset.pickerBound = "1";
     dateInput.addEventListener("click", openPicker);
@@ -210,7 +359,9 @@ export async function renderScladForm() {
 
 /** Завантаження опцій відсотків з таблиці settings */
 async function loadProcentOptions() {
-  const select = document.getElementById("sclad_procent") as HTMLSelectElement | null;
+  const select = document.getElementById(
+    "sclad_procent",
+  ) as HTMLSelectElement | null;
   if (!select) return;
 
   try {
@@ -230,14 +381,17 @@ async function loadProcentOptions() {
     }
 
     // Активні склади вже відфільтровані на сервері — лишаємо тільки ID
-    const activeIds = (data ?? []).map((row: { setting_id: number }) => row.setting_id);
+    const activeIds = (data ?? []).map(
+      (row: { setting_id: number }) => row.setting_id,
+    );
 
     // Генеруємо опції для активних ID (можуть бути розріджені, напр. 1,2,3,15)
     const optionsHtml = activeIds
       .map((id) => `<option value="${id}">${id}</option>`)
       .join("");
 
-    select.innerHTML = optionsHtml || '<option value="">Немає активних складів</option>';
+    select.innerHTML =
+      optionsHtml || '<option value="">Немає активних складів</option>';
   } catch (e) {
     console.error("Помилка завантаження відсотків:", e);
     select.innerHTML = '<option value="">Помилка</option>';
@@ -245,7 +399,12 @@ async function loadProcentOptions() {
 }
 
 /* ---------- helpers ---------- */
-function field(id: string, label: string, type: "text" | "date" | "number" = "text", extra = "") {
+function field(
+  id: string,
+  label: string,
+  type: "text" | "date" | "number" = "text",
+  extra = "",
+) {
   return `
     <div class="form-field">
       <label class="field-label" for="${id}">${label}</label>
@@ -254,8 +413,14 @@ function field(id: string, label: string, type: "text" | "date" | "number" = "te
     </div>`;
 }
 
-function selectField(id: string, label: string, options: Array<[string, string]>) {
-  const opts = options.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
+function selectField(
+  id: string,
+  label: string,
+  options: Array<[string, string]>,
+) {
+  const opts = options
+    .map(([v, t]) => `<option value="${v}">${t}</option>`)
+    .join("");
   return `
     <div class="form-field">
       <label class="field-label" for="${id}">${label}</label>
@@ -274,7 +439,9 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
   // Setup keyboard navigation
   setupDropdownKeyboard(input, dd);
 
-  const { data: rows, error } = await supabase.from("shops").select("shop_id,data");
+  const { data: rows, error } = await supabase
+    .from("shops")
+    .select("shop_id,data");
   if (error) return console.error("Помилка shops:", error);
 
   const names: string[] = [];
@@ -308,7 +475,9 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
   const render = (filter: string) => {
     dd.innerHTML = "";
     const filtered = filter
-      ? uniqueSorted.filter((o) => o.toLowerCase().includes(filter.toLowerCase()))
+      ? uniqueSorted.filter((o) =>
+          o.toLowerCase().includes(filter.toLowerCase()),
+        )
       : uniqueSorted;
     if (!filtered.length) return dd.classList.add("hidden-all_other_bases");
 
@@ -320,7 +489,7 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
       item.onmouseenter = () => {
         item.classList.add("selected");
         item.style.backgroundColor = "#e3f2fd";
-        Array.from(dd.children).forEach(child => {
+        Array.from(dd.children).forEach((child) => {
           if (child !== item) {
             child.classList.remove("selected");
             (child as HTMLElement).style.backgroundColor = "white";
@@ -362,12 +531,16 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
   });
 
   document.addEventListener("click", (e) => {
-    if (!dd.contains(e.target as Node) && e.target !== input) dd.classList.add("hidden-all_other_bases");
+    if (!dd.contains(e.target as Node) && e.target !== input)
+      dd.classList.add("hidden-all_other_bases");
   });
 }
 
 /* ==== НОВИЙ автокомпліт деталі з підтягуванням даних ==== */
-async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: string) {
+async function wireDetailsAutocompleteWithLiveLoad(
+  inputId: string,
+  dropdownId: string,
+) {
   const input = document.getElementById(inputId) as HTMLInputElement | null;
   const dd = document.getElementById(dropdownId) as HTMLDivElement | null;
   if (!input || !dd) return;
@@ -402,7 +575,7 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
       item.onmouseenter = () => {
         item.classList.add("selected");
         item.style.backgroundColor = "#e3f2fd";
-        Array.from(dd.children).forEach(child => {
+        Array.from(dd.children).forEach((child) => {
           if (child !== item) {
             child.classList.remove("selected");
             (child as HTMLElement).style.backgroundColor = "white";
@@ -445,7 +618,8 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
     }
 
     // Перевірка чи потрібно перезавантажувати дані
-    const needsReload = trimmedQuery.length < lastDetailQuery.length ||
+    const needsReload =
+      trimmedQuery.length < lastDetailQuery.length ||
       !lastDetailQuery ||
       !trimmedQuery.startsWith(lastDetailQuery.substring(0, 3));
 
@@ -487,7 +661,7 @@ async function wireDetailsAutocompleteWithLiveLoad(inputId: string, dropdownId: 
 
     // Фільтруємо з кешу
     const filtered = detailsCache.filter((name) =>
-      name.toLowerCase().includes(trimmedQuery.toLowerCase())
+      name.toLowerCase().includes(trimmedQuery.toLowerCase()),
     );
 
     render(filtered);
@@ -541,12 +715,17 @@ async function fillFormFieldsFromSclad(record: any) {
     sclad_procent: record?.scladNomer ?? "",
   };
   Object.entries(fields).forEach(([id, val]) => {
-    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    const el = document.getElementById(id) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | null;
     if (el) el.value = String(val ?? "");
   });
 
   // Оновлюємо стиль select sclad_procent при завантаженні даних
-  const procentSelect = document.getElementById("sclad_procent") as HTMLSelectElement | null;
+  const procentSelect = document.getElementById(
+    "sclad_procent",
+  ) as HTMLSelectElement | null;
   if (procentSelect) {
     const selectedOption = procentSelect.options[procentSelect.selectedIndex];
     if (selectedOption?.dataset.empty === "true") {
@@ -559,7 +738,9 @@ async function fillFormFieldsFromSclad(record: any) {
   }
 
   // Завантаження ID магазину для правильної роботи CRUD
-  const shopInput = document.getElementById("sclad_shop") as HTMLInputElement | null;
+  const shopInput = document.getElementById(
+    "sclad_shop",
+  ) as HTMLInputElement | null;
   if (shopInput?.value) {
     const shopName = shopInput.value.trim();
     // Отримуємо baseShopId з бази даних
@@ -567,12 +748,13 @@ async function fillFormFieldsFromSclad(record: any) {
       .from("shops")
       .select("shop_id, data")
       .limit(1000);
-    
+
     let foundShopId: number | null = null;
     if (shopData) {
       for (const row of shopData) {
         try {
-          const d = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
+          const d =
+            typeof row.data === "string" ? JSON.parse(row.data) : row.data;
           const nm = d?.Name ? String(d.Name).trim() : "";
           if (nm === shopName) {
             foundShopId = row.shop_id;
@@ -583,15 +765,17 @@ async function fillFormFieldsFromSclad(record: any) {
         }
       }
     }
-    
+
     shopEditState.touched = true;
     shopEditState.originalName = shopName;
     shopEditState.currentName = shopName;
     shopEditState.baseShopId = foundShopId;
   }
-  
+
   // Завантаження ID деталі для правильної роботи CRUD
-  const detailInput = document.getElementById("sclad_detail") as HTMLInputElement | null;
+  const detailInput = document.getElementById(
+    "sclad_detail",
+  ) as HTMLInputElement | null;
   if (detailInput?.value) {
     const detailName = detailInput.value.trim();
     // Отримуємо baseDetailId з бази даних
@@ -599,18 +783,21 @@ async function fillFormFieldsFromSclad(record: any) {
       .from("details")
       .select("detail_id, data")
       .limit(1000);
-    
+
     let foundDetailId: number | null = null;
     if (detailData) {
       for (const row of detailData) {
-        const nm = typeof row.data === "string" ? row.data.trim() : String(row.data || "").trim();
+        const nm =
+          typeof row.data === "string"
+            ? row.data.trim()
+            : String(row.data || "").trim();
         if (nm === detailName) {
           foundDetailId = row.detail_id;
           break;
         }
       }
     }
-    
+
     detailEditState.touched = true;
     detailEditState.originalName = detailName;
     detailEditState.currentName = detailName;
@@ -619,7 +806,9 @@ async function fillFormFieldsFromSclad(record: any) {
 }
 
 async function wireLinkedAutocomplete() {
-  const input = document.getElementById("sclad_detail_catno") as HTMLInputElement | null;
+  const input = document.getElementById(
+    "sclad_detail_catno",
+  ) as HTMLInputElement | null;
   const dd = document.getElementById("sclad_part_dd") as HTMLDivElement | null;
   if (!input || !dd) return;
 
@@ -628,7 +817,9 @@ async function wireLinkedAutocomplete() {
 
   const { data, error } = await supabase
     .from("sclad")
-    .select("sclad_id, part_number, name, shops, kilkist_on, price, rahunok, unit_measurement, time_on, scladNomer")
+    .select(
+      "sclad_id, part_number, name, shops, kilkist_on, price, rahunok, unit_measurement, time_on, scladNomer",
+    )
     .order("sclad_id", { ascending: false });
   if (error) return console.error("Помилка sclad:", error);
 
@@ -662,7 +853,8 @@ async function wireLinkedAutocomplete() {
         item.classList.add("selected");
       };
       item.onmouseleave = () => {
-        if (!item.classList.contains("selected")) item.style.backgroundColor = "white";
+        if (!item.classList.contains("selected"))
+          item.style.backgroundColor = "white";
       };
       item.dataset.scladId = r.sclad_id;
       const onSelectHandler = (e: Event) => {
@@ -690,7 +882,11 @@ async function wireLinkedAutocomplete() {
     const v = input.value.trim();
     if (v.length >= 3) {
       const filtered = all
-        .filter((r) => r.part_number && r.part_number.toLowerCase().includes(v.toLowerCase()))
+        .filter(
+          (r) =>
+            r.part_number &&
+            r.part_number.toLowerCase().includes(v.toLowerCase()),
+        )
         .sort((a, b) => b.sclad_id - a.sclad_id);
       renderDropdown(filtered, async (rec) => {
         input.value = rec.part_number;
@@ -717,12 +913,14 @@ async function wireLinkedAutocomplete() {
   });
 
   document.addEventListener("click", (e) => {
-    if (!dd.contains(e.target as Node) && e.target !== input) dd.classList.add("hidden-all_other_bases");
+    if (!dd.contains(e.target as Node) && e.target !== input)
+      dd.classList.add("hidden-all_other_bases");
   });
 
   input.addEventListener("keydown", (e) => {
     const dropdown = document.getElementById("sclad_part_dd");
-    if (!dropdown || dropdown.classList.contains("hidden-all_other_bases")) return;
+    if (!dropdown || dropdown.classList.contains("hidden-all_other_bases"))
+      return;
 
     const items = dropdown.querySelectorAll(".custom-dropdown-item");
     let idx = -1;
@@ -760,7 +958,10 @@ function selectDropdownItem(items: NodeListOf<Element>, index: number) {
 }
 
 function pick(id: string) {
-  const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+  const el = document.getElementById(id) as
+    | HTMLInputElement
+    | HTMLSelectElement
+    | null;
   return el ? el.value : "";
 }
 
@@ -797,7 +998,10 @@ export function clearScladForm() {
   ];
 
   formFields.forEach((id) => {
-    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    const el = document.getElementById(id) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | null;
     if (el) el.value = "";
   });
 
@@ -815,5 +1019,4 @@ export const handleScladClick = async () => {
   await renderScladForm();
 };
 
-export const initScladMagasunDetal = () => {
-};
+export const initScladMagasunDetal = () => {};

@@ -2,7 +2,10 @@
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { reopenActAndClearSlyusars } from "./save_work";
 import { refreshActsTable } from "../../tablucya/tablucya";
-import { getSavedUserDataFromLocalStorage } from "../../tablucya/users"; // Додаємо імпорт для отримання даних поточного користувача
+import {
+  getSavedUserDataFromLocalStorage,
+  saveUserDataToLocalStorage,
+} from "../../tablucya/users"; // Додаємо імпорт для отримання та збереження даних поточного користувача
 
 export const viknoVvodyParoluId = "vikno_vvody_parolu-modal-ActsOn";
 /** Створення DOM елемента модалки */
@@ -12,7 +15,8 @@ export function createViknoVvodyParolu(): HTMLDivElement {
   overlay.className = "vikno_vvody_parolu-overlay-ActsOn";
   overlay.style.display = "none";
   const modal = document.createElement("div");
-  modal.className = "vikno_vvody_parolu-content-ActsOn modal-content-save-ActsOn";
+  modal.className =
+    "vikno_vvody_parolu-content-ActsOn modal-content-save-ActsOn";
   modal.innerHTML = `
     <p>Введіть пароль для відкриття акту:</p>
     <input type="password" id="password-input-ActsOn" placeholder="Пароль" class="password-input-ActsOn" style="padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; width: calc(100% - 20px);">
@@ -34,19 +38,19 @@ function ensureModalMounted(): HTMLElement {
   return el;
 }
 /** Функція для перевірки пароля поточного користувача */
-async function verifyPassword(enteredPassword: string): Promise<boolean> {
-
+async function verifyPassword(
+  enteredPassword: string,
+): Promise<{ isValid: boolean; slyusar_id: number | null }> {
   // Отримуємо дані поточного користувача з localStorage
   const currentUser = getSavedUserDataFromLocalStorage();
 
   if (!currentUser) {
     console.error(
-      "❌ Не вдалося отримати дані поточного користувача з localStorage"
+      "❌ Не вдалося отримати дані поточного користувача з localStorage",
     );
     showNotification("❌ Помилка: користувач не авторизований", "error", 3000);
-    return false;
+    return { isValid: false, slyusar_id: null };
   }
-
 
   // Отримуємо пароль поточного користувача
   const userPassword = currentUser.password;
@@ -56,20 +60,19 @@ async function verifyPassword(enteredPassword: string): Promise<boolean> {
     showNotification(
       "❌ Помилка: пароль користувача не знайдено",
       "error",
-      3000
+      3000,
     );
-    return false;
+    return { isValid: false, slyusar_id: null };
   }
 
   // Порівнюємо введений пароль з паролем з localStorage
   const enteredStr = enteredPassword.toString().trim();
   const userPasswordStr = userPassword.toString().trim();
 
-
   if (enteredStr === userPasswordStr) {
-    return true;
+    return { isValid: true, slyusar_id: currentUser.slyusar_id };
   } else {
-    return false;
+    return { isValid: false, slyusar_id: null };
   }
 }
 /**
@@ -84,13 +87,13 @@ export function showViknoVvodyParolu(actId: number): Promise<boolean> {
     const modal = ensureModalMounted();
     modal.style.display = "flex";
     const passwordInput = document.getElementById(
-      "password-input-ActsOn"
+      "password-input-ActsOn",
     ) as HTMLInputElement | null;
     const confirmBtn = document.getElementById(
-      "password-confirm-btn-ActsOn"
+      "password-confirm-btn-ActsOn",
     ) as HTMLButtonElement | null;
     const cancelBtn = document.getElementById(
-      "password-cancel-btn-ActsOn"
+      "password-cancel-btn-ActsOn",
     ) as HTMLButtonElement | null;
     if (!passwordInput || !confirmBtn || !cancelBtn) {
       console.error("Елементи модалки пароля не знайдені");
@@ -123,7 +126,7 @@ export function showViknoVvodyParolu(actId: number): Promise<boolean> {
         showNotification(
           "Помилка при відкритті акту: " + (e?.message || e),
           "error",
-          2500
+          2500,
         );
         confirmBtn.disabled = false; // дозволяємо повторити
       }
@@ -136,10 +139,23 @@ export function showViknoVvodyParolu(actId: number): Promise<boolean> {
       confirmBtn.textContent = "Перевіряємо...";
 
       try {
-        const isPasswordCorrect = await verifyPassword(entered);
+        const { isValid, slyusar_id } = await verifyPassword(entered);
 
-        if (isPasswordCorrect) {
+        if (isValid) {
           showNotification("Пароль вірний", "success", 800);
+
+          // Зберігаємо slyusar_id в localStorage
+          const currentUser = getSavedUserDataFromLocalStorage();
+          if (currentUser && slyusar_id) {
+            saveUserDataToLocalStorage(
+              currentUser.name,
+              currentUser.access,
+              currentUser.password,
+              slyusar_id,
+            );
+            console.log("✅ slyusar_id збережено в localStorage:", slyusar_id);
+          }
+
           await tryOpen();
         } else {
           showNotification("Невірний пароль", "error", 1500);

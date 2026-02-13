@@ -17,7 +17,6 @@ let currentConfig: {
 
 let lastValidSlyusarId: number | null = null;
 
-
 // Функція отримання даних користувача з localStorage
 const getCurrentUserFromLocalStorage = (): {
   name: string;
@@ -49,7 +48,7 @@ const databaseMapping = {
 const extractNestedValue = (obj: any, path: string[]): string | undefined => {
   return path.reduce(
     (acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined),
-    obj
+    obj,
   );
 };
 
@@ -74,7 +73,7 @@ export const checkEmployeeExists = async (name: string): Promise<boolean> => {
         const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
         const nm = normalizeName(d?.Name ?? "");
         if (nm && nm === needle) return true;
-      } catch { }
+      } catch {}
     }
     return false;
   } catch (error) {
@@ -86,7 +85,7 @@ export const checkEmployeeExists = async (name: string): Promise<boolean> => {
 // Оновлена функція updateAllBdFromInput
 const updateAllBdFromInput = async (
   inputValue: string,
-  isFromDropdown: boolean = false
+  isFromDropdown: boolean = false,
 ) => {
   if (!inputValue.trim()) {
     return;
@@ -150,7 +149,7 @@ const updateAllBdFromInput = async (
             deepPath && deepPath.length === 1
               ? { [deepPath[0]]: extractNestedValue(dataFieldValue, deepPath) }
               : typeof dataFieldValue === "object" &&
-                !Array.isArray(dataFieldValue)
+                  !Array.isArray(dataFieldValue)
                 ? dataFieldValue
                 : { [field]: dataFieldValue },
         };
@@ -182,19 +181,22 @@ const updateAllBdFromInput = async (
 // Оновлена функція для заповнення додаткових інпутів
 const fillSlusarInputs = (data: any, selectedName: string) => {
   const passwordInput = document.getElementById(
-    "slusar-password"
+    "slusar-password",
   ) as HTMLInputElement;
   const accessSelect = document.getElementById(
-    "slusar-access"
+    "slusar-access",
   ) as HTMLSelectElement;
   const percentInput = document.getElementById(
-    "slusar-percent"
+    "slusar-percent",
   ) as HTMLInputElement;
   const percentPartsInput = document.getElementById(
-    "slusar-percent-parts"
+    "slusar-percent-parts",
   ) as HTMLInputElement;
+  const warehouseSelect = document.getElementById(
+    "slusar-warehouse",
+  ) as HTMLSelectElement;
   const searchInput = document.getElementById(
-    "search-input-all_other_bases"
+    "search-input-all_other_bases",
   ) as HTMLInputElement;
 
   // Перевірка прав доступу
@@ -217,7 +219,8 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
       searchInput.readOnly = true;
       searchInput.style.backgroundColor = "#f9f9f9";
       searchInput.style.cursor = "pointer";
-      searchInput.title = "Ім'я адміністратора не можна змінити. Виберіть іншого користувача зі списку.";
+      searchInput.title =
+        "Ім'я адміністратора не можна змінити. Виберіть іншого користувача зі списку.";
     } else {
       // Для інших користувачів - повне редагування
       searchInput.readOnly = false;
@@ -232,7 +235,8 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
     if (isSlyusarId1) {
       accessSelect.value = data.Доступ;
       accessSelect.disabled = true;
-      accessSelect.title = "Доступ адміністраторського акаунту не можна змінити";
+      accessSelect.title =
+        "Доступ адміністраторського акаунту не можна змінити";
     }
     // Якщо вибрано "Бемба В. Я", встановлюємо Адміністратор доступ і блокуємо селект
     else if (normalizeName(selectedName) === normalizeName("Бемба В. Я")) {
@@ -257,12 +261,45 @@ const fillSlusarInputs = (data: any, selectedName: string) => {
     // Блокуємо для не-адміністраторів
     percentPartsInput.disabled = !isAdmin;
   }
+  if (warehouseSelect && data?.Склад !== undefined) {
+    warehouseSelect.value = String(data.Склад);
+    // Блокуємо для не-адміністраторів
+    warehouseSelect.disabled = !isAdmin;
+  }
+};
+
+// Функція для завантаження списку складів з БД
+const getWarehouseNumbers = async (): Promise<number[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("setting_id")
+      .not("setting_id", "is", null);
+
+    if (error) {
+      console.error("Помилка завантаження складів:", error);
+      return [0]; // Повертаємо тільки 0 при помилці
+    }
+
+    // Отримуємо унікальні setting_id значення і сортуємо їх
+    const ids = data
+      ? Array.from(
+          new Set(data.map((row: any) => Number(row.setting_id))),
+        ).sort((a, b) => a - b)
+      : [];
+
+    // Завжди додаємо 0 на початку
+    return [0, ...ids];
+  } catch (error) {
+    console.error("Помилка при отриманні номерів складів:", error);
+    return [0];
+  }
 };
 
 // Функція для керування видимістю пароля
 const updatePasswordVisibility = (selectedRole: string) => {
   const passwordInput = document.getElementById(
-    "slusar-password"
+    "slusar-password",
   ) as HTMLInputElement;
   if (!passwordInput) return;
 
@@ -282,11 +319,23 @@ const updatePasswordVisibility = (selectedRole: string) => {
 // Функція для керування видимістю інпутів
 const updatePercentInputsVisibility = (role: string) => {
   const partsWrapper = document.getElementById("slusar-percent-parts-wrapper");
+  const warehouseWrapper = document.getElementById("slusar-warehouse-wrapper");
+
+  // Показуємо поле з запчастинами для Приймальник
   if (partsWrapper) {
     if (role === "Приймальник") {
       partsWrapper.classList.remove("hidden-all_other_bases");
     } else {
       partsWrapper.classList.add("hidden-all_other_bases");
+    }
+  }
+
+  // Показуємо поле зі складом для Приймальник та Запчастист
+  if (warehouseWrapper) {
+    if (role === "Приймальник" || role === "Запчастист") {
+      warehouseWrapper.classList.remove("hidden-all_other_bases");
+    } else {
+      warehouseWrapper.classList.add("hidden-all_other_bases");
     }
   }
 };
@@ -295,19 +344,22 @@ const updatePercentInputsVisibility = (role: string) => {
 const clearSlusarInputs = () => {
   lastValidSlyusarId = null; // Скидаємо збережений ID
   const passwordInput = document.getElementById(
-    "slusar-password"
+    "slusar-password",
   ) as HTMLInputElement;
   const accessSelect = document.getElementById(
-    "slusar-access"
+    "slusar-access",
   ) as HTMLSelectElement;
   const percentInput = document.getElementById(
-    "slusar-percent"
+    "slusar-percent",
   ) as HTMLInputElement;
   const percentPartsInput = document.getElementById(
-    "slusar-percent-parts"
+    "slusar-percent-parts",
   ) as HTMLInputElement;
+  const warehouseSelect = document.getElementById(
+    "slusar-warehouse",
+  ) as HTMLSelectElement;
   const searchInput = document.getElementById(
-    "search-input-all_other_bases"
+    "search-input-all_other_bases",
   ) as HTMLInputElement;
 
   const currentUser = getCurrentUserFromLocalStorage();
@@ -341,6 +393,10 @@ const clearSlusarInputs = () => {
     percentPartsInput.value = "0";
     percentPartsInput.disabled = !isAdmin; // Блокуємо для не-адміністраторів
   }
+  if (warehouseSelect) {
+    warehouseSelect.value = "0";
+    warehouseSelect.disabled = !isAdmin; // Блокуємо для не-адміністраторів
+  }
 };
 
 const createCustomDropdown = (
@@ -348,10 +404,10 @@ const createCustomDropdown = (
   field: string,
   inputElement: HTMLInputElement | null,
   deepPath?: string[],
-  needsJsonParsing?: boolean
+  needsJsonParsing?: boolean,
 ) => {
   const dropdown = document.getElementById(
-    "custom-dropdown-all_other_bases"
+    "custom-dropdown-all_other_bases",
   ) as HTMLDivElement;
   if (!dropdown || !inputElement) return;
 
@@ -382,7 +438,7 @@ const createCustomDropdown = (
       if (deepPath) {
         value = extractNestedValue(
           needsJsonParsing ? parsed[field] : item[field],
-          deepPath
+          deepPath,
         );
       } else {
         value =
@@ -401,7 +457,7 @@ const createCustomDropdown = (
   const renderSuggestions = (filter: string) => {
     dropdown.innerHTML = "";
     const filtered = uniqueValues.filter((val) =>
-      val.toLowerCase().includes(filter.toLowerCase())
+      val.toLowerCase().includes(filter.toLowerCase()),
     );
     if (filtered.length === 0) {
       dropdown.classList.add("hidden-all_other_bases");
@@ -410,11 +466,11 @@ const createCustomDropdown = (
 
     // Порядок рівнів доступу для сортування
     const accessOrder = {
-      "Адміністратор": 1,
-      "Приймальник": 2,
-      "Слюсар": 3,
-      "Запчастист": 4,
-      "Складовщик": 5,
+      Адміністратор: 1,
+      Приймальник: 2,
+      Слюсар: 3,
+      Запчастист: 4,
+      Складовщик: 5,
     };
 
     // Створюємо масив з даними для сортування
@@ -434,15 +490,17 @@ const createCustomDropdown = (
         if (deepPath) {
           valueToCheck = extractNestedValue(parsed[field], deepPath);
         } else {
-          valueToCheck = needsJsonParsing || typeof item[field] === "object"
-            ? parsed[field]
-            : item[field];
+          valueToCheck =
+            needsJsonParsing || typeof item[field] === "object"
+              ? parsed[field]
+              : item[field];
         }
         if (valueToCheck !== null && valueToCheck !== undefined) {
           if (String(valueToCheck).trim() === val) {
-            employeeData = needsJsonParsing && typeof item[field] === "string"
-              ? JSON.parse(item[field])
-              : item[field];
+            employeeData =
+              needsJsonParsing && typeof item[field] === "string"
+                ? JSON.parse(item[field])
+                : item[field];
             break;
           }
         }
@@ -464,7 +522,7 @@ const createCustomDropdown = (
       }
 
       // Якщо рівень доступу однаковий, сортуємо по алфавіту
-      return a.name.localeCompare(b.name, 'uk');
+      return a.name.localeCompare(b.name, "uk");
     });
 
     itemsWithData.forEach(({ name: val, data: employeeData }) => {
@@ -526,7 +584,9 @@ const createCustomDropdown = (
         item.style.backgroundColor = "#e3f2fd";
 
         // Показуємо реальний пароль при ховері (тільки для не-адміністраторів)
-        const passwordSpan = infoSpan.querySelector("span:last-child") as HTMLElement;
+        const passwordSpan = infoSpan.querySelector(
+          "span:last-child",
+        ) as HTMLElement;
         if (passwordSpan && passwordSpan.dataset.realPassword) {
           passwordSpan.textContent = passwordSpan.dataset.realPassword;
         }
@@ -537,9 +597,13 @@ const createCustomDropdown = (
             (child as HTMLElement).style.backgroundColor = "white";
 
             // Ховаємо пароль для інших елементів
-            const otherInfoSpan = (child as HTMLElement).querySelector("span:last-child");
+            const otherInfoSpan = (child as HTMLElement).querySelector(
+              "span:last-child",
+            );
             if (otherInfoSpan) {
-              const otherPasswordSpan = otherInfoSpan.querySelector("span:last-child") as HTMLElement;
+              const otherPasswordSpan = otherInfoSpan.querySelector(
+                "span:last-child",
+              ) as HTMLElement;
               if (otherPasswordSpan && otherPasswordSpan.dataset.realPassword) {
                 otherPasswordSpan.textContent = "****";
               }
@@ -550,7 +614,9 @@ const createCustomDropdown = (
 
       item.onmouseleave = () => {
         // Повертаємо зірочки при виході миші
-        const passwordSpan = infoSpan.querySelector("span:last-child") as HTMLElement;
+        const passwordSpan = infoSpan.querySelector(
+          "span:last-child",
+        ) as HTMLElement;
         if (passwordSpan && passwordSpan.dataset.realPassword) {
           passwordSpan.textContent = "****";
         }
@@ -670,6 +736,12 @@ const createSlusarAdditionalInputs = async () => {
   const currentUser = getCurrentUserFromLocalStorage();
   const isAdmin = currentUser?.access === "Адміністратор";
 
+  // Завантажуємо список складів з БД
+  const warehouses = await getWarehouseNumbers();
+  const warehouseOptions = warehouses
+    .map((w) => `<option value="${w}">${w}</option>`)
+    .join("");
+
   const additionalInputsContainer = document.createElement("div");
   additionalInputsContainer.id = "slusar-additional-inputs";
   additionalInputsContainer.className = "slusar-additional-inputs";
@@ -680,8 +752,9 @@ const createSlusarAdditionalInputs = async () => {
     </div>
     <div class="slusar-input-group">
       <label for="slusar-access" class="label-all_other_bases">Доступ:</label>
-      <select id="slusar-access" class="input-all_other_bases" ${!isAdmin ? "disabled" : ""
-    }>
+      <select id="slusar-access" class="input-all_other_bases" ${
+        !isAdmin ? "disabled" : ""
+      }>
         <option value="Адміністратор">Адміністратор</option>
         <option value="Приймальник">Приймальник</option>  
         <option value="Слюсар">Слюсар</option>        
@@ -692,13 +765,23 @@ const createSlusarAdditionalInputs = async () => {
     <div class="slusar-percent-container">
       <div class="slusar-input-group slusar-percent-half">
         <label for="slusar-percent" class="label-all_other_bases">Процент роботи:</label>
-        <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${!isAdmin ? "disabled" : ""
-    }>
+        <input type="number" id="slusar-percent" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="50" ${
+          !isAdmin ? "disabled" : ""
+        }>
       </div>
       <div class="slusar-input-group slusar-percent-half hidden-all_other_bases" id="slusar-percent-parts-wrapper">
         <label for="slusar-percent-parts" class="label-all_other_bases">Процент з запчастин:</label>
-        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="0" ${!isAdmin ? "disabled" : ""
-    }>
+        <input type="number" id="slusar-percent-parts" class="input-all_other_bases" placeholder="Від 0 до 100" min="0" max="100" value="0" ${
+          !isAdmin ? "disabled" : ""
+        }>
+      </div>
+      <div class="slusar-input-group slusar-percent-half hidden-all_other_bases" id="slusar-warehouse-wrapper">
+        <label for="slusar-warehouse" class="label-all_other_bases">Склад:</label>
+        <select id="slusar-warehouse" class="input-all_other_bases" ${
+          !isAdmin ? "disabled" : ""
+        }>
+          ${warehouseOptions}
+        </select>
       </div>
     </div>
     <div class="slusar-stats-container">
@@ -707,7 +790,7 @@ const createSlusarAdditionalInputs = async () => {
     </div>
   `;
   const yesNoButtons = rightContent.querySelector(
-    ".yes-no-buttons-all_other_bases"
+    ".yes-no-buttons-all_other_bases",
   );
   if (yesNoButtons) {
     rightContent.insertBefore(additionalInputsContainer, yesNoButtons);
@@ -715,7 +798,7 @@ const createSlusarAdditionalInputs = async () => {
 
   // Додаємо обробник зміни ролі
   const accessSelect = document.getElementById(
-    "slusar-access"
+    "slusar-access",
   ) as HTMLSelectElement;
   if (accessSelect) {
     accessSelect.addEventListener("change", (e) => {
@@ -738,6 +821,7 @@ const createSlusarAdditionalInputs = async () => {
     "slusar-access",
     "slusar-percent",
     "slusar-percent-parts",
+    "slusar-warehouse",
   ]);
 };
 
@@ -755,7 +839,7 @@ const loadDatabaseData = async (buttonText: string) => {
   currentConfig = config;
   try {
     const searchInput = document.getElementById(
-      "search-input-all_other_bases"
+      "search-input-all_other_bases",
     ) as HTMLInputElement;
 
     // Отримуємо поточного користувача
@@ -767,7 +851,7 @@ const loadDatabaseData = async (buttonText: string) => {
 
     // Отримуємо кнопку режиму
     const modeButton = document.getElementById(
-      "modeToggleLabel"
+      "modeToggleLabel",
     ) as HTMLButtonElement;
 
     if (!isAdmin && currentUser?.name) {
@@ -814,8 +898,8 @@ const loadDatabaseData = async (buttonText: string) => {
           input: currentUser?.name || "",
         },
         null,
-        2
-      )
+        2,
+      ),
     );
     updateTableNameDisplay(buttonText, config.table);
     const { data, error } = await supabase.from(config.table).select("*");
@@ -826,7 +910,7 @@ const loadDatabaseData = async (buttonText: string) => {
       config.field,
       searchInput,
       config.deepPath,
-      config.needsJsonParsing
+      config.needsJsonParsing,
     );
 
     // Для не-адміністраторів автоматично завантажуємо їхні дані
@@ -841,17 +925,20 @@ const loadDatabaseData = async (buttonText: string) => {
 // Функція для отримання даних з додаткових інпутів
 export const getSlusarAdditionalData = () => {
   const passwordInput = document.getElementById(
-    "slusar-password"
+    "slusar-password",
   ) as HTMLInputElement;
   const accessSelect = document.getElementById(
-    "slusar-access"
+    "slusar-access",
   ) as HTMLSelectElement;
   const percentInput = document.getElementById(
-    "slusar-percent"
+    "slusar-percent",
   ) as HTMLInputElement;
   const percentPartsInput = document.getElementById(
-    "slusar-percent-parts"
+    "slusar-percent-parts",
   ) as HTMLInputElement;
+  const warehouseSelect = document.getElementById(
+    "slusar-warehouse",
+  ) as HTMLSelectElement;
 
   // Валідація відсотка роботи
   let percentValue = 50; // Значення за замовчуванням
@@ -877,11 +964,21 @@ export const getSlusarAdditionalData = () => {
     }
   }
 
+  // Валідація складу
+  let warehouseValue = 0; // Значення за замовчуванням
+  if (warehouseSelect && warehouseSelect.value) {
+    warehouseValue = Number(warehouseSelect.value);
+    if (isNaN(warehouseValue)) {
+      warehouseValue = 0;
+    }
+  }
+
   return {
     password: passwordInput?.value ? Number(passwordInput.value) : 1111,
     access: accessSelect?.value || "Слюсар",
     percent: percentValue,
     percentParts: percentPartsValue,
+    warehouse: warehouseValue,
   };
 };
 
@@ -906,19 +1003,22 @@ export const initSlusar = () => {
 // Функція збереження даних слюсаря (викликається з модального вікна після перевірки пароля)
 export const saveSlusarData = async (): Promise<boolean> => {
   const percentInput = document.getElementById(
-    "slusar-percent"
+    "slusar-percent",
   ) as HTMLInputElement;
   const percentPartsInput = document.getElementById(
-    "slusar-percent-parts"
+    "slusar-percent-parts",
   ) as HTMLInputElement;
+  const warehouseSelect = document.getElementById(
+    "slusar-warehouse",
+  ) as HTMLSelectElement;
   const searchInput = document.getElementById(
-    "search-input-all_other_bases"
+    "search-input-all_other_bases",
   ) as HTMLInputElement;
   const passwordInput = document.getElementById(
-    "slusar-password"
+    "slusar-password",
   ) as HTMLInputElement;
   const accessSelect = document.getElementById(
-    "slusar-access"
+    "slusar-access",
   ) as HTMLSelectElement;
 
   if (!searchInput || !percentInput || !passwordInput || !accessSelect)
@@ -957,9 +1057,17 @@ export const saveSlusarData = async (): Promise<boolean> => {
     ) {
       console.error(
         "Невалідне значення проценту запчастин:",
-        percentPartsValue
+        percentPartsValue,
       );
       percentPartsValue = 0;
+    }
+  }
+
+  let warehouseValue = 0;
+  if (warehouseSelect && warehouseSelect.value) {
+    warehouseValue = Number(warehouseSelect.value);
+    if (isNaN(warehouseValue)) {
+      warehouseValue = 0;
     }
   }
 
@@ -973,7 +1081,9 @@ export const saveSlusarData = async (): Promise<boolean> => {
     const isEditMode = modeButton && modeButton.textContent === "Редагувати";
 
     if (isEditMode && lastValidSlyusarId !== null) {
-      console.warn(`Редагування по ID: ${lastValidSlyusarId}, нове ім'я: ${name}`);
+      console.warn(
+        `Редагування по ID: ${lastValidSlyusarId}, нове ім'я: ${name}`,
+      );
       query = query.eq("slyusar_id", lastValidSlyusarId);
     } else {
       query = query.eq("data->>Name", name);
@@ -1004,6 +1114,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
       updatedData.Доступ = isSlyusarId1 ? currentData.Доступ : access; // Для ID=1 зберігаємо оригінальний доступ
       updatedData.ПроцентРоботи = percentValue;
       updatedData.ПроцентЗапчастин = percentPartsValue;
+      updatedData.Склад = warehouseValue;
     }
     // Не-адміністратори можуть змінювати ТІЛЬКИ пароль
 

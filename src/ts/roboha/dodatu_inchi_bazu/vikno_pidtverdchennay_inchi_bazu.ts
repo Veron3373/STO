@@ -38,17 +38,17 @@ export let currentTableName: string = "";
 
 const clearInputAndReloadData = async () => {
   const searchInput = document.getElementById(
-    "search-input-all_other_bases"
+    "search-input-all_other_bases",
   ) as HTMLInputElement;
   if (searchInput) searchInput.value = "";
 
   const passwordInput = document.getElementById(
-    "slusar-password"
+    "slusar-password",
   ) as HTMLInputElement;
   if (passwordInput) passwordInput.value = "";
 
   const dropdown = document.getElementById(
-    "custom-dropdown-all_other_bases"
+    "custom-dropdown-all_other_bases",
   ) as HTMLDivElement;
   if (dropdown) {
     dropdown.innerHTML = "";
@@ -64,14 +64,14 @@ export const loadDatabaseData = async (buttonText: string) => {
 
 function getInputValue(): string {
   const inputElement = document.getElementById(
-    "search-input-all_other_bases"
+    "search-input-all_other_bases",
   ) as HTMLInputElement;
   return inputElement ? inputElement.value.trim() : "";
 }
 
 async function getNextId(
   tableName: string,
-  idField: string
+  idField: string,
 ): Promise<number | null> {
   const { data: rows, error } = await supabase
     .from(tableName)
@@ -95,7 +95,7 @@ async function checkDuplicateExists(
   tableName: string,
   value: string,
   idField?: string,
-  currentId?: any
+  currentId?: any,
 ): Promise<boolean> {
   try {
     const { data: rows, error } = await supabase.from(tableName).select("*");
@@ -133,7 +133,7 @@ async function checkDuplicateExists(
         if (nameToCheck && nameToCheck === needle) {
           return true;
         }
-      } catch { }
+      } catch {}
     }
     return false;
   } catch (error) {
@@ -198,7 +198,7 @@ async function performCrudOperation(): Promise<boolean> {
 async function handleEdit(
   tableName: string,
   data: any,
-  newValue: string
+  newValue: string,
 ): Promise<boolean> {
   try {
     if (!data.record) {
@@ -207,7 +207,7 @@ async function handleEdit(
     }
 
     const idField = Object.keys(data.record).find(
-      (key) => key.includes("_id") || key === "id"
+      (key) => key.includes("_id") || key === "id",
     );
     if (!idField) {
       console.error("Не знайдено ID поле для редагування");
@@ -256,6 +256,7 @@ async function handleEdit(
               : {},
           ПроцентРоботи: additionalData.percent,
           ПроцентЗапчастин: additionalData.percentParts,
+          Склад: additionalData.warehouse,
           Пароль: additionalData.password,
           Доступ: currentData?.Доступ || "Адміністратор", // Зберігаємо оригінальний доступ
         },
@@ -272,7 +273,7 @@ async function handleEdit(
 
       showNotification(
         "Дані оновлено. Name та Доступ адміністратора захищені від змін",
-        "info"
+        "info",
       );
       return true;
     }
@@ -315,6 +316,7 @@ async function handleEdit(
             : {},
         ПроцентРоботи: additionalData.percent,
         ПроцентЗапчастин: additionalData.percentParts,
+        Склад: additionalData.warehouse,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
@@ -355,7 +357,7 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
     }
 
     const idField = Object.keys(data.record).find(
-      (key) => key.includes("_id") || key === "id"
+      (key) => key.includes("_id") || key === "id",
     );
     if (!idField) {
       console.error("Не знайдено ID поле для видалення");
@@ -369,7 +371,7 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
       console.error("Видалення адміністраторського акаунту заборонено!");
       showNotification(
         "Видалення адміністраторського акаунту заборонено!",
-        "error"
+        "error",
       );
       return false;
     }
@@ -402,14 +404,14 @@ async function slusarExistsByName(name: string): Promise<boolean> {
       const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
       const nm = normalizeName(d?.Name ?? "");
       if (nm && nm === needle) return true;
-    } catch { }
+    } catch {}
   }
   return false;
 }
 
 async function handleAdd(
   tableName: string,
-  newValue: string
+  newValue: string,
 ): Promise<boolean> {
   try {
     const idFieldMap = {
@@ -452,6 +454,7 @@ async function handleAdd(
         Історія: {},
         ПроцентРоботи: additionalData.percent,
         ПроцентЗапчастин: additionalData.percentParts,
+        Склад: additionalData.warehouse,
         Пароль: additionalData.password,
         Доступ: additionalData.access,
       };
@@ -512,7 +515,7 @@ export function showSavePromptModal(): Promise<boolean> {
 
       // ✅ ПЕРЕВІРКА ПАРОЛЯ
       const passwordInput = document.getElementById(
-        "save-password-input"
+        "save-password-input",
       ) as HTMLInputElement;
       const enteredPassword = passwordInput?.value
         ? Number(passwordInput.value)
@@ -558,10 +561,6 @@ export function showSavePromptModal(): Promise<boolean> {
 
       // Якщо дійшли сюди - пароль правильний, продовжуємо
 
-
-
-
-
       let success = false;
       let errorMessage = "";
 
@@ -580,7 +579,7 @@ export function showSavePromptModal(): Promise<boolean> {
         // ✅ ПЕРЕВІРКА НА ДУБЛІ СПІВРОБІТНИКІВ при додаванні
         if (CRUD === "Додати" && tableFromDraft === "slyusars") {
           const searchInput = document.getElementById(
-            "search-input-all_other_bases"
+            "search-input-all_other_bases",
           ) as HTMLInputElement;
           const name = searchInput?.value?.trim();
 
@@ -589,7 +588,7 @@ export function showSavePromptModal(): Promise<boolean> {
             if (exists) {
               showNotification(
                 `Співробітник "${name}" вже існує в базі даних`,
-                "warning"
+                "warning",
               );
               // Не закриваємо модальне вікно
               return;
@@ -612,7 +611,7 @@ export function showSavePromptModal(): Promise<boolean> {
 
             // Очищуємо інпут пароля
             const passwordInput = document.getElementById(
-              "save-password-input"
+              "save-password-input",
             ) as HTMLInputElement;
             if (passwordInput) {
               passwordInput.value = "";
@@ -662,23 +661,20 @@ export function showSavePromptModal(): Promise<boolean> {
         // ==========================================================
 
         const catalogInput = document.getElementById(
-          "sclad_detail_catno"
+          "sclad_detail_catno",
         ) as HTMLInputElement;
         const catalogNumber = catalogInput?.value?.trim() || "";
 
         if (CRUD === "Редагувати") {
-
           if (catalogNumber && tableFromDraft === "sclad") {
             const scladOk = await handleScladCrud();
             results.push(scladOk);
           } else if (!catalogNumber) {
-
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
 
             if (shopsHandled !== null) results.push(shopsHandled);
             if (detailsHandled !== null) results.push(detailsHandled);
-
           } else {
             success = await performCrudOperation();
             cleanup();
@@ -688,7 +684,7 @@ export function showSavePromptModal(): Promise<boolean> {
               resetDetailState();
               await clearInputAndReloadData();
               document.dispatchEvent(
-                new CustomEvent("other-base-data-updated")
+                new CustomEvent("other-base-data-updated"),
               );
             } else {
               closeAllModals();
@@ -698,15 +694,12 @@ export function showSavePromptModal(): Promise<boolean> {
             return;
           }
         } else if (CRUD === "Видалити") {
-
           if (!catalogNumber) {
-
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
 
             if (shopsHandled !== null) results.push(shopsHandled);
             if (detailsHandled !== null) results.push(detailsHandled);
-
           } else if (catalogNumber && tableFromDraft === "sclad") {
             const scladOk = await handleScladCrud();
             results.push(scladOk);
@@ -719,7 +712,7 @@ export function showSavePromptModal(): Promise<boolean> {
               resetDetailState();
               await clearInputAndReloadData();
               document.dispatchEvent(
-                new CustomEvent("other-base-data-updated")
+                new CustomEvent("other-base-data-updated"),
               );
             } else {
               closeAllModals();
@@ -729,17 +722,13 @@ export function showSavePromptModal(): Promise<boolean> {
             return;
           }
         } else if (CRUD === "Додати") {
-
           if (!catalogNumber) {
-
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
 
             if (shopsHandled !== null) results.push(shopsHandled);
             if (detailsHandled !== null) results.push(detailsHandled);
-
           } else if (catalogNumber && tableFromDraft === "sclad") {
-
             const shopsHandled = await tryHandleShopsCrud();
             const detailsHandled = await tryHandleDetailsCrud();
 
@@ -757,7 +746,7 @@ export function showSavePromptModal(): Promise<boolean> {
               resetDetailState();
               await clearInputAndReloadData();
               document.dispatchEvent(
-                new CustomEvent("other-base-data-updated")
+                new CustomEvent("other-base-data-updated"),
               );
             } else {
               closeAllModals();
@@ -797,7 +786,7 @@ export function showSavePromptModal(): Promise<boolean> {
 
         // Очищуємо інпут пароля
         const passwordInput = document.getElementById(
-          "save-password-input"
+          "save-password-input",
         ) as HTMLInputElement;
         if (passwordInput) {
           passwordInput.value = "";

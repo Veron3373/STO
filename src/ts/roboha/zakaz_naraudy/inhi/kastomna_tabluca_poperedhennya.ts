@@ -48,7 +48,10 @@ function ensureWarningStyles() {
   document.head.appendChild(tag);
 }
 
-function ensureCellClass(cell: HTMLElement, cls: "qty-cell" | "price-cell" | "slyusar-sum-cell") {
+function ensureCellClass(
+  cell: HTMLElement,
+  cls: "qty-cell" | "price-cell" | "slyusar-sum-cell",
+) {
   if (!cell.classList.contains(cls)) cell.classList.add(cls);
 }
 
@@ -69,7 +72,10 @@ export function setPriceWarningFlag(cell: HTMLElement | null, on: boolean) {
   else cell.removeAttribute("data-warnprice");
 }
 
-export function setSlyusarSumWarningFlag(cell: HTMLElement | null, on: boolean) {
+export function setSlyusarSumWarningFlag(
+  cell: HTMLElement | null,
+  on: boolean,
+) {
   if (!cell) return;
   ensureWarningStyles();
   ensureCellClass(cell, "slyusar-sum-cell");
@@ -90,7 +96,8 @@ function parseNumFromNode(node: HTMLElement | null): number {
 }
 
 function getNodeTextLen(el: HTMLElement): number {
-  return (el.textContent ?? "").replace(/\u00A0/g, " ").replace(/\u200B/g, "").length;
+  return (el.textContent ?? "").replace(/\u00A0/g, " ").replace(/\u200B/g, "")
+    .length;
 }
 
 /* ===================== ACT DATA CACHE ===================== */
@@ -134,7 +141,7 @@ async function getCurrentActDetailQty(sclad_id: number): Promise<number> {
   if (!currentActDataCache || !currentActDataCache.Деталі) return 0;
 
   const detail = currentActDataCache.Деталі.find(
-    (d: any) => Number(d.sclad_id) === Number(sclad_id)
+    (d: any) => Number(d.sclad_id) === Number(sclad_id),
   );
 
   const qtyRaw = detail ? detail.Кількість : 0;
@@ -146,7 +153,9 @@ async function getCurrentActDetailQty(sclad_id: number): Promise<number> {
 /* ===================== CORE CHECKS ===================== */
 export async function updateCatalogWarningForRow(row: HTMLElement) {
   if (globalCache.isActClosed) {
-    const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
+    const qtyCell = row.querySelector(
+      '[data-name="id_count"]',
+    ) as HTMLElement | null;
     if (qtyCell) {
       setWarningFlag(qtyCell, false);
       qtyCell.removeAttribute("title");
@@ -155,11 +164,17 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
   }
 
   await ensureSkladLoaded();
-  const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement | null;
+  const qtyCell = row.querySelector(
+    '[data-name="id_count"]',
+  ) as HTMLElement | null;
   if (!qtyCell) return;
 
-  const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
-  const sclad_id = catalogCell?.getAttribute("data-sclad-id") ? Number(catalogCell.getAttribute("data-sclad-id")) : null;
+  const catalogCell = row.querySelector(
+    '[data-name="catalog"]',
+  ) as HTMLElement | null;
+  const sclad_id = catalogCell?.getAttribute("data-sclad-id")
+    ? Number(catalogCell.getAttribute("data-sclad-id"))
+    : null;
 
   if (!sclad_id) {
     setWarningFlag(qtyCell, false);
@@ -167,7 +182,9 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
     return;
   }
 
-  const picked = globalCache.skladParts.find((p) => Number(p.sclad_id) === sclad_id);
+  const picked = globalCache.skladParts.find(
+    (p) => Number(p.sclad_id) === sclad_id,
+  );
   if (!picked) {
     setWarningFlag(qtyCell, false);
     qtyCell.removeAttribute("title");
@@ -186,7 +203,8 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
   setWarningFlag(qtyCell, warn);
   if (warn) {
     const needMore = Math.abs(alarmOsnova);
-    qtyCell.title = `Не вистачає ${formatUA(needMore)} ${picked.unit ?? ""}`.trim();
+    qtyCell.title =
+      `Не вистачає ${formatUA(needMore)} ${picked.unit ?? ""}`.trim();
   } else {
     qtyCell.removeAttribute("title");
   }
@@ -194,7 +212,9 @@ export async function updateCatalogWarningForRow(row: HTMLElement) {
 
 export async function updatePriceWarningForRow(row: HTMLElement) {
   if (globalCache.isActClosed) {
-    const priceCell = row.querySelector('[data-name="price"]') as HTMLElement | null;
+    const priceCell = row.querySelector(
+      '[data-name="price"]',
+    ) as HTMLElement | null;
     if (priceCell) {
       setPriceWarningFlag(priceCell, false);
       priceCell.removeAttribute("title");
@@ -203,11 +223,17 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
     return;
   }
 
-  const priceCell = row.querySelector('[data-name="price"]') as HTMLElement | null;
-  const catalogCell = row.querySelector('[data-name="catalog"]') as HTMLElement | null;
+  const priceCell = row.querySelector(
+    '[data-name="price"]',
+  ) as HTMLElement | null;
+  const catalogCell = row.querySelector(
+    '[data-name="catalog"]',
+  ) as HTMLElement | null;
   if (!priceCell) return;
 
-  const sclad_id = catalogCell?.getAttribute("data-sclad-id") ? Number(catalogCell.getAttribute("data-sclad-id")) : null;
+  const sclad_id = catalogCell?.getAttribute("data-sclad-id")
+    ? Number(catalogCell.getAttribute("data-sclad-id"))
+    : null;
   if (!sclad_id) {
     setPriceWarningFlag(priceCell, false);
     priceCell.removeAttribute("title");
@@ -215,7 +241,9 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
     return;
   }
 
-  const picked = globalCache.skladParts.find((p) => Number(p.sclad_id) === sclad_id);
+  const picked = globalCache.skladParts.find(
+    (p) => Number(p.sclad_id) === sclad_id,
+  );
   if (!picked) {
     setPriceWarningFlag(priceCell, false);
     priceCell.removeAttribute("title");
@@ -223,8 +251,32 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
     return;
   }
 
-  // ✅ НОВИЙ КОД: Використовуємо відсоток по складу деталі
-  const scladNomer = picked.scladNomer;
+  // ✅ ВИПРАВЛЕНО: Спочатку беремо scladNomer з атрибуту DOM, потім з кешу, потім з бази
+  const scladNomerAttr = catalogCell?.getAttribute("data-sclad-nomer");
+  let scladNomer: number | null | undefined = scladNomerAttr
+    ? Number(scladNomerAttr)
+    : picked.scladNomer;
+
+  // ✅ Fallback: якщо scladNomer відсутній - отримуємо напряму з бази по sclad_id
+  if (scladNomer === null || scladNomer === undefined || scladNomer === 0) {
+    try {
+      const { data: scladData } = await supabase
+        .from("sclad")
+        .select('"scladNomer"')
+        .eq("sclad_id", sclad_id)
+        .single();
+      if (scladData && scladData.scladNomer) {
+        scladNomer = Number(scladData.scladNomer);
+        // Зберігаємо в атрибут для наступних перевірок
+        if (catalogCell && scladNomer > 0) {
+          catalogCell.setAttribute("data-sclad-nomer", String(scladNomer));
+        }
+      }
+    } catch (e) {
+      // Ігноруємо помилку запиту
+    }
+  }
+
   const percentInfo = await loadPercentByWarehouse(scladNomer);
   const enteredPrice = parseNumFromNode(priceCell);
   const basePrice = Math.round(Number(picked.price) || 0);
@@ -246,7 +298,8 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
     priceCell.style.backgroundColor = "";
     const warn = enteredPrice > 0 && enteredPrice < minPrice;
     setPriceWarningFlag(priceCell, warn);
-    if (warn) priceCell.title = `Мін. ціна: ${formatUA(minPrice)} грн (вхідна ${formatUA(basePrice)} + ${percentInfo.percent}%)`;
+    if (warn)
+      priceCell.title = `Мін. ціна: ${formatUA(minPrice)} грн (вхідна ${formatUA(basePrice)} + ${percentInfo.percent}%)`;
     else priceCell.removeAttribute("title");
   }
 }
@@ -254,7 +307,9 @@ export async function updatePriceWarningForRow(row: HTMLElement) {
 export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
   // ✅ Слюсар не бачить колонку "Сума", тому не показуємо йому попередження про зарплату
   if (userAccessLevel === "Слюсар") {
-    const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
+    const slyusarSumCell = row.querySelector(
+      '[data-name="slyusar_sum"]',
+    ) as HTMLElement | null;
     if (slyusarSumCell) {
       setSlyusarSumWarningFlag(slyusarSumCell, false);
       slyusarSumCell.removeAttribute("title");
@@ -263,7 +318,9 @@ export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
   }
 
   if (globalCache.isActClosed) {
-    const sumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
+    const sumCell = row.querySelector(
+      '[data-name="slyusar_sum"]',
+    ) as HTMLElement | null;
     if (sumCell) {
       setSlyusarSumWarningFlag(sumCell, false);
       sumCell.removeAttribute("title");
@@ -271,9 +328,13 @@ export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
     return;
   }
 
-  const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+  const nameCell = row.querySelector(
+    '[data-name="name"]',
+  ) as HTMLElement | null;
   const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement | null;
-  const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement | null;
+  const slyusarSumCell = row.querySelector(
+    '[data-name="slyusar_sum"]',
+  ) as HTMLElement | null;
 
   if (!slyusarSumCell || !sumCell) return;
 
@@ -297,14 +358,20 @@ export async function updateSlyusarSumWarningForRow(row: HTMLElement) {
 }
 
 /* ===================== CLEAR CELLS ON NAME CHANGE ===================== */
-async function clearCellsOnNameChange(row: HTMLElement, prevNameLength: number, currentNameLength: number) {
+async function clearCellsOnNameChange(
+  row: HTMLElement,
+  prevNameLength: number,
+  currentNameLength: number,
+) {
   if (currentNameLength >= prevNameLength) return;
 
   // Визначаємо тип рядка (works = робота, інше = запчастина)
-  const nameCell = row.querySelector('[data-name="name"]') as HTMLElement | null;
+  const nameCell = row.querySelector(
+    '[data-name="name"]',
+  ) as HTMLElement | null;
   const rowType = nameCell?.getAttribute("data-type") || "";
   const nameText = nameCell?.textContent?.trim() || "";
-  
+
   // Перевіряємо чи це робота: або за data-type, або за наявністю в списку робіт
   const isWork = rowType === "works" || globalCache.works.includes(nameText);
 
@@ -317,19 +384,20 @@ async function clearCellsOnNameChange(row: HTMLElement, prevNameLength: number, 
         '[data-name="price"]',
         '[data-name="sum"]',
         '[data-name="slyusar_sum"]',
-        '[data-name="pib_magazin"]'
+        '[data-name="pib_magazin"]',
       ];
 
   for (const selector of cellsToClear) {
     const cell = row.querySelector(selector) as HTMLElement | null;
     if (!cell) continue;
-    cell.textContent = '';
-    cell.removeAttribute('data-sclad-id');
-    cell.removeAttribute('data-type');
-    cell.removeAttribute('title');
+    cell.textContent = "";
+    cell.removeAttribute("data-sclad-id");
+    cell.removeAttribute("data-type");
+    cell.removeAttribute("title");
     if (selector === '[data-name="id_count"]') setWarningFlag(cell, false);
     if (selector === '[data-name="price"]') setPriceWarningFlag(cell, false);
-    if (selector === '[data-name="slyusar_sum"]') setSlyusarSumWarningFlag(cell, false);
+    if (selector === '[data-name="slyusar_sum"]')
+      setSlyusarSumWarningFlag(cell, false);
   }
 
   updateCalculatedSumsInFooter();
@@ -349,13 +417,15 @@ export async function refreshQtyWarningsIn(containerId: string) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const rows = Array.from(container.querySelectorAll<HTMLTableRowElement>("tbody tr"));
+  const rows = Array.from(
+    container.querySelectorAll<HTMLTableRowElement>("tbody tr"),
+  );
   for (const tr of rows) {
     const row = tr as HTMLElement;
     await Promise.all([
       updateCatalogWarningForRow(row),
       updatePriceWarningForRow(row),
-      updateSlyusarSumWarningForRow(row)
+      updateSlyusarSumWarningForRow(row),
     ]);
   }
   updateCalculatedSumsInFooter();
@@ -367,13 +437,17 @@ export function setupQtyWarningListeners(containerId: string) {
   if (!container) return;
 
   // Initialize cache for name cells
-  container.querySelectorAll<HTMLElement>('tbody tr [data-name="name"]').forEach((cell) => {
-    nameLengthCache.set(cell, getNodeTextLen(cell));
-    nameClearedOnce.set(cell, false);
-  });
+  container
+    .querySelectorAll<HTMLElement>('tbody tr [data-name="name"]')
+    .forEach((cell) => {
+      nameLengthCache.set(cell, getNodeTextLen(cell));
+      nameClearedOnce.set(cell, false);
+    });
 
   const onKeyDownName = (e: KeyboardEvent) => {
-    const cell = (e.target as HTMLElement)?.closest('[data-name="name"]') as HTMLElement | null;
+    const cell = (e.target as HTMLElement)?.closest(
+      '[data-name="name"]',
+    ) as HTMLElement | null;
     if (!cell || (e.key !== "Backspace" && e.key !== "Delete")) return;
 
     const prev = nameLengthCache.get(cell) ?? 0;
@@ -392,7 +466,9 @@ export function setupQtyWarningListeners(containerId: string) {
   };
 
   const onInputName = async (e: Event) => {
-    const cell = (e.target as HTMLElement)?.closest('[data-name="name"]') as HTMLElement | null;
+    const cell = (e.target as HTMLElement)?.closest(
+      '[data-name="name"]',
+    ) as HTMLElement | null;
     if (!cell) return;
     const row = cell.closest("tr") as HTMLElement | null;
     if (!row) return;
@@ -416,24 +492,32 @@ export function setupQtyWarningListeners(containerId: string) {
     const cell = target.closest('[data-name="id_count"]') as HTMLElement | null;
     if (cell) await updateCatalogWarningForRow(row);
 
-    const priceCell = target.closest('[data-name="price"]') as HTMLElement | null;
+    const priceCell = target.closest(
+      '[data-name="price"]',
+    ) as HTMLElement | null;
     if (priceCell) await updatePriceWarningForRow(row);
 
-    const slyusarSumCell = target.closest('[data-name="slyusar_sum"]') as HTMLElement | null;
+    const slyusarSumCell = target.closest(
+      '[data-name="slyusar_sum"]',
+    ) as HTMLElement | null;
     if (slyusarSumCell) await updateSlyusarSumWarningForRow(row);
 
     if (cell || priceCell || slyusarSumCell) updateCalculatedSumsInFooter();
   };
 
   const onBlur = async (e: Event) => {
-    const cell = (e.target as HTMLElement)?.closest('[data-name="id_count"]') as HTMLElement | null;
+    const cell = (e.target as HTMLElement)?.closest(
+      '[data-name="id_count"]',
+    ) as HTMLElement | null;
     if (!cell) return;
     const row = cell.closest("tr") as HTMLElement | null;
     if (row) await updateCatalogWarningForRow(row);
   };
 
   const onPointerDownPreCommit = async (e: Event) => {
-    const active = (document.activeElement as HTMLElement | null)?.closest('[data-name="id_count"]') as HTMLElement | null;
+    const active = (document.activeElement as HTMLElement | null)?.closest(
+      '[data-name="id_count"]',
+    ) as HTMLElement | null;
     if (!active) return;
     const clickTarget = e.target as Node;
     if (!active.contains(clickTarget)) {
@@ -444,7 +528,9 @@ export function setupQtyWarningListeners(containerId: string) {
 
   const onKeyDownPreCommit = async (e: KeyboardEvent) => {
     if (!["Enter", "Tab", "ArrowDown", "ArrowUp"].includes(e.key)) return;
-    const active = (document.activeElement as HTMLElement | null)?.closest('[data-name="id_count"]') as HTMLElement | null;
+    const active = (document.activeElement as HTMLElement | null)?.closest(
+      '[data-name="id_count"]',
+    ) as HTMLElement | null;
     if (active) {
       const row = active.closest("tr") as HTMLElement | null;
       if (row) await updateCatalogWarningForRow(row);
@@ -455,12 +541,18 @@ export function setupQtyWarningListeners(containerId: string) {
   container.addEventListener("input", onInputName, { capture: true });
   container.addEventListener("input", onInput, { capture: true });
   container.addEventListener("blur", onBlur, true);
-  container.addEventListener("pointerdown", onPointerDownPreCommit, { capture: true });
+  container.addEventListener("pointerdown", onPointerDownPreCommit, {
+    capture: true,
+  });
   container.addEventListener("keydown", onKeyDownPreCommit, { capture: true });
 }
 
 /* ===================== INIT / SAVE HOOK / AUTO REFRESH ===================== */
-export function initializeActWarnings(containerId: string, actId: number, enableAutoRefresh = false) {
+export function initializeActWarnings(
+  containerId: string,
+  actId: number,
+  enableAutoRefresh = false,
+) {
   globalCache.currentActId = actId;
   resetActDataCache();
   setupQtyWarningListeners(containerId);

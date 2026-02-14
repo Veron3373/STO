@@ -70,11 +70,16 @@ export async function loadWarehousePercents(): Promise<void> {
 }
 
 /** Отримати відсоток для конкретного складу */
-export async function loadPercentByWarehouse(scladNomer: number | null | undefined): Promise<WarehousePercentStatus> {
+export async function loadPercentByWarehouse(
+  scladNomer: number | null | undefined,
+): Promise<WarehousePercentStatus> {
   await loadWarehousePercents();
 
   // Якщо склад не вказаний — використовуємо склад 1
-  const warehouseId = (scladNomer !== null && scladNomer !== undefined && scladNomer > 0) ? scladNomer : 1;
+  const warehouseId =
+    scladNomer !== null && scladNomer !== undefined && scladNomer > 0
+      ? scladNomer
+      : 1;
   const procent = warehousePercentsCache.get(warehouseId);
 
   if (procent === -1) {
@@ -113,16 +118,20 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
   }
 
   // Перевіряємо чи кеш має нове поле scladNomer, якщо ні — перезавантажуємо
-  if (globalCache.skladParts.length > 0 && globalCache.skladParts[0].scladNomer === undefined) {
+  if (
+    globalCache.skladParts.length > 0 &&
+    globalCache.skladParts[0].scladNomer === undefined
+  ) {
     globalCache.skladParts = [];
   }
   await ensureSkladLoaded();
 
   // Фільтруємо деталі зі складу (по part_number або name)
   const filteredSkladParts = globalCache.skladParts
-    .filter((p) =>
-      p.part_number.toLowerCase().includes(q) ||
-      p.name.toLowerCase().includes(q)
+    .filter(
+      (p) =>
+        p.part_number.toLowerCase().includes(q) ||
+        p.name.toLowerCase().includes(q),
     )
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
     .map((p) => {
@@ -131,24 +140,29 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       const priceRounded = formatUA(price);
 
       // Форматування дати
-      const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
+      const timeOn = p.time_on
+        ? new Date(p.time_on).toLocaleDateString("uk-UA")
+        : "";
 
       // Колір для кількості та всієї інформації в дужках
       let colorStyle = "";
-      if (qty === 0) colorStyle = "color: #888"; // сіра
-      else if (qty < 0) colorStyle = "color: #e40b0b"; // червона
+      if (qty === 0)
+        colorStyle = "color: #888"; // сіра
+      else if (qty < 0)
+        colorStyle = "color: #e40b0b"; // червона
       else colorStyle = "color: #28a745"; // зелена
 
       // ✅ НОВИЙ ПОРЯДОК: Назва (синя) - Номер (чорний підкреслений) (К-ть і ціна) Дата
-      const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-        ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
-        : '';
-      const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${skladTag}${timeOn ? ' <span style="color: #000; font-weight: normal;">' + timeOn + '</span>' : ''}`;
+      const skladTag =
+        p.scladNomer !== null && p.scladNomer !== undefined
+          ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
+          : "";
+      const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${skladTag}${timeOn ? ' <span style="color: #000; font-weight: normal;">' + timeOn + "</span>" : ""}`;
 
       return {
         value: p.name,
         sclad_id: p.sclad_id,
-        label: `${p.name} - ${p.part_number} (К-ть: ${qty} ціна ${priceRounded} - грн)${timeOn ? ' ' + timeOn : ''}`,
+        label: `${p.name} - ${p.part_number} (К-ть: ${qty} ціна ${priceRounded} - грн)${timeOn ? " " + timeOn : ""}`,
         labelHtml: labelHtml,
         fullName: p.name,
         itemType: "detail" as const,
@@ -169,9 +183,10 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
 
   // Фільтруємо роботи з worksWithId (пошук по work_id або name)
   const filteredWorks = globalCache.worksWithId
-    .filter((w) =>
-      w.work_id.toLowerCase().includes(q) ||
-      (w.name && w.name.toLowerCase().includes(q))
+    .filter(
+      (w) =>
+        w.work_id.toLowerCase().includes(q) ||
+        (w.name && w.name.toLowerCase().includes(q)),
     )
     .slice(0, NAME_AUTOCOMPLETE_MAX_RESULTS)
     .map((w) => ({
@@ -207,7 +222,7 @@ let _repositionCleanup: (() => void) | null = null;
 function startAutoFollow(
   target: HTMLElement,
   list: HTMLElement,
-  positionFn: () => void
+  positionFn: () => void,
 ) {
   _repositionCleanup?.();
 
@@ -222,7 +237,7 @@ function startAutoFollow(
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
   parents.forEach((p) =>
-    p.addEventListener("scroll", onScroll, { passive: true })
+    p.addEventListener("scroll", onScroll, { passive: true }),
   );
 
   const mo = new MutationObserver(() => {
@@ -383,7 +398,7 @@ export function expandAllNamesInTable(): Map<HTMLElement, string> {
  * Відновлює скорочені назви після PDF генерації
  */
 export function restoreOriginalNames(
-  originalTexts: Map<HTMLElement, string>
+  originalTexts: Map<HTMLElement, string>,
 ): void {
   originalTexts.forEach((originalText, cell) => {
     cell.textContent = originalText;
@@ -402,10 +417,10 @@ function parseNum(text: string | null | undefined) {
 
 function getRowSum(row: HTMLElement) {
   const priceEl = row.querySelector(
-    '[data-name="price"]'
+    '[data-name="price"]',
   ) as HTMLElement | null;
   const qtyEl = row.querySelector(
-    '[data-name="id_count"]'
+    '[data-name="id_count"]',
   ) as HTMLElement | null;
   const price = parseNum(priceEl?.textContent);
   const qty = parseNum(qtyEl?.textContent);
@@ -461,7 +476,7 @@ function showCatalogInfo(target: HTMLElement, sclad_id: number) {
 
   const box = document.createElement("div");
   box.className = "catalog-info-popover";
-  
+
   box.innerHTML = `К-ть: ${qtyHtml} по ${formatUA(Math.round(picked.price))}`;
 
   const rect = target.getBoundingClientRect();
@@ -596,7 +611,7 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
           // Case: Work selected in Catalog
           if (chosenFullName) {
             const nameCell = row.querySelector(
-              '[data-name="name"]'
+              '[data-name="name"]',
             ) as HTMLElement | null;
             if (nameCell) {
               // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
@@ -615,7 +630,7 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
           // Set pib_magazin to slyusars
           const pibMagCell = row.querySelector(
-            '[data-name="pib_magazin"]'
+            '[data-name="pib_magazin"]',
           ) as HTMLElement | null;
           if (pibMagCell) pibMagCell.setAttribute("data-type", "slyusars");
         } else {
@@ -633,7 +648,7 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
           // Set type to details if not set by applyCatalogSelection
           const nameCell = row.querySelector(
-            '[data-name="name"]'
+            '[data-name="name"]',
           ) as HTMLElement;
           if (nameCell) nameCell.setAttribute("data-type", "details");
         }
@@ -663,13 +678,13 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
         }
 
         const pibMagCell = row.querySelector(
-          '[data-name="pib_magazin"]'
+          '[data-name="pib_magazin"]',
         ) as HTMLElement | null;
 
         if (pibMagCell) {
           pibMagCell.setAttribute(
             "data-type",
-            typeToSet === "details" ? "shops" : "slyusars"
+            typeToSet === "details" ? "shops" : "slyusars",
           );
 
           if (typeToSet === "works") {
@@ -687,17 +702,17 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
             // Auto-fill Catalog with Work ID
             const workObj = globalCache.worksWithId.find(
-              (w) => w.name === fullText
+              (w) => w.name === fullText,
             );
             if (workObj) {
               const catalogCell = row.querySelector(
-                '[data-name="catalog"]'
+                '[data-name="catalog"]',
               ) as HTMLElement | null;
               if (catalogCell) {
                 setCellText(catalogCell, workObj.work_id);
               }
             }
-            
+
             // 🤖 AI: Підказка середньої ціни для роботи
             handleItemSelection(row, fullText, "work");
           } else {
@@ -744,7 +759,7 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   const availableAbove = Math.max(0, tr.top - GAP);
   const rowsFitBySpace = Math.max(
     1,
-    Math.floor((availableAbove - padV - borderV) / rowH)
+    Math.floor((availableAbove - padV - borderV) / rowH),
   );
   const rowsToShow = Math.min(ROWS_MAX, rowsFitBySpace, suggestions.length);
 
@@ -796,13 +811,13 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
     const availableAbove2 = Math.max(
       0,
-      rect.top - Math.max(vpRect.top, 0) - GAP
+      rect.top - Math.max(vpRect.top, 0) - GAP,
     );
 
     const totalItems = list.children.length;
     const rowsFit = Math.max(
       1,
-      Math.floor((availableAbove2 - padV2 - borderV2) / rowH2)
+      Math.floor((availableAbove2 - padV2 - borderV2) / rowH2),
     );
     const rowsToShow2 = Math.min(ROWS_MAX, totalItems, rowsFit);
 
@@ -846,7 +861,7 @@ let _suppressAutocomplete = false;
 export function setupAutocompleteForEditableCells(
   containerId: string,
   cache: typeof globalCache,
-  onEnterCallback?: () => void
+  onEnterCallback?: () => void,
 ) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -873,7 +888,7 @@ export function setupAutocompleteForEditableCells(
 
           e.preventDefault();
           const first = currentAutocompleteList.querySelector(
-            ".autocomplete-item"
+            ".autocomplete-item",
           ) as HTMLElement;
           if (first) {
             first.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
@@ -890,7 +905,7 @@ export function setupAutocompleteForEditableCells(
       if (currentAutocompleteList) {
         e.preventDefault();
         const first = currentAutocompleteList.querySelector(
-          ".autocomplete-item"
+          ".autocomplete-item",
         ) as HTMLElement;
         if (first) first.focus();
       } else {
@@ -926,7 +941,7 @@ export function setupAutocompleteForEditableCells(
 
       const row = target.closest("tr") as HTMLElement | null;
       const nameCell = row?.querySelector(
-        '[data-name="name"]'
+        '[data-name="name"]',
       ) as HTMLElement | null;
       const selectedName = nameCell?.textContent?.trim() || "";
 
@@ -939,20 +954,27 @@ export function setupAutocompleteForEditableCells(
             const priceRounded = formatUA(Math.round(p.price));
 
             let colorStyle = "color: #2e7d32"; // default green
-            if (qty === 0) colorStyle = "color: #888"; // grey
-            else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+            if (qty === 0)
+              colorStyle = "color: #888"; // grey
+            else if (qty < 0)
+              colorStyle = "color: #e40b0b"; // red
             else colorStyle = "color: #1565c0"; // blue
 
             // Форматування дати
-            const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
-            
+            const timeOn = p.time_on
+              ? new Date(p.time_on).toLocaleDateString("uk-UA")
+              : "";
+
             // Склад (синій, не жирний)
-            const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-              ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
-              : '';
-            
+            const skladTag =
+              p.scladNomer !== null && p.scladNomer !== undefined
+                ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
+                : "";
+
             // Дата (чорний)
-            const dateTag = timeOn ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>` : '';
+            const dateTag = timeOn
+              ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>`
+              : "";
 
             const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
@@ -981,7 +1003,7 @@ export function setupAutocompleteForEditableCells(
       // ✅ При фокусі показуємо повний текст для редагування
       const currentText = target.textContent?.trim() || "";
       const fullNameAttr = target.getAttribute("data-full-name");
-      
+
       if (fullNameAttr && currentText.includes(".....")) {
         // Зберігаємо скорочений текст і показуємо повний
         target.setAttribute("data-shortened-name", currentText);
@@ -995,7 +1017,7 @@ export function setupAutocompleteForEditableCells(
           target.textContent = expanded;
         }
       }
-      
+
       // ← Використовуємо нову функцію з кешуванням
       const query = target.textContent?.trim() || "";
       suggestions = await getNameSuggestions(query);
@@ -1098,7 +1120,7 @@ export function setupAutocompleteForEditableCells(
 
       const row = target.closest("tr") as HTMLElement;
       const nameCell = row?.querySelector(
-        '[data-name="name"]'
+        '[data-name="name"]',
       ) as HTMLElement | null;
 
       /* Mixed Search Logic for Catalog: Works (Green) + Sclad (Blue) */
@@ -1119,7 +1141,7 @@ export function setupAutocompleteForEditableCells(
             .filter(
               (w) =>
                 w.work_id.toLowerCase().includes(query) ||
-                (w.name && w.name.toLowerCase().includes(query))
+                (w.name && w.name.toLowerCase().includes(query)),
             )
             .slice(0, 20);
 
@@ -1138,7 +1160,7 @@ export function setupAutocompleteForEditableCells(
           let matchedParts = globalCache.skladParts.filter(
             (p) =>
               p.part_number.toLowerCase().includes(query) ||
-              p.name.toLowerCase().includes(query)
+              p.name.toLowerCase().includes(query),
           );
           matchedParts = matchedParts.slice(0, 20);
 
@@ -1147,20 +1169,27 @@ export function setupAutocompleteForEditableCells(
             const priceRounded = formatUA(Math.round(p.price));
 
             let colorStyle = "color: #2e7d32"; // default green
-            if (qty === 0) colorStyle = "color: #888"; // grey
-            else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+            if (qty === 0)
+              colorStyle = "color: #888"; // grey
+            else if (qty < 0)
+              colorStyle = "color: #e40b0b"; // red
             else colorStyle = "color: #1565c0"; // blue
 
             // Форматування дати
-            const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
-            
+            const timeOn = p.time_on
+              ? new Date(p.time_on).toLocaleDateString("uk-UA")
+              : "";
+
             // Склад (синій, не жирний)
-            const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-              ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
-              : '';
-            
+            const skladTag =
+              p.scladNomer !== null && p.scladNomer !== undefined
+                ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
+                : "";
+
             // Дата (чорний)
-            const dateTag = timeOn ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>` : '';
+            const dateTag = timeOn
+              ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>`
+              : "";
 
             const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
@@ -1183,7 +1212,7 @@ export function setupAutocompleteForEditableCells(
             .filter(
               (p) =>
                 p.part_number.toLowerCase().includes(query) ||
-                p.name.toLowerCase().includes(query)
+                p.name.toLowerCase().includes(query),
             )
             .slice(0, 20);
 
@@ -1192,20 +1221,27 @@ export function setupAutocompleteForEditableCells(
             const priceRounded = formatUA(Math.round(p.price));
 
             let colorStyle = "color: #2e7d32"; // default green
-            if (qty === 0) colorStyle = "color: #888"; // grey
-            else if (qty < 0) colorStyle = "color: #e40b0b"; // red
+            if (qty === 0)
+              colorStyle = "color: #888"; // grey
+            else if (qty < 0)
+              colorStyle = "color: #e40b0b"; // red
             else colorStyle = "color: #1565c0"; // blue
 
             // Форматування дати
-            const timeOn = p.time_on ? new Date(p.time_on).toLocaleDateString('uk-UA') : '';
-            
+            const timeOn = p.time_on
+              ? new Date(p.time_on).toLocaleDateString("uk-UA")
+              : "";
+
             // Склад (синій, не жирний)
-            const skladTag = p.scladNomer !== null && p.scladNomer !== undefined
-              ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
-              : '';
-            
+            const skladTag =
+              p.scladNomer !== null && p.scladNomer !== undefined
+                ? ` <span style="color: #1565c0; font-weight: normal;">(${p.scladNomer}-Склад)</span>`
+                : "";
+
             // Дата (чорний)
-            const dateTag = timeOn ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>` : '';
+            const dateTag = timeOn
+              ? ` <span style="color: #000; font-weight: normal;">${timeOn}</span>`
+              : "";
 
             const labelHtml = `<span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> - <span style="color: #1565c0">${p.name}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty}, ${priceRounded})</span>${skladTag}${dateTag}`;
 
@@ -1224,7 +1260,7 @@ export function setupAutocompleteForEditableCells(
             .filter(
               (w) =>
                 w.work_id.toLowerCase().includes(query) ||
-                (w.name && w.name.toLowerCase().includes(query))
+                (w.name && w.name.toLowerCase().includes(query)),
             )
             .slice(0, 20);
 
@@ -1253,7 +1289,7 @@ export function setupAutocompleteForEditableCells(
 
       const row = target.closest("tr");
       const pibMagCell = row?.querySelector(
-        '[data-name="pib_magazin"]'
+        '[data-name="pib_magazin"]',
       ) as HTMLElement | null;
       if (pibMagCell) {
         const t = updatePibMagazinDataType(pibMagCell);
@@ -1377,7 +1413,7 @@ export function setupAutocompleteForEditableCells(
 
         const row = target.closest("tr") as HTMLElement | null;
         const catalogCell = row?.querySelector(
-          '[data-name="catalog"]'
+          '[data-name="catalog"]',
         ) as HTMLElement | null;
 
         const scladIdAttr = target.getAttribute("data-sclad-id");
@@ -1410,7 +1446,7 @@ export function setupAutocompleteForEditableCells(
       setTimeout(() => {
         const row = target.closest("tr");
         let nameText = (target.textContent || "").trim();
-        
+
         // ✅ При blur скорочуємо довгий текст
         if (nameText && !nameText.includes(".....")) {
           const shortened = shortenTextToFirstAndLast(nameText);
@@ -1429,8 +1465,9 @@ export function setupAutocompleteForEditableCells(
           const currentType = target.getAttribute("data-type");
 
           // Використовуємо повну назву для перевірки типу
-          const fullNameForCheck = target.getAttribute("data-full-name") || nameText;
-          
+          const fullNameForCheck =
+            target.getAttribute("data-full-name") || nameText;
+
           // Check exact matches if type is not set or we want to double check
           const isDetail = globalCache.details.includes(fullNameForCheck);
           const isWork = globalCache.works.includes(fullNameForCheck);
@@ -1462,7 +1499,7 @@ export function setupAutocompleteForEditableCells(
 
           // Update pib_magazin type
           const pibMagCell = row.querySelector(
-            '[data-name="pib_magazin"]'
+            '[data-name="pib_magazin"]',
           ) as HTMLElement | null;
           if (pibMagCell) {
             const targetPibType =
@@ -1504,7 +1541,7 @@ export function setupAutocompleteForEditableCells(
       await ensureSkladLoaded();
       showCatalogInfo(cell, sclad_id);
     },
-    true
+    true,
   );
 
   container.addEventListener(
@@ -1515,7 +1552,7 @@ export function setupAutocompleteForEditableCells(
       if (!cell) return;
       removeCatalogInfo();
     },
-    true
+    true,
   );
 
   container.addEventListener("mouseleave", () => {
@@ -1530,7 +1567,7 @@ export function setupAutocompleteForEditableCells(
 async function applyCatalogSelectionById(
   target: HTMLElement,
   sclad_id: number,
-  fullName?: string
+  fullName?: string,
 ) {
   const picked = globalCache.skladParts.find((p) => p.sclad_id === sclad_id);
   if (!picked) return;
@@ -1539,16 +1576,16 @@ async function applyCatalogSelectionById(
   if (!row) return;
 
   const nameCell = row.querySelector(
-    '[data-name="name"]'
+    '[data-name="name"]',
   ) as HTMLElement | null;
   const priceCell = row.querySelector(
-    '[data-name="price"]'
+    '[data-name="price"]',
   ) as HTMLElement | null;
   const pibMagCell = row.querySelector(
-    '[data-name="pib_magazin"]'
+    '[data-name="pib_magazin"]',
   ) as HTMLElement | null;
   const catalogCell = row.querySelector(
-    '[data-name="catalog"]'
+    '[data-name="catalog"]',
   ) as HTMLElement | null;
 
   // ✅ НОВИЙ КОД: Отримуємо відсоток по складу деталі
@@ -1556,7 +1593,9 @@ async function applyCatalogSelectionById(
   const percentInfo = await loadPercentByWarehouse(scladNomer);
 
   const basePrice = Math.round(picked.price || 0);
-  const priceWithMarkup = Math.round(basePrice * (1 + percentInfo.percent / 100));
+  const priceWithMarkup = Math.round(
+    basePrice * (1 + percentInfo.percent / 100),
+  );
 
   // ✅ ВИПРАВЛЕНО: Виводимо повну назву замість скороченої
   const nameToSet = fullName || picked.name || "";
@@ -1590,6 +1629,10 @@ async function applyCatalogSelectionById(
 
   if (catalogCell) {
     catalogCell.setAttribute("data-sclad-id", String(picked.sclad_id));
+    // ✅ Зберігаємо номер складу для перевірки націнки при повторному відкритті
+    if (scladNomer !== null && scladNomer !== undefined && scladNomer > 0) {
+      catalogCell.setAttribute("data-sclad-nomer", String(scladNomer));
+    }
     setCellText(catalogCell, picked.part_number || "");
   }
   if (pibMagCell) {
@@ -1612,7 +1655,7 @@ async function applyCatalogSelectionById(
 function updatePibMagazinDataType(pibMagazinCell: HTMLElement): string {
   const currentRow = pibMagazinCell.closest("tr");
   const nameCell = currentRow?.querySelector(
-    '[data-name="name"]'
+    '[data-name="name"]',
   ) as HTMLElement | null;
 
   const nameQuery = (nameCell?.textContent || "").trim();
@@ -1638,11 +1681,11 @@ function updatePibMagazinDataType(pibMagazinCell: HTMLElement): string {
   const nameQueryLower = nameQuery.toLowerCase();
 
   const isInDetails = globalCache.details.some(
-    (d) => d.toLowerCase() === nameQueryLower
+    (d) => d.toLowerCase() === nameQueryLower,
   );
 
   const isInWorks = globalCache.works.some(
-    (w) => w.toLowerCase() === nameQueryLower
+    (w) => w.toLowerCase() === nameQueryLower,
   );
 
   let targetType: "shops" | "slyusars";

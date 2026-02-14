@@ -484,17 +484,6 @@ async function loadReceipterSalaries(): Promise<void> {
                 salaryZapchastysty:
                   existing.salaryZapchastysty + salaryZapchastysty,
               });
-
-              // 🔍 ДІАГНОСТИКА: Логування для акту 597
-              if (actId === 597) {
-                console.log(
-                  `🔍 [ACT 597] Приймальник "${slyusarData?.Name || "невідомий"}": ЗарплатаЗапчастин=${salaryParts}, ЗарплатаЗапчастистів=${salaryZapchastysty}`,
-                );
-                console.log(
-                  `🔍 [ACT 597] Кеш після оновлення:`,
-                  receipterSalaryCache.get(actId),
-                );
-              }
             }
           }
         }
@@ -531,22 +520,6 @@ function calculateDetailsMarginFromAct(
 
   // Віднімаємо зарплату приймальника та запчастистів щоб показати чистий прибуток компанії
   const receipterSalary = getReceipterSalaryForAct(actId);
-
-  // 🔍 ДІАГНОСТИКА: Логування для акту 597
-  if (actId === 597) {
-    console.log(
-      `🔍 [ACT 597] Прибуток за деталі (до відрахувань): ${totalMargin}`,
-    );
-    console.log(
-      `🔍 [ACT 597] salaryParts (ЗП приймальника): ${receipterSalary.salaryParts}`,
-    );
-    console.log(
-      `🔍 [ACT 597] salaryZapchastysty (ЗП запчастистів): ${receipterSalary.salaryZapchastysty}`,
-    );
-    console.log(
-      `🔍 [ACT 597] Очікуваний результат: ${totalMargin} - ${receipterSalary.salaryParts} - ${receipterSalary.salaryZapchastysty} = ${totalMargin - receipterSalary.salaryParts - receipterSalary.salaryZapchastysty}`,
-    );
-  }
 
   totalMargin -= receipterSalary.salaryParts;
   totalMargin -= receipterSalary.salaryZapchastysty;

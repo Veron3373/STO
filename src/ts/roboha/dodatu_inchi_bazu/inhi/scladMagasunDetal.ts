@@ -254,8 +254,14 @@ export async function renderScladForm() {
       ${field("sclad_shop", "Магазин", "text", '<div id="sclad_shop_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
       ${field("sclad_detail_catno", "Каталог номер деталі", "text", '<div id="sclad_part_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
       ${field("sclad_detail", "Деталь", "text", '<div id="sclad_detail_dd" class="custom-dropdown hidden-all_other_bases"></div>')}
-      ${field("sclad_qty_in", "Кількість надходження", "number")}
-      ${field("sclad_price", "Ціна", "number")}
+      <div class="sclad-row-3">
+        ${field("sclad_qty_in", "Кількість надходження", "number")}
+        ${field("sclad_price", "Ціна", "number")}
+        <div class="form-field">
+          <label class="field-label" for="sclad_procent">Склад</label>
+          <select id="sclad_procent" class="input-all_other_bases"><option value="">Завантаження...</option></select>
+        </div>
+      </div>
       <div class="sclad-row-3">
         ${field("sclad_invoice_no", "Рахунок №")}
         ${selectField("sclad_unit", "Одиниця виміру", [
@@ -264,14 +270,10 @@ export async function renderScladForm() {
           ["комплект", "комплект"],
         ])}
         <div class="form-field">
-          <label class="field-label" for="sclad_procent">Склад</label>
-          <select id="sclad_procent" class="input-all_other_bases"><option value="">Завантаження...</option></select>
+          <label class="field-label" for="sclad_zapchastyst_pib">Запчастист</label>
+          <input id="sclad_zapchastyst_pib" type="text" class="input-all_other_bases" autocomplete="off">
+          <div id="sclad_zapchastyst_dd" class="custom-dropdown hidden-all_other_bases"></div>
         </div>
-      </div>
-      <div class="form-field">
-        <label class="field-label" for="sclad_zapchastyst_pib">Запчастист</label>
-        <input id="sclad_zapchastyst_pib" type="text" class="input-all_other_bases" autocomplete="off">
-        <div id="sclad_zapchastyst_dd" class="custom-dropdown hidden-all_other_bases"></div>
       </div>
     </div>
   `;

@@ -150,7 +150,7 @@ async function checkPassword(inputPassword: string): Promise<{
         isValid: true,
         accessLevel: access,
         userName: name,
-        slyusar_id: foundUser.id,
+        slyusar_id: foundUser.slyusar_id,
       };
     }
 

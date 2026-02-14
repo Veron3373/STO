@@ -87,7 +87,7 @@ function populateFormFields(record: ScladRecord) {
     supabase
       .from("slyusars")
       .select("data")
-      .eq("id", xtoZamovuv)
+      .eq("slyusar_id", xtoZamovuv)
       .single()
       .then(({ data: slyusar, error }) => {
         if (!error && slyusar) {

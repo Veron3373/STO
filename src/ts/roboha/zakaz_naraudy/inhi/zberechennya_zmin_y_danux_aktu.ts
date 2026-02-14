@@ -13,7 +13,10 @@ import {
   invalidateGlobalDataCache,
 } from "../globalCache";
 import type { ActItem } from "../globalCache";
-import { updateCalculatedSumsInFooter, getSlyusarSalaryFromHistory } from "../modalUI";
+import {
+  updateCalculatedSumsInFooter,
+  getSlyusarSalaryFromHistory,
+} from "../modalUI";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import { refreshQtyWarningsIn } from "./kastomna_tabluca";
 import { syncShopsOnActSave } from "./save_shops";
@@ -113,9 +116,10 @@ async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
         .single();
 
       if (client?.data) {
-        const clientData = typeof client.data === "string"
-          ? JSON.parse(client.data)
-          : client.data;
+        const clientData =
+          typeof client.data === "string"
+            ? JSON.parse(client.data)
+            : client.data;
         pib = clientData?.["ПІБ"] || clientData?.fio || "";
       }
     }
@@ -129,9 +133,8 @@ async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
         .single();
 
       if (car?.data) {
-        const carData = typeof car.data === "string"
-          ? JSON.parse(car.data)
-          : car.data;
+        const carData =
+          typeof car.data === "string" ? JSON.parse(car.data) : car.data;
         const autoName = carData?.["Авто"] || "";
         const year = carData?.["Рік"] || "";
         const nomer = carData?.["Номер авто"] || "";
@@ -272,21 +275,21 @@ export function cacheHiddenColumnsData(actDetails: any): void {
 
 function readTableNewNumbers(): Map<number, number> {
   const tableRows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   const numberMap = new Map<number, number>();
 
   tableRows.forEach((row) => {
     const nameCell = row.querySelector(
-      '[data-name="name"]'
+      '[data-name="name"]',
     ) as HTMLElement | null;
     if (!nameCell?.textContent?.trim()) return;
 
     const catalogCell = row.querySelector(
-      '[data-name="catalog"]'
+      '[data-name="catalog"]',
     ) as HTMLElement | null;
     const qtyCell = row.querySelector(
-      '[data-name="id_count"]'
+      '[data-name="id_count"]',
     ) as HTMLElement | null;
     const scladIdAttr = catalogCell?.getAttribute("data-sclad-id");
 
@@ -305,7 +308,7 @@ function readTableNewNumbers(): Map<number, number> {
 
 export function parseTableRows(): ParsedItem[] {
   const tableRows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   const items: ParsedItem[] = [];
 
@@ -328,18 +331,18 @@ export function parseTableRows(): ParsedItem[] {
 
     // Отримуємо посилання на всі комірки
     const quantityCell = row.querySelector(
-      '[data-name="id_count"]'
+      '[data-name="id_count"]',
     ) as HTMLElement;
     const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const pibMagazinCell = row.querySelector(
-      '[data-name="pib_magazin"]'
+      '[data-name="pib_magazin"]',
     ) as HTMLElement;
     const catalogCell = row.querySelector(
-      '[data-name="catalog"]'
+      '[data-name="catalog"]',
     ) as HTMLElement;
     const slyusarSumCell = row.querySelector(
-      '[data-name="slyusar_sum"]'
+      '[data-name="slyusar_sum"]',
     ) as HTMLElement;
 
     // 1. Кількість завжди беремо з DOM (користувач міг її змінити)
@@ -385,7 +388,8 @@ export function parseTableRows(): ParsedItem[] {
     }
 
     // ✅ Зчитуємо recordId з атрибута рядка (для точного пошуку при однакових роботах)
-    const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
+    const recordId =
+      (row as HTMLElement).getAttribute("data-record-id") || undefined;
 
     // ✅ ВИПРАВЛЕНО v4.0: Логіка зарплати:
     // 1. Якщо стовпець "Зар-та" ВИДИМИЙ (slyusarSumCell існує) - ЗАВЖДИ беремо з DOM
@@ -400,10 +404,10 @@ export function parseTableRows(): ParsedItem[] {
         // ⚠️ Стовпець ПРИХОВАНИЙ - беремо з історії слюсаря
         const historySalary = getSlyusarSalaryFromHistory(
           pibMagazin, // слюсар = ПІБ_Магазин
-          name,       // назва роботи
+          name, // назва роботи
           globalCache.currentActId,
-          undefined,  // rowIndex - не передаємо бо не маємо індексу тут
-          recordId    // recordId для точного пошуку
+          undefined, // rowIndex - не передаємо бо не маємо індексу тут
+          recordId, // recordId для точного пошуку
         );
 
         if (historySalary !== null && historySalary > 0) {
@@ -453,19 +457,19 @@ export function parseTableRows(): ParsedItem[] {
 
 async function updateScladActNumbers(
   actId: number,
-  newScladIds: Set<number>
+  newScladIds: Set<number>,
 ): Promise<void> {
   validateActId(actId);
 
   const initialScladIds = new Set(
     (globalCache.initialActItems || [])
       .filter((item) => item.type === "detail" && item.sclad_id != null)
-      .map((item) => item.sclad_id!)
+      .map((item) => item.sclad_id!),
   );
 
   const scladIdsToSetAct = Array.from(newScladIds);
   const scladIdsToClearAct = Array.from(initialScladIds).filter(
-    (id) => !newScladIds.has(id)
+    (id) => !newScladIds.has(id),
   );
 
   if (scladIdsToSetAct.length > 0) {
@@ -479,7 +483,7 @@ async function updateScladActNumbers(
 
 async function updateScladAkt(
   scladIds: number[],
-  aktValue: number | null
+  aktValue: number | null,
 ): Promise<void> {
   if (scladIds.length === 0) return;
 
@@ -525,7 +529,7 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
 
   if (selErr) {
     throw new Error(
-      `Не вдалося отримати склад для оновлення: ${selErr.message}`
+      `Не вдалося отримати склад для оновлення: ${selErr.message}`,
     );
   }
 
@@ -556,7 +560,7 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
 
       if (upErr) {
         throw new Error(
-          `Помилка оновлення складу #${update.sclad_id}: ${upErr.message}`
+          `Помилка оновлення складу #${update.sclad_id}: ${upErr.message}`,
         );
       }
     }
@@ -620,7 +624,9 @@ function processItems(items: ParsedItem[]) {
 
       // ✅ КРИТИЧНО: Якщо recordId немає - генеруємо новий
       // Це потрібно для нових рядків, які ще не мають recordId
-      const workRecordId = recordId || `new_${name.substring(0, 20)}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const workRecordId =
+        recordId ||
+        `new_${name.substring(0, 20)}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       works.push({
         ...itemBase,
@@ -760,7 +766,7 @@ function convertActItemsToParsedItems(items: ActItem[]): ParsedItem[] {
  */
 function compareActChanges(
   initialItems: ActItem[],
-  currentItems: ParsedItem[]
+  currentItems: ParsedItem[],
 ): { added: ParsedItem[]; deleted: ParsedItem[] } {
   // Конвертуємо ActItem[] в ParsedItem[] для порівняння
   const initialParsed = convertActItemsToParsedItems(initialItems);
@@ -811,7 +817,7 @@ function compareActChanges(
 async function logActChanges(
   actId: number,
   added: ParsedItem[],
-  deleted: ParsedItem[]
+  deleted: ParsedItem[],
 ): Promise<void> {
   // ✅ Записуємо зміни ТІЛЬКИ для Слюсаря, Запчастиста, Складовщика
   const allowedRoles = ["Слюсар", "Запчастист", "Складовщик"];
@@ -958,7 +964,7 @@ async function syncPruimalnikHistory(
   _totalWorksSumIgnored: number,
   _totalDetailsSumIgnored: number,
   actDateOn: string | null = null,
-  discountPercent: number = 0
+  discountPercent: number = 0,
 ): Promise<void> {
   // ✅ Для Адміністратора: тільки видаляємо з попереднього приймальника, нічого не записуємо
   if (userAccessLevel === "Адміністратор") {
@@ -983,7 +989,10 @@ async function syncPruimalnikHistory(
       .maybeSingle();
 
     if (prevError) {
-      console.error(`❌ Помилка пошуку приймальника "${previousPruimalnyk}":`, prevError);
+      console.error(
+        `❌ Помилка пошуку приймальника "${previousPruimalnyk}":`,
+        prevError,
+      );
       return;
     }
 
@@ -1009,7 +1018,7 @@ async function syncPruimalnikHistory(
       const dailyActs = receiverHistory[dateKey];
       if (Array.isArray(dailyActs)) {
         const idx = dailyActs.findIndex(
-          (item: any) => String(item.Акт) === String(actId)
+          (item: any) => String(item.Акт) === String(actId),
         );
         if (idx !== -1) {
           dailyActs.splice(idx, 1);
@@ -1034,7 +1043,10 @@ async function syncPruimalnikHistory(
         .eq("slyusar_id", prevReceiverData.slyusar_id);
 
       if (updateError) {
-        console.error(`❌ Помилка оновлення історії для "${receiverData.Name}":`, updateError);
+        console.error(
+          `❌ Помилка оновлення історії для "${receiverData.Name}":`,
+          updateError,
+        );
       }
     }
 
@@ -1062,7 +1074,7 @@ async function syncPruimalnikHistory(
 
     if (actError || !actData || !actData.pruimalnyk) {
       console.warn(
-        `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}. Користувач "${userName}" НЕ Приймальник - історія НЕ оновлюється`
+        `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}. Користувач "${userName}" НЕ Приймальник - історія НЕ оновлюється`,
       );
       return;
     }
@@ -1070,9 +1082,40 @@ async function syncPruimalnikHistory(
     pruimalnykName = actData.pruimalnyk;
   }
 
+  // --- ОТРИМАННЯ ДАНИХ ПРИЙМАЛЬНИКА З БД (РАНІШЕ - щоб знати його Склад) ---
+  const { data: userDataArray, error: pruimalnykError } = await supabase
+    .from("slyusars")
+    .select("*")
+    .eq("data->>Name", pruimalnykName);
+
+  if (pruimalnykError || !userDataArray || userDataArray.length === 0) {
+    console.error(
+      `❌ syncPruimalnikHistory: Помилка пошуку приймальника "${pruimalnykName}":`,
+      pruimalnykError,
+    );
+    return;
+  }
+
+  const userData = userDataArray[0];
+  const slyusarData =
+    typeof userData.data === "string"
+      ? JSON.parse(userData.data)
+      : userData.data;
+
+  // Додаткова перевірка ролі в базі
+  if (slyusarData.Доступ !== "Приймальник") {
+    console.warn(
+      "⚠️ syncPruimalnikHistory: Користувач не є Приймальником в базі",
+    );
+    return;
+  }
+
+  // Склад приймальника для порівняння
+  const pruimalnykSklad = Number(slyusarData.Склад) || 0;
+
   // --- ЗБІР ДАНИХ З DOM ---
   const tableBody = document.querySelector<HTMLTableSectionElement>(
-    "#act-items-table-container tbody"
+    "#act-items-table-container tbody",
   );
 
   if (!tableBody) {
@@ -1124,25 +1167,59 @@ async function syncPruimalnikHistory(
     }
   });
 
-  // --- ОТРИМАННЯ ВХІДНИХ ЦІН ---
+  // --- ОТРИМАННЯ ВХІДНИХ ЦІН ТА xto_zamovuv ---
   let partsTotalBuy = 0;
+  // Суми для розрахунку (без деталей, де склад запчастиста = складу приймальника)
+  let partsSaleForPruimalnyk = 0;
+  let partsBuyForPruimalnyk = 0;
+
   const scladIdsToFetch = partsList
     .map((p) => p.scladId)
     .filter((id): id is number => id !== null && !isNaN(id));
 
+  // Мапа: sclad_id -> склад запчастиста (xto_zamovuv)
+  const scladToZapchastystSkladMap = new Map<number, number>();
+
   if (scladIdsToFetch.length > 0) {
+    // Отримуємо дані з sclad разом з xto_zamovuv
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
-      .select("sclad_id, price")
+      .select("sclad_id, price, xto_zamovuv")
       .in("sclad_id", scladIdsToFetch);
 
     if (scladError) {
       console.error(
         "❌ syncPruimalnikHistory: Помилка отримання цін sclad:",
-        scladError
+        scladError,
       );
     } else if (scladItems) {
-      // Створюємо мапу цін: id -> price
+      // Збираємо унікальні xto_zamovuv для отримання їх складів
+      const uniqueXtoZamovuv = new Set<number>();
+      scladItems.forEach((item) => {
+        if (item.xto_zamovuv && typeof item.xto_zamovuv === "number") {
+          uniqueXtoZamovuv.add(item.xto_zamovuv);
+        }
+      });
+
+      // Отримуємо склади запчастистів з slyusars
+      const zapchastystSkladMap = new Map<number, number>();
+      if (uniqueXtoZamovuv.size > 0) {
+        const { data: zapchastysty, error: zapError } = await supabase
+          .from("slyusars")
+          .select("slyusar_id, data")
+          .in("slyusar_id", Array.from(uniqueXtoZamovuv));
+
+        if (!zapError && zapchastysty) {
+          zapchastysty.forEach((z) => {
+            const zData =
+              typeof z.data === "string" ? JSON.parse(z.data) : z.data;
+            const sklad = Number(zData?.Склад) || 0;
+            zapchastystSkladMap.set(z.slyusar_id, sklad);
+          });
+        }
+      }
+
+      // Створюємо мапу цін та зв'язок sclad_id -> склад запчастиста
       const priceMap = new Map<number, number>();
       scladItems.forEach((item) => {
         // Парсимо ціну (якщо рядок "938,00" або число 938)
@@ -1155,20 +1232,47 @@ async function syncPruimalnikHistory(
             parseFloat(
               String(item.price)
                 .replace(",", ".")
-                .replace(/[^\d.-]/g, "")
+                .replace(/[^\d.-]/g, ""),
             ) || 0;
         }
         priceMap.set(item.sclad_id, val);
+
+        // Зберігаємо склад запчастиста для цієї деталі
+        if (item.xto_zamovuv && zapchastystSkladMap.has(item.xto_zamovuv)) {
+          scladToZapchastystSkladMap.set(
+            item.sclad_id,
+            zapchastystSkladMap.get(item.xto_zamovuv)!,
+          );
+        }
       });
 
-      // Рахуємо суму закупки
+      // Рахуємо суму закупки (загальну та для приймальника)
       partsList.forEach((part) => {
         if (part.scladId && priceMap.has(part.scladId)) {
           const buyPrice = priceMap.get(part.scladId) || 0;
-          partsTotalBuy += buyPrice * part.qty;
+          const buyCost = buyPrice * part.qty;
+          partsTotalBuy += buyCost;
+
+          // Перевіряємо, чи склад запчастиста НЕ співпадає зі складом приймальника
+          const zapSklad = scladToZapchastystSkladMap.get(part.scladId);
+          if (zapSklad === undefined || zapSklad !== pruimalnykSklad) {
+            // Деталь враховується в зарплаті приймальника
+            partsSaleForPruimalnyk += part.sale;
+            partsBuyForPruimalnyk += buyCost;
+          }
+        } else {
+          // Деталь без scladId або без ціни в sclad - враховуємо повністю в зарплаті приймальника
+          // (невідомий запчастист = враховується)
+          partsSaleForPruimalnyk += part.sale;
+          // partsBuyForPruimalnyk не додаємо, бо невідома ціна закупки
         }
       });
     }
+  } else {
+    // Якщо немає scladIdsToFetch - всі деталі без scladId, враховуємо всю суму продажу
+    partsList.forEach((part) => {
+      partsSaleForPruimalnyk += part.sale;
+    });
   }
 
   // --- РОЗРАХУНОК БАЗ ТА ЗАРПЛАТ ---
@@ -1182,46 +1286,27 @@ async function syncPruimalnikHistory(
   const baseWorkProfit = workSaleAfterDiscount - worksTotalSlusarSalary;
 
   // 2. Запчастини: (Сума Продажу * множник дисконту - Сума Закупки)
-  // Дисконт застосовується до суми продажу, а потім віднімаємо собівартість
+  // Загальні суми (для відображення)
   const partsSaleAfterDiscount = partsTotalSale * discountMultiplier;
   const basePartsProfit = partsSaleAfterDiscount - partsTotalBuy;
 
-  // --- ОТРИМАННЯ ДАНИХ ПРИЙМАЛЬНИКА З БД ---
-  const { data: userDataArray, error } = await supabase
-    .from("slyusars")
-    .select("*")
-    .eq("data->>Name", pruimalnykName); // ✅ Шукаємо по ПІБ з pruimalnyk
-
-  if (error || !userDataArray || userDataArray.length === 0) {
-    console.error(
-      `❌ syncPruimalnikHistory: Помилка пошуку приймальника "${pruimalnykName}":`,
-      error
-    );
-    return;
-  }
-
-  // Якщо кількох користувачів з однаковим іменем, беремо першого
-  const userData = userDataArray[0];
-
-  const slyusarData =
-    typeof userData.data === "string"
-      ? JSON.parse(userData.data)
-      : userData.data;
-
-  // Додаткова перевірка ролі в базі
-  if (slyusarData.Доступ !== "Приймальник") {
-    console.warn(
-      "⚠️ syncPruimalnikHistory: Користувач не є Приймальником в базі"
-    );
-    return;
-  }
+  // 3. Запчастини для приймальника (виключаємо деталі, де склад запчастиста = складу приймальника)
+  const partsSaleForPruimalnykAfterDiscount =
+    partsSaleForPruimalnyk * discountMultiplier;
+  const basePartsProfitForPruimalnyk =
+    partsSaleForPruimalnykAfterDiscount - partsBuyForPruimalnyk;
 
   const percentWork = Number(slyusarData.ПроцентРоботи) || 0;
   const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
 
   // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - зарплата = 0
-  const salaryWork = baseWorkProfit > 0 ? Math.round(baseWorkProfit * (percentWork / 100)) : 0;
-  const salaryParts = basePartsProfit > 0 ? Math.round(basePartsProfit * (percentParts / 100)) : 0;
+  // Зарплата приймальника розраховується ТІЛЬКИ з деталей, де склад запчастиста ≠ складу приймальника
+  const salaryWork =
+    baseWorkProfit > 0 ? Math.round(baseWorkProfit * (percentWork / 100)) : 0;
+  const salaryParts =
+    basePartsProfitForPruimalnyk > 0
+      ? Math.round(basePartsProfitForPruimalnyk * (percentParts / 100))
+      : 0;
 
   // --- ВИДАЛЕННЯ АКТУ З ПОПЕРЕДНЬОГО ПРИЙМАЛЬНИКА (якщо змінився) ---
   // ✅ ВИПРАВЛЕНО: Шукаємо тільки попереднього приймальника, а не всіх
@@ -1237,7 +1322,10 @@ async function syncPruimalnikHistory(
       .maybeSingle();
 
     if (prevError) {
-      console.error(`❌ Помилка пошуку попереднього приймальника "${previousPruimalnyk}":`, prevError);
+      console.error(
+        `❌ Помилка пошуку попереднього приймальника "${previousPruimalnyk}":`,
+        prevError,
+      );
     } else if (prevReceiverData) {
       const receiverData =
         typeof prevReceiverData.data === "string"
@@ -1254,7 +1342,7 @@ async function syncPruimalnikHistory(
           const dailyActs = receiverHistory[dateKey];
           if (Array.isArray(dailyActs)) {
             const idx = dailyActs.findIndex(
-              (item: any) => String(item.Акт) === String(actId)
+              (item: any) => String(item.Акт) === String(actId),
             );
             if (idx !== -1) {
               dailyActs.splice(idx, 1);
@@ -1281,7 +1369,7 @@ async function syncPruimalnikHistory(
           if (updateError) {
             console.error(
               `❌ Помилка оновлення історії для "${receiverData.Name}":`,
-              updateError
+              updateError,
             );
           }
         }
@@ -1299,7 +1387,7 @@ async function syncPruimalnikHistory(
     const dailyActs = history[dateKey];
     if (Array.isArray(dailyActs)) {
       const idx = dailyActs.findIndex(
-        (item: any) => String(item.Акт) === String(actId)
+        (item: any) => String(item.Акт) === String(actId),
       );
       if (idx !== -1) {
         actFound = true;
@@ -1321,9 +1409,9 @@ async function syncPruimalnikHistory(
     // Записуємо Базовий прибуток (ДО відрахування зарплати приймальника), щоб співвідношення ЗП/Сума відповідало відсотку
     // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - записуємо 0 для зарплати
     СуммаРоботи: baseWorkProfit,
-    СуммаЗапчастин: basePartsProfit,
+    СуммаЗапчастин: basePartsProfit, // Загальна сума запчастин
     ЗарплатаРоботи: salaryWork, // Вже = 0 якщо baseWorkProfit <= 0
-    ЗарплатаЗапчастин: salaryParts, // Вже = 0 якщо basePartsProfit <= 0
+    ЗарплатаЗапчастин: salaryParts, // Розраховано ТІЛЬКИ з деталей де склад запчастиста ≠ складу приймальника
     Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
     ДатаЗакриття: null, // Буде заповнено при закритті акту
   };
@@ -1353,7 +1441,7 @@ async function syncPruimalnikHistory(
   if (updateError) {
     console.error(
       "❌ syncPruimalnikHistory: Помилка оновлення історії:",
-      updateError
+      updateError,
     );
   } else {
     // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
@@ -1393,7 +1481,7 @@ async function savePruimalnykToActs(actId: number): Promise<void> {
 
     if (error) {
       console.error(
-        `❌ Помилка при записуванні приймальника: ${error.message}`
+        `❌ Помилка при записуванні приймальника: ${error.message}`,
       );
     } else {
     }
@@ -1411,7 +1499,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   await loadPurchasePrices();
 
   const probigText = cleanText(
-    document.getElementById(EDITABLE_PROBIG_ID)?.textContent
+    document.getElementById(EDITABLE_PROBIG_ID)?.textContent,
   );
   const probigCleaned = probigText.replace(/\s/g, "");
   const newProbig =
@@ -1439,7 +1527,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
       // Знаходимо оригінальний рядок
       const originalItem = originalItems.find(
         (orig: any) =>
-          orig.Найменування === item.name && orig.Type === item.type
+          orig.Найменування === item.name && orig.Type === item.type,
       );
 
       // Якщо рядок існував раніше (не новий)
@@ -1452,7 +1540,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
           originalPib.toLowerCase() !== userName.toLowerCase()
         ) {
           throw new Error(
-            `⛔ Ви не можете змінювати рядок "${item.name}", оскільки він призначений іншому слюсарю (${originalPib})`
+            `⛔ Ви не можете змінювати рядок "${item.name}", оскільки він призначений іншому слюсарю (${originalPib})`,
           );
         }
       }
@@ -1475,14 +1563,14 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
   } = processItems(items);
 
   const avansInput = document.getElementById(
-    "editable-avans"
+    "editable-avans",
   ) as HTMLInputElement;
   const avansValue = avansInput
     ? parseFloat(avansInput.value.replace(/\s/g, "") || "0")
     : 0;
 
   const discountInput = document.getElementById(
-    "editable-discount"
+    "editable-discount",
   ) as HTMLInputElement;
   const discountValue = discountInput
     ? parseFloat(discountInput.value.replace(/\s/g, "") || "0")
@@ -1557,7 +1645,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     totalWorksSum,
     totalDetailsSum,
     globalCache.currentActDateOn,
-    discountValue
+    discountValue,
   );
 
   // ===== ЛОГУВАННЯ ЗМІН =====
@@ -1565,7 +1653,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     const currentItems = items;
     const { added, deleted } = compareActChanges(
       globalCache.initialActItems || [],
-      currentItems
+      currentItems,
     );
     await logActChanges(actId, added, deleted);
   } catch (logError) {
@@ -1594,7 +1682,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
 
 export function addSaveHandler(actId: number, originalActData: any): void {
   const saveButton = document.getElementById(
-    ZAKAZ_NARAYD_SAVE_BTN_ID
+    ZAKAZ_NARAYD_SAVE_BTN_ID,
   ) as HTMLButtonElement | null;
   if (!saveButton) return;
 
@@ -1618,7 +1706,7 @@ export function addSaveHandler(actId: number, originalActData: any): void {
       console.error("Помилка збереження:", err);
       showNotification(
         `Помилка збереження даних: ${err?.message || err}`,
-        "error"
+        "error",
       );
     }
   });

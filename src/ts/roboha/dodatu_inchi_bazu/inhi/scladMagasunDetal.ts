@@ -126,6 +126,14 @@ async function loadDetailsFromDB(): Promise<string[]> {
 /** Завантаження запчастистів та їх ID */
 let zapchastystCache: Array<{ name: string; id: number }> = [];
 
+/** Отримати slyusar_id за ПІБ з кешу запчастистів */
+export function getSlyusarIdByPib(pib: string): number | null {
+  const found = zapchastystCache.find(
+    (z) => z.name.toLowerCase() === pib.toLowerCase(),
+  );
+  return found ? found.id : null;
+}
+
 async function loadZapchastystFromDB(): Promise<
   Array<{ name: string; id: number }>
 > {
@@ -297,13 +305,25 @@ export async function renderScladForm() {
     "sclad_zapchastyst_dd",
   );
 
-  // Автозаповнення ПІБ поточного користувача
+  // Автозаповнення сьогоднішньої дати
+  const dateInput = host.querySelector<HTMLInputElement>("#sclad_date");
+  if (dateInput) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Автозаповнення ПІБ тільки для користувачів з доступом "Запчастист"
   const currentUserData = localStorage.getItem("userAuthData");
   if (currentUserData) {
     try {
       const userData = JSON.parse(currentUserData);
+      const userAccess = userData["Доступ"] || userData.Dostup || "";
       const currentPib = userData.Name || "";
-      if (currentPib) {
+      // Перевіряємо чи користувач має рівень доступу "Запчастист"
+      if (userAccess === "Запчастист" && currentPib) {
         const pibInput = document.getElementById(
           "sclad_zapchastyst_pib",
         ) as HTMLInputElement | null;
@@ -316,7 +336,7 @@ export async function renderScladForm() {
     }
   }
 
-  const dateInput = host.querySelector<HTMLInputElement>("#sclad_date");
+  // Налаштування date picker
   if (dateInput && !dateInput.dataset.pickerBound) {
     const openPicker = () => {
       try {

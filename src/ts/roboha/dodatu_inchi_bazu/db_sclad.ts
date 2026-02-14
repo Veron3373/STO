@@ -4,6 +4,7 @@ import { CRUD } from "./dodatu_inchi_bazu_danux";
 import {
   getCurrentScladId,
   getOriginalScladAnchor,
+  getSlyusarIdByPib,
 } from "./inhi/scladMagasunDetal";
 
 // toast
@@ -273,18 +274,8 @@ function readScladFormValues() {
   const selectedPib = pick("sclad_zapchastyst_pib");
 
   if (selectedPib) {
-    // Спочатку пробуємо отримати з вибраного ПІБ (синхронно це неможливо, тому використовуватимемо localStorage)
-    const currentUserData = localStorage.getItem("userAuthData");
-    if (currentUserData) {
-      try {
-        const userData = JSON.parse(currentUserData);
-        if (userData.Name === selectedPib) {
-          slyusarId = userData.slyusar_id || null;
-        }
-      } catch (e) {
-        console.error("Помилка отримання slyusar_id з вибраного ПІБ:", e);
-      }
-    }
+    // Шукаємо slyusar_id за вибраним ПІБ в кеші запчастистів
+    slyusarId = getSlyusarIdByPib(selectedPib);
   }
 
   // Якщо не вдалось отримати з вибраного ПІБ, використовуємо дефолтний slyusar_id поточного користувача

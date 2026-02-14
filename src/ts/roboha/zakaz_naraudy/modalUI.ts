@@ -739,10 +739,14 @@ function createRowHtml(
   // 2. Рядки зі своїм прізвищем в ПІБ_Магазин
   // 3. 🆕 Рядки з роботою де ПІБ_Магазин пустий (тільки пусті поля!)
   // Адміністратор і Приймальник можуть редагувати все
+  // ✅ ВИПРАВЛЕНО: Запчастист і Складовщик можуть редагувати якщо canDelete = true (налаштування id:22/19)
+  const isZapchastystOrSkladovschyk =
+    userAccessLevel === "Запчастист" || userAccessLevel === "Складовщик";
   const canEdit =
     userAccessLevel === "Адміністратор" ||
     userAccessLevel === "Приймальник" ||
-    (isSlyusar && (item === null || isOwnRow || isWorkRowWithEmptyPib));
+    (isSlyusar && (item === null || isOwnRow || isWorkRowWithEmptyPib)) ||
+    (isZapchastystOrSkladovschyk && canDelete);
 
   const isEditable = !isActClosed && canEdit;
 

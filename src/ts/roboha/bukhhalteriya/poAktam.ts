@@ -214,6 +214,7 @@ export interface DetailsRecord {
   paymentDate?: string;
   sclad_id?: number;
   scladNomer?: number; // Номер складу з таблиці sclad
+  zapchastystName?: string; // Ім'я Запчастиста хто оприходував
   isClosed: boolean;
 }
 
@@ -1023,7 +1024,7 @@ export function updateDetailsTable(): void {
 
   if (filteredData.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="13" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
+      '<tr><td colspan="14" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
 
     updateDetailsTotalSumDisplay(0, 0, 0);
     return;
@@ -1103,6 +1104,7 @@ export function updateDetailsTable(): void {
             ${salePriceHtml}
           </td>
           <td>${item.total ? formatNumber(item.total) : "-"}${marginHtml}</td>
+          <td class="zapchastyst-cell">${item.zapchastystName || "-"}</td>
           <td class="sklad-cell">${item.scladNomer || "-"}</td>
           <td>
             <button class="Bukhhalter-delete-btn"
@@ -1205,11 +1207,15 @@ interface ScladItem {
   sclad_id: number;
   price: number;
   scladNomer?: number; // Номер складу
+  xto_zamovuv?: number; // slyusar_id того хто оприходував
   [key: string]: any;
 }
 
 // Кеш даних складу:
 let scladData: ScladItem[] = [];
+
+// Кеш даних слюсарів (для отримання імен Запчастистів)
+let slyusarsNameCache: Map<number, string> = new Map();
 
 // Завантаження даних зі складу:
 async function fetchScladData(): Promise<ScladItem[]> {
@@ -1249,6 +1255,7 @@ async function fetchScladData(): Promise<ScladItem[]> {
           sclad_id: item.sclad_id || item.data?.sclad_id,
           price: item.price || item.data?.price || 0,
           scladNomer: scladNomer,
+          xto_zamovuv: item.xto_zamovuv ?? undefined,
           ...(typeof item.data === "object" ? item.data : item),
         };
       });
@@ -1261,6 +1268,44 @@ async function fetchScladData(): Promise<ScladItem[]> {
     console.error("Помилка завантаження даних складу:", error);
     return [];
   }
+}
+
+// Завантаження імен Запчастистів з бази slyusars
+async function fetchSlyusarsNames(): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, data");
+
+    if (error) {
+      console.error("Помилка завантаження слюсарів:", error);
+      return;
+    }
+
+    slyusarsNameCache.clear();
+
+    if (data && Array.isArray(data)) {
+      for (const slyusar of data) {
+        const slyusarData =
+          typeof slyusar.data === "string"
+            ? JSON.parse(slyusar.data)
+            : slyusar.data;
+        const name = slyusarData?.Name || "";
+        if (name && slyusar.slyusar_id) {
+          slyusarsNameCache.set(slyusar.slyusar_id, name);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Помилка завантаження імен слюсарів:", error);
+  }
+}
+
+// Функція для отримання імені Запчастиста за slyusar_id
+function getZapchastystNameByScladId(scladId: number): string | undefined {
+  const item = scladData.find((s) => s.sclad_id === scladId);
+  if (!item?.xto_zamovuv) return undefined;
+  return slyusarsNameCache.get(item.xto_zamovuv);
 }
 
 // Функція для отримання закупівельної ціни за sclad_id
@@ -1328,6 +1373,7 @@ export async function searchDetailsData(): Promise<void> {
   }
 
   await fetchScladData();
+  await fetchSlyusarsNames();
   await fetchActsDiscounts();
 
   const shops = await fetchShopData();
@@ -1375,6 +1421,11 @@ export async function searchDetailsData(): Promise<void> {
             margin = saleAfterDiscount - purchaseTotal;
           }
 
+          // Отримуємо ім'я Запчастиста за sclad_id
+          const zapchastystName = scladId
+            ? getZapchastystNameByScladId(scladId)
+            : undefined;
+
           rawData.push({
             dateOpen: openDate,
             dateClose: closeDate,
@@ -1393,6 +1444,7 @@ export async function searchDetailsData(): Promise<void> {
             paymentDate,
             sclad_id: scladId,
             scladNomer: scladNomer,
+            zapchastystName: zapchastystName,
             isClosed: closeDate !== null,
           });
         }

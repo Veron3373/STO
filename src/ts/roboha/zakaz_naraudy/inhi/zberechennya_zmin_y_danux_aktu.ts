@@ -1153,11 +1153,11 @@ async function syncAllZapchastystyHistoryForAct(
 }
 
 /**
- * Синхронізує історію акту для Приймальника
- * НОВА ЛОГІКА:
- * - Якщо зберігає Приймальник → оновлюємо його історію
- * - Якщо зберігає Адміністратор → тільки видаляємо акт з історії попереднього приймальника, нічого не записуємо
- * - Якщо зберігає інший користувач → шукаємо останнього приймальника з acts.pruimalnyk і оновлюємо його історію
+ * Синхронізує історію акту для Приймальника та Запчастистів
+ * ✅ ОНОВЛЕНА ЛОГІКА: Працює однаково для ВСІХ ролей (Адміністратор, Приймальник, Слюсар, Запчастист, Складовщик)
+ * - Завжди шукає приймальника з acts.pruimalnyk
+ * - Оновлює історію приймальника
+ * - Оновлює історію всіх Запчастистів
  */
 async function syncPruimalnikHistory(
   actId: number,
@@ -1166,154 +1166,69 @@ async function syncPruimalnikHistory(
   actDateOn: string | null = null,
   discountPercent: number = 0,
 ): Promise<void> {
-  // ✅ Для Адміністратора: тільки видаляємо з попереднього приймальника, нічого не записуємо
-  if (userAccessLevel === "Адміністратор") {
-    // Шукаємо попереднього приймальника з acts.pruimalnyk
-    const { data: actData, error: actError } = await supabase
-      .from("acts")
-      .select("pruimalnyk")
-      .eq("act_id", actId)
-      .single();
-
-    if (actError || !actData || !actData.pruimalnyk) {
-      return;
-    }
-
-    const previousPruimalnyk = actData.pruimalnyk;
-
-    // Шукаємо попереднього приймальника в slyusars
-    const { data: prevReceiverData, error: prevError } = await supabase
-      .from("slyusars")
-      .select("slyusar_id, data")
-      .eq("data->>Name", previousPruimalnyk)
-      .maybeSingle();
-
-    if (prevError) {
-      console.error(
-        `❌ Помилка пошуку приймальника "${previousPruimalnyk}":`,
-        prevError,
-      );
-      return;
-    }
-
-    if (!prevReceiverData) {
-      return;
-    }
-
-    const receiverData =
-      typeof prevReceiverData.data === "string"
-        ? JSON.parse(prevReceiverData.data)
-        : prevReceiverData.data;
-
-    // Перевіряємо, чи це дійсно Приймальник
-    if (receiverData.Доступ !== "Приймальник") {
-      return;
-    }
-
-    let receiverHistory = receiverData.Історія || {};
-    let wasModified = false;
-
-    // Шукаємо і видаляємо акт з історії
-    for (const dateKey of Object.keys(receiverHistory)) {
-      const dailyActs = receiverHistory[dateKey];
-      if (Array.isArray(dailyActs)) {
-        const idx = dailyActs.findIndex(
-          (item: any) => String(item.Акт) === String(actId),
-        );
-        if (idx !== -1) {
-          dailyActs.splice(idx, 1);
-
-          // Якщо масив порожній, видаляємо дату
-          if (dailyActs.length === 0) {
-            delete receiverHistory[dateKey];
-          }
-
-          wasModified = true;
-          break;
-        }
-      }
-    }
-
-    // Оновлюємо в БД, якщо були зміни
-    if (wasModified) {
-      receiverData.Історія = receiverHistory;
-      const { error: updateError } = await supabase
-        .from("slyusars")
-        .update({ data: receiverData })
-        .eq("slyusar_id", prevReceiverData.slyusar_id);
-
-      if (updateError) {
-        console.error(
-          `❌ Помилка оновлення історії для "${receiverData.Name}":`,
-          updateError,
-        );
-      }
-    }
-
-    return;
-  }
-
-  // ✅ Визначаємо ПІБ приймальника
+  // ✅ Визначаємо ПІБ приймальника - ЗАВЖДИ з acts.pruimalnyk для всіх ролей
   let pruimalnykName: string;
 
-  if (userAccessLevel === "Приймальник") {
-    // Якщо зберігає Приймальник - беремо його ПІБ
-    const userData = getSavedUserDataFromLocalStorage?.();
-    if (!userData || !userData.name) {
-      console.warn("⚠️ Не вдалося отримати дані Приймальника з localStorage");
-      return;
-    }
-    pruimalnykName = userData.name;
+  // Шукаємо приймальника з acts.pruimalnyk
+  const { data: actData, error: actError } = await supabase
+    .from("acts")
+    .select("pruimalnyk")
+    .eq("act_id", actId)
+    .single();
+
+  if (actError || !actData || !actData.pruimalnyk) {
+    console.warn(
+      `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}. Історія приймальника НЕ оновлюється, але історія Запчастистів буде оновлена.`,
+    );
+    // ✅ НЕ виходимо! Продовжуємо для оновлення історії Запчастистів
+    pruimalnykName = "";
   } else {
-    // Якщо зберігає НЕ Приймальник - шукаємо останнього приймальника з acts.pruimalnyk
-    const { data: actData, error: actError } = await supabase
-      .from("acts")
-      .select("pruimalnyk")
-      .eq("act_id", actId)
-      .single();
-
-    if (actError || !actData || !actData.pruimalnyk) {
-      console.warn(
-        `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}. Користувач "${userName}" НЕ Приймальник - історія НЕ оновлюється`,
-      );
-      return;
-    }
-
     pruimalnykName = actData.pruimalnyk;
   }
 
-  // --- ОТРИМАННЯ ДАНИХ ПРИЙМАЛЬНИКА З БД (РАНІШЕ - щоб знати його Склад) ---
-  const { data: userDataArray, error: pruimalnykError } = await supabase
-    .from("slyusars")
-    .select("*")
-    .eq("data->>Name", pruimalnykName);
+  // Змінні для приймальника (можуть бути undefined якщо немає приймальника)
+  let userData: any = null;
+  let slyusarData: any = null;
+  let pruimalnykSklad = 0;
+  let percentWork = 0;
+  let percentParts = 0;
 
-  if (pruimalnykError || !userDataArray || userDataArray.length === 0) {
-    console.error(
-      `❌ syncPruimalnikHistory: Помилка пошуку приймальника "${pruimalnykName}":`,
-      pruimalnykError,
-    );
-    return;
+  // --- ОТРИМАННЯ ДАНИХ ПРИЙМАЛЬНИКА З БД (якщо є приймальник) ---
+  if (pruimalnykName) {
+    const { data: userDataArray, error: pruimalnykError } = await supabase
+      .from("slyusars")
+      .select("*")
+      .eq("data->>Name", pruimalnykName);
+
+    if (pruimalnykError || !userDataArray || userDataArray.length === 0) {
+      console.warn(
+        `⚠️ syncPruimalnikHistory: Приймальник "${pruimalnykName}" не знайдений в БД. Історія Запчастистів все одно буде оновлена.`,
+      );
+      pruimalnykName = ""; // Скидаємо, щоб не оновлювати історію приймальника
+    } else {
+      userData = userDataArray[0];
+      slyusarData =
+        typeof userData.data === "string"
+          ? JSON.parse(userData.data)
+          : userData.data;
+
+      // Додаткова перевірка ролі в базі - дозволяємо Приймальник та Адміністратор
+      if (
+        slyusarData.Доступ !== "Приймальник" &&
+        slyusarData.Доступ !== "Адміністратор"
+      ) {
+        console.warn(
+          "⚠️ syncPruimalnikHistory: Користувач не є Приймальником/Адміністратором в базі. Історія Запчастистів все одно буде оновлена.",
+        );
+        pruimalnykName = ""; // Скидаємо, щоб не оновлювати історію приймальника
+      } else {
+        // Склад приймальника для порівняння
+        pruimalnykSklad = Number(slyusarData.Склад) || 0;
+        percentWork = Number(slyusarData.ПроцентРоботи) || 0;
+        percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
+      }
+    }
   }
-
-  const userData = userDataArray[0];
-  const slyusarData =
-    typeof userData.data === "string"
-      ? JSON.parse(userData.data)
-      : userData.data;
-
-  // Додаткова перевірка ролі в базі
-  if (slyusarData.Доступ !== "Приймальник") {
-    console.warn(
-      "⚠️ syncPruimalnikHistory: Користувач не є Приймальником в базі",
-    );
-    return;
-  }
-
-  // Склад приймальника для порівняння
-  const pruimalnykSklad = Number(slyusarData.Склад) || 0;
-  const percentWork = Number(slyusarData.ПроцентРоботи) || 0;
-  const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
 
   console.log("🔍 syncPruimalnikHistory DEBUG:", {
     pruimalnykName,
@@ -1574,8 +1489,11 @@ async function syncPruimalnikHistory(
           ? JSON.parse(prevReceiverData.data)
           : prevReceiverData.data;
 
-      // Перевіряємо, чи це дійсно Приймальник
-      if (receiverData.Доступ === "Приймальник") {
+      // Перевіряємо, чи це Приймальник АБО Адміністратор (ті хто можуть "тримати" акти)
+      if (
+        receiverData.Доступ === "Приймальник" ||
+        receiverData.Доступ === "Адміністратор"
+      ) {
         let receiverHistory = receiverData.Історія || {};
         let wasModified = false;
 
@@ -1619,32 +1537,12 @@ async function syncPruimalnikHistory(
     }
   }
 
-  let history = slyusarData.Історія || {};
-  let actFound = false;
-  let foundDateKey = "";
-  let foundIndex = -1;
-
-  // 3. Шукаємо існуючий запис акту в історії
-  for (const dateKey of Object.keys(history)) {
-    const dailyActs = history[dateKey];
-    if (Array.isArray(dailyActs)) {
-      const idx = dailyActs.findIndex(
-        (item: any) => String(item.Акт) === String(actId),
-      );
-      if (idx !== -1) {
-        actFound = true;
-        foundDateKey = dateKey;
-        foundIndex = idx;
-        break;
-      }
-    }
-  }
-
   // ✅ ВИПРАВЛЕНО: Отримуємо дані клієнта та авто з БАЗИ ДАНИХ, а не з DOM
   const { pib, auto } = await fetchActClientAndCarDataFromDB(actId);
 
   // --- РОЗРАХУНОК ТА ЗАПИС ЗАРПЛАТ ЗАПЧАСТИСТІВ ---
   // ✅ Використовуємо нову функцію для повної синхронізації історії ВСІХ Запчастистів
+  // ✅ ВАЖЛИВО: Це виконується ЗАВЖДИ, незалежно від наявності приймальника
   const totalZapchastystySalary = await syncAllZapchastystyHistoryForAct(
     actId,
     partsList,
@@ -1655,53 +1553,81 @@ async function syncPruimalnikHistory(
     auto,
   );
 
-  const actRecordUpdate = {
-    Акт: String(actId),
-    Клієнт: pib,
-    Автомобіль: auto,
-    // Записуємо чистий прибуток (після дисконту, собівартості/зарплати слюсаря і зарплати приймальника)
-    // Записуємо Базовий прибуток (ДО відрахування зарплати приймальника), щоб співвідношення ЗП/Сума відповідало відсотку
-    // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - записуємо 0 для зарплати
-    СуммаРоботи: baseWorkProfit,
-    СуммаЗапчастин: basePartsProfit, // Загальна сума запчастин (включаючи свій склад)
-    МаржаДляЗарплати: basePartsProfitForPruimalnyk, // Маржа БЕЗ свого складу (для розрахунку ЗарплатаЗапчастин)
-    ЗарплатаРоботи: salaryWork, // Вже = 0 якщо baseWorkProfit <= 0
-    ЗарплатаЗапчастин: salaryParts, // = МаржаДляЗарплати × ПроцентЗапчастин / 100
-    ЗарплатаЗапчастистів: totalZapchastystySalary, // Сума зарплат всіх Запчастистів по цьому акту
-    Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
-    ДатаЗакриття: null, // Буде заповнено при закритті акту
-  };
+  // --- ОНОВЛЕННЯ ІСТОРІЇ ПРИЙМАЛЬНИКА (тільки якщо є приймальник) ---
+  if (pruimalnykName && userData && slyusarData) {
+    let history = slyusarData.Історія || {};
+    let actFound = false;
+    let foundDateKey = "";
+    let foundIndex = -1;
 
-  if (actFound) {
-    const oldRecord = history[foundDateKey][foundIndex];
-    history[foundDateKey][foundIndex] = { ...oldRecord, ...actRecordUpdate };
-  } else {
-    // Використовуємо дату створення акту, а не поточну дату
-    const actDate = actDateOn
-      ? actDateOn.split("T")[0]
-      : new Date().toISOString().split("T")[0];
-    if (!history[actDate]) {
-      history[actDate] = [];
+    // 3. Шукаємо існуючий запис акту в історії
+    for (const dateKey of Object.keys(history)) {
+      const dailyActs = history[dateKey];
+      if (Array.isArray(dailyActs)) {
+        const idx = dailyActs.findIndex(
+          (item: any) => String(item.Акт) === String(actId),
+        );
+        if (idx !== -1) {
+          actFound = true;
+          foundDateKey = dateKey;
+          foundIndex = idx;
+          break;
+        }
+      }
     }
-    history[actDate].push(actRecordUpdate);
-  }
 
-  // 4. Зберігаємо оновлену історію в БД
-  slyusarData.Історія = history;
+    const actRecordUpdate = {
+      Акт: String(actId),
+      Клієнт: pib,
+      Автомобіль: auto,
+      // Записуємо чистий прибуток (після дисконту, собівартості/зарплати слюсаря і зарплати приймальника)
+      // Записуємо Базовий прибуток (ДО відрахування зарплати приймальника), щоб співвідношення ЗП/Сума відповідало відсотку
+      // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - записуємо 0 для зарплати
+      СуммаРоботи: baseWorkProfit,
+      СуммаЗапчастин: basePartsProfit, // Загальна сума запчастин (включаючи свій склад)
+      МаржаДляЗарплати: basePartsProfitForPruimalnyk, // Маржа БЕЗ свого складу (для розрахунку ЗарплатаЗапчастин)
+      ЗарплатаРоботи: salaryWork, // Вже = 0 якщо baseWorkProfit <= 0
+      ЗарплатаЗапчастин: salaryParts, // = МаржаДляЗарплати × ПроцентЗапчастин / 100
+      ЗарплатаЗапчастистів: totalZapchastystySalary, // Сума зарплат всіх Запчастистів по цьому акту
+      Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
+      ДатаЗакриття: null, // Буде заповнено при закритті акту
+    };
 
-  const { error: updateError } = await supabase
-    .from("slyusars")
-    .update({ data: slyusarData })
-    .eq("slyusar_id", userData.slyusar_id);
+    if (actFound) {
+      const oldRecord = history[foundDateKey][foundIndex];
+      history[foundDateKey][foundIndex] = { ...oldRecord, ...actRecordUpdate };
+    } else {
+      // Використовуємо дату створення акту, а не поточну дату
+      const actDate = actDateOn
+        ? actDateOn.split("T")[0]
+        : new Date().toISOString().split("T")[0];
+      if (!history[actDate]) {
+        history[actDate] = [];
+      }
+      history[actDate].push(actRecordUpdate);
+    }
 
-  if (updateError) {
-    console.error(
-      "❌ syncPruimalnikHistory: Помилка оновлення історії:",
-      updateError,
-    );
+    // 4. Зберігаємо оновлену історію в БД
+    slyusarData.Історія = history;
+
+    const { error: updateError } = await supabase
+      .from("slyusars")
+      .update({ data: slyusarData })
+      .eq("slyusar_id", userData.slyusar_id);
+
+    if (updateError) {
+      console.error(
+        "❌ syncPruimalnikHistory: Помилка оновлення історії:",
+        updateError,
+      );
+    } else {
+      // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
+      localStorage.setItem("current_act_pruimalnyk", pruimalnykName);
+    }
   } else {
-    // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
-    localStorage.setItem("current_act_pruimalnyk", pruimalnykName);
+    console.log(
+      "⚠️ syncPruimalnikHistory: Немає приймальника - історія приймальника НЕ оновлюється (але Запчастисти оновлені)",
+    );
   }
 }
 
@@ -1709,13 +1635,23 @@ async function syncPruimalnikHistory(
 
 /**
  * Записує інформацію про приймальника в таблицю acts
- * Для всіх користувачів ОКРІМ Слюсаря (Приймальник, Адміністратор, Запчастист, Складовщик)
+ * ✅ ВИПРАВЛЕНО: Записуємо ТІЛЬКИ якщо поточний користувач є Приймальник
+ * Це забезпечує що acts.pruimalnyk завжди вказує на актуального Приймальника
+ * і не перезаписується Адміністратором або іншими ролями
  * @param actId - ID акту
  */
 async function savePruimalnykToActs(actId: number): Promise<void> {
   try {
-    // ✅ Перевірка рівня доступу - НЕ записуємо для Слюсаря
-    if (userAccessLevel === "Слюсар") {
+    // ✅ ВИПРАВЛЕНО: Записуємо приймальника якщо поточний користувач є Приймальник АБО Адміністратор
+    // Вони можуть "забирати" акт собі (видаляють з попереднього, записують собі)
+    // Слюсар / Запчастист / Складовщик → просто оновлюють дані у поточного власника акту
+    if (
+      userAccessLevel !== "Приймальник" &&
+      userAccessLevel !== "Адміністратор"
+    ) {
+      console.log(
+        `📝 savePruimalnykToActs: Пропускаємо для ролі ${userAccessLevel} (тільки Приймальник/Адміністратор можуть стати pruimalnyk)`,
+      );
       return;
     }
 
@@ -1725,7 +1661,7 @@ async function savePruimalnykToActs(actId: number): Promise<void> {
       return;
     }
 
-    // Завжди записуємо приймальника (незалежно від isNewAct)
+    // Записуємо приймальника тільки якщо користувач є Приймальник
     const updateData = {
       pruimalnyk: userData.name,
     };
@@ -1740,6 +1676,7 @@ async function savePruimalnykToActs(actId: number): Promise<void> {
         `❌ Помилка при записуванні приймальника: ${error.message}`,
       );
     } else {
+      console.log(`✅ acts.pruimalnyk оновлено на: ${userData.name}`);
     }
   } catch (err: any) {
     console.error("❌ Помилка savePruimalnykToActs:", err?.message || err);

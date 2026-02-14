@@ -68,8 +68,10 @@ import {
 import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
 import { handleSmsButtonClick } from "../sms/sendActSMS";
-import { refreshActsTable, getActEditorFromPresence } from "../tablucya/tablucya";
-
+import {
+  refreshActsTable,
+  getActEditorFromPresence,
+} from "../tablucya/tablucya";
 
 function initDeleteRowHandler(): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
@@ -89,7 +91,7 @@ function initDeleteRowHandler(): void {
         showNotification(
           "Неможливо видалити рядок у закритому акті",
           "warning",
-          1000
+          1000,
         );
         return;
       }
@@ -99,7 +101,7 @@ function initDeleteRowHandler(): void {
         row.remove();
 
         const tableBody = document.querySelector(
-          `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`
+          `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`,
         );
         if (tableBody) {
           const rows = Array.from(tableBody.querySelectorAll("tr"));
@@ -107,7 +109,7 @@ function initDeleteRowHandler(): void {
             const indexCell = r.querySelector(".row-index");
             if (indexCell) {
               const nameCell = r.querySelector(
-                '[data-name="name"]'
+                '[data-name="name"]',
               ) as HTMLElement;
               const type = nameCell?.getAttribute("data-type");
               let icon = "";
@@ -125,8 +127,6 @@ function initDeleteRowHandler(): void {
     }
   });
 }
-
-
 
 const handleIndexIconClick = async (e: MouseEvent) => {
   const target = e.target as HTMLElement;
@@ -165,7 +165,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
       setTimeout(() => {
         // 1. Натискаємо кнопку "Склад"
         const buttons = document.querySelectorAll(
-          ".toggle-button-all_other_bases"
+          ".toggle-button-all_other_bases",
         );
         buttons.forEach((btn) => {
           if (btn.textContent?.includes("Склад")) {
@@ -175,10 +175,10 @@ const handleIndexIconClick = async (e: MouseEvent) => {
 
         // 2. Заповнюємо інпути
         const scladDetailInput = document.getElementById(
-          "sclad_detail"
+          "sclad_detail",
         ) as HTMLInputElement;
         const scladDateInput = document.getElementById(
-          "sclad_date"
+          "sclad_date",
         ) as HTMLInputElement;
 
         if (scladDetailInput) {
@@ -206,7 +206,9 @@ const handleIndexIconClick = async (e: MouseEvent) => {
             if (match) {
               if (catalogCell) {
                 catalogCell.textContent = String(match.detail_id);
-                catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
+                catalogCell.dispatchEvent(
+                  new Event("input", { bubbles: true }),
+                );
                 showNotification("Catalog оновлено автоматично!", "success");
               }
             }
@@ -247,7 +249,10 @@ const handleIndexIconClick = async (e: MouseEvent) => {
           catalogCell.textContent = String(existingWork.work_id);
           catalogCell.dispatchEvent(new Event("input", { bubbles: true }));
           if (indexCell) indexCell.style.cursor = "";
-          showNotification(`Робота вже існує в базі (ID: ${existingWork.work_id})`, "info");
+          showNotification(
+            `Робота вже існує в базі (ID: ${existingWork.work_id})`,
+            "info",
+          );
           return;
         }
 
@@ -283,7 +288,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
         console.error("Error saving work:", err);
         showNotification(
           "Помилка при збереженні роботи: " + err.message,
-          "error"
+          "error",
         );
       }
     };
@@ -321,7 +326,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
         createChoiceModal(
           () => runWorkLogic(), // On Work
           () => runPartLogic(), // On Part
-          () => { } // On Cancel
+          () => {}, // On Cancel
         );
       } else {
         // showNotification("Функція недоступна", "warning"); // Опціонально можна розкоментувати
@@ -349,7 +354,7 @@ function initIndexIconHandler(): void {
 function createChoiceModal(
   onWork: () => void,
   onPart: () => void,
-  onCancel: () => void
+  onCancel: () => void,
 ): void {
   const styleId = "choice-modal-styles";
   if (!document.getElementById(styleId)) {
@@ -496,7 +501,7 @@ function createChoiceModal(
  */
 async function getRoleSettingBool(
   settingId: number,
-  columnName: string
+  columnName: string,
 ): Promise<boolean> {
   try {
     const { data, error } = await supabase
@@ -508,14 +513,14 @@ async function getRoleSettingBool(
     if (error) {
       console.error(
         `Помилка читання settings (setting_id=${settingId}, col=${columnName}):`,
-        error
+        error,
       );
       return true;
     }
 
     if (!data) {
       console.warn(
-        `settings: не знайдено рядок setting_id=${settingId} для колонки ${columnName}`
+        `settings: не знайдено рядок setting_id=${settingId} для колонки ${columnName}`,
       );
       return true;
     }
@@ -538,7 +543,7 @@ async function getRoleSettingBool(
   } catch (e) {
     console.error(
       `Виняток при читанні settings (setting_id=${settingId}, col=${columnName}):`,
-      e
+      e,
     );
     return true;
   }
@@ -728,8 +733,8 @@ async function canUserSeeSmsButton(): Promise<boolean> {
 
 export async function showModal(
   actId: number,
-  clickSource: 'client' | 'other' = 'other',
-  skipPresence: boolean = false
+  clickSource: "client" | "other" = "other",
+  skipPresence: boolean = false,
 ): Promise<void> {
   const canOpen = await canUserOpenActs();
 
@@ -769,7 +774,7 @@ export async function showModal(
     const originalShowZarplata = globalCache.settings.showZarplata;
 
     // Тимчасово змінюємо видимість залежно від джерела кліку
-    if (clickSource === 'other') {
+    if (clickSource === "other") {
       // Клік по № акту, Дата, Автомобіль, Сума - ховаємо стовпці
       globalCache.settings.showPibMagazin = false;
       globalCache.settings.showZarplata = false;
@@ -792,8 +797,6 @@ export async function showModal(
     globalCache.currentActId = actId;
     globalCache.isActClosed = !!act.date_off;
     globalCache.currentActDateOn = act.date_on || null;
-
-
 
     // ✅ Зберігаємо приймальника в localStorage для використання при логуванні змін
     if (act.pruimalnyk) {
@@ -841,7 +844,7 @@ export async function showModal(
       canShowCreateActBtn,
       canShowPrintActBtn,
       canShowAddRowBtn,
-      canShowSmsBtn
+      canShowSmsBtn,
     );
 
     // ✅ ВІДНОВЛЮЄМО оригінальні значення після рендерингу
@@ -872,9 +875,11 @@ export async function showModal(
       userAccessLevel === "Приймальник"
     ) {
       // Запускаємо без await щоб не блокувати відкриття акту
-      checkAndHighlightChanges(actId).then(() => {
-        removeNotificationsForAct(actId);
-      }).catch(err => console.error("Помилка підсвічування:", err));
+      checkAndHighlightChanges(actId)
+        .then(() => {
+          removeNotificationsForAct(actId);
+        })
+        .catch((err) => console.error("Помилка підсвічування:", err));
     }
 
     // 🔽 Перевірка прав на кнопку "Додати рядок" - тепер це робиться при рендері
@@ -892,7 +897,7 @@ export async function showModal(
         // Акт вже відкритий іншим користувачем - блокуємо одразу
         lockActInterface(existingEditor);
       }
-      
+
       // Перевіряємо чи акт вже відкритий іншим користувачем
       // Передаємо колбек для оновлення даних при розблокуванні
       await subscribeToActPresence(actId, async () => {
@@ -919,7 +924,7 @@ async function fillMissingSlyusarSums(): Promise<void> {
   if (!container) return;
 
   const rows = Array.from(
-    container.querySelectorAll<HTMLTableRowElement>("tbody tr")
+    container.querySelectorAll<HTMLTableRowElement>("tbody tr"),
   );
 
   for (const row of rows) {
@@ -929,13 +934,13 @@ async function fillMissingSlyusarSums(): Promise<void> {
     if (typeFromCell !== "works") continue;
 
     const slyusarSumCell = row.querySelector(
-      '[data-name="slyusar_sum"]'
+      '[data-name="slyusar_sum"]',
     ) as HTMLElement;
 
     if (slyusarSumCell.textContent?.trim()) continue;
 
     const pibCell = row.querySelector(
-      '[data-name="pib_magazin"]'
+      '[data-name="pib_magazin"]',
     ) as HTMLElement;
     const slyusarName = pibCell?.textContent?.trim() || "";
 
@@ -963,7 +968,7 @@ function checkSlyusarSumWarningsOnLoad(): void {
   if (!container) return;
 
   const rows = Array.from(
-    container.querySelectorAll<HTMLTableRowElement>("tbody tr")
+    container.querySelectorAll<HTMLTableRowElement>("tbody tr"),
   );
   let hasWarnings = false;
 
@@ -975,7 +980,7 @@ function checkSlyusarSumWarningsOnLoad(): void {
 
     const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
     const slyusarSumCell = row.querySelector(
-      '[data-name="slyusar_sum"]'
+      '[data-name="slyusar_sum"]',
     ) as HTMLElement;
 
     if (!sumCell || !slyusarSumCell) continue;
@@ -995,7 +1000,7 @@ function checkSlyusarSumWarningsOnLoad(): void {
     showNotification(
       "⚠️ Увага: Знайдено помилки. Зарплата більша ніж сума роботи у деяких рядках",
       "warning",
-      3000
+      3000,
     );
   }
 }
@@ -1046,7 +1051,7 @@ function showNoAccessNotification(): void {
 
 async function applyAccessRestrictionsToNewRow(): Promise<void> {
   const table = document.querySelector(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} table`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} table`,
   );
   if (!table) return;
 
@@ -1058,7 +1063,7 @@ async function applyAccessRestrictionsToNewRow(): Promise<void> {
 
   // Застосовуємо видимість до всіх колонок ціни/суми в останньому рядку
   const priceCells = lastRow.querySelectorAll<HTMLElement>(
-    '[data-col="price"], [data-col="sum"]'
+    '[data-col="price"], [data-col="sum"]',
   );
   priceCells.forEach((cell) => {
     cell.style.display = canSeePriceCols ? "" : "none";
@@ -1066,7 +1071,7 @@ async function applyAccessRestrictionsToNewRow(): Promise<void> {
 
   // Перевіряємо видимість колонки зарплати
   const slyusarSumCell = lastRow.querySelector(
-    '[data-name="slyusar_sum"]'
+    '[data-name="slyusar_sum"]',
   ) as HTMLElement;
   if (slyusarSumCell && !globalCache.settings.showZarplata) {
     slyusarSumCell.style.display = "none";
@@ -1088,7 +1093,7 @@ function applyAccessRestrictions(): void {
 
 function restrictPhotoAccess(): void {
   const photoCell = document.querySelector(
-    "table.zakaz_narayd-table.left tr:nth-child(5) td:nth-child(2)"
+    "table.zakaz_narayd-table.left tr:nth-child(5) td:nth-child(2)",
   ) as HTMLTableCellElement | null;
 
   if (!photoCell) return;
@@ -1129,7 +1134,7 @@ function restrictPhotoAccess(): void {
 
       showNotification(
         "Створення папки заборонено для вашого рівня доступу",
-        "warning"
+        "warning",
       );
     } catch (err) {
       console.error("❌ Помилка при перевірці фото:", err);
@@ -1182,11 +1187,12 @@ function handleLoadError(error: any): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   showNotification(
     `Помилка завантаження акту: ${error?.message || "Перевірте підключення."}`,
-    "error"
+    "error",
   );
   if (body) {
-    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${error?.message || "Перевірте підключення."
-      }</p>`;
+    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${
+      error?.message || "Перевірте підключення."
+    }</p>`;
   }
 }
 
@@ -1199,7 +1205,7 @@ function renderModalContent(
   canShowCreateActBtn: boolean,
   canShowPrintActBtn: boolean,
   canShowAddRowBtn: boolean,
-  canShowSmsBtn: boolean
+  canShowSmsBtn: boolean,
 ): void {
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!body) return;
@@ -1269,7 +1275,11 @@ function renderModalContent(
       slyusarWorkIndexMap.set(slyusarKey, workIndex + 1);
 
       // ✅ ПРІОРИТЕТ: беремо recordId з acts.data.Роботи (якщо є), інакше шукаємо в історії слюсаря
-      const recordId = item["recordId"] || (slyusarName ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex) : undefined);
+      const recordId =
+        item["recordId"] ||
+        (slyusarName
+          ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex)
+          : undefined);
 
       return {
         type: "work",
@@ -1325,49 +1335,55 @@ function renderModalContent(
   const headerButtons = `
     <div class="zakaz_narayd-header-buttons">
       ${pruimalnykDisplay}
-      ${showLockButton
-      ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}">
+      ${
+        showLockButton
+          ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}">
                    ${isClosed ? "🔒" : "🗝️"}
                    </button>`
-      : ""
-    }
-      ${!isRestricted && canShowPrintActBtn
-      ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
-      : ""
-    }
-      ${canShowSmsBtn
-      ? (() => {
-        let tooltip = "Немає SMS";
-        const isSent = !!act.sms;
-        if (isSent) {
-          try {
-            const dateString = String(act.sms).replace(" ", "T");
-            const d = new Date(dateString);
-            if (!isNaN(d.getTime())) {
-              const { date, time } = formatDateTime(d);
-              tooltip = `${time} / ${date}`;
-            } else {
-              tooltip = String(act.sms);
-            }
-          } catch {
-            tooltip = String(act.sms);
-          }
-        }
-        return !isSent
-          ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">✉️</button>`
-          : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📨</button>`;
-      })()
-      : ""
-    }
-      ${!isRestricted && canShowCreateActBtn
-      ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
-      : ""
-    }
+          : ""
+      }
+      ${
+        !isRestricted && canShowPrintActBtn
+          ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+          : ""
+      }
+      ${
+        canShowSmsBtn
+          ? (() => {
+              let tooltip = "Немає SMS";
+              const isSent = !!act.sms;
+              if (isSent) {
+                try {
+                  const dateString = String(act.sms).replace(" ", "T");
+                  const d = new Date(dateString);
+                  if (!isNaN(d.getTime())) {
+                    const { date, time } = formatDateTime(d);
+                    tooltip = `${time} / ${date}`;
+                  } else {
+                    tooltip = String(act.sms);
+                  }
+                } catch {
+                  tooltip = String(act.sms);
+                }
+              }
+              return !isSent
+                ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">✉️</button>`
+                : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📨</button>`;
+            })()
+          : ""
+      }
+      ${
+        !isRestricted && canShowCreateActBtn
+          ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+          : ""
+      }
     </div>
   `;
 
   // Визначаємо стиль для header (не застосовуємо колір якщо slusarsOn активний - буде золотистий)
-  const headerStyle = shouldShowSlusarsOn ? "" : `background-color: ${globalCache.generalSettings.headerColor};`;
+  const headerStyle = shouldShowSlusarsOn
+    ? ""
+    : `background-color: ${globalCache.generalSettings.headerColor};`;
 
   body.innerHTML = `
     <div class="${headerClass}" style="${headerStyle}">
@@ -1383,51 +1399,54 @@ function renderModalContent(
         ${createTableRow("Акт №", `<span id="act-number">${act.act_id}</span>`)}
         ${createTableRow("Клієнт", clientInfo.fio)}
         ${createTableRow(
-    "Телефон",
-    `<span style="color: blue;">${clientInfo.phone}</span>`
-  )}
+          "Телефон",
+          `<span style="color: blue;">${clientInfo.phone}</span>`,
+        )}
         ${createTableRow("Примітка:", clientInfo.note)}
         ${createTableRow("Фото", photoCellHtml)}
       </table>
       <table class="zakaz_narayd-table right">
         ${createTableRow(
-    isClosed ? "Закритий" : "Відкритий",
-    `${isClosed
-      ? `<span class="red">${formatDate(act.date_off)}</span> | <span class="green">${formatDate(act.date_on)}</span>`
-      : `<span class="green">${formatDate(act.date_on) || "-"}</span>`
-    }`
-  )}
+          isClosed ? "Закритий" : "Відкритий",
+          `${
+            isClosed
+              ? `<span class="red">${formatDate(act.date_off)}</span> | <span class="green">${formatDate(act.date_on)}</span>`
+              : `<span class="green">${formatDate(act.date_on) || "-"}</span>`
+          }`,
+        )}
         ${createTableRow(
-    "Автомобіль",
-    `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
-      carInfo.nomer || ""
-    ).trim()}`.trim() || "—"
-  )}
+          "Автомобіль",
+          `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
+            carInfo.nomer || ""
+          ).trim()}`.trim() || "—",
+        )}
         ${createTableRow("Vincode", carInfo.vin)}
         ${createTableRow("Двигун", carInfo.engine)}
         ${createTableRow(
-    "Пробіг",
-    `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
-      actDetails?.["Пробіг"],
-      0,
-      0
-    )}</span>`
-  )}
+          "Пробіг",
+          `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
+            actDetails?.["Пробіг"],
+            0,
+            0,
+          )}</span>`,
+        )}
       </table>
     </div>
     <div class="reason-container">
       <div class="zakaz_narayd-reason-line">
         <div class="reason-text">
           <strong>Причина звернення:</strong>
-          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Причина звернення"] || "—"
-    }</span>
+          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
+            actDetails?.["Причина звернення"] || "—"
+          }</span>
         </div>
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">
           <strong>Рекомендації:</strong>
-          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Рекомендації"] || "—"
-    }</span>
+          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
+            actDetails?.["Рекомендації"] || "—"
+          }</span>
         </div>
 
       </div>
@@ -1435,20 +1454,20 @@ function renderModalContent(
     ${generateTableHTML(
       allItems,
       globalCache.settings.showPibMagazin,
-      canShowAddRowBtn
+      canShowAddRowBtn,
     )}
     ${isClosed ? createClosedActClaimText() : ""}
   `;
 
   setTimeout(() => {
     const avansInput = document.getElementById(
-      "editable-avans"
+      "editable-avans",
     ) as HTMLInputElement | null;
     const discountInput = document.getElementById(
-      "editable-discount"
+      "editable-discount",
     ) as HTMLInputElement | null;
     const discountAmountInput = document.getElementById(
-      "editable-discount-amount"
+      "editable-discount-amount",
     ) as HTMLInputElement | null;
 
     if (avansInput) {
@@ -1459,7 +1478,7 @@ function renderModalContent(
 
     if (discountInput) {
       const discountValue = Number(
-        act?.discount ?? actDetails?.["Знижка"] ?? 0
+        act?.discount ?? actDetails?.["Знижка"] ?? 0,
       );
       discountInput.value = String(discountValue);
       discountInput.dispatchEvent(new Event("input"));
@@ -1467,7 +1486,7 @@ function renderModalContent(
 
     if (discountAmountInput) {
       const discountAmountValue = Number(
-        act?.discount_amount ?? actDetails?.["ПроцентЗнижки"] ?? 0
+        act?.discount_amount ?? actDetails?.["ПроцентЗнижки"] ?? 0,
       );
       discountAmountInput.value = String(discountAmountValue);
       discountAmountInput.dispatchEvent(new Event("input"));
@@ -1493,7 +1512,7 @@ function createClosedActClaimText(): string {
 async function addModalHandlers(
   actId: number,
   actDetails: any,
-  clientPhone: string
+  clientPhone: string,
 ): Promise<void> {
   const isClosed = globalCache.isActClosed;
   const isRestricted = userAccessLevel === "Слюсар";
@@ -1543,7 +1562,7 @@ async function addModalHandlers(
       () => {
         addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
         void applyAccessRestrictionsToNewRow();
-      }
+      },
     );
 
     initializeActWarnings(ACT_ITEMS_TABLE_CONTAINER_ID, actId);
@@ -1557,7 +1576,7 @@ async function addModalHandlers(
   }
 
   const avansInput = document.getElementById(
-    "editable-avans"
+    "editable-avans",
   ) as HTMLInputElement;
   if (avansInput) {
     avansInput.addEventListener("input", () => {
@@ -1566,7 +1585,7 @@ async function addModalHandlers(
   }
 
   const discountInput = document.getElementById(
-    "editable-discount"
+    "editable-discount",
   ) as HTMLInputElement;
   if (discountInput) {
     discountInput.addEventListener("input", () => {
@@ -1625,7 +1644,7 @@ function handleInputChange(event: Event): void {
           const diff = formattedLength - originalLength;
           const newCaretPosition = Math.min(
             originalCaretPosition + diff,
-            formattedLength
+            formattedLength,
           );
           const range = document.createRange();
           range.setStart(target.firstChild, Math.max(0, newCaretPosition));
@@ -1655,7 +1674,7 @@ function handleInputChange(event: Event): void {
           const diff = formattedLength - originalLength;
           const newCaretPosition = Math.min(
             originalCaretPosition + diff,
-            formattedLength
+            formattedLength,
           );
           const range = document.createRange();
           range.setStart(target.firstChild, Math.max(0, newCaretPosition));
@@ -1694,7 +1713,7 @@ function handleInputChange(event: Event): void {
       if (displayedName && globalCache.settings.showPibMagazin) {
         const row = target.closest("tr") as HTMLTableRowElement;
         const pibMagCell = row?.querySelector(
-          '[data-name="pib_magazin"]'
+          '[data-name="pib_magazin"]',
         ) as HTMLElement | null;
 
         if (row && pibMagCell) {
@@ -1748,16 +1767,28 @@ function handleInputChange(event: Event): void {
         target.setAttribute("data-prev-value", newSlyusar);
 
         // ✅ Перевіряємо поточну зарплату в інпуті
-        const slyusarSumCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
-        const currentSalaryText = (slyusarSumCell?.textContent || "").replace(/\s/g, "").trim();
+        const slyusarSumCell = row.querySelector(
+          '[data-name="slyusar_sum"]',
+        ) as HTMLElement;
+        const currentSalaryText = (slyusarSumCell?.textContent || "")
+          .replace(/\s/g, "")
+          .trim();
         const currentSalary = parseFloat(currentSalaryText) || 0;
 
         // ✅ Якщо слюсар змінився І зарплата = 0 або пусто → примусовий перерахунок від відсотка
-        if (prevSlyusar && prevSlyusar !== newSlyusar && (currentSalary === 0 || currentSalaryText === "")) {
+        if (
+          prevSlyusar &&
+          prevSlyusar !== newSlyusar &&
+          (currentSalary === 0 || currentSalaryText === "")
+        ) {
           forceRecalculateSlyusarSalary(row).catch((err) => {
             console.error("Помилка при примусовому перерахунку зарплати:", err);
           });
-        } else if (prevSlyusar && prevSlyusar !== newSlyusar && currentSalary > 0) {
+        } else if (
+          prevSlyusar &&
+          prevSlyusar !== newSlyusar &&
+          currentSalary > 0
+        ) {
           // ✅ Встановлюємо флаг, що зарплату не треба перераховувати
           row.setAttribute("data-salary-locked", "true");
           updateCalculatedSumsInFooter();
@@ -1785,7 +1816,7 @@ function handleInputChange(event: Event): void {
             const diff = formattedLength - originalLength;
             const newCaretPosition = Math.min(
               originalCaretPosition + diff,
-              formattedLength
+              formattedLength,
             );
             const range = document.createRange();
             range.setStart(target.firstChild, Math.max(0, newCaretPosition));
@@ -1811,7 +1842,7 @@ export function getUserNameFromLocalStorage(): string | null {
   } catch (error) {
     console.warn(
       "Помилка при отриманні імені користувача з localStorage:",
-      error
+      error,
     );
     return null;
   }
@@ -1837,7 +1868,7 @@ function togglePriceColumnsVisibility(show: boolean): void {
 
   // Всі клітинки та заголовки з data-col="price" або data-col="sum"
   const priceCells = document.querySelectorAll<HTMLElement>(
-    '[data-col="price"], [data-col="sum"]'
+    '[data-col="price"], [data-col="sum"]',
   );
 
   priceCells.forEach((el) => {
@@ -1845,7 +1876,9 @@ function togglePriceColumnsVisibility(show: boolean): void {
   });
 
   // ✅ Також приховуємо/показуємо футер з сумами
-  const sumsFooter = document.querySelector<HTMLElement>('.zakaz_narayd-sums-footer');
+  const sumsFooter = document.querySelector<HTMLElement>(
+    ".zakaz_narayd-sums-footer",
+  );
   if (sumsFooter) {
     sumsFooter.style.display = displayValue;
   }
@@ -1858,17 +1891,19 @@ function togglePriceColumnsVisibility(show: boolean): void {
  * Приховує/показує стовпець "Сума" в таблиці списку актів (без перезавантаження)
  */
 function toggleActsTableSumaColumn(show: boolean): void {
-  const actsTable = document.querySelector('#table-container-modal-sakaz_narad table');
+  const actsTable = document.querySelector(
+    "#table-container-modal-sakaz_narad table",
+  );
   if (!actsTable) return;
 
   const displayValue = show ? "" : "none";
 
   // Знаходимо індекс стовпця "Сума" в заголовку
-  const headers = actsTable.querySelectorAll('thead th');
+  const headers = actsTable.querySelectorAll("thead th");
   let sumaColumnIndex = -1;
 
   headers.forEach((th, index) => {
-    if (th.textContent?.trim() === 'Сума') {
+    if (th.textContent?.trim() === "Сума") {
       sumaColumnIndex = index;
       (th as HTMLElement).style.display = displayValue;
     }
@@ -1882,9 +1917,9 @@ function toggleActsTableSumaColumn(show: boolean): void {
 
   // Якщо стовпець існує - приховуємо/показуємо комірки в рядках
   if (sumaColumnIndex !== -1) {
-    const rows = actsTable.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-      const cells = row.querySelectorAll('td');
+    const rows = actsTable.querySelectorAll("tbody tr");
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll("td");
       if (cells[sumaColumnIndex]) {
         (cells[sumaColumnIndex] as HTMLElement).style.display = displayValue;
       }
@@ -1953,17 +1988,17 @@ function setupSlusarsOnRealtimeSubscription(actId: number): void {
             header.classList.remove("zakaz_narayd-header-slusar-on");
           }
         }
-      }
+      },
     )
     .subscribe();
 }
 
 /**
-     * Глобальна функція для відкриття акту з HTML (наприклад, з кнопок в таблиці бухгалтерії)
-     * Відкриває акт в режимі 'client' (з усіма стовпцями)
-     */
+ * Глобальна функція для відкриття акту з HTML (наприклад, з кнопок в таблиці бухгалтерії)
+ * Відкриває акт в режимі 'client' (з усіма стовпцями)
+ */
 (window as any).openActModalWithClient = (actId: number) => {
-  showModal(actId, 'client');
+  showModal(actId, "client");
 };
 
 /**
@@ -2004,7 +2039,9 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     const actDetails = safeParseJSON(act.info || act.data || act.details) || {};
 
     // 3. Знаходимо контейнер таблиці
-    const tableContainer = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
+    const tableContainer = document.getElementById(
+      ACT_ITEMS_TABLE_CONTAINER_ID,
+    );
     if (!tableContainer) {
       console.error("❌ Контейнер таблиці не знайдено");
       return;
@@ -2013,26 +2050,41 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     // 4. ✅ ВИПРАВЛЕНО: Визначаємо видимість стовпців на основі ПОТОЧНОЇ таблиці (а не globalCache)
     // Це гарантує, що оновлення покаже ті самі стовпці, що й до оновлення
     const existingHeaderRow = tableContainer.querySelector("thead tr");
-    const headers = Array.from(existingHeaderRow?.querySelectorAll('th') || []);
-    
+    const headers = Array.from(existingHeaderRow?.querySelectorAll("th") || []);
+
     // Функція перевірки чи заголовок видимий (не display: none)
     const isHeaderVisible = (th: Element): boolean => {
       const style = (th as HTMLElement).style;
-      return style.display !== 'none';
+      return style.display !== "none";
     };
-    
+
     // Точна перевірка наявності та ВИДИМОСТІ стовпців за текстом заголовків
-    const showCatalog = headers.some(th => th.textContent?.trim() === "Каталог" && isHeaderVisible(th));
-    const showZarplata = headers.some(th => th.textContent?.trim() === "Зар-та" && isHeaderVisible(th));
-    const showPibMagazin = headers.some(th => th.textContent?.includes("ПІБ") && th.textContent?.includes("Магазин") && isHeaderVisible(th));
-    
+    const showCatalog = headers.some(
+      (th) => th.textContent?.trim() === "Каталог" && isHeaderVisible(th),
+    );
+    const showZarplata = headers.some(
+      (th) => th.textContent?.trim() === "Зар-та" && isHeaderVisible(th),
+    );
+    const showPibMagazin = headers.some(
+      (th) =>
+        th.textContent?.includes("ПІБ") &&
+        th.textContent?.includes("Магазин") &&
+        isHeaderVisible(th),
+    );
+
     // Перевіряємо видимість стовпців Ціна та Сума (можуть бути приховані через display: none)
-    const showPrice = headers.some(th => th.textContent?.trim() === "Ціна" && isHeaderVisible(th));
-    const showSum = headers.some(th => th.textContent?.trim() === "Сума" && isHeaderVisible(th));
-    
+    const showPrice = headers.some(
+      (th) => th.textContent?.trim() === "Ціна" && isHeaderVisible(th),
+    );
+    const showSum = headers.some(
+      (th) => th.textContent?.trim() === "Сума" && isHeaderVisible(th),
+    );
+
     // Перевіряємо чи є ОКРЕМА колонка delete-cell (td.delete-cell в окремому td)
     // Якщо кнопка delete всередині name-cell - це інший варіант верстки, окремий td не потрібен
-    const hasDeleteColumnSeparate = !!tableContainer.querySelector('tbody tr > td.delete-cell');
+    const hasDeleteColumnSeparate = !!tableContainer.querySelector(
+      "tbody tr > td.delete-cell",
+    );
 
     // 5. Підготовка індексів для recordId
     const slyusarWorkIndexMap = new Map<string, number>();
@@ -2067,7 +2119,16 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
         const slyusarKey = slyusarName.toLowerCase();
         const workIndex = slyusarWorkIndexMap.get(slyusarKey) ?? 0;
         slyusarWorkIndexMap.set(slyusarKey, workIndex + 1);
-        const recordId = item["recordId"] || (slyusarName ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex) : undefined);
+        const recordId =
+          item["recordId"] ||
+          (slyusarName
+            ? getRecordIdFromHistory(
+                slyusarName,
+                workName,
+                act.act_id,
+                workIndex,
+              )
+            : undefined);
 
         return {
           type: "work",
@@ -2118,16 +2179,17 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       const formatNum = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
 
       // Генеруємо HTML рядка - стовпці показуємо ТІЛЬКИ якщо вони видимі в заголовках
+      // ✅ ВИПРАВЛЕНО: Комірка каталогу і зарплати завжди існує для збереження даних
       row.innerHTML = `
         <td class="row-index">${icon} ${index + 1}</td>
         <td class="name-cell">
           <div data-name="name" data-type="${dataType}" class="${!isClosed ? "editable-autocomplete" : ""}" ${!isClosed ? 'contenteditable="true"' : ""} ${item.recordId ? `data-record-id="${item.recordId}"` : ""}>${item.name}</div>
         </td>
-        ${showCatalog ? `<td class="catalog-cell" data-name="catalog" ${item.sclad_id ? `data-sclad-id="${item.sclad_id}"` : ""}>${item.catalog || ""}</td>` : ""}
+        <td class="catalog-cell" data-name="catalog" ${item.sclad_id ? `data-sclad-id="${item.sclad_id}"` : ""}${!showCatalog ? ' style="display: none;"' : ""}>${showCatalog ? item.catalog || "" : ""}</td>
         <td class="text-right qty-cell" data-name="id_count" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.quantity)}</td>
         ${showPrice ? `<td class="text-right price-cell" data-name="price" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.price)}</td>` : ""}
         ${showSum ? `<td class="text-right" data-name="sum">${formatNum(item.sum)}</td>` : ""}
-        ${showZarplata ? `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum">${isWork ? "" : ""}</td>` : ""}
+        <td class="text-right slyusar-sum-cell" data-name="slyusar_sum"${!showZarplata ? ' style="display: none;"' : ""}>${isWork ? "" : ""}</td>
         ${showPibMagazin ? `<td class="pib-magazin-cell" data-name="pib_magazin" ${!isClosed ? 'contenteditable="true"' : ""}>${item.person_or_store}</td>` : ""}
         ${hasDeleteColumnSeparate ? `<td class="delete-cell"><button class="delete-row-btn" title="Видалити рядок">🗑️</button></td>` : ""}
       `;
@@ -2153,7 +2215,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
         globalCache,
         () => {
           updateCalculatedSumsInFooter();
-        }
+        },
       );
     }
 
@@ -2161,7 +2223,11 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     // Пробіг
     const probigEl = document.getElementById(EDITABLE_PROBIG_ID);
     if (probigEl) {
-      probigEl.textContent = formatNumberWithSpaces(actDetails?.["Пробіг"], 0, 0);
+      probigEl.textContent = formatNumberWithSpaces(
+        actDetails?.["Пробіг"],
+        0,
+        0,
+      );
     }
 
     // Причина звернення
@@ -2171,13 +2237,17 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     }
 
     // Рекомендації
-    const recommendationsEl = document.getElementById(EDITABLE_RECOMMENDATIONS_ID);
+    const recommendationsEl = document.getElementById(
+      EDITABLE_RECOMMENDATIONS_ID,
+    );
     if (recommendationsEl) {
       recommendationsEl.textContent = actDetails?.["Рекомендації"] || "—";
     }
 
     // Аванс
-    const avansInput = document.getElementById("editable-avans") as HTMLInputElement | null;
+    const avansInput = document.getElementById(
+      "editable-avans",
+    ) as HTMLInputElement | null;
     if (avansInput) {
       const avansValue = Number(act?.avans ?? actDetails?.["Аванс"] ?? 0);
       avansInput.value = String(avansValue);
@@ -2185,21 +2255,26 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     }
 
     // Знижка (відсоток)
-    const discountInput = document.getElementById("editable-discount") as HTMLInputElement | null;
+    const discountInput = document.getElementById(
+      "editable-discount",
+    ) as HTMLInputElement | null;
     if (discountInput) {
-      const discountValue = Number(act?.discount ?? actDetails?.["Знижка"] ?? 0);
+      const discountValue = Number(
+        act?.discount ?? actDetails?.["Знижка"] ?? 0,
+      );
       discountInput.value = String(discountValue);
       discountInput.dispatchEvent(new Event("input"));
     }
 
     // Знижка (сума)
-    const discountAmountInput = document.getElementById("editable-discount-amount") as HTMLInputElement | null;
+    const discountAmountInput = document.getElementById(
+      "editable-discount-amount",
+    ) as HTMLInputElement | null;
     if (discountAmountInput) {
       const discountAmountValue = Number(actDetails?.["Знижка сума"] ?? 0);
       discountAmountInput.value = String(discountAmountValue);
       discountAmountInput.dispatchEvent(new Event("input"));
     }
-
   } catch (error) {
     console.error("❌ Помилка тихого оновлення таблиці:", error);
   }

@@ -98,9 +98,8 @@ function findRowByItemName(itemName: string): HTMLTableRowElement | null {
  * Підсвічує додані позиції синім кольором з морганням (ОДНОЧАСНО)
  */
 async function highlightAddedItems(
-  addedChanges: ChangeRecord[]
+  addedChanges: ChangeRecord[],
 ): Promise<void> {
-
   // Знаходимо всі рядки одразу
   const rowsToHighlight: HTMLTableRowElement[] = [];
 
@@ -134,7 +133,6 @@ async function highlightAddedItems(
 
   // Прибираємо підсвічування у ВСІХ рядків
   rowsToHighlight.forEach((row) => row.classList.remove("highlight-added"));
-
 }
 
 /* =============================== ПІДСВІЧУВАННЯ ВИДАЛЕНИХ =============================== */
@@ -157,17 +155,17 @@ function generateDeletedItemHtml(change: ChangeRecord, index: number): string {
   // Форматуємо числа
   const formatNum = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
 
-  const catalogCellHTML = showCatalog
-    ? `<td class="catalog-cell" data-name="catalog"></td>`
-    : "";
+  // ✅ ВИПРАВЛЕНО: Завжди створюємо комірку каталогу для збереження data-sclad-id
+  const catalogCellHTML = `<td class="catalog-cell" data-name="catalog"${!showCatalog ? ' style="display: none;"' : ""}></td>`;
 
   const pibMagazinCellHTML = showPibMagazin
     ? `<td class="pib-magazin-cell" data-name="pib_magazin">${change.changed_by_surname}</td>`
     : "";
 
   // ✅ ВИПРАВЛЕНО: Завжди створюємо комірку зарплати, але приховуємо якщо showZarplata = false
-  const zarplataCellHTML = `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum"${!showZarplata ? ' style="display: none;"' : ''
-    }>${change.zarplata > 0 ? formatNum(change.zarplata) : ""}</td>`;
+  const zarplataCellHTML = `<td class="text-right slyusar-sum-cell" data-name="slyusar_sum"${
+    !showZarplata ? ' style="display: none;"' : ""
+  }>${change.zarplata > 0 ? formatNum(change.zarplata) : ""}</td>`;
 
   return `
         <tr class="deleted-item-row">
@@ -177,11 +175,11 @@ function generateDeletedItemHtml(change: ChangeRecord, index: number): string {
             </td>
             ${catalogCellHTML}
             <td class="text-right qty-cell" data-name="id_count">${formatNum(
-    change.kilkist
-  )}</td>
+              change.kilkist,
+            )}</td>
             <td class="text-right price-cell" data-name="price">${formatNum(
-    change.cina
-  )}</td>
+              change.cina,
+            )}</td>
             <td class="text-right" data-name="sum">${formatNum(sum)}</td>
             ${zarplataCellHTML}
             ${pibMagazinCellHTML}
@@ -193,9 +191,8 @@ function generateDeletedItemHtml(change: ChangeRecord, index: number): string {
  * Підсвічує видалені позиції червоним кольором з морганням, потім видаляє (ОДНОЧАСНО)
  */
 async function highlightDeletedItems(
-  deletedChanges: ChangeRecord[]
+  deletedChanges: ChangeRecord[],
 ): Promise<void> {
-
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) {
     console.error("❌ Контейнер таблиці не знайдено");
@@ -225,7 +222,7 @@ async function highlightDeletedItems(
 
       // Знаходимо щойно доданий рядок
       const row = tableBody.querySelector(
-        "tr.deleted-item-row:last-child"
+        "tr.deleted-item-row:last-child",
       ) as HTMLTableRowElement;
 
       if (!row) {
@@ -258,7 +255,6 @@ async function highlightDeletedItems(
 
   // Видаляємо ВСІ рядки
   rowsToHighlight.forEach((row) => row.remove());
-
 }
 
 /* =============================== РОБОТА З БД =============================== */
@@ -336,11 +332,10 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
 
     if (!currentUserName) {
       console.warn(
-        "⚠️ Не вдалося отримати ПІБ поточного користувача для видалення"
+        "⚠️ Не вдалося отримати ПІБ поточного користувача для видалення",
       );
       return;
     }
-
 
     // ✅ Видаляємо ТІЛЬКИ ті записи, де pruimalnyk = ПІБ поточного Приймальника
     const { error } = await supabase
@@ -359,7 +354,6 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
 
   // ✅ Для Адміністратора - видаляємо ВСІ записи для даного акту
   if (userAccessLevel === "Адміністратор") {
-
     const { error } = await supabase
       .from("act_changes_notifications")
       .delete()
@@ -391,7 +385,6 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
   }
 
   try {
-
     // Додаємо CSS стилі
     injectHighlightStyles();
 
@@ -402,7 +395,6 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
     if (added.length === 0 && deleted.length === 0) {
       return;
     }
-
 
     // Підсвічуємо додані позиції (синім)
     if (added.length > 0) {
@@ -423,7 +415,6 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
 
       // Знімаємо синю підсвітку з акту в таблиці та видаляємо тости
       await clearNotificationVisualOnly(actId, true);
-
     } else {
     }
   } catch (error) {

@@ -1556,7 +1556,7 @@ export function searchDataInDatabase(
               }
               ${
                 profitAfterSalary !== 0
-                  ? `<div style="color: ${profitAfterSalary > 0 ? "#28a745" : "#dc3545"}; font-weight: bold;">📊 ${profitAfterSalary > 0 ? "+" : ""}${formatNumber(profitAfterSalary)}</div>`
+                  ? `<div style="color: ${profitAfterSalary > 0 ? "#28a745" : "#dc3545"};">📊 ${profitAfterSalary > 0 ? "+" : ""}${formatNumber(profitAfterSalary)}</div>`
                   : ""
               }
             </div>`;

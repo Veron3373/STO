@@ -101,21 +101,21 @@ function removeEmoji(text: string): string {
   return text
     .replace(
       /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu,
-      ""
+      "",
     )
     .trim();
 }
 
 function addEmojiToCategory(categoryName: string): string {
   const found = EXPENSE_CATEGORIES.find(
-    (cat) => removeEmoji(cat) === categoryName
+    (cat) => removeEmoji(cat) === categoryName,
   );
   return found || categoryName;
 }
 
 function addEmojiToPaymentMethod(methodName: string): string {
   const found = PAYMENT_METHODS.find(
-    (method) => removeEmoji(method) === methodName
+    (method) => removeEmoji(method) === methodName,
   );
   return found || methodName;
 }
@@ -141,7 +141,7 @@ export function setExpenseMode(mode: ExpenseMode): void {
   const title = byId<HTMLHeadingElement>("expense-modal-title");
   if (title) title.textContent = config.title;
   const saveBtn = document.querySelector(
-    ".expense-modal-footer button"
+    ".expense-modal-footer button",
   ) as HTMLButtonElement;
   if (saveBtn) {
     saveBtn.textContent = config.buttonText;
@@ -192,7 +192,7 @@ function getCurrentUkrainianTime(): string {
   const now = new Date();
   // Час у Києві як Date, побудований із рядка (без прив'язки до UTC)
   const kyivNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Kyiv", hour12: false })
+    now.toLocaleString("en-US", { timeZone: "Europe/Kyiv", hour12: false }),
   );
 
   const y = kyivNow.getFullYear();
@@ -244,7 +244,7 @@ export function formatDateKyiv(iso?: string | null): string {
 }
 
 function createPasswordConfirmationModal(
-  action: "pay" | "unpay"
+  action: "pay" | "unpay",
 ): Promise<boolean> {
   return new Promise((resolve) => {
     const modal = document.createElement("div");
@@ -363,7 +363,7 @@ function createPasswordConfirmationModal(
 // Функції для керування станом кнопки збереження
 function setSaveButtonLoading(isLoading: boolean): void {
   const saveBtn = document.querySelector(
-    ".expense-modal-footer button"
+    ".expense-modal-footer button",
   ) as HTMLButtonElement;
 
   if (!saveBtn) return;
@@ -408,10 +408,10 @@ interface ActData {
   [key: string]: any;
 }
 
-// Кеш для зарплат приймальника - Map<actId, {salaryParts, salaryWork}>
+// Кеш для зарплат приймальника - Map<actId, {salaryParts, salaryWork, salaryZapchastysty}>
 const receipterSalaryCache = new Map<
   number,
-  { salaryParts: number; salaryWork: number }
+  { salaryParts: number; salaryWork: number; salaryZapchastysty: number }
 >();
 
 // Завантажує історію приймальника для розрахунку його зарплати
@@ -463,16 +463,20 @@ async function loadReceipterSalaries(): Promise<void> {
           if (!isNaN(actId) && actId > 0) {
             const salaryParts = Number(record.ЗарплатаЗапчастин) || 0;
             const salaryWork = Number(record.ЗарплатаРоботи) || 0;
+            const salaryZapchastysty = Number(record.ЗарплатаЗапчастистів) || 0;
 
-            if (salaryParts > 0 || salaryWork > 0) {
+            if (salaryParts > 0 || salaryWork > 0 || salaryZapchastysty > 0) {
               const existing = receipterSalaryCache.get(actId) || {
                 salaryParts: 0,
                 salaryWork: 0,
+                salaryZapchastysty: 0,
               };
 
               receipterSalaryCache.set(actId, {
                 salaryParts: existing.salaryParts + salaryParts,
                 salaryWork: existing.salaryWork + salaryWork,
+                salaryZapchastysty:
+                  existing.salaryZapchastysty + salaryZapchastysty,
               });
 
               // Додаткове логування для дебагу
@@ -483,7 +487,6 @@ async function loadReceipterSalaries(): Promise<void> {
         }
       }
     }
-
   } catch (err: any) {
     console.error("❌ Помилка завантаження зарплат приймальника:", err);
   }
@@ -493,6 +496,7 @@ async function loadReceipterSalaries(): Promise<void> {
 function getReceipterSalaryForAct(actId: number): {
   salaryParts: number;
   salaryWork: number;
+  salaryZapchastysty: number;
 } {
   const salary = receipterSalaryCache.get(actId);
 
@@ -500,21 +504,22 @@ function getReceipterSalaryForAct(actId: number): {
     return salary;
   }
 
-  return { salaryParts: 0, salaryWork: 0 };
+  return { salaryParts: 0, salaryWork: 0, salaryZapchastysty: 0 };
 }
 
 // Використовує збережене значення "Прибуток за деталі" з акту
-// Віднімає зарплату приймальника щоб показати чистий прибуток компанії
+// Віднімає зарплату приймальника та запчастистів щоб показати чистий прибуток компанії
 function calculateDetailsMarginFromAct(
   actData: ActData,
-  actId: number
+  actId: number,
 ): number {
   // Використовуємо збережене значення з акту (вже враховано закупівельні ціни і розраховано маржу)
   let totalMargin = Number(actData["Прибуток за деталі"]) || 0;
 
-  // Віднімаємо зарплату приймальника щоб показати чистий прибуток компанії
+  // Віднімаємо зарплату приймальника та запчастистів щоб показати чистий прибуток компанії
   const receipterSalary = getReceipterSalaryForAct(actId);
   totalMargin -= receipterSalary.salaryParts;
+  totalMargin -= receipterSalary.salaryZapchastysty;
 
   return Number(totalMargin.toFixed(2));
 }
@@ -622,7 +627,7 @@ let vutratuDateFilterMode: "open" | "close" | "paid" = "open";
 // Функція для ініціалізації перемикача фільтрації дат для витрат
 function initvutratuDateFilterToggle(): void {
   const toggleContainer = document.querySelector(
-    "#Bukhhalter-vutratu-section .Bukhhalter-date-filter-toggle"
+    "#Bukhhalter-vutratu-section .Bukhhalter-date-filter-toggle",
   );
   if (!toggleContainer) return;
 
@@ -639,7 +644,6 @@ function initvutratuDateFilterToggle(): void {
       // Зберігаємо режим фільтрації
       vutratuDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
 
-
       // ЗМІНЕНО: Просто фільтруємо вже завантажені дані, НЕ перезавантажуємо з бази
       filtervutratuData();
     });
@@ -648,7 +652,6 @@ function initvutratuDateFilterToggle(): void {
 
 async function loadvutratuFromDatabase(): Promise<void> {
   try {
-
     // Якщо дата не вказана - використовуємо 01.01.2025 як дефолт (не показуємо користувачу)
     const dateFromInput =
       byId<HTMLInputElement>("Bukhhalter-vutratu-date-from")?.value || "";
@@ -668,12 +671,11 @@ async function loadvutratuFromDatabase(): Promise<void> {
     const includeCarInNotes =
       byId<HTMLInputElement>("include-car-notes")?.checked || false;
 
-
     // Завантажуємо дані з vutratu
     let queryVutratu = supabase
       .from("vutratu")
       .select(
-        "vutratu_id,dataOnn,dataOff,kategoria,act,opys_vytraty,suma,sposob_oplaty,prymitky,xto_zapusav"
+        "vutratu_id,dataOnn,dataOff,kategoria,act,opys_vytraty,suma,sposob_oplaty,prymitky,xto_zapusav",
       )
       .lt("suma", 0)
       .is("act", null); // Виключаємо записи з номером акту (щоб уникнути дублювання)
@@ -710,7 +712,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
     let queryActs = supabase
       .from("acts")
       .select(
-        "act_id,date_on,date_off,rosraxovano,data,xto_rozraxuvav,client_id,cars_id,avans,tupOplatu"
+        "act_id,date_on,date_off,rosraxovano,data,xto_rozraxuvav,client_id,cars_id,avans,tupOplatu",
       );
 
     // Застосовуємо фільтр по датах залежно від режиму
@@ -753,7 +755,9 @@ async function loadvutratuFromDatabase(): Promise<void> {
         actNumber: item.act ?? undefined,
         description: item.opys_vytraty,
         amount: Number(item.suma || 0),
-        paymentMethod: addEmojiToPaymentMethod(String(item.sposob_oplaty || "")),
+        paymentMethod: addEmojiToPaymentMethod(
+          String(item.sposob_oplaty || ""),
+        ),
         notes: item.prymitky || undefined,
         isPaid: !!item.dataOff,
         createdBy: item.xto_zapusav || undefined,
@@ -774,7 +778,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
             actData = JSON.parse(actItem.data);
           } catch (e) {
             console.warn(
-              `⚠️ Не вдалося розпарсити data для акту ${actItem.act_id}`
+              `⚠️ Не вдалося розпарсити data для акту ${actItem.act_id}`,
             );
           }
         } else if (typeof actItem.data === "object" && actItem.data !== null) {
@@ -785,7 +789,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
         // Враховуємо зарплату приймальника (тепер синхронно)
         const detailsAmount = calculateDetailsMarginFromAct(
           actData,
-          actItem.act_id
+          actItem.act_id,
         );
         const workAmount = calculateWorkProfitFromAct(actData, actItem.act_id);
         const totalAmount = detailsAmount + workAmount;
@@ -852,7 +856,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
     showNotification(
       `📊 Знайдено ${vutratuData.length} записів (${modeLabels[vutratuDateFilterMode]})`,
       "success",
-      2000
+      2000,
     );
 
     filteredvutratuData = [...vutratuData];
@@ -862,7 +866,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
     showNotification(
       "⚠️ Не вдалося завантажити дані з бази даних",
       "error",
-      5000
+      5000,
     );
     vutratuData = [];
     filteredvutratuData = [];
@@ -872,7 +876,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
 
 async function saveExpenseToDatabase(
   expense: ExpenseRecordLocal,
-  isNew: boolean = true
+  isNew: boolean = true,
 ): Promise<boolean> {
   try {
     const currentUser = getCurrentUserName();
@@ -913,7 +917,6 @@ async function saveExpenseToDatabase(
         console.error("❌ Помилка оновлення витрати:", error);
         throw error;
       }
-
     }
 
     return true;
@@ -939,7 +942,7 @@ export async function initializevutratuData(): Promise<void> {
   // Додати слухачі для всіх фільтрів
   const categorySelect = byId<HTMLSelectElement>("Bukhhalter-vutratu-category");
   const paymentMethodSelect = byId<HTMLSelectElement>(
-    "Bukhhalter-vutratu-payment-method"
+    "Bukhhalter-vutratu-payment-method",
   );
 
   const dateFromInput = byId<HTMLInputElement>("Bukhhalter-vutratu-date-from");
@@ -972,7 +975,6 @@ export async function initializevutratuData(): Promise<void> {
 
   // ДОДАТИ В КІНЕЦЬ ФУНКЦІЇ:
   initvutratuDateFilterToggle();
-
 }
 
 function createExpenseTypeToggle(): void {
@@ -1091,7 +1093,7 @@ export function filtervutratuData(): void {
         if (
           !expense.tupOplatu ||
           !expense.tupOplatu.includes(
-            paymentMethod.replace(/💵 |💳 |🏦 |📱 /g, "")
+            paymentMethod.replace(/💵 |💳 |🏦 |📱 /g, ""),
           )
         ) {
           return false;
@@ -1265,8 +1267,9 @@ export function updatevutratuTable(): void {
     if (isFromAct && expense.actNumber) {
       actCell.innerHTML = `
         <button class="Bukhhalter-act-btn"
-                onclick="event.stopPropagation(); openActModalWithClient(${Number(expense.actNumber) || 0
-        })"
+                onclick="event.stopPropagation(); openActModalWithClient(${
+                  Number(expense.actNumber) || 0
+                })"
                 title="Відкрити акт №${expense.actNumber}">
           📋 ${expense.actNumber}
         </button>
@@ -1332,7 +1335,7 @@ export function updatevutratuTable(): void {
             : "#999";
       const sign = expense.amount > 0 ? "+" : "";
       amountCell.innerHTML = `<span style="color: ${color}; font-size: 0.95em; font-weight: 500;">${sign}${formatNumber(
-        expense.amount
+        expense.amount,
       )}</span>`;
     }
 
@@ -1395,8 +1398,8 @@ export function updatevutratuTable(): void {
       const avansInfo =
         expense.paymentMethod && Number(expense.paymentMethod) > 0
           ? `<br><span style="color: #000; font-weight: 600; font-size: 0.95em;">💰 ${formatNumber(
-            Number(expense.paymentMethod)
-          )}</span>`
+              Number(expense.paymentMethod),
+            )}</span>`
           : "";
       methodCell.innerHTML = `
         <span style="font-size: 0.95em;">
@@ -1552,47 +1555,49 @@ export function updatevutratuDisplayedSums(): void {
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Каса</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-    totalNetFullDetails
-  )}</strong></span>
+          totalNetFullDetails,
+        )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-    totalNetFullWork
-  )}</strong></span>
+          totalNetFullWork,
+        )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
-    totalAvansSum
-  )}</strong></span>
+          totalAvansSum,
+        )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-    Math.abs(totalNegativeSum)
-  )}</strong></span>
+          Math.abs(totalNegativeSum),
+        )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${finalSumCasa >= 0 ? "#006400" : "#8B0000"
-    };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
+        <span><strong style="color: ${
+          finalSumCasa >= 0 ? "#006400" : "#8B0000"
+        };">📈 ${formatNumber(finalSumCasa)}</strong> грн</span>
       </div>
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
         <span>Прибуток</span>
         <span><strong style="color: #1E90FF;">⚙️ ${formatNumber(
-      totalNetDetailsProfit
-    )}</strong></span>
+          totalNetDetailsProfit,
+        )}</strong></span>
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
-      totalNetWorkProfit
-    )}</strong></span>
+          totalNetWorkProfit,
+        )}</strong></span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 -${formatNumber(
-      Math.abs(totalNegativeSum)
-    )}</strong></span>
+          Math.abs(totalNegativeSum),
+        )}</strong></span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${finalSumProfit >= 0 ? "#006400" : "#8B0000"
-    };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
+        <span><strong style="color: ${
+          finalSumProfit >= 0 ? "#006400" : "#8B0000"
+        };">📈 ${formatNumber(finalSumProfit)}</strong> грн</span>
         
         <span style="color: #ccc; margin-left: 10px;">|</span>
         
         <span>Знижки</span>
         <span><strong style="color: #c62828;">🏷️ ${formatNumber(
-      totalDiscountSum
-    )}</strong> грн</span>
+          totalDiscountSum,
+        )}</strong> грн</span>
       </div>
     </div>
   `;
@@ -1606,7 +1611,7 @@ async function handleAddExpense(
   description: string,
   amount: number,
   paymentMethod: string,
-  notes: string
+  notes: string,
 ): Promise<void> {
   setSaveButtonLoading(true);
 
@@ -1641,7 +1646,7 @@ async function handleEditExpense(
   description: string,
   amount: number,
   paymentMethod: string,
-  notes: string
+  notes: string,
 ): Promise<void> {
   if (selectedExpenseId === null) {
     showNotification("⚠️ Витрата для редагування не вибрана", "warning");
@@ -1747,7 +1752,7 @@ function selectExpenseRow(index: number, event?: MouseEvent): void {
     showNotification(
       "⚠️ Редагування доступне тільки для витрат",
       "warning",
-      2000
+      2000,
     );
     return;
   }
@@ -1764,7 +1769,7 @@ function selectExpenseRow(index: number, event?: MouseEvent): void {
   byId<HTMLSelectElement>("expense-modal-payment-method").value =
     expense.paymentMethod;
   byId<HTMLInputElement>("expense-modal-amount").value = Math.abs(
-    expense.amount
+    expense.amount,
   ).toString();
   byId<HTMLTextAreaElement>("expense-modal-description").value =
     expense.description;
@@ -1834,7 +1839,7 @@ export async function runMassPaymentCalculationForvutratu(): Promise<void> {
   filtervutratuData();
   showNotification(
     `✅ Позначено ${successCount} записів як оплачені`,
-    "success"
+    "success",
   );
 }
 
@@ -1948,7 +1953,7 @@ export async function saveExpenseFromModal(): Promise<void> {
         description,
         amount,
         paymentMethod,
-        notes
+        notes,
       );
       break;
     case "edit":
@@ -1958,7 +1963,7 @@ export async function saveExpenseFromModal(): Promise<void> {
         description,
         amount,
         paymentMethod,
-        notes
+        notes,
       );
       break;
     case "delete":

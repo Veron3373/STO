@@ -96,7 +96,7 @@ function toIsoDate(input: string | null | undefined): string {
 function inRangeByIso(
   targetDmy: string,
   fromDmy?: string,
-  toDmy?: string
+  toDmy?: string,
 ): boolean {
   const t = toIsoDate(targetDmy);
   if (!t) return false;
@@ -117,7 +117,7 @@ function todayDateTime(): string {
 }
 
 function createPasswordConfirmationModal(
-  action: "pay" | "unpay" | "return" | "unreturn"
+  action: "pay" | "unpay" | "return" | "unreturn",
 ): Promise<boolean> {
   return new Promise((resolve) => {
     const modal = document.createElement("div");
@@ -287,6 +287,8 @@ interface MagazineRecord {
   isReturned?: boolean;
   xto_povernyv?: string | null;
   scladNomer?: number | null;
+  sclad_id?: number | null;
+  xto_zamovuv?: number | null;
 }
 
 const SCLAD_TABLE = "sclad";
@@ -307,6 +309,49 @@ let currentFilters = {
   scladNomer: null as number | null, // null = всі склади
 };
 
+// Кеш імен Запчастистів (slyusar_id → Name)
+let slyusarsNameCache: Map<number, string> = new Map();
+let slyusarsNameCacheLoaded = false;
+
+// Завантаження імен Запчастистів з бази slyusars
+async function fetchSlyusarsNames(): Promise<void> {
+  if (slyusarsNameCacheLoaded) return;
+  try {
+    const { data, error } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, data");
+
+    if (error) {
+      console.error("Помилка завантаження слюсарів:", error);
+      return;
+    }
+
+    slyusarsNameCache.clear();
+
+    if (data && Array.isArray(data)) {
+      for (const slyusar of data) {
+        const slyusarData =
+          typeof slyusar.data === "string"
+            ? JSON.parse(slyusar.data)
+            : slyusar.data;
+        const name = slyusarData?.Name || "";
+        if (name && slyusar.slyusar_id) {
+          slyusarsNameCache.set(slyusar.slyusar_id, name);
+        }
+      }
+    }
+    slyusarsNameCacheLoaded = true;
+  } catch (error) {
+    console.error("Помилка завантаження імен слюсарів:", error);
+  }
+}
+
+// Функція для отримання імені Запчастиста за xto_zamovuv (slyusar_id)
+function getZapchastystName(xto_zamovuv: number | null | undefined): string {
+  if (!xto_zamovuv) return "-";
+  return slyusarsNameCache.get(xto_zamovuv) || "-";
+}
+
 let autoSearchTimer: number | null = null;
 const AUTOSEARCH_DELAY = 350;
 
@@ -321,7 +366,7 @@ function debounceAutoSearch(fn: () => void) {
 }
 
 function getEl<T extends HTMLInputElement | HTMLSelectElement>(
-  id: string
+  id: string,
 ): T | null {
   return document.getElementById(id) as T | null;
 }
@@ -348,7 +393,7 @@ async function fetchShopData(): Promise<ShopData[]> {
             } else {
               console.warn(
                 `Пропущений запис ${index}: невірний формат data`,
-                item
+                item,
               );
               return null;
             }
@@ -356,7 +401,7 @@ async function fetchShopData(): Promise<ShopData[]> {
             if (!parsedData || !parsedData.Name) {
               console.warn(
                 `Пропущений запис ${index}: немає поля Name`,
-                parsedData
+                parsedData,
               );
               return null;
             }
@@ -366,7 +411,7 @@ async function fetchShopData(): Promise<ShopData[]> {
             console.error(
               `Помилка парсингу запису ${index}:`,
               parseError,
-              item
+              item,
             );
             return null;
           }
@@ -425,7 +470,7 @@ export function deprecated_openActModal(actNumber: number): void {
   <p><strong>Автомобіль:</strong> ${foundRec.Автомобіль || "-"}</p>
   <p><strong>Статус:</strong> ${foundRec.Статус || "-"}</p>
   <p><strong>Дата закриття:</strong> ${formatDate(
-    foundRec.ДатаЗакриття || ""
+    foundRec.ДатаЗакриття || "",
   )}</p>
 `;
 
@@ -448,7 +493,7 @@ export function deprecated_openActModal(actNumber: number): void {
       th.style.cssText =
         "padding:8px; border:1px solid #ddd; background:#e9ecef; text-align:left;";
       trh.appendChild(th);
-    }
+    },
   );
 
   const tbody = detailsTable.createTBody();
@@ -463,7 +508,7 @@ export function deprecated_openActModal(actNumber: number): void {
         if (key === "Кількість") val = Number(val);
         td.textContent = String(val || "-");
         td.style.cssText = "padding:8px; border:1px solid #ddd;";
-      }
+      },
     );
     const sumTd = tr.insertCell();
     sumTd.textContent = formatNumber(Number(det.Ціна) * Number(det.Кількість));
@@ -515,7 +560,7 @@ function syncCatalogFromName(selectedName: string): void {
     catalogInput.value = matchingCatalog;
 
     const catalogDropdown = smartDropdowns.find(
-      (d) => d.config.inputId === "Bukhhalter-magazine-catalog"
+      (d) => d.config.inputId === "Bukhhalter-magazine-catalog",
     );
     if (catalogDropdown) {
       catalogDropdown.updateItems([matchingCatalog]);
@@ -716,8 +761,8 @@ class SmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -742,12 +787,13 @@ class SmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
-      `
+      `,
       )
       .join("");
 
@@ -772,7 +818,7 @@ class SmartDropdown {
     if (!query.trim()) return text;
     const regex = new RegExp(
       `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-      "gi"
+      "gi",
     );
     return text.replace(regex, "<mark>$1</mark>");
   }
@@ -795,7 +841,7 @@ class SmartDropdown {
   private selectNext() {
     this.selectedIndex = Math.min(
       this.selectedIndex + 1,
-      this.filteredItems.length - 1
+      this.filteredItems.length - 1,
     );
     this.render();
     this.scrollToSelected();
@@ -947,7 +993,7 @@ function ensureSmartDropdowns(): void {
         } catch (error) {
           console.warn(
             `Failed to create dropdown for ${config.inputId}:`,
-            error
+            error,
           );
           return null;
         }
@@ -958,14 +1004,14 @@ function ensureSmartDropdowns(): void {
 
 function refreshDropdownOptions(): void {
   const shopEl = getEl<HTMLInputElement | HTMLSelectElement>(
-    "Bukhhalter-magazine-shop"
+    "Bukhhalter-magazine-shop",
   );
   const shopVal = (shopEl?.value || "").trim();
 
   let source = allMagazineData;
   if (shopVal) {
     source = source.filter(
-      (r) => (r.shops || "").trim().toLowerCase() === shopVal.toLowerCase()
+      (r) => (r.shops || "").trim().toLowerCase() === shopVal.toLowerCase(),
     );
   }
 
@@ -999,7 +1045,7 @@ function autoFilterFromInputs(): void {
   const toIsoClose = dateTo || todayISO();
 
   const shopEl = getEl<HTMLInputElement | HTMLSelectElement>(
-    "Bukhhalter-magazine-shop"
+    "Bukhhalter-magazine-shop",
   );
   const shop = (shopEl?.value || "").trim();
   const bill = getElValue<HTMLInputElement>("Bukhhalter-magazine-bill");
@@ -1023,22 +1069,22 @@ function autoFilterFromInputs(): void {
   // Інші фільтри
   if (shop) {
     filtered = filtered.filter(
-      (r) => (r.shops || "").trim().toLowerCase() === shop.toLowerCase()
+      (r) => (r.shops || "").trim().toLowerCase() === shop.toLowerCase(),
     );
   }
   if (bill) {
     filtered = filtered.filter((r) =>
-      (r.rahunok || "").toLowerCase().includes(bill.toLowerCase())
+      (r.rahunok || "").toLowerCase().includes(bill.toLowerCase()),
     );
   }
   if (item) {
     filtered = filtered.filter((r) =>
-      (r.name || "").toLowerCase().includes(item.toLowerCase())
+      (r.name || "").toLowerCase().includes(item.toLowerCase()),
     );
   }
   if (cat) {
     filtered = filtered.filter((r) =>
-      (r.part_number || "").toLowerCase().includes(cat.toLowerCase())
+      (r.part_number || "").toLowerCase().includes(cat.toLowerCase()),
     );
   }
 
@@ -1065,7 +1111,7 @@ let magazineDateFilterMode: "open" | "paid" = "open";
 // Функція для ініціалізації перемикача фільтрації дат для магазину
 function initMagazineDateFilterToggle(): void {
   const toggleContainer = document.querySelector(
-    "#Bukhhalter-magazine-section .Bukhhalter-date-filter-toggle"
+    "#Bukhhalter-magazine-section .Bukhhalter-date-filter-toggle",
   );
   if (!toggleContainer) return;
 
@@ -1089,7 +1135,7 @@ function initMagazineDateFilterToggle(): void {
 
       // ⤵️ ДОДАЙ ОЦЕ: коли режим 'paid' — показуємо тільки оплачені
       const payToggle = getEl<HTMLInputElement>(
-        "magazine-payment-filter-toggle"
+        "magazine-payment-filter-toggle",
       );
       if (magazineDateFilterMode === "paid") {
         currentFilters.paymentStatus = 0; // 0 = Розраховано
@@ -1102,7 +1148,6 @@ function initMagazineDateFilterToggle(): void {
       // Перезапускаємо фільтрацію
       triggerAutoFilter();
 
-
       // Перезапускаємо фільтрацію
       triggerAutoFilter();
     });
@@ -1110,7 +1155,7 @@ function initMagazineDateFilterToggle(): void {
 }
 
 function getElValue<T extends HTMLInputElement | HTMLSelectElement>(
-  id: string
+  id: string,
 ): string {
   const el = document.getElementById(id) as T | null;
   return (el && "value" in el ? (el.value || "").trim() : "").trim();
@@ -1118,7 +1163,7 @@ function getElValue<T extends HTMLInputElement | HTMLSelectElement>(
 
 function getShopValue(): string {
   return getElValue<HTMLInputElement | HTMLSelectElement>(
-    "Bukhhalter-magazine-shop"
+    "Bukhhalter-magazine-shop",
   );
 }
 
@@ -1176,6 +1221,8 @@ function mapRowToMagazineRecord(row: any): MagazineRecord {
     isReturned: !!row?.povernennya,
     xto_povernyv: row?.xto_povernyv ?? null,
     scladNomer: row?.scladNomer ?? null,
+    sclad_id: row?.sclad_id ?? null,
+    xto_zamovuv: row?.xto_zamovuv ?? null,
   };
 }
 
@@ -1186,7 +1233,7 @@ async function autoSearchFromInputs(): Promise<void> {
   const dateClose =
     getEl<HTMLInputElement>("Bukhhalter-magazine-date-close")?.value || "";
   const shopEl = getEl<HTMLInputElement | HTMLSelectElement>(
-    "Bukhhalter-magazine-shop"
+    "Bukhhalter-magazine-shop",
   );
   const shop = (shopEl?.value || "").trim();
   const bill = getElValue<HTMLInputElement>("Bukhhalter-magazine-bill");
@@ -1275,7 +1322,7 @@ async function loadScladData(
     name_exact?: string;
     part_number?: string;
     part_number_exact?: string;
-  } = {}
+  } = {},
 ): Promise<MagazineRecord[]> {
   try {
     if (!shopsData.length) {
@@ -1349,10 +1396,11 @@ async function loadScladData(
   } catch (err) {
     console.error("Помилка завантаження sclad з Supabase:", err);
     showNotification(
-      `Помилка завантаження даних з бази sclad: ${err instanceof Error ? err.message : "Невідома помилка"
+      `Помилка завантаження даних з бази sclad: ${
+        err instanceof Error ? err.message : "Невідома помилка"
       }`,
       "error",
-      5000
+      5000,
     );
     return [];
   }
@@ -1380,10 +1428,10 @@ export async function searchMagazineData(): Promise<void> {
   }
 
   const dateOpen = getElValue<HTMLInputElement>(
-    "Bukhhalter-magazine-date-open"
+    "Bukhhalter-magazine-date-open",
   );
   const dateClose = getElValue<HTMLInputElement>(
-    "Bukhhalter-magazine-date-close"
+    "Bukhhalter-magazine-date-close",
   );
   const shop = getShopValue();
   const bill = getElValue<HTMLInputElement>("Bukhhalter-magazine-bill");
@@ -1427,6 +1475,7 @@ export async function searchMagazineData(): Promise<void> {
   const [loadedData] = await Promise.all([
     loadScladData(filters),
     loadAvailableShops(),
+    fetchSlyusarsNames(),
   ]);
 
   allMagazineData = loadedData;
@@ -1450,7 +1499,7 @@ export async function searchMagazineData(): Promise<void> {
     showNotification(
       `Знайдено ${magazineData.length} позицій`,
       "success",
-      2000
+      2000,
     );
   }
 }
@@ -1462,7 +1511,7 @@ function applyLocalFilters(base?: MagazineRecord[]): void {
 
   if (currentFilters.paymentStatus !== 2) {
     filtered = filtered.filter((item) =>
-      currentFilters.paymentStatus === 0 ? item.isPaid : !item.isPaid
+      currentFilters.paymentStatus === 0 ? item.isPaid : !item.isPaid,
     );
   }
 
@@ -1487,7 +1536,7 @@ function applyLocalFilters(base?: MagazineRecord[]): void {
   // Фільтр по складу
   if (currentFilters.scladNomer !== null) {
     filtered = filtered.filter(
-      (item) => item.scladNomer === currentFilters.scladNomer
+      (item) => item.scladNomer === currentFilters.scladNomer,
     );
   }
 
@@ -1501,7 +1550,7 @@ export function getMagazineData(): MagazineRecord[] {
 export function calculateMagazineTotalSum(): number {
   return magazineData.reduce(
     (sum, item) => sum + item.kilkist_on * item.price,
-    0
+    0,
   );
 }
 
@@ -1526,12 +1575,12 @@ export function updateMagazineTotalSum(): void {
   totalSumElement.innerHTML = `
   <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
     <span style="color: #ffffff;">Загальна сума: <strong style="color: #333;">💰 ${formatNumber(
-    totalSum
-  )}</strong> грн</span>
+      totalSum,
+    )}</strong> грн</span>
     <span style="color: #666;">|</span>
     <span style="color: #ffffff;">На складі: <strong style="color: #8B0000;">💶 ${formatNumber(
-    remainingSum
-  )}</strong> грн</span>
+      remainingSum,
+    )}</strong> грн</span>
   </div>
 `;
 }
@@ -1571,7 +1620,7 @@ export function updateMagazineTable(): void {
 
   if (magazineData.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="14" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
+      '<tr><td colspan="15" class="Bukhhalter-no-data">Немає даних для відображення</td></tr>';
     return;
   }
 
@@ -1639,8 +1688,9 @@ export function updateMagazineTable(): void {
       return `
         <tr onclick="handleRowClick(${index})" class="${rowClass}">
           <td>
-            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
-        }" ${paymentDisabled} ${paymentOnclick}
+            <button class="Bukhhalter-payment-btn ${
+              item.isPaid ? "paid" : "unpaid"
+            }" ${paymentDisabled} ${paymentOnclick}
               title="${item.isPaid ? "Розраховано" : "Не розраховано"}">
               ${paymentIcon} ${paymentText}
             </button>
@@ -1655,6 +1705,7 @@ export function updateMagazineTable(): void {
           <td>${item.price ? formatNumber(item.price) : "-"}</td>
           <td>${total ? formatNumber(total) : "-"}</td>
           <td class="${stockClass}">${remainder}</td>
+          <td class="zapchastyst-cell">${getZapchastystName(item.xto_zamovuv)}</td>
           <td class="sklad-cell">${item.scladNomer != null ? item.scladNomer : "-"}</td>
           <td class="return-cell">
             <div class="return-button-wrapper">
@@ -1676,7 +1727,7 @@ export async function toggleMagazinePayment(index: number): Promise<void> {
   if (item.isReturned) {
     showNotification(
       "⚠️ Неможливо змінити статус оплати для поверненого товару",
-      "warning"
+      "warning",
     );
     return;
   }
@@ -1735,7 +1786,7 @@ export async function toggleMagazinePayment(index: number): Promise<void> {
     if (item.isPaid) {
       showNotification(
         `💰 Розрахунок встановлено на ${formatDate(item.rosraxovano || "")}`,
-        "success"
+        "success",
       );
     } else {
       showNotification("💲 Розрахунок скасовано", "success");
@@ -1777,7 +1828,7 @@ export async function toggleReturn(index: number): Promise<void> {
       showNotification(
         "❌ Скасувати повернення неможливо: доступно тільки для сьогоднішніх повернень",
         "error",
-        4000
+        4000,
       );
       return;
     }
@@ -1785,7 +1836,7 @@ export async function toggleReturn(index: number): Promise<void> {
       showNotification(
         "⚠️ Скасування повернення не сьогоднішнього терміну (як адміністратор)",
         "warning",
-        2000
+        2000,
       );
     }
   }
@@ -1822,7 +1873,7 @@ export async function toggleReturn(index: number): Promise<void> {
       const { dateISO, timeHM } = splitDateTimeSafe(item.povernennya);
       showNotification(
         `🔄 Повернення встановлено на ${formatDate(dateISO)} ${timeHM || ""}`,
-        "success"
+        "success",
       );
     } else {
       showNotification("🔄 Повернення скасовано", "success");
@@ -1859,22 +1910,22 @@ function generateScladFilterButtons(): void {
 
   // Якщо немає складів або тільки 1 склад - не показуємо кнопки
   if (availableScladNomers.length === 0 || availableScladNomers.length === 1) {
-    container.innerHTML = '';
-    container.style.display = 'none';
+    container.innerHTML = "";
+    container.style.display = "none";
     return;
   }
 
-  container.style.display = 'flex';
+  container.style.display = "flex";
   // Додаємо клас для однакової ширини кнопок
-  container.classList.add('equal-width');
+  container.classList.add("equal-width");
 
-  let buttonsHtml = '';
+  let buttonsHtml = "";
 
   availableScladNomers.forEach((nomer) => {
     const isActive = currentFilters.scladNomer === nomer;
     buttonsHtml += `
       <button 
-        class="Bukhhalter-sklad-btn ${isActive ? 'active' : ''}" 
+        class="Bukhhalter-sklad-btn ${isActive ? "active" : ""}" 
         data-sclad-nomer="${nomer}"
         onclick="filterBySclad(${nomer})"
         title="Показати склад ${nomer}"
@@ -1888,7 +1939,7 @@ function generateScladFilterButtons(): void {
   const isAllActive = currentFilters.scladNomer === null;
   buttonsHtml += `
     <button 
-      class="Bukhhalter-sklad-btn Bukhhalter-sklad-btn-all ${isAllActive ? 'active' : ''}" 
+      class="Bukhhalter-sklad-btn Bukhhalter-sklad-btn-all ${isAllActive ? "active" : ""}" 
       data-sclad-nomer="all"
       onclick="filterBySclad(null)"
       title="Показати всі склади"
@@ -1906,13 +1957,13 @@ function filterBySclad(scladNomer: number | null): void {
   // Оновлюємо активну кнопку
   const container = byId<HTMLElement>("magazine-sklad-filter-container");
   if (container) {
-    const buttons = container.querySelectorAll('.Bukhhalter-sklad-btn');
+    const buttons = container.querySelectorAll(".Bukhhalter-sklad-btn");
     buttons.forEach((btn) => {
-      const btnNomer = btn.getAttribute('data-sclad-nomer');
+      const btnNomer = btn.getAttribute("data-sclad-nomer");
       if (scladNomer === null) {
-        btn.classList.toggle('active', btnNomer === 'all');
+        btn.classList.toggle("active", btnNomer === "all");
       } else {
-        btn.classList.toggle('active', btnNomer === String(scladNomer));
+        btn.classList.toggle("active", btnNomer === String(scladNomer));
       }
     });
   }
@@ -1930,7 +1981,7 @@ function initMagazineAutoBehaviors(): void {
   ensureSmartDropdowns();
 
   const shopEl = getEl<HTMLInputElement | HTMLSelectElement>(
-    "Bukhhalter-magazine-shop"
+    "Bukhhalter-magazine-shop",
   );
   if (shopEl && shopEl.tagName.toLowerCase() === "select") {
     const loadShopsHandler = async () => {
@@ -1959,7 +2010,7 @@ function initMagazineAutoBehaviors(): void {
 
   // ==== Перемикач оплати ====
   const paymentToggle = getEl<HTMLInputElement>(
-    "magazine-payment-filter-toggle"
+    "magazine-payment-filter-toggle",
   );
   if (paymentToggle) {
     paymentToggle.min = "0";
@@ -1985,7 +2036,7 @@ function initMagazineAutoBehaviors(): void {
 
   // ==== Перемикач наявності ====
   const availabilityToggle = getEl<HTMLInputElement>(
-    "magazine-availability-filter-toggle"
+    "magazine-availability-filter-toggle",
   );
   if (availabilityToggle) {
     availabilityToggle.min = "0";
@@ -1996,7 +2047,7 @@ function initMagazineAutoBehaviors(): void {
     } else {
       currentFilters.availabilityStatus = parseInt(
         availabilityToggle.value,
-        10
+        10,
       ) as 0 | 1 | 2 | 3 | 4;
     }
 
@@ -2063,7 +2114,7 @@ export function deleteMagazineRecord(index: number): void {
 
   if (removed?.pkName && removed?.pkValue != null) {
     const i = allMagazineData.findIndex(
-      (r) => r.pkName === removed.pkName && r.pkValue === removed.pkValue
+      (r) => r.pkName === removed.pkName && r.pkValue === removed.pkValue,
     );
     if (i > -1) allMagazineData.splice(i, 1);
   }
@@ -2075,12 +2126,12 @@ export function deleteMagazineRecord(index: number): void {
 
 export function clearMagazineForm(): void {
   const inputs = document.querySelectorAll<HTMLInputElement>(
-    "#Bukhhalter-magazine-section input:not([readonly])"
+    "#Bukhhalter-magazine-section input:not([readonly])",
   );
   inputs.forEach((i) => (i.value = ""));
 
   const selects = document.querySelectorAll<HTMLSelectElement>(
-    "#Bukhhalter-magazine-section select"
+    "#Bukhhalter-magazine-section select",
   );
   selects.forEach((s) => (s.value = ""));
 
@@ -2094,10 +2145,10 @@ export function clearMagazineForm(): void {
   };
 
   const paymentToggle = byId<HTMLInputElement>(
-    "magazine-payment-filter-toggle"
+    "magazine-payment-filter-toggle",
   );
   const availabilityToggle = byId<HTMLInputElement>(
-    "magazine-availability-filter-toggle"
+    "magazine-availability-filter-toggle",
   );
   if (paymentToggle) paymentToggle.value = "2";
   if (availabilityToggle) availabilityToggle.value = "4";
@@ -2240,7 +2291,7 @@ export function createShopsSelect(): void {
 
 function populateShopsSelectOptions(): void {
   const el = document.getElementById(
-    "Bukhhalter-magazine-shop"
+    "Bukhhalter-magazine-shop",
   ) as HTMLSelectElement | null;
   if (!el) return;
 
@@ -2248,7 +2299,7 @@ function populateShopsSelectOptions(): void {
     createShopsSelect();
   }
   const select = document.getElementById(
-    "Bukhhalter-magazine-shop"
+    "Bukhhalter-magazine-shop",
   ) as HTMLSelectElement | null;
   if (!select) return;
 
@@ -2268,7 +2319,7 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
   if (!hasFullAccess()) {
     showNotification(
       "⚠️ У вас немає прав для виконання масового розрахунку",
-      "warning"
+      "warning",
     );
     return;
   }
@@ -2283,7 +2334,7 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
   if (!rows || rows.length === 0) {
     showNotification(
       "ℹ️ Немає записів для обробки в поточному фільтрі",
-      "info"
+      "info",
     );
     return;
   }
@@ -2292,7 +2343,7 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
   if (toUpdate.length === 0) {
     showNotification(
       "ℹ️ Усі записи у фільтрі вже розраховані або повернені",
-      "info"
+      "info",
     );
     return;
   }
@@ -2304,7 +2355,7 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
   });
 
   const results = await Promise.allSettled(
-    toUpdate.map((item) => updatePaymentInDatabase(item))
+    toUpdate.map((item) => updatePaymentInDatabase(item)),
   );
 
   let ok = 0,
@@ -2326,13 +2377,13 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
   if (ok && !fail) {
     showNotification(
       `✅ Масовий розрахунок виконано (${ok} позицій)`,
-      "success"
+      "success",
     );
   } else if (ok && fail) {
     showNotification(
       `⚠️ Частково виконано: успішно ${ok}, помилок ${fail}`,
       "warning",
-      5000
+      5000,
     );
   } else {
     showNotification("❌ Не вдалося виконати масовий розрахунок", "error");

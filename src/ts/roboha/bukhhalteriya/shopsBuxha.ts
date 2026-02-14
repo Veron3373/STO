@@ -307,6 +307,7 @@ let currentFilters = {
   paymentStatus: 2 as 0 | 1 | 2, // 0: розраховано, 1: не розраховано, 2: всі
   availabilityStatus: 4 as 0 | 1 | 2 | 3 | 4, // 0: >0, 1: =0, 2: <0, 3: повернення, 4: всі
   scladNomer: null as number | null, // null = всі склади
+  zapchastystFilter: null as number | null, // null = всі запчастисти
 };
 
 // Кеш імен Запчастистів (slyusar_id → Name)
@@ -350,6 +351,47 @@ async function fetchSlyusarsNames(): Promise<void> {
 function getZapchastystName(xto_zamovuv: number | null | undefined): string {
   if (!xto_zamovuv) return "-";
   return slyusarsNameCache.get(xto_zamovuv) || "-";
+}
+
+// Функція заповнення dropdown списку Запчастистів
+function populateZapchastystDropdown(): void {
+  const select = getEl<HTMLSelectElement>("Bukhhalter-magazine-zapchastyst");
+  if (!select) return;
+
+  // Зберігаємо поточне вибране значення
+  const currentValue = select.value;
+
+  // Очищаємо та додаємо опцію "Всі"
+  select.innerHTML = '<option value="">Всі запчастисти</option>';
+
+  // Збираємо унікальні ID запчастистів з даних таблиці
+  const uniqueZapchastysty = new Set<number>();
+  for (const item of allMagazineData) {
+    if (item.xto_zamovuv) {
+      uniqueZapchastysty.add(item.xto_zamovuv);
+    }
+  }
+
+  // Створюємо масив з ID та іменами, сортуємо по імені
+  const zapchastystList: { id: number; name: string }[] = [];
+  for (const id of uniqueZapchastysty) {
+    const name = slyusarsNameCache.get(id) || `ID: ${id}`;
+    zapchastystList.push({ id, name });
+  }
+  zapchastystList.sort((a, b) => a.name.localeCompare(b.name, "uk"));
+
+  // Додаємо опції
+  for (const z of zapchastystList) {
+    const option = document.createElement("option");
+    option.value = String(z.id);
+    option.textContent = z.name;
+    select.appendChild(option);
+  }
+
+  // Відновлюємо вибране значення якщо воно є в списку
+  if (currentValue) {
+    select.value = currentValue;
+  }
 }
 
 let autoSearchTimer: number | null = null;
@@ -1484,6 +1526,7 @@ export async function searchMagazineData(): Promise<void> {
   populateShopsSelectOptions();
   ensureSmartDropdowns();
   refreshDropdownOptions();
+  populateZapchastystDropdown();
 
   // ВАЖЛИВО: застосовуємо локальні тумблери ДО allMagazineData
   applyLocalFilters(allMagazineData);
@@ -1537,6 +1580,13 @@ function applyLocalFilters(base?: MagazineRecord[]): void {
   if (currentFilters.scladNomer !== null) {
     filtered = filtered.filter(
       (item) => item.scladNomer === currentFilters.scladNomer,
+    );
+  }
+
+  // Фільтр по Запчастисту
+  if (currentFilters.zapchastystFilter !== null) {
+    filtered = filtered.filter(
+      (item) => item.xto_zamovuv === currentFilters.zapchastystFilter,
     );
   }
 
@@ -2060,6 +2110,20 @@ function initMagazineAutoBehaviors(): void {
     });
   }
   initMagazineDateFilterToggle();
+
+  // ==== Фільтр по Запчастисту ====
+  const zapchastystSelect = getEl<HTMLSelectElement>(
+    "Bukhhalter-magazine-zapchastyst",
+  );
+  if (zapchastystSelect) {
+    zapchastystSelect.addEventListener("change", function () {
+      const value = this.value;
+      currentFilters.zapchastystFilter = value ? parseInt(value, 10) : null;
+      applyLocalFilters(allMagazineData);
+      updateMagazineTable();
+      updateMagazineTotalSum();
+    });
+  }
 }
 
 async function updatePaymentInDatabase(item: MagazineRecord): Promise<void> {
@@ -2142,6 +2206,7 @@ export function clearMagazineForm(): void {
     paymentStatus: 2,
     availabilityStatus: 4,
     scladNomer: null,
+    zapchastystFilter: null,
   };
 
   const paymentToggle = byId<HTMLInputElement>(
@@ -2152,6 +2217,12 @@ export function clearMagazineForm(): void {
   );
   if (paymentToggle) paymentToggle.value = "2";
   if (availabilityToggle) availabilityToggle.value = "4";
+
+  // Скидаємо фільтр запчастиста
+  const zapchastystSelect = getEl<HTMLSelectElement>(
+    "Bukhhalter-magazine-zapchastyst",
+  );
+  if (zapchastystSelect) zapchastystSelect.value = "";
 
   // Скидаємо фільтр складу
   generateScladFilterButtons();

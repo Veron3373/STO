@@ -134,7 +134,7 @@ async function loadZapchastystFromDB(): Promise<
   try {
     const { data: slyusars, error } = await supabase
       .from("slyusars")
-      .select("id, data");
+      .select("slyusar_id, data");
 
     if (error) {
       console.error("Помилка завантаження запчастистів:", error);
@@ -155,7 +155,7 @@ async function loadZapchastystFromDB(): Promise<
 
         // Фільтруємо тільки Запчастистів
         if (access === "Запчастист" && name) {
-          result.push({ name, id: slyusar.id });
+          result.push({ name, id: slyusar.slyusar_id });
         }
       } catch (e) {
         console.error("Помилка парсингу запчастиста:", e);

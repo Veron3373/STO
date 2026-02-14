@@ -19,7 +19,7 @@ function toISODateOnly(dt: string | Date | null | undefined): string | null {
 }
 
 async function fetchActDates(
-  actId: number
+  actId: number,
 ): Promise<{ date_on: string | null; date_off: string | null }> {
   const { data, error } = await supabase
     .from("acts")
@@ -110,7 +110,7 @@ async function updateSlyusarJson(row: SlyusarRow): Promise<void> {
     .eq("slyusar_id", row.slyusar_id);
   if (error)
     throw new Error(
-      `Не вдалося оновити slyusars#${row.slyusar_id}: ${error.message}`
+      `Не вдалося оновити slyusars#${row.slyusar_id}: ${error.message}`,
     );
 }
 
@@ -129,37 +129,74 @@ const parseNum = (s?: string | null) => {
   return isFinite(n) ? n : 0;
 };
 
-function collectPrevWorkRowsFromCache(): Array<{
-  slyusarName: string;
-  Найменування: string;
-  Кількість: number;
-  Ціна: number;
-  Зарплата?: number;
-  recordId?: string; // ✅ Додано recordId для точного пошуку
-}> {
+/**
+ * ✅ НОВА ФУНКЦІЯ: Отримує попередні роботи акту НАПРЯМУЮ з бази slyusars
+ * Це гарантує що при видаленні робіт, вони також видаляються з slyusars.Історія
+ */
+async function fetchPrevWorksFromSlyusars(actId: number): Promise<
+  Array<{
+    slyusarName: string;
+    Найменування: string;
+    recordId?: string;
+  }>
+> {
   const out: Array<{
     slyusarName: string;
     Найменування: string;
-    Кількість: number;
-    Ціна: number;
-    Зарплата?: number;
-    recordId?: string; // ✅ Додано recordId для точного пошуку
+    recordId?: string;
   }> = [];
 
-  // ВИПРАВЛЕННЯ: беремо дані з initialActItems (початковий стан)
-  for (const it of globalCache.initialActItems || []) {
-    if (it.type !== "work") continue;
-    const slyusarName = (it.person_or_store || "").trim();
-    if (!slyusarName) continue;
+  try {
+    // Отримуємо всіх слюсарів (тільки з роллю Слюсар)
+    const { data: slyusars, error } = await supabase
+      .from("slyusars")
+      .select("data");
 
-    out.push({
-      slyusarName,
-      Найменування: it.name || "",
-      Кількість: Number(it.quantity ?? 0),
-      Ціна: Number(it.price ?? 0),
-      Зарплата: it.slyusarSum || 0, // ✅ Зберігаємо зарплату з початкових даних
-      recordId: (it as any).recordId, // ✅ Додаємо recordId для точного пошуку
-    });
+    if (error || !slyusars) {
+      console.warn(
+        "fetchPrevWorksFromSlyusars: помилка отримання слюсарів:",
+        error,
+      );
+      return out;
+    }
+
+    for (const slyusar of slyusars) {
+      const slyusarData =
+        typeof slyusar.data === "string"
+          ? JSON.parse(slyusar.data)
+          : slyusar.data;
+      if (!slyusarData || !slyusarData.Name) continue;
+
+      // Перевіряємо чи це Слюсар (бо інші ролі не мають робіт в історії)
+      if (slyusarData.Доступ !== "Слюсар") continue;
+
+      const slyusarName = slyusarData.Name;
+      const history = slyusarData.Історія || {};
+
+      // Перебираємо всі дати в історії
+      for (const dateKey of Object.keys(history)) {
+        const dayBucket = history[dateKey];
+        if (!Array.isArray(dayBucket)) continue;
+
+        // Шукаємо запис з цим актом
+        const actEntry = dayBucket.find(
+          (e: any) => String(e?.["Акт"]) === String(actId),
+        );
+        if (!actEntry) continue;
+
+        // Знайшли запис акту - додаємо всі роботи
+        const zapisи = actEntry["Записи"] || [];
+        for (const zap of zapisи) {
+          out.push({
+            slyusarName,
+            Найменування: zap.Робота || "",
+            recordId: zap.recordId,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("fetchPrevWorksFromSlyusars: помилка:", err);
   }
 
   return out;
@@ -168,7 +205,7 @@ function collectPrevWorkRowsFromCache(): Array<{
 function collectCurrentWorkSlyusarsFromTable(): string[] {
   const names = new Set<string>();
   const rows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   rows.forEach((row) => {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
@@ -176,7 +213,7 @@ function collectCurrentWorkSlyusarsFromTable(): string[] {
     const typeFromCell = nameCell.getAttribute("data-type");
     if (typeFromCell !== "works") return;
     const pibCell = row.querySelector(
-      '[data-name="pib_magazin"]'
+      '[data-name="pib_magazin"]',
     ) as HTMLElement;
     const slyusarName = cleanText(pibCell?.textContent);
     if (slyusarName) names.add(slyusarName);
@@ -252,7 +289,6 @@ async function syncSlyusarsHistoryForAct(params: {
       );
     });
 
-
     return fullName || shortenedName;
   }
 
@@ -265,7 +301,7 @@ async function syncSlyusarsHistoryForAct(params: {
       showNotification(
         `Слюсар "${slyusarName}" не знайдений у slyusars — пропущено`,
         "warning",
-        1800
+        1800,
       );
       continue;
     }
@@ -277,7 +313,7 @@ async function syncSlyusarsHistoryForAct(params: {
     if (!history[params.dateKey]) history[params.dateKey] = [];
     const dayBucket = history[params.dateKey] as any[];
     let actEntry = dayBucket.find(
-      (e: any) => String(e?.["Акт"]) === String(params.actId)
+      (e: any) => String(e?.["Акт"]) === String(params.actId),
     );
     if (!actEntry) {
       actEntry = {
@@ -292,16 +328,18 @@ async function syncSlyusarsHistoryForAct(params: {
     }
 
     // Створюємо новий масив записів, зберігаючи стару дату та "Розраховано" для незмінних робіт
-    const prevWorks = Array.isArray(actEntry["Записи"]) ? actEntry["Записи"] : [];
-    
-    
+    const prevWorks = Array.isArray(actEntry["Записи"])
+      ? actEntry["Записи"]
+      : [];
+
     // ✅ Хелпер для нормалізації назви (нечутливий до регістру та пробілів)
-    const normalizeName = (name: string) => (name || "").toLowerCase().replace(/\s+/g, " ").trim();
-    
+    const normalizeName = (name: string) =>
+      (name || "").toLowerCase().replace(/\s+/g, " ").trim();
+
     // ✅ КРИТИЧНО: Створюємо Map для ВСІХ методів пошуку попередніх записів
     const prevWorksById = new Map<string, any>();
     const prevWorksByName = new Map<string, any>();
-    
+
     for (const pw of prevWorks) {
       // За recordId (найточніший)
       if (pw.recordId) {
@@ -316,8 +354,7 @@ async function syncSlyusarsHistoryForAct(params: {
         }
       }
     }
-    
-    
+
     const zapis: Array<{
       Ціна: number;
       Кількість: number;
@@ -339,20 +376,18 @@ async function syncSlyusarsHistoryForAct(params: {
         ? expandNameForSave(workName)
         : workName;
 
-
       // ✅ ВИПРАВЛЕНО: recordId береться з об'єкта WorkRow (передається з processItems)
       const currentRecordId = r.recordId || "";
       let sourceForDates: any = null;
-      
-      
+
       // ✅ ГОЛОВНИЙ СПОСІБ: Пошук за recordId (унікальний і точний)
       // recordId гарантує що ми знаходимо саме той запис, який редагуємо
-      
+
       // 1. ПРІОРИТЕТ №1: Пошук за recordId (найточніший спосіб)
       if (currentRecordId && prevWorksById.has(currentRecordId)) {
         sourceForDates = prevWorksById.get(currentRecordId);
       }
-      
+
       // 2. ПРІОРИТЕТ №2: Пошук за назвою роботи (для записів без recordId або нових) - НОРМАЛІЗОВАНО
       if (!sourceForDates && fullWorkName) {
         const normalizedFullWorkName = normalizeName(fullWorkName);
@@ -361,15 +396,22 @@ async function syncSlyusarsHistoryForAct(params: {
           sourceForDates = prevByName;
         }
       }
-      
+
       // 3. ПРІОРИТЕТ №3: Пошук за частковим збігом назви (для скорочених назв) - НОРМАЛІЗОВАНО
       if (!sourceForDates && fullWorkName) {
         const normalizedFullWorkName = normalizeName(fullWorkName);
         for (const pw of prevWorks) {
           // Перевіряємо часткове співпадіння (початок назви) - нечутливе до регістру
           const normalizedPwName = normalizeName(pw.Робота || "");
-          if (normalizedPwName && (normalizedPwName.startsWith(normalizedFullWorkName.substring(0, 30)) || 
-                            normalizedFullWorkName.startsWith(normalizedPwName.substring(0, 30)))) {
+          if (
+            normalizedPwName &&
+            (normalizedPwName.startsWith(
+              normalizedFullWorkName.substring(0, 30),
+            ) ||
+              normalizedFullWorkName.startsWith(
+                normalizedPwName.substring(0, 30),
+              ))
+          ) {
             sourceForDates = pw;
             break;
           }
@@ -380,12 +422,11 @@ async function syncSlyusarsHistoryForAct(params: {
       // Це гарантує, що "Записано" та "Розраховано" НІКОЛИ не втрачаються
       let recordedDate = sourceForDates?.Записано || null;
       let calculatedDate = sourceForDates?.Розраховано || null;
-      
-      
+
       // ✅ ВИПРАВЛЕНО v4.0: Визначаємо recordId
       // ПРІОРИТЕТ: DOM → попередній запис → генерувати новий
       let recordId = "";
-      
+
       // 1. ГОЛОВНИЙ: беремо з DOM (він вже унікальний і прив'язаний до рядка)
       if (currentRecordId) {
         recordId = currentRecordId;
@@ -398,7 +439,7 @@ async function syncSlyusarsHistoryForAct(params: {
       else {
         recordId = `${params.actId}_${slyusarName}_${idx}_${Date.now()}`;
       }
-      
+
       // Якщо робота нова — ставимо нову дату запису
       if (!recordedDate) {
         const now = new Date();
@@ -416,13 +457,12 @@ async function syncSlyusarsHistoryForAct(params: {
         Зарплата: zp,
         Записано: recordedDate,
       };
-      
+
       // ✅ КРИТИЧНО: Додаємо "Розраховано" якщо воно було в попередньому записі
       // Це гарантує що дата виплати НІКОЛИ не втрачається при редагуванні
       if (calculatedDate) {
         newRecord.Розраховано = calculatedDate;
       }
-
 
       zapis.push(newRecord);
       summaRob += price * qty;
@@ -431,7 +471,7 @@ async function syncSlyusarsHistoryForAct(params: {
     actEntry["Записи"] = zapis;
     actEntry["СуммаРоботи"] = Math.max(
       0,
-      Math.round((summaRob + Number.EPSILON) * 100) / 100
+      Math.round((summaRob + Number.EPSILON) * 100) / 100,
     );
     actEntry["ДатаЗакриття"] = params.dateClose;
     actEntry["Клієнт"] = params.clientInfo;
@@ -459,33 +499,36 @@ async function syncSlyusarsHistoryForAct(params: {
       const currentSlyusar = currentRecordIdToSlyusar.get(prevRecordId);
       if (currentSlyusar !== prevSlyusarName) {
         // Слюсар змінився! Видаляємо цей запис у попереднього слюсаря
-        
+
         const slyRow = await fetchSlyusarByName(prevSlyusarName);
         if (slyRow) {
           const history = ensureSlyusarHistoryRoot(slyRow);
           const dayBucket = history[params.dateKey] as any[] | undefined;
-          
+
           if (dayBucket) {
             const actEntry = dayBucket.find(
-              (e: any) => String(e?.["Акт"]) === String(params.actId)
+              (e: any) => String(e?.["Акт"]) === String(params.actId),
             );
-            
+
             if (actEntry?.["Записи"] && Array.isArray(actEntry["Записи"])) {
               // Видаляємо конкретний запис за recordId
               const initialLength = actEntry["Записи"].length;
               actEntry["Записи"] = actEntry["Записи"].filter(
-                (zap: any) => zap.recordId !== prevRecordId
+                (zap: any) => zap.recordId !== prevRecordId,
               );
-              
+
               if (actEntry["Записи"].length < initialLength) {
-                
                 // Перераховуємо суму
                 let newSum = 0;
                 actEntry["Записи"].forEach((zap: any) => {
-                  newSum += (Number(zap.Ціна) || 0) * (Number(zap.Кількість) || 0);
+                  newSum +=
+                    (Number(zap.Ціна) || 0) * (Number(zap.Кількість) || 0);
                 });
-                actEntry["СуммаРоботи"] = Math.max(0, Math.round((newSum + Number.EPSILON) * 100) / 100);
-                
+                actEntry["СуммаРоботи"] = Math.max(
+                  0,
+                  Math.round((newSum + Number.EPSILON) * 100) / 100,
+                );
+
                 // Якщо записів не залишилось - видаляємо весь актовий запис
                 if (actEntry["Записи"].length === 0) {
                   const actIdx = dayBucket.indexOf(actEntry);
@@ -493,7 +536,7 @@ async function syncSlyusarsHistoryForAct(params: {
                     dayBucket.splice(actIdx, 1);
                   }
                 }
-                
+
                 await updateSlyusarJson(slyRow);
               }
             }
@@ -515,7 +558,7 @@ async function syncSlyusarsHistoryForAct(params: {
     if (!dayBucket) continue;
 
     const idx = dayBucket.findIndex(
-      (e: any) => String(e?.["Акт"]) === String(params.actId)
+      (e: any) => String(e?.["Акт"]) === String(params.actId),
     );
     if (idx === -1) continue;
 
@@ -540,7 +583,7 @@ export async function syncSlyusarsOnActSave(
     Ціна: number;
     Зарплата: number;
     recordId?: string; // ✅ Додано recordId
-  }>
+  }>,
 ): Promise<void> {
   try {
     const { date_on, date_off } = await fetchActDates(actId);
@@ -551,13 +594,16 @@ export async function syncSlyusarsOnActSave(
       showNotification(
         "Не вдалось визначити дату відкриття акту — Історія в slyusars не оновлена",
         "warning",
-        2000
+        2000,
       );
       return;
     }
 
     const { clientInfo, carInfo } = await fetchActClientAndCarData(actId);
-    const prevWorkRows = collectPrevWorkRowsFromCache();
+
+    // ✅ ВИПРАВЛЕНО: Отримуємо попередні роботи НАПРЯМУЮ з бази slyusars, а не з кешу
+    // Це гарантує синхронізацію навіть якщо кеш порожній
+    const prevWorkRows = await fetchPrevWorksFromSlyusars(actId);
 
     await syncSlyusarsHistoryForAct({
       actId,
@@ -566,19 +612,14 @@ export async function syncSlyusarsOnActSave(
       clientInfo,
       carInfo,
       currentRows: workRowsForSlyusars,
-      // ✅ ВИПРАВЛЕНО: Передаємо повні дані prevRows з Найменування та recordId
-      prevRows: prevWorkRows.map((r) => ({ 
-        slyusarName: r.slyusarName,
-        Найменування: r.Найменування,
-        recordId: r.recordId,
-      })),
+      prevRows: prevWorkRows,
     });
   } catch (error: any) {
     console.error("Помилка синхронізації з slyusars:", error);
     showNotification(
       "Помилка синхронізації з ПІБ (слюсарями): " + (error?.message || error),
       "error",
-      3000
+      3000,
     );
   }
 }
@@ -597,7 +638,7 @@ export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
       .eq("act_id", actId);
     if (upErr)
       throw new Error(
-        "Не вдалося оновити дату закриття акту: " + upErr.message
+        "Не вдалося оновити дату закриття акту: " + upErr.message,
       );
 
     const { date_on } = await fetchActDates(actId);
@@ -613,7 +654,7 @@ export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
       const history = ensureSlyusarHistoryRoot(row);
       const dayBucket = (history[dateKey] as any[]) || [];
       const actEntry = dayBucket.find(
-        (e: any) => String(e?.["Акт"]) === String(actId)
+        (e: any) => String(e?.["Акт"]) === String(actId),
       );
       if (actEntry) {
         actEntry["ДатаЗакриття"] = nowDateOnly;
@@ -635,14 +676,14 @@ export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
     showNotification(
       "Акт закрито. Дату закриття та дані клієнта оновлено у ПІБ.",
       "success",
-      1800
+      1800,
     );
   } catch (e: any) {
     console.error(e);
     showNotification(
       "Помилка при закритті акту: " + (e?.message || e),
       "error",
-      2500
+      2500,
     );
   }
 }
@@ -669,7 +710,7 @@ export async function reopenActAndClearSlyusars(actId: number): Promise<void> {
       const history = ensureSlyusarHistoryRoot(row);
       const dayBucket = (history[dateKey] as any[]) || [];
       const actEntry = dayBucket.find(
-        (e: any) => String(e?.["Акт"]) === String(actId)
+        (e: any) => String(e?.["Акт"]) === String(actId),
       );
       if (actEntry) {
         actEntry["ДатаЗакриття"] = null;
@@ -691,14 +732,14 @@ export async function reopenActAndClearSlyusars(actId: number): Promise<void> {
     showNotification(
       "Акт відкрито. Дату закриття очищено, дані клієнта оновлено у ПІБ.",
       "success",
-      1800
+      1800,
     );
   } catch (e: any) {
     console.error(e);
     showNotification(
       "Помилка при відкритті акту: " + (e?.message || e),
       "error",
-      2500
+      2500,
     );
   }
 }
@@ -722,7 +763,7 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
     recordId?: string; // ✅ Додано recordId для точного пошуку
   }> = [];
   const rows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
 
   rows.forEach((row) => {
@@ -737,19 +778,20 @@ export function buildWorkRowsForSlyusarsFromDOM(): Array<{
     const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement;
     const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
     const pibCell = row.querySelector(
-      '[data-name="pib_magazin"]'
+      '[data-name="pib_magazin"]',
     ) as HTMLElement;
     const slyusarSumCell = row.querySelector(
-      '[data-name="slyusar_sum"]'
+      '[data-name="slyusar_sum"]',
     ) as HTMLElement;
 
     const qty = parseNum(qtyCell?.textContent);
     const price = parseNum(priceCell?.textContent);
     const slyusarName = cleanText(pibCell?.textContent);
     const zp = parseNum(slyusarSumCell?.textContent);
-    
+
     // ✅ Зчитуємо recordId з атрибута рядка
-    const recordId = (row as HTMLElement).getAttribute("data-record-id") || undefined;
+    const recordId =
+      (row as HTMLElement).getAttribute("data-record-id") || undefined;
 
     if (!slyusarName) return;
     out.push({

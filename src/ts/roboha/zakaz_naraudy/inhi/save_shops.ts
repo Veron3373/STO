@@ -1,7 +1,6 @@
 //src\ts\roboha\zakaz_naraudy\inhi\save_shops.ts
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
-import { globalCache } from "../globalCache";
 import { safeParseJSON } from "./ctvorennia_papku_googleDrive.";
 
 /* ===================== ХЕЛПЕРИ ДЛЯ СИНХРОНІЗАЦІЇ З SHOPS ===================== */
@@ -19,7 +18,7 @@ function toISODateOnly(dt: string | Date | null | undefined): string | null {
 }
 
 async function fetchActDates(
-  actId: number
+  actId: number,
 ): Promise<{ date_on: string | null; date_off: string | null }> {
   const { data, error } = await supabase
     .from("acts")
@@ -94,7 +93,7 @@ async function fetchActClientAndCarData(actId: number): Promise<{
 }
 
 async function fetchScladMeta(
-  scladIds: number[]
+  scladIds: number[],
 ): Promise<
   Map<number, { rahunok: string | number | null; time_off: string | null }>
 > {
@@ -143,7 +142,7 @@ async function updateShopJson(shop: ShopRow): Promise<void> {
     .eq("shop_id", shop.shop_id);
   if (error)
     throw new Error(
-      `Не вдалося оновити shops#${shop.shop_id}: ${error.message}`
+      `Не вдалося оновити shops#${shop.shop_id}: ${error.message}`,
     );
 }
 
@@ -154,38 +153,63 @@ function ensureShopHistoryRoot(shop: ShopRow): any {
   return shop.data["Історія"];
 }
 
-// Побудувати "попередні" деталі (до збереження) з кешу рендера модалки
-function collectPrevDetailRowsFromCache(): Array<{
-  shopName: string;
-  sclad_id: number | null;
-  Найменування: string;
-  Каталог: string | null;
-  Кількість: number;
-  Ціна: number;
-}> {
-  const out: Array<{
+/**
+ * ✅ НОВА ФУНКЦІЯ: Отримує попередні записи акту НАПРЯМУЮ з бази shops
+ * Це гарантує що при видаленні деталей, вони також видаляються з shops.Історія
+ */
+async function fetchPrevDetailsFromShops(actId: number): Promise<
+  Array<{
     shopName: string;
     sclad_id: number | null;
-    Найменування: string;
-    Каталог: string | null;
-    Кількість: number;
-    Ціна: number;
-  }> = [];
+  }>
+> {
+  const out: Array<{ shopName: string; sclad_id: number | null }> = [];
 
-  for (const it of globalCache.initialActItems || []) {
-    if (it.type !== "detail") continue;
-    const shopName = (it.person_or_store || "").trim();
-    if (!shopName) continue;
+  try {
+    // Отримуємо всі магазини
+    const { data: shops, error } = await supabase.from("shops").select("data");
 
-    out.push({
-      shopName,
-      sclad_id: it.sclad_id ?? null,
-      Найменування: it.name || "",
-      Каталог: (it.catalog ?? "") || null,
-      Кількість: Number(it.quantity ?? 0),
-      Ціна: Number(it.price ?? 0),
-    });
+    if (error || !shops) {
+      console.warn(
+        "fetchPrevDetailsFromShops: помилка отримання магазинів:",
+        error,
+      );
+      return out;
+    }
+
+    for (const shop of shops) {
+      const shopData =
+        typeof shop.data === "string" ? JSON.parse(shop.data) : shop.data;
+      if (!shopData || !shopData.Name) continue;
+
+      const shopName = shopData.Name;
+      const history = shopData.Історія || {};
+
+      // Перебираємо всі дати в історії
+      for (const dateKey of Object.keys(history)) {
+        const dayBucket = history[dateKey];
+        if (!Array.isArray(dayBucket)) continue;
+
+        // Шукаємо запис з цим актом
+        const actEntry = dayBucket.find(
+          (e: any) => Number(e?.["Акт"]) === Number(actId),
+        );
+        if (!actEntry) continue;
+
+        // Знайшли запис акту - додаємо всі деталі
+        const details = actEntry["Деталі"] || [];
+        for (const det of details) {
+          out.push({
+            shopName,
+            sclad_id: det.sclad_id ?? null,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("fetchPrevDetailsFromShops: помилка:", err);
   }
+
   return out;
 }
 
@@ -243,22 +267,24 @@ async function syncShopsHistoryForAct(params: {
       showNotification(
         `Магазин "${shopName}" не знайдено у shops — пропущено`,
         "warning",
-        1800
+        1800,
       );
       continue;
     }
-    
+
     // ✅ Отримуємо попередні записи для збереження recordId
     const history = ensureShopHistoryRoot(shopRow);
     if (!history[params.dateKey]) history[params.dateKey] = [];
     const dayBucket = history[params.dateKey] as any[];
-    
+
     let actEntry = dayBucket.find(
-      (e: any) => Number(e?.["Акт"]) === Number(params.actId)
+      (e: any) => Number(e?.["Акт"]) === Number(params.actId),
     );
-    
-    const prevDetails = Array.isArray(actEntry?.["Деталі"]) ? actEntry["Деталі"] : [];
-    
+
+    const prevDetails = Array.isArray(actEntry?.["Деталі"])
+      ? actEntry["Деталі"]
+      : [];
+
     // ✅ Створюємо Map для пошуку за recordId
     const prevDetailsById = new Map<string, any>();
     for (const pd of prevDetails) {
@@ -266,28 +292,32 @@ async function syncShopsHistoryForAct(params: {
         prevDetailsById.set(pd.recordId, pd);
       }
     }
-    
+
     const out: any[] = [];
     for (let idx = 0; idx < rows.length; idx++) {
       const r = rows[idx];
       const metaR = r.sclad_id ? meta.get(r.sclad_id) || null : null;
-      
+
       // ✅ Визначаємо recordId: з поточного запису, з попереднього, або генеруємо новий
       let recordId = (r as any).recordId || "";
-      
+
       if (!recordId) {
         // Спробуємо знайти за індексом + назвою
         const prevByIndex = prevDetails[idx];
-        if (prevByIndex && prevByIndex.Найменування === r.Найменування && prevByIndex.recordId) {
+        if (
+          prevByIndex &&
+          prevByIndex.Найменування === r.Найменування &&
+          prevByIndex.recordId
+        ) {
           recordId = prevByIndex.recordId;
         }
       }
-      
+
       if (!recordId) {
         // Генеруємо новий унікальний ID
         recordId = `${params.actId}_${shopName}_detail_${idx}_${Date.now()}`;
       }
-      
+
       out.push({
         sclad_id: r.sclad_id,
         Каталог: r.Каталог
@@ -296,7 +326,7 @@ async function syncShopsHistoryForAct(params: {
             : Number(r.Каталог)
           : null,
         Ціна: Number(r.Ціна) || 0,
-        Рахунок: metaR ? metaR.rahunok ?? null : null, // ✅ беремо з колонки rahunok
+        Рахунок: metaR ? (metaR.rahunok ?? null) : null, // ✅ беремо з колонки rahunok
         Кількість: Number(r.Кількість) || 0,
         Найменування: r.Найменування,
         recordId, // ✅ Додаємо recordId
@@ -333,7 +363,7 @@ async function syncShopsHistoryForAct(params: {
     if (!dayBucket) continue;
 
     const idx = dayBucket.findIndex(
-      (e: any) => Number(e?.["Акт"]) === Number(params.actId)
+      (e: any) => Number(e?.["Акт"]) === Number(params.actId),
     );
     if (idx === -1) continue;
 
@@ -357,7 +387,7 @@ export async function syncShopsOnActSave(
     Каталог: string | null;
     Кількість: number;
     Ціна: number;
-  }>
+  }>,
 ): Promise<void> {
   try {
     const { date_on, date_off } = await fetchActDates(actId);
@@ -368,7 +398,7 @@ export async function syncShopsOnActSave(
       showNotification(
         "Не вдалось визначити дату відкриття акту — Історія в shops не оновлена",
         "warning",
-        2000
+        2000,
       );
       return;
     }
@@ -376,7 +406,9 @@ export async function syncShopsOnActSave(
     // Отримуємо дані клієнта та автомобіля
     const { clientInfo, carInfo } = await fetchActClientAndCarData(actId);
 
-    const prevDetailRows = collectPrevDetailRowsFromCache();
+    // ✅ ВИПРАВЛЕНО: Отримуємо попередні деталі НАПРЯМУЮ з бази shops, а не з кешу
+    // Це гарантує синхронізацію навіть якщо кеш порожній
+    const prevDetailRows = await fetchPrevDetailsFromShops(actId);
 
     await syncShopsHistoryForAct({
       actId,
@@ -385,17 +417,14 @@ export async function syncShopsOnActSave(
       clientInfo,
       carInfo,
       currentRows: detailRowsForShops,
-      prevRows: prevDetailRows.map((r) => ({
-        shopName: r.shopName,
-        sclad_id: r.sclad_id,
-      })),
+      prevRows: prevDetailRows,
     });
   } catch (error: any) {
     console.error("Помилка синхронізації з shops:", error);
     showNotification(
       "Помилка синхронізації з магазинами: " + (error?.message || error),
       "error",
-      3000
+      3000,
     );
   }
 }

@@ -1167,9 +1167,9 @@ async function syncPruimalnikHistory(
     }
   });
 
-  // --- ОТРИМАННЯ ВХІДНИХ ЦІН ТА xto_zamovuv ---
+  // --- ОТРИМАННЯ ВХІДНИХ ЦІН ТА НОМЕРА СКЛАДУ ---
   let partsTotalBuy = 0;
-  // Суми для розрахунку (без деталей, де склад запчастиста = складу приймальника)
+  // Суми для розрахунку (без деталей, де номер складу деталі = складу приймальника)
   let partsSaleForPruimalnyk = 0;
   let partsBuyForPruimalnyk = 0;
 
@@ -1177,14 +1177,14 @@ async function syncPruimalnikHistory(
     .map((p) => p.scladId)
     .filter((id): id is number => id !== null && !isNaN(id));
 
-  // Мапа: sclad_id -> склад запчастиста (xto_zamovuv)
-  const scladToZapchastystSkladMap = new Map<number, number>();
+  // Мапа: sclad_id -> номер складу деталі (scladNome)
+  const scladToScladNomeMap = new Map<number, number>();
 
   if (scladIdsToFetch.length > 0) {
-    // Отримуємо дані з sclad разом з xto_zamovuv
+    // Отримуємо дані з sclad разом з scladNome (номер фізичного складу)
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
-      .select("sclad_id, price, xto_zamovuv")
+      .select('sclad_id, price, "scladNome"')
       .in("sclad_id", scladIdsToFetch);
 
     if (scladError) {
@@ -1193,35 +1193,9 @@ async function syncPruimalnikHistory(
         scladError,
       );
     } else if (scladItems) {
-      // Збираємо унікальні xto_zamovuv для отримання їх складів
-      const uniqueXtoZamovuv = new Set<number>();
-      scladItems.forEach((item) => {
-        if (item.xto_zamovuv && typeof item.xto_zamovuv === "number") {
-          uniqueXtoZamovuv.add(item.xto_zamovuv);
-        }
-      });
-
-      // Отримуємо склади запчастистів з slyusars
-      const zapchastystSkladMap = new Map<number, number>();
-      if (uniqueXtoZamovuv.size > 0) {
-        const { data: zapchastysty, error: zapError } = await supabase
-          .from("slyusars")
-          .select("slyusar_id, data")
-          .in("slyusar_id", Array.from(uniqueXtoZamovuv));
-
-        if (!zapError && zapchastysty) {
-          zapchastysty.forEach((z) => {
-            const zData =
-              typeof z.data === "string" ? JSON.parse(z.data) : z.data;
-            const sklad = Number(zData?.Склад) || 0;
-            zapchastystSkladMap.set(z.slyusar_id, sklad);
-          });
-        }
-      }
-
-      // Створюємо мапу цін та зв'язок sclad_id -> склад запчастиста
+      // Створюємо мапу цін та зв'язок sclad_id -> номер складу
       const priceMap = new Map<number, number>();
-      scladItems.forEach((item) => {
+      scladItems.forEach((item: any) => {
         // Парсимо ціну (якщо рядок "938,00" або число 938)
         let val = 0;
         if (typeof item.price === "number") {
@@ -1237,12 +1211,10 @@ async function syncPruimalnikHistory(
         }
         priceMap.set(item.sclad_id, val);
 
-        // Зберігаємо склад запчастиста для цієї деталі
-        if (item.xto_zamovuv && zapchastystSkladMap.has(item.xto_zamovuv)) {
-          scladToZapchastystSkladMap.set(
-            item.sclad_id,
-            zapchastystSkladMap.get(item.xto_zamovuv)!,
-          );
+        // Зберігаємо номер складу для цієї деталі (scladNome)
+        const scladNome = Number(item.scladNome) || 0;
+        if (scladNome > 0) {
+          scladToScladNomeMap.set(item.sclad_id, scladNome);
         }
       });
 
@@ -1253,9 +1225,9 @@ async function syncPruimalnikHistory(
           const buyCost = buyPrice * part.qty;
           partsTotalBuy += buyCost;
 
-          // Перевіряємо, чи склад запчастиста НЕ співпадає зі складом приймальника
-          const zapSklad = scladToZapchastystSkladMap.get(part.scladId);
-          if (zapSklad === undefined || zapSklad !== pruimalnykSklad) {
+          // Перевіряємо, чи номер складу деталі НЕ співпадає зі складом приймальника
+          const detailSklad = scladToScladNomeMap.get(part.scladId);
+          if (detailSklad === undefined || detailSklad !== pruimalnykSklad) {
             // Деталь враховується в зарплаті приймальника
             partsSaleForPruimalnyk += part.sale;
             partsBuyForPruimalnyk += buyCost;
@@ -1290,7 +1262,7 @@ async function syncPruimalnikHistory(
   const partsSaleAfterDiscount = partsTotalSale * discountMultiplier;
   const basePartsProfit = partsSaleAfterDiscount - partsTotalBuy;
 
-  // 3. Запчастини для приймальника (виключаємо деталі, де склад запчастиста = складу приймальника)
+  // 3. Запчастини для приймальника (виключаємо деталі, де scladNome = Склад приймальника)
   const partsSaleForPruimalnykAfterDiscount =
     partsSaleForPruimalnyk * discountMultiplier;
   const basePartsProfitForPruimalnyk =
@@ -1300,7 +1272,7 @@ async function syncPruimalnikHistory(
   const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
 
   // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - зарплата = 0
-  // Зарплата приймальника розраховується ТІЛЬКИ з деталей, де склад запчастиста ≠ складу приймальника
+  // Зарплата приймальника розраховується ТІЛЬКИ з деталей, де номер складу деталі (scladNome) ≠ складу приймальника
   const salaryWork =
     baseWorkProfit > 0 ? Math.round(baseWorkProfit * (percentWork / 100)) : 0;
   const salaryParts =
@@ -1411,7 +1383,7 @@ async function syncPruimalnikHistory(
     СуммаРоботи: baseWorkProfit,
     СуммаЗапчастин: basePartsProfit, // Загальна сума запчастин
     ЗарплатаРоботи: salaryWork, // Вже = 0 якщо baseWorkProfit <= 0
-    ЗарплатаЗапчастин: salaryParts, // Розраховано ТІЛЬКИ з деталей де склад запчастиста ≠ складу приймальника
+    ЗарплатаЗапчастин: salaryParts, // Розраховано ТІЛЬКИ з деталей де scladNome ≠ Склад приймальника
     Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
     ДатаЗакриття: null, // Буде заповнено при закритті акту
   };

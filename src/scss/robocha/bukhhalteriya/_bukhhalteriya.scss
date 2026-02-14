@@ -608,6 +608,30 @@ body {
   margin-bottom: 15px;
 }
 
+/* Кнопка синхронізації */
+.Bukhhalter-sync-btn {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+
+  &:hover {
+    background: linear-gradient(135deg, #1976d2, #1565c0);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
 /* Базовий стиль для всіх перемикачів */
 .Bukhhalter-payment-toggle,
 .Bukhhalter-status-toggle,

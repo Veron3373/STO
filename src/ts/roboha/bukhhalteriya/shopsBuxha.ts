@@ -2468,3 +2468,127 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
 (window as any).deleteMagazineRecord = deleteMagazineRecord;
 
 (window as any).updateMagazineTotalSum = updateMagazineTotalSum;
+
+/**
+ * Синхронізує kilkist_off в таблиці sclad на основі даних з актів.
+ * Перераховує кількість кожного sclad_id в усіх актах і оновлює kilkist_off.
+ */
+export async function syncScladKilkistOff(): Promise<void> {
+  try {
+    showNotification("🔄 Синхронізація kilkist_off...", "info");
+
+    // 1. Завантажуємо всі акти з полями data/info
+    const { data: acts, error: actsError } = await supabase
+      .from("acts")
+      .select("act_id, data, info");
+
+    if (actsError) {
+      throw new Error(`Помилка завантаження актів: ${actsError.message}`);
+    }
+
+    // 2. Рахуємо загальну кількість кожного sclad_id в актах
+    const scladQuantities = new Map<number, number>();
+
+    for (const act of acts || []) {
+      const actData =
+        typeof act.data === "string" ? JSON.parse(act.data) : act.data;
+      const actInfo =
+        typeof act.info === "string" ? JSON.parse(act.info) : act.info;
+
+      // Беремо деталі з data або info
+      const details = actData?.["Деталі"] || actInfo?.["Деталі"] || [];
+
+      for (const detail of details) {
+        const scladId = Number(detail?.sclad_id);
+        const qty = Number(detail?.["Кількість"] ?? 0);
+
+        if (scladId && !isNaN(scladId) && qty > 0) {
+          scladQuantities.set(
+            scladId,
+            (scladQuantities.get(scladId) || 0) + qty,
+          );
+        }
+      }
+    }
+
+    console.log(
+      `📊 Знайдено ${scladQuantities.size} унікальних sclad_id в актах`,
+    );
+
+    // 3. Завантажуємо всі записи sclad для порівняння
+    const { data: scladRecords, error: scladError } = await supabase
+      .from("sclad")
+      .select("sclad_id, kilkist_off");
+
+    if (scladError) {
+      throw new Error(`Помилка завантаження sclad: ${scladError.message}`);
+    }
+
+    // 4. Визначаємо які записи потрібно оновити
+    const updates: { sclad_id: number; newKilkistOff: number }[] = [];
+
+    for (const record of scladRecords || []) {
+      const scladId = Number(record.sclad_id);
+      const currentOff = Number(record.kilkist_off ?? 0);
+      const expectedOff = scladQuantities.get(scladId) || 0;
+
+      if (currentOff !== expectedOff) {
+        updates.push({ sclad_id: scladId, newKilkistOff: expectedOff });
+        console.log(`📝 sclad_id=${scladId}: ${currentOff} → ${expectedOff}`);
+      }
+    }
+
+    if (updates.length === 0) {
+      showNotification("✅ Всі kilkist_off вже актуальні", "success");
+      return;
+    }
+
+    // 5. Оновлюємо записи
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const update of updates) {
+      const { error: updateError } = await supabase
+        .from("sclad")
+        .update({ kilkist_off: update.newKilkistOff })
+        .eq("sclad_id", update.sclad_id);
+
+      if (updateError) {
+        console.error(
+          `Помилка оновлення sclad_id=${update.sclad_id}:`,
+          updateError,
+        );
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    }
+
+    // 6. Показуємо результат
+    if (errorCount === 0) {
+      showNotification(
+        `✅ Синхронізовано ${successCount} записів kilkist_off`,
+        "success",
+      );
+    } else {
+      showNotification(
+        `⚠️ Оновлено ${successCount}, помилок ${errorCount}`,
+        "warning",
+      );
+    }
+
+    // 7. Оновлюємо таблицю якщо є дані
+    if (allMagazineData.length > 0) {
+      await searchMagazineData();
+    }
+  } catch (error) {
+    console.error("Помилка синхронізації kilkist_off:", error);
+    showNotification(
+      `❌ Помилка синхронізації: ${error instanceof Error ? error.message : "Невідома помилка"}`,
+      "error",
+    );
+  }
+}
+
+// Глобалізація syncScladKilkistOff
+(window as any).syncScladKilkistOff = syncScladKilkistOff;

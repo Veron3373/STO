@@ -1517,6 +1517,74 @@ export function searchDataInDatabase(
             customHtmlTotal: customHtml,
           });
         }
+
+        // 3. ЛОГІКА ДЛЯ ЗАПЧАСТИСТІВ (без СуммаРоботи, але з СуммаЗапчастин)
+        else if (
+          record.СуммаЗапчастин !== undefined &&
+          record.СуммаРоботи === undefined
+        ) {
+          const isPaid = !!record.Розраховано;
+          const payDate = record.Розраховано || "";
+
+          // Фільтр "paid"
+          if (podlegleDateFilterMode === "paid") {
+            if (!isPaid) return;
+            if (!inRangeByIso(payDate, dateOpen, toIsoClose)) return;
+          }
+          // Фільтр "open/close"
+          else {
+            const targetDmy =
+              podlegleDateFilterMode === "close"
+                ? getActDateClose(record.Акт, record.ДатаЗакриття)
+                : openDmy;
+            if (!targetDmy) return;
+            if (podlegleDateFilterMode === "close" && !targetDmy) return;
+            if (!inRangeByIso(targetDmy, dateOpen, toIsoClose)) return;
+          }
+
+          const sumParts = record.СуммаЗапчастин || 0;
+          const salaryParts = sumParts > 0 ? record.ЗарплатаЗапчастин || 0 : 0;
+          const profitAfterSalary = sumParts - salaryParts;
+
+          // Формуємо HTML: зелена маржа, червона зарплата, зелений чистий прибуток
+          const customHtml = `
+            <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
+              ${
+                sumParts !== 0
+                  ? `<div style="color: ${sumParts > 0 ? "#28a745" : "#dc3545"};">⚙️ ${sumParts > 0 ? "+" : ""}${formatNumber(sumParts)}</div>`
+                  : ""
+              }
+              ${
+                salaryParts !== 0
+                  ? `<div style="color: #dc3545;">💰 -${formatNumber(salaryParts)}</div>`
+                  : ""
+              }
+              ${
+                profitAfterSalary !== 0
+                  ? `<div style="color: ${profitAfterSalary > 0 ? "#28a745" : "#dc3545"}; font-weight: bold;">📊 ${profitAfterSalary > 0 ? "+" : ""}${formatNumber(profitAfterSalary)}</div>`
+                  : ""
+              }
+            </div>`;
+
+          podlegleData.push({
+            dateOpen: openDmy,
+            dateClose: getActDateClose(record.Акт, record.ДатаЗакриття),
+            name: slyusar.Name,
+            act: record.Акт,
+            client: String(record.Клієнт || ""),
+            automobile: String(record.Автомобіль || ""),
+            work: "Запчастини", // Позначаємо як запчастини
+            quantity: 0,
+            price: 0,
+            total: sumParts,
+            salary: salaryParts,
+            margin: profitAfterSalary,
+            isClosed: isActClosed(record.Акт, record.ДатаЗакриття),
+            isPaid: isPaid,
+            paymentDate: payDate,
+            customHtmlTotal: customHtml,
+          });
+        }
       });
     });
   });

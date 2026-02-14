@@ -195,15 +195,12 @@ async function wireZapchastystAutocomplete(
   const zapchastysts = await loadZapchastystFromDB();
   const names = zapchastysts.map((z) => z.name);
 
-  const render = (filter: string) => {
+  const render = () => {
     dd.innerHTML = "";
-    const filtered = filter
-      ? names.filter((o) => o.toLowerCase().includes(filter.toLowerCase()))
-      : names;
-    if (!filtered.length) return dd.classList.add("hidden-all_other_bases");
+    if (!names.length) return dd.classList.add("hidden-all_other_bases");
 
     dd.classList.remove("hidden-all_other_bases");
-    filtered.forEach((val) => {
+    names.forEach((val) => {
       const item = document.createElement("div");
       item.className = "custom-dropdown-item";
       item.textContent = val;
@@ -225,25 +222,22 @@ async function wireZapchastystAutocomplete(
     });
   };
 
-  const onInput = () => {
-    const val = (input.value ?? "").trim();
-    render(val);
+  const onFocus = () => {
+    render();
   };
 
-  const onFocus = () => {
-    const val = (input.value ?? "").trim();
-    render(val);
+  const onClick = () => {
+    render();
   };
 
   const onClickAway = (e: any) => {
     if (!input.contains(e.target as Node) && !dd.contains(e.target as Node)) {
-      dd.remove();
-      document.removeEventListener("click", onClickAway);
+      dd.classList.add("hidden-all_other_bases");
     }
   };
 
-  input.addEventListener("input", onInput);
   input.addEventListener("focus", onFocus);
+  input.addEventListener("click", onClick);
   document.addEventListener("click", onClickAway);
 }
 
@@ -279,7 +273,7 @@ export async function renderScladForm() {
         ])}
         <div class="form-field">
           <label class="field-label" for="sclad_zapchastyst_pib">Запчастист</label>
-          <input id="sclad_zapchastyst_pib" type="text" class="input-all_other_bases" autocomplete="off">
+          <input id="sclad_zapchastyst_pib" type="text" class="input-all_other_bases" autocomplete="off" readonly style="cursor: pointer;">
           <div id="sclad_zapchastyst_dd" class="custom-dropdown hidden-all_other_bases"></div>
         </div>
       </div>

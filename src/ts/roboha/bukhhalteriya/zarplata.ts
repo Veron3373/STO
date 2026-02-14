@@ -1546,14 +1546,9 @@ export function searchDataInDatabase(
           const salaryParts = sumParts > 0 ? record.ЗарплатаЗапчастин || 0 : 0;
           const profitAfterSalary = sumParts - salaryParts;
 
-          // Формуємо HTML: зелена маржа, червона зарплата, зелений чистий прибуток
+          // Формуємо HTML: червона зарплата, зелений чистий прибуток
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${
-                sumParts !== 0
-                  ? `<div style="color: ${sumParts > 0 ? "#28a745" : "#dc3545"};">⚙️ ${sumParts > 0 ? "+" : ""}${formatNumber(sumParts)}</div>`
-                  : ""
-              }
               ${
                 salaryParts !== 0
                   ? `<div style="color: #dc3545;">💰 -${formatNumber(salaryParts)}</div>`

@@ -1194,10 +1194,10 @@ async function syncPruimalnikHistory(
   console.log("🔍 syncPruimalnikHistory partsList:", partsList);
 
   if (scladIdsToFetch.length > 0) {
-    // Отримуємо дані з sclad разом з scladNome (номер фізичного складу)
+    // Отримуємо дані з sclad разом з scladNomer (номер фізичного складу)
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
-      .select('sclad_id, price, "scladNome"')
+      .select('sclad_id, price, "scladNomer"')
       .in("sclad_id", scladIdsToFetch);
 
     console.log(
@@ -1231,10 +1231,10 @@ async function syncPruimalnikHistory(
         }
         priceMap.set(item.sclad_id, val);
 
-        // Зберігаємо номер складу для цієї деталі (scladNome)
-        const scladNome = Number(item.scladNome) || 0;
-        if (scladNome > 0) {
-          scladToScladNomeMap.set(item.sclad_id, scladNome);
+        // Зберігаємо номер складу для цієї деталі (scladNomer)
+        const scladNomer = Number(item.scladNomer) || 0;
+        if (scladNomer > 0) {
+          scladToScladNomeMap.set(item.sclad_id, scladNomer);
         }
       });
 
@@ -1251,7 +1251,7 @@ async function syncPruimalnikHistory(
             detailSklad === undefined || detailSklad !== pruimalnykSklad;
 
           console.log(
-            `🔍 Деталь sclad_id=${part.scladId}: scladNome=${detailSklad}, pruimalnykSklad=${pruimalnykSklad}, shouldCount=${shouldCount}, sale=${part.sale}, buyPrice=${buyPrice}`,
+            `🔍 Деталь sclad_id=${part.scladId}: scladNomer=${detailSklad}, pruimalnykSklad=${pruimalnykSklad}, shouldCount=${shouldCount}, sale=${part.sale}, buyPrice=${buyPrice}`,
           );
 
           if (shouldCount) {

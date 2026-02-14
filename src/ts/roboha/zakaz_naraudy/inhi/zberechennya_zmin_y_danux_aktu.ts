@@ -953,6 +953,206 @@ function getClientAndCarInfo(): { pib: string; auto: string } {
 }
 
 /**
+ * ✅ НОВА ФУНКЦІЯ: Повна синхронізація історії ВСІХ Запчастистів для акту
+ *
+ * Логіка:
+ * 1. Отримуємо ВСІХ користувачів з роллю "Запчастист"
+ * 2. Для кожного перевіряємо: чи є в акті деталі де xto_zamovuv = його slyusar_id
+ * 3. Якщо є: оновлюємо/створюємо запис акту в історії
+ * 4. Якщо немає: ВИДАЛЯЄМО запис акту з історії (якщо був)
+ *
+ * Це гарантує коректну синхронізацію при:
+ * - Видаленні деталей з акту
+ * - Зміні xto_zamovuv в базі sclad
+ * - Переміщенні деталей між актами
+ *
+ * ⚠️ БЕЗПЕКА: Функція працює ТІЛЬКИ з роллю "Запчастист", не чіпає інші ролі
+ */
+async function syncAllZapchastystyHistoryForAct(
+  actId: number,
+  partsList: Array<{
+    scladId: number | null;
+    qty: number;
+    sale: number;
+    buyPrice: number;
+    xtoZamovuv: number | null;
+  }>,
+  scladToScladNomeMap: Map<number, number>,
+  discountMultiplier: number,
+  actDateOn: string | null,
+  pib: string,
+  auto: string,
+): Promise<number> {
+  // Групуємо деталі по xto_zamovuv (хто оприходував)
+  const partsGroupedByOwner = new Map<number, Array<(typeof partsList)[0]>>();
+
+  for (const part of partsList) {
+    if (part.xtoZamovuv && part.xtoZamovuv > 0) {
+      const existing = partsGroupedByOwner.get(part.xtoZamovuv) || [];
+      existing.push(part);
+      partsGroupedByOwner.set(part.xtoZamovuv, existing);
+    }
+  }
+
+  // Отримуємо ВСІХ Запчастистів з бази
+  const { data: allZapchastysty, error: zapchastystyError } = await supabase
+    .from("slyusars")
+    .select("slyusar_id, data");
+
+  if (zapchastystyError) {
+    console.error(
+      "❌ Помилка отримання списку Запчастистів:",
+      zapchastystyError,
+    );
+    return 0;
+  }
+
+  if (!allZapchastysty || allZapchastysty.length === 0) {
+    return 0;
+  }
+
+  const actDate = actDateOn
+    ? actDateOn.split("T")[0]
+    : new Date().toISOString().split("T")[0];
+
+  let totalZapchastystySalary = 0;
+
+  // Обробляємо КОЖНОГО користувача
+  for (const zapchastyst of allZapchastysty) {
+    const zData =
+      typeof zapchastyst.data === "string"
+        ? JSON.parse(zapchastyst.data)
+        : zapchastyst.data;
+
+    // ✅ БЕЗПЕКА: Працюємо ТІЛЬКИ з Запчастистами
+    if (zData.Доступ !== "Запчастист") {
+      continue;
+    }
+
+    const zSlyusarId = zapchastyst.slyusar_id;
+    const zSklad = Number(zData.Склад) || 0;
+    const zPercent = Number(zData.ПроцентЗапчастин) || 0;
+
+    // Перевіряємо: чи є деталі в акті де xto_zamovuv = цей Запчастист
+    const hisParts = partsGroupedByOwner.get(zSlyusarId) || [];
+    const hasPartsInAct = hisParts.length > 0;
+
+    // Рахуємо маржу для цього Запчастиста (БЕЗ деталей з його складу)
+    let marginForSalary = 0;
+    for (const part of hisParts) {
+      // Перевіряємо чи склад деталі ≠ склад Запчастиста
+      const detailSklad = part.scladId
+        ? scladToScladNomeMap.get(part.scladId)
+        : undefined;
+      const shouldCount = detailSklad === undefined || detailSklad !== zSklad;
+
+      if (shouldCount) {
+        const partMargin =
+          part.sale * discountMultiplier - part.buyPrice * part.qty;
+        marginForSalary += partMargin;
+      }
+    }
+
+    // Розраховуємо зарплату
+    const zSalary =
+      marginForSalary > 0 ? Math.round(marginForSalary * (zPercent / 100)) : 0;
+
+    // Отримуємо поточну історію
+    let zHistory = zData.Історія || {};
+    let zActFound = false;
+    let zFoundDateKey = "";
+    let zFoundIndex = -1;
+
+    // Шукаємо існуючий запис акту в історії
+    for (const dateKey of Object.keys(zHistory)) {
+      const dailyActs = zHistory[dateKey];
+      if (Array.isArray(dailyActs)) {
+        const idx = dailyActs.findIndex(
+          (item: any) => String(item.Акт) === String(actId),
+        );
+        if (idx !== -1) {
+          zActFound = true;
+          zFoundDateKey = dateKey;
+          zFoundIndex = idx;
+          break;
+        }
+      }
+    }
+
+    let needsUpdate = false;
+
+    if (hasPartsInAct) {
+      // ✅ Є деталі в акті → оновлюємо/створюємо запис
+      totalZapchastystySalary += zSalary;
+
+      const zActRecord = {
+        Акт: String(actId),
+        Клієнт: pib,
+        Автомобіль: auto,
+        СуммаЗапчастин: Math.round(marginForSalary * 100) / 100,
+        ЗарплатаЗапчастин: zSalary,
+        ДатаЗакриття: null,
+      };
+
+      if (zActFound) {
+        // Оновлюємо існуючий запис
+        const oldRecord = zHistory[zFoundDateKey][zFoundIndex];
+        zHistory[zFoundDateKey][zFoundIndex] = { ...oldRecord, ...zActRecord };
+        needsUpdate = true;
+        console.log(
+          `📝 Оновлено історію Запчастиста "${zData.Name}" для акту ${actId}: маржа=${marginForSalary.toFixed(2)}, ЗП=${zSalary}`,
+        );
+      } else {
+        // Створюємо новий запис
+        if (!zHistory[actDate]) {
+          zHistory[actDate] = [];
+        }
+        zHistory[actDate].push(zActRecord);
+        needsUpdate = true;
+        console.log(
+          `➕ Додано запис в історію Запчастиста "${zData.Name}" для акту ${actId}: маржа=${marginForSalary.toFixed(2)}, ЗП=${zSalary}`,
+        );
+      }
+    } else {
+      // ❌ Немає деталей в акті → видаляємо запис (якщо був)
+      if (zActFound) {
+        zHistory[zFoundDateKey].splice(zFoundIndex, 1);
+
+        // Якщо масив порожній, видаляємо дату
+        if (zHistory[zFoundDateKey].length === 0) {
+          delete zHistory[zFoundDateKey];
+        }
+
+        needsUpdate = true;
+        console.log(
+          `🗑️ Видалено акт ${actId} з історії Запчастиста "${zData.Name}" (деталей більше немає)`,
+        );
+      }
+    }
+
+    // Зберігаємо оновлену історію в БД
+    if (needsUpdate) {
+      zData.Історія = zHistory;
+
+      const { error: zUpdateError } = await supabase
+        .from("slyusars")
+        .update({ data: zData })
+        .eq("slyusar_id", zSlyusarId);
+
+      if (zUpdateError) {
+        console.error(
+          `❌ Помилка оновлення історії Запчастиста "${zData.Name}":`,
+          zUpdateError,
+        );
+      }
+    }
+  }
+
+  console.log(`💰 Загальна зарплата Запчастистів: ${totalZapchastystySalary}`);
+  return totalZapchastystySalary;
+}
+
+/**
  * Синхронізує історію акту для Приймальника
  * НОВА ЛОГІКА:
  * - Якщо зберігає Приймальник → оновлюємо його історію
@@ -1444,156 +1644,16 @@ async function syncPruimalnikHistory(
   const { pib, auto } = await fetchActClientAndCarDataFromDB(actId);
 
   // --- РОЗРАХУНОК ТА ЗАПИС ЗАРПЛАТ ЗАПЧАСТИСТІВ ---
-  // Групуємо деталі по xto_zamovuv (хто оприходував)
-  const zapchastystyMap = new Map<number, { sale: number; buy: number }>();
-
-  for (const part of partsList) {
-    if (part.xtoZamovuv && part.xtoZamovuv > 0) {
-      const existing = zapchastystyMap.get(part.xtoZamovuv) || {
-        sale: 0,
-        buy: 0,
-      };
-      existing.sale += part.sale * discountMultiplier;
-      existing.buy += part.buyPrice * part.qty;
-      zapchastystyMap.set(part.xtoZamovuv, existing);
-    }
-  }
-
-  // Обробляємо кожного Запчастиста
-  let totalZapchastystySalary = 0;
-
-  if (zapchastystyMap.size > 0) {
-    // Отримуємо дані всіх Запчастистів одним запитом
-    const zapchastystyIds = Array.from(zapchastystyMap.keys());
-    const { data: zapchastystyData, error: zapchastystyError } = await supabase
-      .from("slyusars")
-      .select("slyusar_id, data")
-      .in("slyusar_id", zapchastystyIds);
-
-    if (zapchastystyError) {
-      console.error(
-        "❌ Помилка отримання даних Запчастистів:",
-        zapchastystyError,
-      );
-    } else if (zapchastystyData) {
-      const actDate = actDateOn
-        ? actDateOn.split("T")[0]
-        : new Date().toISOString().split("T")[0];
-
-      for (const zapchastyst of zapchastystyData) {
-        const zData =
-          typeof zapchastyst.data === "string"
-            ? JSON.parse(zapchastyst.data)
-            : zapchastyst.data;
-
-        // Перевіряємо що це Запчастист
-        if (zData.Доступ !== "Запчастист") {
-          console.log(
-            `⏭️ Пропускаємо ${zData.Name} - роль "${zData.Доступ}", не Запчастист`,
-          );
-          continue;
-        }
-
-        const zSklad = Number(zData.Склад) || 0;
-        const zPercent = Number(zData.ПроцентЗапчастин) || 0;
-        const zSlyusarId = zapchastyst.slyusar_id;
-
-        // Перераховуємо маржу БЕЗ свого складу (аналог логіки Приймальника)
-        let marginForSalary = 0;
-        for (const part of partsList) {
-          if (part.xtoZamovuv === zSlyusarId) {
-            // Перевіряємо чи склад деталі ≠ склад Запчастиста
-            const detailSklad = part.scladId
-              ? scladToScladNomeMap.get(part.scladId)
-              : undefined;
-            const shouldCount =
-              detailSklad === undefined || detailSklad !== zSklad;
-
-            if (shouldCount) {
-              const partMargin =
-                part.sale * discountMultiplier - part.buyPrice * part.qty;
-              marginForSalary += partMargin;
-            }
-          }
-        }
-
-        // Розраховуємо зарплату
-        const zSalary =
-          marginForSalary > 0
-            ? Math.round(marginForSalary * (zPercent / 100))
-            : 0;
-        totalZapchastystySalary += zSalary;
-
-        console.log(
-          `🔧 Запчастист "${zData.Name}": склад=${zSklad}, %=${zPercent}, маржаДляЗП=${marginForSalary.toFixed(2)}, ЗП=${zSalary}`,
-        );
-
-        // Записуємо в Історію Запчастиста (тільки якщо є зарплата)
-        if (zSalary > 0 || marginForSalary !== 0) {
-          let zHistory = zData.Історія || {};
-          let zActFound = false;
-          let zFoundDateKey = "";
-          let zFoundIndex = -1;
-
-          // Шукаємо існуючий запис акту
-          for (const dateKey of Object.keys(zHistory)) {
-            const dailyActs = zHistory[dateKey];
-            if (Array.isArray(dailyActs)) {
-              const idx = dailyActs.findIndex(
-                (item: any) => String(item.Акт) === String(actId),
-              );
-              if (idx !== -1) {
-                zActFound = true;
-                zFoundDateKey = dateKey;
-                zFoundIndex = idx;
-                break;
-              }
-            }
-          }
-
-          const zActRecord = {
-            Акт: String(actId),
-            Клієнт: pib,
-            Автомобіль: auto,
-            СуммаЗапчастин: Math.round(marginForSalary * 100) / 100, // Маржа його деталей
-            ЗарплатаЗапчастин: zSalary,
-            ДатаЗакриття: null,
-          };
-
-          if (zActFound) {
-            const oldRecord = zHistory[zFoundDateKey][zFoundIndex];
-            zHistory[zFoundDateKey][zFoundIndex] = {
-              ...oldRecord,
-              ...zActRecord,
-            };
-          } else {
-            if (!zHistory[actDate]) {
-              zHistory[actDate] = [];
-            }
-            zHistory[actDate].push(zActRecord);
-          }
-
-          zData.Історія = zHistory;
-
-          const { error: zUpdateError } = await supabase
-            .from("slyusars")
-            .update({ data: zData })
-            .eq("slyusar_id", zSlyusarId);
-
-          if (zUpdateError) {
-            console.error(
-              `❌ Помилка оновлення історії Запчастиста "${zData.Name}":`,
-              zUpdateError,
-            );
-          } else {
-            console.log(`✅ Історія Запчастиста "${zData.Name}" оновлена`);
-          }
-        }
-      }
-    }
-  }
-
-  console.log(`💰 Загальна зарплата Запчастистів: ${totalZapchastystySalary}`);
+  // ✅ Використовуємо нову функцію для повної синхронізації історії ВСІХ Запчастистів
+  const totalZapchastystySalary = await syncAllZapchastystyHistoryForAct(
+    actId,
+    partsList,
+    scladToScladNomeMap,
+    discountMultiplier,
+    actDateOn,
+    pib,
+    auto,
+  );
 
   const actRecordUpdate = {
     Акт: String(actId),

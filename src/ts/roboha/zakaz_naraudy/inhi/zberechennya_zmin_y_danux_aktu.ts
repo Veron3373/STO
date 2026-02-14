@@ -1576,53 +1576,95 @@ async function syncPruimalnikHistory(
       }
     }
 
-    const actRecordUpdate = {
-      Акт: String(actId),
-      Клієнт: pib,
-      Автомобіль: auto,
-      // Записуємо чистий прибуток (після дисконту, собівартості/зарплати слюсаря і зарплати приймальника)
-      // Записуємо Базовий прибуток (ДО відрахування зарплати приймальника), щоб співвідношення ЗП/Сума відповідало відсотку
-      // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - записуємо 0 для зарплати
-      СуммаРоботи: baseWorkProfit,
-      СуммаЗапчастин: basePartsProfit, // Загальна сума запчастин (включаючи свій склад)
-      МаржаДляЗарплати: basePartsProfitForPruimalnyk, // Маржа БЕЗ свого складу (для розрахунку ЗарплатаЗапчастин)
-      ЗарплатаРоботи: salaryWork, // Вже = 0 якщо baseWorkProfit <= 0
-      ЗарплатаЗапчастин: salaryParts, // = МаржаДляЗарплати × ПроцентЗапчастин / 100
-      ЗарплатаЗапчастистів: totalZapchastystySalary, // Сума зарплат всіх Запчастистів по цьому акту
-      Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
-      ДатаЗакриття: null, // Буде заповнено при закритті акту
-    };
+    // ✅ ВИПРАВЛЕНО: Перевіряємо чи акт порожній (немає робіт і деталей)
+    const isActEmpty =
+      rows.length === 0 || (worksTotalSale === 0 && partsTotalSale === 0);
 
-    if (actFound) {
-      const oldRecord = history[foundDateKey][foundIndex];
-      history[foundDateKey][foundIndex] = { ...oldRecord, ...actRecordUpdate };
-    } else {
-      // Використовуємо дату створення акту, а не поточну дату
-      const actDate = actDateOn
-        ? actDateOn.split("T")[0]
-        : new Date().toISOString().split("T")[0];
-      if (!history[actDate]) {
-        history[actDate] = [];
+    if (isActEmpty) {
+      // ❌ Акт порожній → видаляємо запис з історії (якщо був)
+      if (actFound) {
+        history[foundDateKey].splice(foundIndex, 1);
+
+        // Якщо масив порожній, видаляємо дату
+        if (history[foundDateKey].length === 0) {
+          delete history[foundDateKey];
+        }
+
+        slyusarData.Історія = history;
+
+        const { error: updateError } = await supabase
+          .from("slyusars")
+          .update({ data: slyusarData })
+          .eq("slyusar_id", userData.slyusar_id);
+
+        if (updateError) {
+          console.error(
+            "❌ syncPruimalnikHistory: Помилка видалення акту з історії:",
+            updateError,
+          );
+        } else {
+          console.log(
+            `🗑️ Видалено порожній акт ${actId} з історії Приймальника "${pruimalnykName}"`,
+          );
+        }
+      } else {
+        console.log(
+          `ℹ️ Акт ${actId} порожній і не був в історії Приймальника - нічого видаляти`,
+        );
       }
-      history[actDate].push(actRecordUpdate);
-    }
-
-    // 4. Зберігаємо оновлену історію в БД
-    slyusarData.Історія = history;
-
-    const { error: updateError } = await supabase
-      .from("slyusars")
-      .update({ data: slyusarData })
-      .eq("slyusar_id", userData.slyusar_id);
-
-    if (updateError) {
-      console.error(
-        "❌ syncPruimalnikHistory: Помилка оновлення історії:",
-        updateError,
-      );
     } else {
-      // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
-      localStorage.setItem("current_act_pruimalnyk", pruimalnykName);
+      // ✅ Акт має дані → оновлюємо/створюємо запис
+      const actRecordUpdate = {
+        Акт: String(actId),
+        Клієнт: pib,
+        Автомобіль: auto,
+        // Записуємо чистий прибуток (після дисконту, собівартості/зарплати слюсаря і зарплати приймальника)
+        // Записуємо Базовий прибуток (ДО відрахування зарплати приймальника), щоб співвідношення ЗП/Сума відповідало відсотку
+        // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - записуємо 0 для зарплати
+        СуммаРоботи: baseWorkProfit,
+        СуммаЗапчастин: basePartsProfit, // Загальна сума запчастин (включаючи свій склад)
+        МаржаДляЗарплати: basePartsProfitForPruimalnyk, // Маржа БЕЗ свого складу (для розрахунку ЗарплатаЗапчастин)
+        ЗарплатаРоботи: salaryWork, // Вже = 0 якщо baseWorkProfit <= 0
+        ЗарплатаЗапчастин: salaryParts, // = МаржаДляЗарплати × ПроцентЗапчастин / 100
+        ЗарплатаЗапчастистів: totalZapchastystySalary, // Сума зарплат всіх Запчастистів по цьому акту
+        Знижка: discountPercent, // Зберігаємо відсоток знижки для відображення
+        ДатаЗакриття: null, // Буде заповнено при закритті акту
+      };
+
+      if (actFound) {
+        const oldRecord = history[foundDateKey][foundIndex];
+        history[foundDateKey][foundIndex] = {
+          ...oldRecord,
+          ...actRecordUpdate,
+        };
+      } else {
+        // Використовуємо дату створення акту, а не поточну дату
+        const actDate = actDateOn
+          ? actDateOn.split("T")[0]
+          : new Date().toISOString().split("T")[0];
+        if (!history[actDate]) {
+          history[actDate] = [];
+        }
+        history[actDate].push(actRecordUpdate);
+      }
+
+      // 4. Зберігаємо оновлену історію в БД
+      slyusarData.Історія = history;
+
+      const { error: updateError } = await supabase
+        .from("slyusars")
+        .update({ data: slyusarData })
+        .eq("slyusar_id", userData.slyusar_id);
+
+      if (updateError) {
+        console.error(
+          "❌ syncPruimalnikHistory: Помилка оновлення історії:",
+          updateError,
+        );
+      } else {
+        // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
+        localStorage.setItem("current_act_pruimalnyk", pruimalnykName);
+      }
     }
   } else {
     console.log(
@@ -1903,4 +1945,148 @@ export function addSaveHandler(actId: number, originalActData: any): void {
       );
     }
   });
+}
+
+/**
+ * ✅ НОВА ФУНКЦІЯ: Видаляє акт з історії Приймальника та всіх Запчастистів
+ * Використовується при повному видаленні акту з БД
+ * @param actId - ID акту для видалення з історій
+ */
+export async function removeActFromAllHistories(actId: number): Promise<void> {
+  console.log(
+    `🗑️ removeActFromAllHistories: Видаляємо акт ${actId} з усіх історій...`,
+  );
+
+  try {
+    // 1. Отримуємо приймальника для цього акту
+    const { data: actData, error: actError } = await supabase
+      .from("acts")
+      .select("pruimalnyk")
+      .eq("act_id", actId)
+      .single();
+
+    if (actError && actError.code !== "PGRST116") {
+      console.error("❌ Помилка отримання даних акту:", actError);
+    }
+
+    // 2. Видаляємо з історії Приймальника (якщо є)
+    if (actData?.pruimalnyk) {
+      const { data: pruimalnykData, error: pruimalnykError } = await supabase
+        .from("slyusars")
+        .select("slyusar_id, data")
+        .eq("data->>Name", actData.pruimalnyk)
+        .maybeSingle();
+
+      if (pruimalnykError) {
+        console.error("❌ Помилка пошуку Приймальника:", pruimalnykError);
+      } else if (pruimalnykData) {
+        const pData =
+          typeof pruimalnykData.data === "string"
+            ? JSON.parse(pruimalnykData.data)
+            : pruimalnykData.data;
+
+        if (
+          pData.Доступ === "Приймальник" ||
+          pData.Доступ === "Адміністратор"
+        ) {
+          let pHistory = pData.Історія || {};
+          let wasModified = false;
+
+          for (const dateKey of Object.keys(pHistory)) {
+            const dailyActs = pHistory[dateKey];
+            if (Array.isArray(dailyActs)) {
+              const idx = dailyActs.findIndex(
+                (item: any) => String(item.Акт) === String(actId),
+              );
+              if (idx !== -1) {
+                dailyActs.splice(idx, 1);
+                if (dailyActs.length === 0) {
+                  delete pHistory[dateKey];
+                }
+                wasModified = true;
+                break;
+              }
+            }
+          }
+
+          if (wasModified) {
+            pData.Історія = pHistory;
+            const { error: updateError } = await supabase
+              .from("slyusars")
+              .update({ data: pData })
+              .eq("slyusar_id", pruimalnykData.slyusar_id);
+
+            if (updateError) {
+              console.error(
+                `❌ Помилка видалення акту ${actId} з історії Приймальника:`,
+                updateError,
+              );
+            } else {
+              console.log(
+                `✅ Акт ${actId} видалено з історії Приймальника "${actData.pruimalnyk}"`,
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Видаляємо з історії ВСІХ Запчастистів
+    const { data: allZapchastysty, error: zError } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, data");
+
+    if (zError) {
+      console.error("❌ Помилка отримання списку Запчастистів:", zError);
+    } else if (allZapchastysty) {
+      for (const z of allZapchastysty) {
+        const zData = typeof z.data === "string" ? JSON.parse(z.data) : z.data;
+
+        if (zData.Доступ !== "Запчастист") continue;
+
+        let zHistory = zData.Історія || {};
+        let wasModified = false;
+
+        for (const dateKey of Object.keys(zHistory)) {
+          const dailyActs = zHistory[dateKey];
+          if (Array.isArray(dailyActs)) {
+            const idx = dailyActs.findIndex(
+              (item: any) => String(item.Акт) === String(actId),
+            );
+            if (idx !== -1) {
+              dailyActs.splice(idx, 1);
+              if (dailyActs.length === 0) {
+                delete zHistory[dateKey];
+              }
+              wasModified = true;
+              break;
+            }
+          }
+        }
+
+        if (wasModified) {
+          zData.Історія = zHistory;
+          const { error: zUpdateError } = await supabase
+            .from("slyusars")
+            .update({ data: zData })
+            .eq("slyusar_id", z.slyusar_id);
+
+          if (zUpdateError) {
+            console.error(
+              `❌ Помилка видалення акту ${actId} з історії Запчастиста "${zData.Name}":`,
+              zUpdateError,
+            );
+          } else {
+            console.log(
+              `✅ Акт ${actId} видалено з історії Запчастиста "${zData.Name}"`,
+            );
+          }
+        }
+      }
+    }
+
+    console.log(`✅ removeActFromAllHistories: Завершено для акту ${actId}`);
+  } catch (err) {
+    console.error(`❌ removeActFromAllHistories: Помилка:`, err);
+  }
 }

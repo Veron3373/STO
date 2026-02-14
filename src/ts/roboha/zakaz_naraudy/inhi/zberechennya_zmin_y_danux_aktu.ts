@@ -1112,6 +1112,16 @@ async function syncPruimalnikHistory(
 
   // Склад приймальника для порівняння
   const pruimalnykSklad = Number(slyusarData.Склад) || 0;
+  const percentWork = Number(slyusarData.ПроцентРоботи) || 0;
+  const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
+
+  console.log("🔍 syncPruimalnikHistory DEBUG:", {
+    pruimalnykName,
+    pruimalnykSklad,
+    percentWork,
+    percentParts,
+    slyusarData,
+  });
 
   // --- ЗБІР ДАНИХ З DOM ---
   const tableBody = document.querySelector<HTMLTableSectionElement>(
@@ -1180,12 +1190,22 @@ async function syncPruimalnikHistory(
   // Мапа: sclad_id -> номер складу деталі (scladNome)
   const scladToScladNomeMap = new Map<number, number>();
 
+  console.log("🔍 syncPruimalnikHistory scladIdsToFetch:", scladIdsToFetch);
+  console.log("🔍 syncPruimalnikHistory partsList:", partsList);
+
   if (scladIdsToFetch.length > 0) {
     // Отримуємо дані з sclad разом з scladNome (номер фізичного складу)
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
       .select('sclad_id, price, "scladNome"')
       .in("sclad_id", scladIdsToFetch);
+
+    console.log(
+      "🔍 syncPruimalnikHistory scladItems:",
+      scladItems,
+      "error:",
+      scladError,
+    );
 
     if (scladError) {
       console.error(
@@ -1227,7 +1247,14 @@ async function syncPruimalnikHistory(
 
           // Перевіряємо, чи номер складу деталі НЕ співпадає зі складом приймальника
           const detailSklad = scladToScladNomeMap.get(part.scladId);
-          if (detailSklad === undefined || detailSklad !== pruimalnykSklad) {
+          const shouldCount =
+            detailSklad === undefined || detailSklad !== pruimalnykSklad;
+
+          console.log(
+            `🔍 Деталь sclad_id=${part.scladId}: scladNome=${detailSklad}, pruimalnykSklad=${pruimalnykSklad}, shouldCount=${shouldCount}, sale=${part.sale}, buyPrice=${buyPrice}`,
+          );
+
+          if (shouldCount) {
             // Деталь враховується в зарплаті приймальника
             partsSaleForPruimalnyk += part.sale;
             partsBuyForPruimalnyk += buyCost;
@@ -1235,13 +1262,22 @@ async function syncPruimalnikHistory(
         } else {
           // Деталь без scladId або без ціни в sclad - враховуємо повністю в зарплаті приймальника
           // (невідомий запчастист = враховується)
+          console.log(
+            `🔍 Деталь без scladId або ціни: scladId=${part.scladId}, sale=${part.sale}`,
+          );
           partsSaleForPruimalnyk += part.sale;
           // partsBuyForPruimalnyk не додаємо, бо невідома ціна закупки
         }
       });
+
+      console.log(
+        "🔍 scladToScladNomeMap:",
+        Object.fromEntries(scladToScladNomeMap),
+      );
     }
   } else {
     // Якщо немає scladIdsToFetch - всі деталі без scladId, враховуємо всю суму продажу
+    console.log("🔍 scladIdsToFetch порожній - всі деталі без sclad_id");
     partsList.forEach((part) => {
       partsSaleForPruimalnyk += part.sale;
     });
@@ -1268,8 +1304,19 @@ async function syncPruimalnikHistory(
   const basePartsProfitForPruimalnyk =
     partsSaleForPruimalnykAfterDiscount - partsBuyForPruimalnyk;
 
-  const percentWork = Number(slyusarData.ПроцентРоботи) || 0;
-  const percentParts = Number(slyusarData.ПроцентЗапчастин) || 0;
+  console.log("🔍 syncPruimalnikHistory РОЗРАХУНКИ:", {
+    partsTotalSale,
+    partsTotalBuy,
+    basePartsProfit,
+    partsSaleForPruimalnyk,
+    partsBuyForPruimalnyk,
+    basePartsProfitForPruimalnyk,
+    percentParts,
+    expectedSalaryParts:
+      basePartsProfitForPruimalnyk > 0
+        ? Math.round(basePartsProfitForPruimalnyk * (percentParts / 100))
+        : 0,
+  });
 
   // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - зарплата = 0
   // Зарплата приймальника розраховується ТІЛЬКИ з деталей, де номер складу деталі (scladNome) ≠ складу приймальника

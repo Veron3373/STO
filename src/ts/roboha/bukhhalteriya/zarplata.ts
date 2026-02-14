@@ -76,6 +76,7 @@ interface SlyusarData {
       ДатаЗакриття: string | null;
       // ✅ Нові поля для Приймальника
       СуммаЗапчастин?: number;
+      МаржаДляЗарплати?: number; // Маржа запчастин БЕЗ свого складу (для розрахунку ЗарплатаЗапчастин)
       ЗарплатаРоботи?: number;
       ЗарплатаЗапчастин?: number;
       Розраховано?: string;
@@ -89,7 +90,6 @@ let slyusarsData: SlyusarData[] = [];
 let availableNames: string[] = [];
 let currentPaymentFilter: PaymentFilter = "all";
 let currentPercentageFilter: PercentageFilter = "all";
-
 
 // Кеш для процентів роботи слюсарів (Name -> ПроцентРоботи)
 let slyusarPercentCache: Map<string, number> = new Map();
@@ -251,8 +251,8 @@ class WorkSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -277,12 +277,13 @@ class WorkSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
-      `
+      `,
       )
       .join("");
 
@@ -333,7 +334,7 @@ class WorkSmartDropdown {
     if (!query.trim()) return text;
     const regex = new RegExp(
       `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-      "gi"
+      "gi",
     );
     return text.replace(regex, "<mark>$1</mark>");
   }
@@ -356,7 +357,7 @@ class WorkSmartDropdown {
   private selectNext() {
     this.selectedIndex = Math.min(
       this.selectedIndex + 1,
-      this.filteredItems.length - 1
+      this.filteredItems.length - 1,
     );
     this.render();
     this.scrollToSelected();
@@ -487,7 +488,7 @@ function ensureWorkSmartDropdown(): void {
       } catch (error) {
         console.warn(
           `Failed to create work dropdown for ${workDropdownConfig.inputId}:`,
-          error
+          error,
         );
       }
     }
@@ -630,7 +631,7 @@ function getCurrentDate(): string {
 }
 
 function createPasswordConfirmationModal(
-  action: "pay" | "unpay"
+  action: "pay" | "unpay",
 ): Promise<boolean> {
   return new Promise((resolve) => {
     const modal = document.createElement("div");
@@ -761,7 +762,7 @@ export async function loadSlyusarsData(): Promise<void> {
     // 🔹 Паралельно завантажуємо slyusars та acts.date_off
     const [slyusarsResult, actsResult] = await Promise.all([
       supabase.from("slyusars").select("*"),
-      supabase.from("acts").select("act_id, date_off")
+      supabase.from("acts").select("act_id, date_off"),
     ]);
 
     const { data, error } = slyusarsResult;
@@ -769,11 +770,13 @@ export async function loadSlyusarsData(): Promise<void> {
     // 🔹 Завантажуємо дати закриття актів в map
     if (actsResult.data && Array.isArray(actsResult.data)) {
       actsDateOffMap.clear();
-      actsResult.data.forEach((act: { act_id: number; date_off: string | null }) => {
-        if (act.date_off) {
-          actsDateOffMap.set(String(act.act_id), act.date_off);
-        }
-      });
+      actsResult.data.forEach(
+        (act: { act_id: number; date_off: string | null }) => {
+          if (act.date_off) {
+            actsDateOffMap.set(String(act.act_id), act.date_off);
+          }
+        },
+      );
     }
 
     if (error) {
@@ -793,7 +796,7 @@ export async function loadSlyusarsData(): Promise<void> {
             } else {
               console.warn(
                 `Пропущений запис ${index}: невірний формат data`,
-                item
+                item,
               );
               return null;
             }
@@ -801,7 +804,7 @@ export async function loadSlyusarsData(): Promise<void> {
             if (!parsedData || !parsedData.Name) {
               console.warn(
                 `Пропущений запис ${index}: немає поля Name`,
-                parsedData
+                parsedData,
               );
               return null;
             }
@@ -813,7 +816,7 @@ export async function loadSlyusarsData(): Promise<void> {
             ) {
               slyusarPercentCache.set(
                 parsedData.Name.toLowerCase(),
-                parsedData.ПроцентРоботи
+                parsedData.ПроцентРоботи,
               );
             }
 
@@ -822,7 +825,7 @@ export async function loadSlyusarsData(): Promise<void> {
             console.error(
               `Помилка парсингу запису ${index}:`,
               parseError,
-              item
+              item,
             );
             return null;
           }
@@ -832,7 +835,7 @@ export async function loadSlyusarsData(): Promise<void> {
       updateNamesList();
     } else {
       throw new Error(
-        "Невірний формат даних з Supabase: дані не є масивом або порожні"
+        "Невірний формат даних з Supabase: дані не є масивом або порожні",
       );
     }
   } catch (error) {
@@ -844,7 +847,7 @@ export async function loadSlyusarsData(): Promise<void> {
     showNotification(
       `⚠️ Не вдалося завантажити дані з бази: ${errorMessage}. Перевірте підключення до сервера або налаштування Supabase.`,
       "error",
-      5000
+      5000,
     );
     slyusarsData = [];
     availableNames = [];
@@ -866,14 +869,19 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
     }
 
     // ✅ ВИПРАВЛЕНО: Додано правильний ключ slyusar_id
-    const primaryKeyCandidates = ["slyusar_id", "id", "slyusars_id", "uid", "pk"];
+    const primaryKeyCandidates = [
+      "slyusar_id",
+      "id",
+      "slyusars_id",
+      "uid",
+      "pk",
+    ];
     const detectPrimaryKey = (row: any): string | null => {
       if (!row) return null;
       for (const k of primaryKeyCandidates) if (k in row) return k;
       return null;
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
-
 
     // ✅ ОПТИМІЗАЦІЯ: Збираємо всі оновлення в масив промісів
     const updatePromises: Promise<any>[] = [];
@@ -919,7 +927,10 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
             .contains("data", { Name: slyusar.Name })
             .select();
           if (updErr) {
-            console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
+            console.error(
+              `Помилка оновлення (fallback) ${slyusar.Name}:`,
+              updErr,
+            );
             throw updErr;
           }
           return upd;
@@ -943,7 +954,7 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
     showNotification(
       `⚠️ Помилка збереження в базу даних: ${errorMessage}. Зміни можуть не зберегтися.`,
       "error",
-      5000
+      5000,
     );
     throw error;
   }
@@ -983,13 +994,12 @@ export function createNameSelect(): void {
       // ✅ ВИПРАВЛЕННЯ БАГ №2: ЗАВЖДИ оновлюємо дані при зміні імені
       // Раніше оновлення відбувалось тільки якщо hasDataForAllEmployees === true
       if (lastSearchDateOpen || lastSearchDateClose) {
-
         searchDataInDatabase(
           lastSearchDateOpen,
           lastSearchDateClose,
-          selectedName
+          selectedName,
         );
-        
+
         // Оновлюємо таблицю після пошуку
         updatepodlegleTable();
       }
@@ -997,20 +1007,22 @@ export function createNameSelect(): void {
       refreshWorkDropdownOptions();
       refreshActDropdownOptions();
     });
-  } catch (error) { }
+  } catch (error) {}
 }
 
 export function getFilteredpodlegleData(): PodlegleRecord[] {
   let filteredData = podlegleData;
 
   // ✅ ВИПРАВЛЕННЯ БАГ №1: Фільтрація по вибраному імені з селекту
-  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+  const selectedName =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
   if (selectedName) {
     filteredData = filteredData.filter((item) => item.name === selectedName);
   }
 
   // ✅ Фільтрація по номеру акту
-  const selectedAct = byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select")?.value || "";
+  const selectedAct =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select")?.value || "";
   if (selectedAct) {
     filteredData = filteredData.filter((item) => item.act === selectedAct);
   }
@@ -1088,7 +1100,7 @@ export function updatePodlegleDisplayedSums(): void {
   if (filteredData.length > 0) {
     totalRevenue = filteredData.reduce(
       (sum, item) => sum + (item.total || 0),
-      0
+      0,
     );
     totalSalary = calculatePodlegleSalaryTotal();
     totalMargin = totalRevenue - totalSalary; // Виправлено: тепер margin = revenue - salary
@@ -1099,15 +1111,16 @@ export function updatePodlegleDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
       <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-    totalRevenue
-  )}</strong> грн</span>
+        totalRevenue,
+      )}</strong> грн</span>
       <span style="color: #666;">-</span>
       <span><strong style="color: #8B0000;">💶 ${formatNumber(
-    totalSalary
-  )}</strong> грн</span>
+        totalSalary,
+      )}</strong> грн</span>
       <span style="color: #666;">=</span>
-      <span><strong style="color: ${totalMargin >= 0 ? "#006400 " : "#8B0000"
-    };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
+      <span><strong style="color: ${
+        totalMargin >= 0 ? "#006400 " : "#8B0000"
+      };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
     </div>
   `;
 }
@@ -1187,19 +1200,20 @@ export function updatepodlegleTable(): void {
         <div class="salary-cell-wrapper">
           <div class="salary-cell-numbers">
             <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(
-          item.total
-        )}</div>
+              item.total,
+            )}</div>
             <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(
-          item.salary
-        )}</div>
+              item.salary,
+            )}</div>
             <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
-          item.margin
-        )}</div>
+              item.margin,
+            )}</div>
           </div>
-          ${salaryArrowHtml
-          ? `<div class="salary-arrow-container">${salaryArrowHtml}</div>`
-          : ""
-        }
+          ${
+            salaryArrowHtml
+              ? `<div class="salary-arrow-container">${salaryArrowHtml}</div>`
+              : ""
+          }
         </div>
       `;
 
@@ -1208,10 +1222,11 @@ export function updatepodlegleTable(): void {
                     <td>
                              <button class="Bukhhalter-payment-btn ${buttonPaidClass}"
                                 onclick="event.stopPropagation(); togglepodleglePaymentWithConfirmation(${originalIndex})" 
-                                title="${item.isPaid
-          ? `Розраховано ${item.paymentDate || ""}`
-          : "Не розраховано"
-        }">
+                                title="${
+                                  item.isPaid
+                                    ? `Розраховано ${item.paymentDate || ""}`
+                                    : "Не розраховано"
+                                }">
                             ${paymentButtonText}
                         </button>
                     </td>
@@ -1221,8 +1236,9 @@ export function updatepodlegleTable(): void {
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
-                             onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
-        })"
+                             onclick="event.stopPropagation(); openActModalWithClient(${
+                               Number(item.act) || 0
+                             })"
                              title="Відкрити акт №${item.act}">
                        📋 ${item.act || "-"}
                      </button>
@@ -1289,7 +1305,7 @@ function todayIso(): string {
 function inRangeByIso(
   targetDmy: string,
   fromDmy?: string,
-  toDmy?: string
+  toDmy?: string,
 ): boolean {
   const t = toIsoDate(targetDmy);
   if (!t) return false; // якщо дата в полі була "💰 31.10.2025" або інший шум — тепер парситься
@@ -1302,7 +1318,7 @@ function inRangeByIso(
 export function searchDataInDatabase(
   dateOpen: string,
   dateClose: string,
-  selectedName: string
+  selectedName: string,
 ): void {
   podlegleData = [];
   if (!dateOpen && !dateClose) {
@@ -1311,7 +1327,7 @@ export function searchDataInDatabase(
   if (slyusarsData.length === 0) {
     showNotification(
       "⚠️ Немає даних з бази slyusars. Спробуйте перезавантажити сторінку.",
-      "warning"
+      "warning",
     );
     updatepodlegleTable();
     return;
@@ -1321,7 +1337,6 @@ export function searchDataInDatabase(
   lastSearchDateClose = dateClose;
 
   const toIsoClose = dateClose || todayIso();
-
 
   slyusarsData.forEach((slyusar) => {
     if (selectedName && slyusar.Name !== selectedName) return;
@@ -1438,8 +1453,8 @@ export function searchDataInDatabase(
           const sumParts = record.СуммаЗапчастин || 0;
 
           // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна → зарплата = 0
-          const salaryWork = sumWork > 0 ? (record.ЗарплатаРоботи || 0) : 0;
-          const salaryParts = sumParts > 0 ? (record.ЗарплатаЗапчастин || 0) : 0;
+          const salaryWork = sumWork > 0 ? record.ЗарплатаРоботи || 0 : 0;
+          const salaryParts = sumParts > 0 ? record.ЗарплатаЗапчастин || 0 : 0;
 
           const totalSum = sumWork + sumParts;
           const totalSalary = salaryWork + salaryParts;
@@ -1456,22 +1471,30 @@ export function searchDataInDatabase(
 
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${salaryParts !== 0
-              ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
-              : (sumParts < 0 ? `<div style="color: #6c757d;">⚙️ 0</div>` : "")
-            }
-              ${sumPartsAfterSalary !== 0
-              ? `<div style="color: ${sumPartsAfterSalary > 0 ? '#28a745' : '#dc3545'};">⚙️ ${sumPartsAfterSalary > 0 ? '+' : ''}${formatNumber(sumPartsAfterSalary)}</div>`
-              : ""
-            }
-              ${salaryWork !== 0
-              ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
-              : (sumWork < 0 ? `<div style="color: #6c757d;">🛠️ 0</div>` : "")
-            }
-              ${sumWorkAfterSalary !== 0
-              ? `<div style="color: ${sumWorkAfterSalary > 0 ? '#28a745' : '#dc3545'};">🛠️ ${sumWorkAfterSalary > 0 ? '+' : ''}${formatNumber(sumWorkAfterSalary)}</div>`
-              : ""
-            }
+              ${
+                salaryParts !== 0
+                  ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
+                  : sumParts < 0
+                    ? `<div style="color: #6c757d;">⚙️ 0</div>`
+                    : ""
+              }
+              ${
+                sumPartsAfterSalary !== 0
+                  ? `<div style="color: ${sumPartsAfterSalary > 0 ? "#28a745" : "#dc3545"};">⚙️ ${sumPartsAfterSalary > 0 ? "+" : ""}${formatNumber(sumPartsAfterSalary)}</div>`
+                  : ""
+              }
+              ${
+                salaryWork !== 0
+                  ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
+                  : sumWork < 0
+                    ? `<div style="color: #6c757d;">🛠️ 0</div>`
+                    : ""
+              }
+              ${
+                sumWorkAfterSalary !== 0
+                  ? `<div style="color: ${sumWorkAfterSalary > 0 ? "#28a745" : "#dc3545"};">🛠️ ${sumWorkAfterSalary > 0 ? "+" : ""}${formatNumber(sumWorkAfterSalary)}</div>`
+                  : ""
+              }
             </div>`;
 
           podlegleData.push({
@@ -1497,7 +1520,6 @@ export function searchDataInDatabase(
     });
   });
 
-
   // Фільтр по роботі - для приймальників work = "-", тому вони можуть відсіятись, якщо юзер щось ввів
   const workInput =
     byId<HTMLInputElement>("Bukhhalter-podlegle-work-input")?.value.trim() ||
@@ -1505,7 +1527,7 @@ export function searchDataInDatabase(
   if (workInput) {
     // const beforeFilter = podlegleData.length;
     podlegleData = podlegleData.filter((record) =>
-      (record.work || "").toLowerCase().includes(workInput.toLowerCase())
+      (record.work || "").toLowerCase().includes(workInput.toLowerCase()),
     );
   }
 
@@ -1530,7 +1552,7 @@ export function searchDataInDatabase(
     selectedName,
     dateOpen,
     dateClose,
-    workInput
+    workInput,
   );
 
   allPodlegleData = [...podlegleData];
@@ -1547,7 +1569,7 @@ function notificationHelperInSearch(
   name: string,
   dOpen: string,
   dClose: string,
-  wInput: string
+  wInput: string,
 ) {
   const modeLabels = {
     open: "відкриття",
@@ -1571,7 +1593,7 @@ function notificationHelperInSearch(
     count > 0
       ? `✅ Знайдено ${count} записів${filterMessage}${dateFilterMessage}`
       : `ℹ️ Записів не знайдено${filterMessage}${dateFilterMessage}`,
-    count > 0 ? "success" : "info"
+    count > 0 ? "success" : "info",
   );
 }
 
@@ -1583,7 +1605,7 @@ export function filterPodlegleData(): void {
     showNotification(
       "ℹ️ Записів не знайдено за поточним фільтром",
       "info",
-      2000
+      2000,
     );
     return;
   }
@@ -1633,7 +1655,7 @@ export function filterPodlegleData(): void {
 
   if (workInput) {
     filtered = filtered.filter((record) =>
-      (record.work || "").toLowerCase().includes(workInput.toLowerCase())
+      (record.work || "").toLowerCase().includes(workInput.toLowerCase()),
     );
   }
 
@@ -1691,7 +1713,7 @@ export function filterPodlegleData(): void {
     showNotification(
       `ℹ️ Записів не знайдено${namePart} (${modeLabel})${datePart}${workPart}`,
       "info",
-      2500
+      2500,
     );
     return;
   }
@@ -1705,7 +1727,7 @@ let podlegleDateFilterMode: "open" | "close" | "paid" = "open";
 // Функція для ініціалізації перемикача фільтрації дат для підлеглих
 function initPodlegleDateFilterToggle(): void {
   const toggleContainer = document.querySelector(
-    "#Bukhhalter-podlegle-section .Bukhhalter-date-filter-toggle"
+    "#Bukhhalter-podlegle-section .Bukhhalter-date-filter-toggle",
   );
   if (!toggleContainer) return;
 
@@ -1718,7 +1740,6 @@ function initPodlegleDateFilterToggle(): void {
       this.classList.add("active");
 
       podlegleDateFilterMode = this.dataset.filter as "open" | "close" | "paid";
-
 
       // ✅ ВИПРАВЛЕНО: Завжди використовуємо локальну фільтрацію
       if (hasPodlegleDataLoaded) {
@@ -1742,7 +1763,6 @@ export function createStatusToggle(): void {
   toggle.addEventListener("change", (e) => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
-
 
     switch (value) {
       case "0":
@@ -1768,7 +1788,6 @@ export function createStatusToggle(): void {
   toggle.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement;
     const value = target.value;
-
 
     switch (value) {
       case "0":
@@ -1822,7 +1841,6 @@ export function createPaymentToggle(): void {
     } else {
       updatepodlegleTable();
     }
-
   });
 
   // ✅ ЗАЛИШАЄМО: Обробник input (для сумісності)
@@ -1848,7 +1866,6 @@ export function createPaymentToggle(): void {
     } else {
       updatepodlegleTable();
     }
-
   });
 }
 
@@ -1883,7 +1900,6 @@ export function createPercentageToggle(): void {
     } else {
       updatepodlegleTable();
     }
-
   });
 
   // Обробник input (для сумісності)
@@ -1909,7 +1925,6 @@ export function createPercentageToggle(): void {
     } else {
       updatepodlegleTable();
     }
-
   });
 }
 
@@ -1925,10 +1940,10 @@ export async function handlepodlegleAddRecord(): Promise<void> {
 
   // <--- ЗМІНА 1: (async)
   const dateOpen = byId<HTMLInputElement>(
-    "Bukhhalter-podlegle-date-open"
+    "Bukhhalter-podlegle-date-open",
   ).value;
   const dateClose = byId<HTMLInputElement>(
-    "Bukhhalter-podlegle-date-close"
+    "Bukhhalter-podlegle-date-close",
   ).value;
   const selectedName =
     byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
@@ -1940,7 +1955,7 @@ export async function handlepodlegleAddRecord(): Promise<void> {
     showNotification(
       "⚠️ Не вдалося завантажити дані. Пошук неможливий.",
       "error",
-      3000
+      3000,
     );
     return;
   }
@@ -1968,7 +1983,6 @@ export async function handlepodlegleAddRecord(): Promise<void> {
   if (selectedName) {
     searchInfo += ` для ${selectedName}`;
   }
-
 }
 
 function initPodlegleDateAutoFilter(): void {
@@ -2044,7 +2058,7 @@ export function deletepodlegleRecord(index: number): void {
 }
 
 export async function togglepodleglePaymentWithConfirmation(
-  index: number
+  index: number,
 ): Promise<void> {
   if (!podlegleData[index]) {
     console.error(`Запис з індексом ${index} не знайдено`);
@@ -2090,13 +2104,13 @@ export async function togglepodleglePayment(index: number): Promise<void> {
   if (!slyusar.Історія[record.dateOpen]) {
     showNotification(
       `⚠️ Дата ${record.dateOpen} не знайдена в історії`,
-      "error"
+      "error",
     );
     return;
   }
 
   const actRecord = slyusar.Історія[record.dateOpen].find(
-    (a) => a.Акт === record.act
+    (a) => a.Акт === record.act,
   );
 
   if (!actRecord) {
@@ -2138,7 +2152,12 @@ export async function togglepodleglePayment(index: number): Promise<void> {
     }
 
     // ✅ ПРІОРИТЕТ 1: Використовуємо workIndex для точного пошуку при однакових роботах
-    if (!workEntry && typeof record.workIndex === "number" && record.workIndex >= 0 && record.workIndex < actRecord.Записи.length) {
+    if (
+      !workEntry &&
+      typeof record.workIndex === "number" &&
+      record.workIndex >= 0 &&
+      record.workIndex < actRecord.Записи.length
+    ) {
       // Точний пошук за індексом
       const entryByIndex = actRecord.Записи[record.workIndex];
 
@@ -2152,29 +2171,24 @@ export async function togglepodleglePayment(index: number): Promise<void> {
     if (!workEntry) {
       if (!record.isPaid) {
         workEntry = actRecord.Записи.find(
-          (e) => e.Робота === record.work && !e.Розраховано
+          (e) => e.Робота === record.work && !e.Розраховано,
         );
       } else {
         workEntry = actRecord.Записи.find(
-          (e) => e.Робота === record.work && e.Розраховано === record.paymentDate
+          (e) =>
+            e.Робота === record.work && e.Розраховано === record.paymentDate,
         );
       }
     }
 
     if (!workEntry) {
-      showNotification(
-        `⚠️ Робота "${record.work}" не знайдена`,
-        "error"
-      );
+      showNotification(`⚠️ Робота "${record.work}" не знайдена`, "error");
       return;
     }
 
     if (!record.isPaid) {
       if (workEntry.Розраховано) {
-        showNotification(
-          `⚠️ Робота "${record.work}" вже оплачена`,
-          "error"
-        );
+        showNotification(`⚠️ Робота "${record.work}" вже оплачена`, "error");
         return;
       }
       workEntry.Розраховано = currentDate;
@@ -2211,7 +2225,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
   if (!hasFullAccess()) {
     showNotification(
       "⚠️ У вас немає прав для виконання масового розрахунку",
-      "warning"
+      "warning",
     );
     return;
   }
@@ -2223,19 +2237,23 @@ export async function runMassPaymentCalculation(): Promise<void> {
   }
 
   const filteredData = getFilteredpodlegleData();
-  
+
   // ✅ Додаткове логування для відстеження
-  const selectedName = byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
-  
+  const selectedName =
+    byId<HTMLSelectElement>("Bukhhalter-podlegle-name-select")?.value || "";
+
   // ✅ Логування унікальних імен в filteredData
-  const uniqueNames = [...new Set(filteredData.map(r => r.name))];
-  
+  const uniqueNames = [...new Set(filteredData.map((r) => r.name))];
+
   // ✅ Перевірка: якщо вибрано конкретне ім'я, але filteredData містить інші імена - це баг!
-  if (selectedName && uniqueNames.some(name => name !== selectedName)) {
-    console.error(`❌ УВАГА! Вибрано "${selectedName}", але filteredData містить інші імена:`, uniqueNames);
+  if (selectedName && uniqueNames.some((name) => name !== selectedName)) {
+    console.error(
+      `❌ УВАГА! Вибрано "${selectedName}", але filteredData містить інші імена:`,
+      uniqueNames,
+    );
     showNotification(
       `⚠️ Помилка фільтрації! Дані містять записи для інших працівників. Перезавантажте сторінку.`,
-      "error"
+      "error",
     );
     return;
   }
@@ -2243,7 +2261,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
   if (filteredData.length === 0) {
     showNotification(
       "ℹ️ Немає записів для обробки в поточному фільтрі",
-      "info"
+      "info",
     );
     return;
   }
@@ -2257,7 +2275,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
       const slyusar = slyusarsData.find((s) => s.Name === record.name);
       if (slyusar && slyusar.Історія[record.dateOpen]) {
         const actRecord = slyusar.Історія[record.dateOpen].find(
-          (a) => a.Акт === record.act
+          (a) => a.Акт === record.act,
         );
         if (actRecord) {
           // 1. ЛОГІКА ДЛЯ ПРИЙМАЛЬНИКА (якщо є суми і немає Записів)
@@ -2274,7 +2292,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
                 item.dateOpen === record.dateOpen &&
                 item.name === record.name &&
                 item.act === record.act &&
-                !item.isPaid // work може бути "-" або пустим, тому не перевіряємо його строго, або перевіряємо як є
+                !item.isPaid, // work може бути "-" або пустим, тому не перевіряємо його строго, або перевіряємо як є
             );
 
             if (originalIndex !== -1) {
@@ -2286,28 +2304,36 @@ export async function runMassPaymentCalculation(): Promise<void> {
           else if (actRecord.Записи) {
             // ✅ ВИПРАВЛЕННЯ БАГ №3: Шукаємо спочатку по recordId (найточніше), потім по workIndex, потім по роботі
             let workEntry = null;
-            
+
             // ПРІОРИТЕТ 1: Пошук за recordId (найточніший)
             if (record.recordId) {
               workEntry = actRecord.Записи.find(
-                (e) => e.recordId === record.recordId && !e.Розраховано
+                (e) => e.recordId === record.recordId && !e.Розраховано,
               );
               if (workEntry) {
               }
             }
-            
+
             // ПРІОРИТЕТ 2: Пошук за workIndex (якщо recordId не знайдено)
-            if (!workEntry && record.workIndex !== undefined && record.workIndex >= 0) {
+            if (
+              !workEntry &&
+              record.workIndex !== undefined &&
+              record.workIndex >= 0
+            ) {
               const entryByIndex = actRecord.Записи[record.workIndex];
-              if (entryByIndex && entryByIndex.Робота === record.work && !entryByIndex.Розраховано) {
+              if (
+                entryByIndex &&
+                entryByIndex.Робота === record.work &&
+                !entryByIndex.Розраховано
+              ) {
                 workEntry = entryByIndex;
               }
             }
-            
+
             // ПРІОРИТЕТ 3: Пошук тільки по назві роботи (fallback)
             if (!workEntry) {
               workEntry = actRecord.Записи.find(
-                (e) => e.Робота === record.work && !e.Розраховано
+                (e) => e.Робота === record.work && !e.Розраховано,
               );
               if (workEntry) {
               }
@@ -2324,7 +2350,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
                   item.name === record.name &&
                   item.act === record.act &&
                   item.work === record.work &&
-                  !item.isPaid
+                  !item.isPaid,
               );
 
               if (originalIndex !== -1) {
@@ -2336,7 +2362,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
               // Тому тут else блок безпечний
               console.warn(
                 "❌ Не знайдено workEntry для масового розрахунку:",
-                record
+                record,
               );
               errorCount++;
             }
@@ -2350,12 +2376,12 @@ export async function runMassPaymentCalculation(): Promise<void> {
     if (errorCount > 0) {
       showNotification(
         `❌ Не вдалося знайти ${errorCount} записів для оновлення. Можливо, вони були змінені.`,
-        "error"
+        "error",
       );
     } else {
       showNotification(
         "ℹ️ Усі записи в поточному фільтрі вже розраховані",
-        "info"
+        "info",
       );
     }
     return;
@@ -2375,7 +2401,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
     showNotification("❌ Помилка при збереженні змін у базу", "error");
     showNotification(
       "Будь ласка, оновіть пошук, щоб побачити актуальний стан",
-      "warning"
+      "warning",
     );
   }
 }
@@ -2386,7 +2412,7 @@ export function clearpodlegleForm(): void {
 
   // ✅ 1. Очищаємо всі інпути
   const inputs = podlegleSection.querySelectorAll<HTMLInputElement>(
-    "input:not([readonly])"
+    "input:not([readonly])",
   );
   inputs.forEach((input) => {
     input.value = "";
@@ -2440,7 +2466,7 @@ export function clearpodlegleForm(): void {
   // ✅ 7. Скидаємо режим фільтрації дат на "Відкриття"
   podlegleDateFilterMode = "open";
   const dateFilterButtons = document.querySelectorAll(
-    "#Bukhhalter-podlegle-section .date-filter-btn"
+    "#Bukhhalter-podlegle-section .date-filter-btn",
   );
   dateFilterButtons.forEach((btn) => {
     if ((btn as HTMLButtonElement).dataset.filter === "open") {
@@ -2477,7 +2503,9 @@ document.addEventListener("DOMContentLoaded", () => {
     initPodlegleDateAutoFilter(); // 👈 нове
 
     // 🔹 Ініціалізація обробника для селекту номера акту
-    const actSelectEl = byId<HTMLSelectElement>("Bukhhalter-podlegle-act-select");
+    const actSelectEl = byId<HTMLSelectElement>(
+      "Bukhhalter-podlegle-act-select",
+    );
     if (actSelectEl) {
       actSelectEl.addEventListener("change", () => {
         triggerPodlegleAutoFilter();

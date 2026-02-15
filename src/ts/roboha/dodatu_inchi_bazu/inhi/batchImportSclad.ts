@@ -363,7 +363,7 @@ function createBatchImportModal() {
         <h3 class="batch-title-Excel">Імпорт даних з Excel</h3>
         <p class="batch-instructions-Excel">
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
-          <strong>Дата ┃ Магазин ┃ Каталог номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
+          <strong>Дата прихід ┃ Магазин ┃ Каталог номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
         </p>
         <textarea id="batch-textarea-Excel" class="batch-textarea-Excel" placeholder="Вставте дані з Excel сюди (з табуляцією між колонками)..." autocomplete="off"></textarea>
         <div id="batch-table-container-Excel" class="batch-table-container-Excel hidden-all_other_bases">

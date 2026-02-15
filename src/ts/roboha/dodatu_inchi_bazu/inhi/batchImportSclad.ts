@@ -370,7 +370,7 @@ function createBatchImportModal() {
           <table id="batch-table-Excel" class="batch-table-Excel">
             <thead>
               <tr>
-                <th data-col="date">Дата</th>
+                <th data-col="date">Дата приходу</th>
                 <th data-col="shop">Магазин</th>
                 <th data-col="catno">Каталог номер</th>
                 <th data-col="detail">Деталь</th>

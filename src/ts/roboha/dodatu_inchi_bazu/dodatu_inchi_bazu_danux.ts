@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div id="sclad-form" class="hidden-all_other_bases"></div>
           <div class="yes-no-buttons-all_other_bases">
-            <button id="import-excel-btn" class="batch-btn-Excel import-Excel hidden-all_other_bases" style="margin-right: 10px;">📝 Запланувати дет</button>
+            <button id="import-excel-btn" class="batch-btn-Excel import-Excel hidden-all_other_bases" style="margin-right: 10px;">📊 Імпорт з Excel</button>
             <button id="export-works-excel-btn" class="batch-btn-Excel export-Excel hidden-all_other_bases" style="margin-right: 10px;">📤 Вивантажити роботи</button>
             <button class="yes-button-all_other_bases">Ок</button>
           </div>

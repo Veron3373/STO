@@ -839,7 +839,7 @@ function createClientCell(
   const actData = safeParseJSON(act.info || act.data || act.details);
   const actNotes = actData?.["Примітки"];
   if (actNotes && actNotes !== "—" && actNotes.trim() !== "") {
-    td.innerHTML += `<div class="act-note-indicator" title="${actNotes.replace(/"/g, "&quot;")}">${actNotes}</div>`;
+    td.innerHTML += `<div class="act-note-indicator">${actNotes}</div>`;
   }
 
   let smsHtml = "";

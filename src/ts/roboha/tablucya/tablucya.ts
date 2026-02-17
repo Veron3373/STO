@@ -72,7 +72,7 @@ function formatCallDateTime(): string {
 
 /**
  * 📞 Обробник кліку на індикатор дзвінка
- * ⏳ -> 📞 (взяв) -> 📵 (не взяв) -> 📞 -> ...
+ * ⏳ -> 📞 (дозвонилися) -> 📵 (не взяв) -> ⏳ (очікуємо) -> ...
  */
 async function handleCallIndicatorClick(
   actId: number,
@@ -80,23 +80,32 @@ async function handleCallIndicatorClick(
 ): Promise<void> {
   const currentText = indicator.textContent?.trim() || "";
   let newCallValue = "";
+  let shouldDelete = false;
 
   if (currentText === "⏳" || currentText === "") {
-    // Перший клік - записуємо 📞 (взяв слухавку)
+    // ⏳ → 📞 (дозвонилися)
     newCallValue = `📞 ${formatCallDateTime()}`;
   } else if (currentText.startsWith("📞")) {
-    // Був "взяв" - міняємо на "не взяв" 📵
+    // 📞 → 📵 (не взяв)
     newCallValue = `📵 ${formatCallDateTime()}`;
   } else if (currentText.startsWith("📵")) {
-    // Був "не взяв" - міняємо назад на "взяв" 📞
-    newCallValue = `📞 ${formatCallDateTime()}`;
+    // 📵 → ⏳ (очікуємо - видаляємо з бази)
+    newCallValue = "⏳";
+    shouldDelete = true;
   } else {
     // Щось інше - ставимо 📞
     newCallValue = `📞 ${formatCallDateTime()}`;
   }
 
-  // Якщо це була hover-зона, замінюємо її на результат
-  if (indicator.classList.contains("call-indicator-zone")) {
+  // Оновлюємо UI
+  if (shouldDelete) {
+    // Повертаємо hover-зону
+    const newSpan = document.createElement("span");
+    newSpan.className = "call-indicator-zone";
+    newSpan.setAttribute("data-act-id", String(actId));
+    newSpan.innerHTML = `<span class="call-indicator-icon">⏳</span>`;
+    indicator.replaceWith(newSpan);
+  } else if (indicator.classList.contains("call-indicator-zone")) {
     const newSpan = document.createElement("span");
     newSpan.className = "call-indicator call-indicator-result";
     newSpan.setAttribute("data-act-id", String(actId));
@@ -109,16 +118,17 @@ async function handleCallIndicatorClick(
     indicator.classList.add("call-indicator-result");
   }
 
-  // Зберігаємо в базу даних
-  await saveCallToDatabase(actId, newCallValue);
+  // Зберігаємо в базу даних (або видаляємо)
+  await saveCallToDatabase(actId, shouldDelete ? null : newCallValue);
 }
 
 /**
  * 📞 Зберігає запис про дзвінок в базу даних (в поле data акту)
+ * Якщо callValue = null - видаляє поле "Дзвінок"
  */
 async function saveCallToDatabase(
   actId: number,
-  callValue: string,
+  callValue: string | null,
 ): Promise<void> {
   try {
     // Отримуємо поточні дані акту
@@ -136,8 +146,14 @@ async function saveCallToDatabase(
     // Парсимо data
     let actData = safeParseJSON(act?.data) || {};
 
-    // Записуємо дзвінок
-    actData["Дзвінок"] = callValue;
+    // Записуємо або видаляємо дзвінок
+    if (callValue === null) {
+      delete actData["Дзвінок"];
+      console.log("📞 Дзвінок видалено");
+    } else {
+      actData["Дзвінок"] = callValue;
+      console.log("📞 Дзвінок збережено:", callValue);
+    }
 
     // Оновлюємо в базі
     const { error: updateError } = await supabase
@@ -147,8 +163,6 @@ async function saveCallToDatabase(
 
     if (updateError) {
       console.error("📞 Помилка збереження дзвінка:", updateError);
-    } else {
-      console.log("📞 Дзвінок збережено:", callValue);
     }
   } catch (err) {
     console.error("📞 Критична помилка збереження дзвінка:", err);

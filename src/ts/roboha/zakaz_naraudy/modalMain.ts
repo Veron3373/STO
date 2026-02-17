@@ -32,6 +32,7 @@ import {
   ACT_ITEMS_TABLE_CONTAINER_ID,
   formatNumberWithSpaces,
   EDITABLE_RECOMMENDATIONS_ID,
+  EDITABLE_NOTES_ID,
 } from "./globalCache";
 import {
   createModal,
@@ -1448,7 +1449,14 @@ function renderModalContent(
             actDetails?.["Рекомендації"] || "—"
           }</span>
         </div>
-
+      </div>
+      <div class="zakaz_narayd-reason-line" id="notes-line-container">
+        <div class="notes-text">
+          <strong>Примітки:</strong>
+          <span id="${EDITABLE_NOTES_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
+            actDetails?.["Примітки"] || "—"
+          }</span>
+        </div>
       </div>
     </div>
     ${generateTableHTML(
@@ -2242,6 +2250,12 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     );
     if (recommendationsEl) {
       recommendationsEl.textContent = actDetails?.["Рекомендації"] || "—";
+    }
+
+    // Примітки
+    const notesEl = document.getElementById(EDITABLE_NOTES_ID);
+    if (notesEl) {
+      notesEl.textContent = actDetails?.["Примітки"] || "—";
     }
 
     // Аванс

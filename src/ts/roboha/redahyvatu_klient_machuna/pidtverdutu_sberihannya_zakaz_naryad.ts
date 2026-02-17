@@ -72,7 +72,7 @@ export async function createActInDatabase(
   clientId: number,
   carsId: number,
   reason: string = "",
-  postArxivId?: number
+  postArxivId?: number,
 ): Promise<number | null> {
   try {
     const dateOn = getCurrentDateTimeLocal();
@@ -86,6 +86,7 @@ export async function createActInDatabase(
       "За роботу": 0,
       Приймальник: "",
       Рекомендації: "",
+      Примітки: "",
       "Загальна сума": 0,
       "Причина звернення": reason,
       "Прибуток за деталі": 0,
@@ -110,7 +111,6 @@ export async function createActInDatabase(
       return null;
     }
 
-
     // ✅ Записуємо інформацію про приймальника при створенні нового акту
     // Для всіх ОКРІМ Слюсаря (Приймальник, Адміністратор, Запчастист, Складовщик)
     if (userAccessLevel !== "Слюсар") {
@@ -123,7 +123,7 @@ export async function createActInDatabase(
 
         if (updateError) {
           console.warn(
-            `⚠️ Помилка при записуванні приймальника: ${updateError.message}`
+            `⚠️ Помилка при записуванні приймальника: ${updateError.message}`,
           );
         } else {
         }
@@ -141,7 +141,7 @@ export async function createActInDatabase(
       if (updateError) {
         console.error(
           "❌ Помилка: не вдалося оновити post_arxiv з act_id",
-          updateError.message
+          updateError.message,
         );
       } else {
       }
@@ -156,11 +156,11 @@ export async function createActInDatabase(
 
 // Основна логіка створення заказ-наряду
 export function showSaveModalCreate(
-  postArxivId?: number
+  postArxivId?: number,
 ): Promise<number | null> {
   return new Promise((resolve) => {
     let modal = document.getElementById(
-      saveModalIdCreate
+      saveModalIdCreate,
     ) as HTMLDivElement | null;
     if (!modal) {
       modal = createSaveModalCreate();
@@ -171,10 +171,10 @@ export function showSaveModalCreate(
     modal.style.display = "flex";
 
     const confirmBtn = modal.querySelector(
-      "#save-confirm-create"
+      "#save-confirm-create",
     ) as HTMLButtonElement;
     const cancelBtn = modal.querySelector(
-      "#save-cancel-create"
+      "#save-cancel-create",
     ) as HTMLButtonElement;
 
     const cleanup = () => {
@@ -201,7 +201,7 @@ export function showSaveModalCreate(
           Number(values.client_id),
           Number(values.cars_id),
           reason,
-          postArxivId
+          postArxivId,
         );
 
         if (actId) {

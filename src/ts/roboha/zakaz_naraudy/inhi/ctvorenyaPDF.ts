@@ -31,10 +31,10 @@ function prepareTableForPrint(): void {
  * Це треба, щоб не різати зображення всередині рядка, а лише по його нижній межі.
  */
 function getRowBoundsPx(
-  modalBody: HTMLElement
+  modalBody: HTMLElement,
 ): Array<{ top: number; bottom: number }> {
   const tbody = modalBody.querySelector(
-    ".zakaz_narayd-items-table tbody"
+    ".zakaz_narayd-items-table tbody",
   ) as HTMLElement | null;
   if (!tbody) return [];
   const bodyRect = modalBody.getBoundingClientRect();
@@ -64,10 +64,10 @@ function getElementBoundsPx(modalBody: HTMLElement, selector: string) {
 function collectColumnCellsToHideByHeaderText(
   table: HTMLTableElement,
   headerMatchers: Array<(txt: string) => boolean>,
-  bucket: HTMLElement[]
+  bucket: HTMLElement[],
 ): void {
   const headerCells = Array.from(
-    table.querySelectorAll<HTMLElement>("thead th, thead td")
+    table.querySelectorAll<HTMLElement>("thead th, thead td"),
   );
 
   if (headerCells.length === 0) return;
@@ -115,7 +115,7 @@ export async function printModalToPdf(): Promise<void> {
   }
 
   const modalContent = modalBody.closest(
-    ".zakaz_narayd-modal-content"
+    ".zakaz_narayd-modal-content",
   ) as HTMLElement | null;
 
   // збереження стилів
@@ -126,24 +126,28 @@ export async function printModalToPdf(): Promise<void> {
   // Перевірка режиму друку і застосування чорно-білих стилів
   const isBlackAndWhiteMode = !globalCache.generalSettings.printColorMode;
   const header = modalBody.querySelector(".zakaz_narayd-header") as HTMLElement;
-  const headerInfo = modalBody.querySelector(".zakaz_narayd-header-info") as HTMLElement;
+  const headerInfo = modalBody.querySelector(
+    ".zakaz_narayd-header-info",
+  ) as HTMLElement;
   const headerH1 = headerInfo?.querySelector("h1") as HTMLElement;
-  const headerParagraphs = headerInfo?.querySelectorAll("p") as NodeListOf<HTMLElement>;
-  
+  const headerParagraphs = headerInfo?.querySelectorAll(
+    "p",
+  ) as NodeListOf<HTMLElement>;
+
   let originalHeaderBg = "";
   let originalH1Color = "";
   let originalPColors: string[] = [];
-  
+
   if (isBlackAndWhiteMode && header && headerInfo) {
     // Зберігаємо оригінальні стилі
     originalHeaderBg = header.style.backgroundColor || "";
     if (headerH1) originalH1Color = headerH1.style.color || "";
-    headerParagraphs?.forEach(p => originalPColors.push(p.style.color || ""));
-    
+    headerParagraphs?.forEach((p) => originalPColors.push(p.style.color || ""));
+
     // Застосовуємо чорно-білі стилі
     header.style.backgroundColor = "#ffffff";
     if (headerH1) headerH1.style.color = "#000000";
-    headerParagraphs?.forEach(p => p.style.color = "#000000");
+    headerParagraphs?.forEach((p) => (p.style.color = "#000000"));
   }
 
   // елементи, які ховаємо
@@ -165,11 +169,12 @@ export async function printModalToPdf(): Promise<void> {
     document.querySelector(".modal-close-button") as HTMLElement,
     document.querySelector(".modal-footer") as HTMLElement,
     document.querySelector(".act-pruimalnyk-info") as HTMLElement, // <--- Приховуємо ім'я приймальника
+    document.getElementById("notes-line-container") as HTMLElement, // <--- Приховуємо "Примітки" при друці
   ].filter(Boolean) as HTMLElement[];
 
   // таблиця для приховування колонок
   const table = document.querySelector(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} table.zakaz_narayd-items-table`
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} table.zakaz_narayd-items-table`,
   ) as HTMLTableElement | null;
 
   if (table) {
@@ -181,13 +186,13 @@ export async function printModalToPdf(): Promise<void> {
         (t) => t.includes("каталог"),
         (t) => t.includes("зарплата") || t.includes("зар-та"),
       ],
-      elementsToHide
+      elementsToHide,
     );
   }
 
   // 🔶 Приховуємо рядок знижки, якщо знижка = 0
   const discountInput = document.getElementById(
-    "editable-discount"
+    "editable-discount",
   ) as HTMLInputElement | null;
   const discountValue = discountInput
     ? parseFloat(discountInput.value.replace(/\s/g, "") || "0")
@@ -203,13 +208,15 @@ export async function printModalToPdf(): Promise<void> {
 
   // 🔶 тимчасово зняти прапорці-попередження
   const warnedQtyCells = Array.from(
-    document.querySelectorAll<HTMLElement>('.qty-cell[data-warn="1"]')
+    document.querySelectorAll<HTMLElement>('.qty-cell[data-warn="1"]'),
   );
   const warnedPriceCells = Array.from(
-    document.querySelectorAll<HTMLElement>('.price-cell[data-warnprice="1"]')
+    document.querySelectorAll<HTMLElement>('.price-cell[data-warnprice="1"]'),
   );
   const warnedSlyusarSumCells = Array.from(
-    document.querySelectorAll<HTMLElement>('.slyusar-sum-cell[data-warnzp="1"]')
+    document.querySelectorAll<HTMLElement>(
+      '.slyusar-sum-cell[data-warnzp="1"]',
+    ),
   );
   warnedQtyCells.forEach((el) => el.removeAttribute("data-warn"));
   warnedPriceCells.forEach((el) => el.removeAttribute("data-warnprice"));
@@ -270,18 +277,22 @@ export async function printModalToPdf(): Promise<void> {
     // межі блоку підсумків (може бути відсутній у режимі "Слюсар")
     const footerBounds = getElementBoundsPx(
       modalBody,
-      ".zakaz_narayd-sums-footer"
+      ".zakaz_narayd-sums-footer",
     );
 
     // межі блоку тексту претензій та підписів (тільки для закритого акту)
     const closedActInfoBounds = getElementBoundsPx(
       modalBody,
-      ".closed-act-info"
+      ".closed-act-info",
     );
 
     // Об'єднуємо footer та closedActInfo в один комбінований блок
     // Це потрібно, щоб сума, текст і підписи не розривалися
-    let combinedFooterBounds: { top: number; bottom: number; height: number } | null = null;
+    let combinedFooterBounds: {
+      top: number;
+      bottom: number;
+      height: number;
+    } | null = null;
     if (footerBounds && closedActInfoBounds) {
       combinedFooterBounds = {
         top: footerBounds.top,
@@ -302,7 +313,7 @@ export async function printModalToPdf(): Promise<void> {
         marginLeft,
         marginTop,
         contentWidthMm,
-        imgHeightMm
+        imgHeightMm,
       );
     } else {
       let currentDomY = 0; // позиція старту зрізу (DOM px)
@@ -332,10 +343,12 @@ export async function printModalToPdf(): Promise<void> {
         //    якщо НЕ вміщається — переносимо ВЕСЬ блок на наступну сторінку (не розриваємо)
         if (combinedFooterBounds) {
           const footerStartsOnThisPage =
-            combinedFooterBounds.top >= currentDomY && combinedFooterBounds.top <= pageMaxDomY;
+            combinedFooterBounds.top >= currentDomY &&
+            combinedFooterBounds.top <= pageMaxDomY;
           if (footerStartsOnThisPage) {
             const remainingDomSpace = pageMaxDomY - safeCutDomY; // залишок після останнього рядка
-            const footerFitsHere = combinedFooterBounds.height <= remainingDomSpace;
+            const footerFitsHere =
+              combinedFooterBounds.height <= remainingDomSpace;
             if (footerFitsHere) {
               // тягнемо зріз до низу комбінованого блоку — він не підуть на наступну сторінку
               safeCutDomY = combinedFooterBounds.bottom;
@@ -352,7 +365,7 @@ export async function printModalToPdf(): Promise<void> {
         // 3) ріжемо canvas по обрахованих межах
         const sourceYCanvas = Math.round(currentDomY * canvasPxPerDomPx);
         const sourceHCanvas = Math.round(
-          (safeCutDomY - currentDomY) * canvasPxPerDomPx
+          (safeCutDomY - currentDomY) * canvasPxPerDomPx,
         );
 
         const tempCanvas = document.createElement("canvas");
@@ -368,7 +381,7 @@ export async function printModalToPdf(): Promise<void> {
           0,
           0,
           canvas.width,
-          sourceHCanvas
+          sourceHCanvas,
         );
 
         const sliceImg = tempCanvas.toDataURL("image/jpeg", 0.9);
@@ -380,7 +393,7 @@ export async function printModalToPdf(): Promise<void> {
           marginLeft,
           marginTop,
           contentWidthMm,
-          sliceHeightMm
+          sliceHeightMm,
         );
 
         currentDomY = safeCutDomY;
@@ -407,7 +420,9 @@ export async function printModalToPdf(): Promise<void> {
     if (isBlackAndWhiteMode && header && headerInfo) {
       header.style.backgroundColor = originalHeaderBg;
       if (headerH1) headerH1.style.color = originalH1Color;
-      headerParagraphs?.forEach((p, i) => p.style.color = originalPColors[i] || "");
+      headerParagraphs?.forEach(
+        (p, i) => (p.style.color = originalPColors[i] || ""),
+      );
     }
 
     // повернути відображення елементів та стилі

@@ -76,14 +76,14 @@ export interface SkladLiteRow {
 
 // Інтерфейс для загальних налаштувань
 export interface GeneralSettings {
-  stoName: string;       // Назва СТО (setting_id: 1)
-  address: string;       // Адреса (setting_id: 2)
-  phone: string;         // Телефон (setting_id: 3)
-  headerColor: string;   // Колір шапки акту (setting_id: 4)
-  tableColor: string;    // Колір таблиці актів (setting_id: 5)
+  stoName: string; // Назва СТО (setting_id: 1)
+  address: string; // Адреса (setting_id: 2)
+  phone: string; // Телефон (setting_id: 3)
+  headerColor: string; // Колір шапки акту (setting_id: 4)
+  tableColor: string; // Колір таблиці актів (setting_id: 5)
   printColorMode: boolean; // Режим друку: true = кольоровий, false = чорнобілий (setting_id: 6, data)
-  wallpaperMain: string;  // Шпалери основні (setting_id: 7, Загальні)
-  aiEnabled: boolean;     // ШІ підказки (setting_id: 7, data)
+  wallpaperMain: string; // Шпалери основні (setting_id: 7, Загальні)
+  aiEnabled: boolean; // ШІ підказки (setting_id: 7, data)
 }
 
 export interface ActItem {
@@ -105,8 +105,8 @@ export interface GlobalDataCache {
   worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
   detailsWithId: Array<{ detail_id: number; name: string }>;
-  slyusars: Array<{ Name: string;[k: string]: any }>;
-  shops: Array<{ Name: string;[k: string]: any }>;
+  slyusars: Array<{ Name: string; [k: string]: any }>;
+  shops: Array<{ Name: string; [k: string]: any }>;
   settings: {
     showPibMagazin: boolean;
     showCatalog: boolean;
@@ -178,6 +178,7 @@ export const ZAKAZ_NARAYD_SAVE_BTN_ID = "save-act-data";
 export const EDITABLE_PROBIG_ID = "editable-probig";
 export const EDITABLE_REASON_ID = "editable-reason";
 export const EDITABLE_RECOMMENDATIONS_ID = "editable-recommendations";
+export const EDITABLE_NOTES_ID = "editable-notes";
 
 // 🔹 Ключ для збереження загальних налаштувань в localStorage
 const GENERAL_SETTINGS_STORAGE_KEY = "sto_general_settings";
@@ -206,7 +207,8 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         phone: parsed.phone || "068 931 24 38",
         headerColor: parsed.headerColor || "#164D25",
         tableColor: parsed.tableColor || "#164D25",
-        printColorMode: parsed.printColorMode !== undefined ? parsed.printColorMode : true,
+        printColorMode:
+          parsed.printColorMode !== undefined ? parsed.printColorMode : true,
         wallpaperMain: parsed.wallpaperMain || "",
         aiEnabled: parsed.aiEnabled !== undefined ? parsed.aiEnabled : false,
       };
@@ -225,21 +227,30 @@ export function saveGeneralSettingsToLocalStorage(): void {
   try {
     localStorage.setItem(
       GENERAL_SETTINGS_STORAGE_KEY,
-      JSON.stringify(globalCache.generalSettings)
+      JSON.stringify(globalCache.generalSettings),
     );
   } catch (e) {
-    console.warn("⚠️ Помилка збереження загальних налаштувань в localStorage:", e);
+    console.warn(
+      "⚠️ Помилка збереження загальних налаштувань в localStorage:",
+      e,
+    );
   }
 }
 
 // 🔹 Завантажує загальні налаштування з БД і зберігає в localStorage
 export async function loadGeneralSettingsFromDB(): Promise<void> {
   try {
-    const { data: generalSettingsRows } = await supabase
+    const { data: generalSettingsRows } = (await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
       .in("setting_id", [1, 2, 3, 4, 5, 6, 7])
-      .order("setting_id") as { data: Array<{ setting_id: number; "Загальні": string | null; data: boolean | null }> | null };
+      .order("setting_id")) as {
+      data: Array<{
+        setting_id: number;
+        Загальні: string | null;
+        data: boolean | null;
+      }> | null;
+    };
 
     if (generalSettingsRows) {
       for (const row of generalSettingsRows) {
@@ -249,7 +260,8 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             globalCache.generalSettings.stoName = value || "B.S.Motorservice";
             break;
           case 2:
-            globalCache.generalSettings.address = value || "вул. Корольова, 6, Вінниця";
+            globalCache.generalSettings.address =
+              value || "вул. Корольова, 6, Вінниця";
             break;
           case 3:
             globalCache.generalSettings.phone = value || "068 931 24 38";
@@ -261,11 +273,13 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             globalCache.generalSettings.tableColor = value || "#164D25";
             break;
           case 6:
-            globalCache.generalSettings.printColorMode = (row as any).data !== false; // true якщо data не false
+            globalCache.generalSettings.printColorMode =
+              (row as any).data !== false; // true якщо data не false
             break;
           case 7:
             globalCache.generalSettings.wallpaperMain = value || "";
-            globalCache.generalSettings.aiEnabled = (row as any).data === true || (row as any).data === "true"; // ШІ підказки
+            globalCache.generalSettings.aiEnabled =
+              (row as any).data === true || (row as any).data === "true"; // ШІ підказки
             break;
         }
       }
@@ -320,7 +334,7 @@ export function invalidateGlobalDataCache(): void {
 export function formatNumberWithSpaces(
   value: number | string | undefined | null,
   minimumFractionDigits: number = 0,
-  maximumFractionDigits: number = 2
+  maximumFractionDigits: number = 2,
 ): string {
   if (value === undefined || value === null || String(value).trim() === "")
     return "";
@@ -333,13 +347,14 @@ export function formatNumberWithSpaces(
 }
 
 function dedupeSklad<
-  T extends { part_number: string; price: number; quantity: number }
+  T extends { part_number: string; price: number; quantity: number },
 >(rows: T[]): T[] {
   const seen = new Set<string>();
   const out: T[] = [];
   for (const r of rows) {
-    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${r.quantity
-      }`;
+    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${
+      r.quantity
+    }`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -355,7 +370,7 @@ function dedupeSklad<
 async function fetchAllWithPagination<T>(
   tableName: string,
   selectFields: string,
-  orderBy?: string
+  orderBy?: string,
 ): Promise<T[]> {
   const allData: T[] = [];
   let from = 0;
@@ -394,20 +409,25 @@ async function fetchAllWithPagination<T>(
   return allData;
 }
 
-export async function loadGlobalData(forceReload: boolean = false): Promise<void> {
+export async function loadGlobalData(
+  forceReload: boolean = false,
+): Promise<void> {
   // ✅ Кешування: якщо дані вже завантажені і TTL не вийшов - не перезавантажуємо
   const now = Date.now();
-  if (!forceReload && globalDataLoaded && (now - lastGlobalDataLoadTime < GLOBAL_DATA_CACHE_TTL)) {
+  if (
+    !forceReload &&
+    globalDataLoaded &&
+    now - lastGlobalDataLoadTime < GLOBAL_DATA_CACHE_TTL
+  ) {
     return;
   }
 
   try {
     // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ робіт
-    const worksData = await fetchAllWithPagination<{ work_id: number; data: string }>(
-      "works",
-      "work_id, data",
-      "work_id"
-    );
+    const worksData = await fetchAllWithPagination<{
+      work_id: number;
+      data: string;
+    }>("works", "work_id, data", "work_id");
 
     // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ деталей зі складу
     const skladRows = await fetchAllWithPagination<{
@@ -423,20 +443,16 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
     }>(
       "sclad",
       "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on",
-      "sclad_id"
+      "sclad_id",
     );
 
     // ✅ ВИПРАВЛЕНО: Використовуємо пагінацію для завантаження ВСІХ деталей з detail_id
-    const detailsData = await fetchAllWithPagination<{ detail_id: number; data: string }>(
-      "details",
-      "detail_id, data",
-      "detail_id"
-    );
+    const detailsData = await fetchAllWithPagination<{
+      detail_id: number;
+      data: string;
+    }>("details", "detail_id, data", "detail_id");
 
-    const [
-      { data: slyusarsData },
-      { data: shopsData },
-    ] = await Promise.all([
+    const [{ data: slyusarsData }, { data: shopsData }] = await Promise.all([
       supabase.from("slyusars").select("data"),
       supabase.from("shops").select("data"),
     ]);
@@ -474,10 +490,12 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
 
     // ✅ Зберігаємо detailsWithId для Realtime оновлень
     globalCache.detailsWithId =
-      detailsData?.map((r: any) => ({
-        detail_id: Number(r.detail_id || 0),
-        name: String(r.data || "").trim(),
-      })).filter((d) => d.name) || [];
+      detailsData
+        ?.map((r: any) => ({
+          detail_id: Number(r.detail_id || 0),
+          name: String(r.data || "").trim(),
+        }))
+        .filter((d) => d.name) || [];
 
     globalCache.details = globalCache.detailsWithId.map((d) => d.name);
 
@@ -491,7 +509,7 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
         .filter(Boolean) || [];
 
     // магазини: ТЕПЕР витягуємо Name і з об'єктів, і з подвійно-JSON-рядків, і з «просто рядка»
-    const shopsParsed: Array<{ Name: string;[k: string]: any }> = [];
+    const shopsParsed: Array<{ Name: string; [k: string]: any }> = [];
     for (const row of shopsData || []) {
       let raw = row?.data;
 
@@ -514,7 +532,7 @@ export async function loadGlobalData(forceReload: boolean = false): Promise<void
 
     // алфавітне сортування UA (без урахування регістру)
     globalCache.shops = shopsParsed.sort((a, b) =>
-      a.Name.localeCompare(b.Name, "uk", { sensitivity: "base" })
+      a.Name.localeCompare(b.Name, "uk", { sensitivity: "base" }),
     );
 
     globalCache.settings = {
@@ -572,7 +590,7 @@ export async function reloadSlyusarsOnly(): Promise<void> {
     const { data: slyusarsData, error } = await supabase
       .from("slyusars")
       .select("data");
-    
+
     if (error) {
       console.error("❌ Помилка завантаження слюсарів:", error);
       return;
@@ -598,11 +616,7 @@ export async function loadSkladLite(): Promise<void> {
       part_number: string;
       kilkist_on: number;
       kilkist_off: number;
-    }>(
-      "sclad",
-      "sclad_id, part_number, kilkist_on, kilkist_off",
-      "sclad_id"
-    );
+    }>("sclad", "sclad_id, part_number, kilkist_on, kilkist_off", "sclad_id");
 
     globalCache.skladLite = data.map((r: any): SkladLiteRow => {
       const on = Number(r.kilkist_on ?? 0);
@@ -653,13 +667,13 @@ export async function ensureSkladLoaded(): Promise<void> {
   const { data, error } = await supabase
     .from("sclad")
     .select(
-      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on, scladNomer"
+      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on, scladNomer",
     )
     .order("sclad_id", { ascending: false });
   if (error) {
     console.warn(
       "⚠️ ensureSkladLoaded(): не вдалося отримати sclad:",
-      error.message
+      error.message,
     );
     return;
   }
@@ -704,7 +718,7 @@ export function initScladRealtimeSubscription() {
       { event: "*", schema: "public", table: "sclad" },
       (payload) => {
         handleScladChange(payload);
-      }
+      },
     )
     .subscribe();
 }
@@ -716,14 +730,14 @@ function handleScladChange(payload: any) {
     // 🗑️ Видалення запису
     if (oldRecord && oldRecord.sclad_id) {
       globalCache.skladParts = globalCache.skladParts.filter(
-        (p) => p.sclad_id !== oldRecord.sclad_id
+        (p) => p.sclad_id !== oldRecord.sclad_id,
       );
     }
   } else if (eventType === "INSERT") {
     // ➕ Додавання запису
     if (newRecord) {
       const mapped = mapScladRecord(newRecord);
-      // Додаємо в початок або кінець? В ensureSkladLoaded order desc, але тут можна просто push, 
+      // Додаємо в початок або кінець? В ensureSkladLoaded order desc, але тут можна просто push,
       // бо автодоповнення все одно фільтрує.
       globalCache.skladParts.push(mapped);
     }
@@ -732,7 +746,7 @@ function handleScladChange(payload: any) {
     if (newRecord) {
       const updated = mapScladRecord(newRecord);
       const index = globalCache.skladParts.findIndex(
-        (p) => p.sclad_id === newRecord.sclad_id
+        (p) => p.sclad_id === newRecord.sclad_id,
       );
 
       if (index !== -1) {
@@ -784,7 +798,7 @@ export function initWorksRealtimeSubscription() {
       { event: "*", schema: "public", table: "works" },
       (payload) => {
         handleWorksChange(payload);
-      }
+      },
     )
     .subscribe();
 }
@@ -796,11 +810,15 @@ function handleWorksChange(payload: any) {
     // 🗑️ Видалення роботи
     if (oldRecord && oldRecord.work_id) {
       const workIdStr = String(oldRecord.work_id);
-      const index = globalCache.worksWithId.findIndex((w) => w.work_id === workIdStr);
+      const index = globalCache.worksWithId.findIndex(
+        (w) => w.work_id === workIdStr,
+      );
       if (index !== -1) {
         globalCache.worksWithId.splice(index, 1);
         // Оновлюємо масив works
-        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+        globalCache.works = globalCache.worksWithId
+          .map((w) => w.name)
+          .filter(Boolean);
       }
     }
   } else if (eventType === "INSERT") {
@@ -812,23 +830,31 @@ function handleWorksChange(payload: any) {
       };
       if (mapped.name) {
         globalCache.worksWithId.push(mapped);
-        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+        globalCache.works = globalCache.worksWithId
+          .map((w) => w.name)
+          .filter(Boolean);
       }
     }
   } else if (eventType === "UPDATE") {
     // 🔄 Оновлення роботи
     if (newRecord) {
       const workIdStr = String(newRecord.work_id);
-      const index = globalCache.worksWithId.findIndex((w) => w.work_id === workIdStr);
+      const index = globalCache.worksWithId.findIndex(
+        (w) => w.work_id === workIdStr,
+      );
       const updatedName = String(newRecord.data || "").trim();
 
       if (index !== -1) {
         globalCache.worksWithId[index].name = updatedName;
-        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+        globalCache.works = globalCache.worksWithId
+          .map((w) => w.name)
+          .filter(Boolean);
       } else if (updatedName) {
         // Якщо немає в кеші — додаємо
         globalCache.worksWithId.push({ work_id: workIdStr, name: updatedName });
-        globalCache.works = globalCache.worksWithId.map((w) => w.name).filter(Boolean);
+        globalCache.works = globalCache.worksWithId
+          .map((w) => w.name)
+          .filter(Boolean);
       }
     }
   }
@@ -853,10 +879,9 @@ export function initDetailsRealtimeSubscription() {
       { event: "*", schema: "public", table: "details" },
       (payload) => {
         handleDetailsChange(payload);
-      }
+      },
     )
-    .subscribe(() => {
-    });
+    .subscribe(() => {});
 }
 
 function handleDetailsChange(payload: any) {
@@ -866,7 +891,9 @@ function handleDetailsChange(payload: any) {
     // 🗑️ Видалення деталі
     if (oldRecord && oldRecord.detail_id) {
       const detailId = Number(oldRecord.detail_id);
-      const index = globalCache.detailsWithId.findIndex((d) => d.detail_id === detailId);
+      const index = globalCache.detailsWithId.findIndex(
+        (d) => d.detail_id === detailId,
+      );
       if (index !== -1) {
         globalCache.detailsWithId.splice(index, 1);
         // Оновлюємо масив details
@@ -889,7 +916,9 @@ function handleDetailsChange(payload: any) {
     // 🔄 Оновлення деталі
     if (newRecord) {
       const detailId = Number(newRecord.detail_id);
-      const index = globalCache.detailsWithId.findIndex((d) => d.detail_id === detailId);
+      const index = globalCache.detailsWithId.findIndex(
+        (d) => d.detail_id === detailId,
+      );
       const updatedName = String(newRecord.data || "").trim();
 
       if (index !== -1) {
@@ -897,7 +926,10 @@ function handleDetailsChange(payload: any) {
         globalCache.details = globalCache.detailsWithId.map((d) => d.name);
       } else if (updatedName && detailId) {
         // Якщо немає в кеші — додаємо
-        globalCache.detailsWithId.push({ detail_id: detailId, name: updatedName });
+        globalCache.detailsWithId.push({
+          detail_id: detailId,
+          name: updatedName,
+        });
         globalCache.details = globalCache.detailsWithId.map((d) => d.name);
       }
     }

@@ -8,6 +8,7 @@ import {
   EDITABLE_PROBIG_ID,
   EDITABLE_REASON_ID,
   EDITABLE_RECOMMENDATIONS_ID,
+  EDITABLE_NOTES_ID,
   ACT_ITEMS_TABLE_CONTAINER_ID,
   loadGlobalData,
   invalidateGlobalDataCache,
@@ -1750,6 +1751,10 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     (
       document.getElementById(EDITABLE_RECOMMENDATIONS_ID) as HTMLElement
     )?.innerText?.trim() || "";
+  const newNotes =
+    (
+      document.getElementById(EDITABLE_NOTES_ID) as HTMLElement
+    )?.innerText?.trim() || "";
 
   const items = parseTableRows();
 
@@ -1838,6 +1843,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     Пробіг: newProbig,
     "Причина звернення": newReason,
     Рекомендації: newRecommendations,
+    Примітки: newNotes,
     Деталі: details,
     Роботи: works,
     "За деталі": totalDetailsSum,

@@ -926,12 +926,40 @@ function createCarCell(
   return td;
 }
 
+function formatShortDateTime(date: Date): { date: string; time: string } {
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const year = date.getFullYear().toString().slice(-2);
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return { date: `${day}.${month}.${year}`, time: `${hours}:${minutes}` };
+}
+
 function createDateCell(act: any, actId: number): HTMLTableCellElement {
   const td = document.createElement("td");
-  const actDate = getActDateAsDate(act);
-  if (actDate) {
-    const { date, time } = formatDateTime(actDate);
-    td.innerHTML = `<div>${date}</div><div style="color: #0400ffff; font-size: 0.85em;">${time}</div>`;
+  const actDateOn = act.date_on ? new Date(act.date_on) : null;
+  const actDateOff = act.date_off ? new Date(act.date_off) : null;
+
+  if (actDateOn && actDateOff) {
+    // Обидві дати: date_on / date_off
+    const on = formatShortDateTime(actDateOn);
+    const off = formatShortDateTime(actDateOff);
+    td.innerHTML = `
+      <div style="display: flex; justify-content: space-around; align-items: center; gap: 4px;">
+        <div style="text-align: center;">
+          <div style="font-size: 0.9em;">${on.date}</div>
+          <div style="color: #0400ff; font-size: 0.75em;">${on.time}</div>
+        </div>
+        <div style="font-size: 0.85em; color: #666;">/</div>
+        <div style="text-align: center;">
+          <div style="font-size: 0.9em;">${off.date}</div>
+          <div style="color: #0400ff; font-size: 0.75em;">${off.time}</div>
+        </div>
+      </div>`;
+  } else if (actDateOn) {
+    // Тільки date_on
+    const on = formatShortDateTime(actDateOn);
+    td.innerHTML = `<div>${on.date}</div><div style="color: #0400ff; font-size: 0.85em;">${on.time}</div>`;
   } else {
     td.innerHTML = `<div>-</div>`;
   }

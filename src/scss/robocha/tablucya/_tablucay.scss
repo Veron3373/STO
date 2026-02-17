@@ -542,6 +542,31 @@ body {
   position: relative;
 }
 
+/* Hover-зона для показу ⏳ */
+.call-indicator-zone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 20px;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  .call-indicator-icon {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    font-size: 0.85em;
+  }
+
+  &:hover .call-indicator-icon {
+    opacity: 1;
+  }
+}
+
+/* Результат дзвінка */
 .call-indicator {
   position: absolute;
   left: 0;
@@ -550,11 +575,6 @@ body {
   cursor: pointer;
   z-index: 10;
   white-space: nowrap;
-  transition: opacity 0.2s ease-in-out;
-
-  &.call-indicator-hover {
-    opacity: 0;
-  }
 
   &.call-indicator-result {
     opacity: 1;

@@ -41,7 +41,10 @@ document.addEventListener("click", async (e) => {
   const target = e.target as HTMLElement | null;
   if (!target) return;
 
-  const callIndicator = target.closest(".call-indicator") as HTMLElement | null;
+  // Перевіряємо чи клік на індикатор або hover-зону
+  const callIndicator = target.closest(
+    ".call-indicator, .call-indicator-zone",
+  ) as HTMLElement | null;
   if (!callIndicator) return;
 
   e.stopPropagation(); // Не відкривати модалку акту
@@ -92,11 +95,19 @@ async function handleCallIndicatorClick(
     newCallValue = `📞 ${formatCallDateTime()}`;
   }
 
-  // Показуємо нове значення одразу
-  indicator.textContent = newCallValue;
-  indicator.classList.remove("call-indicator-hover");
-  indicator.classList.add("call-indicator-result");
-  indicator.style.opacity = "1";
+  // Якщо це була hover-зона, замінюємо її на результат
+  if (indicator.classList.contains("call-indicator-zone")) {
+    const newSpan = document.createElement("span");
+    newSpan.className = "call-indicator call-indicator-result";
+    newSpan.setAttribute("data-act-id", String(actId));
+    newSpan.textContent = newCallValue;
+    indicator.replaceWith(newSpan);
+  } else {
+    // Показуємо нове значення одразу
+    indicator.textContent = newCallValue;
+    indicator.classList.remove("call-indicator-hover");
+    indicator.classList.add("call-indicator-result");
+  }
 
   // Зберігаємо в базу даних
   await saveCallToDatabase(actId, newCallValue);
@@ -950,34 +961,20 @@ function createClientCell(
   const actData = safeParseJSON(act.info || act.data || act.details);
   const callData = actData?.["Дзвінок"] || "";
 
-  // Визначаємо HTML для індикатора дзвінка
+  // Визначаємо HTML для індикатора дзвінка - завжди додаємо hover-зону
   let callIndicatorHtml = "";
-  const hasCallData = !!callData;
   if (callData) {
     // Якщо є запис дзвінка - показуємо його
     callIndicatorHtml = `<span class="call-indicator call-indicator-result" data-act-id="${actId}">${callData}</span>`;
   } else {
-    // Якщо дзвінка ще не було - показуємо ⏳ при наведенні
-    callIndicatorHtml = `<span class="call-indicator call-indicator-hover" data-act-id="${actId}">⏳</span>`;
+    // Якщо дзвінка ще не було - показуємо ⏳ при наведенні на hover-зону
+    callIndicatorHtml = `<span class="call-indicator-zone" data-act-id="${actId}"><span class="call-indicator-icon">⏳</span></span>`;
   }
 
   // Додаємо ПІБ з індикатором дзвінка
   td.innerHTML = `<div class="client-pib-wrapper"><div>${pibOnly}</div>${callIndicatorHtml}</div>`;
 
-  // 📞 Додаємо hover-ефект для показу ⏳
-  if (!hasCallData) {
-    const indicator = td.querySelector(".call-indicator-hover") as HTMLElement;
-    if (indicator) {
-      td.addEventListener("mouseenter", () => {
-        indicator.style.opacity = "1";
-      });
-      td.addEventListener("mouseleave", () => {
-        indicator.style.opacity = "0";
-      });
-    }
-  }
-
-  // 📝 Отримуємо примітки акту (actData вже оголошена вище)
+  //  Отримуємо примітки акту (actData вже оголошена вище)
   const actNotes = actData?.["Примітки"];
   if (actNotes && actNotes !== "—" && actNotes.trim() !== "") {
     td.innerHTML += `<div class="act-note-indicator">${actNotes}</div>`;

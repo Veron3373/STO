@@ -1028,7 +1028,13 @@ function createClientCell(
     td.innerHTML += `<div style="margin-top: 4px; text-align: left;">${smsHtml}</div>`;
   }
 
-  td.addEventListener("click", async () => {
+  td.addEventListener("click", async (e) => {
+    // 📞 Якщо клік на індикаторі дзвінка - не відкриваємо акт
+    const target = e.target as HTMLElement;
+    if (target.closest(".call-indicator, .call-indicator-zone")) {
+      return; // Обробляється глобальним обробником
+    }
+
     const canOpen = await canUserOpenActs();
     if (canOpen) {
       clearNotificationVisualOnly(actId, true);

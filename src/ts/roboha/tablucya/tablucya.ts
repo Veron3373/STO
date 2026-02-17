@@ -385,8 +385,16 @@ function subscribeToSlusarNotifications() {
 function subscribeToGlobalActPresence() {
   // Відписуємося від попереднього каналу, якщо він існує
   if (globalPresenceChannel) {
-    supabase.removeChannel(globalPresenceChannel);
-    globalPresenceChannel = null;
+    try {
+      supabase.removeChannel(globalPresenceChannel);
+    } catch (err) {
+      console.warn(
+        "⚠️ [subscribeToGlobalActPresence] Помилка при видаленні каналу:",
+        err,
+      );
+    } finally {
+      globalPresenceChannel = null;
+    }
   }
 
   // Створюємо канал для ВСІХ актів

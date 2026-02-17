@@ -828,11 +828,19 @@ function createClientCell(
   act: any,
 ): HTMLTableCellElement {
   const td = document.createElement("td");
+  td.style.position = "relative"; // Для позиціонування індикатора примітки
   const phones = clientInfo.phone ? [clientInfo.phone] : [];
   let pibOnly = clientInfo.pib;
 
   // Додаємо ПІБ
-  td.innerHTML = `<div>${pibOnly}</div>`;
+  td.innerHTML = `<div style="position: relative;"><div>${pibOnly}</div></div>`;
+
+  // 📝 Отримуємо примітки акту
+  const actData = safeParseJSON(act.info || act.data || act.details);
+  const actNotes = actData?.["Примітки"];
+  if (actNotes && actNotes !== "—" && actNotes.trim() !== "") {
+    td.innerHTML += `<div class="act-note-indicator" style="position: absolute; right: 4px; top: 4px; font-size: 0.75em; color: #666; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; z-index: 4; transition: 0.3s;" title="${actNotes.replace(/"/g, "&quot;")}">${actNotes}</div>`;
+  }
 
   let smsHtml = "";
   // Формуємо HTML для SMS, якщо є

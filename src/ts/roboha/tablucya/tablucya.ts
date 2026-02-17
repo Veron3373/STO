@@ -36,6 +36,112 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// 📞 Глобальний обробник кліків на індикатор дзвінка
+document.addEventListener("click", async (e) => {
+  const target = e.target as HTMLElement | null;
+  if (!target) return;
+
+  const callIndicator = target.closest(".call-indicator") as HTMLElement | null;
+  if (!callIndicator) return;
+
+  e.stopPropagation(); // Не відкривати модалку акту
+  e.preventDefault();
+
+  const actId = callIndicator.dataset.actId;
+  if (!actId) return;
+
+  await handleCallIndicatorClick(Number(actId), callIndicator);
+});
+
+/**
+ * 📞 Форматує поточний час та дату для дзвінка
+ * Формат: HH:MM DD.MM.YY
+ */
+function formatCallDateTime(): string {
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, "0");
+  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const day = now.getDate().toString().padStart(2, "0");
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const year = now.getFullYear().toString().slice(-2);
+  return `${hours}:${minutes} ${day}.${month}.${year}`;
+}
+
+/**
+ * 📞 Обробник кліку на індикатор дзвінка
+ * ⏳ -> 📞 (взяв) -> 📵 (не взяв) -> 📞 -> ...
+ */
+async function handleCallIndicatorClick(
+  actId: number,
+  indicator: HTMLElement,
+): Promise<void> {
+  const currentText = indicator.textContent?.trim() || "";
+  let newCallValue = "";
+
+  if (currentText === "⏳" || currentText === "") {
+    // Перший клік - записуємо 📞 (взяв слухавку)
+    newCallValue = `📞 ${formatCallDateTime()}`;
+  } else if (currentText.startsWith("📞")) {
+    // Був "взяв" - міняємо на "не взяв" 📵
+    newCallValue = `📵 ${formatCallDateTime()}`;
+  } else if (currentText.startsWith("📵")) {
+    // Був "не взяв" - міняємо назад на "взяв" 📞
+    newCallValue = `📞 ${formatCallDateTime()}`;
+  } else {
+    // Щось інше - ставимо 📞
+    newCallValue = `📞 ${formatCallDateTime()}`;
+  }
+
+  // Показуємо нове значення одразу
+  indicator.textContent = newCallValue;
+  indicator.classList.remove("call-indicator-hover");
+  indicator.classList.add("call-indicator-result");
+  indicator.style.opacity = "1";
+
+  // Зберігаємо в базу даних
+  await saveCallToDatabase(actId, newCallValue);
+}
+
+/**
+ * 📞 Зберігає запис про дзвінок в базу даних (в поле info акту)
+ */
+async function saveCallToDatabase(
+  actId: number,
+  callValue: string,
+): Promise<void> {
+  try {
+    // Отримуємо поточні дані акту
+    const { data: act, error: fetchError } = await supabase
+      .from("acts")
+      .select("info")
+      .eq("act_id", actId)
+      .single();
+
+    if (fetchError) {
+      console.error("📞 Помилка отримання акту:", fetchError);
+      return;
+    }
+
+    // Парсимо info
+    let actInfo = safeParseJSON(act?.info) || {};
+
+    // Записуємо дзвінок
+    actInfo["Дзвінок"] = callValue;
+
+    // Оновлюємо в базі
+    const { error: updateError } = await supabase
+      .from("acts")
+      .update({ info: JSON.stringify(actInfo) })
+      .eq("act_id", actId);
+
+    if (updateError) {
+      console.error("📞 Помилка збереження дзвінка:", updateError);
+    }
+  } catch (err) {
+    console.error("📞 Критична помилка збереження дзвінка:", err);
+  }
+}
+
 // =============================================================================
 // ГЛОБАЛЬНІ ЗМІННІ
 // =============================================================================
@@ -840,11 +946,24 @@ function createClientCell(
   const phones = clientInfo.phone ? [clientInfo.phone] : [];
   let pibOnly = clientInfo.pib;
 
-  // Додаємо ПІБ
-  td.innerHTML = `<div style="position: relative;"><div>${pibOnly}</div></div>`;
-
-  // 📝 Отримуємо примітки акту
+  // 📞 Отримуємо дані про попередні дзвінки
   const actData = safeParseJSON(act.info || act.data || act.details);
+  const callData = actData?.["Дзвінок"] || "";
+
+  // Визначаємо HTML для індикатора дзвінка
+  let callIndicatorHtml = "";
+  if (callData) {
+    // Якщо є запис дзвінка - показуємо його
+    callIndicatorHtml = `<span class="call-indicator call-indicator-result" data-act-id="${actId}" style="position: absolute; left: 0; top: 0; font-size: 0.85em; cursor: pointer; transition: opacity 0.2s; z-index: 10; white-space: nowrap;">${callData}</span>`;
+  } else {
+    // Якщо дзвінка ще не було - показуємо ⏳ при наведенні
+    callIndicatorHtml = `<span class="call-indicator call-indicator-hover" data-act-id="${actId}" style="position: absolute; left: 0; top: 0; font-size: 0.85em; cursor: pointer; opacity: 0; transition: opacity 0.2s; z-index: 10;">⏳</span>`;
+  }
+
+  // Додаємо ПІБ з індикатором дзвінка
+  td.innerHTML = `<div style="position: relative;"><div>${pibOnly}</div>${callIndicatorHtml}</div>`;
+
+  // 📝 Отримуємо примітки акту (actData вже оголошена вище)
   const actNotes = actData?.["Примітки"];
   if (actNotes && actNotes !== "—" && actNotes.trim() !== "") {
     td.innerHTML += `<div class="act-note-indicator">${actNotes}</div>`;

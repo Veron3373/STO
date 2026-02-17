@@ -536,3 +536,28 @@ body {
     z-index: 100;
   }
 }
+
+/* 📞 Індикатор дзвінка клієнту */
+.call-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 0.85em;
+  cursor: pointer;
+  z-index: 10;
+  white-space: nowrap;
+  transition: opacity 0.2s ease-in-out;
+
+  &.call-indicator-hover {
+    opacity: 0;
+  }
+
+  &.call-indicator-result {
+    opacity: 1;
+  }
+}
+
+/* При наведенні на комірку показати ⏳ */
+td:hover .call-indicator-hover {
+  opacity: 1;
+}

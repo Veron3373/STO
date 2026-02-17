@@ -114,7 +114,7 @@ async function handleCallIndicatorClick(
 }
 
 /**
- * 📞 Зберігає запис про дзвінок в базу даних (в поле info акту)
+ * 📞 Зберігає запис про дзвінок в базу даних (в поле data акту)
  */
 async function saveCallToDatabase(
   actId: number,
@@ -124,7 +124,7 @@ async function saveCallToDatabase(
     // Отримуємо поточні дані акту
     const { data: act, error: fetchError } = await supabase
       .from("acts")
-      .select("info")
+      .select("data")
       .eq("act_id", actId)
       .single();
 
@@ -133,20 +133,22 @@ async function saveCallToDatabase(
       return;
     }
 
-    // Парсимо info
-    let actInfo = safeParseJSON(act?.info) || {};
+    // Парсимо data
+    let actData = safeParseJSON(act?.data) || {};
 
     // Записуємо дзвінок
-    actInfo["Дзвінок"] = callValue;
+    actData["Дзвінок"] = callValue;
 
     // Оновлюємо в базі
     const { error: updateError } = await supabase
       .from("acts")
-      .update({ info: JSON.stringify(actInfo) })
+      .update({ data: JSON.stringify(actData) })
       .eq("act_id", actId);
 
     if (updateError) {
       console.error("📞 Помилка збереження дзвінка:", updateError);
+    } else {
+      console.log("📞 Дзвінок збережено:", callValue);
     }
   } catch (err) {
     console.error("📞 Критична помилка збереження дзвінка:", err);

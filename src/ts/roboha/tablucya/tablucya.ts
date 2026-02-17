@@ -839,7 +839,7 @@ function createClientCell(
   const actData = safeParseJSON(act.info || act.data || act.details);
   const actNotes = actData?.["Примітки"];
   if (actNotes && actNotes !== "—" && actNotes.trim() !== "") {
-    td.innerHTML += `<div class="act-note-indicator" style="position: absolute; right: 4px; top: 4px; font-size: 0.75em; color: #666; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; z-index: 4; transition: 0.3s;" title="${actNotes.replace(/"/g, "&quot;")}">${actNotes}</div>`;
+    td.innerHTML += `<div class="act-note-indicator" title="${actNotes.replace(/"/g, "&quot;")}">${actNotes}</div>`;
   }
 
   let smsHtml = "";

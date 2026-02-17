@@ -953,7 +953,7 @@ function createDateCell(act: any, actId: number): HTMLTableCellElement {
         <div style="font-size: 0.85em; color: #666;">/</div>
         <div style="text-align: center;">
           <div style="font-size: 0.9em;">${off.date}</div>
-          <div style="color: #0400ff; font-size: 0.75em;">${off.time}</div>
+          <div style="color: #8B0000; font-size: 0.75em;">${off.time}</div>
         </div>
       </div>`;
   } else if (actDateOn) {

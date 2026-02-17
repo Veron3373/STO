@@ -538,6 +538,10 @@ body {
 }
 
 /* 📞 Індикатор дзвінка клієнту */
+.client-pib-wrapper {
+  position: relative;
+}
+
 .call-indicator {
   position: absolute;
   left: 0;
@@ -555,9 +559,4 @@ body {
   &.call-indicator-result {
     opacity: 1;
   }
-}
-
-/* При наведенні на комірку показати ⏳ */
-td:hover .call-indicator-hover {
-  opacity: 1;
 }

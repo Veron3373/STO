@@ -952,16 +952,30 @@ function createClientCell(
 
   // Визначаємо HTML для індикатора дзвінка
   let callIndicatorHtml = "";
+  const hasCallData = !!callData;
   if (callData) {
     // Якщо є запис дзвінка - показуємо його
-    callIndicatorHtml = `<span class="call-indicator call-indicator-result" data-act-id="${actId}" style="position: absolute; left: 0; top: 0; font-size: 0.85em; cursor: pointer; transition: opacity 0.2s; z-index: 10; white-space: nowrap;">${callData}</span>`;
+    callIndicatorHtml = `<span class="call-indicator call-indicator-result" data-act-id="${actId}">${callData}</span>`;
   } else {
     // Якщо дзвінка ще не було - показуємо ⏳ при наведенні
-    callIndicatorHtml = `<span class="call-indicator call-indicator-hover" data-act-id="${actId}" style="position: absolute; left: 0; top: 0; font-size: 0.85em; cursor: pointer; opacity: 0; transition: opacity 0.2s; z-index: 10;">⏳</span>`;
+    callIndicatorHtml = `<span class="call-indicator call-indicator-hover" data-act-id="${actId}">⏳</span>`;
   }
 
   // Додаємо ПІБ з індикатором дзвінка
-  td.innerHTML = `<div style="position: relative;"><div>${pibOnly}</div>${callIndicatorHtml}</div>`;
+  td.innerHTML = `<div class="client-pib-wrapper"><div>${pibOnly}</div>${callIndicatorHtml}</div>`;
+
+  // 📞 Додаємо hover-ефект для показу ⏳
+  if (!hasCallData) {
+    const indicator = td.querySelector(".call-indicator-hover") as HTMLElement;
+    if (indicator) {
+      td.addEventListener("mouseenter", () => {
+        indicator.style.opacity = "1";
+      });
+      td.addEventListener("mouseleave", () => {
+        indicator.style.opacity = "0";
+      });
+    }
+  }
 
   // 📝 Отримуємо примітки акту (actData вже оголошена вище)
   const actNotes = actData?.["Примітки"];

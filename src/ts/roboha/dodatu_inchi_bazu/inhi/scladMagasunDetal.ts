@@ -873,6 +873,32 @@ async function fillFormFieldsFromSclad(record: any) {
     detailEditState.currentName = detailName;
     detailEditState.baseDetailId = foundDetailId;
   }
+
+  // Підтягування ПІБ за xto_zamovuv
+  if (record?.xto_zamovuv) {
+    try {
+      const { data: slyusar, error: slyusarError } = await supabase
+        .from("slyusars")
+        .select("data")
+        .eq("slyusar_id", record.xto_zamovuv)
+        .single();
+
+      if (!slyusarError && slyusar) {
+        const userData =
+          typeof slyusar.data === "string"
+            ? JSON.parse(slyusar.data)
+            : slyusar.data;
+        const pibInput = document.getElementById(
+          "sclad_zapchastyst_pib",
+        ) as HTMLInputElement | null;
+        if (pibInput && userData?.Name) {
+          pibInput.value = userData.Name;
+        }
+      }
+    } catch (e) {
+      console.error("Помилка підтягування ПІБ запчастиста:", e);
+    }
+  }
 }
 
 async function wireLinkedAutocomplete() {
@@ -888,7 +914,7 @@ async function wireLinkedAutocomplete() {
   const { data, error } = await supabase
     .from("sclad")
     .select(
-      "sclad_id, part_number, name, shops, kilkist_on, price, rahunok, unit_measurement, time_on, scladNomer",
+      "sclad_id, part_number, name, shops, kilkist_on, price, rahunok, unit_measurement, time_on, scladNomer, xto_zamovuv",
     )
     .order("sclad_id", { ascending: false });
   if (error) return console.error("Помилка sclad:", error);

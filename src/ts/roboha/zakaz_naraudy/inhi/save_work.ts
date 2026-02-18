@@ -332,26 +332,13 @@ async function syncSlyusarsHistoryForAct(params: {
       ? actEntry["Записи"]
       : [];
 
-    // ✅ Хелпер для нормалізації назви (нечутливий до регістру та пробілів)
-    const normalizeName = (name: string) =>
-      (name || "").toLowerCase().replace(/\s+/g, " ").trim();
-
-    // ✅ КРИТИЧНО: Створюємо Map для ВСІХ методів пошуку попередніх записів
+    // ✅ КРИТИЧНО: Створюємо Map для пошуку за recordId (єдиний правильний спосіб)
     const prevWorksById = new Map<string, any>();
-    const prevWorksByName = new Map<string, any>();
 
     for (const pw of prevWorks) {
-      // За recordId (найточніший)
+      // За recordId (найточніший і єдиний спосіб)
       if (pw.recordId) {
         prevWorksById.set(pw.recordId, pw);
-      }
-      // За назвою роботи (fallback) - НОРМАЛІЗОВАНО
-      if (pw.Робота) {
-        const normalizedName = normalizeName(pw.Робота);
-        // Якщо ще немає запису з такою назвою - зберігаємо
-        if (!prevWorksByName.has(normalizedName)) {
-          prevWorksByName.set(normalizedName, pw);
-        }
       }
     }
 
@@ -382,41 +369,14 @@ async function syncSlyusarsHistoryForAct(params: {
 
       // ✅ ГОЛОВНИЙ СПОСІБ: Пошук за recordId (унікальний і точний)
       // recordId гарантує що ми знаходимо саме той запис, який редагуємо
+      // ВАЖЛИВО: НЕ шукаємо за назвою! Якщо recordId немає - це НОВИЙ запис,
+      // і він НЕ повинен наслідувати "Розраховано" від інших записів з такою ж назвою.
 
-      // 1. ПРІОРИТЕТ №1: Пошук за recordId (найточніший спосіб)
+      // ЄДИНИЙ СПОСІБ: Пошук за recordId (найточніший і єдиний правильний)
       if (currentRecordId && prevWorksById.has(currentRecordId)) {
         sourceForDates = prevWorksById.get(currentRecordId);
       }
-
-      // 2. ПРІОРИТЕТ №2: Пошук за назвою роботи (для записів без recordId або нових) - НОРМАЛІЗОВАНО
-      if (!sourceForDates && fullWorkName) {
-        const normalizedFullWorkName = normalizeName(fullWorkName);
-        const prevByName = prevWorksByName.get(normalizedFullWorkName);
-        if (prevByName) {
-          sourceForDates = prevByName;
-        }
-      }
-
-      // 3. ПРІОРИТЕТ №3: Пошук за частковим збігом назви (для скорочених назв) - НОРМАЛІЗОВАНО
-      if (!sourceForDates && fullWorkName) {
-        const normalizedFullWorkName = normalizeName(fullWorkName);
-        for (const pw of prevWorks) {
-          // Перевіряємо часткове співпадіння (початок назви) - нечутливе до регістру
-          const normalizedPwName = normalizeName(pw.Робота || "");
-          if (
-            normalizedPwName &&
-            (normalizedPwName.startsWith(
-              normalizedFullWorkName.substring(0, 30),
-            ) ||
-              normalizedFullWorkName.startsWith(
-                normalizedPwName.substring(0, 30),
-              ))
-          ) {
-            sourceForDates = pw;
-            break;
-          }
-        }
-      }
+      // Якщо recordId немає - це новий запис, sourceForDates залишається null
 
       // ✅ КРИТИЧНО: Зберігаємо дати з попереднього запису (якщо знайдено)
       // Це гарантує, що "Записано" та "Розраховано" НІКОЛИ не втрачаються

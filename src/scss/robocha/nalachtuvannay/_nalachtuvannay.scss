@@ -661,8 +661,7 @@
     border-radius: 12px;
     padding: 16px;
     border: 1px solid #dee2e6;
-    flex-direction: column; /* Текст буде йти один під одним */
-    align-items: flex-start; /* Вирівнювання по лівому краю */
+    
   }
 
   .sms-group-label {
@@ -682,6 +681,8 @@
     justify-content: center;
     flex-wrap: wrap;
     gap: 4px;
+    flex-direction: column; /* Текст буде йти один під одним */
+    align-items: flex-start; /* Вирівнювання по лівому краю */
 
     .sms-text-before-preview,
     .sms-text-after-preview {

@@ -2183,6 +2183,11 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       const dataType = isWork ? "works" : "details";
       const icon = isWork ? "🛠️" : "⚙️";
 
+      // ✅ ВИПРАВЛЕНО: Встановлюємо data-record-id на <tr> для коректного зчитування при збереженні
+      if (item.recordId) {
+        row.setAttribute("data-record-id", item.recordId);
+      }
+
       // Форматування чисел
       const formatNum = (n: number) => new Intl.NumberFormat("uk-UA").format(n);
 
@@ -2191,7 +2196,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       row.innerHTML = `
         <td class="row-index">${icon} ${index + 1}</td>
         <td class="name-cell">
-          <div data-name="name" data-type="${dataType}" class="${!isClosed ? "editable-autocomplete" : ""}" ${!isClosed ? 'contenteditable="true"' : ""} ${item.recordId ? `data-record-id="${item.recordId}"` : ""}>${item.name}</div>
+          <div data-name="name" data-type="${dataType}" class="${!isClosed ? "editable-autocomplete" : ""}" ${!isClosed ? 'contenteditable="true"' : ""}>${item.name}</div>
         </td>
         <td class="catalog-cell" data-name="catalog" ${item.sclad_id ? `data-sclad-id="${item.sclad_id}"` : ""}${!showCatalog ? ' style="display: none;"' : ""}>${showCatalog ? item.catalog || "" : ""}</td>
         <td class="text-right qty-cell" data-name="id_count" ${!isClosed ? 'contenteditable="true"' : ""}>${formatNum(item.quantity)}</td>

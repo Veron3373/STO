@@ -220,6 +220,9 @@ const validateActId = (actId: number): void => {
 /**
  * Зберігає ПОВНІ дані рядків у тимчасовий кеш.
  * Це потрібно для ВСІХ ролей з прихованими колонками (Слюсар, Приймальник, Складовщик, Запчастист).
+ *
+ * ✅ 10/10 FIX: Використовуємо recordId як ключ кешу для коректної обробки дублікатів.
+ * Fallback на ${type}:${name} якщо recordId відсутній (для сумісності зі старими даними).
  */
 export function cacheHiddenColumnsData(actDetails: any): void {
   fullRowDataCache.clear();
@@ -236,7 +239,9 @@ export function cacheHiddenColumnsData(actDetails: any): void {
     const name = d["Деталь"]?.trim();
     if (!name) return;
 
-    const cacheKey = `detail:${name}`;
+    const recordId = d["recordId"];
+    // ✅ Пріоритет: recordId, fallback на type:name
+    const cacheKey = recordId || `detail:${name}`;
     fullRowDataCache.set(cacheKey, {
       type: "detail",
       name,
@@ -248,6 +253,7 @@ export function cacheHiddenColumnsData(actDetails: any): void {
       pibMagazin: d["Магазин"] || "",
       sclad_id: d["sclad_id"] || null,
       slyusar_id: null,
+      recordId: recordId || undefined,
     });
   });
 
@@ -256,7 +262,9 @@ export function cacheHiddenColumnsData(actDetails: any): void {
     const name = w["Робота"]?.trim();
     if (!name) return;
 
-    const cacheKey = `work:${name}`;
+    const recordId = w["recordId"];
+    // ✅ Пріоритет: recordId, fallback на type:name
+    const cacheKey = recordId || `work:${name}`;
     fullRowDataCache.set(cacheKey, {
       type: "work",
       name,
@@ -268,6 +276,7 @@ export function cacheHiddenColumnsData(actDetails: any): void {
       pibMagazin: w["Слюсар"] || "",
       sclad_id: null,
       slyusar_id: w["slyusar_id"] || null,
+      recordId: recordId || undefined,
     });
   });
 }
@@ -326,9 +335,19 @@ export function parseTableRows(): ParsedItem[] {
         ? "work"
         : "detail";
 
-    // Створюємо ключ для кешу
-    const cacheKey = `${type}:${name}`;
-    const cachedData = fullRowDataCache.get(cacheKey);
+    // ✅ 10/10 FIX: Зчитуємо recordId СПОЧАТКУ (для коректного отримання з кешу)
+    const recordId =
+      (row as HTMLElement).getAttribute("data-record-id") || undefined;
+
+    // ✅ 10/10 FIX: Створюємо ключ для кешу з пріоритетом recordId
+    // Це вирішує проблему дублікатів (дві однакові роботи з різними параметрами)
+    const cacheKey = recordId || `${type}:${name}`;
+    let cachedData = fullRowDataCache.get(cacheKey);
+
+    // ✅ Fallback: якщо не знайдено по recordId, шукаємо по type:name
+    if (!cachedData && recordId) {
+      cachedData = fullRowDataCache.get(`${type}:${name}`);
+    }
 
     // Отримуємо посилання на всі комірки
     const quantityCell = row.querySelector(
@@ -387,10 +406,6 @@ export function parseTableRows(): ParsedItem[] {
     } else if (cachedData) {
       catalog = cachedData.catalog;
     }
-
-    // ✅ Зчитуємо recordId з атрибута рядка (для точного пошуку при однакових роботах)
-    const recordId =
-      (row as HTMLElement).getAttribute("data-record-id") || undefined;
 
     // ✅ ВИПРАВЛЕНО v4.0: Логіка зарплати:
     // 1. Якщо стовпець "Зар-та" ВИДИМИЙ (slyusarSumCell існує) - ЗАВЖДИ беремо з DOM

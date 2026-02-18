@@ -830,10 +830,24 @@ function createRowHtml(
   const displayName = shortenTextToFirstAndLast(fullName);
   const hasShortened = displayName !== fullName;
 
+  // ✅ 10/10 FIX: Генеруємо recordId для КОЖНОГО рядка
+  // 1. Якщо є recordId в item - використовуємо його
+  // 2. Якщо item є, але recordId немає - генеруємо на основі item.name
+  // 3. Якщо item немає (новий рядок) - генеруємо тимчасовий recordId
+  let rowRecordId = item?.recordId;
+  if (!rowRecordId) {
+    const nameForId = (item?.name || "new")
+      .substring(0, 20)
+      .replace(/\s+/g, "_");
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 11);
+    rowRecordId = `row_${nameForId}_${timestamp}_${random}`;
+  }
+
   // ✅ Формуємо атрибути рядка
   const rowAttrs: string[] = [];
   if (isWorkRowWithEmptyPib) rowAttrs.push('data-partial-edit="true"');
-  if (item?.recordId) rowAttrs.push(`data-record-id="${item.recordId}"`);
+  rowAttrs.push(`data-record-id="${rowRecordId}"`);
   const rowAttrsStr = rowAttrs.length > 0 ? " " + rowAttrs.join(" ") : "";
 
   return `

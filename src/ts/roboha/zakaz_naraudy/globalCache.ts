@@ -84,6 +84,8 @@ export interface GeneralSettings {
   printColorMode: boolean; // Режим друку: true = кольоровий, false = чорнобілий (setting_id: 6, data)
   wallpaperMain: string; // Шпалери основні (setting_id: 7, Загальні)
   aiEnabled: boolean; // ШІ підказки (setting_id: 7, data)
+  smsTextBefore: string; // SMS текст перед сумою (setting_id: 8)
+  smsTextAfter: string; // SMS текст після суми (setting_id: 9)
 }
 
 export interface ActItem {
@@ -168,6 +170,8 @@ export const globalCache: GlobalDataCache = {
     printColorMode: true, // За замовчуванням кольоровий друк
     wallpaperMain: "",
     aiEnabled: false, // За замовчуванням ШІ вимкнено
+    smsTextBefore: "Ваше замовлення виконане. Сума:", // SMS текст перед сумою
+    smsTextAfter: "грн. Дякуємо за довіру!", // SMS текст після суми
   },
 };
 
@@ -211,6 +215,9 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
           parsed.printColorMode !== undefined ? parsed.printColorMode : true,
         wallpaperMain: parsed.wallpaperMain || "",
         aiEnabled: parsed.aiEnabled !== undefined ? parsed.aiEnabled : false,
+        smsTextBefore:
+          parsed.smsTextBefore || "Ваше замовлення виконане. Сума:",
+        smsTextAfter: parsed.smsTextAfter || "грн. Дякуємо за довіру!",
       };
       // Застосовуємо шпалери після завантаження
       applyWallpapers();
@@ -243,7 +250,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
     const { data: generalSettingsRows } = (await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9])
       .order("setting_id")) as {
       data: Array<{
         setting_id: number;
@@ -280,6 +287,14 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             globalCache.generalSettings.wallpaperMain = value || "";
             globalCache.generalSettings.aiEnabled =
               (row as any).data === true || (row as any).data === "true"; // ШІ підказки
+            break;
+          case 8:
+            globalCache.generalSettings.smsTextBefore =
+              value || "Ваше замовлення виконане. Сума:";
+            break;
+          case 9:
+            globalCache.generalSettings.smsTextAfter =
+              value || "грн. Дякуємо за довіру!";
             break;
         }
       }

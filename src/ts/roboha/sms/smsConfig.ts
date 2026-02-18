@@ -30,9 +30,8 @@ export async function getSMSConfig(): Promise<SMSConfig> {
       throw new Error("Налаштування SMS не знайдено в базі даних");
     }
 
-    const smsSettings = typeof data.data === "string"
-      ? JSON.parse(data.data)
-      : data.data;
+    const smsSettings =
+      typeof data.data === "string" ? JSON.parse(data.data) : data.data;
 
     if (!smsSettings?.token) {
       throw new Error("SMS токен відсутній в налаштуваннях");
@@ -40,7 +39,7 @@ export async function getSMSConfig(): Promise<SMSConfig> {
 
     return {
       token: smsSettings.token,
-      alphaName: smsSettings.alphaName || "REMONT"
+      alphaName: smsSettings.alphaName || "REMONT",
     };
   } catch (err: any) {
     console.error("❌ Помилка завантаження SMS конфігурації:", err);
@@ -50,9 +49,12 @@ export async function getSMSConfig(): Promise<SMSConfig> {
 
 /* ===================== ГЕНЕРАЦІЯ ТЕКСТУ ===================== */
 
+// Імпортуємо globalCache для отримання налаштувань SMS тексту
+import { globalCache } from "../zakaz_naraudy/globalCache";
+
 /**
  * Форматує суму з пробілами між тисячами.
- * Приклади: 
+ * Приклади:
  * 600 -> "600"
  * 1000 -> "1 000"
  * 10500.50 -> "10 500.50"
@@ -62,10 +64,10 @@ function formatSum(sum: number): string {
   if (!Number.isFinite(n)) return String(sum);
 
   // 1. Округляємо до 2 знаків після коми
-  const fixed = n.toFixed(2); 
-  
+  const fixed = n.toFixed(2);
+
   // 2. Розділяємо цілу (integer) та дробову (decimal) частини
-  const parts = fixed.split('.');
+  const parts = fixed.split(".");
   const integerPart = parts[0];
   const decimalPart = parts[1];
 
@@ -82,10 +84,16 @@ function formatSum(sum: number): string {
 
 /**
  * Генерація тексту SMS: Без імені та відмінювання.
- * Приклад: "Ваше замовлення виконане. Сума: 1 600 грн. Дякуємо за довіру! Чекаємо на Вас"
+ * Приклад: "Ваше замовлення виконане. Сума: 1 600 грн. Дякуємо за довіру!"
+ * Текст до і після суми налаштовується в секції "Загальні" налаштувань.
  */
 export function generateSMSText(_clientName: string, totalSum: number): string {
-  return `Ваше замовлення виконане. Сума: ${formatSum(totalSum)} грн. Дякуємо за довіру!`;
+  const textBefore =
+    globalCache.generalSettings?.smsTextBefore ||
+    "Ваше замовлення виконане. Сума:";
+  const textAfter =
+    globalCache.generalSettings?.smsTextAfter || "грн. Дякуємо за довіру!";
+  return `${textBefore} ${formatSum(totalSum)} ${textAfter}`;
 }
 
 /* ===================== ТЕЛЕФОН ===================== */

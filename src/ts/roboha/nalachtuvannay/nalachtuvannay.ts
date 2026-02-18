@@ -1,7 +1,12 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { resetPercentCache } from "../zakaz_naraudy/inhi/kastomna_tabluca";
-import { invalidateGlobalDataCache, globalCache, saveGeneralSettingsToLocalStorage, applyWallpapers } from "../zakaz_naraudy/globalCache";
+import {
+  invalidateGlobalDataCache,
+  globalCache,
+  saveGeneralSettingsToLocalStorage,
+  applyWallpapers,
+} from "../zakaz_naraudy/globalCache";
 import { resetAISettingsCache } from "../ai/aiService";
 
 const SETTINGS = {
@@ -177,7 +182,8 @@ const ROLE_TO_COLUMN = {
 };
 
 // 🔹 Зберігає початковий стан налаштувань при відкритті модалки
-let initialSettingsState: Map<number | string, boolean | number | string> = new Map();
+let initialSettingsState: Map<number | string, boolean | number | string> =
+  new Map();
 
 // 🔹 Масив ID складів, які потрібно видалити (procent → null) при збереженні
 let pendingDeletedWarehouseIds: Set<number> = new Set();
@@ -214,6 +220,29 @@ function createGeneralSettingsHTML(): string {
           <span class="general-label-text">📞 Телефон</span>
           <input type="text" id="general-phone" class="general-input" placeholder="Введіть телефон" />
         </label>
+      </div>
+      
+      <div class="settings-divider"></div>
+      
+      <div class="general-input-group sms-text-group">
+        <label class="general-label sms-group-label">
+          <span class="general-label-text">📱 Текст SMS повідомлення</span>
+        </label>
+        <div class="sms-preview">
+          <span class="sms-text-before-preview"></span>
+          <span class="sms-sum-example">1 500</span>
+          <span class="sms-text-after-preview"></span>
+        </div>
+        <div class="sms-inputs-row">
+          <div class="sms-input-wrapper">
+            <label class="sms-input-label">Текст перед сумою:</label>
+            <input type="text" id="general-sms-before" class="general-input sms-input" placeholder="Ваше замовлення виконане. Сума:" />
+          </div>
+          <div class="sms-input-wrapper">
+            <label class="sms-input-label">Текст після суми:</label>
+            <input type="text" id="general-sms-after" class="general-input sms-input" placeholder="грн. Дякуємо за довіру!" />
+          </div>
+        </div>
       </div>
       
       <div class="settings-divider"></div>
@@ -262,7 +291,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9])
       .order("setting_id");
 
     if (error) throw error;
@@ -276,40 +305,84 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
 
       switch (row.setting_id) {
         case 1: // Назва СТО
-          const nameInput = modal.querySelector("#general-sto-name") as HTMLInputElement;
+          const nameInput = modal.querySelector(
+            "#general-sto-name",
+          ) as HTMLInputElement;
           if (nameInput) nameInput.value = value;
           break;
         case 2: // Адреса
-          const addressInput = modal.querySelector("#general-address") as HTMLInputElement;
+          const addressInput = modal.querySelector(
+            "#general-address",
+          ) as HTMLInputElement;
           if (addressInput) addressInput.value = value;
           break;
         case 3: // Телефон
-          const phoneInput = modal.querySelector("#general-phone") as HTMLInputElement;
+          const phoneInput = modal.querySelector(
+            "#general-phone",
+          ) as HTMLInputElement;
           if (phoneInput) phoneInput.value = value;
           break;
         case 4: // Колір шапки акту
-          const headerColor = modal.querySelector("#general-header-color") as HTMLInputElement;
-          const headerColorValue = modal.querySelector("#header-color-value") as HTMLElement;
+          const headerColor = modal.querySelector(
+            "#general-header-color",
+          ) as HTMLInputElement;
+          const headerColorValue = modal.querySelector(
+            "#header-color-value",
+          ) as HTMLElement;
           const colorValue4 = value || DEFAULT_COLOR;
           if (headerColor) headerColor.value = colorValue4;
           if (headerColorValue) headerColorValue.textContent = colorValue4;
           break;
         case 5: // Колір таблиці актів
-          const tableColor = modal.querySelector("#general-table-color") as HTMLInputElement;
-          const tableColorValue = modal.querySelector("#table-color-value") as HTMLElement;
+          const tableColor = modal.querySelector(
+            "#general-table-color",
+          ) as HTMLInputElement;
+          const tableColorValue = modal.querySelector(
+            "#table-color-value",
+          ) as HTMLElement;
           const colorValue5 = value || DEFAULT_COLOR;
           if (tableColor) tableColor.value = colorValue5;
           if (tableColorValue) tableColorValue.textContent = colorValue5;
           break;
         case 7: // Шпалери основні
-          const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
+          const wallpaperMainInput = modal.querySelector(
+            "#general-wallpaper-main",
+          ) as HTMLInputElement;
           if (wallpaperMainInput) wallpaperMainInput.value = value;
+          break;
+        case 8: // SMS текст перед сумою
+          const smsBeforeInput = modal.querySelector(
+            "#general-sms-before",
+          ) as HTMLInputElement;
+          const smsBeforePreview = modal.querySelector(
+            ".sms-text-before-preview",
+          ) as HTMLElement;
+          const smsBeforeValue = value || "Ваше замовлення виконане. Сума:";
+          if (smsBeforeInput) smsBeforeInput.value = smsBeforeValue;
+          if (smsBeforePreview)
+            smsBeforePreview.textContent = smsBeforeValue + " ";
+          break;
+        case 9: // SMS текст після суми
+          const smsAfterInput = modal.querySelector(
+            "#general-sms-after",
+          ) as HTMLInputElement;
+          const smsAfterPreview = modal.querySelector(
+            ".sms-text-after-preview",
+          ) as HTMLElement;
+          const smsAfterValue = value || "грн. Дякуємо за довіру!";
+          if (smsAfterInput) smsAfterInput.value = smsAfterValue;
+          if (smsAfterPreview)
+            smsAfterPreview.textContent = " " + smsAfterValue;
           break;
       }
     });
   } catch (err) {
     console.error(err);
-    showNotification("Помилка завантаження загальних налаштувань", "error", 2000);
+    showNotification(
+      "Помилка завантаження загальних налаштувань",
+      "error",
+      2000,
+    );
   }
 }
 
@@ -317,12 +390,28 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
 async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   let changesCount = 0;
 
-  const nameInput = modal.querySelector("#general-sto-name") as HTMLInputElement;
-  const addressInput = modal.querySelector("#general-address") as HTMLInputElement;
+  const nameInput = modal.querySelector(
+    "#general-sto-name",
+  ) as HTMLInputElement;
+  const addressInput = modal.querySelector(
+    "#general-address",
+  ) as HTMLInputElement;
   const phoneInput = modal.querySelector("#general-phone") as HTMLInputElement;
-  const headerColor = modal.querySelector("#general-header-color") as HTMLInputElement;
-  const tableColor = modal.querySelector("#general-table-color") as HTMLInputElement;
-  const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
+  const headerColor = modal.querySelector(
+    "#general-header-color",
+  ) as HTMLInputElement;
+  const tableColor = modal.querySelector(
+    "#general-table-color",
+  ) as HTMLInputElement;
+  const wallpaperMainInput = modal.querySelector(
+    "#general-wallpaper-main",
+  ) as HTMLInputElement;
+  const smsBeforeInput = modal.querySelector(
+    "#general-sms-before",
+  ) as HTMLInputElement;
+  const smsAfterInput = modal.querySelector(
+    "#general-sms-after",
+  ) as HTMLInputElement;
 
   const newValues = [
     { id: 1, value: nameInput?.value || "" },
@@ -331,6 +420,11 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     { id: 4, value: headerColor?.value || DEFAULT_COLOR },
     { id: 5, value: tableColor?.value || DEFAULT_COLOR },
     { id: 7, value: wallpaperMainInput?.value || "" },
+    {
+      id: 8,
+      value: smsBeforeInput?.value || "Ваше замовлення виконане. Сума:",
+    },
+    { id: 9, value: smsAfterInput?.value || "грн. Дякуємо за довіру!" },
   ];
 
   for (const { id, value } of newValues) {
@@ -342,8 +436,12 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
         .select("setting_id")
         .eq("setting_id", id)
         .single();
-      if (selectError && selectError.code !== "PGRST116") { // ігноруємо not found
-        console.error(`Помилка перевірки існування setting_id ${id}:`, selectError);
+      if (selectError && selectError.code !== "PGRST116") {
+        // ігноруємо not found
+        console.error(
+          `Помилка перевірки існування setting_id ${id}:`,
+          selectError,
+        );
         throw selectError;
       }
 
@@ -372,19 +470,26 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   // Оновлюємо globalCache та localStorage, якщо були зміни
   if (changesCount > 0) {
     // Оновлюємо globalCache
-    globalCache.generalSettings.stoName = nameInput?.value || "B.S.Motorservice";
-    globalCache.generalSettings.address = addressInput?.value || "вул. Корольова, 6, Вінниця";
+    globalCache.generalSettings.stoName =
+      nameInput?.value || "B.S.Motorservice";
+    globalCache.generalSettings.address =
+      addressInput?.value || "вул. Корольова, 6, Вінниця";
     globalCache.generalSettings.phone = phoneInput?.value || "068 931 24 38";
-    globalCache.generalSettings.headerColor = headerColor?.value || DEFAULT_COLOR;
+    globalCache.generalSettings.headerColor =
+      headerColor?.value || DEFAULT_COLOR;
     globalCache.generalSettings.tableColor = tableColor?.value || DEFAULT_COLOR;
     globalCache.generalSettings.wallpaperMain = wallpaperMainInput?.value || "";
-    
+    globalCache.generalSettings.smsTextBefore =
+      smsBeforeInput?.value || "Ваше замовлення виконане. Сума:";
+    globalCache.generalSettings.smsTextAfter =
+      smsAfterInput?.value || "грн. Дякуємо за довіру!";
+
     // Зберігаємо в localStorage
     saveGeneralSettingsToLocalStorage();
-    
+
     // Застосовуємо шпалери одразу після збереження
     applyWallpapers();
-    
+
     // Інвалідуємо кеш глобальних даних
     invalidateGlobalDataCache();
   }
@@ -395,10 +500,18 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
 // Ініціалізує обробники для секції "Загальні"
 function initGeneralSettingsHandlers(modal: HTMLElement): void {
   // Color pickers
-  const headerColor = modal.querySelector("#general-header-color") as HTMLInputElement;
-  const tableColor = modal.querySelector("#general-table-color") as HTMLInputElement;
-  const headerColorValue = modal.querySelector("#header-color-value") as HTMLElement;
-  const tableColorValue = modal.querySelector("#table-color-value") as HTMLElement;
+  const headerColor = modal.querySelector(
+    "#general-header-color",
+  ) as HTMLInputElement;
+  const tableColor = modal.querySelector(
+    "#general-table-color",
+  ) as HTMLInputElement;
+  const headerColorValue = modal.querySelector(
+    "#header-color-value",
+  ) as HTMLElement;
+  const tableColorValue = modal.querySelector(
+    "#table-color-value",
+  ) as HTMLElement;
 
   if (headerColor && headerColorValue) {
     headerColor.addEventListener("input", () => {
@@ -412,9 +525,41 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
     });
   }
 
+  // SMS preview update handlers
+  const smsBeforeInput = modal.querySelector(
+    "#general-sms-before",
+  ) as HTMLInputElement;
+  const smsAfterInput = modal.querySelector(
+    "#general-sms-after",
+  ) as HTMLInputElement;
+  const smsBeforePreview = modal.querySelector(
+    ".sms-text-before-preview",
+  ) as HTMLElement;
+  const smsAfterPreview = modal.querySelector(
+    ".sms-text-after-preview",
+  ) as HTMLElement;
+
+  if (smsBeforeInput && smsBeforePreview) {
+    smsBeforeInput.addEventListener("input", () => {
+      smsBeforePreview.textContent =
+        (smsBeforeInput.value || "Ваше замовлення виконане. Сума:") + " ";
+    });
+  }
+
+  if (smsAfterInput && smsAfterPreview) {
+    smsAfterInput.addEventListener("input", () => {
+      smsAfterPreview.textContent =
+        " " + (smsAfterInput.value || "грн. Дякуємо за довіру!");
+    });
+  }
+
   // Кнопка скидання кольорів та шпалер
-  const resetBtn = modal.querySelector("#reset-colors-btn") as HTMLButtonElement;
-  const wallpaperMainInput = modal.querySelector("#general-wallpaper-main") as HTMLInputElement;
+  const resetBtn = modal.querySelector(
+    "#reset-colors-btn",
+  ) as HTMLButtonElement;
+  const wallpaperMainInput = modal.querySelector(
+    "#general-wallpaper-main",
+  ) as HTMLInputElement;
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
       if (headerColor) {
@@ -429,7 +574,11 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       if (wallpaperMainInput) {
         wallpaperMainInput.value = "";
       }
-      showNotification("Кольори та шпалери скинуто до значень за замовчуванням", "info", 1500);
+      showNotification(
+        "Кольори та шпалери скинуто до значень за замовчуванням",
+        "info",
+        1500,
+      );
     });
   }
 }
@@ -458,43 +607,52 @@ function createRoleToggles(role: string): string {
 }
 
 // Функція для додавання нового рядка відсотків
-function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingId?: number, isFrozen: boolean = false): void {
+function addPercentageRow(
+  modal: HTMLElement,
+  initialValue: number = 0,
+  settingId?: number,
+  isFrozen: boolean = false,
+): void {
   const wrapper = modal.querySelector(".percentage-rows-wrapper");
   const container = modal.querySelector("#additional-percentage-rows");
-  
+
   if (!container) return;
-  
+
   // Визначаємо наступний номер рядка
   const allRows = wrapper?.querySelectorAll(".percentage-row") || [];
   let nextRowNum = settingId;
-  
+
   if (!nextRowNum) {
     // Знаходимо максимальний номер і додаємо 1
     let maxNum = 1;
-    allRows.forEach(row => {
+    allRows.forEach((row) => {
       const num = parseInt(row.getAttribute("data-setting-id") || "1");
       if (num > maxNum) maxNum = num;
     });
     nextRowNum = maxNum + 1;
   }
-  
+
   // Максимум 500 рядків (розширений діапазон)
   if (nextRowNum > 500) return;
-  
+
   // Перевіряємо чи вже існує цей рядок
   if (modal.querySelector(`#percentage-slider-${nextRowNum}`)) {
     // Просто оновлюємо значення
-    const slider = modal.querySelector(`#percentage-slider-${nextRowNum}`) as HTMLInputElement;
-    const input = modal.querySelector(`#percentage-input-${nextRowNum}`) as HTMLInputElement;
+    const slider = modal.querySelector(
+      `#percentage-slider-${nextRowNum}`,
+    ) as HTMLInputElement;
+    const input = modal.querySelector(
+      `#percentage-input-${nextRowNum}`,
+    ) as HTMLInputElement;
     if (slider) slider.value = String(initialValue);
     if (input) input.value = String(initialValue);
     return;
   }
-  
+
   // Кнопка плюсика завжди видима (можна додавати багато складів)
   const frozenClass = isFrozen ? " frozen" : "";
   const disabledAttr = isFrozen ? " disabled" : "";
-  
+
   const rowHtml = `
     <div class="percentage-row${frozenClass}" data-setting-id="${nextRowNum}">
       <span class="percentage-number">${nextRowNum}</span>
@@ -505,30 +663,37 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${isFrozen 
-        ? `<div class="percentage-buttons-container">
+      ${
+        isFrozen
+          ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-        : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
       }
     </div>
   `;
-  
+
   container.insertAdjacentHTML("beforeend", rowHtml);
-  
+
   // Додаємо обробники для нового рядка
-  const slider = modal.querySelector(`#percentage-slider-${nextRowNum}`) as HTMLInputElement;
-  const input = modal.querySelector(`#percentage-input-${nextRowNum}`) as HTMLInputElement;
+  const slider = modal.querySelector(
+    `#percentage-slider-${nextRowNum}`,
+  ) as HTMLInputElement;
+  const input = modal.querySelector(
+    `#percentage-input-${nextRowNum}`,
+  ) as HTMLInputElement;
   const removeBtn = modal.querySelector(`#remove-percentage-row-${nextRowNum}`);
-  const unfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${nextRowNum}`);
+  const unfreezeBtn = modal.querySelector(
+    `#unfreeze-percentage-row-${nextRowNum}`,
+  );
   const deleteBtn = modal.querySelector(`#delete-percentage-row-${nextRowNum}`);
-  
+
   if (slider && input && !isFrozen) {
     slider.addEventListener("input", () => {
       input.value = slider.value;
     });
-    
+
     input.addEventListener("input", () => {
       const numValue = parseInt(input.value) || 0;
       if (numValue >= 0 && numValue <= 100) {
@@ -546,15 +711,17 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
       pendingDeletedWarehouseIds.add(nextRowNum!);
       pendingFrozenWarehouseIds.delete(nextRowNum!);
       pendingUnfrozenWarehouseIds.delete(nextRowNum!);
-      
+
       // Видаляємо рядок з UI
-      const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
+      const row = modal.querySelector(
+        `.percentage-row[data-setting-id="${nextRowNum}"]`,
+      );
       if (row) {
         row.remove();
       }
     });
   }
-  
+
   // Обробник для заморожування рядка (тільки UI, збереження при "ОК")
   if (removeBtn) {
     removeBtn.addEventListener("click", () => {
@@ -562,32 +729,44 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
       pendingFrozenWarehouseIds.add(nextRowNum!);
       pendingUnfrozenWarehouseIds.delete(nextRowNum!);
       pendingDeletedWarehouseIds.delete(nextRowNum!);
-      
+
       // Оновлюємо UI
-      const row = modal.querySelector(`.percentage-row[data-setting-id="${nextRowNum}"]`);
+      const row = modal.querySelector(
+        `.percentage-row[data-setting-id="${nextRowNum}"]`,
+      );
       if (row) {
         row.classList.add("frozen");
-        const sliderEl = row.querySelector(".percentage-slider") as HTMLInputElement;
-        const inputEl = row.querySelector(".percentage-input") as HTMLInputElement;
+        const sliderEl = row.querySelector(
+          ".percentage-slider",
+        ) as HTMLInputElement;
+        const inputEl = row.querySelector(
+          ".percentage-input",
+        ) as HTMLInputElement;
         const percentSign = row.querySelector(".percent-sign");
         if (sliderEl) sliderEl.disabled = true;
         if (inputEl) inputEl.disabled = true;
         if (percentSign) percentSign.textContent = ".";
-        
+
         // Замінюємо кнопку на контейнер з двома кнопками
         removeBtn.outerHTML = `<div class="percentage-buttons-container">
           <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
           <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
         </div>`;
-        
+
         // Додаємо обробники для нових кнопок
-        const newUnfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${nextRowNum}`);
-        const newDeleteBtn = modal.querySelector(`#delete-percentage-row-${nextRowNum}`);
-        
+        const newUnfreezeBtn = modal.querySelector(
+          `#unfreeze-percentage-row-${nextRowNum}`,
+        );
+        const newDeleteBtn = modal.querySelector(
+          `#delete-percentage-row-${nextRowNum}`,
+        );
+
         if (newUnfreezeBtn) {
-          newUnfreezeBtn.addEventListener("click", () => unfreezeRow(modal, nextRowNum!));
+          newUnfreezeBtn.addEventListener("click", () =>
+            unfreezeRow(modal, nextRowNum!),
+          );
         }
-        
+
         if (newDeleteBtn) {
           newDeleteBtn.addEventListener("click", () => {
             // Додаємо ID до списку видалених
@@ -600,10 +779,12 @@ function addPercentageRow(modal: HTMLElement, initialValue: number = 0, settingI
       }
     });
   }
-  
+
   // Обробник для розморожування рядка
   if (unfreezeBtn) {
-    unfreezeBtn.addEventListener("click", () => unfreezeRow(modal, nextRowNum!));
+    unfreezeBtn.addEventListener("click", () =>
+      unfreezeRow(modal, nextRowNum!),
+    );
   }
 }
 
@@ -614,12 +795,16 @@ function unfreezeRow(modal: HTMLElement, settingId: number): void {
   pendingUnfrozenWarehouseIds.add(settingId);
   pendingFrozenWarehouseIds.delete(settingId);
   pendingDeletedWarehouseIds.delete(settingId);
-  
+
   // Оновлюємо UI
-  const row = modal.querySelector(`.percentage-row[data-setting-id="${settingId}"]`);
+  const row = modal.querySelector(
+    `.percentage-row[data-setting-id="${settingId}"]`,
+  );
   if (row) {
     row.classList.remove("frozen");
-    const sliderEl = row.querySelector(".percentage-slider") as HTMLInputElement;
+    const sliderEl = row.querySelector(
+      ".percentage-slider",
+    ) as HTMLInputElement;
     const inputEl = row.querySelector(".percentage-input") as HTMLInputElement;
     const percentSign = row.querySelector(".percent-sign");
     if (sliderEl) {
@@ -631,41 +816,49 @@ function unfreezeRow(modal: HTMLElement, settingId: number): void {
       inputEl.value = "0";
     }
     if (percentSign) percentSign.textContent = "%";
-    
+
     // Видаляємо контейнер з кнопками і додаємо просту кнопку заморозки
     const buttonsContainer = row.querySelector(".percentage-buttons-container");
     if (buttonsContainer) {
       buttonsContainer.outerHTML = `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${settingId}" title="Заморозити склад">−</button>`;
     }
-    
+
     // Додаємо обробник для нової кнопки заморозки (тільки UI)
-    const newRemoveBtn = modal.querySelector(`#remove-percentage-row-${settingId}`);
+    const newRemoveBtn = modal.querySelector(
+      `#remove-percentage-row-${settingId}`,
+    );
     if (newRemoveBtn) {
       newRemoveBtn.addEventListener("click", () => {
         // Додаємо ID до списку заморожених
         pendingFrozenWarehouseIds.add(settingId);
         pendingUnfrozenWarehouseIds.delete(settingId);
         pendingDeletedWarehouseIds.delete(settingId);
-        
+
         // Заморожуємо рядок
         row.classList.add("frozen");
         if (sliderEl) sliderEl.disabled = true;
         if (inputEl) inputEl.disabled = true;
         if (percentSign) percentSign.textContent = ".";
-        
+
         // Замінюємо кнопку на контейнер з двома кнопками
         newRemoveBtn.outerHTML = `<div class="percentage-buttons-container">
           <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${settingId}" title="Видалити склад повністю">×</button>
           <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${settingId}" title="Активувати склад">↻</button>
         </div>`;
-        
-        const newerUnfreezeBtn = modal.querySelector(`#unfreeze-percentage-row-${settingId}`);
-        const newerDeleteBtn = modal.querySelector(`#delete-percentage-row-${settingId}`);
-        
+
+        const newerUnfreezeBtn = modal.querySelector(
+          `#unfreeze-percentage-row-${settingId}`,
+        );
+        const newerDeleteBtn = modal.querySelector(
+          `#delete-percentage-row-${settingId}`,
+        );
+
         if (newerUnfreezeBtn) {
-          newerUnfreezeBtn.addEventListener("click", () => unfreezeRow(modal, settingId));
+          newerUnfreezeBtn.addEventListener("click", () =>
+            unfreezeRow(modal, settingId),
+          );
         }
-        
+
         if (newerDeleteBtn) {
           newerDeleteBtn.addEventListener("click", () => {
             // Додаємо ID до списку видалених
@@ -677,13 +870,13 @@ function unfreezeRow(modal: HTMLElement, settingId: number): void {
         }
       });
     }
-    
+
     // Додаємо обробники для слайдера і інпута
     if (sliderEl && inputEl) {
       sliderEl.addEventListener("input", () => {
         inputEl.value = sliderEl.value;
       });
-      
+
       inputEl.addEventListener("input", () => {
         const numValue = parseInt(inputEl.value) || 0;
         if (numValue >= 0 && numValue <= 100) {
@@ -707,18 +900,20 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
     // 🔹 Очищуємо попередній стан
     initialSettingsState.clear();
-    
+
     // 🔹 Очищуємо списки відкладених змін складів
     pendingDeletedWarehouseIds.clear();
     pendingFrozenWarehouseIds.clear();
     pendingUnfrozenWarehouseIds.clear();
-    
+
     // Очищаємо додаткові рядки відсотків
     const additionalRows = modal.querySelector("#additional-percentage-rows");
     if (additionalRows) additionalRows.innerHTML = "";
-    
+
     // Показуємо кнопку плюсика
-    const addBtn = modal.querySelector("#add-percentage-row") as HTMLButtonElement;
+    const addBtn = modal.querySelector(
+      "#add-percentage-row",
+    ) as HTMLButtonElement;
     if (addBtn) addBtn.style.display = "";
 
     Object.values(SETTINGS).forEach((s) => {
@@ -731,16 +926,16 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
     data?.forEach((row: any) => {
       const setting = SETTINGS[row.setting_id as keyof typeof SETTINGS];
-      
+
       // Зберігаємо всі procent значення (setting_id >= 1)
       if (row.setting_id >= 1) {
         procentMap.set(row.setting_id, row.procent);
       }
-      
+
       // Обробка чекбоксів
       if (setting && setting.id !== "percentage-value") {
         const checkbox = modal.querySelector(
-          `#${setting.id}`
+          `#${setting.id}`,
         ) as HTMLInputElement;
         if (checkbox) checkbox.checked = !!row.data;
         initialSettingsState.set(`checkbox_${row.setting_id}`, !!row.data);
@@ -773,9 +968,15 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
         if (id === 1) {
           // Перший рядок вже існує в HTML
-          const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
-          const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
-          const row1 = modal.querySelector(".percentage-row[data-setting-id='1']");
+          const slider1 = modal.querySelector(
+            "#percentage-slider-1",
+          ) as HTMLInputElement;
+          const input1 = modal.querySelector(
+            "#percentage-input-1",
+          ) as HTMLInputElement;
+          const row1 = modal.querySelector(
+            ".percentage-row[data-setting-id='1']",
+          );
           const percentSign1 = row1?.querySelector(".percent-sign");
 
           // Скидаємо стан перед застосуванням
@@ -785,8 +986,14 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
           if (input1) input1.disabled = false;
 
           if (isFrozen) {
-            if (slider1) { slider1.value = "0"; slider1.disabled = true; }
-            if (input1) { input1.value = "0"; input1.disabled = true; }
+            if (slider1) {
+              slider1.value = "0";
+              slider1.disabled = true;
+            }
+            if (input1) {
+              input1.value = "0";
+              input1.disabled = true;
+            }
             if (row1) row1.classList.add("frozen");
             if (percentSign1) percentSign1.textContent = ".";
           } else {
@@ -802,8 +1009,12 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
       }
     } else {
       // Якщо немає жодного заповненого відсотка, встановлюємо 0 для першого
-      const slider1 = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
-      const input1 = modal.querySelector("#percentage-input-1") as HTMLInputElement;
+      const slider1 = modal.querySelector(
+        "#percentage-slider-1",
+      ) as HTMLInputElement;
+      const input1 = modal.querySelector(
+        "#percentage-input-1",
+      ) as HTMLInputElement;
       if (slider1) slider1.value = "0";
       if (input1) input1.value = "0";
       initialSettingsState.set(`procent_1`, 0);
@@ -822,7 +1033,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
 
 async function loadRoleSettings(
   modal: HTMLElement,
-  role: string
+  role: string,
 ): Promise<void> {
   const column = ROLE_TO_COLUMN[role as keyof typeof ROLE_TO_COLUMN];
 
@@ -853,7 +1064,7 @@ async function loadRoleSettings(
     const presentIds = new Set<number>();
     data?.forEach((row: any) => {
       const checkbox = modal.querySelector(
-        `#role-toggle-${row.setting_id}`
+        `#role-toggle-${row.setting_id}`,
       ) as HTMLInputElement;
       const value = !!row[column];
       if (checkbox) checkbox.checked = value;
@@ -866,7 +1077,7 @@ async function loadRoleSettings(
     settingIds.forEach((id: number) => {
       if (!presentIds.has(id)) {
         const checkbox = modal.querySelector(
-          `#role-toggle-${id}`
+          `#role-toggle-${id}`,
         ) as HTMLInputElement;
         const value = !!checkbox?.checked; // за замовчуванням false
         initialSettingsState.set(`role_${id}`, value);
@@ -883,7 +1094,7 @@ async function loadRoleSettings(
     showNotification(
       `Помилка завантаження налаштувань для ролі ${role}`,
       "error",
-      2000
+      2000,
     );
   }
 }
@@ -891,7 +1102,7 @@ async function loadRoleSettings(
 async function saveSettings(modal: HTMLElement): Promise<boolean> {
   try {
     const roleButton = modal.querySelector(
-      "#role-toggle-button"
+      "#role-toggle-button",
     ) as HTMLButtonElement;
 
     // ✅ гарантуємо чисту назву ролі
@@ -933,7 +1144,9 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         changesCount++;
       }
 
-      const checkbox2 = modal.querySelector("#toggle-receiver") as HTMLInputElement;
+      const checkbox2 = modal.querySelector(
+        "#toggle-receiver",
+      ) as HTMLInputElement;
       const newValue2 = checkbox2?.checked ?? false;
       if (initialSettingsState.get("checkbox_2") !== newValue2) {
         const { data: existingRow, error: selectError } = await supabase
@@ -957,7 +1170,9 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         changesCount++;
       }
 
-      const checkbox3 = modal.querySelector("#toggle-zarplata") as HTMLInputElement;
+      const checkbox3 = modal.querySelector(
+        "#toggle-zarplata",
+      ) as HTMLInputElement;
       const newValue3 = checkbox3?.checked ?? false;
       if (initialSettingsState.get("checkbox_3") !== newValue3) {
         const { data: existingRow, error: selectError } = await supabase
@@ -982,24 +1197,32 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       }
 
       // Відсотки - динамічно зберігаємо всі наявні рядки
-      const percentageInputs = modal.querySelectorAll<HTMLInputElement>('.percentage-input');
+      const percentageInputs =
+        modal.querySelectorAll<HTMLInputElement>(".percentage-input");
       for (const input of Array.from(percentageInputs)) {
         const idMatch = input.id.match(/percentage-input-(\d+)/);
         if (idMatch) {
           const settingId = parseInt(idMatch[1]);
-          const row = modal.querySelector(`.percentage-row[data-setting-id="${settingId}"]`);
-          
+          const row = modal.querySelector(
+            `.percentage-row[data-setting-id="${settingId}"]`,
+          );
+
           // Якщо рядок заморожений — зберігаємо -1
-          if (row?.classList.contains("frozen") || pendingFrozenWarehouseIds.has(settingId)) {
+          if (
+            row?.classList.contains("frozen") ||
+            pendingFrozenWarehouseIds.has(settingId)
+          ) {
             // Перевіряємо чи це нова зміна
-            const initialValue = initialSettingsState.get(`procent_${settingId}`);
+            const initialValue = initialSettingsState.get(
+              `procent_${settingId}`,
+            );
             if (initialValue !== -1) {
               const { data: existingRow } = await supabase
                 .from("settings")
                 .select("setting_id")
                 .eq("setting_id", settingId)
                 .single();
-              
+
               if (existingRow) {
                 const { error } = await supabase
                   .from("settings")
@@ -1016,9 +1239,12 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
             }
             continue;
           }
-          
+
           const raw = Number(input.value ?? 0);
-          const newValue = Math.min(100, Math.max(0, Math.floor(isFinite(raw) ? raw : 0)));
+          const newValue = Math.min(
+            100,
+            Math.max(0, Math.floor(isFinite(raw) ? raw : 0)),
+          );
           if (initialSettingsState.get(`procent_${settingId}`) !== newValue) {
             // Спочатку перевіряємо чи існує запис
             const { data: existingRow } = await supabase
@@ -1026,7 +1252,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
               .select("setting_id")
               .eq("setting_id", settingId)
               .single();
-            
+
             if (existingRow) {
               // Запис існує - оновлюємо тільки procent
               const { error } = await supabase
@@ -1038,7 +1264,11 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
               // Запис не існує - створюємо новий з data: false
               const { error } = await supabase
                 .from("settings")
-                .insert({ setting_id: settingId, procent: newValue, data: false });
+                .insert({
+                  setting_id: settingId,
+                  procent: newValue,
+                  data: false,
+                });
               if (error) throw error;
             }
             changesCount++;
@@ -1087,7 +1317,9 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       }
 
       // 🔹 Збереження toggle-print (setting_id 6)
-      const checkbox6 = modal.querySelector("#toggle-print") as HTMLInputElement;
+      const checkbox6 = modal.querySelector(
+        "#toggle-print",
+      ) as HTMLInputElement;
       const newValue6 = checkbox6?.checked ?? false;
       if (initialSettingsState.get("checkbox_6") !== newValue6) {
         const { data: existingRow, error: selectError } = await supabase
@@ -1147,12 +1379,13 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       // Зберегти налаштування для інших ролей — покриваємо id 1..23, працюємо лише з наявними чекбоксами
       for (let id = 1; id <= 23; id++) {
         const checkbox = modal.querySelector(
-          `#role-toggle-${id}`
+          `#role-toggle-${id}`,
         ) as HTMLInputElement;
         if (!checkbox) continue; // пропускаємо невідображені у UI
 
         const newValue = checkbox.checked ?? false;
-        const oldValue = (initialSettingsState.get(`role_${id}`) as boolean) ?? false;
+        const oldValue =
+          (initialSettingsState.get(`role_${id}`) as boolean) ?? false;
 
         if (oldValue !== newValue) {
           // Якщо запис існує — оновлюємо лише колонку ролі; якщо ні — створюємо (data:false)
@@ -1345,7 +1578,7 @@ export async function createSettingsModal(): Promise<void> {
   }
 
   const roleButton = modal.querySelector(
-    "#role-toggle-button"
+    "#role-toggle-button",
   ) as HTMLButtonElement;
   let currentRoleIndex = 0;
 
@@ -1354,11 +1587,11 @@ export async function createSettingsModal(): Promise<void> {
       const buttonRect = roleButton.getBoundingClientRect();
       const clickX = e.clientX - buttonRect.left;
       const buttonWidth = buttonRect.width;
-      
+
       // Ліва зона 40% ширини - для перемикання назад
       // Права зона 60% ширини - для перемикання вперед
       const leftZoneWidth = buttonWidth * 0.4;
-      
+
       if (clickX < leftZoneWidth) {
         // Клік на ліву частину (40%) - назад
         currentRoleIndex = (currentRoleIndex - 1 + ROLES.length) % ROLES.length;
@@ -1366,14 +1599,16 @@ export async function createSettingsModal(): Promise<void> {
         // Клік на праву частину (60%) - вперед
         currentRoleIndex = (currentRoleIndex + 1) % ROLES.length;
       }
-      
+
       const newRole = ROLES[currentRoleIndex];
       roleButton.textContent = newRole;
       updateRoleTogglesVisibility(modal, newRole);
     });
   }
 
-  const slider = modal.querySelector("#percentage-slider-1") as HTMLInputElement;
+  const slider = modal.querySelector(
+    "#percentage-slider-1",
+  ) as HTMLInputElement;
   const input = modal.querySelector("#percentage-input-1") as HTMLInputElement;
 
   const updateInputFromSlider = () => {
@@ -1431,7 +1666,7 @@ export async function openSettingsModal(): Promise<void> {
   const modal = document.getElementById("modal-settings");
   if (modal) {
     const roleButton = modal.querySelector(
-      "#role-toggle-button"
+      "#role-toggle-button",
     ) as HTMLButtonElement;
     const role = roleButton?.textContent?.trim() || ROLES[0];
     updateRoleTogglesVisibility(modal, role);

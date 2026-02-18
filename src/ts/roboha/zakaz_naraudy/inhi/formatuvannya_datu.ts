@@ -45,14 +45,14 @@ export const formatDate = (dateString: string | null): string | null => {
  * @returns Об'єкт з відформатованими датою та часом.
  */
 export function formatDateTime(date: Date): { date: string; time: string } {
-  const d = date.getDate().toString().padStart(2, '0');
-  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, "0");
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
   const y = date.getFullYear();
-  const h = date.getHours().toString().padStart(2, '0');
-  const min = date.getMinutes().toString().padStart(2, '0');
+  const h = date.getHours().toString().padStart(2, "0");
+  const min = date.getMinutes().toString().padStart(2, "0");
 
   return {
     date: `${d}.${m}.${y}`,
-    time: `${h}:${min}`
+    time: `${h}:${min}`,
   };
 }

@@ -702,6 +702,17 @@ function processItems(items: ParsedItem[]) {
     }
   });
 
+  // 🔍 DEBUG: Перевіряємо скільки робіт зібрано для слюсарів
+  console.log("🔍 processItems: works.length =", works.length);
+  console.log(
+    "🔍 processItems: workRowsForSlyusars.length =",
+    workRowsForSlyusars.length,
+  );
+  console.log(
+    "🔍 processItems: workRowsForSlyusars =",
+    JSON.stringify(workRowsForSlyusars, null, 2),
+  );
+
   return {
     details,
     works,

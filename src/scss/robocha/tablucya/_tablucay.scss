@@ -525,17 +525,25 @@ body {
   transition: all 0.3s ease-in-out;
 
   &:hover {
-    max-width: 40%;
-    min-width: 200px;
+    position: fixed;
+    top: auto;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 60vw;
+    min-width: 300px;
+    width: max-content;
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
     height: auto;
-    max-height: fit-content;
     overflow: visible;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     background: #fff;
-    z-index: 100;
+    border: 1px solid #ccc;
+    z-index: 10000;
+    padding: 10px 14px;
+    line-height: 1.5;
   }
 }
 

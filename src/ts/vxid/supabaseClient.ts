@@ -9,4 +9,10 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   throw new Error("❌ Відсутні ключі Supabase у файлі .env");
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // Ліміт подій на секунду
+    },
+  },
+});

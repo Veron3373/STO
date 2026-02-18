@@ -8,7 +8,11 @@
 import { supabase } from "../../../vxid/supabaseClient";
 import { globalCache } from "../globalCache";
 import { showNotification } from "./vspluvauhe_povidomlenna";
-import { userAccessLevel, updateUIBasedOnAccess, clearSettingsCache } from "../../tablucya/users";
+import {
+  userAccessLevel,
+  updateUIBasedOnAccess,
+  clearSettingsCache,
+} from "../../tablucya/users";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { enforcePageAccess } from "./page_access_guard";
 import { refreshActsTable } from "../../tablucya/tablucya";
@@ -18,13 +22,16 @@ let settingsChannel: RealtimeChannel | null = null;
 /**
  * Перевіряє чи потрібно оновлювати UI для поточного користувача
  */
-function shouldUpdateForCurrentUser(_settingId: number, changedColumn?: string): boolean {
+function shouldUpdateForCurrentUser(
+  _settingId: number,
+  changedColumn?: string,
+): boolean {
   // Адміністратор бачить ВСІ зміни
   if (userAccessLevel === "Адміністратор") return true;
-  
+
   // Якщо змінилась колонка "data" - це впливає на ВСІХ
   if (changedColumn === "data") return true;
-  
+
   // Якщо знаємо яка колонка змінилась - перевіряємо чи це колонка поточної ролі
   if (changedColumn) {
     // Назва колонки в БД = назва ролі ("Приймальник", "Слюсар", "Запчастист", "Складовщик")
@@ -32,7 +39,7 @@ function shouldUpdateForCurrentUser(_settingId: number, changedColumn?: string):
       return true;
     }
   }
-  
+
   // Якщо не знаємо колонку - оновлюємо на всяк випадок (безпечніше)
   return true;
 }
@@ -63,7 +70,7 @@ async function refreshSettingsCache(): Promise<void> {
 function findElementsByText(selector: string, text: string): HTMLElement[] {
   const elements = document.querySelectorAll(selector);
   const found: HTMLElement[] = [];
-  elements.forEach(el => {
+  elements.forEach((el) => {
     if (el.textContent?.includes(text)) found.push(el as HTMLElement);
   });
   return found;
@@ -71,26 +78,32 @@ function findElementsByText(selector: string, text: string): HTMLElement[] {
 
 function updatePibMagazinVisibility(): void {
   const show = globalCache.settings.showPibMagazin;
-  const headers = findElementsByText('th', 'ПІБ _ Магазин');
-  const cells = document.querySelectorAll('td.pib-magazin-cell, td[data-name="pib_magazin"]');
-  headers.forEach(h => h.style.display = show ? '' : 'none');
-  cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
+  const headers = findElementsByText("th", "ПІБ _ Магазин");
+  const cells = document.querySelectorAll(
+    'td.pib-magazin-cell, td[data-name="pib_magazin"]',
+  );
+  headers.forEach((h) => (h.style.display = show ? "" : "none"));
+  cells.forEach((c) => ((c as HTMLElement).style.display = show ? "" : "none"));
 }
 
 function updateCatalogVisibility(): void {
   const show = globalCache.settings.showCatalog;
-  const headers = findElementsByText('th', 'Каталог');
-  const cells = document.querySelectorAll('td.catalog-cell, td[data-name="catalog"]');
-  headers.forEach(h => h.style.display = show ? '' : 'none');
-  cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
+  const headers = findElementsByText("th", "Каталог");
+  const cells = document.querySelectorAll(
+    'td.catalog-cell, td[data-name="catalog"]',
+  );
+  headers.forEach((h) => (h.style.display = show ? "" : "none"));
+  cells.forEach((c) => ((c as HTMLElement).style.display = show ? "" : "none"));
 }
 
 function updateZarplataVisibility(): void {
   const show = globalCache.settings.showZarplata;
-  const headers = findElementsByText('th', 'Зар-та');
-  const cells = document.querySelectorAll('td.slyusar-sum-cell, td[data-name="slyusar_sum"]');
-  headers.forEach(h => h.style.display = show ? '' : 'none');
-  cells.forEach(c => (c as HTMLElement).style.display = show ? '' : 'none');
+  const headers = findElementsByText("th", "Зар-та");
+  const cells = document.querySelectorAll(
+    'td.slyusar-sum-cell, td[data-name="slyusar_sum"]',
+  );
+  headers.forEach((h) => (h.style.display = show ? "" : "none"));
+  cells.forEach((c) => ((c as HTMLElement).style.display = show ? "" : "none"));
 }
 
 function updateSMSButtonVisibility(): void {
@@ -98,8 +111,10 @@ function updateSMSButtonVisibility(): void {
   // і оновлюються через updateActButtonsVisibility()
   // Тут залишаємо тільки для глобальних SMS кнопок (якщо є)
   const show = globalCache.settings.showSMS;
-  const btns = document.querySelectorAll('[data-action="send-sms"]:not(#sms-btn), .sms-button:not(#sms-btn)');
-  btns.forEach(b => (b as HTMLElement).style.display = show ? '' : 'none');
+  const btns = document.querySelectorAll(
+    '[data-action="send-sms"]:not(#sms-btn), .sms-button:not(#sms-btn)',
+  );
+  btns.forEach((b) => ((b as HTMLElement).style.display = show ? "" : "none"));
 }
 
 async function updateMenuVisibility(): Promise<void> {
@@ -133,42 +148,45 @@ async function updateActButtonsVisibility(): Promise<void> {
     }
 
     // Мапа: роль → setting_id → дія (селектор або функція)
-    const roleActionMap: Record<string, Record<number, { type: 'selector' | 'column', value: string }>> = {
-      "Слюсар": {
-        1: { type: 'column', value: 'zarplata' },      // Зарплата колонка
-        2: { type: 'column', value: 'price' },         // Ціна та Сума колонки
-        3: { type: 'selector', value: '#status-lock-btn' },
-        4: { type: 'selector', value: '#status-lock-btn' },
-        5: { type: 'selector', value: '#status-lock-btn' },
+    const roleActionMap: Record<
+      string,
+      Record<number, { type: "selector" | "column"; value: string }>
+    > = {
+      Слюсар: {
+        1: { type: "column", value: "zarplata" }, // Зарплата колонка
+        2: { type: "column", value: "price" }, // Ціна та Сума колонки
+        3: { type: "selector", value: "#status-lock-btn" },
+        4: { type: "selector", value: "#status-lock-btn" },
+        5: { type: "selector", value: "#status-lock-btn" },
       },
-      "Приймальник": {
-        14: { type: 'column', value: 'zarplata' },     // Зарплата колонка
-        15: { type: 'column', value: 'price' },        // Ціна та Сума колонки
-        16: { type: 'selector', value: '#status-lock-btn' },
-        17: { type: 'selector', value: '#status-lock-btn' },
-        18: { type: 'selector', value: '#create-act-btn' },
-        19: { type: 'selector', value: '#print-act-button' },
-        20: { type: 'selector', value: '#sms-btn' },
+      Приймальник: {
+        14: { type: "column", value: "zarplata" }, // Зарплата колонка
+        15: { type: "column", value: "price" }, // Ціна та Сума колонки
+        16: { type: "selector", value: "#status-lock-btn" },
+        17: { type: "selector", value: "#status-lock-btn" },
+        18: { type: "selector", value: "#create-act-btn" },
+        19: { type: "selector", value: "#print-act-button" },
+        20: { type: "selector", value: "#sms-btn" },
       },
-      "Запчастист": {
-        14: { type: 'column', value: 'zarplata' },     // Зарплата колонка
-        15: { type: 'column', value: 'price' },        // Ціна та Сума колонки
-        16: { type: 'selector', value: '#status-lock-btn' },
-        17: { type: 'selector', value: '#status-lock-btn' },
-        18: { type: 'selector', value: '#status-lock-btn' },
-        19: { type: 'selector', value: '#create-act-btn' },
-        20: { type: 'selector', value: '#print-act-button' },
-        21: { type: 'selector', value: '#sms-btn' },
+      Запчастист: {
+        14: { type: "column", value: "zarplata" }, // Зарплата колонка
+        15: { type: "column", value: "price" }, // Ціна та Сума колонки
+        16: { type: "selector", value: "#status-lock-btn" },
+        17: { type: "selector", value: "#status-lock-btn" },
+        18: { type: "selector", value: "#status-lock-btn" },
+        19: { type: "selector", value: "#create-act-btn" },
+        20: { type: "selector", value: "#print-act-button" },
+        21: { type: "selector", value: "#sms-btn" },
       },
-      "Складовщик": {
-        11: { type: 'column', value: 'zarplata' },     // Зарплата колонка
-        12: { type: 'column', value: 'price' },        // Ціна та Сума колонки
-        13: { type: 'selector', value: '#status-lock-btn' },
-        14: { type: 'selector', value: '#status-lock-btn' },
-        15: { type: 'selector', value: '#status-lock-btn' },
-        16: { type: 'selector', value: '#create-act-btn' },
-        17: { type: 'selector', value: '#print-act-button' },
-        18: { type: 'selector', value: '#sms-btn' },
+      Складовщик: {
+        11: { type: "column", value: "zarplata" }, // Зарплата колонка
+        12: { type: "column", value: "price" }, // Ціна та Сума колонки
+        13: { type: "selector", value: "#status-lock-btn" },
+        14: { type: "selector", value: "#status-lock-btn" },
+        15: { type: "selector", value: "#status-lock-btn" },
+        16: { type: "selector", value: "#create-act-btn" },
+        17: { type: "selector", value: "#print-act-button" },
+        18: { type: "selector", value: "#sms-btn" },
       },
     };
 
@@ -180,27 +198,26 @@ async function updateActButtonsVisibility(): Promise<void> {
       const settingId = row.setting_id;
       const allowed = !!(row as any)[roleColumn];
       const action = actionMap[settingId];
-      
+
       if (!action) return;
-      
-      if (action.type === 'selector') {
+
+      if (action.type === "selector") {
         // Приховування/показ кнопок
         const buttons = document.querySelectorAll(action.value);
         if (buttons.length > 0) {
-          buttons.forEach(btn => {
-            (btn as HTMLElement).style.display = allowed ? '' : 'none';
+          buttons.forEach((btn) => {
+            (btn as HTMLElement).style.display = allowed ? "" : "none";
           });
         }
-      } else if (action.type === 'column') {
+      } else if (action.type === "column") {
         // Приховування/показ колонок
-        if (action.value === 'zarplata') {
+        if (action.value === "zarplata") {
           toggleZarplataColumnVisibility(allowed);
-        } else if (action.value === 'price') {
+        } else if (action.value === "price") {
           togglePriceColumnsVisibility(allowed);
         }
       }
     });
-
   } catch (error) {
     console.error("❌ Помилка оновлення кнопок актів:", error);
   }
@@ -211,17 +228,19 @@ async function updateActButtonsVisibility(): Promise<void> {
  */
 function toggleZarplataColumnVisibility(show: boolean): void {
   // Заголовки колонки Зар-та
-  const headers = document.querySelectorAll('th');
-  headers.forEach(h => {
-    if (h.textContent?.includes('Зар-та')) {
-      (h as HTMLElement).style.display = show ? '' : 'none';
+  const headers = document.querySelectorAll("th");
+  headers.forEach((h) => {
+    if (h.textContent?.includes("Зар-та")) {
+      (h as HTMLElement).style.display = show ? "" : "none";
     }
   });
-  
+
   // Комірки з даними зарплати
-  const cells = document.querySelectorAll('td[data-name="slyusar_sum"], td.slyusar-sum-cell');
-  cells.forEach(cell => {
-    (cell as HTMLElement).style.display = show ? '' : 'none';
+  const cells = document.querySelectorAll(
+    'td[data-name="slyusar_sum"], td.slyusar-sum-cell',
+  );
+  cells.forEach((cell) => {
+    (cell as HTMLElement).style.display = show ? "" : "none";
   });
 }
 
@@ -230,30 +249,36 @@ function toggleZarplataColumnVisibility(show: boolean): void {
  */
 function togglePriceColumnsVisibility(show: boolean): void {
   // Заголовки колонок
-  const headers = document.querySelectorAll('th');
-  headers.forEach(h => {
+  const headers = document.querySelectorAll("th");
+  headers.forEach((h) => {
     const text = h.textContent?.trim();
-    if (text === 'Ціна' || text === 'Сума') {
-      (h as HTMLElement).style.display = show ? '' : 'none';
+    if (text === "Ціна" || text === "Сума") {
+      (h as HTMLElement).style.display = show ? "" : "none";
     }
   });
-  
+
   // Комірки з даними ціни та суми
-  const priceCells = document.querySelectorAll('td[data-name="price"], td.price-cell');
-  const sumCells = document.querySelectorAll('td[data-name="sum"], td.sum-cell');
-  
-  priceCells.forEach(cell => {
-    (cell as HTMLElement).style.display = show ? '' : 'none';
+  const priceCells = document.querySelectorAll(
+    'td[data-name="price"], td.price-cell',
+  );
+  const sumCells = document.querySelectorAll(
+    'td[data-name="sum"], td.sum-cell',
+  );
+
+  priceCells.forEach((cell) => {
+    (cell as HTMLElement).style.display = show ? "" : "none";
   });
-  
-  sumCells.forEach(cell => {
-    (cell as HTMLElement).style.display = show ? '' : 'none';
+
+  sumCells.forEach((cell) => {
+    (cell as HTMLElement).style.display = show ? "" : "none";
   });
 
   // ✅ Також приховуємо/показуємо футер з сумами
-  const sumsFooter = document.querySelector<HTMLElement>('.zakaz_narayd-sums-footer');
+  const sumsFooter = document.querySelector<HTMLElement>(
+    ".zakaz_narayd-sums-footer",
+  );
   if (sumsFooter) {
-    sumsFooter.style.display = show ? '' : 'none';
+    sumsFooter.style.display = show ? "" : "none";
   }
 
   // ✅ Також оновлюємо стовпець "Сума" в таблиці списку актів
@@ -264,17 +289,19 @@ function togglePriceColumnsVisibility(show: boolean): void {
  * Приховує/показує стовпець "Сума" в таблиці списку актів (без перезавантаження)
  */
 function toggleActsTableSumaColumn(show: boolean): void {
-  const actsTable = document.querySelector('#table-container-modal-sakaz_narad table');
+  const actsTable = document.querySelector(
+    "#table-container-modal-sakaz_narad table",
+  );
   if (!actsTable) return;
 
-  const displayValue = show ? '' : 'none';
+  const displayValue = show ? "" : "none";
 
   // Знаходимо індекс стовпця "Сума" в заголовку
-  const headers = actsTable.querySelectorAll('thead th');
+  const headers = actsTable.querySelectorAll("thead th");
   let sumaColumnIndex = -1;
-  
+
   headers.forEach((th, index) => {
-    if (th.textContent?.trim() === 'Сума') {
+    if (th.textContent?.trim() === "Сума") {
       sumaColumnIndex = index;
       (th as HTMLElement).style.display = displayValue;
     }
@@ -282,15 +309,17 @@ function toggleActsTableSumaColumn(show: boolean): void {
 
   // Якщо стовпець "Сума" не існує і потрібно показати - перезавантажуємо таблицю
   if (sumaColumnIndex === -1 && show) {
-    refreshActsTable().catch(err => console.error('Помилка оновлення таблиці:', err));
+    refreshActsTable().catch((err) =>
+      console.error("Помилка оновлення таблиці:", err),
+    );
     return;
   }
 
   // Якщо стовпець існує - приховуємо/показуємо комірки в рядках
   if (sumaColumnIndex !== -1) {
-    const rows = actsTable.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-      const cells = row.querySelectorAll('td');
+    const rows = actsTable.querySelectorAll("tbody tr");
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll("td");
       if (cells[sumaColumnIndex]) {
         (cells[sumaColumnIndex] as HTMLElement).style.display = displayValue;
       }
@@ -312,7 +341,7 @@ async function handleSettingsChange(payload: any): Promise<void> {
   if (eventType !== "UPDATE" && eventType !== "INSERT") return;
   const settingId = newRecord?.setting_id;
   if (!settingId) return;
-  
+
   let changedColumn: string | undefined;
   if (eventType === "UPDATE" && oldRecord) {
     for (const key of Object.keys(newRecord)) {
@@ -322,31 +351,61 @@ async function handleSettingsChange(payload: any): Promise<void> {
       }
     }
   }
-  
+
   if (!shouldUpdateForCurrentUser(settingId, changedColumn)) {
     return;
   }
-  
+
   await refreshSettingsCache();
   await updateUIBasedOnSettings();
-  
+
   // 🔐 КРИТИЧНО: Перевіряємо чи користувач ще має доступ до поточної сторінки
   await enforcePageAccess();
-  
+
   showNotification("Налаштування оновлено адміністратором", "info", 3000);
 }
+
+let settingsErrorLogged = false;
+let settingsRetryCount = 0;
+const MAX_SETTINGS_RETRIES = 5;
 
 export function initializeSettingsSubscription(): void {
   if (settingsChannel) {
     settingsChannel.unsubscribe();
     settingsChannel = null;
   }
+  settingsErrorLogged = false;
+  settingsRetryCount = 0;
+
   try {
     settingsChannel = supabase
       .channel("settings-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, handleSettingsChange)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "settings" },
+        handleSettingsChange,
+      )
       .subscribe((status) => {
-        if (status === "CHANNEL_ERROR") console.error("❌ Помилка підписки");
+        if (status === "SUBSCRIBED") {
+          settingsErrorLogged = false;
+          settingsRetryCount = 0;
+        } else if (status === "CHANNEL_ERROR") {
+          settingsRetryCount++;
+          if (!settingsErrorLogged) {
+            console.warn(
+              "⚠️ Помилка підписки settings. Спроба перепідключення...",
+            );
+            settingsErrorLogged = true;
+          }
+          if (settingsRetryCount >= MAX_SETTINGS_RETRIES) {
+            console.error(
+              "❌ Не вдалось підключитись до settings після",
+              MAX_SETTINGS_RETRIES,
+              "спроб",
+            );
+            settingsChannel?.unsubscribe();
+          }
+        }
       });
   } catch (error) {
     console.error("❌ Помилка ініціалізації:", error);

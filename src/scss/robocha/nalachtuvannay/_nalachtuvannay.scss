@@ -6,11 +6,11 @@
   height: 100vh;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
+  align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 10px 0;
-  flex-direction: column; /* Текст буде йти один під одним */
-  align-items: flex-start; /* Вирівнювання по лівому краю */
+  
 
   &.hidden {
     display: none;
@@ -661,6 +661,8 @@
     border-radius: 12px;
     padding: 16px;
     border: 1px solid #dee2e6;
+    flex-direction: column; /* Текст буде йти один під одним */
+    align-items: flex-start; /* Вирівнювання по лівому краю */
   }
 
   .sms-group-label {

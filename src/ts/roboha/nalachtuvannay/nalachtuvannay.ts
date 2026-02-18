@@ -21,6 +21,7 @@ const SETTINGS = {
   5: { id: "toggle-sms", label: "SMS", class: "_sms" },
   6: { id: "toggle-print", label: "Шапка акту в кольорі", class: "_print" },
   7: { id: "toggle-ai", label: "🤖 ШІ підказки", class: "_ai" },
+  8: { id: "toggle-phone-admin", label: "📞 Телефон", class: "_phone" },
 };
 
 const ROLES = [
@@ -101,6 +102,8 @@ const ROLE_SETTINGS = {
     { id: 20, label: "📋 Акт SMS ✉️" },
     { divider: true },
     { id: 21, label: "Планування" },
+    { divider: true },
+    { id: 22, label: "📞 Телефон" },
   ],
   Слюсар: [
     { id: 1, label: "📋 Акт Зарплата 💲" },
@@ -108,6 +111,8 @@ const ROLE_SETTINGS = {
     { id: 3, label: "📋 Акт Завершення робіт 🗝️" },
     { divider: true },
     { id: 6, label: "Планування" },
+    { divider: true },
+    { id: 7, label: "📞 Телефон" },
   ],
   Запчастист: [
     { id: 1, label: "Додати" },
@@ -140,6 +145,8 @@ const ROLE_SETTINGS = {
     { id: 22, label: "📋 Акт ➕ Додати рядок 💾 Зберегти зміни 🗑️ Видалити" },
     { divider: true },
     { id: 23, label: "Планування" },
+    { divider: true },
+    { id: 24, label: "📞 Телефон" },
   ],
   Складовщик: [
     { id: 1, label: "Додати" },
@@ -169,7 +176,21 @@ const ROLE_SETTINGS = {
     { id: 19, label: "📋 Акт ➕ Додати рядок 💾 Зберегти зміни 🗑️ Видалити" },
     { divider: true },
     { id: 20, label: "Планування" },
+    { divider: true },
+    { id: 21, label: "📞 Телефон" },
   ],
+};
+
+// 📞 Конфігурація setting_id для налаштування "Телефон" по ролям
+const PHONE_SETTINGS_MAP: Record<
+  string,
+  { settingId: number; toggleId: number }
+> = {
+  Адміністратор: { settingId: 8, toggleId: 8 },
+  Приймальник: { settingId: 22, toggleId: 22 },
+  Слюсар: { settingId: 7, toggleId: 7 },
+  Запчастист: { settingId: 24, toggleId: 24 },
+  Складовщик: { settingId: 21, toggleId: 21 },
 };
 
 const ROLE_TO_COLUMN = {
@@ -196,6 +217,67 @@ let pendingUnfrozenWarehouseIds: Set<number> = new Set();
 
 // Константа за замовчуванням для кольорів
 const DEFAULT_COLOR = "#164D25";
+
+/**
+ * 📞 Завантажує та застосовує налаштування відображення індикатора дзвінків
+ * Викликати при завантаженні сторінки після авторизації
+ */
+export async function loadAndApplyPhoneIndicatorSetting(): Promise<void> {
+  try {
+    // Отримуємо роль користувача з localStorage
+    const USER_DATA_KEY = "userAuthData";
+    const storedData = localStorage.getItem(USER_DATA_KEY);
+    if (!storedData) return;
+
+    const userData = JSON.parse(storedData);
+    const role = userData?.["Доступ"] as string;
+
+    if (!role || !PHONE_SETTINGS_MAP[role]) {
+      // Якщо роль невідома, показуємо індикатори за замовчуванням
+      applyPhoneIndicatorVisibility(true);
+      return;
+    }
+
+    const { settingId } = PHONE_SETTINGS_MAP[role];
+    const column = ROLE_TO_COLUMN[role as keyof typeof ROLE_TO_COLUMN];
+
+    if (!column) {
+      applyPhoneIndicatorVisibility(true);
+      return;
+    }
+
+    // Завантажуємо налаштування з БД
+    const { data, error } = await supabase
+      .from("settings")
+      .select(`"${column}"`)
+      .eq("setting_id", settingId)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      console.warn("Помилка завантаження налаштування телефону:", error);
+      applyPhoneIndicatorVisibility(true);
+      return;
+    }
+
+    // Якщо запису немає або значення true - показуємо індикатори
+    const showIndicators = data ? !!data[column] : true;
+    applyPhoneIndicatorVisibility(showIndicators);
+  } catch (err) {
+    console.error("Помилка застосування налаштування телефону:", err);
+    applyPhoneIndicatorVisibility(true);
+  }
+}
+
+/**
+ * Застосовує видимість індикаторів дзвінків через CSS клас на body
+ */
+function applyPhoneIndicatorVisibility(show: boolean): void {
+  if (show) {
+    document.body.classList.remove("hide-call-indicators");
+  } else {
+    document.body.classList.add("hide-call-indicators");
+  }
+}
 
 // Генерує HTML для секції "Загальні"
 function createGeneralSettingsHTML(): string {
@@ -960,7 +1042,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     });
 
     // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
-    [1, 2, 3, 5, 6, 7].forEach((id) => {
+    [1, 2, 3, 5, 6, 7, 8].forEach((id) => {
       if (!initialSettingsState.has(`checkbox_${id}`)) {
         const setting = SETTINGS[id as keyof typeof SETTINGS];
         if (setting) {
@@ -1060,8 +1142,8 @@ async function loadRoleSettings(
     // 🔹 Очищуємо попередній стан
     initialSettingsState.clear();
 
-    // Охоплюємо повний діапазон id 1..23
-    const settingIds = Array.from({ length: 23 }, (_, i) => i + 1);
+    // Охоплюємо повний діапазон id 1..24
+    const settingIds = Array.from({ length: 24 }, (_, i) => i + 1);
 
     const { data, error } = await supabase
       .from("settings")
@@ -1090,7 +1172,7 @@ async function loadRoleSettings(
       presentIds.add(row.setting_id);
     });
 
-    // Для всіх id 1..23, де немає записів у БД — фіксуємо дефолт (стан чекбокса або false)
+    // Для всіх id 1..24, де немає записів у БД — фіксуємо дефолт (стан чекбокса або false)
     settingIds.forEach((id: number) => {
       if (!presentIds.has(id)) {
         const checkbox = modal.querySelector(
@@ -1387,12 +1469,38 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         resetAISettingsCache();
         changesCount++;
       }
+
+      // 📞 Збереження toggle-phone-admin (setting_id 8)
+      const checkboxPhone = modal.querySelector(
+        "#toggle-phone-admin",
+      ) as HTMLInputElement;
+      const newValuePhone = checkboxPhone?.checked ?? false;
+      if (initialSettingsState.get("checkbox_8") !== newValuePhone) {
+        const { data: existing8 } = await supabase
+          .from("settings")
+          .select("setting_id")
+          .eq("setting_id", 8)
+          .single();
+        if (existing8) {
+          const { error: updateError8 } = await supabase
+            .from("settings")
+            .update({ [column]: newValuePhone })
+            .eq("setting_id", 8);
+          if (updateError8) throw updateError8;
+        } else {
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert({ setting_id: 8, [column]: newValuePhone });
+          if (insertError) throw insertError;
+        }
+        changesCount++;
+      }
     } else if (role === "Загальні") {
       // Зберегти налаштування для секції "Загальні"
       changesCount = await saveGeneralSettings(modal);
     } else {
-      // Зберегти налаштування для інших ролей — покриваємо id 1..23, працюємо лише з наявними чекбоксами
-      for (let id = 1; id <= 23; id++) {
+      // Зберегти налаштування для інших ролей — покриваємо id 1..24, працюємо лише з наявними чекбоксами
+      for (let id = 1; id <= 24; id++) {
         const checkbox = modal.querySelector(
           `#role-toggle-${id}`,
         ) as HTMLInputElement;

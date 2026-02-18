@@ -614,3 +614,10 @@ body {
     opacity: 1;
   }
 }
+/* Приховування індикаторів дзвінків за налаштуванням */
+body.hide-call-indicators {
+  .call-indicator,
+  .call-indicator-zone {
+    display: none !important;
+  }
+}

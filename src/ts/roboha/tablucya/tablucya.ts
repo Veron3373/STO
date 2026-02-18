@@ -28,6 +28,9 @@ import {
   loadAndShowExistingNotifications,
 } from "./povidomlennya_tablucya";
 
+// 📞 ІМПОРТ ФУНКЦІЇ ЗАСТОСУВАННЯ НАЛАШТУВАННЯ ТЕЛЕФОНУ
+import { loadAndApplyPhoneIndicatorSetting } from "../nalachtuvannay/nalachtuvannay";
+
 document.addEventListener("click", (e) => {
   const target = e.target as HTMLElement | null;
   if (target && target.closest("#logout-link")) {
@@ -1898,6 +1901,9 @@ export async function initializeActsSystem(): Promise<void> {
       await loadAndShowExistingNotifications();
     } else {
     }
+
+    // 📞 ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ВІДОБРАЖЕННЯ ТЕЛЕФОНУ
+    await loadAndApplyPhoneIndicatorSetting();
 
     watchDateRangeChanges();
   } catch (error) {

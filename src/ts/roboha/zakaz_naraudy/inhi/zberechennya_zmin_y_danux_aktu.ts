@@ -702,17 +702,6 @@ function processItems(items: ParsedItem[]) {
     }
   });
 
-  // 🔍 DEBUG: Перевіряємо скільки робіт зібрано для слюсарів
-  console.log("🔍 processItems: works.length =", works.length);
-  console.log(
-    "🔍 processItems: workRowsForSlyusars.length =",
-    workRowsForSlyusars.length,
-  );
-  console.log(
-    "🔍 processItems: workRowsForSlyusars =",
-    JSON.stringify(workRowsForSlyusars, null, 2),
-  );
-
   return {
     details,
     works,
@@ -1175,7 +1164,6 @@ async function syncAllZapchastystyHistoryForAct(
     }
   }
 
-  console.log(`💰 Загальна зарплата Запчастистів: ${totalZapchastystySalary}`);
   return totalZapchastystySalary;
 }
 
@@ -1257,14 +1245,6 @@ async function syncPruimalnikHistory(
     }
   }
 
-  console.log("🔍 syncPruimalnikHistory DEBUG:", {
-    pruimalnykName,
-    pruimalnykSklad,
-    percentWork,
-    percentParts,
-    slyusarData,
-  });
-
   // --- ЗБІР ДАНИХ З DOM ---
   const tableBody = document.querySelector<HTMLTableSectionElement>(
     "#act-items-table-container tbody",
@@ -1344,22 +1324,12 @@ async function syncPruimalnikHistory(
   // Мапа: sclad_id -> номер складу деталі (scladNome)
   const scladToScladNomeMap = new Map<number, number>();
 
-  console.log("🔍 syncPruimalnikHistory scladIdsToFetch:", scladIdsToFetch);
-  console.log("🔍 syncPruimalnikHistory partsList:", partsList);
-
   if (scladIdsToFetch.length > 0) {
     // Отримуємо дані з sclad разом з scladNomer (номер фізичного складу) та xto_zamovuv (хто оприходував)
     const { data: scladItems, error: scladError } = await supabase
       .from("sclad")
       .select('sclad_id, price, "scladNomer", xto_zamovuv')
       .in("sclad_id", scladIdsToFetch);
-
-    console.log(
-      "🔍 syncPruimalnikHistory scladItems:",
-      scladItems,
-      "error:",
-      scladError,
-    );
 
     if (scladError) {
       console.error(
@@ -1434,15 +1404,9 @@ async function syncPruimalnikHistory(
           // partsBuyForPruimalnyk не додаємо, бо невідома ціна закупки
         }
       });
-
-      console.log(
-        "🔍 scladToScladNomeMap:",
-        Object.fromEntries(scladToScladNomeMap),
-      );
     }
   } else {
     // Якщо немає scladIdsToFetch - всі деталі без scladId, враховуємо всю суму продажу
-    console.log("🔍 scladIdsToFetch порожній - всі деталі без sclad_id");
     partsList.forEach((part) => {
       partsSaleForPruimalnyk += part.sale;
     });
@@ -1468,20 +1432,6 @@ async function syncPruimalnikHistory(
     partsSaleForPruimalnyk * discountMultiplier;
   const basePartsProfitForPruimalnyk =
     partsSaleForPruimalnykAfterDiscount - partsBuyForPruimalnyk;
-
-  console.log("🔍 syncPruimalnikHistory РОЗРАХУНКИ:", {
-    partsTotalSale,
-    partsTotalBuy,
-    basePartsProfit,
-    partsSaleForPruimalnyk,
-    partsBuyForPruimalnyk,
-    basePartsProfitForPruimalnyk,
-    percentParts,
-    expectedSalaryParts:
-      basePartsProfitForPruimalnyk > 0
-        ? Math.round(basePartsProfitForPruimalnyk * (percentParts / 100))
-        : 0,
-  });
 
   // ✅ ВИПРАВЛЕНО: Якщо сума від'ємна - зарплата = 0
   // Зарплата приймальника розраховується ТІЛЬКИ з деталей, де номер складу деталі (scladNome) ≠ складу приймальника

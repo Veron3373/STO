@@ -546,17 +546,6 @@ export async function syncSlyusarsOnActSave(
   }>,
 ): Promise<void> {
   try {
-    // 🔍 DEBUG: Перевіряємо що приходить на вхід
-    console.log("🔍 syncSlyusarsOnActSave актID:", actId);
-    console.log(
-      "🔍 syncSlyusarsOnActSave кількість робіт:",
-      workRowsForSlyusars.length,
-    );
-    console.log(
-      "🔍 syncSlyusarsOnActSave роботи:",
-      JSON.stringify(workRowsForSlyusars, null, 2),
-    );
-
     const { date_on, date_off } = await fetchActDates(actId);
     const dateKey = toISODateOnly(date_on);
     const dateClose = toISODateOnly(date_off);

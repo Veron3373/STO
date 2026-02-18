@@ -134,6 +134,53 @@ export function getSlyusarIdByPib(pib: string): number | null {
   return found ? found.id : null;
 }
 
+/** Завантаження ПІБ користувача за назвою деталі з таблиці sclad (окрім Слюсарів) */
+async function loadZapchastystPibByDetailName(
+  detailName: string,
+): Promise<string | null> {
+  try {
+    // Шукаємо останній запис в sclad по назві деталі
+    const { data: scladRecord, error } = await supabase
+      .from("sclad")
+      .select("xto_zamovuv")
+      .eq("name", detailName)
+      .order("sclad_id", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !scladRecord?.xto_zamovuv) {
+      return null;
+    }
+
+    // Отримуємо ПІБ за slyusar_id
+    const { data: slyusar, error: slyusarError } = await supabase
+      .from("slyusars")
+      .select("data")
+      .eq("slyusar_id", scladRecord.xto_zamovuv)
+      .single();
+
+    if (slyusarError || !slyusar) {
+      return null;
+    }
+
+    const userData =
+      typeof slyusar.data === "string"
+        ? JSON.parse(slyusar.data)
+        : slyusar.data;
+
+    // Перевіряємо що користувач не Слюсар
+    const access = userData?.["Доступ"] || "";
+    if (access === "Слюсар") {
+      return null;
+    }
+
+    return userData?.Name || userData?.["Ім'я"] || null;
+  } catch (e) {
+    console.error("Помилка завантаження ПІБ за деталлю:", e);
+    return null;
+  }
+}
+
 async function loadZapchastystFromDB(): Promise<
   Array<{ name: string; id: number }>
 > {
@@ -161,8 +208,8 @@ async function loadZapchastystFromDB(): Promise<
         const access = userData?.["Доступ"] || "";
         const name = userData?.["Name"] || userData?.["Ім'я"] || "";
 
-        // Фільтруємо тільки Запчастистів
-        if (access === "Запчастист" && name) {
+        // Фільтруємо всіх окрім Слюсарів (Адміністратор, Приймальник, Запчастист, Складовщик)
+        if (access !== "Слюсар" && name) {
           result.push({ name, id: slyusar.slyusar_id });
         }
       } catch (e) {
@@ -309,15 +356,15 @@ export async function renderScladForm() {
     dateInput.value = `${yyyy}-${mm}-${dd}`;
   }
 
-  // Автозаповнення ПІБ тільки для користувачів з доступом "Запчастист"
+  // Автозаповнення ПІБ поточного користувача (для всіх крім Слюсарів)
   const currentUserData = localStorage.getItem("userAuthData");
   if (currentUserData) {
     try {
       const userData = JSON.parse(currentUserData);
       const userAccess = userData["Доступ"] || userData.Dostup || "";
       const currentPib = userData.Name || "";
-      // Перевіряємо чи користувач має рівень доступу "Запчастист"
-      if (userAccess === "Запчастист" && currentPib) {
+      // Автозаповнення для всіх користувачів крім Слюсарів
+      if (userAccess !== "Слюсар" && currentPib) {
         const pibInput = document.getElementById(
           "sclad_zapchastyst_pib",
         ) as HTMLInputElement | null;
@@ -599,7 +646,7 @@ async function wireDetailsAutocompleteWithLiveLoad(
         });
       };
 
-      const onSelect = (e?: Event) => {
+      const onSelect = async (e?: Event) => {
         if (e && e.type === "mousedown") e.preventDefault();
         input.value = val;
         setBaseOnce();
@@ -610,6 +657,18 @@ async function wireDetailsAutocompleteWithLiveLoad(
         }
         updateCurrent(val);
         dd.classList.add("hidden-all_other_bases");
+
+        // Підтягуємо ПІБ запчастиста з бази даних за назвою деталі
+        const zapchastystPib = await loadZapchastystPibByDetailName(val);
+        if (zapchastystPib) {
+          const pibInput = document.getElementById(
+            "sclad_zapchastyst_pib",
+          ) as HTMLInputElement | null;
+          if (pibInput) {
+            pibInput.value = zapchastystPib;
+          }
+        }
+
         snapshotToAllBd();
       };
       item.addEventListener("mousedown", onSelect);

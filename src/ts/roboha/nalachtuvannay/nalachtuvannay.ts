@@ -265,10 +265,11 @@ function createGeneralSettingsHTML(): string {
       <div class="general-input-group sms-text-group">
         <label class="general-label sms-group-label">
           <span class="general-label-text">📱 Текст SMS повідомлення</span>
+          <span class="sms-char-counter" id="sms-char-counter">0 симв.</span>
         </label>
         <div class="sms-preview">
           <span class="sms-text-before-preview" contenteditable="true"></span>
-          <span class="sms-sum-example">1 500</span>
+          <span class="sms-sum-example">11 500</span>
           <span class="sms-text-after-preview" contenteditable="true"></span>
         </div>
       </div>
@@ -358,6 +359,9 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           break;
       }
     });
+
+    // Оновлюємо лічильник символів SMS після завантаження даних
+    updateSmsCharCounter(modal);
   } catch (err) {
     console.error(err);
     showNotification(
@@ -485,6 +489,36 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   return changesCount;
 }
 
+// Функція для підрахунку та оновлення лічильника символів SMS
+function updateSmsCharCounter(modal: HTMLElement): void {
+  const smsBeforePreview = modal.querySelector(
+    ".sms-text-before-preview",
+  ) as HTMLElement;
+  const smsAfterPreview = modal.querySelector(
+    ".sms-text-after-preview",
+  ) as HTMLElement;
+  const sumExample = modal.querySelector(".sms-sum-example") as HTMLElement;
+  const charCounter = modal.querySelector("#sms-char-counter") as HTMLElement;
+
+  if (!charCounter) return;
+
+  const beforeText = smsBeforePreview?.textContent || "";
+  const sumText = sumExample?.textContent || "";
+  const afterText = smsAfterPreview?.textContent || "";
+
+  const totalChars = beforeText.length + sumText.length + afterText.length;
+  charCounter.textContent = `${totalChars} симв.`;
+
+  // Змінюємо колір в залежності від кількості символів
+  if (totalChars > 160) {
+    charCounter.classList.add("warning");
+    charCounter.classList.remove("ok");
+  } else {
+    charCounter.classList.add("ok");
+    charCounter.classList.remove("warning");
+  }
+}
+
 // Ініціалізує обробники для секції "Загальні"
 function initGeneralSettingsHandlers(modal: HTMLElement): void {
   // Color pickers
@@ -540,6 +574,29 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
         1500,
       );
     });
+  }
+
+  // Обробники для підрахунку символів SMS
+  const smsBeforePreview = modal.querySelector(
+    ".sms-text-before-preview",
+  ) as HTMLElement;
+  const smsAfterPreview = modal.querySelector(
+    ".sms-text-after-preview",
+  ) as HTMLElement;
+
+  // Початковий підрахунок
+  updateSmsCharCounter(modal);
+
+  // Оновлюємо лічильник при зміні тексту
+  if (smsBeforePreview) {
+    smsBeforePreview.addEventListener("input", () =>
+      updateSmsCharCounter(modal),
+    );
+  }
+  if (smsAfterPreview) {
+    smsAfterPreview.addEventListener("input", () =>
+      updateSmsCharCounter(modal),
+    );
   }
 }
 

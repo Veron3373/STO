@@ -57,7 +57,7 @@ document.addEventListener("click", async (e) => {
 });
 
 /**
- * 📞 Форматує поточний час та дату для дзвінка
+ * 📞 Форматує поточний час та дату для дзвінка (для збереження в БД)
  * Формат: HH:MM DD.MM.YY
  */
 function formatCallDateTime(): string {
@@ -68,6 +68,25 @@ function formatCallDateTime(): string {
   const month = (now.getMonth() + 1).toString().padStart(2, "0");
   const year = now.getFullYear().toString().slice(-2);
   return `${hours}:${minutes} ${day}.${month}.${year}`;
+}
+
+/**
+ * 📞 Форматує збережене значення дзвінка в HTML зі стилями
+ * Вхід: "📞 10:33 18.02.26" або "📵 10:33 18.02.26"
+ * Вихід: HTML з синім часом та сірою датою
+ */
+function formatCallDisplayHtml(callValue: string): string {
+  // Парсимо: "📞 10:33 18.02.26" -> icon="📞", time="10:33", date="18.02.26"
+  const match = callValue.match(
+    /^([📞📵])\s*(\d{2}:\d{2})\s+(\d{2}\.\d{2}\.\d{2})$/u,
+  );
+  if (!match) {
+    return callValue; // якщо не відповідає формату - повертаємо як є
+  }
+  const icon = match[1];
+  const time = match[2];
+  const date = match[3];
+  return `${icon} <span style="color: #0400ff; font-weight: bold;">${time}</span> / <span style="color: #555;">${date}</span>`;
 }
 
 /**
@@ -109,11 +128,11 @@ async function handleCallIndicatorClick(
     const newSpan = document.createElement("span");
     newSpan.className = "call-indicator call-indicator-result";
     newSpan.setAttribute("data-act-id", String(actId));
-    newSpan.textContent = newCallValue;
+    newSpan.innerHTML = formatCallDisplayHtml(newCallValue);
     indicator.replaceWith(newSpan);
   } else {
     // Показуємо нове значення одразу
-    indicator.textContent = newCallValue;
+    indicator.innerHTML = formatCallDisplayHtml(newCallValue);
     indicator.classList.remove("call-indicator-hover");
     indicator.classList.add("call-indicator-result");
   }
@@ -978,8 +997,8 @@ function createClientCell(
   // Визначаємо HTML для індикатора дзвінка - завжди додаємо hover-зону
   let callIndicatorHtml = "";
   if (callData) {
-    // Якщо є запис дзвінка - показуємо його
-    callIndicatorHtml = `<span class="call-indicator call-indicator-result" data-act-id="${actId}">${callData}</span>`;
+    // Якщо є запис дзвінка - показуємо його зі стилями
+    callIndicatorHtml = `<span class="call-indicator call-indicator-result" data-act-id="${actId}">${formatCallDisplayHtml(callData)}</span>`;
   } else {
     // Якщо дзвінка ще не було - показуємо ⏳ при наведенні на hover-зону
     callIndicatorHtml = `<span class="call-indicator-zone" data-act-id="${actId}"><span class="call-indicator-icon">⏳</span></span>`;

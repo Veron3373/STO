@@ -224,19 +224,6 @@ function createGeneralSettingsHTML(): string {
       
       <div class="settings-divider"></div>
       
-      <div class="general-input-group sms-text-group">
-        <label class="general-label sms-group-label">
-          <span class="general-label-text">📱 Текст SMS повідомлення</span>
-        </label>
-        <div class="sms-preview">
-          <span class="sms-text-before-preview" contenteditable="true"></span>
-          <span class="sms-sum-example">1 500</span>
-          <span class="sms-text-after-preview" contenteditable="true"></span>
-        </div>
-      </div>
-      
-      <div class="settings-divider"></div>
-      
       <div class="general-color-group">
         <label class="general-label color-label" for="general-header-color">
           <span class="general-label-text">🎨 Колір шапки акту</span>
@@ -257,7 +244,7 @@ function createGeneralSettingsHTML(): string {
         </label>
       </div>
       
-<div class="settings-divider"></div>
+      <div class="settings-divider"></div>
       
       <div class="general-input-group">
         <label class="general-label" for="general-wallpaper-main">
@@ -271,6 +258,21 @@ function createGeneralSettingsHTML(): string {
           🔄 Скинути кольори за замовчуванням
         </button>
       </div>
+
+      
+      <div class="settings-divider"></div>
+      
+      <div class="general-input-group sms-text-group">
+        <label class="general-label sms-group-label">
+          <span class="general-label-text">📱 Текст SMS повідомлення</span>
+        </label>
+        <div class="sms-preview">
+          <span class="sms-text-before-preview" contenteditable="true"></span>
+          <span class="sms-sum-example">1 500</span>
+          <span class="sms-text-after-preview" contenteditable="true"></span>
+        </div>
+      </div>
+
     </div>
   `;
 }

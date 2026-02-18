@@ -1536,6 +1536,72 @@ export function closeZakazNaraydModal(): void {
   }
 }
 
+/**
+ * Генерує HTML skeleton loader для швидкого відображення модалки
+ * поки завантажуються реальні дані
+ */
+export function getSkeletonLoaderHTML(): string {
+  return `
+    <div class="skeleton-loader">
+      <div class="skeleton-loader__header">
+        <div class="skeleton-loader__title skeleton-pulse"></div>
+        <div class="skeleton-loader__date skeleton-pulse"></div>
+      </div>
+      
+      <div class="skeleton-loader__client-section">
+        <div class="skeleton-loader__card">
+          <div class="skeleton-loader__card-title skeleton-pulse"></div>
+          <div class="skeleton-loader__card-line skeleton-loader__card-line--long skeleton-pulse"></div>
+          <div class="skeleton-loader__card-line skeleton-loader__card-line--medium skeleton-pulse"></div>
+          <div class="skeleton-loader__card-line skeleton-loader__card-line--short skeleton-pulse"></div>
+        </div>
+        <div class="skeleton-loader__card">
+          <div class="skeleton-loader__card-title skeleton-pulse"></div>
+          <div class="skeleton-loader__card-line skeleton-loader__card-line--long skeleton-pulse"></div>
+          <div class="skeleton-loader__card-line skeleton-loader__card-line--medium skeleton-pulse"></div>
+        </div>
+      </div>
+      
+      <div class="skeleton-loader__table">
+        <div class="skeleton-loader__table-header">
+          <div class="skeleton-loader__table-header-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-header-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-header-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-header-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-header-cell skeleton-pulse"></div>
+        </div>
+        <div class="skeleton-loader__table-row">
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+        </div>
+        <div class="skeleton-loader__table-row">
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+        </div>
+        <div class="skeleton-loader__table-row">
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+          <div class="skeleton-loader__table-cell skeleton-pulse"></div>
+        </div>
+      </div>
+      
+      <div class="skeleton-loader__buttons">
+        <div class="skeleton-loader__button skeleton-pulse"></div>
+        <div class="skeleton-loader__button skeleton-pulse"></div>
+        <div class="skeleton-loader__button skeleton-pulse"></div>
+      </div>
+    </div>
+  `;
+}
+
 if (!(window as any).__otherBasesHandlerBound__) {
   document.addEventListener("other-base-data-updated", async () => {
     await loadGlobalData();

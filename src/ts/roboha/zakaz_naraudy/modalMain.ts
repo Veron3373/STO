@@ -46,6 +46,7 @@ import {
   calculateSlyusarSum,
   getRecordIdFromHistory, // ✅ Додано для завантаження recordId з історії
   forceRecalculateSlyusarSalary, // ✅ Додано для примусового перерахунку при зміні слюсаря
+  getSkeletonLoaderHTML, // ⚡ Skeleton loader для швидкого відкриття
 } from "./modalUI";
 import { showModalAllOtherBases } from "../dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 import { formatDate, formatDateTime } from "./inhi/formatuvannya_datu";
@@ -56,7 +57,6 @@ import {
   canUserOpenActs,
   canUserSeeZarplataColumn,
   canUserSeePriceColumns,
-  canUserAddRowToAct,
 } from "../tablucya/users";
 
 import {
@@ -551,185 +551,160 @@ async function getRoleSettingBool(
 }
 
 /**
- * Перевіряє, чи потрібно показувати кнопку замка (закриття акту)
- * по ролі та налаштуванням таблиці settings.
- *
- * Мапа:
- *  - Слюсар      → settings.setting_id = 3,  колонка "Слюсар"
- *  - Запчастист  → settings.setting_id = 16, колонка "Запчастист"
- *  - Складовщик  → settings.setting_id = 13, колонка "Складовщик"
- *
- *  - Адміністратор → завжди TRUE
- *  - Приймальник та інші ролі → TRUE (поки що без обмежень)
+ * ⚡ ОПТИМІЗАЦІЯ: Завантажує всі permission-налаштування для модалки ОДНИМ запитом
+ * Замість 5+ окремих запитів до таблиці settings
  */
-async function canUserSeeLockButton(): Promise<boolean> {
-  const role = userAccessLevel;
-
-  if (!role) return true;
-
-  if (role === "Адміністратор") return true;
-
-  let settingId: number | null = null;
-  let columnName: string | null = null;
-
-  switch (role) {
-    case "Слюсар":
-      settingId = 3;
-      columnName = "Слюсар";
-      break;
-
-    case "Запчастист":
-      settingId = 16;
-      columnName = "Запчастист";
-      break;
-
-    case "Складовщик":
-      settingId = 13;
-      columnName = "Складовщик";
-      break;
-
-    default:
-      return true;
-  }
-
-  if (!settingId || !columnName) return true;
-
-  return await getRoleSettingBool(settingId, columnName);
+interface ModalPermissions {
+  canShowLockButton: boolean;
+  canShowCreateActBtn: boolean;
+  canShowPrintActBtn: boolean;
+  canShowAddRowBtn: boolean;
+  canShowSmsBtn: boolean;
 }
 
-/**
- * Чи можна показувати кнопку "Акт Рахунок? 🗂️"
- *
- * Мапа:
- *  - Приймальник → settings.setting_id = 18, колонка "Приймальник"
- *  - Запчастист  → settings.setting_id = 19, колонка "Запчастист"
- *  - Складовщик  → settings.setting_id = 16, колонка "Складовщик"
- *
- *  - Адміністратор → завжди TRUE
- *  - Слюсар та інші → TRUE (але Слюсар все одно обрізається по isRestricted)
- */
-async function canUserSeeCreateActButton(): Promise<boolean> {
+async function loadAllModalPermissions(): Promise<ModalPermissions> {
   const role = userAccessLevel;
 
-  if (!role) return true;
-  if (role === "Адміністратор") return true;
-
-  let settingId: number | null = null;
-  let columnName: string | null = null;
-
-  switch (role) {
-    case "Приймальник":
-      settingId = 18;
-      columnName = "Приймальник";
-      break;
-
-    case "Запчастист":
-      settingId = 19;
-      columnName = "Запчастист";
-      break;
-
-    case "Складовщик":
-      settingId = 16;
-      columnName = "Складовщик";
-      break;
-
-    default:
-      return true;
+  // Якщо роль невизначена або Адміністратор - все дозволено
+  if (!role || role === "Адміністратор") {
+    return {
+      canShowLockButton: true,
+      canShowCreateActBtn: true,
+      canShowPrintActBtn: true,
+      canShowAddRowBtn: true,
+      canShowSmsBtn: true,
+    };
   }
 
-  if (!settingId || !columnName) return true;
-  return await getRoleSettingBool(settingId, columnName);
+  // Слюсар має особливі правила - SMS завжди приховано
+  if (role === "Слюсар") {
+    // Завантажуємо тільки потрібні settings для Слюсаря
+    const { data, error } = await supabase
+      .from("settings")
+      .select('setting_id, data, "Слюсар"')
+      .in("setting_id", [3, 4]);
+
+    if (error || !data) {
+      return {
+        canShowLockButton: true,
+        canShowCreateActBtn: true,
+        canShowPrintActBtn: true,
+        canShowAddRowBtn: true,
+        canShowSmsBtn: false, // Слюсар завжди не бачить SMS
+      };
+    }
+
+    const setting3 = data.find((s) => s.setting_id === 3);
+    const setting4 = data.find((s) => s.setting_id === 4);
+
+    return {
+      canShowLockButton: parseBoolValue(setting3?.["Слюсар"]),
+      canShowCreateActBtn: true,
+      canShowPrintActBtn: true,
+      canShowAddRowBtn: parseBoolValue(setting4?.["Слюсар"]),
+      canShowSmsBtn: false, // Слюсар завжди не бачить SMS
+    };
+  }
+
+  // Визначаємо потрібні setting_id для ролі
+  const settingIds = getSettingIdsForRole(role);
+  const columnName = role;
+
+  try {
+    // Один запит для всіх потрібних settings
+    const { data, error } = await supabase
+      .from("settings")
+      .select(`setting_id, data, "${columnName}"`)
+      .in("setting_id", settingIds);
+
+    if (error || !data) {
+      console.error("Помилка завантаження permissions:", error);
+      return getDefaultPermissions();
+    }
+
+    // Створюємо мапу setting_id -> значення
+    const settingsMap = new Map<number, unknown>();
+    for (const row of data) {
+      const value =
+        (row as Record<string, unknown>)[columnName] ??
+        (row as Record<string, unknown>).data;
+      settingsMap.set(row.setting_id, value);
+    }
+
+    return buildPermissionsForRole(role, settingsMap);
+  } catch (e) {
+    console.error("Виняток при завантаженні permissions:", e);
+    return getDefaultPermissions();
+  }
 }
 
-/**
- * Чи можна показувати кнопку "Друк акту 🖨️"
- *
- * Мапа:
- *  - Приймальник → settings.setting_id = 19, колонка "Приймальник"
- *  - Запчастист  → settings.setting_id = 20, колонка "Запчастист"
- *  - Складовщик  → settings.setting_id = 17, колонка "Складовщик"
- */
-async function canUserSeePrintActButton(): Promise<boolean> {
-  const role = userAccessLevel;
-
-  if (!role) return true;
-  if (role === "Адміністратор") return true;
-
-  let settingId: number | null = null;
-  let columnName: string | null = null;
-
+function getSettingIdsForRole(role: string): number[] {
   switch (role) {
     case "Приймальник":
-      settingId = 19;
-      columnName = "Приймальник";
-      break;
-
+      return [4, 18, 19, 20]; // addRow, createAct, printAct, sms
     case "Запчастист":
-      settingId = 20;
-      columnName = "Запчастист";
-      break;
-
+      return [4, 16, 19, 20, 21]; // addRow, lock, createAct, printAct, sms
     case "Складовщик":
-      settingId = 17;
-      columnName = "Складовщик";
-      break;
-
+      return [4, 13, 16, 17, 18]; // addRow, lock, createAct, printAct, sms
     default:
-      return true;
+      return [];
   }
-
-  if (!settingId || !columnName) return true;
-  return await getRoleSettingBool(settingId, columnName);
 }
 
-/**
- * Чи можна показувати кнопку SMS ✉️ в акті
- *
- * Мапа:
- *  - Слюсар        → завжди FALSE (приховано)
- *  - Адміністратор → settings.setting_id = 5, колонка "data"
- *  - Приймальник   → settings.setting_id = 20, колонка "Приймальник"
- *  - Запчастист    → settings.setting_id = 21, колонка "Запчастист"
- *  - Складовщик    → settings.setting_id = 18, колонка "Складовщик"
- */
-async function canUserSeeSmsButton(): Promise<boolean> {
-  const role = userAccessLevel;
-
-  if (!role) return true;
-
-  // ✅ Слюсар завжди не бачить SMS
-  if (role === "Слюсар") return false;
-
-  let settingId: number | null = null;
-  let columnName: string | null = null;
-
+function buildPermissionsForRole(
+  role: string,
+  settingsMap: Map<number, unknown>,
+): ModalPermissions {
   switch (role) {
-    case "Адміністратор":
-      settingId = 5;
-      columnName = "data";
-      break;
-
     case "Приймальник":
-      settingId = 20;
-      columnName = "Приймальник";
-      break;
-
+      return {
+        canShowLockButton: true, // Приймальник завжди бачить замок
+        canShowCreateActBtn: parseBoolValue(settingsMap.get(18)),
+        canShowPrintActBtn: parseBoolValue(settingsMap.get(19)),
+        canShowAddRowBtn: parseBoolValue(settingsMap.get(4)),
+        canShowSmsBtn: parseBoolValue(settingsMap.get(20)),
+      };
     case "Запчастист":
-      settingId = 21;
-      columnName = "Запчастист";
-      break;
-
+      return {
+        canShowLockButton: parseBoolValue(settingsMap.get(16)),
+        canShowCreateActBtn: parseBoolValue(settingsMap.get(19)),
+        canShowPrintActBtn: parseBoolValue(settingsMap.get(20)),
+        canShowAddRowBtn: parseBoolValue(settingsMap.get(4)),
+        canShowSmsBtn: parseBoolValue(settingsMap.get(21)),
+      };
     case "Складовщик":
-      settingId = 18;
-      columnName = "Складовщик";
-      break;
-
+      return {
+        canShowLockButton: parseBoolValue(settingsMap.get(13)),
+        canShowCreateActBtn: parseBoolValue(settingsMap.get(16)),
+        canShowPrintActBtn: parseBoolValue(settingsMap.get(17)),
+        canShowAddRowBtn: parseBoolValue(settingsMap.get(4)),
+        canShowSmsBtn: parseBoolValue(settingsMap.get(18)),
+      };
     default:
-      return true;
+      return getDefaultPermissions();
   }
+}
 
-  if (!settingId || !columnName) return true;
-  return await getRoleSettingBool(settingId, columnName);
+function parseBoolValue(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    if (["true", "1", "yes", "y"].includes(v)) return true;
+    if (["false", "0", "no", "n"].includes(v)) return false;
+  }
+  return true;
+}
+
+function getDefaultPermissions(): ModalPermissions {
+  return {
+    canShowLockButton: true,
+    canShowCreateActBtn: true,
+    canShowPrintActBtn: true,
+    canShowAddRowBtn: true,
+    canShowSmsBtn: true,
+  };
 }
 
 export async function showModal(
@@ -752,17 +727,29 @@ export async function showModal(
     console.error("❌ Модальне вікно або його тіло не знайдені.");
     return;
   }
+
+  // ⚡ ОПТИМІЗАЦІЯ: Показуємо skeleton loader ОДРАЗУ для швидкого візуального відгуку
   modal.setAttribute("data-act-id", actId.toString());
-  showNotification("Завантаження даних акту...", "info", 2000);
   modal.classList.remove("hidden");
-  body.innerHTML = "";
+  body.innerHTML = getSkeletonLoaderHTML();
 
   try {
-    // ✅ ВИПРАВЛЕННЯ: Перезавантажуємо дані слюсарів перед відкриттям акту
-    // щоб зарплата завжди була актуальною
-    await loadGlobalData();
+    // ⚡ ОПТИМІЗАЦІЯ: Запускаємо незалежні операції паралельно
+    // loadGlobalData, createRequiredModals та запит act не залежать одна від одної
+    const [, , actResult] = await Promise.all([
+      loadGlobalData(),
+      createRequiredModals(),
+      supabase.from("acts").select("*").eq("act_id", actId).single(),
+    ]);
 
-    // 🔽 Доступ до колонки "Зар-та" по ролі (по settings)
+    const { data: act, error: actError } = actResult;
+
+    if (actError || !act) {
+      handleLoadError(actError);
+      return;
+    }
+
+    // 🔽 Доступ до колонки "Зар-та" по ролі (по settings) - тепер globalCache вже завантажено
     if (userAccessLevel && userAccessLevel !== "Адміністратор") {
       const canSeeZarplata = await canUserSeeZarplataColumn();
       globalCache.settings.showZarplata = canSeeZarplata;
@@ -782,19 +769,6 @@ export async function showModal(
     }
     // Якщо clickSource === 'client' - залишаємо оригінальні значення
 
-    await createRequiredModals();
-
-    const { data: act, error: actError } = await supabase
-      .from("acts")
-      .select("*")
-      .eq("act_id", actId)
-      .single();
-
-    if (actError || !act) {
-      handleLoadError(actError);
-      return;
-    }
-
     globalCache.currentActId = actId;
     globalCache.isActClosed = !!act.date_off;
     globalCache.currentActDateOn = act.date_on || null;
@@ -806,10 +780,20 @@ export async function showModal(
       localStorage.removeItem("current_act_pruimalnyk");
     }
 
-    const [clientData, carData] = await Promise.all([
+    // ⚡ ОПТИМІЗАЦІЯ: Завантажуємо client, car та permissions паралельно
+    const [clientData, carData, permissions] = await Promise.all([
       fetchClientData(act.client_id),
       fetchCarData(act.cars_id),
+      loadAllModalPermissions(),
     ]);
+
+    const {
+      canShowLockButton,
+      canShowCreateActBtn,
+      canShowPrintActBtn,
+      canShowAddRowBtn,
+      canShowSmsBtn,
+    } = permissions;
 
     const actDetails = safeParseJSON(act.info || act.data || act.details) || {};
 
@@ -820,21 +804,6 @@ export async function showModal(
       const qty = Number(d?.["Кількість"] ?? 0);
       if (id) globalCache.oldNumbers.set(id, qty);
     }
-
-    // 🔑 ВАЖЛИВО: визначаємо, чи показувати кнопки (за роллю + settings)
-    const [
-      canShowLockButton,
-      canShowCreateActBtn,
-      canShowPrintActBtn,
-      canShowAddRowBtn,
-      canShowSmsBtn,
-    ] = await Promise.all([
-      canUserSeeLockButton(),
-      canUserSeeCreateActButton(),
-      canUserSeePrintActButton(),
-      canUserAddRowToAct(),
-      canUserSeeSmsButton(),
-    ]);
 
     renderModalContent(
       act,
@@ -856,18 +825,32 @@ export async function showModal(
     const canSeePriceCols = await canUserSeePriceColumns();
     togglePriceColumnsVisibility(canSeePriceCols);
 
-    // ✅ ВИПРАВЛЕНО: тепер чекаємо завершення встановлення зарплат з історії
-    await updateAllSlyusarSumsFromHistory();
+    // ⚡ ОПТИМІЗАЦІЯ: Запускаємо handlers одразу, щоб модалька була інтерактивною
+    // Handlers не залежать від slyusar sums
+    addModalHandlers(actId, actDetails, clientData?.phone).catch((err) =>
+      console.error("Помилка при додаванні handlers:", err),
+    );
 
-    // 🚀 Запускаємо операції паралельно для швидкості
-    await Promise.all([
-      fillMissingSlyusarSums(),
-      addModalHandlers(actId, actDetails, clientData?.phone),
-      refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID),
-      refreshPhotoData(actId),
-    ]);
+    // ⚡ ОПТИМІЗАЦІЯ: Виносимо важкі операції в фоновий режим
+    // Вони виконуються ПІСЛЯ показу модалки, не блокуючи відкриття
+    Promise.resolve().then(async () => {
+      try {
+        // Встановлення зарплат з історії (важка операція)
+        await updateAllSlyusarSumsFromHistory();
 
-    checkSlyusarSumWarningsOnLoad();
+        // Паралельні фонові операції
+        await Promise.all([
+          fillMissingSlyusarSums(),
+          refreshQtyWarningsIn(ACT_ITEMS_TABLE_CONTAINER_ID),
+          refreshPhotoData(actId),
+        ]);
+
+        checkSlyusarSumWarningsOnLoad();
+      } catch (err) {
+        console.error("Помилка у фонових операціях:", err);
+      }
+    });
+
     applyAccessRestrictions();
 
     // 🔽 Підсвічування змін для Адміністратора та Приймальника (в фоні, не блокуємо)

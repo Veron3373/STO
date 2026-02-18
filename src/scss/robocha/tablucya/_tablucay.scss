@@ -533,14 +533,16 @@ body {
     white-space 0s 0.3s;
 
   &:hover {
-    max-width: calc(100vw - 100px);
-    white-space: normal;
+    max-width: 380px;
+    width: max-content;
+    white-space: pre-line;
     word-wrap: break-word;
     overflow-wrap: break-word;
     height: auto;
     overflow: visible;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    background: #fff;
+    background: #ffffcc;
+    border: 1px solid #ccc;
     z-index: 100;
     transition:
       max-width 0.3s ease-in-out,

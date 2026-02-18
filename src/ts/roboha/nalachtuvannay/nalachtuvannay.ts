@@ -229,19 +229,9 @@ function createGeneralSettingsHTML(): string {
           <span class="general-label-text">📱 Текст SMS повідомлення</span>
         </label>
         <div class="sms-preview">
-          <span class="sms-text-before-preview"></span>
+          <span class="sms-text-before-preview" contenteditable="true"></span>
           <span class="sms-sum-example">1 500</span>
-          <span class="sms-text-after-preview"></span>
-        </div>
-        <div class="sms-inputs-row">
-          <div class="sms-input-wrapper">
-            <label class="sms-input-label">Текст перед сумою:</label>
-            <input type="text" id="general-sms-before" class="general-input sms-input" placeholder="Ваше замовлення виконане. Сума:" />
-          </div>
-          <div class="sms-input-wrapper">
-            <label class="sms-input-label">Текст після суми:</label>
-            <input type="text" id="general-sms-after" class="general-input sms-input" placeholder="грн. Дякуємо за довіру!" />
-          </div>
+          <span class="sms-text-after-preview" contenteditable="true"></span>
         </div>
       </div>
       
@@ -351,28 +341,18 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           if (wallpaperMainInput) wallpaperMainInput.value = value;
           break;
         case 8: // SMS текст перед сумою
-          const smsBeforeInput = modal.querySelector(
-            "#general-sms-before",
-          ) as HTMLInputElement;
           const smsBeforePreview = modal.querySelector(
             ".sms-text-before-preview",
           ) as HTMLElement;
           const smsBeforeValue = value || "Ваше замовлення виконане. Сума:";
-          if (smsBeforeInput) smsBeforeInput.value = smsBeforeValue;
-          if (smsBeforePreview)
-            smsBeforePreview.textContent = smsBeforeValue + " ";
+          if (smsBeforePreview) smsBeforePreview.textContent = smsBeforeValue;
           break;
         case 9: // SMS текст після суми
-          const smsAfterInput = modal.querySelector(
-            "#general-sms-after",
-          ) as HTMLInputElement;
           const smsAfterPreview = modal.querySelector(
             ".sms-text-after-preview",
           ) as HTMLElement;
           const smsAfterValue = value || "грн. Дякуємо за довіру!";
-          if (smsAfterInput) smsAfterInput.value = smsAfterValue;
-          if (smsAfterPreview)
-            smsAfterPreview.textContent = " " + smsAfterValue;
+          if (smsAfterPreview) smsAfterPreview.textContent = smsAfterValue;
           break;
       }
     });
@@ -406,12 +386,12 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const wallpaperMainInput = modal.querySelector(
     "#general-wallpaper-main",
   ) as HTMLInputElement;
-  const smsBeforeInput = modal.querySelector(
-    "#general-sms-before",
-  ) as HTMLInputElement;
-  const smsAfterInput = modal.querySelector(
-    "#general-sms-after",
-  ) as HTMLInputElement;
+  const smsBeforePreview = modal.querySelector(
+    ".sms-text-before-preview",
+  ) as HTMLElement;
+  const smsAfterPreview = modal.querySelector(
+    ".sms-text-after-preview",
+  ) as HTMLElement;
 
   const newValues = [
     { id: 1, value: nameInput?.value || "" },
@@ -422,9 +402,14 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     { id: 7, value: wallpaperMainInput?.value || "" },
     {
       id: 8,
-      value: smsBeforeInput?.value || "Ваше замовлення виконане. Сума:",
+      value:
+        smsBeforePreview?.textContent?.trim() ||
+        "Ваше замовлення виконане. Сума:",
     },
-    { id: 9, value: smsAfterInput?.value || "грн. Дякуємо за довіру!" },
+    {
+      id: 9,
+      value: smsAfterPreview?.textContent?.trim() || "грн. Дякуємо за довіру!",
+    },
   ];
 
   for (const { id, value } of newValues) {
@@ -480,9 +465,10 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     globalCache.generalSettings.tableColor = tableColor?.value || DEFAULT_COLOR;
     globalCache.generalSettings.wallpaperMain = wallpaperMainInput?.value || "";
     globalCache.generalSettings.smsTextBefore =
-      smsBeforeInput?.value || "Ваше замовлення виконане. Сума:";
+      smsBeforePreview?.textContent?.trim() ||
+      "Ваше замовлення виконане. Сума:";
     globalCache.generalSettings.smsTextAfter =
-      smsAfterInput?.value || "грн. Дякуємо за довіру!";
+      smsAfterPreview?.textContent?.trim() || "грн. Дякуємо за довіру!";
 
     // Зберігаємо в localStorage
     saveGeneralSettingsToLocalStorage();
@@ -522,34 +508,6 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
   if (tableColor && tableColorValue) {
     tableColor.addEventListener("input", () => {
       tableColorValue.textContent = tableColor.value;
-    });
-  }
-
-  // SMS preview update handlers
-  const smsBeforeInput = modal.querySelector(
-    "#general-sms-before",
-  ) as HTMLInputElement;
-  const smsAfterInput = modal.querySelector(
-    "#general-sms-after",
-  ) as HTMLInputElement;
-  const smsBeforePreview = modal.querySelector(
-    ".sms-text-before-preview",
-  ) as HTMLElement;
-  const smsAfterPreview = modal.querySelector(
-    ".sms-text-after-preview",
-  ) as HTMLElement;
-
-  if (smsBeforeInput && smsBeforePreview) {
-    smsBeforeInput.addEventListener("input", () => {
-      smsBeforePreview.textContent =
-        (smsBeforeInput.value || "Ваше замовлення виконане. Сума:") + " ";
-    });
-  }
-
-  if (smsAfterInput && smsAfterPreview) {
-    smsAfterInput.addEventListener("input", () => {
-      smsAfterPreview.textContent =
-        " " + (smsAfterInput.value || "грн. Дякуємо за довіру!");
     });
   }
 
@@ -1262,13 +1220,11 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
               if (error) throw error;
             } else {
               // Запис не існує - створюємо новий з data: false
-              const { error } = await supabase
-                .from("settings")
-                .insert({
-                  setting_id: settingId,
-                  procent: newValue,
-                  data: false,
-                });
+              const { error } = await supabase.from("settings").insert({
+                setting_id: settingId,
+                procent: newValue,
+                data: false,
+              });
               if (error) throw error;
             }
             changesCount++;

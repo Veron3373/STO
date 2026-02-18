@@ -149,10 +149,8 @@ async function saveCallToDatabase(
     // Записуємо або видаляємо дзвінок
     if (callValue === null) {
       delete actData["Дзвінок"];
-      console.log("📞 Дзвінок видалено");
     } else {
       actData["Дзвінок"] = callValue;
-      console.log("📞 Дзвінок збережено:", callValue);
     }
 
     // Оновлюємо в базі

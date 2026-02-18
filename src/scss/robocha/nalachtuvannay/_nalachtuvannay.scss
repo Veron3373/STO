@@ -671,15 +671,41 @@
     border: 2px dashed #607d8b;
     border-radius: 8px;
     padding: 14px 18px;
-    margin-bottom: 16px;
     font-size: 14px;
     color: #2c3e50;
     line-height: 1.5;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
 
     .sms-text-before-preview,
     .sms-text-after-preview {
       color: #495057;
+      outline: none;
+      border-bottom: 1px dashed transparent;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      min-width: 20px;
+
+      &:hover {
+        background: rgba(96, 125, 139, 0.08);
+        border-bottom-color: #607d8b;
+      }
+
+      &:focus {
+        background: rgba(96, 125, 139, 0.12);
+        border-bottom-color: #607d8b;
+        box-shadow: 0 2px 4px rgba(96, 125, 139, 0.15);
+      }
+
+      &:empty::before {
+        content: "текст...";
+        color: #adb5bd;
+        font-style: italic;
+      }
     }
 
     .sms-sum-example {
@@ -688,31 +714,9 @@
       background: rgba(40, 167, 69, 0.1);
       padding: 2px 8px;
       border-radius: 4px;
-      margin: 0 2px;
+      user-select: none;
+      cursor: default;
     }
-  }
-
-  .sms-inputs-row {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .sms-input-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .sms-input-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: #6c757d;
-  }
-
-  .sms-input {
-    font-size: 14px !important;
-    padding: 10px 14px !important;
   }
 
   .color-label {

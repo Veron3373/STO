@@ -134,7 +134,7 @@ export function getSlyusarIdByPib(pib: string): number | null {
   return found ? found.id : null;
 }
 
-/** Завантаження ПІБ користувача за назвою деталі з таблиці sclad (окрім Слюсарів) */
+/** Завантаження ПІБ користувача за назвою деталі з таблиці sclad */
 async function loadZapchastystPibByDetailName(
   detailName: string,
 ): Promise<string | null> {
@@ -168,12 +168,7 @@ async function loadZapchastystPibByDetailName(
         ? JSON.parse(slyusar.data)
         : slyusar.data;
 
-    // Перевіряємо що користувач не Слюсар
-    const access = userData?.["Доступ"] || "";
-    if (access === "Слюсар") {
-      return null;
-    }
-
+    // Повертаємо ПІБ того хто записав деталь (незалежно від ролі)
     return userData?.Name || userData?.["Ім'я"] || null;
   } catch (e) {
     console.error("Помилка завантаження ПІБ за деталлю:", e);

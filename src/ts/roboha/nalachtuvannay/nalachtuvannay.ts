@@ -103,7 +103,7 @@ const ROLE_SETTINGS = {
     { divider: true },
     { id: 21, label: "Планування" },
     { divider: true },
-    { id: 22, label: "📞 Телефон" },
+    { id: 22, label: "Акти Телефон 📞" },
   ],
   Слюсар: [
     { id: 1, label: "📋 Акт Зарплата 💲" },
@@ -112,7 +112,7 @@ const ROLE_SETTINGS = {
     { divider: true },
     { id: 6, label: "Планування" },
     { divider: true },
-    { id: 7, label: "📞 Телефон" },
+    { id: 7, label: "Акти Телефон 📞" },
   ],
   Запчастист: [
     { id: 1, label: "Додати" },
@@ -146,7 +146,7 @@ const ROLE_SETTINGS = {
     { divider: true },
     { id: 23, label: "Планування" },
     { divider: true },
-    { id: 24, label: "📞 Телефон" },
+    { id: 24, label: "Акти Телефон 📞" },
   ],
   Складовщик: [
     { id: 1, label: "Додати" },
@@ -177,7 +177,7 @@ const ROLE_SETTINGS = {
     { divider: true },
     { id: 20, label: "Планування" },
     { divider: true },
-    { id: 21, label: "📞 Телефон" },
+    { id: 21, label: "Акти Телефон 📞" },
   ],
 };
 
@@ -276,6 +276,190 @@ function applyPhoneIndicatorVisibility(show: boolean): void {
     document.body.classList.remove("hide-call-indicators");
   } else {
     document.body.classList.add("hide-call-indicators");
+  }
+}
+
+// ============================================================
+// 🔄 REALTIME СИНХРОНІЗАЦІЯ НАЛАШТУВАНЬ
+// ============================================================
+
+let settingsRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+/**
+ * Підписка на Realtime зміни в таблиці settings
+ * Викликати один раз при ініціалізації системи
+ */
+export function subscribeToSettingsRealtime(): void {
+  // Якщо вже підписані — не підписуємося повторно
+  if (settingsRealtimeChannel) return;
+
+  settingsRealtimeChannel = supabase
+    .channel("settings-realtime-sync")
+    .on(
+      "postgres_changes",
+      {
+        event: "*", // INSERT, UPDATE, DELETE
+        schema: "public",
+        table: "settings",
+      },
+      (payload) => {
+        handleSettingsRealtimeChange(payload);
+      },
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        console.log("📡 Realtime: підписка на settings активна");
+      }
+    });
+}
+
+/**
+ * Відписка від Realtime каналу settings
+ * Викликати при logout
+ */
+export function unsubscribeFromSettingsRealtime(): void {
+  if (settingsRealtimeChannel) {
+    supabase.removeChannel(settingsRealtimeChannel);
+    settingsRealtimeChannel = null;
+    console.log("📡 Realtime: відписка від settings");
+  }
+}
+
+/**
+ * Обробник Realtime змін в таблиці settings
+ */
+function handleSettingsRealtimeChange(payload: any): void {
+  const { eventType, new: newRecord, old: _oldRecord } = payload;
+  void _oldRecord; // Suppress unused variable warning
+
+  if (eventType === "DELETE") return; // Видалення ігноруємо
+
+  // Отримуємо роль поточного користувача
+  const USER_DATA_KEY = "userAuthData";
+  const storedData = localStorage.getItem(USER_DATA_KEY);
+  if (!storedData) return;
+
+  const userData = JSON.parse(storedData);
+  const currentRole = userData?.["Доступ"] as string;
+  if (!currentRole) return;
+
+  const settingId = newRecord?.setting_id;
+  if (!settingId) return;
+
+  // Визначаємо колонку для поточної ролі
+  const column = ROLE_TO_COLUMN[currentRole as keyof typeof ROLE_TO_COLUMN];
+  if (!column) return;
+
+  console.log(
+    `📡 Realtime settings: ${eventType} setting_id=${settingId}`,
+    newRecord,
+  );
+
+  // === ОБРОБКА НАЛАШТУВАНЬ АДМІНІСТРАТОРА (колонка "data") ===
+  if (currentRole === "Адміністратор") {
+    handleAdminSettingsChange(settingId, newRecord);
+  }
+
+  // === ОБРОБКА НАЛАШТУВАНЬ ІНШИХ РОЛЕЙ ===
+  handleRoleSettingsChange(currentRole, column, settingId, newRecord);
+
+  // === ОБРОБКА ЗАГАЛЬНИХ НАЛАШТУВАНЬ (колонка "Загальні") ===
+  handleGeneralSettingsChange(settingId, newRecord);
+}
+
+/**
+ * Обробка змін налаштувань для Адміністратора
+ */
+function handleAdminSettingsChange(settingId: number, newRecord: any): void {
+  const value = newRecord?.data;
+
+  switch (settingId) {
+    case 6: // toggle-print
+      globalCache.generalSettings.printColorMode = !!value;
+      saveGeneralSettingsToLocalStorage();
+      break;
+    case 7: // toggle-ai
+      globalCache.generalSettings.aiEnabled = !!value;
+      saveGeneralSettingsToLocalStorage();
+      resetAISettingsCache();
+      break;
+    case 8: // toggle-phone-admin
+      applyPhoneIndicatorVisibility(!!value);
+      break;
+  }
+
+  // Обробка зміни процентів націнки
+  if (newRecord?.procent !== undefined) {
+    resetPercentCache();
+  }
+}
+
+/**
+ * Обробка змін налаштувань для конкретної ролі
+ */
+function handleRoleSettingsChange(
+  currentRole: string,
+  column: string,
+  settingId: number,
+  newRecord: any,
+): void {
+  // Перевіряємо чи ця зміна стосується налаштування "Телефон" для поточної ролі
+  const phoneConfig = PHONE_SETTINGS_MAP[currentRole];
+  if (phoneConfig && settingId === phoneConfig.settingId) {
+    const value = newRecord?.[column];
+    if (value !== undefined) {
+      applyPhoneIndicatorVisibility(!!value);
+      console.log(
+        `📞 Realtime: оновлено відображення телефону для ${currentRole}: ${!!value}`,
+      );
+    }
+  }
+
+  // Тут можна додати обробку інших налаштувань ролі при потребі
+  // Наприклад, оновлення кешу прав доступу
+}
+
+/**
+ * Обробка змін загальних налаштувань (Загальні)
+ */
+function handleGeneralSettingsChange(settingId: number, newRecord: any): void {
+  const value = newRecord?.["Загальні"];
+  if (value === undefined) return;
+
+  switch (settingId) {
+    case 1: // Назва СТО
+      globalCache.generalSettings.stoName = value || "B.S.Motorservice";
+      break;
+    case 2: // Адреса
+      globalCache.generalSettings.address =
+        value || "вул. Корольова, 6, Вінниця";
+      break;
+    case 3: // Телефон
+      globalCache.generalSettings.phone = value || "068 931 24 38";
+      break;
+    case 4: // Колір шапки акту
+      globalCache.generalSettings.headerColor = value || DEFAULT_COLOR;
+      break;
+    case 5: // Колір таблиці актів
+      globalCache.generalSettings.tableColor = value || DEFAULT_COLOR;
+      break;
+    case 7: // Шпалери основні
+      globalCache.generalSettings.wallpaperMain = value || "";
+      applyWallpapers();
+      break;
+    case 8: // SMS текст перед сумою
+      globalCache.generalSettings.smsTextBefore =
+        value || "Ваше замовлення виконане. Сума:";
+      break;
+    case 9: // SMS текст після суми
+      globalCache.generalSettings.smsTextAfter =
+        value || "грн. Дякуємо за довіру!";
+      break;
+  }
+
+  // Зберігаємо оновлені налаштування в localStorage
+  if ([1, 2, 3, 4, 5, 7, 8, 9].includes(settingId)) {
+    saveGeneralSettingsToLocalStorage();
   }
 }
 

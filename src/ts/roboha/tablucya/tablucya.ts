@@ -28,8 +28,11 @@ import {
   loadAndShowExistingNotifications,
 } from "./povidomlennya_tablucya";
 
-// 📞 ІМПОРТ ФУНКЦІЇ ЗАСТОСУВАННЯ НАЛАШТУВАННЯ ТЕЛЕФОНУ
-import { loadAndApplyPhoneIndicatorSetting } from "../nalachtuvannay/nalachtuvannay";
+// 📞 ІМПОРТ ФУНКЦІЇ ЗАСТОСУВАННЯ НАЛАШТУВАННЯ ТЕЛЕФОНУ ТА REALTIME ПІДПИСКИ
+import {
+  loadAndApplyPhoneIndicatorSetting,
+  subscribeToSettingsRealtime,
+} from "../nalachtuvannay/nalachtuvannay";
 
 document.addEventListener("click", (e) => {
   const target = e.target as HTMLElement | null;
@@ -1904,6 +1907,9 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 📞 ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ВІДОБРАЖЕННЯ ТЕЛЕФОНУ
     await loadAndApplyPhoneIndicatorSetting();
+
+    // ⚙️ REALTIME ПІДПИСКА НА ЗМІНИ НАЛАШТУВАНЬ
+    subscribeToSettingsRealtime();
 
     watchDateRangeChanges();
   } catch (error) {

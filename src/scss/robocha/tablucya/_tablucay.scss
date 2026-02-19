@@ -550,7 +550,8 @@ body {
   &:hover {
     position: absolute;
     right: 4px;
-    top: 4px;
+    top: auto;
+    bottom: 4px;
     max-width: 420px;
     width: max-content;
     white-space: pre-line;
@@ -558,8 +559,8 @@ body {
     overflow-wrap: break-word;
     text-align: left;
     height: auto;
-    max-height: none;
-    overflow: visible;
+    max-height: 80vh;
+    overflow-y: auto;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     background: #f5f5f5;
     border: 1px solid #bbb;

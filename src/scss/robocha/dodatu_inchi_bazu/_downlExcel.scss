@@ -438,22 +438,12 @@ $radius-xlarge: 16px;
     transition: background-color 0.2s;
 
     &:hover {
-      background-color: color.adjust(
-        $primary-green,
-        $lightness: 40%
-      ) !important;
-
-      // Всі колонки крім останньої (Г-ть / статус)
+      // Всі колонки крім останньої (Г-ть / статус) - ще світліший зелений
       td:not(:last-child) {
         background-color: color.adjust(
           $primary-green,
-          $lightness: 40%
+          $lightness: 48%
         ) !important;
-      }
-
-      // Остання колонка (Г-ть) - без ховер ефекту
-      td:last-child {
-        background-color: transparent !important;
       }
 
       // Інпути також стають зеленими при ховері на рядок (крім останньої колонки)

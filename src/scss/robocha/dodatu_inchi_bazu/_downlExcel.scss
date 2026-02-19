@@ -169,7 +169,7 @@ $radius-xlarge: 16px;
 // ============= Модальне вікно імпорту =============
 .batch-modal-Excel {
   max-width: 98vw;
-  max-height: 90vh;
+  height: 85vh;
   min-width: 600px;
   width: 98vw;
   display: flex;
@@ -184,7 +184,6 @@ $radius-xlarge: 16px;
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: calc(90vh - 48px);
   width: 100%;
   padding: 24px;
   overflow: hidden;
@@ -381,8 +380,7 @@ $radius-xlarge: 16px;
   border-radius: $radius-medium;
   background: white;
   flex: 1;
-  //min-height: 200px;
-  max-height: calc(90vh - 320px);
+  min-height: 150px;
   margin-bottom: 16px;
   width: 100%;
   max-width: 100%;
@@ -491,7 +489,7 @@ $radius-xlarge: 16px;
     background: $bg-warning;
     // box-shadow: inset 0 0 0 2px $warning-orange;
   }
-  // Статус замовлення - комірка з кольоровим фоном
+  // Статус замовлення - комірка з кольоровим текстом
   td.orderStatus-cell-Excel {
     position: relative;
 

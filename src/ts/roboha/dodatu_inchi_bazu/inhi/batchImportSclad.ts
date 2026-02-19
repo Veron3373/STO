@@ -424,7 +424,7 @@ function createBatchImportModal() {
     <div class="modal-all_other_bases batch-modal-Excel">
       <button class="modal-close-all_other_bases">×</button>
       <div class="modal-content-Excel">
-        <h3 class="batch-title-Excel">Записати деталіl\</h3>
+        <h3 class="batch-title-Excel">Записати деталі\</h3>
         <p class="batch-instructions-Excel">
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
           <strong>Дата прихід ┃ Магазин ┃ Каталог номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
@@ -909,16 +909,16 @@ function recalculateAndApplyWidths() {
   // З table-layout: fixed ширина автоматично застосовується з th до td
 }
 // ===== Рендеринг таблиці =====
-// Отримати колір фону для статусу замовлення
+// Отримати колір тексту для статусу замовлення
 function getOrderStatusColor(status: string): string {
   switch (status) {
     case "Прибуло":
-      return "#bbf7d0"; // світло-зелений
+      return "#22c55e"; // зелений
     case "Замовлено":
-      return "#fed7aa"; // світло-помаранчевий
+      return "#f97316"; // помаранчевий
     case "Потребує за-ння":
     default:
-      return "#fecaca"; // світло-червоний
+      return "#ef4444"; // червоний
   }
 }
 
@@ -1039,7 +1039,7 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td class="orderStatus-cell-Excel" style="background-color: ${getOrderStatusColor(row.orderStatus)};">
+      <td class="orderStatus-cell-Excel">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel orderStatus-input-Excel"
@@ -1048,7 +1048,7 @@ function renderBatchTable(data: any[]) {
           data-index="${index}"
           readonly
           autocomplete="off"
-          style="background: transparent; cursor: pointer;"
+          style="color: ${getOrderStatusColor(row.orderStatus)}; font-weight: bold; cursor: pointer; background: transparent;"
         >
       </td>
       <td>
@@ -1670,9 +1670,8 @@ function showOrderStatusDropdown(input: HTMLInputElement, index: number) {
     const li = document.createElement("li");
     li.className = "excel-dropdown-item";
     li.textContent = opt.label;
-    li.style.backgroundColor = opt.color;
-    li.style.color = "#1e293b";
-    li.style.fontWeight = "500";
+    li.style.color = opt.color;
+    li.style.fontWeight = "bold";
     li.tabIndex = 0;
     li.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1680,13 +1679,8 @@ function showOrderStatusDropdown(input: HTMLInputElement, index: number) {
       input.value = opt.value;
       parsedDataGlobal[index]["orderStatus"] = opt.value;
 
-      // Оновлюємо колір комірки
-      const td = input.closest("td");
-      if (td) {
-        (td as HTMLElement).style.backgroundColor = getOrderStatusColor(
-          opt.value,
-        );
-      }
+      // Оновлюємо колір тексту інпуту
+      input.style.color = getOrderStatusColor(opt.value);
 
       closeDropdownList();
     });
@@ -2152,7 +2146,6 @@ export async function initBatchImport() {
       if (!modal) return;
       modal.classList.remove("hidden-all_other_bases");
       resetModalState();
-      parsedDataGlobal = [];
 
       // Оновлюємо кеш у фоновому режимі при відкритті
       Promise.all([

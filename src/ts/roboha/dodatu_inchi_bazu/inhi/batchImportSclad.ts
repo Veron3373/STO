@@ -479,7 +479,7 @@ function createBatchImportModal() {
         <div class="batch-buttons-Excel">
           <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Розпарсити</button>
           <button id="batch-add-row-btn-Excel" class="batch-btn-Excel add-row-Excel">➕ Додати рядок</button>
-          <button id="batch-upload-btn-Excel" class="batch-btn-Excel upload-Excel hidden-all_other_bases">✅ Завантажити</button>
+          <button id="batch-upload-btn-Excel" class="batch-btn-Excel upload-Excel hidden-all_other_bases">✅ Записати</button>
         </div>
       </div>
     </div>

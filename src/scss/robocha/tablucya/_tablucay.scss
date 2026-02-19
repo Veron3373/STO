@@ -548,9 +548,11 @@ body {
     border-color 0.25s ease-out;
 
   &:hover {
-    position: absolute;
-    right: 4px;
-    top: 4px;
+    position: fixed;
+    right: 10px;
+    top: 10px;
+    left: auto;
+    bottom: auto;
     max-width: 420px;
     width: max-content;
     white-space: pre-line;

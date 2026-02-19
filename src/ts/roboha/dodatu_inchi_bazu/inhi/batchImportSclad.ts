@@ -2139,13 +2139,19 @@ async function uploadBatchData(data: any[]) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   } finally {
-    // знімаємо лоадінг та розблоковуємо кнопку
+    // знімаємо лоадінг
     uploadBtn?.classList.remove("loading-Excel");
-    uploadBtn?.removeAttribute("disabled");
     isUploading = false;
   }
 
   if (errorCount === 0) {
+    // Все успішно - залишаємо кнопку заблокованою
+    if (uploadBtn) {
+      uploadBtn.setAttribute("disabled", "true");
+      uploadBtn.style.backgroundColor = "#9ca3af";
+      uploadBtn.style.cursor = "not-allowed";
+      uploadBtn.textContent = "✅ Записано";
+    }
     showNotification(
       `Успішно завантажено ${successCount} ${
         successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
@@ -2154,6 +2160,8 @@ async function uploadBatchData(data: any[]) {
       4000,
     );
   } else {
+    // Є помилки - розблоковуємо кнопку для повторної спроби
+    uploadBtn?.removeAttribute("disabled");
     showNotification(
       `Завантажено: ${successCount}, Помилок: ${errorCount}`,
       "warning",
@@ -2185,6 +2193,16 @@ function updateRowStatus(
     if (success) {
       const deleteBtn = statusCell.querySelector(".delete-row-btn-Excel");
       deleteBtn?.remove();
+
+      // Додаємо зелену галочку ✅ замість кнопки
+      const checkmark = document.createElement("span");
+      checkmark.textContent = "✅";
+      checkmark.style.fontSize = "18px";
+      checkmark.style.display = "flex";
+      checkmark.style.justifyContent = "center";
+      checkmark.style.alignItems = "center";
+      checkmark.title = statusText;
+      statusCell.appendChild(checkmark);
 
       // 🔒 Блокуємо АБСОЛЮТНО ВСІ інпути (включно з dropdown)
       const inputs =

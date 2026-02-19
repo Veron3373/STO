@@ -77,18 +77,32 @@ function toIsoDate(dateStr: string): string {
   if (!dateStr?.trim()) return "";
   let cleanDate = dateStr.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) return cleanDate;
-  const match = cleanDate.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (match) {
-    const [, dd, mm, yyyy] = match;
+  
+  // Підтримка dd.mm.yyyy
+  const match4 = cleanDate.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (match4) {
+    const [, dd, mm, yyyy] = match4;
     const d = parseInt(dd, 10);
     const m = parseInt(mm, 10);
     const y = parseInt(yyyy, 10);
     if (d >= 1 && d <= 31 && m >= 1 && m <= 12 && y >= 1900 && y <= 2100) {
-      return `${y}-${m.toString().padStart(2, "0")}-${d
-        .toString()
-        .padStart(2, "0")}`;
+      return `${y}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
     }
   }
+  
+  // Підтримка dd.mm.yy
+  const match2 = cleanDate.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
+  if (match2) {
+    const [, dd, mm, yy] = match2;
+    const d = parseInt(dd, 10);
+    const m = parseInt(mm, 10);
+    const y2 = parseInt(yy, 10);
+    const yyyy = y2 >= 50 ? 1900 + y2 : 2000 + y2;
+    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) {
+      return `${yyyy}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
+    }
+  }
+  
   return "";
 }
 function fromIsoToDisplay(isoDate: string): string {
@@ -96,7 +110,8 @@ function fromIsoToDisplay(isoDate: string): string {
   const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (match) {
     const [, yyyy, mm, dd] = match;
-    return `${dd}.${mm}.${yyyy}`;
+    const yy = yyyy.slice(-2);
+    return `${dd}.${mm}.${yy}`;
   }
   return "";
 }
@@ -433,18 +448,18 @@ function createBatchImportModal() {
                 <th data-col="shop">Магазин</th>
                 <th data-col="catno">Каталог номер</th>
                 <th data-col="detail">Деталь</th>
-                <th data-col="qty">Кількість</th>
+                <th data-col="qty">К-ть</th>
                 <th data-col="price">Ціна</th>
-                <th data-col="clientPrice">Ціна клієнта</th>
+                <th data-col="clientPrice">Ц-н К-та</th>
                 <th data-col="warehouse">Склад</th>
                 <th data-col="invoice">Рахунок №</th>
                 <th data-col="actNo">Акт №</th>
-                <th data-col="unit">Одиниця</th>
+                <th data-col="unit">О-ця</th>
                 <th data-col="orderStatus">Статус</th>
                 <th data-col="createdBy">Замовив</th>
                 <th data-col="notes">Примітка</th>
                 <th data-col="action">Дія</th>
-                <th data-col="status">Готовність</th>
+                <th data-col="status">Г-ть</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -549,10 +564,14 @@ function parseBatchData(text: string) {
     };
     try {
       if (row.date.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
-        // OK
+        // dd.mm.yyyy -> dd.mm.yy
+        const parts4 = row.date.split(".");
+        row.date = `${parts4[0]}.${parts4[1]}.${parts4[2].slice(-2)}`;
+      } else if (row.date.match(/^\d{2}\.\d{2}\.\d{2}$/)) {
+        // dd.mm.yy - OK
       } else if (row.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         const [yyyy, mm, dd] = row.date.split("-");
-        row.date = `${dd}.${mm}.${yyyy}`;
+        row.date = `${dd}.${mm}.${yyyy.slice(-2)}`;
       } else {
         throw new Error("Невірний формат дати");
       }
@@ -665,18 +684,18 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "Магазин",
     "Каталог номер",
     "Деталь",
-    "Кількість",
+    "К-ть",
     "Ціна",
-    "Ціна клієнта",
+    "Ц-н К-та",
     "Склад",
     "Рахунок №",
     "Акт №",
-    "Одиниця",
+    "О-ця",
     "Статус",
     "Замовив",
     "Примітка",
     "Дія",
-    "Готовність",
+    "Г-ть",
   ];
   const widths = new Map<string, number>();
   const canvas = document.createElement("canvas");
@@ -700,7 +719,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     orderStatus: 6,
     createdBy: 6,
     notes: 8,
-    action: 4,
+    action: 6,
     status: 3,
   };
   
@@ -1740,8 +1759,8 @@ function createEmptyRow(): any {
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, "0");
   const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const yyyy = today.getFullYear();
-  const todayStr = `${dd}.${mm}.${yyyy}`;
+  const yy = String(today.getFullYear()).slice(-2);
+  const todayStr = `${dd}.${mm}.${yy}`;
 
   return {
     date: todayStr,

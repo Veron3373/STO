@@ -1881,6 +1881,17 @@ function resetModalState() {
   document
     .getElementById("batch-upload-btn-Excel")
     ?.classList.remove("hidden-all_other_bases");
+
+  // Скидаємо стан кнопки "Записати" до початкового
+  const uploadBtn = document.getElementById(
+    "batch-upload-btn-Excel",
+  ) as HTMLButtonElement | null;
+  if (uploadBtn) {
+    uploadBtn.removeAttribute("disabled");
+    uploadBtn.style.backgroundColor = "";
+    uploadBtn.style.cursor = "";
+    uploadBtn.textContent = "✅ Записати";
+  }
 }
 // ===== Завантаження даних у БД =====
 async function uploadBatchData(data: any[]) {
@@ -2303,6 +2314,8 @@ export async function initBatchImport() {
         .getElementById(batchModalId)
         ?.classList.add("hidden-all_other_bases");
       closeDropdownList();
+      // Скидаємо стан модального вікна для наступного відкриття
+      resetModalState();
     };
   }
 
@@ -2399,6 +2412,9 @@ export async function initBatchImport() {
           invoice: (allInputs[8] as HTMLInputElement).value,
           actNo: (allInputs[9] as HTMLInputElement).value,
           unit: (allInputs[10] as HTMLInputElement).value,
+          orderStatus: (allInputs[11] as HTMLInputElement).value, // Статус деталі
+          createdBy: (allInputs[12] as HTMLInputElement).value, // Замовив
+          notes: (allInputs[13] as HTMLInputElement).value, // Примітка
           status: statusText,
           rowNumber: index + 1,
           warehouseValid: row.warehouseValid,

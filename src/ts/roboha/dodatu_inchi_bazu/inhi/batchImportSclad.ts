@@ -37,7 +37,7 @@ const VALID_UNITS = UNIT_OPTIONS.map((o) => o.value);
 // Опції для статусу деталі (Прибуло/Замовлено/Потребує за-ння)
 const ORDER_STATUS_OPTIONS = [
   { value: "Потребує за-ння", label: "Потребує за-ння", color: "#f87171" },
-  { value: "Замовлено", label: "Замовлено", color: "#fb923c" },
+  { value: "Замовлено", label: "Замовлено", color: "#3b82f6" },
   { value: "Прибуло", label: "Прибуло", color: "#4ade80" },
 ];
 
@@ -922,10 +922,23 @@ function getOrderStatusBackgroundColor(status: string): string {
     case "Прибуло":
       return "#22c55e"; // зелений
     case "Замовлено":
-      return "#f97316"; // помаранчевий
+      return "#3b82f6"; // синій
     case "Потребує за-ння":
     default:
       return "#ef4444"; // червоний
+  }
+}
+
+// Отримати світлий фоновий колір для комірки td статусу
+function getOrderStatusCellBackground(status: string): string {
+  switch (status) {
+    case "Прибуло":
+      return "#dcfce7"; // світло-зелений
+    case "Замовлено":
+      return "#dbeafe"; // світло-синій
+    case "Потребує за-ння":
+    default:
+      return "#fee2e2"; // світло-червоний
   }
 }
 
@@ -1068,7 +1081,7 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td class="orderStatus-cell-Excel">
+      <td class="orderStatus-cell-Excel" style="background-color: ${getOrderStatusCellBackground(row.orderStatus || "Потребує за-ння")}">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel orderStatus-input-Excel"
@@ -1408,7 +1421,14 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       const filteredOptions = filter
         ? detailsListCache.filter((opt) => opt.toLowerCase().includes(filter))
         : detailsListCache;
-      if (currentDropdownInput === target && currentDropdownList) {
+
+      // Якщо dropdown ще не відкритий - відкриваємо з фільтрованими опціями
+      if (!currentDropdownList || currentDropdownInput !== target) {
+        if (filteredOptions.length > 0) {
+          showDropdownList(target, filteredOptions);
+        }
+      } else {
+        // Якщо вже відкритий - оновлюємо
         updateDropdownList(filteredOptions, target, index, "detail");
         if (filteredOptions.length)
           positionDropdown(target, currentDropdownList);
@@ -1721,6 +1741,12 @@ function showOrderStatusDropdown(input: HTMLInputElement, index: number) {
 
       // Оновлюємо фоновий колір інпуту
       input.style.backgroundColor = getOrderStatusBackgroundColor(opt.value);
+
+      // Оновлюємо фоновий колір комірки td
+      const td = input.closest("td");
+      if (td) {
+        td.style.backgroundColor = getOrderStatusCellBackground(opt.value);
+      }
 
       closeDropdownList();
     });

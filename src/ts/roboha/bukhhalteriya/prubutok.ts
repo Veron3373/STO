@@ -1064,17 +1064,26 @@ export function filtervutratuData(): void {
     byId<HTMLInputElement>("vutratu-discount-filter-toggle")?.value || "2";
 
   filteredvutratuData = vutratuData.filter((expense) => {
+    const isFromAct = expense.category === "💰 Прибуток";
+
     // НОВИЙ ФІЛЬТР: Фільтр по режиму дати (відкриття/закриття/розрахунку)
     if (vutratuDateFilterMode === "open") {
       // Фільтруємо по даті відкриття (expense.date)
       if (dateFrom && expense.date < dateFrom) return false;
       if (dateTo && expense.date > dateTo) return false;
     } else if (vutratuDateFilterMode === "close") {
-      // Фільтруємо по даті закриття (paymentDate)
-      // Якщо немає дати закриття - виключаємо
-      if (!expense.paymentDate) return false;
-      if (dateFrom && expense.paymentDate < dateFrom) return false;
-      if (dateTo && expense.paymentDate > dateTo) return false;
+      // Фільтруємо по даті закриття
+      // Для актів використовуємо paymentDate, для витрат - date (бо витрати не мають дати закриття)
+      if (isFromAct) {
+        // Для актів: якщо немає дати закриття - виключаємо (акт ще відкритий)
+        if (!expense.paymentDate) return false;
+        if (dateFrom && expense.paymentDate < dateFrom) return false;
+        if (dateTo && expense.paymentDate > dateTo) return false;
+      } else {
+        // Для витрат: використовуємо дату витрати (date) як "дату закриття"
+        if (dateFrom && expense.date < dateFrom) return false;
+        if (dateTo && expense.date > dateTo) return false;
+      }
     } else if (vutratuDateFilterMode === "paid") {
       // Фільтруємо по даті розрахунку (rosraxovanoDate)
       // Якщо немає дати розрахунку - виключаємо
@@ -1090,7 +1099,6 @@ export function filtervutratuData(): void {
 
     // Фільтр по способу оплати (перевіряємо як paymentMethod для витрат, так і tupOplatu для актів)
     if (paymentMethod) {
-      const isFromAct = expense.category === "💰 Прибуток";
       if (isFromAct) {
         // Для актів перевіряємо tupOplatu
         if (
@@ -1480,8 +1488,8 @@ export function updatevutratuDisplayedSums(): void {
   let totalDiscountSum = 0;
 
   filteredvutratuData.forEach((expense) => {
-    // 1. Витрати (від'ємні суми)
-    if (expense.amount < 0) {
+    // 1. Витрати (від'ємні суми) - НЕ враховуємо акти, бо знижка вже врахована в detailsAmount/workAmount
+    if (expense.amount < 0 && expense.category !== "💰 Прибуток") {
       totalNegativeSum += expense.amount;
     }
 

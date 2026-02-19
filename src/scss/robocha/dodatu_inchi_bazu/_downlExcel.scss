@@ -330,6 +330,15 @@ $radius-xlarge: 16px;
     }
   }
 
+  &.add-row-Excel {
+    @include gradient-button($primary-blue);
+    color: white;
+
+    &:hover {
+      @include gradient-button($primary-blue, true);
+    }
+  }
+
   &.import-Excel {
     @include gradient-button($primary-yellow);
     color: $text-dark;

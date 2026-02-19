@@ -389,6 +389,7 @@ function createBatchImportModal() {
         </div>
         <div class="batch-buttons-Excel">
           <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Розпарсити</button>
+          <button id="batch-add-row-btn-Excel" class="batch-btn-Excel add-row-Excel">➕ Додати рядок</button>
           <button id="batch-upload-btn-Excel" class="batch-btn-Excel upload-Excel hidden-all_other_bases">✅ Завантажити</button>
         </div>
       </div>
@@ -1511,6 +1512,40 @@ function updateDropdownList(
     currentDropdownList!.appendChild(li);
   });
 }
+// Створення порожнього рядка даних з дефолтними значеннями
+function createEmptyRow(): any {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const yyyy = today.getFullYear();
+  const todayStr = `${dd}.${mm}.${yyyy}`;
+
+  return {
+    date: todayStr,
+    shop: "",
+    catno: "",
+    detail: "",
+    qty: 0,
+    price: 0,
+    clientPrice: 0,
+    warehouse: warehouseListCache.length > 0 ? warehouseListCache[0] : "",
+    invoice: "",
+    actNo: "",
+    unit: "штук",
+    status: "Помилка",
+    shopValid: false,
+    detailValid: false,
+    unitValid: true,
+    actValid: true,
+    actClosed: false,
+    warehouseValid: warehouseListCache.length > 0,
+    qtyValid: false,
+    priceValid: false,
+    shopExists: false,
+    detailExists: false,
+  };
+}
+
 function resetModalState() {
   const textarea = document.getElementById(
     "batch-textarea-Excel",
@@ -1518,17 +1553,31 @@ function resetModalState() {
   const instructions = document.querySelector(
     ".batch-instructions-Excel",
   ) as HTMLElement;
+  const parseBtn = document.getElementById(
+    "batch-parse-btn-Excel",
+  ) as HTMLButtonElement;
+
+  // Ховаємо textarea та instructions
   if (textarea) {
-    textarea.style.display = "block";
+    textarea.style.display = "none";
     textarea.value = "";
   }
-  if (instructions) instructions.style.display = "block";
+  if (instructions) instructions.style.display = "none";
+
+  // Ховаємо кнопку "Розпарсити"
+  if (parseBtn) parseBtn.style.display = "none";
+
+  // Створюємо порожній рядок та показуємо таблицю
+  parsedDataGlobal = [createEmptyRow()];
+  renderBatchTable(parsedDataGlobal);
+
+  // Показуємо таблицю та кнопку "Завантажити"
   document
     .getElementById("batch-table-container-Excel")
-    ?.classList.add("hidden-all_other_bases");
+    ?.classList.remove("hidden-all_other_bases");
   document
     .getElementById("batch-upload-btn-Excel")
-    ?.classList.add("hidden-all_other_bases");
+    ?.classList.remove("hidden-all_other_bases");
 }
 // ===== Завантаження даних у БД =====
 async function uploadBatchData(data: any[]) {
@@ -1944,6 +1993,29 @@ export async function initBatchImport() {
           "error",
           4000,
         );
+      }
+    };
+  }
+
+  // Обробник кнопки "Додати рядок"
+  const addRowBtn = document.getElementById(
+    "batch-add-row-btn-Excel",
+  ) as HTMLButtonElement | null;
+  if (addRowBtn) {
+    addRowBtn.onclick = () => {
+      // Додаємо новий порожній рядок
+      const newRow = createEmptyRow();
+      parsedDataGlobal.push(newRow);
+      renderBatchTable(parsedDataGlobal);
+
+      // Прокручуємо до нового рядка
+      const tableContainer = document.getElementById(
+        "batch-table-container-Excel",
+      );
+      if (tableContainer) {
+        setTimeout(() => {
+          tableContainer.scrollTop = tableContainer.scrollHeight;
+        }, 50);
       }
     };
   }

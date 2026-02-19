@@ -168,9 +168,10 @@ $radius-xlarge: 16px;
 }
 // ============= Модальне вікно імпорту =============
 .batch-modal-Excel {
-  max-width: 90vw;
+  max-width: 98vw;
   max-height: 90vh;
   min-width: 600px;
+  width: 98vw;
   display: flex;
   flex-direction: column;
   background: white;
@@ -178,14 +179,13 @@ $radius-xlarge: 16px;
   box-shadow: $shadow-modal;
   overflow: hidden;
   position: relative;
-  width: fit-content;
 }
 .modal-content-Excel {
   display: flex;
   flex-direction: column;
   height: 100%;
   max-height: calc(90vh - 48px);
-  max-width: 98vw;
+  width: 100%;
   padding: 24px;
   overflow: hidden;
 }
@@ -503,21 +503,12 @@ $radius-xlarge: 16px;
   // Дія - комірка з кольоровим текстом
   td.action-cell-Excel {
     position: relative;
-    display: flex;
-    align-items: center;
-    gap: 4px;
 
     .cell-input-Excel {
-      flex: 1;
       background: transparent !important;
       cursor: pointer;
       font-weight: bold;
       text-align: center;
-    }
-
-    .delete-row-btn-Excel {
-      position: static;
-      flex-shrink: 0;
     }
   }
 }

@@ -419,7 +419,7 @@ function createBatchImportModal() {
     <div class="modal-all_other_bases batch-modal-Excel">
       <button class="modal-close-all_other_bases">×</button>
       <div class="modal-content-Excel">
-        <h3 class="batch-title-Excel">Імпорт даних з Excel</h3>
+        <h3 class="batch-title-Excel">Записати деталіl</h3>
         <p class="batch-instructions-Excel">
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
           <strong>Дата прихід ┃ Магазин ┃ Каталог номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
@@ -444,6 +444,7 @@ function createBatchImportModal() {
                 <th data-col="createdBy">Хто створив</th>
                 <th data-col="notes">Примітка</th>
                 <th data-col="action">Дія</th>
+                <th data-col="status">Готовність</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -657,6 +658,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "createdBy",
     "notes",
     "action",
+    "status",
   ];
   const headers = [
     "Дата",
@@ -674,6 +676,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "Хто створив",
     "Примітка",
     "Дія",
+    "Готовність",
   ];
   const widths = new Map<string, number>();
   const canvas = document.createElement("canvas");
@@ -718,7 +721,10 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
       limit = 140; // Хто створив: ПІБ
     else if (col === "notes")
       limit = 150; // Примітка: текст
-    else if (col === "action") limit = 90; // Дія: Записати/Видалити
+    else if (col === "action")
+      limit = 90; // Дія: Записати/Видалити
+    else if (col === "status")
+      limit = 100; // Готовність: Готовий/Помилка
 
     widths.set(col, Math.min(Math.ceil(maxWidth), limit));
   });
@@ -1114,7 +1120,24 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
           style="color: ${row.action === "Видалити" ? "#ef4444" : "#22c55e"}; font-weight: bold; cursor: pointer; background: transparent;"
         >
-        <button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>
+      </td>
+      <td class="status-cell-Excel ${
+        row.status === "Готовий"
+          ? "ready-Excel"
+          : row.status?.includes("Помилка")
+            ? "error-Excel"
+            : row.status?.includes("Успішно")
+              ? "success-Excel"
+              : "error-Excel"
+      }" style="width:${getWidth(
+        "status",
+      )}px;min-width:${getWidth("status")}px;max-width:${getWidth("status")}px;">
+        <span class="status-text-Excel">${row.status || "Помилка"}</span>
+        ${
+          row.status !== "✅ Успішно"
+            ? `<button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>`
+            : ""
+        }
       </td>
     `;
     tbody.appendChild(tr);

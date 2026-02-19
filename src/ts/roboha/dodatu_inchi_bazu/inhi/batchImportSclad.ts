@@ -429,7 +429,7 @@ function createBatchImportModal() {
           <table id="batch-table-Excel" class="batch-table-Excel">
             <thead>
               <tr>
-                <th data-col="date">Дата приходу</th>
+                <th data-col="date">Дата</th>
                 <th data-col="shop">Магазин</th>
                 <th data-col="catno">Каталог номер</th>
                 <th data-col="detail">Деталь</th>
@@ -441,7 +441,7 @@ function createBatchImportModal() {
                 <th data-col="actNo">Акт №</th>
                 <th data-col="unit">Одиниця</th>
                 <th data-col="orderStatus">Статус</th>
-                <th data-col="createdBy">Хто створив</th>
+                <th data-col="createdBy">Замовив</th>
                 <th data-col="notes">Примітка</th>
                 <th data-col="action">Дія</th>
                 <th data-col="status">Готовність</th>
@@ -692,39 +692,39 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     });
 
     // Ліміти відповідно до типу даних в колонці
-    let limit = 130;
+    let limit = 80;
     if (col === "detail")
-      limit = 240; // Деталь - залишаємо великий
+      limit = 280; // Деталь - залишаємо великий
     else if (col === "shop")
-      limit = 160; // Магазин - текст
+      limit = 100; // Магазин - текст
     else if (col === "catno")
-      limit = 150; // Каталог номер
+      limit = 95; // Каталог номер
     else if (col === "date")
-      limit = 110; // Дата: dd.mm.yyyy
+      limit = 80; // Дата: dd.mm.yyyy
     else if (col === "qty")
-      limit = 90; // Кількість: числа
+      limit = 55; // Кількість: числа
     else if (col === "price")
-      limit = 100; // Ціна: числа
+      limit = 70; // Ціна: числа
     else if (col === "clientPrice")
-      limit = 100; // Ціна клієнта: числа
+      limit = 70; // Ціна клієнта: числа
     else if (col === "warehouse")
-      limit = 60; // Склад: 1-3 цифри
+      limit = 50; // Склад: 1-3 цифри
     else if (col === "invoice")
-      limit = 90; // Рахунок №
+      limit = 70; // Рахунок №
     else if (col === "actNo")
-      limit = 80; // Акт №: числа
+      limit = 65; // Акт №: числа
     else if (col === "unit")
-      limit = 80; // Одиниця: штук/літр/комплект
+      limit = 60; // Одиниця: штук/літр/комплект
     else if (col === "orderStatus")
-      limit = 120; // Статус: Прибуло/Замовлено/Потребує за-ння
+      limit = 85; // Статус: Прибуло/Замовлено/Потребує за-ння
     else if (col === "createdBy")
-      limit = 140; // Хто створив: ПІБ
+      limit = 90; // Хто створив: ПІБ
     else if (col === "notes")
-      limit = 150; // Примітка: текст
+      limit = 100; // Примітка: текст
     else if (col === "action")
-      limit = 90; // Дія: Записати/Видалити
+      limit = 70; // Дія: Записати/Видалити
     else if (col === "status")
-      limit = 100; // Готовність: Готовий/Помилка
+      limit = 50; // Готовність: іконка
 
     widths.set(col, Math.min(Math.ceil(maxWidth), limit));
   });
@@ -1132,12 +1132,7 @@ function renderBatchTable(data: any[]) {
       }" style="width:${getWidth(
         "status",
       )}px;min-width:${getWidth("status")}px;max-width:${getWidth("status")}px;">
-        <span class="status-text-Excel">${row.status || "Помилка"}</span>
-        ${
-          row.status !== "✅ Успішно"
-            ? `<button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>`
-            : ""
-        }
+        <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || 'Помилка'}">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);

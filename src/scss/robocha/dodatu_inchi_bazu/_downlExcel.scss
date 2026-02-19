@@ -393,7 +393,7 @@ $radius-xlarge: 16px;
   width: auto;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 14px;
+  font-size: 11px;
   border: 2px solid $border-strong;
   border-radius: $radius-small;
   overflow: hidden;
@@ -416,7 +416,7 @@ $radius-xlarge: 16px;
   }
 
   th {
-    padding: 8px 6px;
+    padding: 5px 4px;
     background: linear-gradient(
       180deg,
       $bg-header 0%,
@@ -428,8 +428,8 @@ $radius-xlarge: 16px;
     top: 0;
     z-index: 100;
     text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.3px;
+    font-size: 9px;
+    letter-spacing: 0.2px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     border-bottom: 2px solid $border-strong;
   }
@@ -600,29 +600,21 @@ $radius-xlarge: 16px;
 }
 // ============= Статус комірки =============
 .status-cell-Excel {
-  padding: 4px 6px !important;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  min-width: 120px !important;
-  max-width: 150px;
+  padding: 2px 4px !important;
+  text-align: center;
+  min-width: 40px !important;
+  max-width: 50px;
 
   &.success-Excel {
-    background: color.adjust($primary-green, $lightness: 45%);
-    color: color.adjust($primary-green, $lightness: -20%);
-    border: 1px solid color.adjust($primary-green, $lightness: 35%);
+    background: color.adjust($primary-green, $lightness: 40%);
   }
 
   &.error-Excel {
-    background: color.adjust($danger-red, $lightness: 42%);
-    color: color.adjust($danger-red, $lightness: -10%);
-    border: 1px solid color.adjust($danger-red, $lightness: 32%);
+    background: color.adjust($danger-red, $lightness: 35%);
   }
 
   &.ready-Excel {
-    background: color.adjust($primary-blue, $lightness: 45%);
-    color: color.adjust($primary-blue, $lightness: -20%);
-    border: 1px solid color.adjust($primary-blue, $lightness: 35%);
+    background: color.adjust($primary-green, $lightness: 42%);
   }
 }
 .status-text-Excel {
@@ -634,8 +626,8 @@ $radius-xlarge: 16px;
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 18px;
-  padding: 2px 4px;
+  font-size: 14px;
+  padding: 1px 2px;
   line-height: 1;
   transition: transform 0.2s;
   flex-shrink: 0;

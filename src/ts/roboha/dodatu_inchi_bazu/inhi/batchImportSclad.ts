@@ -929,6 +929,19 @@ function getOrderStatusCellBackground(status: string): string {
   }
 }
 
+// Отримати колір тексту для статусу
+function getOrderStatusTextColor(status: string): string {
+  switch (status) {
+    case "Прибуло":
+      return "#16a34a"; // зелений
+    case "Замовлено":
+      return "#2563eb"; // синій
+    case "Потребує за-ння":
+    default:
+      return "#dc2626"; // червоний
+  }
+}
+
 // Перерахунок ціни клієнта на основі ціни та відсотка складу
 function recalculateClientPrice(index: number): void {
   const row = parsedDataGlobal[index];
@@ -1078,7 +1091,7 @@ function renderBatchTable(data: any[]) {
           data-index="${index}"
           readonly
           autocomplete="off"
-          style="background: transparent; color: #333; font-weight: bold; cursor: pointer;"
+          style="background: transparent; color: ${getOrderStatusTextColor(row.orderStatus || "Потребує за-ння")}; font-weight: bold; cursor: pointer;"
         >
       </td>
       <td>
@@ -1732,6 +1745,9 @@ function showOrderStatusDropdown(input: HTMLInputElement, index: number) {
       if (td) {
         td.style.backgroundColor = getOrderStatusCellBackground(opt.value);
       }
+
+      // Оновлюємо колір тексту
+      input.style.color = getOrderStatusTextColor(opt.value);
 
       closeDropdownList();
     });

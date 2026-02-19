@@ -27,6 +27,7 @@ let scladIdsMap: Map<string, string> = new Map();
 let warehouseListCache: string[] = []; // Кеш активних складів (номери)
 let warehouseProcentMap: Map<string, number> = new Map(); // Кеш відсотків складів: warehouse_id -> procent
 let usersListCache: string[] = []; // Кеш користувачів (не Слюсарів)
+let usersIdMap: Map<string, number> = new Map(); // Кеш ПІБ → slyusar_id
 const UNIT_OPTIONS = [
   { value: "штук", label: "штук" },
   { value: "літр", label: "літр" },
@@ -206,7 +207,7 @@ async function loadUsersList(): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from("slyusars")
-      .select("data")
+      .select("slyusar_id, data")
       .not("data", "is", null);
 
     if (error || !Array.isArray(data)) {
@@ -215,8 +216,10 @@ async function loadUsersList(): Promise<string[]> {
     }
 
     const names: string[] = [];
+    usersIdMap.clear(); // Очищуємо кеш перед оновленням
     for (const row of data) {
       const d = (row as any)?.data;
+      const slyusarId = (row as any)?.slyusar_id;
       let parsed: any = d;
       if (typeof d === "string") {
         try {
@@ -234,7 +237,12 @@ async function loadUsersList(): Promise<string[]> {
       // Отримуємо ім'я
       const name = parsed["Name"] || parsed["name"] || parsed["Ім'я"] || "";
       if (name && name.trim()) {
-        names.push(name.trim());
+        const trimmedName = name.trim();
+        names.push(trimmedName);
+        // Зберігаємо відповідність ПІБ → slyusar_id
+        if (slyusarId) {
+          usersIdMap.set(trimmedName, Number(slyusarId));
+        }
       }
     }
 
@@ -243,6 +251,12 @@ async function loadUsersList(): Promise<string[]> {
     console.error("Error loading users list:", e);
     return [];
   }
+}
+
+/** Отримання slyusar_id за ПІБ з кешу */
+function getSlyusarIdByName(name: string): number | null {
+  const trimmedName = (name || "").trim();
+  return usersIdMap.get(trimmedName) ?? null;
 }
 
 // Повертає id магазину або null, якщо не знайдено
@@ -1011,9 +1025,11 @@ function renderBatchTable(data: any[]) {
     const qtyTdClass = !row.qtyValid ? "invalid-qty" : "";
     // Ціна: червоний якщо невалідна
     const priceTdClass = !row.priceValid ? "invalid-price" : "";
+    // Конвертуємо дату в ISO формат для input type="date"
+    const isoDateForInput = toIsoDate(row.date) || row.date;
     tr.innerHTML = `
       <td>
-        ${createInput("text", row.date, "date", index)}
+        ${createInput("date", isoDateForInput, "date", index)}
       </td>
       <td class="${shopTdClass}">
         <input
@@ -1798,10 +1814,10 @@ function showActionDropdown(input: HTMLInputElement, index: number) {
 // Створення порожнього рядка даних з дефолтними значеннями
 function createEmptyRow(): any {
   const today = new Date();
-  const dd = String(today.getDate()).padStart(2, "0");
+  const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const yy = String(today.getFullYear()).slice(-2);
-  const todayStr = `${dd}.${mm}.${yy}`;
+  const dd = String(today.getDate()).padStart(2, "0");
+  const todayStr = `${yyyy}-${mm}-${dd}`; // ISO формат для input type="date"
 
   return {
     date: todayStr,
@@ -2008,6 +2024,29 @@ async function uploadBatchData(data: any[]) {
       offInput.value = "0";
       document.body.appendChild(offInput);
 
+      // тимчасові приховані інпути для statys, xto_zamovuv, prumitka
+      const statysInput = document.createElement("input");
+      statysInput.id = "sclad_statys";
+      statysInput.type = "hidden";
+      statysInput.value = row.orderStatus || "Потребує за-ння";
+      document.body.appendChild(statysInput);
+
+      const xtoZamovuvInput = document.createElement("input");
+      xtoZamovuvInput.id = "sclad_xto_zamovuv";
+      xtoZamovuvInput.type = "hidden";
+      // Отримуємо slyusar_id за ПІБ з кешу
+      const slyusarIdForRow = row.createdBy
+        ? getSlyusarIdByName(row.createdBy)
+        : null;
+      xtoZamovuvInput.value = slyusarIdForRow ? String(slyusarIdForRow) : "";
+      document.body.appendChild(xtoZamovuvInput);
+
+      const prumitkaInput = document.createElement("input");
+      prumitkaInput.id = "sclad_prumitka";
+      prumitkaInput.type = "hidden";
+      prumitkaInput.value = row.notes || "";
+      document.body.appendChild(prumitkaInput);
+
       // заповнюємо інпути під handleScladCrud
       const fields: Record<string, string> = {
         sclad_date: dbDate,
@@ -2043,6 +2082,9 @@ async function uploadBatchData(data: any[]) {
       // прибираємо тимчасові інпути
       aktInput.remove();
       offInput.remove();
+      statysInput.remove();
+      xtoZamovuvInput.remove();
+      prumitkaInput.remove();
 
       if (!scladSuccess) {
         errorCount++;

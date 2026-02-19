@@ -294,6 +294,15 @@ function readScladFormValues() {
     }
   }
 
+  // Перевіряємо чи є приховані інпути від batch import
+  const hiddenXtoZamovuv = pick("sclad_xto_zamovuv");
+  if (hiddenXtoZamovuv) {
+    const hiddenId = Number(hiddenXtoZamovuv);
+    if (Number.isFinite(hiddenId) && hiddenId > 0) {
+      slyusarId = hiddenId;
+    }
+  }
+
   return {
     time_on: pick("sclad_date") || null,
     shops: pick("sclad_shop") || null,
@@ -306,6 +315,8 @@ function readScladFormValues() {
     akt: pick("sclad_akt") || null,
     scladNomer: toNum(pick("sclad_procent")),
     xto_zamovuv: slyusarId, // ID користувача (запчастиста), який завантажив деталь
+    statys: pick("sclad_statys") || null, // Статус деталі (Прибуло/Замовлено/Потребує за-ння)
+    prumitka: pick("sclad_prumitka") || null, // Примітка
 
     // 🛠️ Безпечна заміна: якщо null → ставимо 0
     kilkist_off: off === null ? 0 : off,

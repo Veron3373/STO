@@ -916,19 +916,6 @@ function recalculateAndApplyWidths() {
   // З table-layout: fixed ширина автоматично застосовується з th до td
 }
 // ===== Рендеринг таблиці =====
-// Отримати фоновий колір для статусу замовлення (для input)
-function getOrderStatusBackgroundColor(status: string): string {
-  switch (status) {
-    case "Прибуло":
-      return "#22c55e"; // зелений
-    case "Замовлено":
-      return "#3b82f6"; // синій
-    case "Потребує за-ння":
-    default:
-      return "#ef4444"; // червоний
-  }
-}
-
 // Отримати світлий фоновий колір для комірки td статусу
 function getOrderStatusCellBackground(status: string): string {
   switch (status) {
@@ -1055,6 +1042,7 @@ function renderBatchTable(data: any[]) {
           data-field="warehouse"
           data-index="${index}"
           autocomplete="off"
+          style="text-align: center;"
         >
       </td>
       <td>
@@ -1090,7 +1078,7 @@ function renderBatchTable(data: any[]) {
           data-index="${index}"
           readonly
           autocomplete="off"
-          style="background-color: ${getOrderStatusBackgroundColor(row.orderStatus || "Потребує за-ння")}; color: #fff; font-weight: bold; cursor: pointer;"
+          style="background: transparent; color: #333; font-weight: bold; cursor: pointer;"
         >
       </td>
       <td>
@@ -1738,9 +1726,6 @@ function showOrderStatusDropdown(input: HTMLInputElement, index: number) {
       e.stopPropagation();
       input.value = opt.value;
       parsedDataGlobal[index]["orderStatus"] = opt.value;
-
-      // Оновлюємо фоновий колір інпуту
-      input.style.backgroundColor = getOrderStatusBackgroundColor(opt.value);
 
       // Оновлюємо фоновий колір комірки td
       const td = input.closest("td");

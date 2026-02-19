@@ -15,6 +15,7 @@ import { tryHandleShopsCrud, tryHandleDetailsCrud } from "../db_shops_details";
 import { handleScladCrud } from "../db_sclad";
 import { showNotification } from "../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { supabase } from "../../../vxid/supabaseClient";
+import { userName as currentUserName } from "../../tablucya/users";
 const batchModalId = "batch-import-modal-Excel";
 const confirmModalId = "batch-confirm-modal-Excel";
 let parsedDataGlobal: any[] = [];
@@ -24,12 +25,26 @@ let actsListCache: string[] = [];
 let actsDateOffMap: Map<number, string | null> = new Map();
 let scladIdsMap: Map<string, string> = new Map();
 let warehouseListCache: string[] = []; // Кеш активних складів (номери)
+let usersListCache: string[] = []; // Кеш користувачів (не Слюсарів)
 const UNIT_OPTIONS = [
   { value: "штук", label: "штук" },
   { value: "літр", label: "літр" },
   { value: "комплект", label: "комплект" },
 ];
 const VALID_UNITS = UNIT_OPTIONS.map((o) => o.value);
+
+// Опції для статусу деталі (Прибуло/Замовлено/Потребує за-ння)
+const ORDER_STATUS_OPTIONS = [
+  { value: "Потребує за-ння", label: "Потребує за-ння", color: "#f87171" },
+  { value: "Замовлено", label: "Замовлено", color: "#fb923c" },
+  { value: "Прибуло", label: "Прибуло", color: "#4ade80" },
+];
+
+// Опції для дії (Записати/Видалити)
+const ACTION_OPTIONS = [
+  { value: "Записати", label: "Записати", color: "#22c55e" },
+  { value: "Видалити", label: "Видалити", color: "#ef4444" },
+];
 // ===== Допоміжні функції =====
 type TableName = "shops" | "details";
 function looksLikeJson(s: string): boolean {
@@ -170,6 +185,50 @@ async function loadWarehouseList(): Promise<string[]> {
     return data.map((row: { setting_id: number }) => String(row.setting_id));
   } catch (e) {
     console.error("Error loading warehouse list:", e);
+    return [];
+  }
+}
+
+/** Завантаження списку користувачів (не Слюсарів) з таблиці slyusars */
+async function loadUsersList(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from("slyusars")
+      .select("data")
+      .not("data", "is", null);
+
+    if (error || !Array.isArray(data)) {
+      console.error("Error loading users:", error);
+      return [];
+    }
+
+    const names: string[] = [];
+    for (const row of data) {
+      const d = (row as any)?.data;
+      let parsed: any = d;
+      if (typeof d === "string") {
+        try {
+          parsed = JSON.parse(d);
+        } catch {
+          continue;
+        }
+      }
+      if (!parsed || typeof parsed !== "object") continue;
+
+      // Пропускаємо Слюсарів
+      const access = parsed["Доступ"] || parsed["доступ"] || "";
+      if (access === "Слюсар") continue;
+
+      // Отримуємо ім'я
+      const name = parsed["Name"] || parsed["name"] || parsed["Ім'я"] || "";
+      if (name && name.trim()) {
+        names.push(name.trim());
+      }
+    }
+
+    return uniqAndSort(names);
+  } catch (e) {
+    console.error("Error loading users list:", e);
     return [];
   }
 }
@@ -381,7 +440,10 @@ function createBatchImportModal() {
                 <th data-col="invoice">Рахунок №</th>
                 <th data-col="actNo">Акт №</th>
                 <th data-col="unit">Одиниця</th>
-                <th data-col="status">Статус</th>
+                <th data-col="orderStatus">Статус</th>
+                <th data-col="createdBy">Хто створив</th>
+                <th data-col="notes">Примітка</th>
+                <th data-col="action">Дія</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -591,7 +653,10 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "invoice",
     "actNo",
     "unit",
-    "status",
+    "orderStatus",
+    "createdBy",
+    "notes",
+    "action",
   ];
   const headers = [
     "Дата",
@@ -606,6 +671,9 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "Акт №",
     "Одиниця",
     "Статус",
+    "Хто створив",
+    "Примітка",
+    "Дія",
   ];
   const widths = new Map<string, number>();
   const canvas = document.createElement("canvas");
@@ -644,7 +712,13 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
       limit = 80; // Акт №: числа
     else if (col === "unit")
       limit = 80; // Одиниця: штук/літр/комплект
-    else if (col === "status") limit = 100; // Статус
+    else if (col === "orderStatus")
+      limit = 120; // Статус: Прибуло/Замовлено/Потребує за-ння
+    else if (col === "createdBy")
+      limit = 140; // Хто створив: ПІБ
+    else if (col === "notes")
+      limit = 150; // Примітка: текст
+    else if (col === "action") limit = 90; // Дія: Записати/Видалити
 
     widths.set(col, Math.min(Math.ceil(maxWidth), limit));
   });
@@ -835,6 +909,19 @@ function recalculateAndApplyWidths() {
   });
 }
 // ===== Рендеринг таблиці =====
+// Отримати колір фону для статусу замовлення
+function getOrderStatusColor(status: string): string {
+  switch (status) {
+    case "Прибуло":
+      return "#bbf7d0"; // світло-зелений
+    case "Замовлено":
+      return "#fed7aa"; // світло-помаранчевий
+    case "Потребує за-ння":
+    default:
+      return "#fecaca"; // світло-червоний
+  }
+}
+
 function createInput(
   type: string,
   value: string,
@@ -863,14 +950,6 @@ function renderBatchTable(data: any[]) {
   tbody.innerHTML = "";
   data.forEach((row, index) => {
     const tr = document.createElement("tr");
-    const statusClass =
-      row.status === "Готовий"
-        ? "ready-Excel"
-        : row.status.includes("Помилка")
-          ? "error-Excel"
-          : row.status.includes("Успішно")
-            ? "success-Excel"
-            : "";
     const getWidth = (col: string) => widths.get(col) || 100;
     // Магазин: жовтий якщо не існує в базі (буде створено)
     const shopTdClass =
@@ -983,15 +1062,59 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td class="status-cell-Excel ${statusClass}" style="width:${getWidth(
-        "status",
-      )}px;min-width:${getWidth("status")}px;max-width:${getWidth("status")}px;">
-        <span class="status-text-Excel">${row.status}</span>
-        ${
-          row.status !== "✅ Успішно"
-            ? `<button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>`
-            : ""
-        }
+      <td class="orderStatus-cell-Excel" style="width:${getWidth(
+        "orderStatus",
+      )}px;min-width:${getWidth("orderStatus")}px;max-width:${getWidth("orderStatus")}px; background-color: ${getOrderStatusColor(row.orderStatus)};">
+        <input
+          type="text"
+          class="cell-input-Excel cell-input-combo-Excel orderStatus-input-Excel"
+          value="${row.orderStatus || "Потребує за-ння"}"
+          data-field="orderStatus"
+          data-index="${index}"
+          readonly
+          autocomplete="off"
+          style="background: transparent; cursor: pointer;"
+        >
+      </td>
+      <td style="width:${getWidth(
+        "createdBy",
+      )}px;min-width:${getWidth("createdBy")}px;max-width:${getWidth("createdBy")}px;">
+        <input
+          type="text"
+          class="cell-input-Excel cell-input-combo-Excel createdBy-input-Excel"
+          value="${row.createdBy || ""}"
+          data-field="createdBy"
+          data-index="${index}"
+          autocomplete="off"
+        >
+      </td>
+      <td style="width:${getWidth(
+        "notes",
+      )}px;min-width:${getWidth("notes")}px;max-width:${getWidth("notes")}px;">
+        <input
+          type="text"
+          class="cell-input-Excel"
+          value="${row.notes || ""}"
+          data-field="notes"
+          data-index="${index}"
+          autocomplete="off"
+          placeholder="Примітка..."
+        >
+      </td>
+      <td class="action-cell-Excel" style="width:${getWidth(
+        "action",
+      )}px;min-width:${getWidth("action")}px;max-width:${getWidth("action")}px;">
+        <input
+          type="text"
+          class="cell-input-Excel cell-input-combo-Excel action-input-Excel"
+          value="${row.action || "Записати"}"
+          data-field="action"
+          data-index="${index}"
+          readonly
+          autocomplete="off"
+          style="color: ${row.action === "Видалити" ? "#ef4444" : "#22c55e"}; font-weight: bold; cursor: pointer; background: transparent;"
+        >
+        <button class="delete-row-btn-Excel" data-index="${index}" title="Видалити рядок">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -1409,6 +1532,62 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
     });
   });
 
+  // Статус замовлення (orderStatus) з випадаючим списком
+  tbody.querySelectorAll(".orderStatus-input-Excel").forEach((input) => {
+    input.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      showOrderStatusDropdown(target, index);
+    });
+  });
+
+  // Хто створив (createdBy) з випадаючим списком користувачів
+  tbody.querySelectorAll(".createdBy-input-Excel").forEach((input) => {
+    input.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showDropdownList(e.target as HTMLElement, usersListCache);
+    });
+    input.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      const value = target.value;
+      parsedDataGlobal[index]["createdBy"] = value;
+
+      const filter = value.toLowerCase();
+      const filteredOptions = filter
+        ? usersListCache.filter((opt) => opt.toLowerCase().includes(filter))
+        : usersListCache;
+      if (currentDropdownInput === target && currentDropdownList) {
+        updateDropdownList(filteredOptions, target, index, "createdBy");
+        if (filteredOptions.length)
+          positionDropdown(target, currentDropdownList);
+        else closeDropdownList();
+      }
+      recalculateAndApplyWidths();
+    });
+  });
+
+  // Дія (action) з випадаючим списком
+  tbody.querySelectorAll(".action-input-Excel").forEach((input) => {
+    input.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      showActionDropdown(target, index);
+    });
+  });
+
+  // Примітка (notes)
+  tbody.querySelectorAll('[data-field="notes"]').forEach((input) => {
+    input.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      parsedDataGlobal[index]["notes"] = target.value;
+      recalculateAndApplyWidths();
+    });
+  });
+
   // Видалення рядка
   tbody.querySelectorAll(".delete-row-btn-Excel").forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -1512,6 +1691,80 @@ function updateDropdownList(
     currentDropdownList!.appendChild(li);
   });
 }
+// Показати випадаючий список для статусу замовлення
+function showOrderStatusDropdown(input: HTMLInputElement, index: number) {
+  closeDropdownList();
+  const list = document.createElement("ul");
+  list.className = "excel-dropdown-list";
+
+  ORDER_STATUS_OPTIONS.forEach((opt) => {
+    const li = document.createElement("li");
+    li.className = "excel-dropdown-item";
+    li.textContent = opt.label;
+    li.style.backgroundColor = opt.color;
+    li.style.color = "#1e293b";
+    li.style.fontWeight = "500";
+    li.tabIndex = 0;
+    li.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      input.value = opt.value;
+      parsedDataGlobal[index]["orderStatus"] = opt.value;
+
+      // Оновлюємо колір комірки
+      const td = input.closest("td");
+      if (td) {
+        (td as HTMLElement).style.backgroundColor = getOrderStatusColor(
+          opt.value,
+        );
+      }
+
+      closeDropdownList();
+    });
+    list.appendChild(li);
+  });
+
+  currentDropdownInput = input;
+  currentDropdownList = list;
+  input.classList.add("dropdown-open");
+  document.body.appendChild(list);
+  positionDropdown(input, list);
+}
+
+// Показати випадаючий список для дії
+function showActionDropdown(input: HTMLInputElement, index: number) {
+  closeDropdownList();
+  const list = document.createElement("ul");
+  list.className = "excel-dropdown-list";
+
+  ACTION_OPTIONS.forEach((opt) => {
+    const li = document.createElement("li");
+    li.className = "excel-dropdown-item";
+    li.textContent = opt.label;
+    li.style.color = opt.color;
+    li.style.fontWeight = "bold";
+    li.tabIndex = 0;
+    li.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      input.value = opt.value;
+      parsedDataGlobal[index]["action"] = opt.value;
+
+      // Оновлюємо колір тексту
+      input.style.color = opt.color;
+
+      closeDropdownList();
+    });
+    list.appendChild(li);
+  });
+
+  currentDropdownInput = input;
+  currentDropdownList = list;
+  input.classList.add("dropdown-open");
+  document.body.appendChild(list);
+  positionDropdown(input, list);
+}
+
 // Створення порожнього рядка даних з дефолтними значеннями
 function createEmptyRow(): any {
   const today = new Date();
@@ -1532,6 +1785,10 @@ function createEmptyRow(): any {
     invoice: "",
     actNo: "",
     unit: "штук",
+    orderStatus: "Потребує за-ння",
+    createdBy: currentUserName || "",
+    notes: "",
+    action: "Записати",
     status: "Помилка",
     shopValid: false,
     detailValid: false,
@@ -1883,6 +2140,7 @@ export async function initBatchImport() {
   actsListCache = actsData.list;
   actsDateOffMap = actsData.map;
   warehouseListCache = await loadWarehouseList();
+  usersListCache = await loadUsersList();
 
   // Ensure модалки створені один раз
   const existingModal = document.getElementById(batchModalId);
@@ -1933,13 +2191,15 @@ export async function initBatchImport() {
         loadDetailsList(),
         loadActsList(),
         loadWarehouseList(),
+        loadUsersList(),
       ])
-        .then(([shops, details, acts, warehouses]) => {
+        .then(([shops, details, acts, warehouses, users]) => {
           shopsListCache = shops;
           detailsListCache = details;
           actsListCache = acts.list;
           actsDateOffMap = acts.map;
           warehouseListCache = warehouses;
+          usersListCache = users;
         })
         .catch((err) => console.error("Помилка оновлення кешу імпорту:", err));
     };

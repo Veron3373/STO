@@ -77,7 +77,7 @@ function toIsoDate(dateStr: string): string {
   if (!dateStr?.trim()) return "";
   let cleanDate = dateStr.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) return cleanDate;
-  
+
   // Підтримка dd.mm.yyyy
   const match4 = cleanDate.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (match4) {
@@ -89,7 +89,7 @@ function toIsoDate(dateStr: string): string {
       return `${y}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
     }
   }
-  
+
   // Підтримка dd.mm.yy
   const match2 = cleanDate.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
   if (match2) {
@@ -102,17 +102,7 @@ function toIsoDate(dateStr: string): string {
       return `${yyyy}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
     }
   }
-  
-  return "";
-}
-function fromIsoToDisplay(isoDate: string): string {
-  if (!isoDate?.trim()) return "";
-  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) {
-    const [, yyyy, mm, dd] = match;
-    const yy = yyyy.slice(-2);
-    return `${dd}.${mm}.${yy}`;
-  }
+
   return "";
 }
 async function fetchNames(table: TableName): Promise<string[]> {
@@ -450,9 +440,9 @@ function createBatchImportModal() {
                 <th data-col="detail">Деталь</th>
                 <th data-col="qty">К-ть</th>
                 <th data-col="price">Ціна</th>
-                <th data-col="clientPrice">Ц-н К-та</th>
+                <th data-col="clientPrice">Клієнта</th>
                 <th data-col="warehouse">Склад</th>
-                <th data-col="invoice">Рахунок №</th>
+                <th data-col="invoice">Рах. №</th>
                 <th data-col="actNo">Акт №</th>
                 <th data-col="unit">О-ця</th>
                 <th data-col="orderStatus">Статус</th>
@@ -686,9 +676,9 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "Деталь",
     "К-ть",
     "Ціна",
-    "Ц-н К-та",
+    "Клієнта",
     "Склад",
-    "Рахунок №",
+    "Рах. №",
     "Акт №",
     "О-ця",
     "Статус",
@@ -702,7 +692,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return widths;
   ctx.font = "11px Arial";
-  
+
   // Мінімальні ширини для колонок (у відсотках від загальної ширини)
   const minWidths: Record<string, number> = {
     date: 5,
@@ -719,14 +709,14 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     orderStatus: 6,
     createdBy: 6,
     notes: 8,
-    action: 6,
-    status: 3,
+    action: 8,
+    status: 2,
   };
-  
+
   // Розрахунок ідеальної ширини на основі контенту
   const contentWidths = new Map<string, number>();
   let totalContentWidth = 0;
-  
+
   columns.forEach((col, i) => {
     let maxWidth = ctx.measureText(headers[i]).width + 20;
     data.forEach((row) => {
@@ -737,19 +727,19 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     contentWidths.set(col, maxWidth);
     totalContentWidth += maxWidth;
   });
-  
+
   // Перетворюємо в відсотки (пропорційно контенту)
   columns.forEach((col) => {
     const contentW = contentWidths.get(col) || 50;
     let percent = (contentW / totalContentWidth) * 100;
-    
+
     // Застосовуємо мінімальну ширину
     const minW = minWidths[col] || 3;
     percent = Math.max(percent, minW);
-    
+
     widths.set(col, percent);
   });
-  
+
   // Нормалізуємо до 100%
   let total = 0;
   widths.forEach((v) => (total += v));
@@ -759,7 +749,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
       widths.set(col, Math.round((widths.get(col) || 0) * scale * 100) / 100);
     });
   }
-  
+
   return widths;
 }
 function applyColumnWidths(widths: Map<string, number>) {
@@ -981,7 +971,7 @@ function renderBatchTable(data: any[]) {
     const priceTdClass = !row.priceValid ? "invalid-price" : "";
     tr.innerHTML = `
       <td>
-        ${createInput("date", toIsoDate(row.date), "date", index)}
+        ${createInput("text", row.date, "date", index)}
       </td>
       <td class="${shopTdClass}">
         <input
@@ -1103,7 +1093,7 @@ function renderBatchTable(data: any[]) {
               ? "success-Excel"
               : "error-Excel"
       }">
-        <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || 'Помилка'}">🗑️</button>
+        <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || "Помилка"}">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -1177,27 +1167,17 @@ function revalidateRow(index: number) {
 
 function attachInputHandlers(tbody: HTMLTableSectionElement) {
   tbody.querySelectorAll('input[data-field="date"]').forEach((input) => {
-    input.addEventListener("click", () => {
-      const dateInput = input as HTMLInputElement;
-      if ("showPicker" in HTMLInputElement.prototype) {
-        dateInput.showPicker();
-      } else {
-        dateInput.focus();
-        dateInput.click();
-      }
-    });
     input.addEventListener("input", (e) => {
       const target = e.target as HTMLInputElement;
       const index = parseInt(target.dataset.index || "0");
-      parsedDataGlobal[index]["date"] = fromIsoToDisplay(target.value);
-      parsedDataGlobal[index]["date"] = fromIsoToDisplay(target.value);
+      parsedDataGlobal[index]["date"] = target.value;
       recalculateAndApplyWidths();
       revalidateRow(index);
     });
     input.addEventListener("change", (e) => {
       const target = e.target as HTMLInputElement;
       const index = parseInt(target.dataset.index || "0");
-      parsedDataGlobal[index]["date"] = fromIsoToDisplay(target.value);
+      parsedDataGlobal[index]["date"] = target.value;
       recalculateAndApplyWidths();
       revalidateRow(index);
     });

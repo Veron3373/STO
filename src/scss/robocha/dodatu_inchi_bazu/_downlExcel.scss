@@ -443,16 +443,22 @@ $radius-xlarge: 16px;
         $lightness: 40%
       ) !important;
 
-      td {
+      // Всі колонки крім останньої (Г-ть / статус)
+      td:not(:last-child) {
         background-color: color.adjust(
           $primary-green,
           $lightness: 40%
         ) !important;
       }
 
-      // Інпути також стають зеленими при ховері на рядок
-      .cell-input-Excel,
-      .cell-input-combo-Excel {
+      // Остання колонка (Г-ть) - без ховер ефекту
+      td:last-child {
+        background-color: transparent !important;
+      }
+
+      // Інпути також стають зеленими при ховері на рядок (крім останньої колонки)
+      td:not(:last-child) .cell-input-Excel,
+      td:not(:last-child) .cell-input-combo-Excel {
         background: transparent !important;
       }
     }

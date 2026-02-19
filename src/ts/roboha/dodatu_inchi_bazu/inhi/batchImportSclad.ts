@@ -25,6 +25,7 @@ let actsListCache: string[] = [];
 let actsDateOffMap: Map<number, string | null> = new Map();
 let scladIdsMap: Map<string, string> = new Map();
 let warehouseListCache: string[] = []; // Кеш активних складів (номери)
+let warehouseProcentMap: Map<string, number> = new Map(); // Кеш відсотків складів: warehouse_id -> procent
 let usersListCache: string[] = []; // Кеш користувачів (не Слюсарів)
 const UNIT_OPTIONS = [
   { value: "штук", label: "штук" },
@@ -185,6 +186,12 @@ async function loadWarehouseList(): Promise<string[]> {
       console.error("Error loading warehouses:", error);
       return [];
     }
+
+    // Заповнюємо карту відсотків для кожного складу
+    warehouseProcentMap.clear();
+    data.forEach((row: { setting_id: number; procent: number }) => {
+      warehouseProcentMap.set(String(row.setting_id), row.procent);
+    });
 
     // Активні склади - повертаємо номери як рядки
     return data.map((row: { setting_id: number }) => String(row.setting_id));
@@ -909,8 +916,8 @@ function recalculateAndApplyWidths() {
   // З table-layout: fixed ширина автоматично застосовується з th до td
 }
 // ===== Рендеринг таблиці =====
-// Отримати колір тексту для статусу замовлення
-function getOrderStatusColor(status: string): string {
+// Отримати фоновий колір для статусу замовлення (для input)
+function getOrderStatusBackgroundColor(status: string): string {
   switch (status) {
     case "Прибуло":
       return "#22c55e"; // зелений
@@ -919,6 +926,28 @@ function getOrderStatusColor(status: string): string {
     case "Потребує за-ння":
     default:
       return "#ef4444"; // червоний
+  }
+}
+
+// Перерахунок ціни клієнта на основі ціни та відсотка складу
+function recalculateClientPrice(index: number): void {
+  const row = parsedDataGlobal[index];
+  if (!row) return;
+
+  const price = parseFloat(row.price) || 0;
+  const warehouseId = String(row.warehouse || "").trim();
+  const procent = warehouseProcentMap.get(warehouseId) ?? 0;
+
+  // Формула: clientPrice = price + (price * procent / 100)
+  const clientPrice = price + (price * procent) / 100;
+  row.clientPrice = Math.round(clientPrice * 100) / 100; // Округлення до 2 знаків
+
+  // Оновити input в DOM
+  const clientPriceInput = document.querySelector(
+    `#batch-table-Excel tbody tr:nth-child(${index + 1}) [data-field="clientPrice"]`,
+  ) as HTMLInputElement | null;
+  if (clientPriceInput) {
+    clientPriceInput.value = String(row.clientPrice);
   }
 }
 
@@ -1048,7 +1077,7 @@ function renderBatchTable(data: any[]) {
           data-index="${index}"
           readonly
           autocomplete="off"
-          style="color: ${getOrderStatusColor(row.orderStatus)}; font-weight: bold; cursor: pointer; background: transparent;"
+          style="background-color: ${getOrderStatusBackgroundColor(row.orderStatus || "Потребує за-ння")}; color: #fff; font-weight: bold; cursor: pointer;"
         >
       </td>
       <td>
@@ -1205,6 +1234,11 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
           } else if (field === "price") {
             td.classList.remove("invalid-price");
           }
+        }
+
+        // Авторозрахунок ціни клієнта при зміні ціни
+        if (field === "price") {
+          recalculateClientPrice(index);
         }
 
         recalculateAndApplyWidths();
@@ -1459,6 +1493,10 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
           if (td) td.classList.remove("invalid-warehouse");
         }
       }
+
+      // Перерахунок ціни клієнта при зміні складу
+      recalculateClientPrice(index);
+
       revalidateRow(index);
     });
   });
@@ -1624,6 +1662,8 @@ function updateDropdownList(
       } else if (field === "warehouse") {
         parsedDataGlobal[index].warehouse = option; // явно оновлюємо
         parsedDataGlobal[index].warehouseValid = true;
+        // Перерахунок ціни клієнта при виборі складу
+        recalculateClientPrice(index);
       }
 
       // Примусово оновлюємо статус
@@ -1679,8 +1719,8 @@ function showOrderStatusDropdown(input: HTMLInputElement, index: number) {
       input.value = opt.value;
       parsedDataGlobal[index]["orderStatus"] = opt.value;
 
-      // Оновлюємо колір тексту інпуту
-      input.style.color = getOrderStatusColor(opt.value);
+      // Оновлюємо фоновий колір інпуту
+      input.style.backgroundColor = getOrderStatusBackgroundColor(opt.value);
 
       closeDropdownList();
     });

@@ -338,7 +338,7 @@ function createConfirmModal() {
   modal.innerHTML = `
     <div class="modal-all_other_bases confirm-modal-Excel">
       <div class="confirm-content-Excel">
-        <div class="confirm-icon-Excel">📊</div>
+        <div class="confirm-icon-Excel">💾</div>
         <h3 class="confirm-title-Excel">Підтвердження завантаження</h3>
         <p class="confirm-message-Excel"></p>
         <div class="confirm-buttons-Excel">
@@ -419,7 +419,7 @@ function createBatchImportModal() {
     <div class="modal-all_other_bases batch-modal-Excel">
       <button class="modal-close-all_other_bases">×</button>
       <div class="modal-content-Excel">
-        <h3 class="batch-title-Excel">Записати деталіl</h3>
+        <h3 class="batch-title-Excel">Записати деталіl\</h3>
         <p class="batch-instructions-Excel">
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
           <strong>Дата прихід ┃ Магазин ┃ Каталог номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
@@ -673,7 +673,7 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
     "Акт №",
     "Одиниця",
     "Статус",
-    "Хто створив",
+    "Замовив",
     "Примітка",
     "Дія",
     "Готовність",
@@ -682,52 +682,65 @@ function calculateDynamicWidths(data: any[]): Map<string, number> {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) return widths;
-  ctx.font = "13px Arial";
+  ctx.font = "11px Arial";
+  
+  // Мінімальні ширини для колонок (у відсотках від загальної ширини)
+  const minWidths: Record<string, number> = {
+    date: 5,
+    shop: 6,
+    catno: 6,
+    detail: 12,
+    qty: 4,
+    price: 4,
+    clientPrice: 5,
+    warehouse: 3,
+    invoice: 5,
+    actNo: 4,
+    unit: 4,
+    orderStatus: 6,
+    createdBy: 6,
+    notes: 8,
+    action: 4,
+    status: 3,
+  };
+  
+  // Розрахунок ідеальної ширини на основі контенту
+  const contentWidths = new Map<string, number>();
+  let totalContentWidth = 0;
+  
   columns.forEach((col, i) => {
-    let maxWidth = ctx.measureText(headers[i]).width + 40;
+    let maxWidth = ctx.measureText(headers[i]).width + 20;
     data.forEach((row) => {
       const value = String(row[col] ?? "");
-      const textWidth = ctx.measureText(value).width + 40;
+      const textWidth = ctx.measureText(value).width + 20;
       if (textWidth > maxWidth) maxWidth = textWidth;
     });
-
-    // Ліміти відповідно до типу даних в колонці
-    let limit = 80;
-    if (col === "detail")
-      limit = 280; // Деталь - залишаємо великий
-    else if (col === "shop")
-      limit = 100; // Магазин - текст
-    else if (col === "catno")
-      limit = 95; // Каталог номер
-    else if (col === "date")
-      limit = 80; // Дата: dd.mm.yyyy
-    else if (col === "qty")
-      limit = 55; // Кількість: числа
-    else if (col === "price")
-      limit = 70; // Ціна: числа
-    else if (col === "clientPrice")
-      limit = 70; // Ціна клієнта: числа
-    else if (col === "warehouse")
-      limit = 50; // Склад: 1-3 цифри
-    else if (col === "invoice")
-      limit = 70; // Рахунок №
-    else if (col === "actNo")
-      limit = 65; // Акт №: числа
-    else if (col === "unit")
-      limit = 60; // Одиниця: штук/літр/комплект
-    else if (col === "orderStatus")
-      limit = 85; // Статус: Прибуло/Замовлено/Потребує за-ння
-    else if (col === "createdBy")
-      limit = 90; // Хто створив: ПІБ
-    else if (col === "notes")
-      limit = 100; // Примітка: текст
-    else if (col === "action")
-      limit = 70; // Дія: Записати/Видалити
-    else if (col === "status")
-      limit = 50; // Готовність: іконка
-
-    widths.set(col, Math.min(Math.ceil(maxWidth), limit));
+    contentWidths.set(col, maxWidth);
+    totalContentWidth += maxWidth;
   });
+  
+  // Перетворюємо в відсотки (пропорційно контенту)
+  columns.forEach((col) => {
+    const contentW = contentWidths.get(col) || 50;
+    let percent = (contentW / totalContentWidth) * 100;
+    
+    // Застосовуємо мінімальну ширину
+    const minW = minWidths[col] || 3;
+    percent = Math.max(percent, minW);
+    
+    widths.set(col, percent);
+  });
+  
+  // Нормалізуємо до 100%
+  let total = 0;
+  widths.forEach((v) => (total += v));
+  if (total !== 100) {
+    const scale = 100 / total;
+    columns.forEach((col) => {
+      widths.set(col, Math.round((widths.get(col) || 0) * scale * 100) / 100);
+    });
+  }
+  
   return widths;
 }
 function applyColumnWidths(widths: Map<string, number>) {
@@ -736,10 +749,8 @@ function applyColumnWidths(widths: Map<string, number>) {
   thead.querySelectorAll("th").forEach((th) => {
     const col = (th as HTMLElement).dataset.col;
     if (col && widths.has(col)) {
-      const width = widths.get(col)!;
-      (th as HTMLElement).style.width = `${width}px`;
-      (th as HTMLElement).style.minWidth = `${width}px`;
-      (th as HTMLElement).style.maxWidth = `${width}px`;
+      const percent = widths.get(col)!;
+      (th as HTMLElement).style.width = `${percent}%`;
     }
   });
 }
@@ -886,33 +897,7 @@ function showDropdownList(input: HTMLElement, options: string[]) {
 function recalculateAndApplyWidths() {
   const widths = calculateDynamicWidths(parsedDataGlobal);
   applyColumnWidths(widths);
-  const tbody = document.querySelector("#batch-table-Excel tbody");
-  if (!tbody) return;
-  const columnKeys = [
-    "date",
-    "shop",
-    "catno",
-    "detail",
-    "qty",
-    "price",
-    "clientPrice",
-    "warehouse",
-    "invoice",
-    "actNo",
-    "unit",
-    "status",
-  ];
-  tbody.querySelectorAll("tr").forEach((tr) => {
-    tr.querySelectorAll("td").forEach((td, colIndex) => {
-      const col = columnKeys[colIndex];
-      if (widths.has(col)) {
-        const width = widths.get(col)!;
-        (td as HTMLElement).style.width = `${width}px`;
-        (td as HTMLElement).style.minWidth = `${width}px`;
-        (td as HTMLElement).style.maxWidth = `${width}px`;
-      }
-    });
-  });
+  // З table-layout: fixed ширина автоматично застосовується з th до td
 }
 // ===== Рендеринг таблиці =====
 // Отримати колір фону для статусу замовлення
@@ -956,7 +941,6 @@ function renderBatchTable(data: any[]) {
   tbody.innerHTML = "";
   data.forEach((row, index) => {
     const tr = document.createElement("tr");
-    const getWidth = (col: string) => widths.get(col) || 100;
     // Магазин: жовтий якщо не існує в базі (буде створено)
     const shopTdClass =
       row.shop && !(row as any).shopExists ? "invalid-shop" : "";
@@ -977,14 +961,10 @@ function renderBatchTable(data: any[]) {
     // Ціна: червоний якщо невалідна
     const priceTdClass = !row.priceValid ? "invalid-price" : "";
     tr.innerHTML = `
-      <td style="width:${getWidth("date")}px;min-width:${getWidth(
-        "date",
-      )}px;max-width:${getWidth("date")}px;">
+      <td>
         ${createInput("date", toIsoDate(row.date), "date", index)}
       </td>
-      <td class="${shopTdClass}" style="width:${getWidth(
-        "shop",
-      )}px;min-width:${getWidth("shop")}px;max-width:${getWidth("shop")}px;">
+      <td class="${shopTdClass}">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel shop-input-Excel"
@@ -994,14 +974,10 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td style="width:${getWidth("catno")}px;min-width:${getWidth(
-        "catno",
-      )}px;max-width:${getWidth("catno")}px;">
+      <td>
         ${createInput("text", row.catno, "catno", index)}
       </td>
-      <td class="${detailTdClass}" style="width:${getWidth(
-        "detail",
-      )}px;min-width:${getWidth("detail")}px;max-width:${getWidth("detail")}px;">
+      <td class="${detailTdClass}">
         <textarea
           class="cell-input-Excel cell-input-combo-Excel detail-input-Excel"
           data-field="detail"
@@ -1011,24 +987,16 @@ function renderBatchTable(data: any[]) {
           style="overflow:hidden; resize:none; min-height:30px; width:100%; box-sizing:border-box; white-space: pre-wrap; line-height: 1.3; padding-top: 6px;"
         >${row.detail}</textarea>
       </td>
-      <td class="${qtyTdClass}" style="width:${getWidth("qty")}px;min-width:${getWidth(
-        "qty",
-      )}px;max-width:${getWidth("qty")}px;">
+      <td class="${qtyTdClass}">
         ${createInput("number", row.qty, "qty", index)}
       </td>
-      <td class="${priceTdClass}" style="width:${getWidth("price")}px;min-width:${getWidth(
-        "price",
-      )}px;max-width:${getWidth("price")}px;">
+      <td class="${priceTdClass}">
         ${createInput("number", row.price, "price", index)}
       </td>
-      <td style="width:${getWidth("clientPrice")}px;min-width:${getWidth(
-        "clientPrice",
-      )}px;max-width:${getWidth("clientPrice")}px;">
+      <td>
         ${createInput("number", row.clientPrice, "clientPrice", index)}
       </td>
-      <td class="${warehouseTdClass}" style="width:${getWidth(
-        "warehouse",
-      )}px;min-width:${getWidth("warehouse")}px;max-width:${getWidth("warehouse")}px;">
+      <td class="${warehouseTdClass}">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel warehouse-input-Excel"
@@ -1038,14 +1006,10 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td style="width:${getWidth("invoice")}px;min-width:${getWidth(
-        "invoice",
-      )}px;max-width:${getWidth("invoice")}px;">
+      <td>
         ${createInput("text", row.invoice, "invoice", index)}
       </td>
-      <td class="${actTdClass}" style="width:${getWidth(
-        "actNo",
-      )}px;min-width:${getWidth("actNo")}px;max-width:${getWidth("actNo")}px;">
+      <td class="${actTdClass}">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel act-input-Excel"
@@ -1055,9 +1019,7 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td class="${unitTdClass}" style="width:${getWidth(
-        "unit",
-      )}px;min-width:${getWidth("unit")}px;max-width:${getWidth("unit")}px;">
+      <td class="${unitTdClass}">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel unit-input-Excel"
@@ -1068,9 +1030,7 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td class="orderStatus-cell-Excel" style="width:${getWidth(
-        "orderStatus",
-      )}px;min-width:${getWidth("orderStatus")}px;max-width:${getWidth("orderStatus")}px; background-color: ${getOrderStatusColor(row.orderStatus)};">
+      <td class="orderStatus-cell-Excel" style="background-color: ${getOrderStatusColor(row.orderStatus)};">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel orderStatus-input-Excel"
@@ -1082,9 +1042,7 @@ function renderBatchTable(data: any[]) {
           style="background: transparent; cursor: pointer;"
         >
       </td>
-      <td style="width:${getWidth(
-        "createdBy",
-      )}px;min-width:${getWidth("createdBy")}px;max-width:${getWidth("createdBy")}px;">
+      <td>
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel createdBy-input-Excel"
@@ -1094,9 +1052,7 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td style="width:${getWidth(
-        "notes",
-      )}px;min-width:${getWidth("notes")}px;max-width:${getWidth("notes")}px;">
+      <td>
         <input
           type="text"
           class="cell-input-Excel"
@@ -1107,9 +1063,7 @@ function renderBatchTable(data: any[]) {
           placeholder="Примітка..."
         >
       </td>
-      <td class="action-cell-Excel" style="width:${getWidth(
-        "action",
-      )}px;min-width:${getWidth("action")}px;max-width:${getWidth("action")}px;">
+      <td class="action-cell-Excel">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel action-input-Excel"
@@ -1129,9 +1083,7 @@ function renderBatchTable(data: any[]) {
             : row.status?.includes("Успішно")
               ? "success-Excel"
               : "error-Excel"
-      }" style="width:${getWidth(
-        "status",
-      )}px;min-width:${getWidth("status")}px;max-width:${getWidth("status")}px;">
+      }">
         <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || 'Помилка'}">🗑️</button>
       </td>
     `;

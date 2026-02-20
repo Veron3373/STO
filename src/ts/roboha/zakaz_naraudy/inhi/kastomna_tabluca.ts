@@ -146,7 +146,10 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
 
       // Колір для кількості та всієї інформації в дужках
       let colorStyle = "";
-      if (qty === 0)
+      // Якщо статус "Замовити" або "Замовлено" - сірий (деталі ще не прибули)
+      if (p.statys === "Замовити" || p.statys === "Замовлено")
+        colorStyle = "color: #888"; // сіра
+      else if (qty === 0)
         colorStyle = "color: #888"; // сіра
       else if (qty < 0)
         colorStyle = "color: #e40b0b"; // червона
@@ -960,8 +963,11 @@ export function setupAutocompleteForEditableCells(
             const qty = Number(p.quantity) || 0;
             const priceRounded = formatUA(Math.round(p.price));
 
+            // Якщо статус "Замовити" або "Замовлено" - сірий (деталі ще не прибули)
             let colorStyle = "color: #2e7d32"; // default green
-            if (qty === 0)
+            if (p.statys === "Замовити" || p.statys === "Замовлено")
+              colorStyle = "color: #888"; // grey - деталі ще не прибули
+            else if (qty === 0)
               colorStyle = "color: #888"; // grey
             else if (qty < 0)
               colorStyle = "color: #e40b0b"; // red
@@ -1183,8 +1189,11 @@ export function setupAutocompleteForEditableCells(
             const qty = Number(p.quantity) || 0;
             const priceRounded = formatUA(Math.round(p.price));
 
+            // Якщо статус "Замовити" або "Замовлено" - сірий (деталі ще не прибули)
             let colorStyle = "color: #2e7d32"; // default green
-            if (qty === 0)
+            if (p.statys === "Замовити" || p.statys === "Замовлено")
+              colorStyle = "color: #888"; // grey - деталі ще не прибули
+            else if (qty === 0)
               colorStyle = "color: #888"; // grey
             else if (qty < 0)
               colorStyle = "color: #e40b0b"; // red
@@ -1243,8 +1252,11 @@ export function setupAutocompleteForEditableCells(
             const qty = Number(p.quantity) || 0;
             const priceRounded = formatUA(Math.round(p.price));
 
+            // Якщо статус "Замовити" або "Замовлено" - сірий (деталі ще не прибули)
             let colorStyle = "color: #2e7d32"; // default green
-            if (qty === 0)
+            if (p.statys === "Замовити" || p.statys === "Замовлено")
+              colorStyle = "color: #888"; // grey - деталі ще не прибули
+            else if (qty === 0)
               colorStyle = "color: #888"; // grey
             else if (qty < 0)
               colorStyle = "color: #e40b0b"; // red

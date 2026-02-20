@@ -1308,7 +1308,7 @@ function renderBatchTable(data: any[]) {
           data-index="${index}"
           readonly
           autocomplete="off"
-          style="color: ${row.action === "Видалити" ? "#ef4444" : "#22c55e"}; font-weight: bold; cursor: pointer; background: transparent;"
+          style="color: ${row.action === "Видалити" ? "#ef4444" : "#2D7244"}; font-weight: bold; cursor: pointer; background: transparent;"
         >
       </td>
       <td class="status-cell-Excel ${

@@ -2728,6 +2728,8 @@ export async function initBatchImport() {
           orderStatus: (allInputs[11] as HTMLInputElement).value, // Статус деталі
           createdBy: (allInputs[12] as HTMLInputElement).value, // Замовив
           notes: (allInputs[13] as HTMLInputElement).value, // Примітка
+          action: row.action || "Записати", // Дія (Записати/Видалити) з parsedDataGlobal
+          _scladId: row._scladId || null, // sclad_id для UPDATE/DELETE
           status: statusText,
           rowNumber: index + 1,
           warehouseValid: row.warehouseValid,

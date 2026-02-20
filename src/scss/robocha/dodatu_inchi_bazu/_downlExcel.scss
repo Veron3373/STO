@@ -21,7 +21,8 @@ $bg-error: #ffebee;
 $shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
 $shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.2);
 $shadow-confirm: 0 10px 40px rgba(0, 0, 0, 0.3);
-$shadow-dropdown: 0 8px 24px rgba(33, 150, 243, 0.25),
+$shadow-dropdown:
+  0 8px 24px rgba(33, 150, 243, 0.25),
   0 4px 8px rgba(0, 0, 0, 0.1);
 $transition: all 0.3s ease;
 $transition-fast: all 0.2s ease;
@@ -35,9 +36,11 @@ $radius-xlarge: 16px;
   $lightness-start: if($hover, -5%, 0%);
   $lightness-end: if($hover, -15%, -10%);
 
-  background: linear-gradient(135deg,
-      color.adjust($color, $lightness: $lightness-start) 0%,
-      color.adjust($color, $lightness: $lightness-end) 100%);
+  background: linear-gradient(
+    135deg,
+    color.adjust($color, $lightness: $lightness-start) 0%,
+    color.adjust($color, $lightness: $lightness-end) 100%
+  );
 }
 
 @mixin button-base {
@@ -433,9 +436,11 @@ $radius-xlarge: 16px;
 
   th {
     padding: 5px 4px;
-    background: linear-gradient(180deg,
-        $bg-header 0%,
-        color.adjust($bg-header, $lightness: -3%) 100%);
+    background: linear-gradient(
+      180deg,
+      $bg-header 0%,
+      color.adjust($bg-header, $lightness: -3%) 100%
+    );
     font-weight: 700;
     color: $text-dark;
     position: sticky;
@@ -452,11 +457,12 @@ $radius-xlarge: 16px;
     transition: background-color 0.2s;
 
     &:hover {
-
       // Всі колонки крім останньої (Г-ть / статус) - ще світліший зелений
       td:not(:last-child) {
-        background-color: color.adjust($primary-green,
-            $lightness: 48%) !important;
+        background-color: color.adjust(
+          $primary-green,
+          $lightness: 48%
+        ) !important;
       }
 
       // Інпути також стають зеленими при ховері на рядок (крім останньої колонки)
@@ -492,7 +498,8 @@ $radius-xlarge: 16px;
   td.invalid-act,
   td.invalid-warehouse,
   td.invalid-qty,
-  td.invalid-price {
+  td.invalid-price,
+  td.invalid-invoice {
     background: $bg-error;
     // box-shadow: inset 0 0 0 2px $danger-red;
   }
@@ -720,9 +727,11 @@ $radius-xlarge: 16px;
 
   &:hover,
   &:focus {
-    background: linear-gradient(90deg,
-        color.adjust($primary-blue, $lightness: 48%) 0%,
-        color.adjust($primary-blue, $lightness: 45%) 100%);
+    background: linear-gradient(
+      90deg,
+      color.adjust($primary-blue, $lightness: 48%) 0%,
+      color.adjust($primary-blue, $lightness: 45%) 100%
+    );
     color: color.adjust($primary-blue, $lightness: -25%);
     font-weight: 600;
     outline: none;
@@ -800,7 +809,6 @@ $radius-xlarge: 16px;
 }
 
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);
@@ -835,7 +843,8 @@ $radius-xlarge: 16px;
 }
 
 /* Приховати іконку нативного date-picker'а, зберігши клік */
-.batch-table-Excel input.cell-input-Excel[type="date"]::-webkit-calendar-picker-indicator {
+.batch-table-Excel
+  input.cell-input-Excel[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0;
   /* іконка невидима */
   pointer-events: auto;

@@ -1155,7 +1155,7 @@ function renderBatchTable(data: any[]) {
         >
       </td>
       <td>
-        ${createInput("text", row.invoice, "invoice", index)}
+        ${createInput("text", row.invoice, "invoice", index, "invoice-input-Excel")}
       </td>
       <td class="${actTdClass}">
         <input
@@ -1253,8 +1253,8 @@ function revalidateRow(index: number) {
   }
 
   // Перевірка на заповненість обов'язкових полів
-  // Обов'язкові: Дата, Магазин, Каталог номер, Деталь, Кількість, Ціна, Одиниця, Склад
-  // Необов'язкові: Рахунок №, Ціна клієнта, Акт №
+  // Обов'язкові: Дата, Магазин, Каталог номер, Деталь, Кількість, Ціна, Одиниця, Склад, Рах. №
+  // Необов'язкові: Ціна клієнта, Акт №
 
   const isFilled =
     row.date &&
@@ -1268,7 +1268,9 @@ function revalidateRow(index: number) {
     row.unit &&
     String(row.unit).trim() &&
     row.warehouse &&
-    String(row.warehouse).trim();
+    String(row.warehouse).trim() &&
+    row.invoice &&
+    String(row.invoice).trim();
 
   // Перевірка чисел (ціна клієнта необов'язкова)
   const areNumbersValid = !isNaN(row.qty) && !isNaN(row.price);
@@ -1336,13 +1338,15 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
           parsedDataGlobal[index][field] = target.value;
         }
 
-        // Видалити клас invalid при редагуванні для qty та price
+        // Видалити клас invalid при редагуванні для qty та price та invoice
         const td = target.closest("td");
         if (td) {
           if (field === "qty") {
             td.classList.remove("invalid-qty");
           } else if (field === "price") {
             td.classList.remove("invalid-price");
+          } else if (field === "invoice") {
+            td.classList.remove("invalid-invoice");
           }
         }
 
@@ -1382,6 +1386,24 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         });
       }
     });
+
+  // Рах. № (invoice) — обов'язкове поле
+  tbody.querySelectorAll(".invoice-input-Excel").forEach((input) => {
+    input.addEventListener("blur", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      const value = target.value.trim();
+      const td = target.closest("td");
+
+      if (!value) {
+        if (td) td.classList.add("invalid-invoice");
+      } else {
+        if (td) td.classList.remove("invalid-invoice");
+      }
+      revalidateRow(index);
+    });
+  });
+
   // Акт № з live-фільтром
   // показуємо список відкритих актів при кліку
   tbody.querySelectorAll(".act-input-Excel").forEach((input) => {
@@ -2327,6 +2349,10 @@ async function uploadBatchData(data: any[]) {
       if (isExistingRecord) {
         // Пряме оновлення існуючого запису через supabase
         try {
+          // Якщо статус "Прибула" — очищаємо поле statys
+          const statysValue =
+            row.orderStatus === "Прибула" ? null : row.orderStatus || null;
+
           const updatePayload: Record<string, any> = {
             time_on: dbDate || null,
             shops: row.shop || null,
@@ -2338,7 +2364,7 @@ async function uploadBatchData(data: any[]) {
             unit_measurement: row.unit || null,
             akt: row.actNo || null,
             scladNomer: row.warehouse ? parseFloat(row.warehouse) : null,
-            statys: row.orderStatus || null,
+            statys: statysValue,
             prumitka: row.notes || null,
             xto_zamovuv: slyusarIdForRow || null,
           };
@@ -2380,7 +2406,9 @@ async function uploadBatchData(data: any[]) {
         const statysInput = document.createElement("input");
         statysInput.id = "sclad_statys";
         statysInput.type = "hidden";
-        statysInput.value = row.orderStatus || "Замовити";
+        // Якщо статус "Прибула" — очищаємо поле statys
+        statysInput.value =
+          row.orderStatus === "Прибула" ? "" : row.orderStatus || "Замовити";
         document.body.appendChild(statysInput);
 
         const xtoZamovuvInput = document.createElement("input");
@@ -2807,7 +2835,8 @@ export async function initBatchImport() {
           (!row.warehouse ||
             !row.warehouse.trim() ||
             !warehouseListCache.includes(row.warehouse.trim())) &&
-          !row.status.includes("Помилка"),
+          !row.status.includes("Помилка") &&
+          row.action !== "Видалити",
       );
       if (invalidWarehouses.length > 0) {
         showNotification(
@@ -2821,6 +2850,24 @@ export async function initBatchImport() {
             `#batch-table-Excel tbody tr:nth-child(${row.rowNumber}) td:has(.warehouse-input-Excel)`,
           ) as HTMLElement;
           if (warehouseTd) warehouseTd.classList.add("invalid-warehouse");
+        });
+      }
+
+      // Перевірка Рах. № (invoice) — обов'язкове поле
+      const invalidInvoices = currentData.filter(
+        (row) =>
+          (!row.invoice || !row.invoice.trim()) &&
+          !row.status.includes("Помилка") &&
+          row.action !== "Видалити",
+      );
+      if (invalidInvoices.length > 0) {
+        showNotification("❌ Рах. № не може бути порожнім", "error", 4000);
+        hasErrors = true;
+        invalidInvoices.forEach((row) => {
+          const invoiceTd = document.querySelector(
+            `#batch-table-Excel tbody tr:nth-child(${row.rowNumber}) td:has(.invoice-input-Excel)`,
+          ) as HTMLElement;
+          if (invoiceTd) invoiceTd.classList.add("invalid-invoice");
         });
       }
 
@@ -2838,7 +2885,9 @@ export async function initBatchImport() {
           row.unit &&
           row.detail &&
           row.warehouse &&
-          row.warehouseValid
+          row.warehouseValid &&
+          row.invoice &&
+          row.invoice.trim()
         );
       });
       if (validData.length === 0) {

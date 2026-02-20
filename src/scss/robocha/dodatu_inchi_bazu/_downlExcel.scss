@@ -21,8 +21,7 @@ $bg-error: #ffebee;
 $shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
 $shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.2);
 $shadow-confirm: 0 10px 40px rgba(0, 0, 0, 0.3);
-$shadow-dropdown:
-  0 8px 24px rgba(33, 150, 243, 0.25),
+$shadow-dropdown: 0 8px 24px rgba(33, 150, 243, 0.25),
   0 4px 8px rgba(0, 0, 0, 0.1);
 $transition: all 0.3s ease;
 $transition-fast: all 0.2s ease;
@@ -30,17 +29,17 @@ $radius-small: 4px;
 $radius-medium: 8px;
 $radius-large: 12px;
 $radius-xlarge: 16px;
+
 // ============= Міксини =============
 @mixin gradient-button($color, $hover: false) {
   $lightness-start: if($hover, -5%, 0%);
   $lightness-end: if($hover, -15%, -10%);
 
-  background: linear-gradient(
-    135deg,
-    color.adjust($color, $lightness: $lightness-start) 0%,
-    color.adjust($color, $lightness: $lightness-end) 100%
-  );
+  background: linear-gradient(135deg,
+      color.adjust($color, $lightness: $lightness-start) 0%,
+      color.adjust($color, $lightness: $lightness-end) 100%);
 }
+
 @mixin button-base {
   border: none;
   border-radius: $radius-medium;
@@ -70,6 +69,7 @@ $radius-xlarge: 16px;
     }
   }
 }
+
 @mixin scrollbar {
   &::-webkit-scrollbar {
     width: 12px;
@@ -91,6 +91,7 @@ $radius-xlarge: 16px;
     }
   }
 }
+
 // ============= Модальний оверлей =============
 .modal-overlay-all_other_bases {
   display: flex;
@@ -106,6 +107,7 @@ $radius-xlarge: 16px;
     display: none;
   }
 }
+
 // ============= Модальне вікно підтвердження =============
 .confirm-modal-Excel {
   max-width: 480px;
@@ -116,32 +118,38 @@ $radius-xlarge: 16px;
   overflow: hidden;
   animation: scaleIn 0.3s ease-out;
 }
+
 .confirm-content-Excel {
   padding: 32px;
   text-align: center;
 }
+
 .confirm-icon-Excel {
   font-size: 64px;
   margin-bottom: 20px;
   animation: bounce 0.6s ease-out;
 }
+
 .confirm-title-Excel {
   font-size: 22px;
   font-weight: 700;
   color: $text-dark;
   margin: 0 0 16px 0;
 }
+
 .confirm-message-Excel {
   font-size: 16px;
   color: $text-light;
   margin: 0 0 28px 0;
   line-height: 1.5;
 }
+
 .confirm-buttons-Excel {
   display: flex;
   gap: 12px;
   justify-content: center;
 }
+
 .confirm-btn-Excel {
   @include button-base;
   padding: 12px 32px;
@@ -166,6 +174,7 @@ $radius-xlarge: 16px;
     }
   }
 }
+
 // ============= Модальне вікно імпорту =============
 .batch-modal-Excel {
   max-width: 98vw;
@@ -180,6 +189,7 @@ $radius-xlarge: 16px;
   overflow: hidden;
   position: relative;
 }
+
 .modal-content-Excel {
   display: flex;
   flex-direction: column;
@@ -188,6 +198,7 @@ $radius-xlarge: 16px;
   padding: 24px;
   overflow: hidden;
 }
+
 .modal-close-all_other_bases {
   position: absolute;
   top: 12px;
@@ -212,6 +223,7 @@ $radius-xlarge: 16px;
     transform: rotate(90deg);
   }
 }
+
 .batch-title-Excel {
   font-size: 24px;
   margin: 0 0 16px 0;
@@ -226,6 +238,7 @@ $radius-xlarge: 16px;
     font-size: 28px;
   }
 }
+
 .batch-instructions-Excel {
   font-size: 14px;
   margin-bottom: 16px;
@@ -249,6 +262,7 @@ $radius-xlarge: 16px;
     font-size: 12px;
   }
 }
+
 .batch-textarea-Excel {
   width: 100%;
   min-height: 160px;
@@ -274,6 +288,7 @@ $radius-xlarge: 16px;
     color: $text-placeholder;
   }
 }
+
 // ============= Кнопки =============
 .batch-buttons-Excel {
   display: flex;
@@ -282,6 +297,7 @@ $radius-xlarge: 16px;
   padding-top: 8px;
   margin-top: auto;
 }
+
 .batch-btn-Excel {
   @include button-base;
   flex: 1;
@@ -372,6 +388,7 @@ $radius-xlarge: 16px;
     }
   }
 }
+
 // ============= Контейнер таблиці =============
 .batch-table-container-Excel {
   @include scrollbar;
@@ -386,6 +403,7 @@ $radius-xlarge: 16px;
   max-width: 100%;
   animation: fadeIn 0.3s ease-out;
 }
+
 // ============= Таблиця =============
 .batch-table-Excel {
   width: 100%;
@@ -407,8 +425,6 @@ $radius-xlarge: 16px;
     background: white;
     vertical-align: middle;
     position: relative;
-    overflow: hidden;
-    text-overflow: ellipsis;
 
     &:last-child {
       border-right: none;
@@ -417,11 +433,9 @@ $radius-xlarge: 16px;
 
   th {
     padding: 5px 4px;
-    background: linear-gradient(
-      180deg,
-      $bg-header 0%,
-      color.adjust($bg-header, $lightness: -3%) 100%
-    );
+    background: linear-gradient(180deg,
+        $bg-header 0%,
+        color.adjust($bg-header, $lightness: -3%) 100%);
     font-weight: 700;
     color: $text-dark;
     position: sticky;
@@ -438,12 +452,11 @@ $radius-xlarge: 16px;
     transition: background-color 0.2s;
 
     &:hover {
+
       // Всі колонки крім останньої (Г-ть / статус) - ще світліший зелений
       td:not(:last-child) {
-        background-color: color.adjust(
-          $primary-green,
-          $lightness: 48%
-        ) !important;
+        background-color: color.adjust($primary-green,
+            $lightness: 48%) !important;
       }
 
       // Інпути також стають зеленими при ховері на рядок (крім останньої колонки)
@@ -467,12 +480,14 @@ $radius-xlarge: 16px;
       box-shadow: inset 0 0 0 1px color.adjust($primary-blue, $lightness: 30%);
     }
   }
+
   // Highlight invalid cells
   td.invalid-shop,
   td.invalid-detail {
     background: $bg-warning;
     // box-shadow: inset 0 0 0 2px $warning-orange;
   }
+
   td.invalid-unit,
   td.invalid-act,
   td.invalid-warehouse,
@@ -481,10 +496,12 @@ $radius-xlarge: 16px;
     background: $bg-error;
     // box-shadow: inset 0 0 0 2px $danger-red;
   }
+
   td.closed-act {
     background: $bg-warning;
     // box-shadow: inset 0 0 0 2px $warning-orange;
   }
+
   // Статус замовлення - комірка з кольоровим текстом
   td.orderStatus-cell-Excel {
     position: relative;
@@ -496,6 +513,7 @@ $radius-xlarge: 16px;
       text-align: center;
     }
   }
+
   // Дія - комірка з кольоровим текстом
   td.action-cell-Excel {
     position: relative;
@@ -508,13 +526,14 @@ $radius-xlarge: 16px;
     }
   }
 }
+
 // ============= Інпути в таблиці =============
 .cell-input-Excel,
 .cell-input-combo-Excel {
   width: 100%;
   height: 100%;
   min-height: 32px;
-  padding: 4px 6px;
+  padding: 1px 1px;
   border: none;
   background: transparent;
   font-family: inherit;
@@ -524,8 +543,6 @@ $radius-xlarge: 16px;
   transition: $transition-fast;
   box-sizing: border-box;
   text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: block;
 
   &:focus {
@@ -558,10 +575,11 @@ $radius-xlarge: 16px;
     }
   }
 }
+
 // Комбінований інпут
 .cell-input-combo-Excel {
   cursor: pointer;
-  padding-right: 30px !important;
+  padding-right: 14px !important;
 
   &::after {
     content: "▼";
@@ -585,6 +603,7 @@ $radius-xlarge: 16px;
     box-shadow: inset 0 0 0 2px $primary-blue !important;
   }
 }
+
 // ============= Адаптивні стилі для лівого вирівнювання =============
 .shop-input-Excel,
 .detail-input-Excel,
@@ -596,6 +615,7 @@ $radius-xlarge: 16px;
   white-space: normal;
   line-height: 1.4;
 }
+
 // ============= Статус комірки =============
 .status-cell-Excel {
   padding: 2px 4px !important;
@@ -615,11 +635,13 @@ $radius-xlarge: 16px;
     background: color.adjust($primary-green, $lightness: 42%);
   }
 }
+
 .status-text-Excel {
   font-weight: 700;
   font-size: 12px;
   white-space: nowrap;
 }
+
 .delete-row-btn-Excel {
   background: transparent;
   border: none;
@@ -638,6 +660,7 @@ $radius-xlarge: 16px;
     transform: scale(0.9);
   }
 }
+
 // ============= Випадаючий список =============
 .excel-dropdown-list {
   @include scrollbar;
@@ -672,6 +695,7 @@ $radius-xlarge: 16px;
     }
   }
 }
+
 .excel-dropdown-item {
   padding: 10px 16px;
   cursor: pointer;
@@ -696,11 +720,9 @@ $radius-xlarge: 16px;
 
   &:hover,
   &:focus {
-    background: linear-gradient(
-      90deg,
-      color.adjust($primary-blue, $lightness: 48%) 0%,
-      color.adjust($primary-blue, $lightness: 45%) 100%
-    );
+    background: linear-gradient(90deg,
+        color.adjust($primary-blue, $lightness: 48%) 0%,
+        color.adjust($primary-blue, $lightness: 45%) 100%);
     color: color.adjust($primary-blue, $lightness: -25%);
     font-weight: 600;
     outline: none;
@@ -717,6 +739,7 @@ $radius-xlarge: 16px;
     transform: scale(0.98);
   }
 }
+
 // ============= Медіа-запити =============
 @media (max-width: 1024px) {
   .batch-modal-Excel {
@@ -745,72 +768,88 @@ $radius-xlarge: 16px;
     .cell-input-Excel,
     .cell-input-combo-Excel {
       min-height: 34px;
-      padding: 6px 8px;
+      padding: 1px 2px;
       font-size: 12px;
     }
   }
 }
+
 // ============= Анімації =============
 @keyframes fadeIn {
   from {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 @keyframes scaleIn {
   from {
     opacity: 0;
     transform: scale(0.8);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
+
 @keyframes bounce {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
+
 @keyframes dropdownSlideIn {
   from {
     opacity: 0;
     transform: translateY(8px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
+
 // ============= Утилітний клас =============
 .hidden-all_other_bases {
   display: none !important;
 }
+
 /* Приховати іконку нативного date-picker'а, зберігши клік */
-.batch-table-Excel
-  input.cell-input-Excel[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0; /* іконка невидима */
-  pointer-events: auto; /* зона лишається клікабельною */
+.batch-table-Excel input.cell-input-Excel[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  /* іконка невидима */
+  pointer-events: auto;
+  /* зона лишається клікабельною */
   cursor: pointer;
 }
+
 /* Прибрати будь-які бекграунди/іконки */
 .batch-table-Excel input.cell-input-Excel[type="date"] {
   background-image: none;
-  padding-right: 8px; /* трохи менше місця під невидиму іконку */
+  padding-right: 8px;
+  /* трохи менше місця під невидиму іконку */
 }
+
 /* Edge/IE артефакти */
 .batch-table-Excel input.cell-input-Excel[type="date"]::-ms-clear {
   display: none;

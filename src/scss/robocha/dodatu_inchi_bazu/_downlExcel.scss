@@ -842,21 +842,32 @@ $radius-xlarge: 16px;
   display: none !important;
 }
 
-/* Приховати іконку нативного date-picker'а, зберігши клік */
+/* Повністю вимикаємо нативний date-picker */
 .batch-table-Excel
   input.cell-input-Excel[type="date"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none;
   opacity: 0;
-  /* іконка невидима */
-  pointer-events: auto;
-  /* зона лишається клікабельною */
-  cursor: pointer;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 
-/* Прибрати будь-які бекграунди/іконки */
+.batch-table-Excel
+  input.cell-input-Excel[type="date"]::-webkit-inner-spin-button,
+.batch-table-Excel input.cell-input-Excel[type="date"]::-webkit-clear-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+/* Стилі для date input */
 .batch-table-Excel input.cell-input-Excel[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: none;
   background-image: none;
   padding-right: 8px;
-  /* трохи менше місця під невидиму іконку */
+  cursor: pointer;
 }
 
 /* Edge/IE артефакти */

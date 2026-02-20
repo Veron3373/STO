@@ -37,9 +37,13 @@ export function initCustomDatePicker(container?: HTMLElement): void {
   );
 
   dateInputs.forEach((input) => {
-    // Вимикаємо нативний календар
+    // Вимикаємо нативний календар повністю
+    input.addEventListener("mousedown", handleDateInputMouseDown);
     input.addEventListener("click", handleDateInputClick);
     input.addEventListener("focus", handleDateInputFocus);
+    input.addEventListener("keydown", handleDateInputKeydown);
+    // Блокуємо відкриття нативного календаря
+    input.setAttribute("readonly", "readonly");
   });
 }
 
@@ -53,11 +57,19 @@ export function destroyCustomDatePicker(container?: HTMLElement): void {
   );
 
   dateInputs.forEach((input) => {
+    input.removeEventListener("mousedown", handleDateInputMouseDown);
     input.removeEventListener("click", handleDateInputClick);
     input.removeEventListener("focus", handleDateInputFocus);
+    input.removeEventListener("keydown", handleDateInputKeydown);
+    input.removeAttribute("readonly");
   });
 
   closeDatePicker();
+}
+
+function handleDateInputMouseDown(e: Event): void {
+  e.preventDefault();
+  e.stopPropagation();
 }
 
 function handleDateInputClick(e: Event): void {
@@ -69,10 +81,18 @@ function handleDateInputClick(e: Event): void {
 
 function handleDateInputFocus(e: Event): void {
   e.preventDefault();
+  e.stopPropagation();
   const input = e.target as HTMLInputElement;
-  // Розмиваємо фокус, щоб не відкривався нативний календар
-  input.blur();
   openDatePicker(input);
+}
+
+function handleDateInputKeydown(e: KeyboardEvent): void {
+  // Дозволяємо відкриття календаря через Enter або Space
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    const input = e.target as HTMLInputElement;
+    openDatePicker(input);
+  }
 }
 
 function openDatePicker(input: HTMLInputElement): void {

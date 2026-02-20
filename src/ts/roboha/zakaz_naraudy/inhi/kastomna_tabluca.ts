@@ -160,9 +160,9 @@ async function getNameSuggestions(query: string): Promise<Suggest[]> {
       // Статус (Замовити - червоний, Замовлено - синій)
       const statysTag =
         p.statys === "Замовити"
-          ? ` <span style="color: #e40b0b; font-weight: normal;">Замовити</span>`
+          ? ` <span style="color: #ff0000; font-weight: bold; text-decoration: underline;">Замовити</span>`
           : p.statys === "Замовлено"
-            ? ` <span style="color: #3b82f6; font-weight: normal;">Замовлено</span>`
+            ? ` <span style="color: #0000ff; font-weight: bold; text-decoration: underline;">Замовлено</span>`
             : "";
       const labelHtml = `<span style="color: #1565c0">${p.name}</span> - <span style="color: #000; font-weight: normal; text-decoration: underline;">${p.part_number}</span> <span style="${colorStyle}; font-weight: bold;">(К-ть: ${qty} по ${priceRounded}-грн)</span>${skladTag}${statysTag}${timeOn ? ' <span style="color: #000; font-weight: normal;">' + timeOn + "</span>" : ""}`;
 
@@ -981,9 +981,9 @@ export function setupAutocompleteForEditableCells(
             // Статус (Замовити - червоний, Замовлено - синій)
             const statysTag =
               p.statys === "Замовити"
-                ? ` <span style="color: #e40b0b; font-weight: normal;">Замовити</span>`
+                ? ` <span style="color: #ff0000; font-weight: bold; text-decoration: underline;">Замовити</span>`
                 : p.statys === "Замовлено"
-                  ? ` <span style="color: #3b82f6; font-weight: normal;">Замовлено</span>`
+                  ? ` <span style="color: #0000ff; font-weight: bold; text-decoration: underline;">Замовлено</span>`
                   : "";
 
             // Дата (чорний)
@@ -1204,9 +1204,9 @@ export function setupAutocompleteForEditableCells(
             // Статус (Замовити - червоний, Замовлено - синій)
             const statysTag =
               p.statys === "Замовити"
-                ? ` <span style="color: #e40b0b; font-weight: normal;">Замовити</span>`
+                ? ` <span style="color: #ff0000; font-weight: bold; text-decoration: underline;">Замовити</span>`
                 : p.statys === "Замовлено"
-                  ? ` <span style="color: #3b82f6; font-weight: normal;">Замовлено</span>`
+                  ? ` <span style="color: #0000ff; font-weight: bold; text-decoration: underline;">Замовлено</span>`
                   : "";
 
             // Дата (чорний)
@@ -1264,9 +1264,9 @@ export function setupAutocompleteForEditableCells(
             // Статус (Замовити - червоний, Замовлено - синій)
             const statysTag =
               p.statys === "Замовити"
-                ? ` <span style="color: #e40b0b; font-weight: normal;">Замовити</span>`
+                ? ` <span style="color: #ff0000; font-weight: bold; text-decoration: underline;">Замовити</span>`
                 : p.statys === "Замовлено"
-                  ? ` <span style="color: #3b82f6; font-weight: normal;">Замовлено</span>`
+                  ? ` <span style="color: #0000ff; font-weight: bold; text-decoration: underline;">Замовлено</span>`
                   : "";
 
             // Дата (чорний)

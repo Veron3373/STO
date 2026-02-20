@@ -16,6 +16,7 @@ import { handleScladCrud } from "../db_sclad";
 import { showNotification } from "../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { supabase } from "../../../vxid/supabaseClient";
 import { userName as currentUserName } from "../../tablucya/users";
+import { initCustomDatePicker } from "./customDatePicker";
 const batchModalId = "batch-import-modal-Excel";
 const confirmModalId = "batch-confirm-modal-Excel";
 let parsedDataGlobal: any[] = [];
@@ -1325,6 +1326,8 @@ function renderBatchTable(data: any[]) {
     tbody.appendChild(tr);
   });
   attachInputHandlers(tbody);
+  // Ініціалізуємо кастомний DatePicker для всіх полів дати
+  initCustomDatePicker(tbody);
 }
 // ===== Валідація рядка при редагуванні =====
 function revalidateRow(index: number) {

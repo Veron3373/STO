@@ -27,6 +27,7 @@ let scladIdsMap: Map<string, string> = new Map();
 let warehouseListCache: string[] = []; // Кеш активних складів (номери)
 let warehouseProcentMap: Map<string, number> = new Map(); // Кеш відсотків складів: warehouse_id -> procent
 let usersListCache: string[] = []; // Кеш користувачів (не Слюсарів)
+let partNumbersCache: string[] = []; // Кеш каталог номерів з бази sclad
 let usersIdMap: Map<string, number> = new Map(); // Кеш ПІБ → slyusar_id
 const UNIT_OPTIONS = [
   { value: "штук", label: "штук" },
@@ -257,6 +258,30 @@ async function loadUsersList(): Promise<string[]> {
 function getSlyusarIdByName(name: string): number | null {
   const trimmedName = (name || "").trim();
   return usersIdMap.get(trimmedName) ?? null;
+}
+
+/* Завантаження унікальних part_number з таблиці sclad */
+async function loadPartNumbers(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from("sclad")
+      .select("part_number")
+      .order("part_number", { ascending: true });
+    if (error) {
+      console.error("Помилка завантаження каталог номерів:", error);
+      return [];
+    }
+    // Збираємо унікальні непорожні part_number
+    const unique = new Set<string>();
+    (data || []).forEach((row: any) => {
+      const pn = String(row.part_number || "").trim();
+      if (pn) unique.add(pn);
+    });
+    return Array.from(unique).sort();
+  } catch (e) {
+    console.error("Помилка завантаження каталог номерів:", e);
+    return [];
+  }
 }
 
 // Повертає id магазину або null, якщо не знайдено
@@ -834,11 +859,10 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
 
   list.style.maxHeight = `${listHeight}px`;
 
-  list.style.top = `${
-    useAbove
+  list.style.top = `${useAbove
       ? scrollY + rect.top - listHeight - gap
       : scrollY + rect.bottom + gap
-  }px`;
+    }px`;
   list.style.left = `${scrollX + rect.left}px`;
 }
 function showDropdownList(input: HTMLElement, options: string[]) {
@@ -969,12 +993,12 @@ function recalculateClientPrice(index: number): void {
   const clientPrice = price + (price * procent) / 100;
   row.clientPrice = Math.round(clientPrice * 100) / 100; // Округлення до 2 знаків
 
-  // Оновити input в DOM
+  // Оновити input в DOM — якщо 0, показуємо порожнє (placeholder покаже 0)
   const clientPriceInput = document.querySelector(
     `#batch-table-Excel tbody tr:nth-child(${index + 1}) [data-field="clientPrice"]`,
   ) as HTMLInputElement | null;
   if (clientPriceInput) {
-    clientPriceInput.value = String(row.clientPrice);
+    clientPriceInput.value = row.clientPrice === 0 ? "" : String(row.clientPrice);
   }
 }
 
@@ -985,14 +1009,20 @@ function createInput(
   index: number,
   className: string = "",
 ): string {
+  // Для числових полів qty/price/clientPrice: якщо значення = 0, показуємо порожнє + placeholder
+  const isZeroPlaceholder = field === "qty" || field === "price" || field === "clientPrice";
+  const numVal = parseFloat(value as any);
+  const displayValue = isZeroPlaceholder && (numVal === 0 || value === "" || value === "0") ? "" : value;
+  const placeholderAttr = isZeroPlaceholder ? 'placeholder="0"' : "";
   return `<input
     type="${type}"
     class="cell-input-Excel ${className}"
-    value="${value}"
+    value="${displayValue}"
     data-field="${field}"
     data-index="${index}"
     ${type === "number" ? 'step="0.01"' : ""}
     ${field === "unit" ? "readonly" : ""}
+    ${placeholderAttr}
     autocomplete="off"
   >`;
 }
@@ -1042,7 +1072,14 @@ function renderBatchTable(data: any[]) {
         >
       </td>
       <td>
-        ${createInput("text", row.catno, "catno", index)}
+        <input
+          type="text"
+          class="cell-input-Excel cell-input-combo-Excel catno-input-Excel"
+          value="${row.catno}"
+          data-field="catno"
+          data-index="${index}"
+          autocomplete="off"
+        >
       </td>
       <td class="${detailTdClass}">
         <textarea
@@ -1143,14 +1180,13 @@ function renderBatchTable(data: any[]) {
           style="color: ${row.action === "Видалити" ? "#ef4444" : "#22c55e"}; font-weight: bold; cursor: pointer; background: transparent;"
         >
       </td>
-      <td class="status-cell-Excel ${
-        row.status === "Готовий"
-          ? "ready-Excel"
-          : row.status?.includes("Помилка")
-            ? "error-Excel"
-            : row.status?.includes("Успішно")
-              ? "success-Excel"
-              : "error-Excel"
+      <td class="status-cell-Excel ${row.status === "Готовий"
+        ? "ready-Excel"
+        : row.status?.includes("Помилка")
+          ? "error-Excel"
+          : row.status?.includes("Успішно")
+            ? "success-Excel"
+            : "error-Excel"
       }">
         <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || "Помилка"}">🗑️</button>
       </td>
@@ -1274,6 +1310,29 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         recalculateAndApplyWidths();
         revalidateRow(index);
       });
+
+      // === Плейсхолдер для нулів: при фокусі очищаємо "0", при blur повертаємо ===
+      const fieldName = (input as HTMLInputElement).dataset.field || "";
+      if (fieldName === "qty" || fieldName === "price" || fieldName === "clientPrice") {
+        input.addEventListener("focus", (e) => {
+          const target = e.target as HTMLInputElement;
+          // Якщо значення 0 або порожнє — очистити для зручності вводу
+          if (target.value === "0" || target.value === "") {
+            target.value = "";
+          }
+        });
+        input.addEventListener("blur", (e) => {
+          const target = e.target as HTMLInputElement;
+          const index = parseInt(target.dataset.index || "0");
+          const field = target.dataset.field || "";
+          const val = parseFloat(target.value);
+          if (isNaN(val) || val === 0) {
+            // Зберігаємо 0 в дані, але показуємо порожнє (placeholder покаже 0)
+            parsedDataGlobal[index][field] = 0;
+            target.value = "";
+          }
+        });
+      }
     });
   // Акт № з live-фільтром
   // показуємо список відкритих актів при кліку
@@ -1480,6 +1539,43 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
       revalidateRow(index);
     });
   });
+
+  // === Каталог номер (catno) з live-фільтром по part_number з бази sclad ===
+  tbody.querySelectorAll(".catno-input-Excel").forEach((input) => {
+    input.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (partNumbersCache.length > 0) {
+        showDropdownList(e.target as HTMLElement, partNumbersCache);
+      }
+    });
+    input.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      const index = parseInt(target.dataset.index || "0");
+      const value = target.value;
+      parsedDataGlobal[index]["catno"] = value;
+
+      const filter = value.toLowerCase();
+      const filteredOptions = filter
+        ? partNumbersCache.filter((opt) => opt.toLowerCase().includes(filter))
+        : partNumbersCache;
+
+      // Якщо dropdown ще не відкритий — відкриваємо з фільтрованими опціями
+      if (!currentDropdownList || currentDropdownInput !== target) {
+        if (filteredOptions.length > 0) {
+          showDropdownList(target, filteredOptions);
+        }
+      } else {
+        // Якщо вже відкритий — оновлюємо
+        updateDropdownList(filteredOptions, target, index, "catno");
+        if (filteredOptions.length)
+          positionDropdown(target, currentDropdownList);
+        else closeDropdownList();
+      }
+      recalculateAndApplyWidths();
+      revalidateRow(index);
+    });
+  });
+
   // Склад з live-фільтром
   tbody.querySelectorAll(".warehouse-input-Excel").forEach((input) => {
     input.addEventListener("click", (e) => {
@@ -2164,8 +2260,7 @@ async function uploadBatchData(data: any[]) {
       uploadBtn.textContent = "✅ Записано";
     }
     showNotification(
-      `Успішно завантажено ${successCount} ${
-        successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
+      `Успішно завантажено ${successCount} ${successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
       }`,
       "success",
       4000,
@@ -2242,6 +2337,7 @@ export async function initBatchImport() {
   actsDateOffMap = actsData.map;
   warehouseListCache = await loadWarehouseList();
   usersListCache = await loadUsersList();
+  partNumbersCache = await loadPartNumbers();
 
   // Ensure модалки створені один раз
   const existingModal = document.getElementById(batchModalId);
@@ -2292,14 +2388,16 @@ export async function initBatchImport() {
         loadActsList(),
         loadWarehouseList(),
         loadUsersList(),
+        loadPartNumbers(),
       ])
-        .then(([shops, details, acts, warehouses, users]) => {
+        .then(([shops, details, acts, warehouses, users, partNumbers]) => {
           shopsListCache = shops;
           detailsListCache = details;
           actsListCache = acts.list;
           actsDateOffMap = acts.map;
           warehouseListCache = warehouses;
           usersListCache = users;
+          partNumbersCache = partNumbers as string[];
         })
         .catch((err) => console.error("Помилка оновлення кешу імпорту:", err));
     };
@@ -2344,8 +2442,7 @@ export async function initBatchImport() {
           .getElementById("batch-upload-btn-Excel")
           ?.classList.remove("hidden-all_other_bases");
         showNotification(
-          `Розпарсовано ${data.length} ${
-            data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
+          `Розпарсовано ${data.length} ${data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
           }`,
           "success",
         );

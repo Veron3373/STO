@@ -52,6 +52,26 @@ const ACTION_OPTIONS = [
 ];
 // ===== Допоміжні функції =====
 type TableName = "shops" | "details";
+
+// Нормалізація назви для порівняння (без врахування регістру і зайвих пробілів)
+function normalizeNameForCompare(s: string): string {
+  return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Нормалізовані кеші для швидкого порівняння
+let detailsListCacheNormalized: string[] = [];
+let shopsListCacheNormalized: string[] = [];
+
+// Перевірка чи назва існує в кеші (нормалізоване порівняння)
+function detailExistsInCache(name: string): boolean {
+  const normalized = normalizeNameForCompare(name);
+  return detailsListCacheNormalized.includes(normalized);
+}
+function shopExistsInCache(name: string): boolean {
+  const normalized = normalizeNameForCompare(name);
+  return shopsListCacheNormalized.includes(normalized);
+}
+
 function looksLikeJson(s: string): boolean {
   const t = s.trim();
   return (
@@ -310,16 +330,73 @@ async function getShopIdByName(name: string): Promise<number | null> {
   return data[0].id as number;
 }
 // Повертає id деталі або null, якщо не знайдено
+// Підтримує як JSON формат (data->>Name), так і plain text формат (data)
 async function getDetailIdByName(name: string): Promise<number | null> {
   const n = (name ?? "").trim();
   if (!n) return null;
-  const { data, error } = await supabase
+
+  // Спочатку пробуємо знайти по JSON полях
+  const { data: jsonData, error: jsonError } = await supabase
     .from("details")
     .select("id")
     .or(`data->>Name.eq.${n},data->>name.eq.${n},data->>Назва.eq.${n}`)
     .limit(1);
-  if (error || !data || data.length === 0) return null;
-  return data[0].id as number;
+
+  if (!jsonError && jsonData && jsonData.length > 0) {
+    return jsonData[0].id as number;
+  }
+
+  // Якщо не знайдено по JSON - пробуємо plain text (data = 'назва')
+  const { data: textData, error: textError } = await supabase
+    .from("details")
+    .select("id")
+    .eq("data", n)
+    .limit(1);
+
+  if (!textError && textData && textData.length > 0) {
+    return textData[0].id as number;
+  }
+
+  // Якщо все ще не знайдено - пробуємо нормалізоване порівняння (без регістру)
+  const { data: allData, error: allError } = await supabase
+    .from("details")
+    .select("id, data");
+
+  if (allError || !allData) return null;
+
+  const normalizedSearch = normalizeNameForCompare(n);
+  for (const row of allData) {
+    const d = (row as any)?.data;
+    if (!d) continue;
+
+    // Якщо data - рядок
+    if (typeof d === "string") {
+      if (normalizeNameForCompare(d) === normalizedSearch) {
+        return row.id as number;
+      }
+      // Якщо виглядає як JSON - парсимо
+      if (looksLikeJson(d)) {
+        try {
+          const j = JSON.parse(d);
+          const nm = readName(j);
+          if (nm && normalizeNameForCompare(nm) === normalizedSearch) {
+            return row.id as number;
+          }
+        } catch {
+          /* ігноруємо */
+        }
+      }
+    }
+    // Якщо data - об'єкт
+    if (typeof d === "object") {
+      const nm = readName(d);
+      if (nm && normalizeNameForCompare(nm) === normalizedSearch) {
+        return row.id as number;
+      }
+    }
+  }
+
+  return null;
 }
 // Функція для отримання sclad_id з бази даних
 async function getScladId(
@@ -636,7 +713,7 @@ function parseBatchData(text: string) {
       row.shopValid = false;
     } else {
       // Перевіряємо чи є в списку (для підсвічування), але завжди валідний
-      const existsInCache = shopsListCache.includes(row.shop);
+      const existsInCache = shopExistsInCache(row.shop);
       row.shopValid = true; // завжди валідний, якщо заповнений
       // Зберігаємо інфо чи існує (для кольору)
       (row as any).shopExists = existsInCache;
@@ -647,7 +724,7 @@ function parseBatchData(text: string) {
       row.detailValid = false;
     } else {
       // Перевіряємо чи є в списку (для підсвічування), але завжди валідна
-      const existsInCache = detailsListCache.includes(row.detail);
+      const existsInCache = detailExistsInCache(row.detail);
       row.detailValid = true; // завжди валідна, якщо заповнена
       // Зберігаємо інфо чи існує (для кольору)
       (row as any).detailExists = existsInCache;
@@ -932,7 +1009,7 @@ function showDropdownList(input: HTMLElement, options: string[]) {
           parsedDataGlobal[index]["detail"] = detailName;
           parsedDataGlobal[index].detailValid = true;
           (parsedDataGlobal[index] as any).detailExists =
-            detailsListCache.includes(detailName);
+            detailExistsInCache(detailName);
           // Оновлюємо input Деталь в DOM
           const detailInput = document.querySelector(
             `#batch-table-Excel tbody tr:nth-child(${index + 1}) [data-field="detail"]`,
@@ -942,7 +1019,7 @@ function showDropdownList(input: HTMLElement, options: string[]) {
             // Оновлюємо клас td деталі
             const detailTd = detailInput.closest("td");
             if (detailTd) {
-              if (detailsListCache.includes(detailName)) {
+              if (detailExistsInCache(detailName)) {
                 detailTd.classList.remove("invalid-detail");
               } else {
                 detailTd.classList.add("invalid-detail");
@@ -1051,12 +1128,17 @@ function createInput(
   // Для числових полів qty/price/clientPrice: якщо значення = 0, показуємо порожнє + placeholder
   const isZeroPlaceholder =
     field === "qty" || field === "price" || field === "clientPrice";
+  // Для invoice: якщо порожнє - показуємо placeholder "0"
+  const isInvoicePlaceholder = field === "invoice";
   const numVal = parseFloat(value as any);
   const displayValue =
     isZeroPlaceholder && (numVal === 0 || value === "" || value === "0")
       ? ""
-      : value;
-  const placeholderAttr = isZeroPlaceholder ? 'placeholder="0"' : "";
+      : isInvoicePlaceholder && (!value || value.trim() === "")
+        ? ""
+        : value;
+  const placeholderAttr =
+    isZeroPlaceholder || isInvoicePlaceholder ? 'placeholder="0"' : "";
   return `<input
     type="${type}"
     class="cell-input-Excel ${className}"
@@ -1098,6 +1180,11 @@ function renderBatchTable(data: any[]) {
     const qtyTdClass = !row.qtyValid ? "invalid-qty" : "";
     // Ціна: червоний якщо невалідна
     const priceTdClass = !row.priceValid ? "invalid-price" : "";
+    // Рах. №: червоний якщо порожній
+    const invoiceTdClass =
+      !row.invoice || String(row.invoice).trim() === ""
+        ? "invalid-invoice"
+        : "";
     // Конвертуємо дату в ISO формат для input type="date"
     const isoDateForInput = toIsoDate(row.date) || row.date;
     tr.innerHTML = `
@@ -1154,7 +1241,7 @@ function renderBatchTable(data: any[]) {
           style="text-align: center;"
         >
       </td>
-      <td>
+      <td class="${invoiceTdClass}">
         ${createInput("text", row.invoice, "invoice", index, "invoice-input-Excel")}
       </td>
       <td class="${actTdClass}">
@@ -1523,7 +1610,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         (parsedDataGlobal[index] as any).shopExists = false;
       } else {
         // Заповнений - завжди валідний, але перевіряємо чи існує
-        const existsInCache = shopsListCache.includes(value);
+        const existsInCache = shopExistsInCache(value);
         parsedDataGlobal[index].shopValid = true;
         (parsedDataGlobal[index] as any).shopExists = existsInCache;
 
@@ -1595,7 +1682,7 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
         (parsedDataGlobal[index] as any).detailExists = false;
       } else {
         // Заповнена - завжди валідна, але перевіряємо чи існує
-        const existsInCache = detailsListCache.includes(value);
+        const existsInCache = detailExistsInCache(value);
         parsedDataGlobal[index].detailValid = true;
         (parsedDataGlobal[index] as any).detailExists = existsInCache;
 
@@ -2060,9 +2147,9 @@ async function loadScladPendingRecords(): Promise<any[]> {
 
       // Валідація полів
       const shopValid = !!shop;
-      const shopExists = shop ? shopsListCache.includes(shop) : false;
+      const shopExists = shop ? shopExistsInCache(shop) : false;
       const detailValid = !!detail;
-      const detailExists = detail ? detailsListCache.includes(detail) : false;
+      const detailExists = detail ? detailExistsInCache(detail) : false;
       const unitValid = VALID_UNITS.includes(unit);
       const warehouseValid = warehouse
         ? warehouseListCache.includes(warehouse)
@@ -2208,6 +2295,13 @@ async function uploadBatchData(data: any[]) {
       .select("data")
       .eq("id", id)
       .single();
+
+    // Якщо data вже є рядком (plain text) - нічого не оновлюємо
+    // Назва вже записана в потрібному форматі
+    if (row?.data && typeof row.data === "string") {
+      return;
+    }
+
     let newData: any = {};
     if (row?.data && typeof row.data === "object") newData = { ...row.data };
     if (!newData.Name && !newData.name && !newData["Назва"]) {
@@ -2610,6 +2704,9 @@ export async function initBatchImport() {
 
   shopsListCache = await loadShopsList();
   detailsListCache = await loadDetailsList();
+  // Оновлюємо нормалізовані кеші для коректного порівняння (без врахування регістру)
+  shopsListCacheNormalized = shopsListCache.map(normalizeNameForCompare);
+  detailsListCacheNormalized = detailsListCache.map(normalizeNameForCompare);
   const actsData = await loadActsList();
   actsListCache = actsData.list;
   actsDateOffMap = actsData.map;
@@ -2671,6 +2768,13 @@ export async function initBatchImport() {
         .then(([shops, details, acts, warehouses, users, partNumbers]) => {
           shopsListCache = shops;
           detailsListCache = details;
+          // Оновлюємо нормалізовані кеші для коректного порівняння (без врахування регістру)
+          shopsListCacheNormalized = shopsListCache.map(
+            normalizeNameForCompare,
+          );
+          detailsListCacheNormalized = detailsListCache.map(
+            normalizeNameForCompare,
+          );
           actsListCache = acts.list;
           actsDateOffMap = acts.map;
           warehouseListCache = warehouses;

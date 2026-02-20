@@ -30,6 +30,7 @@ let usersListCache: string[] = []; // Кеш користувачів (не Сл
 let partNumbersCache: string[] = []; // Кеш каталог номерів з бази sclad
 let partNumberNameMap: Map<string, string> = new Map(); // Кеш каталог номер → назва деталі
 let usersIdMap: Map<string, number> = new Map(); // Кеш ПІБ → slyusar_id
+let usersIdReverseMap: Map<number, string> = new Map(); // Кеш slyusar_id → ПІБ (зворотній)
 const UNIT_OPTIONS = [
   { value: "штук", label: "штук" },
   { value: "літр", label: "літр" },
@@ -37,11 +38,11 @@ const UNIT_OPTIONS = [
 ];
 const VALID_UNITS = UNIT_OPTIONS.map((o) => o.value);
 
-// Опції для статусу деталі (Прибуло/Замовлено/Потребує за-ння)
+// Опції для статусу деталі (Прибула/Замовлено/Потребує за-ння)
 const ORDER_STATUS_OPTIONS = [
   { value: "Потребує за-ння", label: "Потребує за-ння", color: "#f87171" },
   { value: "Замовлено", label: "Замовлено", color: "#3b82f6" },
-  { value: "Прибуло", label: "Прибуло", color: "#4ade80" },
+  { value: "Прибула", label: "Прибула", color: "#4ade80" },
 ];
 
 // Опції для дії (Записати/Видалити)
@@ -219,6 +220,7 @@ async function loadUsersList(): Promise<string[]> {
 
     const names: string[] = [];
     usersIdMap.clear(); // Очищуємо кеш перед оновленням
+    usersIdReverseMap.clear(); // Очищуємо зворотній кеш
     for (const row of data) {
       const d = (row as any)?.data;
       const slyusarId = (row as any)?.slyusar_id;
@@ -241,9 +243,10 @@ async function loadUsersList(): Promise<string[]> {
       if (name && name.trim()) {
         const trimmedName = name.trim();
         names.push(trimmedName);
-        // Зберігаємо відповідність ПІБ → slyusar_id
+        // Зберігаємо відповідність ПІБ → slyusar_id та зворотню
         if (slyusarId) {
           usersIdMap.set(trimmedName, Number(slyusarId));
+          usersIdReverseMap.set(Number(slyusarId), trimmedName);
         }
       }
     }
@@ -990,7 +993,7 @@ function recalculateAndApplyWidths() {
 // Отримати світлий фоновий колір для комірки td статусу
 function getOrderStatusCellBackground(status: string): string {
   switch (status) {
-    case "Прибуло":
+    case "Прибула":
       return "#dcfce7"; // світло-зелений
     case "Замовлено":
       return "#dbeafe"; // світло-синій
@@ -1003,7 +1006,7 @@ function getOrderStatusCellBackground(status: string): string {
 // Отримати колір тексту для статусу
 function getOrderStatusTextColor(status: string): string {
   switch (status) {
-    case "Прибуло":
+    case "Прибула":
       return "#16a34a"; // зелений
     case "Замовлено":
       return "#2563eb"; // синій
@@ -1978,7 +1981,99 @@ function createEmptyRow(): any {
   };
 }
 
-function resetModalState() {
+/* Завантаження записів з sclad де statys = 'Потребує за-ння' або 'Замовлено' */
+async function loadScladPendingRecords(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from("sclad")
+      .select("*")
+      .in("statys", ["Потребує за-ння", "Замовлено"])
+      .order("sclad_id", { ascending: false });
+    if (error) {
+      console.error("Помилка завантаження записів sclad:", error);
+      return [];
+    }
+    if (!data || data.length === 0) return [];
+
+    // Конвертуємо записи sclad у формат рядка таблиці batch
+    return data.map((rec: any) => {
+      const dateRaw = String(rec.time_on || "").trim();
+      // Конвертуємо дату в ISO формат для input type="date"
+      const isoDate = toIsoDate(dateRaw) || dateRaw;
+
+      const shop = String(rec.shops || "").trim();
+      const catno = String(rec.part_number || "").trim();
+      const detail = String(rec.name || "").trim();
+      const qty = parseFloat(rec.kilkist_on) || 0;
+      const price = parseFloat(rec.price) || 0;
+      const warehouse = String(rec.scladNomer ?? "").trim();
+      const invoice = String(rec.rahunok || "").trim();
+      const actNo = rec.akt ? String(rec.akt).trim() : "";
+      const unit = String(rec.unit_measurement || "штук").trim();
+      const orderStatus = String(rec.statys || "Потребує за-ння").trim();
+      const notes = String(rec.prumitka || "").trim();
+
+      // Визначаємо ПІБ замовника за slyusar_id
+      let createdBy = "";
+      if (rec.xto_zamovuv) {
+        createdBy = usersIdReverseMap.get(Number(rec.xto_zamovuv)) || "";
+      }
+
+      // Перерахунок ціни клієнта на основі відсотка складу
+      const procent = warehouseProcentMap.get(warehouse) ?? 0;
+      const clientPrice = Math.round((price + (price * procent) / 100) * 100) / 100;
+
+      // Валідація полів
+      const shopValid = !!shop;
+      const shopExists = shop ? shopsListCache.includes(shop) : false;
+      const detailValid = !!detail;
+      const detailExists = detail ? detailsListCache.includes(detail) : false;
+      const unitValid = VALID_UNITS.includes(unit);
+      const warehouseValid = warehouse ? warehouseListCache.includes(warehouse) : false;
+      const qtyValid = qty > 0;
+      const priceValid = price > 0;
+      const actValid = !actNo || actsListCache.includes(actNo);
+      const actClosed = actNo ? (actsDateOffMap.has(parseInt(actNo)) && actsDateOffMap.get(parseInt(actNo)) !== null) : false;
+
+      const allValid = shopValid && detailValid && unitValid && warehouseValid && qtyValid && priceValid && !!isoDate && !!catno && actValid;
+
+      return {
+        date: isoDate,
+        shop,
+        catno,
+        detail,
+        qty,
+        price,
+        clientPrice,
+        warehouse,
+        invoice,
+        actNo,
+        unit,
+        orderStatus,
+        createdBy,
+        notes,
+        action: "Записати",
+        status: allValid ? "Готовий" : "Помилка",
+        shopValid,
+        detailValid,
+        unitValid,
+        actValid,
+        actClosed,
+        warehouseValid,
+        qtyValid,
+        priceValid,
+        shopExists,
+        detailExists,
+        _scladId: rec.sclad_id, // Зберігаємо sclad_id для можливого оновлення
+      };
+    });
+  } catch (e) {
+    console.error("Помилка завантаження записів sclad:", e);
+    return [];
+  }
+}
+
+async function resetModalState() {
   const textarea = document.getElementById(
     "batch-textarea-Excel",
   ) as HTMLTextAreaElement;
@@ -1999,8 +2094,15 @@ function resetModalState() {
   // Ховаємо кнопку "Розпарсити"
   if (parseBtn) parseBtn.style.display = "none";
 
-  // Створюємо порожній рядок та показуємо таблицю
-  parsedDataGlobal = [createEmptyRow()];
+  // Завантажуємо записи з sclad (statys = 'Потребує за-ння' або 'Замовлено')
+  const pendingRecords = await loadScladPendingRecords();
+
+  // Якщо є записи з бази — показуємо їх, інакше порожній рядок
+  if (pendingRecords.length > 0) {
+    parsedDataGlobal = pendingRecords;
+  } else {
+    parsedDataGlobal = [createEmptyRow()];
+  }
   renderBatchTable(parsedDataGlobal);
 
   // Показуємо таблицю та кнопку "Завантажити"

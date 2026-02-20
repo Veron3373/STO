@@ -871,10 +871,11 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
 
   list.style.maxHeight = `${listHeight}px`;
 
-  list.style.top = `${useAbove
-    ? scrollY + rect.top - listHeight - gap
-    : scrollY + rect.bottom + gap
-    }px`;
+  list.style.top = `${
+    useAbove
+      ? scrollY + rect.top - listHeight - gap
+      : scrollY + rect.bottom + gap
+  }px`;
   list.style.left = `${scrollX + rect.left}px`;
 }
 function showDropdownList(input: HTMLElement, options: string[]) {
@@ -930,7 +931,8 @@ function showDropdownList(input: HTMLElement, options: string[]) {
         if (detailName) {
           parsedDataGlobal[index]["detail"] = detailName;
           parsedDataGlobal[index].detailValid = true;
-          (parsedDataGlobal[index] as any).detailExists = detailsListCache.includes(detailName);
+          (parsedDataGlobal[index] as any).detailExists =
+            detailsListCache.includes(detailName);
           // Оновлюємо input Деталь в DOM
           const detailInput = document.querySelector(
             `#batch-table-Excel tbody tr:nth-child(${index + 1}) [data-field="detail"]`,
@@ -1034,7 +1036,8 @@ function recalculateClientPrice(index: number): void {
     `#batch-table-Excel tbody tr:nth-child(${index + 1}) [data-field="clientPrice"]`,
   ) as HTMLInputElement | null;
   if (clientPriceInput) {
-    clientPriceInput.value = row.clientPrice === 0 ? "" : String(row.clientPrice);
+    clientPriceInput.value =
+      row.clientPrice === 0 ? "" : String(row.clientPrice);
   }
 }
 
@@ -1046,9 +1049,13 @@ function createInput(
   className: string = "",
 ): string {
   // Для числових полів qty/price/clientPrice: якщо значення = 0, показуємо порожнє + placeholder
-  const isZeroPlaceholder = field === "qty" || field === "price" || field === "clientPrice";
+  const isZeroPlaceholder =
+    field === "qty" || field === "price" || field === "clientPrice";
   const numVal = parseFloat(value as any);
-  const displayValue = isZeroPlaceholder && (numVal === 0 || value === "" || value === "0") ? "" : value;
+  const displayValue =
+    isZeroPlaceholder && (numVal === 0 || value === "" || value === "0")
+      ? ""
+      : value;
   const placeholderAttr = isZeroPlaceholder ? 'placeholder="0"' : "";
   return `<input
     type="${type}"
@@ -1216,13 +1223,14 @@ function renderBatchTable(data: any[]) {
           style="color: ${row.action === "Видалити" ? "#ef4444" : "#22c55e"}; font-weight: bold; cursor: pointer; background: transparent;"
         >
       </td>
-      <td class="status-cell-Excel ${row.status === "Готовий"
-        ? "ready-Excel"
-        : row.status?.includes("Помилка")
-          ? "error-Excel"
-          : row.status?.includes("Успішно")
-            ? "success-Excel"
-            : "error-Excel"
+      <td class="status-cell-Excel ${
+        row.status === "Готовий"
+          ? "ready-Excel"
+          : row.status?.includes("Помилка")
+            ? "error-Excel"
+            : row.status?.includes("Успішно")
+              ? "success-Excel"
+              : "error-Excel"
       }">
         <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || "Помилка"}">🗑️</button>
       </td>
@@ -1349,7 +1357,11 @@ function attachInputHandlers(tbody: HTMLTableSectionElement) {
 
       // === Плейсхолдер для нулів: при фокусі очищаємо "0", при blur повертаємо ===
       const fieldName = (input as HTMLInputElement).dataset.field || "";
-      if (fieldName === "qty" || fieldName === "price" || fieldName === "clientPrice") {
+      if (
+        fieldName === "qty" ||
+        fieldName === "price" ||
+        fieldName === "clientPrice"
+      ) {
         input.addEventListener("focus", (e) => {
           const target = e.target as HTMLInputElement;
           // Якщо значення 0 або порожнє — очистити для зручності вводу
@@ -2021,7 +2033,8 @@ async function loadScladPendingRecords(): Promise<any[]> {
 
       // Перерахунок ціни клієнта на основі відсотка складу
       const procent = warehouseProcentMap.get(warehouse) ?? 0;
-      const clientPrice = Math.round((price + (price * procent) / 100) * 100) / 100;
+      const clientPrice =
+        Math.round((price + (price * procent) / 100) * 100) / 100;
 
       // Валідація полів
       const shopValid = !!shop;
@@ -2029,13 +2042,27 @@ async function loadScladPendingRecords(): Promise<any[]> {
       const detailValid = !!detail;
       const detailExists = detail ? detailsListCache.includes(detail) : false;
       const unitValid = VALID_UNITS.includes(unit);
-      const warehouseValid = warehouse ? warehouseListCache.includes(warehouse) : false;
+      const warehouseValid = warehouse
+        ? warehouseListCache.includes(warehouse)
+        : false;
       const qtyValid = qty > 0;
       const priceValid = price > 0;
       const actValid = !actNo || actsListCache.includes(actNo);
-      const actClosed = actNo ? (actsDateOffMap.has(parseInt(actNo)) && actsDateOffMap.get(parseInt(actNo)) !== null) : false;
+      const actClosed = actNo
+        ? actsDateOffMap.has(parseInt(actNo)) &&
+          actsDateOffMap.get(parseInt(actNo)) !== null
+        : false;
 
-      const allValid = shopValid && detailValid && unitValid && warehouseValid && qtyValid && priceValid && !!isoDate && !!catno && actValid;
+      const allValid =
+        shopValid &&
+        detailValid &&
+        unitValid &&
+        warehouseValid &&
+        qtyValid &&
+        priceValid &&
+        !!isoDate &&
+        !!catno &&
+        actValid;
 
       return {
         date: isoDate,
@@ -2268,7 +2295,10 @@ async function uploadBatchData(data: any[]) {
               .eq("sclad_id", row._scladId);
 
             if (deleteError) {
-              console.error(`Помилка видалення sclad_id=${row._scladId}:`, deleteError);
+              console.error(
+                `Помилка видалення sclad_id=${row._scladId}:`,
+                deleteError,
+              );
               errorCount++;
               updateRowStatus(i, false, "❌ Помилка видалення");
             } else {
@@ -2319,7 +2349,10 @@ async function uploadBatchData(data: any[]) {
             .eq("sclad_id", row._scladId);
 
           if (updateError) {
-            console.error(`Помилка оновлення sclad_id=${row._scladId}:`, updateError);
+            console.error(
+              `Помилка оновлення sclad_id=${row._scladId}:`,
+              updateError,
+            );
             scladSuccess = false;
           } else {
             scladSuccess = true;
@@ -2476,7 +2509,8 @@ async function uploadBatchData(data: any[]) {
       uploadBtn.textContent = "✅ Записано";
     }
     showNotification(
-      `Успішно завантажено ${successCount} ${successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
+      `Успішно завантажено ${successCount} ${
+        successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
       }`,
       "success",
       4000,
@@ -2658,7 +2692,8 @@ export async function initBatchImport() {
           .getElementById("batch-upload-btn-Excel")
           ?.classList.remove("hidden-all_other_bases");
         showNotification(
-          `Розпарсовано ${data.length} ${data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
+          `Розпарсовано ${data.length} ${
+            data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
           }`,
           "success",
         );
@@ -2728,7 +2763,10 @@ export async function initBatchImport() {
           orderStatus: (allInputs[11] as HTMLInputElement).value, // Статус деталі
           createdBy: (allInputs[12] as HTMLInputElement).value, // Замовив
           notes: (allInputs[13] as HTMLInputElement).value, // Примітка
-          action: row.action || "Записати", // Дія (Записати/Видалити) з parsedDataGlobal
+          action:
+            (allInputs[14] as HTMLInputElement)?.value ||
+            row.action ||
+            "Записати", // Дія з DOM або parsedDataGlobal
           _scladId: row._scladId || null, // sclad_id для UPDATE/DELETE
           status: statusText,
           rowNumber: index + 1,
@@ -2788,15 +2826,21 @@ export async function initBatchImport() {
 
       if (hasErrors) return;
 
-      const validData = currentData.filter(
-        (row) =>
+      const validData = currentData.filter((row) => {
+        // Рядки з дією "Видалити" і наявним _scladId — завжди валідні для видалення
+        if (row.action === "Видалити" && row._scladId) {
+          return true;
+        }
+        // Для записів "Записати" — стандартна валідація
+        return (
           !row.status.includes("Помилка") &&
           row.shop &&
           row.unit &&
           row.detail &&
           row.warehouse &&
-          row.warehouseValid,
-      );
+          row.warehouseValid
+        );
+      });
       if (validData.length === 0) {
         showNotification(
           "Немає валідних даних для завантаження! Перевірте, чи заповнено магазин, деталь, одиницю виміру та склад.",

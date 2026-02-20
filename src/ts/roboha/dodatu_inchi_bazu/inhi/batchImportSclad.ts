@@ -2289,9 +2289,8 @@ async function uploadBatchData(data: any[]) {
         continue;
       }
 
-      // === Якщо рядок завантажений з бази (має _scladId) — UPDATE ===
-      const isExistingRecord = row._scladId &&
-        (row.orderStatus === "Замовити" || row.orderStatus === "Замовлено");
+      // === Якщо рядок завантажений з бази (має _scladId) — UPDATE, інакше INSERT ===
+      const isExistingRecord = !!row._scladId;
 
       let scladSuccess = false;
 

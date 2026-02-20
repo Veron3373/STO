@@ -38,9 +38,9 @@ const UNIT_OPTIONS = [
 ];
 const VALID_UNITS = UNIT_OPTIONS.map((o) => o.value);
 
-// Опції для статусу деталі (Прибула/Замовлено/Потребує за-ння)
+// Опції для статусу деталі (Прибула/Замовлено/Замовити)
 const ORDER_STATUS_OPTIONS = [
-  { value: "Потребує за-ння", label: "Потребує за-ння", color: "#f87171" },
+  { value: "Замовити", label: "Замовити", color: "#f87171" },
   { value: "Замовлено", label: "Замовлено", color: "#3b82f6" },
   { value: "Прибула", label: "Прибула", color: "#4ade80" },
 ];
@@ -997,7 +997,7 @@ function getOrderStatusCellBackground(status: string): string {
       return "#dcfce7"; // світло-зелений
     case "Замовлено":
       return "#dbeafe"; // світло-синій
-    case "Потребує за-ння":
+    case "Замовити":
     default:
       return "#fee2e2"; // світло-червоний
   }
@@ -1010,7 +1010,7 @@ function getOrderStatusTextColor(status: string): string {
       return "#16a34a"; // зелений
     case "Замовлено":
       return "#2563eb"; // синій
-    case "Потребує за-ння":
+    case "Замовити":
     default:
       return "#dc2626"; // червоний
   }
@@ -1171,16 +1171,16 @@ function renderBatchTable(data: any[]) {
           autocomplete="off"
         >
       </td>
-      <td class="orderStatus-cell-Excel" style="background-color: ${getOrderStatusCellBackground(row.orderStatus || "Потребує за-ння")}">
+      <td class="orderStatus-cell-Excel" style="background-color: ${getOrderStatusCellBackground(row.orderStatus || "Замовити")}">
         <input
           type="text"
           class="cell-input-Excel cell-input-combo-Excel orderStatus-input-Excel"
-          value="${row.orderStatus || "Потребує за-ння"}"
+          value="${row.orderStatus || "Замовити"}"
           data-field="orderStatus"
           data-index="${index}"
           readonly
           autocomplete="off"
-          style="background: transparent; color: ${getOrderStatusTextColor(row.orderStatus || "Потребує за-ння")}; font-weight: bold; cursor: pointer;"
+          style="background: transparent; color: ${getOrderStatusTextColor(row.orderStatus || "Замовити")}; font-weight: bold; cursor: pointer;"
         >
       </td>
       <td>
@@ -1963,7 +1963,7 @@ function createEmptyRow(): any {
     invoice: "",
     actNo: "",
     unit: "штук",
-    orderStatus: "Потребує за-ння",
+    orderStatus: "Замовити",
     createdBy: currentUserName || "",
     notes: "",
     action: "Записати",
@@ -1981,13 +1981,13 @@ function createEmptyRow(): any {
   };
 }
 
-/* Завантаження записів з sclad де statys = 'Потребує за-ння' або 'Замовлено' */
+/* Завантаження записів з sclad де statys = 'Замовити' або 'Замовлено' */
 async function loadScladPendingRecords(): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from("sclad")
       .select("*")
-      .in("statys", ["Потребує за-ння", "Замовлено"])
+      .in("statys", ["Замовити", "Замовлено"])
       .order("sclad_id", { ascending: false });
     if (error) {
       console.error("Помилка завантаження записів sclad:", error);
@@ -2010,7 +2010,7 @@ async function loadScladPendingRecords(): Promise<any[]> {
       const invoice = String(rec.rahunok || "").trim();
       const actNo = rec.akt ? String(rec.akt).trim() : "";
       const unit = String(rec.unit_measurement || "штук").trim();
-      const orderStatus = String(rec.statys || "Потребує за-ння").trim();
+      const orderStatus = String(rec.statys || "Замовити").trim();
       const notes = String(rec.prumitka || "").trim();
 
       // Визначаємо ПІБ замовника за slyusar_id
@@ -2094,7 +2094,7 @@ async function resetModalState() {
   // Ховаємо кнопку "Розпарсити"
   if (parseBtn) parseBtn.style.display = "none";
 
-  // Завантажуємо записи з sclad (statys = 'Потребує за-ння' або 'Замовлено')
+  // Завантажуємо записи з sclad (statys = 'Замовити' або 'Замовлено')
   const pendingRecords = await loadScladPendingRecords();
 
   // Якщо є записи з бази — показуємо їх, інакше порожній рядок
@@ -2253,80 +2253,154 @@ async function uploadBatchData(data: any[]) {
         dbDate = `${yyyy}-${mm}-${dd}`;
       }
 
-      // тимчасові приховані інпути для akt та kilkist_off
-      const aktInput = document.createElement("input");
-      aktInput.id = "sclad_akt";
-      aktInput.type = "hidden";
-      aktInput.value = row.actNo || "";
-      document.body.appendChild(aktInput);
-
-      const offInput = document.createElement("input");
-      offInput.id = "sclad_kilkist_off";
-      offInput.type = "hidden";
-      offInput.value = "0";
-      document.body.appendChild(offInput);
-
-      // тимчасові приховані інпути для statys, xto_zamovuv, prumitka
-      const statysInput = document.createElement("input");
-      statysInput.id = "sclad_statys";
-      statysInput.type = "hidden";
-      statysInput.value = row.orderStatus || "Потребує за-ння";
-      document.body.appendChild(statysInput);
-
-      const xtoZamovuvInput = document.createElement("input");
-      xtoZamovuvInput.id = "sclad_xto_zamovuv";
-      xtoZamovuvInput.type = "hidden";
       // Отримуємо slyusar_id за ПІБ з кешу
       const slyusarIdForRow = row.createdBy
         ? getSlyusarIdByName(row.createdBy)
         : null;
-      xtoZamovuvInput.value = slyusarIdForRow ? String(slyusarIdForRow) : "";
-      document.body.appendChild(xtoZamovuvInput);
 
-      const prumitkaInput = document.createElement("input");
-      prumitkaInput.id = "sclad_prumitka";
-      prumitkaInput.type = "hidden";
-      prumitkaInput.value = row.notes || "";
-      document.body.appendChild(prumitkaInput);
+      // === Якщо дія = "Видалити" — видаляємо запис з бази ===
+      if (row.action === "Видалити") {
+        if (row._scladId) {
+          try {
+            const { error: deleteError } = await supabase
+              .from("sclad")
+              .delete()
+              .eq("sclad_id", row._scladId);
 
-      // заповнюємо інпути під handleScladCrud
-      const fields: Record<string, string> = {
-        sclad_date: dbDate,
-        sclad_detail_catno: row.catno,
-        sclad_detail: row.detail,
-        sclad_qty_in: String(row.qty),
-        sclad_price: String(row.price),
-        // sclad_client_price: String(row.clientPrice), // якщо є така колонка в БД
-        sclad_invoice_no: row.invoice,
-        sclad_unit: row.unit,
-        sclad_shop: row.shop,
-        sclad_procent: String(row.warehouse || ""), // Номер складу
-      };
-      Object.entries(fields).forEach(([id, val]) => {
-        const el = document.getElementById(id) as HTMLInputElement | null;
-        if (el) el.value = val;
-      });
+            if (deleteError) {
+              console.error(`Помилка видалення sclad_id=${row._scladId}:`, deleteError);
+              errorCount++;
+              updateRowStatus(i, false, "❌ Помилка видалення");
+            } else {
+              successCount++;
+              updateRowStatus(i, true, "🗑️ Видалено");
+            }
+          } catch (err) {
+            console.error(`Помилка видалення sclad_id=${row._scladId}:`, err);
+            errorCount++;
+            updateRowStatus(i, false, "❌ Помилка видалення");
+          }
+        } else {
+          // Новий рядок з дією "Видалити" — просто пропускаємо
+          successCount++;
+          updateRowStatus(i, true, "🗑️ Пропущено");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        continue;
+      }
 
-      // не створюємо тут shops/details — вони вже оброблені вище
-      resetShopState();
-      resetDetailState();
-      shopEditState.currentName = row.shop;
-      shopEditState.touched = false;
-      detailEditState.currentName = row.detail;
-      detailEditState.touched = false;
+      // === Якщо рядок завантажений з бази (має _scladId) — UPDATE ===
+      const isExistingRecord = row._scladId &&
+        (row.orderStatus === "Замовити" || row.orderStatus === "Замовлено");
 
-      // запис у sclad
-      const originalCRUD = CRUD;
-      updateCRUD("Додати");
-      const scladSuccess = await handleScladCrud();
-      updateCRUD(originalCRUD);
+      let scladSuccess = false;
 
-      // прибираємо тимчасові інпути
-      aktInput.remove();
-      offInput.remove();
-      statysInput.remove();
-      xtoZamovuvInput.remove();
-      prumitkaInput.remove();
+      if (isExistingRecord) {
+        // Пряме оновлення існуючого запису через supabase
+        try {
+          const updatePayload: Record<string, any> = {
+            time_on: dbDate || null,
+            shops: row.shop || null,
+            part_number: row.catno || null,
+            name: row.detail || null,
+            kilkist_on: parseFloat(row.qty) || 0,
+            price: parseFloat(row.price) || 0,
+            rahunok: row.invoice || null,
+            unit_measurement: row.unit || null,
+            akt: row.actNo || null,
+            scladNomer: row.warehouse ? parseFloat(row.warehouse) : null,
+            statys: row.orderStatus || null,
+            prumitka: row.notes || null,
+            xto_zamovuv: slyusarIdForRow || null,
+          };
+
+          const { error: updateError } = await supabase
+            .from("sclad")
+            .update(updatePayload)
+            .eq("sclad_id", row._scladId);
+
+          if (updateError) {
+            console.error(`Помилка оновлення sclad_id=${row._scladId}:`, updateError);
+            scladSuccess = false;
+          } else {
+            scladSuccess = true;
+          }
+        } catch (err) {
+          console.error(`Помилка оновлення sclad_id=${row._scladId}:`, err);
+          scladSuccess = false;
+        }
+      } else {
+        // === Новий запис — INSERT через handleScladCrud ===
+        // тимчасові приховані інпути для akt та kilkist_off
+        const aktInput = document.createElement("input");
+        aktInput.id = "sclad_akt";
+        aktInput.type = "hidden";
+        aktInput.value = row.actNo || "";
+        document.body.appendChild(aktInput);
+
+        const offInput = document.createElement("input");
+        offInput.id = "sclad_kilkist_off";
+        offInput.type = "hidden";
+        offInput.value = "0";
+        document.body.appendChild(offInput);
+
+        // тимчасові приховані інпути для statys, xto_zamovuv, prumitka
+        const statysInput = document.createElement("input");
+        statysInput.id = "sclad_statys";
+        statysInput.type = "hidden";
+        statysInput.value = row.orderStatus || "Замовити";
+        document.body.appendChild(statysInput);
+
+        const xtoZamovuvInput = document.createElement("input");
+        xtoZamovuvInput.id = "sclad_xto_zamovuv";
+        xtoZamovuvInput.type = "hidden";
+        xtoZamovuvInput.value = slyusarIdForRow ? String(slyusarIdForRow) : "";
+        document.body.appendChild(xtoZamovuvInput);
+
+        const prumitkaInput = document.createElement("input");
+        prumitkaInput.id = "sclad_prumitka";
+        prumitkaInput.type = "hidden";
+        prumitkaInput.value = row.notes || "";
+        document.body.appendChild(prumitkaInput);
+
+        // заповнюємо інпути під handleScladCrud
+        const fields: Record<string, string> = {
+          sclad_date: dbDate,
+          sclad_detail_catno: row.catno,
+          sclad_detail: row.detail,
+          sclad_qty_in: String(row.qty),
+          sclad_price: String(row.price),
+          sclad_invoice_no: row.invoice,
+          sclad_unit: row.unit,
+          sclad_shop: row.shop,
+          sclad_procent: String(row.warehouse || ""), // Номер складу
+        };
+        Object.entries(fields).forEach(([id, val]) => {
+          const el = document.getElementById(id) as HTMLInputElement | null;
+          if (el) el.value = val;
+        });
+
+        // не створюємо тут shops/details — вони вже оброблені вище
+        resetShopState();
+        resetDetailState();
+        shopEditState.currentName = row.shop;
+        shopEditState.touched = false;
+        detailEditState.currentName = row.detail;
+        detailEditState.touched = false;
+
+        // запис у sclad
+        const originalCRUD = CRUD;
+        updateCRUD("Додати");
+        scladSuccess = await handleScladCrud();
+        updateCRUD(originalCRUD);
+
+        // прибираємо тимчасові інпути
+        aktInput.remove();
+        offInput.remove();
+        statysInput.remove();
+        xtoZamovuvInput.remove();
+        prumitkaInput.remove();
+      }
 
       if (!scladSuccess) {
         errorCount++;
@@ -2334,16 +2408,24 @@ async function uploadBatchData(data: any[]) {
         continue;
       }
 
-      // отримати sclad_id щойно створеного запису
+      // отримати sclad_id запису
       let scladIdWeb: string | null = null;
-      try {
-        scladIdWeb = await getScladId(row.date, row.catno, row.detail);
-        if (scladIdWeb) {
-          const key = `${dbDate}|${row.catno}|${row.detail}`;
-          scladIdsMap.set(key, scladIdWeb);
+      if (isExistingRecord) {
+        // Для існуючих записів — вже маємо sclad_id
+        scladIdWeb = String(row._scladId);
+        const key = `${dbDate}|${row.catno}|${row.detail}`;
+        scladIdsMap.set(key, scladIdWeb);
+      } else {
+        // Для нових записів — отримуємо sclad_id щойно створеного запису
+        try {
+          scladIdWeb = await getScladId(row.date, row.catno, row.detail);
+          if (scladIdWeb) {
+            const key = `${dbDate}|${row.catno}|${row.detail}`;
+            scladIdsMap.set(key, scladIdWeb);
+          }
+        } catch (err) {
+          console.error("Помилка отримання sclad_id:", err);
         }
-      } catch (err) {
-        console.error("Помилка отримання sclad_id:", err);
       }
 
       // оновлення акта (за наявності)

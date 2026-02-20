@@ -315,7 +315,7 @@ function readScladFormValues() {
     akt: pick("sclad_akt") || null,
     scladNomer: toNum(pick("sclad_procent")),
     xto_zamovuv: slyusarId, // ID користувача (запчастиста), який завантажив деталь
-    statys: pick("sclad_statys") || null, // Статус деталі (Прибуло/Замовлено/Потребує за-ння)
+    statys: pick("sclad_statys") || null, // Статус деталі (Прибуло/Замовлено/Замовити)
     prumitka: pick("sclad_prumitka") || null, // Примітка
 
     // 🛠️ Безпечна заміна: якщо null → ставимо 0

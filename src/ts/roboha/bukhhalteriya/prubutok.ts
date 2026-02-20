@@ -1510,21 +1510,17 @@ export function updatevutratuDisplayedSums(): void {
         totalNetWorkProfit += workProfit;
 
         // --- Розрахунок для КАСИ (повні суми) ---
+        // Знижка віднімається в HTML-відображенні рядка, тому тут просто беремо повні суми
+        // і віднімаємо знижку один раз
         let fullDetails = expense.fullDetailsAmount || 0;
         let fullWork = expense.fullWorkAmount || 0;
+        const fullTotal = fullDetails + fullWork;
 
-        // Віднімаємо знижку (але НЕ аванс - він вже включений у повну суму закритого акту)
-        if (discountVal > 0) {
-          const posDetailsFull = Math.max(0, fullDetails);
-          const posWorkFull = Math.max(0, fullWork);
-          const totalPosFull = posDetailsFull + posWorkFull;
-
-          if (totalPosFull > 0) {
-            const dPartFull = (posDetailsFull / totalPosFull) * discountVal;
-            const wPartFull = (posWorkFull / totalPosFull) * discountVal;
-            fullDetails -= dPartFull;
-            fullWork -= wPartFull;
-          }
+        // Віднімаємо знижку від загальної суми (розподіляємо пропорційно)
+        if (discountVal > 0 && fullTotal > 0) {
+          const discountRatio = discountVal / fullTotal;
+          fullDetails -= fullDetails * discountRatio;
+          fullWork -= fullWork * discountRatio;
         }
 
         totalNetFullDetails += fullDetails;
@@ -1534,7 +1530,8 @@ export function updatevutratuDisplayedSums(): void {
   });
 
   // Фінальні суми
-  // Каса = (Залишок Деталі + Залишок Робота + Всі Аванси) - Витрати
+  // Каса = (Залишок Деталі + Залишок Робота + Всі Аванси) + Витрати (від'ємні)
+  // ВАЖЛИВО: totalNegativeSum НЕ включає акти, тільки реальні витрати
   const finalSumCasa =
     totalNetFullDetails + totalNetFullWork + totalAvansSum + totalNegativeSum;
 
@@ -1556,11 +1553,15 @@ export function updatevutratuDisplayedSums(): void {
         <span style="color: #666;">+</span>
         <span><strong style="color: #000;">💰 ${formatNumber(
           totalAvansSum,
-        )}</strong></span>
-        <span style="color: #666;">-</span>
-        <span><strong style="color: #8B0000;">💶 -${formatNumber(
-          Math.abs(totalNegativeSum),
-        )}</strong></span>
+        )}</strong></span>${
+          totalNegativeSum !== 0
+            ? `
+        <span style="color: #666;">+</span>
+        <span><strong style="color: #8B0000;">💶 ${formatNumber(
+          totalNegativeSum,
+        )}</strong></span>`
+            : ""
+        }
         <span style="color: #666;">=</span>
         <span><strong style="color: ${
           finalSumCasa >= 0 ? "#006400" : "#8B0000"
@@ -1574,11 +1575,15 @@ export function updatevutratuDisplayedSums(): void {
         <span style="color: #666;">+</span>
         <span><strong style="color: #FF8C00;">🛠️ ${formatNumber(
           totalNetWorkProfit,
-        )}</strong></span>
-        <span style="color: #666;">-</span>
-        <span><strong style="color: #8B0000;">💶 -${formatNumber(
-          Math.abs(totalNegativeSum),
-        )}</strong></span>
+        )}</strong></span>${
+          totalNegativeSum !== 0
+            ? `
+        <span style="color: #666;">+</span>
+        <span><strong style="color: #8B0000;">💶 ${formatNumber(
+          totalNegativeSum,
+        )}</strong></span>`
+            : ""
+        }
         <span style="color: #666;">=</span>
         <span><strong style="color: ${
           finalSumProfit >= 0 ? "#006400" : "#8B0000"

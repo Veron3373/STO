@@ -43,12 +43,12 @@ const VALID_UNITS = UNIT_OPTIONS.map((o) => o.value);
 const ORDER_STATUS_OPTIONS = [
   { value: "Замовити", label: "Замовити", color: "#f87171" },
   { value: "Замовлено", label: "Замовлено", color: "#3b82f6" },
-  { value: "Прибула", label: "Прибула", color: "#4ade80" },
+  { value: "Прибула", label: "Прибула", color: "#2D7244" },
 ];
 
 // Опції для дії (Записати/Видалити)
 const ACTION_OPTIONS = [
-  { value: "Записати", label: "Записати", color: "#22c55e" },
+  { value: "Записати", label: "Записати", color: "#2D7244" },
   { value: "Видалити", label: "Видалити", color: "#ef4444" },
 ];
 // ===== Допоміжні функції =====

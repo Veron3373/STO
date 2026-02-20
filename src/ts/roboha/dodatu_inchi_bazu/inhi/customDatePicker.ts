@@ -117,12 +117,25 @@ function openDatePicker(input: HTMLInputElement): void {
   // Створюємо overlay для закриття при кліку поза календарем
   currentOverlay = document.createElement("div");
   currentOverlay.className = "custom-datepicker-overlay";
-  currentOverlay.addEventListener("click", closeDatePicker);
+  currentOverlay.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeDatePicker();
+  });
   document.body.appendChild(currentOverlay);
 
   // Створюємо календар
   currentDatePicker = createDatePickerElement();
+  // Зупиняємо propagation кліків на календарі, щоб вони не закривали модалку
+  currentDatePicker.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
   document.body.appendChild(currentDatePicker);
+
+  // Додатковий обробник на document для закриття при кліку поза календарем
+  setTimeout(() => {
+    document.addEventListener("click", handleDocumentClick);
+  }, 10);
 
   // Позиціонуємо відносно input
   positionDatePicker(input);
@@ -131,7 +144,21 @@ function openDatePicker(input: HTMLInputElement): void {
   renderDays();
 }
 
+function handleDocumentClick(e: MouseEvent): void {
+  // Якщо клік не на календарі і не на input - закриваємо
+  const target = e.target as HTMLElement;
+  if (
+    currentDatePicker &&
+    !currentDatePicker.contains(target) &&
+    currentInput &&
+    target !== currentInput
+  ) {
+    closeDatePicker();
+  }
+}
+
 function closeDatePicker(): void {
+  document.removeEventListener("click", handleDocumentClick);
   if (currentOverlay) {
     currentOverlay.remove();
     currentOverlay = null;

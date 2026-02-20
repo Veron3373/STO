@@ -1087,7 +1087,7 @@ function getOrderStatusCellBackground(status: string): string {
 function getOrderStatusTextColor(status: string): string {
   switch (status) {
     case "Прибула":
-      return "#16a34a"; // зелений
+      return "#2D7244"; // зелений
     case "Замовлено":
       return "#2563eb"; // синій
     case "Замовити":

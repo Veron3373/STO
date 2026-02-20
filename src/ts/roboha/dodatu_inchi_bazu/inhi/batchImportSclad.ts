@@ -28,6 +28,7 @@ let warehouseListCache: string[] = []; // Кеш активних складів
 let warehouseProcentMap: Map<string, number> = new Map(); // Кеш відсотків складів: warehouse_id -> procent
 let usersListCache: string[] = []; // Кеш користувачів (не Слюсарів)
 let partNumbersCache: string[] = []; // Кеш каталог номерів з бази sclad
+let partNumberNameMap: Map<string, string> = new Map(); // Кеш каталог номер → назва деталі
 let usersIdMap: Map<string, number> = new Map(); // Кеш ПІБ → slyusar_id
 const UNIT_OPTIONS = [
   { value: "штук", label: "штук" },
@@ -260,22 +261,30 @@ function getSlyusarIdByName(name: string): number | null {
   return usersIdMap.get(trimmedName) ?? null;
 }
 
-/* Завантаження унікальних part_number з таблиці sclad */
+/* Завантаження унікальних part_number та name з таблиці sclad */
 async function loadPartNumbers(): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from("sclad")
-      .select("part_number")
+      .select("part_number, name")
       .order("part_number", { ascending: true });
     if (error) {
       console.error("Помилка завантаження каталог номерів:", error);
       return [];
     }
-    // Збираємо унікальні непорожні part_number
+    // Збираємо унікальні непорожні part_number + зберігаємо назву деталі
     const unique = new Set<string>();
+    partNumberNameMap.clear();
     (data || []).forEach((row: any) => {
       const pn = String(row.part_number || "").trim();
-      if (pn) unique.add(pn);
+      const name = String(row.name || "").trim();
+      if (pn) {
+        unique.add(pn);
+        // Зберігаємо перше знайдене ім'я для кожного part_number
+        if (!partNumberNameMap.has(pn) && name) {
+          partNumberNameMap.set(pn, name);
+        }
+      }
     });
     return Array.from(unique).sort();
   } catch (e) {
@@ -860,8 +869,8 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
   list.style.maxHeight = `${listHeight}px`;
 
   list.style.top = `${useAbove
-      ? scrollY + rect.top - listHeight - gap
-      : scrollY + rect.bottom + gap
+    ? scrollY + rect.top - listHeight - gap
+    : scrollY + rect.bottom + gap
     }px`;
   list.style.left = `${scrollX + rect.left}px`;
 }
@@ -912,6 +921,30 @@ function showDropdownList(input: HTMLElement, options: string[]) {
         }
       } else if (field === "warehouse") {
         parsedDataGlobal[index].warehouseValid = true;
+      } else if (field === "catno") {
+        // Автозаповнення назви деталі з бази sclad при виборі каталог номера
+        const detailName = partNumberNameMap.get(option);
+        if (detailName) {
+          parsedDataGlobal[index]["detail"] = detailName;
+          parsedDataGlobal[index].detailValid = true;
+          (parsedDataGlobal[index] as any).detailExists = detailsListCache.includes(detailName);
+          // Оновлюємо input Деталь в DOM
+          const detailInput = document.querySelector(
+            `#batch-table-Excel tbody tr:nth-child(${index + 1}) [data-field="detail"]`,
+          ) as HTMLInputElement | HTMLTextAreaElement | null;
+          if (detailInput) {
+            detailInput.value = detailName;
+            // Оновлюємо клас td деталі
+            const detailTd = detailInput.closest("td");
+            if (detailTd) {
+              if (detailsListCache.includes(detailName)) {
+                detailTd.classList.remove("invalid-detail");
+              } else {
+                detailTd.classList.add("invalid-detail");
+              }
+            }
+          }
+        }
       }
 
       recalculateAndApplyWidths();

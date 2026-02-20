@@ -683,20 +683,12 @@ async function loadvutratuFromDatabase(): Promise<void> {
       .lt("suma", 0)
       .is("act", null); // Виключаємо записи з номером акту (щоб уникнути дублювання)
 
-    // Застосовуємо фільтр по датах залежно від режиму
-    if (vutratuDateFilterMode === "open") {
-      // Фільтр по даті відкриття (dataOnn)
-      if (dateFrom) queryVutratu = queryVutratu.gte("dataOnn", dateFrom);
-      if (dateTo) queryVutratu = queryVutratu.lte("dataOnn", dateTo);
-    } else if (vutratuDateFilterMode === "close") {
-      // Фільтр по даті закриття (dataOff)
-      if (dateFrom) queryVutratu = queryVutratu.gte("dataOff", dateFrom);
-      if (dateTo) queryVutratu = queryVutratu.lte("dataOff", dateTo);
-    } else if (vutratuDateFilterMode === "paid") {
-      // Фільтр по даті розрахунку (для витрат це dataOnn, бо витрати не мають dataOff)
-      if (dateFrom) queryVutratu = queryVutratu.gte("dataOnn", dateFrom);
-      if (dateTo) queryVutratu = queryVutratu.lte("dataOnn", dateTo);
-    }
+    // Застосовуємо фільтр по датах для витрат
+    // ВАЖЛИВО: Витрати не мають окремої "дати закриття" (dataOff зазвичай NULL)
+    // Тому для всіх режимів фільтрації використовуємо dataOnn
+    // Локальна фільтрація в filtervutratuData() правильно обробляє відображення
+    if (dateFrom) queryVutratu = queryVutratu.gte("dataOnn", dateFrom);
+    if (dateTo) queryVutratu = queryVutratu.lte("dataOnn", dateTo);
 
     if (category) queryVutratu = queryVutratu.eq("kategoria", category);
     if (paymentMethod)

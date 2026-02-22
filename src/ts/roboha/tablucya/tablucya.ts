@@ -1594,7 +1594,7 @@ function createTableHeader(
 ): HTMLTableSectionElement {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
-  const headers = ["№ акту", "Дата", "Клієнт 🔽", "Автомобіль"];
+  const headers = ["№ акту", "Дата", "Клієнт", "Автомобіль"];
   // ✅ Показуємо "Сума" тільки якщо showSumaColumn = true
   if (showSumaColumn) headers.push("Сума");
 
@@ -1607,9 +1607,12 @@ function createTableHeader(
     th.style.backgroundColor = tableColor;
     th.style.color = "#fff";
     if (header.includes("Клієнт")) {
+      th.style.cursor = "pointer";
       th.addEventListener("click", () => {
         sortActs();
         updateTableBody();
+        // Оновлюємо індикатор в заголовку
+        th.textContent = sortByDateStep === 1 ? "Клієнт 🔽" : "Клієнт";
       });
     }
     // 📅 Фільтр по даті закриття - клік на заголовок "Дата"

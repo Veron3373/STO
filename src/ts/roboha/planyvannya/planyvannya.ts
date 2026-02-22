@@ -111,7 +111,6 @@ class SchedulerApp {
     try {
       this.postArxiv = new PostArxiv("postCalendarGrid");
     } catch (e) {
-
       // Fallback or handle error - though strictly TS requires init in constructor if not optional
       // To satisfy TS strict property init, we should probably assign it.
       // If it throws, the app might crash, which is acceptable if critical.
@@ -162,8 +161,7 @@ class SchedulerApp {
     // 📡 Підключаємо Realtime підписку для автоматичного оновлення
     try {
       initPostArxivRealtimeSubscription();
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   private async loadDataFromDatabase(): Promise<void> {
@@ -172,7 +170,6 @@ class SchedulerApp {
       const hasAccess = await checkCurrentPageAccess();
 
       if (!hasAccess) {
-
         redirectToIndex();
         return;
       }
@@ -210,7 +207,7 @@ class SchedulerApp {
 
       // Створюємо Map для швидкого пошуку постів
       const postsMap = new Map<number, any>(
-        postsData.map((post: any) => [post.post_id, post])
+        postsData.map((post: any) => [post.post_id, post]),
       );
 
       // Заповнюємо карти пошуку для нових створених елементів
@@ -233,13 +230,13 @@ class SchedulerApp {
         categoriesData.map((cat: any) => [
           String(cat.category_id),
           cat.category,
-        ])
+        ]),
       );
 
       // Трансформація даних - фільтруємо записи з пустим namber
       const slyusars: Sluysar[] = slyusarsData
         .filter(
-          (item: any) => item.namber !== null && item.namber !== undefined
+          (item: any) => item.namber !== null && item.namber !== undefined,
         )
         .map((item: any) => {
           const post = postsMap.get(parseInt(item.post_sluysar));
@@ -264,16 +261,19 @@ class SchedulerApp {
 
   private transformDataToSections(
     data: Sluysar[],
-    categoryMap: Map<string, string>
+    categoryMap: Map<string, string>,
   ): void {
     // Групування за category
-    const grouped = data.reduce((acc, item) => {
-      if (!acc[item.category]) {
-        acc[item.category] = [];
-      }
-      acc[item.category].push(item);
-      return acc;
-    }, {} as Record<string, Sluysar[]>);
+    const grouped = data.reduce(
+      (acc, item) => {
+        if (!acc[item.category]) {
+          acc[item.category] = [];
+        }
+        acc[item.category].push(item);
+        return acc;
+      },
+      {} as Record<string, Sluysar[]>,
+    );
 
     // Створення секцій
     this.sections = Object.entries(grouped).map(
@@ -297,7 +297,7 @@ class SchedulerApp {
             namber: item.namber,
           })),
         };
-      }
+      },
     );
 
     // Сортування секцій за мінімальним namber у кожній секції
@@ -361,7 +361,7 @@ class SchedulerApp {
       section.posts.forEach((post, postIndex) => {
         const namber = sectionIndex + 1 + (postIndex + 1) / 10;
         const initial = this.initialPositions.find(
-          (p) => p.slyusar_id === post.id
+          (p) => p.slyusar_id === post.id,
         );
         currentPositions.push({
           slyusar_id: post.id,
@@ -387,7 +387,7 @@ class SchedulerApp {
 
     for (const current of currentPositions) {
       const initial = this.initialPositions.find(
-        (p) => p.slyusar_id === current.slyusar_id
+        (p) => p.slyusar_id === current.slyusar_id,
       );
       if (!initial) return true;
       if (Math.abs(initial.current_namber - current.current_namber) > 0.001) {
@@ -552,7 +552,7 @@ class SchedulerApp {
 
       // Очищаємо namber для видалених елементів (теж фільтруємо реальні ID)
       const validDeletedIds = this.deletedSlyusarIds.filter(
-        (id) => id < 100000
+        (id) => id < 100000,
       );
       for (const deletedId of validDeletedIds) {
         const { error } = await supabase
@@ -636,7 +636,6 @@ class SchedulerApp {
 
       // Зберігаємо посилання на кнопку
       this.editModeBtn = editButton;
-
     }
   }
 
@@ -667,13 +666,13 @@ class SchedulerApp {
     if (this.timeHeader) {
       (this.timeHeader as HTMLElement).style.setProperty(
         "--past-percentage",
-        decimal.toString()
+        decimal.toString(),
       );
     }
     if (this.schedulerWrapper) {
       (this.schedulerWrapper as HTMLElement).style.setProperty(
         "--past-percentage",
-        decimal.toString()
+        decimal.toString(),
       );
     }
   }
@@ -703,7 +702,10 @@ class SchedulerApp {
     this.viewYear = this.selectedDate.getFullYear();
 
     // Якщо місяць змінився - потрібен повний рендеринг
-    if (oldMonth !== this.selectedDate.getMonth() || oldYear !== this.selectedDate.getFullYear()) {
+    if (
+      oldMonth !== this.selectedDate.getMonth() ||
+      oldYear !== this.selectedDate.getFullYear()
+    ) {
       this.render();
     } else {
       // Той самий місяць - просто оновлюємо підсвічування
@@ -751,7 +753,7 @@ class SchedulerApp {
     // Оновлюємо текст дати в header
     if (this.headerDateDisplay) {
       this.headerDateDisplay.textContent = this.formatFullDate(
-        this.selectedDate
+        this.selectedDate,
       );
     }
 
@@ -864,7 +866,7 @@ class SchedulerApp {
 
       // Знаходимо елемент контенту секції в DOM
       const sectionContent = document.querySelector(
-        `.post-section-content[data-section-id="${sectionId}"]`
+        `.post-section-content[data-section-id="${sectionId}"]`,
       ) as HTMLElement;
 
       if (sectionContent) {
@@ -928,7 +930,7 @@ class SchedulerApp {
         // Показуємо повідомлення
         showNotification(
           `Видалено пост: ${postTitle} - ${postSubtitle}`,
-          "warning"
+          "warning",
         );
       }
     }
@@ -1134,7 +1136,7 @@ class SchedulerApp {
   private startSectionDrag(
     _e: MouseEvent,
     element: HTMLElement,
-    sectionId: number
+    sectionId: number,
   ): void {
     this.draggedElement = element;
     this.draggedSectionId = sectionId;
@@ -1184,7 +1186,7 @@ class SchedulerApp {
     if (!this.dragPlaceholder || !this.calendarGrid) return;
 
     const sectionGroups = Array.from(
-      this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging)")
+      this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging)"),
     );
 
     for (const group of sectionGroups) {
@@ -1213,8 +1215,8 @@ class SchedulerApp {
     // Визначаємо нову позицію
     const sectionGroups = Array.from(
       this.calendarGrid.querySelectorAll(
-        ".post-section-group:not(.dragging), .post-drag-placeholder"
-      )
+        ".post-section-group:not(.dragging), .post-drag-placeholder",
+      ),
     );
 
     // Знаходимо реальний індекс
@@ -1231,7 +1233,7 @@ class SchedulerApp {
 
     // Переміщуємо секцію в масиві
     const oldIndex = this.sections.findIndex(
-      (s) => s.id === this.draggedSectionId
+      (s) => s.id === this.draggedSectionId,
     );
     if (oldIndex !== -1 && newIndex !== oldIndex) {
       const [movedSection] = this.sections.splice(oldIndex, 1);
@@ -1263,7 +1265,7 @@ class SchedulerApp {
     _e: MouseEvent,
     element: HTMLElement,
     sectionId: number,
-    postId: number
+    postId: number,
   ): void {
     this.draggedElement = element;
     this.draggedSectionId = sectionId;
@@ -1315,7 +1317,7 @@ class SchedulerApp {
 
     // Знаходимо секцію над якою курсор
     const sectionGroups = Array.from(
-      this.calendarGrid.querySelectorAll(".post-section-group")
+      this.calendarGrid.querySelectorAll(".post-section-group"),
     );
     let targetSectionContent: Element | null = null;
     let fallbackAddBtn: Element | null = null;
@@ -1336,7 +1338,7 @@ class SchedulerApp {
     if (!targetSectionContent) return;
 
     const postRows = Array.from(
-      targetSectionContent.querySelectorAll(".post-unified-row:not(.dragging)")
+      targetSectionContent.querySelectorAll(".post-unified-row:not(.dragging)"),
     );
 
     for (const row of postRows) {
@@ -1353,7 +1355,7 @@ class SchedulerApp {
     if (fallbackAddBtn) {
       fallbackAddBtn.parentNode?.insertBefore(
         this.dragPlaceholder,
-        fallbackAddBtn
+        fallbackAddBtn,
       );
     } else {
       targetSectionContent.appendChild(this.dragPlaceholder);
@@ -1371,20 +1373,20 @@ class SchedulerApp {
 
     // Знаходимо стару секцію
     const oldSectionIndex = this.sections.findIndex(
-      (s) => s.id === this.draggedSectionId
+      (s) => s.id === this.draggedSectionId,
     );
     if (oldSectionIndex === -1) return;
     const oldSection = this.sections[oldSectionIndex];
 
     // Знаходимо нову секцію по плейсхолдеру
     const newSectionContent = this.dragPlaceholder.closest(
-      ".post-section-content"
+      ".post-section-content",
     ) as HTMLElement;
     if (!newSectionContent) return;
 
     const newSectionId = parseInt(newSectionContent.dataset.sectionId || "0");
     const newSectionIndex = this.sections.findIndex(
-      (s) => s.id === newSectionId
+      (s) => s.id === newSectionId,
     );
     if (newSectionIndex === -1) return;
     const newSection = this.sections[newSectionIndex];
@@ -1392,8 +1394,8 @@ class SchedulerApp {
     // Визначаємо нову позицію всередині нової секції
     const allElements = Array.from(
       newSectionContent.querySelectorAll(
-        ".post-unified-row, .post-drag-placeholder"
-      )
+        ".post-unified-row, .post-drag-placeholder",
+      ),
     );
 
     let newIndex = 0;
@@ -1409,7 +1411,7 @@ class SchedulerApp {
 
     // Видаляємо зі старої секції
     const oldPostIndex = oldSection.posts.findIndex(
-      (p) => p.id === this.draggedPostId
+      (p) => p.id === this.draggedPostId,
     );
     if (oldPostIndex !== -1) {
       const [movedPost] = oldSection.posts.splice(oldPostIndex, 1);
@@ -1461,8 +1463,9 @@ class SchedulerApp {
       "листопада",
       "грудня",
     ];
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]
-      } ${date.getFullYear()}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${
+      months[date.getMonth()]
+    } ${date.getFullYear()}`;
   }
 
   private getMonthName(monthIndex: number): string {
@@ -1485,14 +1488,13 @@ class SchedulerApp {
 
   private async loadMonthOccupancyStats(
     year: number,
-    month: number
+    month: number,
   ): Promise<void> {
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 0);
 
     const startStr = startDate.toISOString().split("T")[0];
     const endStr = endDate.toISOString().split("T")[0];
-
 
     try {
       const { data, error } = await supabase
@@ -1515,7 +1517,6 @@ class SchedulerApp {
         totalPosts += section.posts.length;
       }
 
-
       // Групуємо по датах і постах
       const statsMap = new Map<string, Map<number, number>>();
 
@@ -1532,7 +1533,7 @@ class SchedulerApp {
         if (!postId) continue;
 
         const durationMinutes = Math.round(
-          (dateOff.getTime() - dateOn.getTime()) / 60000
+          (dateOff.getTime() - dateOn.getTime()) / 60000,
         );
 
         if (!statsMap.has(dateKey)) {
@@ -1544,8 +1545,15 @@ class SchedulerApp {
         dayStats.set(postId, currentMinutes + durationMinutes);
       }
 
+      // Видаляємо тільки ключі для поточного місяця, а не всю статистику
+      // Формуємо префікс для ключів цього місяця
+      const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}-`;
+      for (const key of this.monthOccupancyStats.keys()) {
+        if (key.startsWith(monthPrefix)) {
+          this.monthOccupancyStats.delete(key);
+        }
+      }
 
-      this.monthOccupancyStats.clear();
       for (const [dateKey, postOccupancy] of statsMap) {
         this.monthOccupancyStats.set(dateKey, {
           date: dateKey,
@@ -1560,9 +1568,8 @@ class SchedulerApp {
 
   // Метод для оновлення індикаторів конкретних дат
   public async refreshOccupancyIndicatorsForDates(
-    dates: string[]
+    dates: string[],
   ): Promise<void> {
-
     // Збираємо унікальні місяці які треба перезавантажити
     const monthsToLoad = new Set<string>();
     dates.forEach((dateStr) => {
@@ -1606,7 +1613,7 @@ class SchedulerApp {
 
         // Видаляємо старий індикатор
         const oldIndicator = container.querySelector(
-          ".day-occupancy-indicator"
+          ".day-occupancy-indicator",
         );
         if (oldIndicator) {
           oldIndicator.remove();
@@ -1639,7 +1646,7 @@ class SchedulerApp {
           if (occupancyPercent > 0) {
             const indicator = this.createOccupancyIndicator(
               occupancyPercent,
-              isFullyOccupied
+              isFullyOccupied,
             );
             container.insertBefore(indicator, span);
           }
@@ -1688,7 +1695,16 @@ class SchedulerApp {
       const monthIndex = this.getMonthIndexByName(monthName);
       if (monthIndex === -1) return;
 
-      const year = this.selectedDate.getFullYear();
+      // Визначаємо рік правильно: якщо наступний місяць (січень) а поточний грудень - рік+1
+      let year = this.selectedDate.getFullYear();
+      const currentMonth = this.selectedDate.getMonth();
+      if (
+        monthIndex < currentMonth &&
+        currentMonth === 11 &&
+        monthIndex === 0
+      ) {
+        year = year + 1;
+      }
       const month = monthIndex;
       const current = new Date(year, month, dayNumber);
 
@@ -1719,7 +1735,7 @@ class SchedulerApp {
         if (occupancyPercent > 0) {
           const indicator = this.createOccupancyIndicator(
             occupancyPercent,
-            isFullyOccupied
+            isFullyOccupied,
           );
           container.insertBefore(indicator, span);
         }
@@ -1727,10 +1743,9 @@ class SchedulerApp {
     });
   }
 
-
   private createOccupancyIndicator(
     occupancyPercent: number,
-    isFullyOccupied: boolean
+    isFullyOccupied: boolean,
   ): SVGElement {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "day-occupancy-indicator");
@@ -1745,7 +1760,7 @@ class SchedulerApp {
     // Фоновий круг
     const bgCircle = document.createElementNS(
       "http://www.w3.org/2000/svg",
-      "circle"
+      "circle",
     );
     bgCircle.setAttribute("cx", centerX.toString());
     bgCircle.setAttribute("cy", centerY.toString());
@@ -1767,7 +1782,7 @@ class SchedulerApp {
       if (occupancyPercent >= 99.9) {
         const fullCircle = document.createElementNS(
           "http://www.w3.org/2000/svg",
-          "circle"
+          "circle",
         );
         fullCircle.setAttribute("cx", centerX.toString());
         fullCircle.setAttribute("cy", centerY.toString());
@@ -1777,7 +1792,9 @@ class SchedulerApp {
         svg.appendChild(fullCircle);
       } else {
         // Розраховуємо кут для заливки (0% = 0°, 100% = 360°)
-        const angle = (occupancyPercent / 100) * 360;
+        // Мінімальний кут 20° (5.5%) щоб індикатор був видимий при низькій завантаженості
+        const rawAngle = (occupancyPercent / 100) * 360;
+        const angle = Math.max(rawAngle, 20);
         const angleRad = (angle * Math.PI) / 180;
 
         // Координати кінцевої точки дуги (починаємо зверху, тобто -90°)
@@ -1795,7 +1812,7 @@ class SchedulerApp {
         // Створюємо path для плавної заливки
         const path = document.createElementNS(
           "http://www.w3.org/2000/svg",
-          "path"
+          "path",
         );
         const pathData = [
           `M ${centerX} ${centerY}`,
@@ -1883,13 +1900,11 @@ class SchedulerApp {
       const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
       const stats = this.monthOccupancyStats.get(dateKey);
 
-
       if (stats && stats.totalPosts > 0) {
         // Рахуємо загальну зайнятість (робочий день = 12 годин = 720 хв)
         const workDayMinutes = 720;
         let totalMinutes = 0;
         let fullyOccupiedPosts = 0;
-
 
         for (const [, minutes] of stats.postOccupancy) {
           totalMinutes += minutes;
@@ -1903,11 +1918,10 @@ class SchedulerApp {
         const occupancyPercent = (totalMinutes / maxMinutes) * 100;
         const isFullyOccupied = fullyOccupiedPosts === stats.totalPosts;
 
-
         if (occupancyPercent > 0) {
           const indicator = this.createOccupancyIndicator(
             occupancyPercent,
-            isFullyOccupied
+            isFullyOccupied,
           );
           dayContainer.appendChild(indicator);
         }
@@ -1924,7 +1938,7 @@ class SchedulerApp {
   private async render(): Promise<void> {
     if (this.headerDateDisplay) {
       this.headerDateDisplay.textContent = this.formatFullDate(
-        this.selectedDate
+        this.selectedDate,
       );
     }
 
@@ -1940,7 +1954,7 @@ class SchedulerApp {
       this.calendarContainer.innerHTML = "";
       const currentMonth = await this.renderMonth(
         this.viewYear,
-        this.viewMonth
+        this.viewMonth,
       );
       this.calendarContainer.appendChild(currentMonth);
 
@@ -1967,7 +1981,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Глобальна функція для оновлення календаря після створення акту
 (window as any).refreshPlannerCalendar = async () => {
-
   if (schedulerAppInstance && schedulerAppInstance["postArxiv"]) {
     // ⚠️ Спочатку очищаємо старі блоки, потім завантажуємо нові
     schedulerAppInstance["postArxiv"].clearAllBlocks();
@@ -1975,7 +1988,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Оновлюємо індикатори зайнятості
     await schedulerAppInstance.refreshOccupancyIndicators();
   } else {
-    console.error("❌ [refreshPlannerCalendar] schedulerAppInstance або postArxiv не знайдено!");
+    console.error(
+      "❌ [refreshPlannerCalendar] schedulerAppInstance або postArxiv не знайдено!",
+    );
   }
 };
 
@@ -1988,7 +2003,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Глобальна функція для оновлення індикаторів конкретних дат
 (window as any).refreshOccupancyIndicatorsForDates = async (
-  dates: string[]
+  dates: string[],
 ) => {
   if (schedulerAppInstance) {
     await schedulerAppInstance.refreshOccupancyIndicatorsForDates(dates);

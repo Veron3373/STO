@@ -917,6 +917,7 @@ export function generateTableHTML(
           .join("")
       : createRowHtml(null, 0, showPibMagazin, showCatalog, canAddRow); // <--- ПЕРЕДАЄМО canAddRow
 
+  const isActClosed = globalCache.isActClosed;
   const sumsFooter = isRestricted
     ? ""
     : `
@@ -930,6 +931,7 @@ export function generateTableHTML(
         value="0"
         placeholder="0"
         autocomplete="off"
+        ${isActClosed ? "disabled" : ""}
       />
       <span class="sum-currency">грн</span>
     </p>
@@ -948,6 +950,7 @@ export function generateTableHTML(
         value="0"
         placeholder="0"
         autocomplete="off"
+        ${isActClosed ? "disabled" : ""}
       />
       <span class="sum-currency">%</span>
     </p>

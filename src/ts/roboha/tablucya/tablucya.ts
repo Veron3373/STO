@@ -204,6 +204,8 @@ let modifiedActIdsGlobal: Set<number> = new Set();
 // Зберігаємо кількість повідомлень для кожного акту
 let actNotificationCounts: Map<number, number> = new Map();
 let sortByDateStep = 0;
+// 📅 Стан сортування по даті закриття: 0 = звичайний, 1 = закриті від нових до старих по date_off
+let sortByClosingDateStep = 0;
 
 // ✏️ Глобальна мапа: actId -> ПІБ редактора (для показу хто редагує акт)
 let actEditorsMap: Map<number, string> = new Map();
@@ -1386,6 +1388,44 @@ function sortActs(): void {
   }
 }
 
+/**
+ * 📅 Сортування закритих актів по даті закриття (date_off) від нових до старих
+ */
+function sortActsByClosingDate(): void {
+  if (sortByClosingDateStep === 0) {
+    // Спочатку закриті, потім відкриті; закриті сортуємо по date_off від нових до старих
+    actsGlobal.sort((a, b) => {
+      const aClosed = isActClosed(a);
+      const bClosed = isActClosed(b);
+
+      // Закриті акти йдуть першими
+      if (aClosed && !bClosed) return -1;
+      if (!aClosed && bClosed) return 1;
+
+      // Якщо обидва закриті - сортуємо по date_off від нових до старих
+      if (aClosed && bClosed) {
+        const aDateOff = a.date_off ? new Date(a.date_off).getTime() : 0;
+        const bDateOff = b.date_off ? new Date(b.date_off).getTime() : 0;
+        return bDateOff - aDateOff; // Нові першими
+      }
+
+      // Якщо обидва відкриті - сортуємо по date_on від нових до старих
+      const aDateOn = a.date_on ? new Date(a.date_on).getTime() : 0;
+      const bDateOn = b.date_on ? new Date(b.date_on).getTime() : 0;
+      return bDateOn - aDateOn;
+    });
+    sortByClosingDateStep = 1;
+  } else {
+    // Повертаємо до звичайного сортування (по date_on від нових до старих)
+    actsGlobal.sort(
+      (a, b) =>
+        (getActDateAsDate(b)?.getTime() || 0) -
+        (getActDateAsDate(a)?.getTime() || 0),
+    );
+    sortByClosingDateStep = 0;
+  }
+}
+
 function getDefaultDateRange(): string {
   const today = new Date();
   const lastMonth = new Date(
@@ -1570,6 +1610,16 @@ function createTableHeader(
       th.addEventListener("click", () => {
         sortActs();
         updateTableBody();
+      });
+    }
+    // 📅 Фільтр по даті закриття - клік на заголовок "Дата"
+    if (header === "Дата") {
+      th.style.cursor = "pointer";
+      th.addEventListener("click", () => {
+        sortActsByClosingDate();
+        updateTableBody();
+        // Оновлюємо індикатор в заголовку
+        th.textContent = sortByClosingDateStep === 1 ? "Дата 🔽" : "Дата";
       });
     }
     headerRow.appendChild(th);

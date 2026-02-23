@@ -90,18 +90,9 @@ function createPasswordConfirmationModal(
     const modal = document.createElement("div");
     modal.id = "password-confirmation-modal";
     modal.className = "login-modal";
-    modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center;
-            align-items: center; z-index: 10000;
-        `;
 
     const modalContent = document.createElement("div");
     modalContent.className = "login-modal-content";
-    modalContent.style.cssText = `
-            background-color: #fff; padding: 20px; border-radius: 8px;
-            width: 300px; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        `;
 
     const title = document.createElement("h3");
     title.textContent =
@@ -109,40 +100,31 @@ function createPasswordConfirmationModal(
         ? "🔐 Підтвердження розрахунку"
         : "🔐 Підтвердження скасування";
     title.className = "login-modal-title";
-    title.style.cssText = `margin-bottom: 15px; color: #333;`;
 
     const description = document.createElement("p");
-    description.style.cssText = `margin-bottom: 15px; color: #666; font-size: 14px;`;
+    description.className = "login-modal-subtitle";
 
     const input = document.createElement("input");
     input.type = "password";
     input.placeholder = "Введіть пароль...";
     input.className = "login-input";
-    input.style.cssText = `
-            width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc;
-            border-radius: 4px; box-sizing: border-box;
-        `;
 
     const errorDiv = document.createElement("div");
-    errorDiv.style.cssText = `color: #f44336; margin: 10px 0; display: none; font-size: 14px;`;
+    errorDiv.className = "login-error-message";
+    errorDiv.style.display = "none";
 
     const buttonsContainer = document.createElement("div");
-    buttonsContainer.style.cssText = `display: flex; gap: 10px; justify-content: center;`;
+    buttonsContainer.style.cssText = `display: flex; gap: 10px; justify-content: center; margin-top: 16px;`;
 
     const confirmButton = document.createElement("button");
     confirmButton.textContent = "Підтвердити";
     confirmButton.className = "login-button";
-    confirmButton.style.cssText = `
-            padding: 10px 20px; background-color: #007bff; color: #fff; border: none;
-            border-radius: 4px; cursor: pointer; transition: background-color 0.2s; flex: 1;
-        `;
+    confirmButton.style.cssText = `flex: 1; margin-top: 0;`;
 
     const cancelButton = document.createElement("button");
     cancelButton.textContent = "Скасувати";
-    cancelButton.style.cssText = `
-            padding: 10px 20px; background-color: #6c757d; color: #fff; border: none;
-            border-radius: 4px; cursor: pointer; transition: background-color 0.2s; flex: 1;
-        `;
+    cancelButton.className = "login-button";
+    cancelButton.style.cssText = `flex: 1; margin-top: 0; background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 4px 16px rgba(100, 116, 139, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);`;
 
     // Обробники подій
     confirmButton.addEventListener("click", async () => {
@@ -244,7 +226,7 @@ async function saveSlyusarsDataToDatabase(
       return null;
     };
     const primaryKey = detectPrimaryKey(existingData?.[0]);
-    
+
 
     // ✅ ОПТИМІЗАЦІЯ: Збираємо всі оновлення в масив промісів
     const updatePromises: Promise<any>[] = [];
@@ -282,7 +264,7 @@ async function saveSlyusarsDataToDatabase(
           }
           return upd;
         })();
-        
+
         updatePromises.push(updatePromise);
       } else {
         // fallback: оновлення за вмістом JSON
@@ -298,14 +280,14 @@ async function saveSlyusarsDataToDatabase(
           }
           return upd;
         })();
-        
+
         updatePromises.push(updatePromise);
       }
     }
 
     // ✅ Чекаємо завершення ВСІХ оновлень
     await Promise.all(updatePromises);
-    
+
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
     console.error("❌ Помилка збереження в базу slyusars:", error);

@@ -252,8 +252,8 @@ class WorkSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-          .filter((item) => item.toLowerCase().includes(q))
-          .slice(0, this.config.maxItems)
+        .filter((item) => item.toLowerCase().includes(q))
+        .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -278,9 +278,8 @@ class WorkSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${
-          index === this.selectedIndex ? "selected" : ""
-        }" 
+        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
+          }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -638,18 +637,9 @@ function createPasswordConfirmationModal(
     const modal = document.createElement("div");
     modal.id = "password-confirmation-modal";
     modal.className = "login-modal";
-    modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center;
-            align-items: center; z-index: 10000;
-        `;
 
     const modalContent = document.createElement("div");
     modalContent.className = "login-modal-content";
-    modalContent.style.cssText = `
-            background-color: #fff; padding: 20px; border-radius: 8px;
-            width: 300px; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        `;
 
     const title = document.createElement("h3");
     title.textContent =
@@ -657,40 +647,31 @@ function createPasswordConfirmationModal(
         ? "🔐 Підтвердження розрахунку"
         : "🔐 Підтвердження скасування";
     title.className = "login-modal-title";
-    title.style.cssText = `margin-bottom: 15px; color: #333;`;
 
     const description = document.createElement("p");
-    description.style.cssText = `margin-bottom: 15px; color: #666; font-size: 14px;`;
+    description.className = "login-modal-subtitle";
 
     const input = document.createElement("input");
     input.type = "password";
     input.placeholder = "Введіть пароль...";
     input.className = "login-input";
-    input.style.cssText = `
-            width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc;
-            border-radius: 4px; box-sizing: border-box;
-        `;
 
     const errorDiv = document.createElement("div");
-    errorDiv.style.cssText = `color: #f44336; margin: 10px 0; display: none; font-size: 14px;`;
+    errorDiv.className = "login-error-message";
+    errorDiv.style.display = "none";
 
     const buttonsContainer = document.createElement("div");
-    buttonsContainer.style.cssText = `display: flex; gap: 10px; justify-content: center;`;
+    buttonsContainer.style.cssText = `display: flex; gap: 10px; justify-content: center; margin-top: 16px;`;
 
     const confirmButton = document.createElement("button");
     confirmButton.textContent = "Підтвердити";
     confirmButton.className = "login-button";
-    confirmButton.style.cssText = `
-            padding: 10px 20px; background-color: #007bff; color: #fff; border: none;
-            border-radius: 4px; cursor: pointer; transition: background-color 0.2s; flex: 1;
-        `;
+    confirmButton.style.cssText = `flex: 1; margin-top: 0;`;
 
     const cancelButton = document.createElement("button");
     cancelButton.textContent = "Скасувати";
-    cancelButton.style.cssText = `
-            padding: 10px 20px; background-color: #6c757d; color: #fff; border: none;
-            border-radius: 4px; cursor: pointer; transition: background-color 0.2s; flex: 1;
-        `;
+    cancelButton.className = "login-button";
+    cancelButton.style.cssText = `flex: 1; margin-top: 0; background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 4px 16px rgba(100, 116, 139, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);`;
 
     confirmButton.addEventListener("click", async () => {
       const inputPassword = input.value.trim();
@@ -1008,7 +989,7 @@ export function createNameSelect(): void {
       refreshWorkDropdownOptions();
       refreshActDropdownOptions();
     });
-  } catch (error) {}
+  } catch (error) { }
 }
 
 export function getFilteredpodlegleData(): PodlegleRecord[] {
@@ -1112,16 +1093,15 @@ export function updatePodlegleDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
       <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-        totalRevenue,
-      )}</strong> грн</span>
+    totalRevenue,
+  )}</strong> грн</span>
       <span style="color: #666;">-</span>
       <span><strong style="color: #8B0000;">💶 ${formatNumber(
-        totalSalary,
-      )}</strong> грн</span>
+    totalSalary,
+  )}</strong> грн</span>
       <span style="color: #666;">=</span>
-      <span><strong style="color: ${
-        totalMargin >= 0 ? "#006400 " : "#8B0000"
-      };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
+      <span><strong style="color: ${totalMargin >= 0 ? "#006400 " : "#8B0000"
+    };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
     </div>
   `;
 }
@@ -1201,20 +1181,19 @@ export function updatepodlegleTable(): void {
         <div class="salary-cell-wrapper">
           <div class="salary-cell-numbers">
             <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(
-              item.total,
-            )}</div>
+          item.total,
+        )}</div>
             <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(
-              item.salary,
-            )}</div>
+          item.salary,
+        )}</div>
             <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
-              item.margin,
-            )}</div>
+          item.margin,
+        )}</div>
           </div>
-          ${
-            salaryArrowHtml
-              ? `<div class="salary-arrow-container">${salaryArrowHtml}</div>`
-              : ""
-          }
+          ${salaryArrowHtml
+          ? `<div class="salary-arrow-container">${salaryArrowHtml}</div>`
+          : ""
+        }
         </div>
       `;
 
@@ -1223,11 +1202,10 @@ export function updatepodlegleTable(): void {
                     <td>
                              <button class="Bukhhalter-payment-btn ${buttonPaidClass}"
                                 onclick="event.stopPropagation(); togglepodleglePaymentWithConfirmation(${originalIndex})" 
-                                title="${
-                                  item.isPaid
-                                    ? `Розраховано ${item.paymentDate || ""}`
-                                    : "Не розраховано"
-                                }">
+                                title="${item.isPaid
+          ? `Розраховано ${item.paymentDate || ""}`
+          : "Не розраховано"
+        }">
                             ${paymentButtonText}
                         </button>
                     </td>
@@ -1237,9 +1215,8 @@ export function updatepodlegleTable(): void {
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
-                             onclick="event.stopPropagation(); openActModalWithClient(${
-                               Number(item.act) || 0
-                             })"
+                             onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
+        })"
                              title="Відкрити акт №${item.act}">
                        📋 ${item.act || "-"}
                      </button>
@@ -1472,30 +1449,26 @@ export function searchDataInDatabase(
 
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${
-                salaryParts !== 0
-                  ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
-                  : sumParts < 0
-                    ? `<div style="color: #6c757d;">⚙️ 0</div>`
-                    : ""
-              }
-              ${
-                sumPartsAfterSalary !== 0
-                  ? `<div style="color: ${sumPartsAfterSalary > 0 ? "#28a745" : "#dc3545"};">⚙️ ${sumPartsAfterSalary > 0 ? "+" : ""}${formatNumber(sumPartsAfterSalary)}</div>`
-                  : ""
-              }
-              ${
-                salaryWork !== 0
-                  ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
-                  : sumWork < 0
-                    ? `<div style="color: #6c757d;">🛠️ 0</div>`
-                    : ""
-              }
-              ${
-                sumWorkAfterSalary !== 0
-                  ? `<div style="color: ${sumWorkAfterSalary > 0 ? "#28a745" : "#dc3545"};">🛠️ ${sumWorkAfterSalary > 0 ? "+" : ""}${formatNumber(sumWorkAfterSalary)}</div>`
-                  : ""
-              }
+              ${salaryParts !== 0
+              ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
+              : sumParts < 0
+                ? `<div style="color: #6c757d;">⚙️ 0</div>`
+                : ""
+            }
+              ${sumPartsAfterSalary !== 0
+              ? `<div style="color: ${sumPartsAfterSalary > 0 ? "#28a745" : "#dc3545"};">⚙️ ${sumPartsAfterSalary > 0 ? "+" : ""}${formatNumber(sumPartsAfterSalary)}</div>`
+              : ""
+            }
+              ${salaryWork !== 0
+              ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
+              : sumWork < 0
+                ? `<div style="color: #6c757d;">🛠️ 0</div>`
+                : ""
+            }
+              ${sumWorkAfterSalary !== 0
+              ? `<div style="color: ${sumWorkAfterSalary > 0 ? "#28a745" : "#dc3545"};">🛠️ ${sumWorkAfterSalary > 0 ? "+" : ""}${formatNumber(sumWorkAfterSalary)}</div>`
+              : ""
+            }
             </div>`;
 
           podlegleData.push({
@@ -1549,16 +1522,14 @@ export function searchDataInDatabase(
           // Формуємо HTML: червона зарплата, зелений чистий прибуток
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${
-                salaryParts !== 0
-                  ? `<div style="color: #dc3545;">💰 -${formatNumber(salaryParts)}</div>`
-                  : ""
-              }
-              ${
-                profitAfterSalary !== 0
-                  ? `<div style="color: ${profitAfterSalary > 0 ? "#28a745" : "#dc3545"};">📊 ${profitAfterSalary > 0 ? "+" : ""}${formatNumber(profitAfterSalary)}</div>`
-                  : ""
-              }
+              ${salaryParts !== 0
+              ? `<div style="color: #dc3545;">💰 -${formatNumber(salaryParts)}</div>`
+              : ""
+            }
+              ${profitAfterSalary !== 0
+              ? `<div style="color: ${profitAfterSalary > 0 ? "#28a745" : "#dc3545"};">📊 ${profitAfterSalary > 0 ? "+" : ""}${formatNumber(profitAfterSalary)}</div>`
+              : ""
+            }
             </div>`;
 
           podlegleData.push({

@@ -171,11 +171,6 @@ async function checkPassword(inputPassword: string): Promise<{
   }
 }
 
-function showError(errorDiv: HTMLElement, message: string): void {
-  errorDiv.textContent = message;
-  errorDiv.style.display = "block";
-}
-
 // =============================================================================
 // ДОСТУП ДО НАЛАШТУВАНЬ (GET SETTING VALUE) З КЕШЕМ
 // =============================================================================
@@ -432,77 +427,101 @@ export async function attemptAutoLogin(): Promise<{
 
 export function createLoginModal(): Promise<string | null> {
   return new Promise((resolve) => {
+    // ───── ОВЕРЛЕЙ ─────
     const modal = document.createElement("div");
     modal.id = "login-modal_users";
     modal.className = "login-modal";
-    modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.8); display: flex; justify-content: center;
-            align-items: center; z-index: 10000;
-        `;
 
+    // ───── КОНТЕНТ ─────
     const modalContent = document.createElement("div");
     modalContent.className = "login-modal-content";
-    modalContent.style.cssText = `
-            background: white; padding: 40px; border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); text-align: center;
-            min-width: 350px; max-width: 90vw;
-        `;
 
+    // ───── ПЛАВАЮЧА ІКОНКА ─────
+    const icon = document.createElement("span");
+    icon.className = "login-modal-icon";
+    icon.textContent = "🔐";
+
+    // ───── ЗАГОЛОВОК ─────
     const title = document.createElement("h3");
-    title.textContent = "🔐 Вхід в систему";
+    title.textContent = "Вхід в систему";
     title.className = "login-modal-title";
-    title.style.cssText = `margin: 0 0 25px 0; color: #333; font-size: 24px;`;
 
+    // ───── ПІДЗАГОЛОВОК ─────
+    const subtitle = document.createElement("p");
+    subtitle.className = "login-modal-subtitle";
+    subtitle.textContent = "Введіть свій пароль для доступу";
+
+    // ───── ІНПУТ ─────
     const input = document.createElement("input");
     input.type = "password";
     input.id = "login-input_users";
-    input.placeholder = "Введіть пароль...";
+    input.placeholder = "••••••••";
     input.className = "login-input";
-    input.style.cssText = `
-            width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;
-            margin: 15px 0; font-size: 16px; box-sizing: border-box; transition: border-color 0.3s ease;
-        `;
+    input.autocomplete = "current-password";
 
+    // ───── ПОВІДОМЛЕННЯ ПРО ПОМИЛКУ ─────
     const errorDiv = document.createElement("div");
     errorDiv.id = "login-error";
-    errorDiv.style.cssText = `color: #f44336; margin: 10px 0; display: none; font-size: 14px;`;
+    errorDiv.className = "login-error-message";
+    errorDiv.style.display = "none";
 
+    // ───── КНОПКА ─────
     const button = document.createElement("button");
     button.id = "login-button_users";
-    button.textContent = "Увійти";
+    button.innerHTML = "Увійти";
     button.className = "login-button";
-    button.style.cssText = `
-            background: #4CAF50; color: white; border: none; padding: 12px 30px;
-            border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 20px;
-            transition: background-color 0.3s ease; width: 100%;
-        `;
 
-    button.addEventListener(
-      "mouseenter",
-      () => (button.style.background = "#45a049"),
-    );
-    button.addEventListener(
-      "mouseleave",
-      () => (button.style.background = "#4CAF50"),
-    );
-    input.addEventListener(
-      "focus",
-      () => (input.style.borderColor = "#4CAF50"),
-    );
-    input.addEventListener("blur", () => (input.style.borderColor = "#ddd"));
+    // ───── ОБРОБНИКИ ПОДІЙ ─────
 
+    // Помилка з shake-анімацією
+    const showLoginError = (message: string) => {
+      errorDiv.textContent = message;
+      errorDiv.style.display = "block";
+      input.classList.remove("input-error");
+      // Trigger reflow для перезапуску анімації
+      void input.offsetWidth;
+      input.classList.add("input-error");
+      // Прибираємо клас помилки через час
+      setTimeout(() => input.classList.remove("input-error"), 600);
+    };
+
+    // Стан завантаження
+    const setLoadingState = (loading: boolean) => {
+      if (loading) {
+        button.innerHTML = '<span class="login-spinner"></span>';
+        button.setAttribute("disabled", "true");
+        input.setAttribute("disabled", "true");
+      } else {
+        button.innerHTML = "Увійти";
+        button.removeAttribute("disabled");
+        input.removeAttribute("disabled");
+      }
+    };
+
+    // Анімація успіху
+    const showSuccessState = () => {
+      icon.textContent = "✅";
+      icon.classList.add("login-success-anim");
+      title.textContent = "Ласкаво просимо!";
+      title.style.color = "#4ade80";
+      input.classList.remove("input-error");
+      input.classList.add("input-success");
+      button.innerHTML = "✓ Успішно";
+      button.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+    };
+
+    // Клік на кнопку — перевірка пароля
     button.addEventListener("click", async () => {
       const loginValue = input.value.trim();
       if (!loginValue) {
-        showError(errorDiv, "❌ Введіть пароль");
+        showLoginError("Введіть пароль");
+        input.focus();
         return;
       }
 
-      button.textContent = "Перевірка...";
-      button.setAttribute("disabled", "true");
-      button.style.background = "#ccc";
+      setLoadingState(true);
       errorDiv.style.display = "none";
+      input.classList.remove("input-error");
 
       try {
         const {
@@ -526,32 +545,34 @@ export function createLoginModal(): Promise<string | null> {
             );
           }
 
-          modal.remove();
-          resolve(userAccessLevel);
+          // Показуємо анімацію успіху перед закриттям
+          showSuccessState();
+          setTimeout(() => {
+            modal.remove();
+            resolve(userAccessLevel);
+          }, 700);
         } else {
-          showError(errorDiv, "❌ Невірний пароль");
-          button.textContent = "Увійти";
-          button.removeAttribute("disabled");
-          button.style.background = "#4CAF50";
+          showLoginError("Невірний пароль");
+          setLoadingState(false);
           input.focus();
           input.select();
         }
       } catch (error) {
         console.error("💥 Помилка при перевірці пароля:", error);
-        showError(errorDiv, "❌ Помилка перевірки пароля");
-        button.textContent = "Увійти";
-        button.removeAttribute("disabled");
-        button.style.background = "#4CAF50";
+        showLoginError("Помилка з'єднання. Спробуйте ще раз");
+        setLoadingState(false);
         resolve(null);
       }
     });
 
+    // Enter для підтвердження
     input.addEventListener("keypress", (event) => {
       if (event.key === "Enter") {
         button.click();
       }
     });
 
+    // Блокування Escape
     const preventEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -566,13 +587,16 @@ export function createLoginModal(): Promise<string | null> {
       originalRemove.call(this);
     };
 
+    // ───── ЗБІРКА DOM ─────
+    modalContent.appendChild(icon);
     modalContent.appendChild(title);
+    modalContent.appendChild(subtitle);
     modalContent.appendChild(input);
     modalContent.appendChild(errorDiv);
     modalContent.appendChild(button);
     modal.appendChild(modalContent);
 
-    setTimeout(() => input.focus(), 100);
+    setTimeout(() => input.focus(), 150);
     document.body.appendChild(modal);
   });
 }

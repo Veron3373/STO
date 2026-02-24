@@ -383,7 +383,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
     return;
   }
 
-  const controls = document.querySelector(".invoice-controls-fixed") as HTMLElement;
+  const controls = document.querySelector(".invoice-controls") as HTMLElement;
   const btnPrint = document.getElementById(
     "btn-print-invoice"
   ) as HTMLButtonElement;
@@ -721,14 +721,11 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
                       <span class="line"></span>
                   </div>
               </div>
+              <div class="invoice-controls">
+                  <button id="btn-add-invoice" class="btn-save">💾 Зберегти</button>
+                  <button id="btn-print-invoice" class="btn-print">📥 Завантажити</button>
+              </div>
           </div>
-      </div>
-
-      <div class="invoice-controls-fixed">
-          <button id="btn-add-invoice" class="btn-add">
-            💾 Зберегти
-          </button>
-          <button id="btn-print-invoice" class="btn-print">📥 Завантажити</button>
       </div>
   </div>
   `;

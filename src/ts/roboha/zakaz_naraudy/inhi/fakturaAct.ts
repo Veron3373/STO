@@ -195,7 +195,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
               <div class="fakturaAct-footer-left">
                 <div class="fakturaAct-footer-title">Від Виконавця*:</div>
                 <div class="fakturaAct-footer-signature">____________________</div>
-                <div class="fakturaAct-signature-name">${executorFullName}</div>
+                <div class="fakturaAct-signature-name" contenteditable="true" title="Натисніть, щоб змінити">${executorFullName}</div>
                 <div class="fakturaAct-footer-note">* Відповідальний за здійснення господарської операції і правильність її оформлення</div>
                 <div class="fakturaAct-footer-date">${todayDateText}</div>
                 <div class="fakturaAct-footer-details" contenteditable="true" title="Натисніть, щоб змінити">${executorPrumitka}</div>

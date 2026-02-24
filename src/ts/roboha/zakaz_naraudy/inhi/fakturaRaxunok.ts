@@ -675,7 +675,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
                   </tr>
                   <tr>
                       <td class="label-cell">Одержувач</td>
-                      <td class="value-cell">${recipientName}</td>
+                      <td class="value-cell" contenteditable="true" title="Натисніть, щоб змінити">${recipientName}</td>
                   </tr>
                   <tr>
                       <td class="label-cell">Платник</td>
@@ -716,7 +716,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
               </div>
 
               <div class="signature-section">
-                  <div class="sign-block">
+                  <div class="sign-block" contenteditable="true" title="Натисніть, щоб змінити">
                       <span>Виписав(ла):</span>
                       <span class="line"></span>
                   </div>

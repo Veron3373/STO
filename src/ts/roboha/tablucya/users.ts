@@ -430,11 +430,11 @@ export function createLoginModal(): Promise<string | null> {
     // ───── ОВЕРЛЕЙ ─────
     const modal = document.createElement("div");
     modal.id = "login-modal_users";
-    modal.className = "login-modal";
+    modal.className = "login-modal login-modal--dark";
 
     // ───── КОНТЕНТ ─────
     const modalContent = document.createElement("div");
-    modalContent.className = "login-modal-content";
+    modalContent.className = "login-modal-content login-modal-content--dark";
 
     // ───── ПЛАВАЮЧА ІКОНКА ─────
     const icon = document.createElement("span");

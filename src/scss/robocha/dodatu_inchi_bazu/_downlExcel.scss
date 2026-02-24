@@ -1070,3 +1070,40 @@ $radius-xlarge: 16px;
     background: #e0e0e0;
   }
 }
+
+/* Skeleton Loader для модалки Завантаження деталей Excel */
+.batch-skeleton-loader-Excel {
+  padding: 10px 0;
+  margin-top: 15px;
+}
+
+.batch-skeleton-row-Excel {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.batch-skeleton-cell-Excel {
+  height: 20px;
+  border-radius: 4px;
+}
+
+/* Перевикористовуємо анімацію pulse */
+.skeleton-pulse {
+  background: linear-gradient(90deg, #e0e0e0 0px, #f0f0f0 40px, #e0e0e0 80px);
+  background-size: 200px 100%;
+  animation: skeletonPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0% {
+    background-position: -200px 0;
+  }
+
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}

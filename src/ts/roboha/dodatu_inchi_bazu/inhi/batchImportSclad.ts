@@ -734,7 +734,89 @@ function createBatchImportModal() {
     <div class="modal-all_other_bases batch-modal-Excel">
       <button class="modal-close-all_other_bases">×</button>
       <div class="modal-content-Excel">
-        <h3 class="batch-title-Excel">Записати деталі\</h3>
+        <h3 class="batch-title-Excel">Записати деталі</h3>
+        <div id="batch-skeleton-loader" class="batch-skeleton-loader-Excel" style="display:none;">
+          <div class="batch-skeleton-row-Excel">
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:10%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:15%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+          </div>
+          <div class="batch-skeleton-row-Excel">
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:10%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:15%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+          </div>
+          <div class="batch-skeleton-row-Excel">
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:10%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:15%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+          </div>
+          <div class="batch-skeleton-row-Excel">
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:10%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:15%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+          </div>
+          <div class="batch-skeleton-row-Excel">
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:10%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:15%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:5%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:6%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:7%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+            <div class="batch-skeleton-cell-Excel skeleton-pulse" style="width:8%;"></div>
+          </div>
+        </div>
         <p class="batch-instructions-Excel">
           Вставте дані з Excel (Ctrl+V) у форматі:<br>
           <strong>Дата прихід ┃ Магазин ┃ Каталог номер ┃ Деталь ┃ Кількість надходження ┃ Ціна ┃ Ціна клієнта ┃ Склад ┃ Рахунок № ┃ Акт № ┃ Одиниця виміру</strong><br>
@@ -2949,11 +3031,26 @@ export async function initBatchImport() {
     importBtn.onclick = async () => {
       const modal = document.getElementById(batchModalId);
       if (!modal) return;
+
+      // 1. Одразу відкриваємо модалку
       modal.classList.remove("hidden-all_other_bases");
 
-      // ✅ ВИПРАВЛЕННЯ: Спочатку оновлюємо кеш, ПОТІМ завантажуємо записи
-      // Раніше кеш оновлювався у фоновому режимі (без await),
-      // тому detailExistsInCache() використовувала старі дані
+      // 2. Показуємо skeleton loader, ховаємо контент
+      const skeleton = document.getElementById('batch-skeleton-loader');
+      const tableContainer = document.getElementById('batch-table-container-Excel');
+      const textarea = document.getElementById('batch-textarea-Excel') as HTMLTextAreaElement;
+      const instructions = document.querySelector('.batch-instructions-Excel') as HTMLElement;
+      const parseBtn = document.getElementById('batch-parse-btn-Excel') as HTMLButtonElement;
+      const uploadBtn = document.getElementById('batch-upload-btn-Excel') as HTMLButtonElement;
+
+      if (skeleton) skeleton.style.display = 'block';
+      if (tableContainer) tableContainer.classList.add('hidden-all_other_bases');
+      if (textarea) textarea.style.display = 'none';
+      if (instructions) instructions.style.display = 'none';
+      if (parseBtn) parseBtn.style.display = 'none';
+      if (uploadBtn) uploadBtn.classList.add('hidden-all_other_bases');
+
+      // 3. Завантажуємо дані у фоні (модалка вже видима зі skeleton)
       try {
         const [shops, details, acts, warehouses, users, partNumbers] = await Promise.all([
           loadShopsList(),
@@ -2965,13 +3062,8 @@ export async function initBatchImport() {
         ]);
         shopsListCache = shops;
         detailsListCache = details;
-        // Оновлюємо нормалізовані кеші для коректного порівняння (без врахування регістру)
-        shopsListCacheNormalized = shopsListCache.map(
-          normalizeNameForCompare,
-        );
-        detailsListCacheNormalized = detailsListCache.map(
-          normalizeNameForCompare,
-        );
+        shopsListCacheNormalized = shopsListCache.map(normalizeNameForCompare);
+        detailsListCacheNormalized = detailsListCache.map(normalizeNameForCompare);
         actsListCache = acts.list;
         actsDateOffMap = acts.map;
         warehouseListCache = warehouses;
@@ -2981,8 +3073,11 @@ export async function initBatchImport() {
         console.error("Помилка оновлення кешу імпорту:", err);
       }
 
-      // Тепер завантажуємо записи з sclad — кеш вже актуальний
+      // 4. Завантажуємо записи з sclad
       await resetModalState();
+
+      // 5. Ховаємо skeleton, показуємо таблицю
+      if (skeleton) skeleton.style.display = 'none';
     };
   }
 

@@ -383,7 +383,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
     return;
   }
 
-  const controls = document.querySelector(".invoice-controls") as HTMLElement;
+  const controls = document.querySelector(".invoice-controls-fixed") as HTMLElement;
   const btnPrint = document.getElementById(
     "btn-print-invoice"
   ) as HTMLButtonElement;
@@ -671,7 +671,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
               <table class="header-table">
                   <tr>
                       <td class="label-cell no-underline">Постачальник</td>
-                      <td class="value-cell">${supplierName}</td> 
+                      <td class="value-cell" contenteditable="true" title="Натисніть, щоб змінити">${supplierName}</td> 
                   </tr>
                   <tr>
                       <td class="label-cell">Одержувач</td>
@@ -722,13 +722,13 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
                   </div>
               </div>
           </div>
+      </div>
 
-          <div class="invoice-controls">
-              <button id="btn-add-invoice" class="btn-add">
-                💾 Зберегти
-              </button>
-              <button id="btn-print-invoice" class="btn-print">📥 Завантажити</button>
-          </div>
+      <div class="invoice-controls-fixed">
+          <button id="btn-add-invoice" class="btn-add">
+            💾 Зберегти
+          </button>
+          <button id="btn-print-invoice" class="btn-print">📥 Завантажити</button>
       </div>
   </div>
   `;

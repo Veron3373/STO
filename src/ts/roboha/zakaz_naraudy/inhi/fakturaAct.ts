@@ -158,9 +158,8 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   </tr>
 `;
 
-  const introText = `Ми, представники Замовника ${zamovnykSentencePart} директора <u>${directorGenitive}</u>, з одного боку, та представник Виконавця ${executorSentencePart}, з іншого боку, склали цей акт про те, що Виконавцем були проведені такі роботи (надані такі послуги) по рахунку № ${invoiceNumber}${
-    invoiceDateText ? ` від ${invoiceDateText}` : ""
-  }:`;
+  const introText = `Ми, представники Замовника ${zamovnykSentencePart} директора <u>${directorGenitive}</u>, з одного боку, та представник Виконавця ${executorSentencePart}, з іншого боку, склали цей акт про те, що Виконавцем були проведені такі роботи (надані такі послуги) по рахунку № ${invoiceNumber}${invoiceDateText ? ` від ${invoiceDateText}` : ""
+    }:`;
 
   const modalHtml = `
   <div id="${ACT_PREVIEW_MODAL_ID}" class="fakturaAct-overlay">
@@ -168,12 +167,12 @@ export async function renderActPreviewModal(data: any): Promise<void> {
           <div class="fakturaAct-header-approval">
             <div class="fakturaAct-approval-block">
                 <div class="fakturaAct-approval-title">ЗАТВЕРДЖУЮ</div>
-                <div class="fakturaAct-approval-content">${leftSideText}</div>
+                <div class="fakturaAct-approval-content" contenteditable="true" title="Натисніть, щоб змінити">${leftSideText}</div>
             </div>
             <div class="fakturaAct-approval-block">
                 <div class="fakturaAct-approval-title">ЗАТВЕРДЖУЮ</div>
                 <div>Директор</div>
-                <div class="fakturaAct-approval-content">${rightSideText}</div>
+                <div class="fakturaAct-approval-content" contenteditable="true" title="Натисніть, щоб змінити">${rightSideText}</div>
             </div>
           </div>
           <div class="fakturaAct-main-title">АКТ № ОУ-${actNumber} здачі-прийняття робіт (надання послуг)</div>
@@ -186,8 +185,8 @@ export async function renderActPreviewModal(data: any): Promise<void> {
           </table>
           <div class="fakturaAct-total-section">
             <p>Загальна вартість робіт (послуг) без ПДВ ${formatNumberWithSpaces(
-              totalSum
-            )} грн <strong contenteditable="true">${totalSumWords}</strong></p>
+    totalSum
+  )} грн <strong contenteditable="true">${totalSumWords}</strong></p>
             <p>Сторони претензій одна до одної не мають.</p>
           </div>
           <div class="fakturaAct-footer">
@@ -199,13 +198,13 @@ export async function renderActPreviewModal(data: any): Promise<void> {
                 <div class="fakturaAct-signature-name">${executorFullName}</div>
                 <div class="fakturaAct-footer-note">* Відповідальний за здійснення господарської операції і правильність її оформлення</div>
                 <div class="fakturaAct-footer-date">${todayDateText}</div>
-                <div class="fakturaAct-footer-details">${executorPrumitka}</div>
+                <div class="fakturaAct-footer-details" contenteditable="true" title="Натисніть, щоб змінити">${executorPrumitka}</div>
               </div>
               <div class="fakturaAct-footer-right">
                 <div class="fakturaAct-footer-title">Від Замовника:</div>
                 <div class="fakturaAct-footer-signatureZamov">____________________</div>
                 <div class="fakturaAct-footer-date">${todayDateText}</div>
-                <div class="fakturaAct-footer-details">${clientPrumitka}</div>
+                <div class="fakturaAct-footer-details" contenteditable="true" title="Натисніть, щоб змінити">${clientPrumitka}</div>
               </div>
             </div>
           </div>
@@ -302,9 +301,8 @@ function formatDateWithMonthName(date: Date): string {
     "Листопада",
     "Грудня",
   ];
-  return `${date.getDate()} ${
-    months[date.getMonth()]
-  } ${date.getFullYear()} р.`;
+  return `${date.getDate()} ${months[date.getMonth()]
+    } ${date.getFullYear()} р.`;
 }
 
 function normalizeSingleLine(text: string): string {

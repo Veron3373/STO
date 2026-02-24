@@ -331,6 +331,10 @@ export async function renderScladForm() {
     currentScladId = persistentScladId;
   }
 
+  // ✅ ВИПРАВЛЕННЯ: ініціалізуємо одразу, до async-операцій,
+  // щоб onclick на "💾 Записати деталі" спрацював без затримки 4-5с
+  initBatchImport();
+
   await wireShopAutocomplete("sclad_shop", "sclad_shop_dd");
   await wireDetailsAutocompleteWithLiveLoad("sclad_detail", "sclad_detail_dd");
   await wireLinkedAutocomplete();
@@ -395,8 +399,6 @@ export async function renderScladForm() {
     el.addEventListener("change", snapshotToAllBd);
   });
   snapshotToAllBd();
-
-  initBatchImport();
 
   // Завантаження опцій відсотків
   await loadProcentOptions();

@@ -2975,22 +2975,10 @@ function updateRowStatus(
   }
 }
 // ===== Ініціалізація =====
-export async function initBatchImport() {
+export function initBatchImport() {
   // 🔒 не ініціалізувати вдруге (щоб слухачі не множилися)
   if (batchInitDone) return;
   batchInitDone = true;
-
-  shopsListCache = await loadShopsList();
-  detailsListCache = await loadDetailsList();
-  // Оновлюємо нормалізовані кеші для коректного порівняння (без врахування регістру)
-  shopsListCacheNormalized = shopsListCache.map(normalizeNameForCompare);
-  detailsListCacheNormalized = detailsListCache.map(normalizeNameForCompare);
-  const actsData = await loadActsList();
-  actsListCache = actsData.list;
-  actsDateOffMap = actsData.map;
-  warehouseListCache = await loadWarehouseList();
-  usersListCache = await loadUsersList();
-  partNumbersCache = await loadPartNumbers();
 
   // Ensure модалки створені один раз
   const existingModal = document.getElementById(batchModalId);

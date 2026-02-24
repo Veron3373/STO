@@ -94,62 +94,84 @@ function createPasswordConfirmationModal(
     const modalContent = document.createElement("div");
     modalContent.className = "login-modal-content";
 
+    // Плаваюча іконка
+    const icon = document.createElement("span");
+    icon.className = "login-modal-icon";
+    icon.textContent = "🔐";
+
     const title = document.createElement("h3");
+    title.className = "login-modal-title";
     title.textContent =
       action === "pay"
-        ? "🔐 Підтвердження розрахунку"
-        : "🔐 Підтвердження скасування";
-    title.className = "login-modal-title";
+        ? "Підтвердження розрахунку"
+        : "Підтвердження скасування";
 
     const description = document.createElement("p");
     description.className = "login-modal-subtitle";
+    description.textContent = "Введіть пароль для підтвердження";
 
     const input = document.createElement("input");
     input.type = "password";
-    input.placeholder = "Введіть пароль...";
+    input.placeholder = "••••••••";
     input.className = "login-input";
+    input.autocomplete = "current-password";
 
     const errorDiv = document.createElement("div");
     errorDiv.className = "login-error-message";
     errorDiv.style.display = "none";
 
     const buttonsContainer = document.createElement("div");
-    buttonsContainer.style.cssText = `display: flex; gap: 10px; justify-content: center; margin-top: 16px;`;
+    buttonsContainer.style.cssText = `display: flex; gap: 12px; justify-content: center; margin-top: 16px;`;
 
-    const confirmButton = document.createElement("button");
-    confirmButton.textContent = "Підтвердити";
-    confirmButton.className = "login-button";
-    confirmButton.style.cssText = `flex: 1; margin-top: 0;`;
-
+    // Скасувати — ЗЛІВА
     const cancelButton = document.createElement("button");
     cancelButton.textContent = "Скасувати";
     cancelButton.className = "login-button";
     cancelButton.style.cssText = `flex: 1; margin-top: 0; background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 4px 16px rgba(100, 116, 139, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);`;
 
+    // Підтвердити — СПРАВА
+    const confirmButton = document.createElement("button");
+    confirmButton.textContent = "Підтвердити";
+    confirmButton.className = "login-button";
+    confirmButton.style.cssText = `flex: 1; margin-top: 0;`;
+
+    // Shake-анімація помилки
+    const showModalError = (message: string) => {
+      errorDiv.textContent = message;
+      errorDiv.style.display = "block";
+      input.classList.remove("input-error");
+      void input.offsetWidth;
+      input.classList.add("input-error");
+      setTimeout(() => input.classList.remove("input-error"), 600);
+    };
+
     // Обробники подій
     confirmButton.addEventListener("click", async () => {
       const inputPassword = input.value.trim();
       if (!inputPassword) {
-        errorDiv.textContent = "Введіть пароль";
-        errorDiv.style.display = "block";
+        showModalError("Введіть пароль");
+        input.focus();
         return;
       }
 
-      // Отримуємо збережені дані користувача
       const savedData = getSavedUserDataFromLocalStorage();
       if (!savedData) {
-        errorDiv.textContent = "Помилка: не знайдено дані користувача";
-        errorDiv.style.display = "block";
+        showModalError("Не знайдено дані користувача");
         return;
       }
 
-      // Перевіряємо пароль
       if (inputPassword === savedData.password) {
-        modal.remove();
-        resolve(true);
+        // Анімація успіху
+        icon.textContent = "✅";
+        icon.classList.add("login-success-anim");
+        title.textContent = "Підтверджено!";
+        title.style.color = "#4ade80";
+        input.classList.add("input-success");
+        confirmButton.innerHTML = "✓ Успішно";
+        confirmButton.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+        setTimeout(() => { modal.remove(); resolve(true); }, 500);
       } else {
-        errorDiv.textContent = "Невірний пароль";
-        errorDiv.style.display = "block";
+        showModalError("Невірний пароль");
         input.focus();
         input.select();
       }
@@ -176,17 +198,16 @@ function createPasswordConfirmationModal(
     };
     document.addEventListener("keydown", handleEscape);
 
-    // Очищення слухача при видаленні модального вікна
     const originalRemove = modal.remove;
     modal.remove = function () {
       document.removeEventListener("keydown", handleEscape);
       originalRemove.call(this);
     };
 
-    // Додавання елементів до модального вікна
-    buttonsContainer.appendChild(confirmButton);
     buttonsContainer.appendChild(cancelButton);
+    buttonsContainer.appendChild(confirmButton);
 
+    modalContent.appendChild(icon);
     modalContent.appendChild(title);
     modalContent.appendChild(description);
     modalContent.appendChild(input);

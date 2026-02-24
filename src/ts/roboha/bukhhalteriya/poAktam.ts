@@ -56,82 +56,87 @@ function createPasswordConfirmationModal(
   return new Promise((resolve) => {
     const modal = document.createElement("div");
     modal.id = "password-confirmation-modal";
-    modal.style.cssText = `
-      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-      background: rgba(0, 0, 0, 0.5); z-index: 10000; backdrop-filter: blur(3px);
-    `;
+    modal.className = "login-modal";
 
     const box = document.createElement("div");
-    box.style.cssText = `
-      background: #fff; width: 320px; border-radius: 12px; padding: 24px; text-align: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); border: 1px solid #e0e0e0;
-    `;
+    box.className = "login-modal-content";
+
+    // Плаваюча іконка
+    const icon = document.createElement("span");
+    icon.className = "login-modal-icon";
+    icon.textContent = "🔐";
 
     const h = document.createElement("h3");
+    h.className = "login-modal-title";
     h.textContent =
       action === "pay"
-        ? "🔐 Підтвердження розрахунку"
-        : "🔐 Підтвердження скасування";
-    h.style.cssText = "margin: 0 0 16px 0; color: #333; font-size: 18px;";
+        ? "Підтвердження розрахунку"
+        : "Підтвердження скасування";
+
+    const subtitle = document.createElement("p");
+    subtitle.className = "login-modal-subtitle";
+    subtitle.textContent = "Введіть пароль для підтвердження";
 
     const inp = document.createElement("input");
     inp.type = "password";
-    inp.placeholder = "Введіть пароль...";
-    inp.style.cssText = `
-      width: 100%; padding: 12px; margin: 12px 0; border: 2px solid #e0e0e0;
-      border-radius: 8px; font-size: 14px; transition: border-color 0.2s;
-      box-sizing: border-box;
-    `;
-    inp.onfocus = () => (inp.style.borderColor = "#007bff");
-    inp.onblur = () => (inp.style.borderColor = "#e0e0e0");
+    inp.placeholder = "••••••••";
+    inp.className = "login-input";
+    inp.autocomplete = "current-password";
 
     const err = document.createElement("div");
-    err.style.cssText =
-      "color: #f44336; display: none; margin: 8px 0; font-size: 14px;";
+    err.className = "login-error-message";
+    err.style.display = "none";
 
     const row = document.createElement("div");
     row.style.cssText =
       "display: flex; gap: 12px; justify-content: center; margin-top: 16px;";
 
-    const ok = document.createElement("button");
-    ok.textContent = "Підтвердити";
-    ok.style.cssText = `
-      flex: 1; padding: 12px 0; background: #007bff; color: #fff; border: none;
-      border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;
-      transition: background-color 0.2s;
-    `;
-    ok.onmouseover = () => (ok.style.backgroundColor = "#0056b3");
-    ok.onmouseout = () => (ok.style.backgroundColor = "#007bff");
-
+    // Скасувати — ЗЛІВА
     const cancel = document.createElement("button");
     cancel.textContent = "Скасувати";
-    cancel.style.cssText = `
-      flex: 1; padding: 12px 0; background: #6c757d; color: #fff; border: none;
-      border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;
-      transition: background-color 0.2s;
-    `;
-    cancel.onmouseover = () => (cancel.style.backgroundColor = "#545b62");
-    cancel.onmouseout = () => (cancel.style.backgroundColor = "#6c757d");
+    cancel.className = "login-button";
+    cancel.style.cssText = `flex:1; margin-top:0; background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 4px 16px rgba(100,116,139,0.3), 0 2px 4px rgba(0,0,0,0.15);`;
+
+    // Підтвердити — СПРАВА
+    const ok = document.createElement("button");
+    ok.textContent = "Підтвердити";
+    ok.className = "login-button";
+    ok.style.cssText = `flex:1; margin-top:0;`;
+
+    // Shake-анімація помилки
+    const showModalError = (message: string) => {
+      err.textContent = message;
+      err.style.display = "block";
+      inp.classList.remove("input-error");
+      void inp.offsetWidth;
+      inp.classList.add("input-error");
+      setTimeout(() => inp.classList.remove("input-error"), 600);
+    };
 
     ok.onclick = () => {
       const p = (inp.value || "").trim();
       const saved = getSavedUserDataFromLocalStorage?.();
       if (!p) {
-        err.textContent = "Введіть пароль";
-        err.style.display = "block";
+        showModalError("Введіть пароль");
+        inp.focus();
         return;
       }
       if (!saved) {
-        err.textContent = "Не знайдено дані користувача";
-        err.style.display = "block";
+        showModalError("Не знайдено дані користувача");
         return;
       }
       if (p === saved.password) {
-        modal.remove();
-        resolve(true);
+        // Анімація успіху
+        icon.textContent = "✅";
+        icon.classList.add("login-success-anim");
+        h.textContent = "Підтверджено!";
+        h.style.color = "#4ade80";
+        inp.classList.add("input-success");
+        ok.innerHTML = "✓ Успішно";
+        ok.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+        setTimeout(() => { modal.remove(); resolve(true); }, 500);
       } else {
-        err.textContent = "Невірний пароль";
-        err.style.display = "block";
+        showModalError("Невірний пароль");
         inp.focus();
         inp.select();
       }
@@ -159,11 +164,11 @@ function createPasswordConfirmationModal(
       rm();
     };
 
-    row.append(ok, cancel);
-    box.append(h, inp, err, row);
+    row.append(cancel, ok);
+    box.append(icon, h, subtitle, inp, err, row);
     modal.append(box);
     document.body.appendChild(modal);
-    setTimeout(() => inp.focus(), 50);
+    setTimeout(() => inp.focus(), 100);
   });
 }
 
@@ -373,8 +378,8 @@ class DetailsSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-          .filter((item) => item.toLowerCase().includes(q))
-          .slice(0, this.config.maxItems)
+        .filter((item) => item.toLowerCase().includes(q))
+        .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -399,9 +404,8 @@ class DetailsSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-      <div class="dropdown-item ${
-        index === this.selectedIndex ? "selected" : ""
-      }" 
+      <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
+          }" 
            data-index="${index}">
         ${this.highlightMatch(item, this.input.value)}
       </div>
@@ -1045,8 +1049,8 @@ export function updateDetailsTable(): void {
       const purchasePriceHtml =
         item.purchasePrice !== undefined
           ? `<div style="font-size: 0.85em; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">${formatNumber(
-              item.purchasePrice,
-            )}</div>`
+            item.purchasePrice,
+          )}</div>`
           : '<div style="font-size: 0.85em; color: #999; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">-</div>';
 
       const salePriceHtml = `<div style="font-size: 0.95em; font-weight: 500;">${formatNumber(
@@ -1061,25 +1065,22 @@ export function updateDetailsTable(): void {
 
       const marginHtml =
         item.margin !== undefined
-          ? `<div style="font-size: 0.85em; color: ${
-              item.margin >= 0 ? "#28a745" : "#dc3545"
-            }; font-weight: 500; margin-top: 2px;">${item.margin >= 0 ? "+" : ""}${formatNumber(
-              item.margin,
-            )}${discountIndicator}</div>`
+          ? `<div style="font-size: 0.85em; color: ${item.margin >= 0 ? "#28a745" : "#dc3545"
+          }; font-weight: 500; margin-top: 2px;">${item.margin >= 0 ? "+" : ""}${formatNumber(
+            item.margin,
+          )}${discountIndicator}</div>`
           : "";
 
       return `
         <tr class="${rowClass} ${paidClass}" onclick="handleRowClick(${index})">
           <td>
-            <button class="Bukhhalter-payment-btn ${
-              item.isPaid ? "paid" : "unpaid"
-            }" 
+            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
+        }" 
                     onclick="event.stopPropagation(); toggleDetailsPaymentWithConfirmation(${originalIndex})" 
-                    title="${
-                      item.isPaid
-                        ? `Розраховано ${item.paymentDate || ""}`
-                        : "Не розраховано"
-                    }">
+                    title="${item.isPaid
+          ? `Розраховано ${item.paymentDate || ""}`
+          : "Не розраховано"
+        }">
               ${paymentButtonText}
             </button>
           </td>
@@ -1087,9 +1088,8 @@ export function updateDetailsTable(): void {
           <td>${formatDate(item.dateClose || "")}</td>
           <td>
             <button class="Bukhhalter-act-btn"
-                    onclick="event.stopPropagation(); openActModalWithClient(${
-                      Number(item.act) || 0
-                    })"
+                    onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
+        })"
                     title="Відкрити акт №${item.act}">
               📋 ${item.act || "-"}
             </button>
@@ -1136,16 +1136,15 @@ function updateDetailsTotalSumDisplay(
     totalSumElement.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
         <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-          saleTotal,
-        )}</strong> грн</span>
+      saleTotal,
+    )}</strong> грн</span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 ${formatNumber(
-          purchaseTotal,
-        )}</strong> грн</span>
+      purchaseTotal,
+    )}</strong> грн</span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${
-          marginTotal >= 0 ? "#006400 " : "#8B0000"
-        };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
+        <span><strong style="color: ${marginTotal >= 0 ? "#006400 " : "#8B0000"
+      };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
       </div>
     `;
   }

@@ -122,90 +122,93 @@ function createPasswordConfirmationModal(
   return new Promise((resolve) => {
     const modal = document.createElement("div");
     modal.id = "password-confirmation-modal";
-    modal.style.cssText = `
-      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.5); z-index:10000; backdrop-filter: blur(3px);
-    `;
+    modal.className = "login-modal";
+
     const box = document.createElement("div");
-    box.style.cssText = `
-      background:#fff; width:320px; border-radius:12px; padding:24px; text-align:center;
-      box-shadow:0 8px 32px rgba(0,0,0,.15); border: 1px solid #e0e0e0;
-    `;
-    const h = document.createElement("h3");
+    box.className = "login-modal-content";
+
+    // Плаваюча іконка
+    const icon = document.createElement("span");
+    icon.className = "login-modal-icon";
     switch (action) {
-      case "pay":
-        h.textContent = "🔐 Підтвердження розрахунку";
-        break;
-      case "unpay":
-        h.textContent = "🔐 Підтвердження скасування";
-        break;
-      case "return":
-        h.textContent = "⬅️🚚 Підтвердження повернення";
-        break;
-      case "unreturn":
-        h.textContent = "🚚➡️ Підтвердження скасування повернення";
-        break;
+      case "pay": icon.textContent = "🔐"; break;
+      case "unpay": icon.textContent = "🔐"; break;
+      case "return": icon.textContent = "⬅️"; break;
+      case "unreturn": icon.textContent = "🚚"; break;
     }
-    h.style.cssText = "margin: 0 0 16px 0; color: #333; font-size: 18px;";
+
+    const h = document.createElement("h3");
+    h.className = "login-modal-title";
+    switch (action) {
+      case "pay": h.textContent = "Підтвердження розрахунку"; break;
+      case "unpay": h.textContent = "Підтвердження скасування"; break;
+      case "return": h.textContent = "Підтвердження повернення"; break;
+      case "unreturn": h.textContent = "Підтвердження скасування повернення"; break;
+    }
+
+    const subtitle = document.createElement("p");
+    subtitle.className = "login-modal-subtitle";
+    subtitle.textContent = "Введіть пароль для підтвердження";
 
     const inp = document.createElement("input");
     inp.type = "password";
-    inp.placeholder = "Введіть пароль...";
-    inp.style.cssText = `
-      width:100%; padding:12px; margin:12px 0; border:2px solid #e0e0e0; 
-      border-radius:8px; font-size:14px; transition: border-color 0.2s;
-      box-sizing: border-box;
-    `;
-    inp.onfocus = () => (inp.style.borderColor = "#007bff");
-    inp.onblur = () => (inp.style.borderColor = "#e0e0e0");
+    inp.placeholder = "••••••••";
+    inp.className = "login-input";
+    inp.autocomplete = "current-password";
 
     const err = document.createElement("div");
-    err.style.cssText =
-      "color:#f44336; display:none; margin:8px 0; font-size:14px;";
+    err.className = "login-error-message";
+    err.style.display = "none";
 
     const row = document.createElement("div");
-    row.style.cssText =
-      "display:flex; gap:12px; justify-content:center; margin-top:16px;";
+    row.style.cssText = "display:flex; gap:12px; justify-content:center; margin-top:16px;";
 
-    const ok = document.createElement("button");
-    ok.textContent = "Підтвердити";
-    ok.style.cssText = `
-      flex:1; padding:12px 0; background:#007bff; color:#fff; border:none; 
-      border-radius:8px; cursor:pointer; font-size:14px; font-weight:500;
-      transition: background-color 0.2s;
-    `;
-    ok.onmouseover = () => (ok.style.backgroundColor = "#0056b3");
-    ok.onmouseout = () => (ok.style.backgroundColor = "#007bff");
-
+    // Скасувати — ЗЛІВА
     const cancel = document.createElement("button");
     cancel.textContent = "Скасувати";
-    cancel.style.cssText = `
-      flex:1; padding:12px 0; background:#6c757d; color:#fff; border:none; 
-      border-radius:8px; cursor:pointer; font-size:14px; font-weight:500;
-      transition: background-color 0.2s;
-    `;
-    cancel.onmouseover = () => (cancel.style.backgroundColor = "#545b62");
-    cancel.onmouseout = () => (cancel.style.backgroundColor = "#6c757d");
+    cancel.className = "login-button";
+    cancel.style.cssText = `flex:1; margin-top:0; background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 4px 16px rgba(100,116,139,0.3), 0 2px 4px rgba(0,0,0,0.15);`;
+
+    // Підтвердити — СПРАВА
+    const ok = document.createElement("button");
+    ok.textContent = "Підтвердити";
+    ok.className = "login-button";
+    ok.style.cssText = `flex:1; margin-top:0;`;
+
+    // Shake-анімація помилки
+    const showModalError = (message: string) => {
+      err.textContent = message;
+      err.style.display = "block";
+      inp.classList.remove("input-error");
+      void inp.offsetWidth;
+      inp.classList.add("input-error");
+      setTimeout(() => inp.classList.remove("input-error"), 600);
+    };
 
     ok.onclick = () => {
       const p = (inp.value || "").trim();
       const saved = getSavedUserDataFromLocalStorage?.();
       if (!p) {
-        err.textContent = "Введіть пароль";
-        err.style.display = "block";
+        showModalError("Введіть пароль");
+        inp.focus();
         return;
       }
       if (!saved) {
-        err.textContent = "Не знайдено дані користувача";
-        err.style.display = "block";
+        showModalError("Не знайдено дані користувача");
         return;
       }
       if (p === saved.password) {
-        modal.remove();
-        resolve(true);
+        // Анімація успіху
+        icon.textContent = "✅";
+        icon.classList.add("login-success-anim");
+        h.textContent = "Підтверджено!";
+        h.style.color = "#4ade80";
+        inp.classList.add("input-success");
+        ok.innerHTML = "✓ Успішно";
+        ok.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+        setTimeout(() => { modal.remove(); resolve(true); }, 500);
       } else {
-        err.textContent = "Невірний пароль";
-        err.style.display = "block";
+        showModalError("Невірний пароль");
         inp.focus();
         inp.select();
       }
@@ -233,11 +236,11 @@ function createPasswordConfirmationModal(
       rm();
     };
 
-    row.append(ok, cancel);
-    box.append(h, inp, err, row);
+    row.append(cancel, ok);
+    box.append(icon, h, subtitle, inp, err, row);
     modal.append(box);
     document.body.appendChild(modal);
-    setTimeout(() => inp.focus(), 50);
+    setTimeout(() => inp.focus(), 100);
   });
 }
 
@@ -803,8 +806,8 @@ class SmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-          .filter((item) => item.toLowerCase().includes(q))
-          .slice(0, this.config.maxItems)
+        .filter((item) => item.toLowerCase().includes(q))
+        .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -829,9 +832,8 @@ class SmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${
-          index === this.selectedIndex ? "selected" : ""
-        }" 
+        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
+          }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -1438,8 +1440,7 @@ async function loadScladData(
   } catch (err) {
     console.error("Помилка завантаження sclad з Supabase:", err);
     showNotification(
-      `Помилка завантаження даних з бази sclad: ${
-        err instanceof Error ? err.message : "Невідома помилка"
+      `Помилка завантаження даних з бази sclad: ${err instanceof Error ? err.message : "Невідома помилка"
       }`,
       "error",
       5000,
@@ -1625,12 +1626,12 @@ export function updateMagazineTotalSum(): void {
   totalSumElement.innerHTML = `
   <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
     <span style="color: #ffffff;">Загальна сума: <strong style="color: #333;">💰 ${formatNumber(
-      totalSum,
-    )}</strong> грн</span>
+    totalSum,
+  )}</strong> грн</span>
     <span style="color: #666;">|</span>
     <span style="color: #ffffff;">На складі: <strong style="color: #8B0000;">💶 ${formatNumber(
-      remainingSum,
-    )}</strong> грн</span>
+    remainingSum,
+  )}</strong> грн</span>
   </div>
 `;
 }
@@ -1738,9 +1739,8 @@ export function updateMagazineTable(): void {
       return `
         <tr onclick="handleRowClick(${index})" class="${rowClass}">
           <td>
-            <button class="Bukhhalter-payment-btn ${
-              item.isPaid ? "paid" : "unpaid"
-            }" ${paymentDisabled} ${paymentOnclick}
+            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
+        }" ${paymentDisabled} ${paymentOnclick}
               title="${item.isPaid ? "Розраховано" : "Не розраховано"}">
               ${paymentIcon} ${paymentText}
             </button>

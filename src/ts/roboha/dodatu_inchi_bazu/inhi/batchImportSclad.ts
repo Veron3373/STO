@@ -99,8 +99,15 @@ function sortTableByColumn(col: string) {
   });
 
   renderBatchTable(parsedDataGlobal);
-  updateSortIndicators();
 }
+
+// Оригінальні назви заголовків колонок (щоб не накопичувались індикатори)
+const columnHeaderNames: Record<string, string> = {
+  date: 'Дата', shop: 'Магазин', catno: 'Каталог номер', detail: 'Деталь',
+  qty: 'К-ть', price: 'Ціна', clientPrice: 'Клієнта', warehouse: 'Склад',
+  invoice: 'Рах. №', actNo: 'Акт №', unit: 'О-ця', orderStatus: 'Статус',
+  createdBy: 'Замовив', notes: 'Примітка', action: 'Дія', status: 'Г-ть',
+};
 
 // Оновлення індикаторів сортування в шапці
 function updateSortIndicators() {
@@ -108,10 +115,11 @@ function updateSortIndicators() {
   if (!thead) return;
   thead.querySelectorAll('th').forEach((th) => {
     const col = (th as HTMLElement).dataset.col;
-    // Видаляємо попередній індикатор
-    const baseText = (th.textContent || '').replace(/\s*[🔽🔼]$/, '').trim();
+    if (!col) return;
+    const baseText = columnHeaderNames[col] || col;
     if (col === sortColumn) {
-      th.textContent = baseText + (sortDirection === 'desc' ? ' 🔽' : ' 🔼');
+      const arrow = sortDirection === 'desc' ? '&#9660;' : '&#9650;';
+      th.innerHTML = `${baseText} <span style="color:#2196f3;font-size:8px;vertical-align:middle;">${arrow}</span>`;
     } else {
       th.textContent = baseText;
     }

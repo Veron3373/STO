@@ -323,12 +323,12 @@ async function getShopIdByName(name: string): Promise<number | null> {
   if (!n) return null;
   const { data, error } = await supabase
     .from("shops")
-    .select("id")
+    .select("shop_id")
     // УВАГА: БЕЗ лапок навколо Назва
     .or(`data->>Name.eq.${n},data->>name.eq.${n},data->>Назва.eq.${n}`)
     .limit(1);
   if (error || !data || data.length === 0) return null;
-  return data[0].id as number;
+  return data[0].shop_id as number;
 }
 // Повертає id деталі або null, якщо не знайдено
 // Підтримує як JSON формат (data->>Name), так і plain text формат (data)
@@ -339,29 +339,29 @@ async function getDetailIdByName(name: string): Promise<number | null> {
   // Спочатку пробуємо знайти по JSON полях
   const { data: jsonData, error: jsonError } = await supabase
     .from("details")
-    .select("id")
+    .select("detail_id")
     .or(`data->>Name.eq.${n},data->>name.eq.${n},data->>Назва.eq.${n}`)
     .limit(1);
 
   if (!jsonError && jsonData && jsonData.length > 0) {
-    return jsonData[0].id as number;
+    return jsonData[0].detail_id as number;
   }
 
   // Якщо не знайдено по JSON - пробуємо plain text (data = 'назва')
   const { data: textData, error: textError } = await supabase
     .from("details")
-    .select("id")
+    .select("detail_id")
     .eq("data", n)
     .limit(1);
 
   if (!textError && textData && textData.length > 0) {
-    return textData[0].id as number;
+    return textData[0].detail_id as number;
   }
 
   // Якщо все ще не знайдено - пробуємо нормалізоване порівняння (без регістру)
   const { data: allData, error: allError } = await supabase
     .from("details")
-    .select("id, data");
+    .select("detail_id, data");
 
   if (allError || !allData) return null;
 
@@ -373,7 +373,7 @@ async function getDetailIdByName(name: string): Promise<number | null> {
     // Якщо data - рядок
     if (typeof d === "string") {
       if (normalizeNameForCompare(d) === normalizedSearch) {
-        return row.id as number;
+        return (row as any).detail_id as number;
       }
       // Якщо виглядає як JSON - парсимо
       if (looksLikeJson(d)) {
@@ -381,7 +381,7 @@ async function getDetailIdByName(name: string): Promise<number | null> {
           const j = JSON.parse(d);
           const nm = readName(j);
           if (nm && normalizeNameForCompare(nm) === normalizedSearch) {
-            return row.id as number;
+            return (row as any).detail_id as number;
           }
         } catch {
           /* ігноруємо */
@@ -392,7 +392,7 @@ async function getDetailIdByName(name: string): Promise<number | null> {
     if (typeof d === "object") {
       const nm = readName(d);
       if (nm && normalizeNameForCompare(nm) === normalizedSearch) {
-        return row.id as number;
+        return (row as any).detail_id as number;
       }
     }
   }
@@ -2312,13 +2312,13 @@ async function uploadBatchData(data: any[]) {
     const { data: row } = await supabase
       .from("shops")
       .select("data")
-      .eq("id", id)
+      .eq("shop_id", id)
       .single();
     let newData: any = {};
     if (row?.data && typeof row.data === "object") newData = { ...row.data };
     if (!newData.Name && !newData.name && !newData["Назва"]) {
       newData.Name = name;
-      await supabase.from("shops").update({ data: newData }).eq("id", id);
+      await supabase.from("shops").update({ data: newData }).eq("shop_id", id);
     }
   }
 
@@ -2326,7 +2326,7 @@ async function uploadBatchData(data: any[]) {
     const { data: row } = await supabase
       .from("details")
       .select("data")
-      .eq("id", id)
+      .eq("detail_id", id)
       .single();
 
     // Якщо data вже є рядком (plain text) - нічого не оновлюємо
@@ -2339,7 +2339,7 @@ async function uploadBatchData(data: any[]) {
     if (row?.data && typeof row.data === "object") newData = { ...row.data };
     if (!newData.Name && !newData.name && !newData["Назва"]) {
       newData.Name = name;
-      await supabase.from("details").update({ data: newData }).eq("id", id);
+      await supabase.from("details").update({ data: newData }).eq("detail_id", id);
     }
   }
 
@@ -2782,38 +2782,43 @@ export async function initBatchImport() {
     "import-excel-btn",
   ) as HTMLButtonElement | null;
   if (importBtn) {
-    importBtn.onclick = () => {
+    importBtn.onclick = async () => {
       const modal = document.getElementById(batchModalId);
       if (!modal) return;
       modal.classList.remove("hidden-all_other_bases");
-      resetModalState();
 
-      // Оновлюємо кеш у фоновому режимі при відкритті
-      Promise.all([
-        loadShopsList(),
-        loadDetailsList(),
-        loadActsList(),
-        loadWarehouseList(),
-        loadUsersList(),
-        loadPartNumbers(),
-      ])
-        .then(([shops, details, acts, warehouses, users, partNumbers]) => {
-          shopsListCache = shops;
-          detailsListCache = details;
-          // Оновлюємо нормалізовані кеші для коректного порівняння (без врахування регістру)
-          shopsListCacheNormalized = shopsListCache.map(
-            normalizeNameForCompare,
-          );
-          detailsListCacheNormalized = detailsListCache.map(
-            normalizeNameForCompare,
-          );
-          actsListCache = acts.list;
-          actsDateOffMap = acts.map;
-          warehouseListCache = warehouses;
-          usersListCache = users;
-          partNumbersCache = partNumbers as string[];
-        })
-        .catch((err) => console.error("Помилка оновлення кешу імпорту:", err));
+      // ✅ ВИПРАВЛЕННЯ: Спочатку оновлюємо кеш, ПОТІМ завантажуємо записи
+      // Раніше кеш оновлювався у фоновому режимі (без await),
+      // тому detailExistsInCache() використовувала старі дані
+      try {
+        const [shops, details, acts, warehouses, users, partNumbers] = await Promise.all([
+          loadShopsList(),
+          loadDetailsList(),
+          loadActsList(),
+          loadWarehouseList(),
+          loadUsersList(),
+          loadPartNumbers(),
+        ]);
+        shopsListCache = shops;
+        detailsListCache = details;
+        // Оновлюємо нормалізовані кеші для коректного порівняння (без врахування регістру)
+        shopsListCacheNormalized = shopsListCache.map(
+          normalizeNameForCompare,
+        );
+        detailsListCacheNormalized = detailsListCache.map(
+          normalizeNameForCompare,
+        );
+        actsListCache = acts.list;
+        actsDateOffMap = acts.map;
+        warehouseListCache = warehouses;
+        usersListCache = users;
+        partNumbersCache = partNumbers as string[];
+      } catch (err) {
+        console.error("Помилка оновлення кешу імпорту:", err);
+      }
+
+      // Тепер завантажуємо записи з sclad — кеш вже актуальний
+      await resetModalState();
     };
   }
 

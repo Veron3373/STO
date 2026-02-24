@@ -158,20 +158,28 @@ async function showActNumberModal() {
   const errorDiv = modal.querySelector("#act-error") as HTMLDivElement;
   const okButton = modal.querySelector("#act-ok-btn") as HTMLButtonElement;
 
-  // Завантаження поточного номера акту
+  // Зберігаємо faktura_id для подальшого оновлення
+  let targetFakturaId: number | null = null;
+
+  // Завантаження поточного номера з faktura.namber (де name містить "Брацлавець")
   try {
     const { data, error } = await supabase
-      .from("acts")
-      .select("contrAgent_raxunok")
-      .eq("act_id", 1)
-      .single();
+      .from("faktura")
+      .select("faktura_id, namber")
+      .ilike("name", "%Брацлавець%")
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
-      console.error("❌ Помилка завантаження номера акту:", error);
+      console.error("❌ Помилка завантаження номера акту з faktura:", error);
       actNumberInput.placeholder = "Помилка завантаження";
-    } else {
-      actNumberInput.value = data?.contrAgent_raxunok != null ? String(data.contrAgent_raxunok) : "";
+    } else if (data) {
+      targetFakturaId = data.faktura_id;
+      actNumberInput.value = data.namber != null ? String(data.namber) : "";
       actNumberInput.placeholder = "Введіть номер акту...";
+    } else {
+      console.warn("⚠️ Не знайдено запис faktura з 'Брацлавець' у name");
+      actNumberInput.placeholder = "Запис не знайдено";
     }
     actNumberInput.disabled = false;
     actNumberInput.style.background = "white";
@@ -235,11 +243,17 @@ async function showActNumberModal() {
       return;
     }
 
+    if (!targetFakturaId) {
+      errorDiv.textContent = "❌ Не знайдено запис faktura для збереження";
+      errorDiv.style.display = "block";
+      return;
+    }
+
     try {
       const { error } = await supabase
-        .from("acts")
-        .update({ contrAgent_raxunok: parseInt(actNumber) })
-        .eq("act_id", 1);
+        .from("faktura")
+        .update({ namber: parseInt(actNumber) })
+        .eq("faktura_id", targetFakturaId);
 
       if (error) {
         console.error("❌ Помилка запису:", error);
@@ -269,6 +283,7 @@ async function showActNumberModal() {
     if (e.target === overlay) overlay.remove();
   });
 }
+
 
 // ====== DATE PICKER ====================================
 

@@ -193,12 +193,15 @@ function amountToWordsUA(amount: number): string {
 }
 
 /**
- * Отримує номер рахунку для поточного акту
+ * Отримує номер рахунку для поточного акту.
+ * Джерело лічильника — таблиця faktura, стовпець namber
+ * (запис, де name містить "Брацлавець").
  */
 async function getInvoiceNumber(
   currentActId: number
 ): Promise<{ number: string; isNew: boolean }> {
   try {
+    // 1) Якщо у поточного акту вже є contrAgent_raxunok — повертаємо його
     const { data: currentAct, error: currentError } = await supabase
       .from("acts")
       .select("contrAgent_raxunok")
@@ -216,18 +219,20 @@ async function getInvoiceNumber(
       };
     }
 
-    const { data: masterAct, error: masterError } = await supabase
-      .from("acts")
-      .select("contrAgent_raxunok")
-      .eq("act_id", 1)
-      .single();
+    // 2) Номер для нового рахунку беремо з faktura.namber
+    const { data: fakturaRow, error: fakturaError } = await supabase
+      .from("faktura")
+      .select("namber")
+      .ilike("name", "%Брацлавець%")
+      .limit(1)
+      .maybeSingle();
 
-    if (masterError) {
-      console.error("Помилка отримання мастер-акту:", masterError);
+    if (fakturaError) {
+      console.error("Помилка отримання namber з faktura:", fakturaError);
       return { number: "0000001", isNew: true };
     }
 
-    const currentNumber = parseInt(masterAct?.contrAgent_raxunok || "0");
+    const currentNumber = parseInt(fakturaRow?.namber || "0");
     const nextNumber = currentNumber + 1;
 
     return {
@@ -241,7 +246,8 @@ async function getInvoiceNumber(
 }
 
 /**
- * Зберігає номер рахунку та faktura_id в базу даних
+ * Зберігає номер рахунку та faktura_id в базу даних.
+ * Лічильник оновлюється в таблиці faktura (стовпець namber).
  */
 async function saveInvoiceNumber(
   currentActId: number,
@@ -250,27 +256,29 @@ async function saveInvoiceNumber(
   fakturaId: number | null
 ): Promise<boolean> {
   try {
-
-    const { data: masterAct, error: readError } = await supabase
-      .from("acts")
-      .select("contrAgent_raxunok")
-      .eq("act_id", 1)
-      .single();
+    // 1) Оновлюємо лічильник у faktura.namber (де name містить "Брацлавець")
+    const { data: fakturaRow, error: readError } = await supabase
+      .from("faktura")
+      .select("faktura_id, namber")
+      .ilike("name", "%Брацлавець%")
+      .limit(1)
+      .maybeSingle();
 
     if (readError) {
-      console.error("❌ Помилка зчитування мастер-акту:", readError);
-    } else {
-      const currentMasterNum = parseInt(masterAct?.contrAgent_raxunok || "0");
+      console.error("❌ Помилка зчитування faktura:", readError);
+    } else if (fakturaRow) {
+      const currentNamber = parseInt(fakturaRow.namber || "0");
       const newNum = parseInt(invoiceNumber);
 
-      if (newNum > currentMasterNum) {
+      if (newNum > currentNamber) {
         await supabase
-          .from("acts")
-          .update({ contrAgent_raxunok: newNum })
-          .eq("act_id", 1);
+          .from("faktura")
+          .update({ namber: newNum })
+          .eq("faktura_id", fakturaRow.faktura_id);
       }
     }
 
+    // 2) Зберігаємо номер у поточному акті
     const { error: currentError } = await supabase
       .from("acts")
       .update({

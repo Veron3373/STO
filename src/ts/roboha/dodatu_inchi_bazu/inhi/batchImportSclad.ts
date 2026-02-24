@@ -483,26 +483,48 @@ async function updateActWithDetails(
       actJsonData["За деталі"] = 0;
     }
 
-    // Перевіряємо чи деталь з таким sclad_id вже існує в акті
-    const existingIndex = actJsonData["Деталі"].findIndex(
-      (d: any) =>
-        d.sclad_id && detailData.sclad_id && d.sclad_id === detailData.sclad_id,
-    );
+    // Перевіряємо чи деталь вже існує в акті:
+    // 1) Спочатку шукаємо за sclad_id (точний збіг)
+    // 2) Якщо не знайдено — шукаємо за каталожним номером (Каталог)
+    //    Це запобігає створенню дублікатів деталей в акті
+    let existingIndex = -1;
+
+    // Крок 1: Пошук за sclad_id
+    if (detailData.sclad_id) {
+      existingIndex = actJsonData["Деталі"].findIndex(
+        (d: any) => d.sclad_id && d.sclad_id === detailData.sclad_id,
+      );
+    }
+
+    // Крок 2: Якщо не знайдено за sclad_id — шукаємо за каталожним номером
+    if (existingIndex === -1 && detailData["Каталог"]) {
+      const newCatNo = String(detailData["Каталог"]).trim().toLowerCase();
+      if (newCatNo && newCatNo !== "?") {
+        existingIndex = actJsonData["Деталі"].findIndex((d: any) => {
+          const existingCatNo = String(d["Каталог"] || "").trim().toLowerCase();
+          return existingCatNo === newCatNo;
+        });
+      }
+    }
 
     const detailSum = detailData["Сума"] || 0;
 
     if (existingIndex !== -1) {
-      // Деталь вже існує — оновлюємо тільки ціну та суму
+      // Деталь вже існує в акті — оновлюємо дані
       const oldDetail = actJsonData["Деталі"][existingIndex];
       const oldSum = oldDetail["Сума"] || 0;
       const sumDiff = detailSum - oldSum;
 
-      // Оновлюємо дані деталі (ціна, сума, кількість)
+      // Оновлюємо всі поля деталі (назва, ціна, сума, кількість, магазин, sclad_id)
       actJsonData["Деталі"][existingIndex] = {
         ...oldDetail,
+        Деталь: detailData["Деталь"] || oldDetail["Деталь"],
+        Каталог: detailData["Каталог"] || oldDetail["Каталог"],
+        Магазин: detailData["Магазин"] || oldDetail["Магазин"],
         Ціна: detailData["Ціна"],
         Сума: detailSum,
         Кількість: detailData["Кількість"],
+        sclad_id: detailData.sclad_id || oldDetail.sclad_id,
       };
 
       // Коригуємо загальну суму за деталі
@@ -511,6 +533,7 @@ async function updateActWithDetails(
         actJsonData["Загальна сума"] =
           (actJsonData["Загальна сума"] || 0) + sumDiff;
       }
+      console.log(`🔄 Оновлено існуючу деталь в акті №${actNo}: ${detailData["Каталог"]} (індекс: ${existingIndex})`);
     } else {
       // Нова деталь — додаємо
       actJsonData["Деталі"].push(detailData);
@@ -519,6 +542,7 @@ async function updateActWithDetails(
         actJsonData["Загальна сума"] =
           (actJsonData["Загальна сума"] || 0) + detailSum;
       }
+      console.log(`➕ Додано нову деталь в акт №${actNo}: ${detailData["Каталог"]}`);
     }
 
     const { error: updateError } = await supabase

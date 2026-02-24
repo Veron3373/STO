@@ -212,22 +212,31 @@ const createCustomDropdown = (inputElement: HTMLInputElement | null) => {
     dropdown.classList.remove("hidden-all_other_bases");
   };
 
-  inputElement.addEventListener("input", async () => {
-    await renderSuggestions(inputElement.value.trim());
-    updateAllBdFromInput(inputElement.value.trim(), false);
+  // Видаляємо старі обробники шляхом клонування елемента
+  const newInput = inputElement.cloneNode(true) as HTMLInputElement;
+  inputElement.parentNode?.replaceChild(newInput, inputElement);
+
+  newInput.addEventListener("input", async () => {
+    await renderSuggestions(newInput.value.trim());
+    updateAllBdFromInput(newInput.value.trim(), false);
   });
 
-  inputElement.addEventListener("focus", async () => {
-    await renderSuggestions(inputElement.value.trim());
+  newInput.addEventListener("focus", async () => {
+    await renderSuggestions(newInput.value.trim());
+  });
+
+  // Клік на інпуті — відкривати dropdown навіть якщо вже має фокус
+  newInput.addEventListener("click", async () => {
+    await renderSuggestions(newInput.value.trim());
   });
 
   document.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target as Node) && e.target !== inputElement) {
+    if (!dropdown.contains(e.target as Node) && e.target !== newInput) {
       dropdown.classList.add("hidden-all_other_bases");
     }
   });
 
-  const rect = inputElement.getBoundingClientRect();
+  const rect = newInput.getBoundingClientRect();
   dropdown.style.minWidth = `${rect.width}px`;
 };
 
@@ -272,4 +281,4 @@ export const handleRobotaClick = async () => {
   await loadDatabaseData("Робота");
 };
 
-export const initRobota = () => {};
+export const initRobota = () => { };

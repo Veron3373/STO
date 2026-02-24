@@ -95,8 +95,8 @@ const updateAllBdFromInput = (
               ? { [deepPath[0]]: extractNestedValue(dataFieldValue, deepPath) }
               : typeof dataFieldValue === "object" &&
                 !Array.isArray(dataFieldValue)
-              ? dataFieldValue
-              : { [field]: dataFieldValue },
+                ? dataFieldValue
+                : { [field]: dataFieldValue },
         };
 
         updateAllBd(JSON.stringify(result, null, 2));
@@ -199,22 +199,31 @@ const createCustomDropdown = (
     dropdown.classList.remove("hidden-all_other_bases");
   };
 
-  inputElement.addEventListener("input", () => {
-    renderSuggestions(inputElement.value.trim());
-    updateAllBdFromInput(inputElement.value.trim(), false);
+  // Видаляємо старі обробники шляхом клонування елемента
+  const newInput = inputElement.cloneNode(true) as HTMLInputElement;
+  inputElement.parentNode?.replaceChild(newInput, inputElement);
+
+  newInput.addEventListener("input", () => {
+    renderSuggestions(newInput.value.trim());
+    updateAllBdFromInput(newInput.value.trim(), false);
   });
 
-  inputElement.addEventListener("focus", () => {
-    renderSuggestions(inputElement.value.trim());
+  newInput.addEventListener("focus", () => {
+    renderSuggestions(newInput.value.trim());
+  });
+
+  // Клік на інпуті — відкривати dropdown навіть якщо вже має фокус
+  newInput.addEventListener("click", () => {
+    renderSuggestions(newInput.value.trim());
   });
 
   document.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target as Node) && e.target !== inputElement) {
+    if (!dropdown.contains(e.target as Node) && e.target !== newInput) {
       dropdown.classList.add("hidden-all_other_bases");
     }
   });
 
-  const rect = inputElement.getBoundingClientRect();
+  const rect = newInput.getBoundingClientRect();
   dropdown.style.minWidth = `${rect.width}px`;
 };
 

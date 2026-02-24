@@ -618,9 +618,7 @@ function createBatchImportModal() {
     <style>
       .batch-table-container-Excel {
         overflow-y: auto;
-        max-height: 60vh; /* slightly less to ensure fit */
         position: relative;
-        border: 1px solid #e2e8f0;
       }
       .batch-table-Excel {
         border-collapse: separate; 
@@ -630,16 +628,7 @@ function createBatchImportModal() {
       .batch-table-Excel thead th {
         position: sticky !important;
         top: 0 !important;
-        z-index: 100; /* Increased z-index */
-        background-color: #e2e8f0 !important;
-        border-bottom: 2px solid #cbd5e1;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        padding: 10px; /* Add padding for better look */
-        color: #1e293b;
-        font-weight: bold;
-      }
-      .batch-table-Excel tbody td {
-        border-bottom: 1px solid #e2e8f0;
+        z-index: 100;
       }
       .excel-dropdown-list {
         z-index: 99999 !important;

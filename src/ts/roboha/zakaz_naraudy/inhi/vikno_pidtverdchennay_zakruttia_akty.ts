@@ -3,7 +3,7 @@
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { closeActAndMarkSlyusars } from "./save_work";
 import { refreshActsTable } from "../../tablucya/tablucya";
-import { ACT_ITEMS_TABLE_CONTAINER_ID } from "../globalCache";
+import { ACT_ITEMS_TABLE_CONTAINER_ID, ZAKAZ_NARAYD_SAVE_BTN_ID } from "../globalCache";
 import { userAccessLevel } from "../../tablucya/users";
 import { supabase } from "../../../vxid/supabaseClient";
 
@@ -143,6 +143,11 @@ export function showViknoPidtverdchennayZakruttiaAkty(
     const onConfirm = async () => {
       confirmBtn.disabled = true;
       try {
+        // 🔹 Автозбереження акту перед закриттям
+        (
+          document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLButtonElement
+        )?.click();
+
         // Отримуємо вибраний тип оплати
         const paymentSelect = document.getElementById(
           "payment-type-select"

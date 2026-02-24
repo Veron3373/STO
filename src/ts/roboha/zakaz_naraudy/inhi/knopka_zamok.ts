@@ -10,7 +10,6 @@ import {
   globalCache,
   loadGlobalData,
   ACT_ITEMS_TABLE_CONTAINER_ID,
-  ZAKAZ_NARAYD_SAVE_BTN_ID, // <-- Імпортуємо ID кнопки збереження
 } from "../globalCache";
 import { refreshActsTable } from "../../tablucya/tablucya";
 import { deleteActNotificationsOnClose } from "../../tablucya/mark_notification_deleted";
@@ -954,12 +953,8 @@ export function initStatusLockDelegation(): void {
         } else {
         }
 
-        // 3️⃣ Автозбереження перед закриттям
-        (
-          document.getElementById(ZAKAZ_NARAYD_SAVE_BTN_ID) as HTMLButtonElement
-        )?.click();
-
-        // 4️⃣ Вікно підтвердження закриття (як в адміна, з попередженнями)
+        // 3️⃣ Вікно підтвердження закриття (як в адміна, з попередженнями)
+        // Автозбереження тепер відбувається всередині вікна підтвердження при натисканні "Так"
         const confirmed = await showViknoPidtverdchennayZakruttiaAkty(actId);
         if (!confirmed) {
           showNotification("Скасовано закриття акту", "warning");

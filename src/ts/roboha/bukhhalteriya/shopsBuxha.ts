@@ -167,7 +167,7 @@ function createPasswordConfirmationModal(
     const cancel = document.createElement("button");
     cancel.textContent = "Скасувати";
     cancel.className = "login-button";
-    cancel.style.cssText = `flex:1; margin-top:0; background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 4px 16px rgba(100,116,139,0.3), 0 2px 4px rgba(0,0,0,0.15);`;
+    cancel.style.cssText = `flex:1; margin-top:0; background: linear-gradient(135deg, #94a3b8 0%, #a1b0c4 100%); box-shadow: 0 3px 12px rgba(148,163,184,0.25), 0 1px 3px rgba(0,0,0,0.06);`;
 
     // Підтвердити — СПРАВА
     const ok = document.createElement("button");

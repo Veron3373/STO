@@ -757,12 +757,8 @@ const createSlusarAdditionalInputs = async () => {
   const currentUser = getCurrentUserFromLocalStorage();
   const isAdmin = currentUser?.access === "Адміністратор";
 
-  // Завантажуємо список складів з БД
-  const warehouses = await getWarehouseNumbers();
-  const warehouseOptions = warehouses
-    .map((w) => `<option value="${w}">${w}</option>`)
-    .join("");
-
+  // ✅ ВИПРАВЛЕННЯ: рендеримо HTML одразу (без очікування БД),
+  // склади і статистика підвантажуються у фоні паралельно
   const additionalInputsContainer = document.createElement("div");
   additionalInputsContainer.id = "slusar-additional-inputs";
   additionalInputsContainer.className = "slusar-additional-inputs";
@@ -801,7 +797,7 @@ const createSlusarAdditionalInputs = async () => {
         <select id="slusar-warehouse" class="input-all_other_bases" ${
           !isAdmin ? "disabled" : ""
         }>
-          ${warehouseOptions}
+          <option value="0">Завантаження...</option>
         </select>
       </div>
     </div>
@@ -832,8 +828,18 @@ const createSlusarAdditionalInputs = async () => {
     updatePasswordVisibility(accessSelect.value);
   }
 
-  // Завантажуємо статистику після створення контейнера
-  await fetchAndDisplayEmployeeStats();
+  // ✅ Завантажуємо склади і статистику ПАРАЛЕЛЬНО у фоні (не блокуємо UI)
+  getWarehouseNumbers().then((warehouses) => {
+    const warehouseSelect = document.getElementById(
+      "slusar-warehouse",
+    ) as HTMLSelectElement | null;
+    if (warehouseSelect) {
+      warehouseSelect.innerHTML = warehouses
+        .map((w) => `<option value="${w}">${w}</option>`)
+        .join("");
+    }
+  });
+  fetchAndDisplayEmployeeStats(); // без await — оновлює div у фоні
 
   // Налаштування навігації Enter між полями
   setupEnterNavigationForFields([
@@ -867,8 +873,13 @@ const loadDatabaseData = async (buttonText: string) => {
     const currentUser = getCurrentUserFromLocalStorage();
     const isAdmin = currentUser?.access === "Адміністратор";
 
-    // Створюємо додаткові інпути
-    await createSlusarAdditionalInputs();
+    // ✅ ВИПРАВЛЕННЯ: createSlusarAdditionalInputs і запит до БД виконуються ПАРАЛЕЛЬНО
+    const [, dbResult] = await Promise.all([
+      createSlusarAdditionalInputs(),
+      supabase.from(config.table).select("*"),
+    ]);
+    const { data, error } = dbResult as { data: any[] | null; error: any };
+    if (error || !data) throw new Error(error?.message || "Дані не отримані");
 
     // Отримуємо кнопку режиму
     const modeButton = document.getElementById(
@@ -923,11 +934,9 @@ const loadDatabaseData = async (buttonText: string) => {
       ),
     );
     updateTableNameDisplay(buttonText, config.table);
-    const { data, error } = await supabase.from(config.table).select("*");
-    if (error || !data) throw new Error(error?.message || "Дані не отримані");
 
     createCustomDropdown(
-      data,
+      data as any[],
       config.field,
       searchInput,
       config.deepPath,

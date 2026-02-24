@@ -16,8 +16,18 @@ export let contragentData: ContragentRecord[] = [];
 
 const MAX_TEXTAREA_HEIGHT = 150;
 const MONTH_NAMES = [
-  "Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
-  "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"
+  "Січень",
+  "Лютий",
+  "Березень",
+  "Квітень",
+  "Травень",
+  "Червень",
+  "Липень",
+  "Серпень",
+  "Вересень",
+  "Жовтень",
+  "Листопад",
+  "Грудень",
 ];
 
 // ====== UTILITIES ======================================
@@ -153,7 +163,9 @@ async function showActNumberModal() {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
-  const passwordInput = modal.querySelector("#act-password") as HTMLInputElement;
+  const passwordInput = modal.querySelector(
+    "#act-password",
+  ) as HTMLInputElement;
   const actNumberInput = modal.querySelector("#act-number") as HTMLInputElement;
   const errorDiv = modal.querySelector("#act-error") as HTMLDivElement;
   const okButton = modal.querySelector("#act-ok-btn") as HTMLButtonElement;
@@ -284,7 +296,6 @@ async function showActNumberModal() {
   });
 }
 
-
 // ====== DATE PICKER ====================================
 
 function createDatePicker(input: HTMLInputElement) {
@@ -317,7 +328,8 @@ function createDatePicker(input: HTMLInputElement) {
     text-align: center; font-weight: bold; margin-bottom: 6px; font-size: 10px;
   `;
   daysHeader.innerHTML = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"]
-    .map(d => `<div style="padding:1px;">${d}</div>`).join("");
+    .map((d) => `<div style="padding:1px;">${d}</div>`)
+    .join("");
 
   calendar.appendChild(header);
   calendar.appendChild(daysHeader);
@@ -348,7 +360,10 @@ function createDatePicker(input: HTMLInputElement) {
         transition: all 0.2s; font-size: 12px; line-height: 1.1;
       `;
 
-      const isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+      const isToday =
+        year === today.getFullYear() &&
+        month === today.getMonth() &&
+        day === today.getDate();
       if (isToday) {
         dayBtn.style.background = "#e6f0ff";
         dayBtn.style.borderColor = "#3b82f6";
@@ -405,10 +420,18 @@ function createDatePicker(input: HTMLInputElement) {
 // ====== FORM MANAGEMENT ================================
 
 export function clearFormFields() {
-  const nameInput = document.getElementById("contragent-name") as HTMLTextAreaElement;
-  const receiverInput = document.getElementById("contragent-receiver") as HTMLTextAreaElement;
-  const noteInput = document.getElementById("contragent-note") as HTMLTextAreaElement;
-  const dateInput = document.getElementById("contragent-date") as HTMLInputElement;
+  const nameInput = document.getElementById(
+    "contragent-name",
+  ) as HTMLTextAreaElement;
+  const receiverInput = document.getElementById(
+    "contragent-receiver",
+  ) as HTMLTextAreaElement;
+  const noteInput = document.getElementById(
+    "contragent-note",
+  ) as HTMLTextAreaElement;
+  const dateInput = document.getElementById(
+    "contragent-date",
+  ) as HTMLInputElement;
 
   if (nameInput) {
     nameInput.value = "";
@@ -433,7 +456,9 @@ function removeActButton() {
     actButton.remove();
 
     // ✅ ВИПРАВЛЕННЯ: Повертаємо стандартне вирівнювання для кнопки "Ok"
-    const buttonsDiv = document.querySelector(".yes-no-buttons-all_other_bases") as HTMLElement;
+    const buttonsDiv = document.querySelector(
+      ".yes-no-buttons-all_other_bases",
+    ) as HTMLElement;
     if (buttonsDiv) {
       buttonsDiv.style.justifyContent = "flex-end"; // Вирівнюємо справа
     }
@@ -442,7 +467,9 @@ function removeActButton() {
 
 // ✅ НАЛАШТУВАННЯ АВТОМАТИЧНОГО ПРИХОВУВАННЯ КНОПКИ
 function setupActButtonAutoHide() {
-  const otherButtons = document.querySelectorAll('.toggle-button-all_other_bases');
+  const otherButtons = document.querySelectorAll(
+    ".toggle-button-all_other_bases",
+  );
 
   otherButtons.forEach((btn) => {
     const buttonText = btn.textContent?.trim();
@@ -456,9 +483,12 @@ function setupActButtonAutoHide() {
 export async function handleDhereloContragent() {
   removeActButton(); // Видаляємо стару кнопку перед створенням форми
 
-  contragentData = await loadContragentData();
+  // ✅ ВИПРАВЛЕННЯ: запускаємо завантаження даних паралельно з будуванням форми
+  const contragentDataPromise = loadContragentData();
 
-  const rightPanel = document.querySelector(".modal-right-all_other_bases") as HTMLDivElement;
+  const rightPanel = document.querySelector(
+    ".modal-right-all_other_bases",
+  ) as HTMLDivElement;
   if (!rightPanel) {
     console.error("❌ Не знайдено правої панелі модального вікна");
     return;
@@ -474,7 +504,8 @@ export async function handleDhereloContragent() {
 
   const formContainer = document.createElement("div");
   formContainer.id = "contragent-form";
-  formContainer.style.cssText = "display: flex; flex-direction: column; gap: 5px; padding: 0;";
+  formContainer.style.cssText =
+    "display: flex; flex-direction: column; gap: 5px; padding: 0;";
 
   // Створення елементів форми
   const createTextarea = (id: string, label: string, placeholder: string) => {
@@ -483,7 +514,8 @@ export async function handleDhereloContragent() {
 
     const labelEl = document.createElement("label");
     labelEl.textContent = label;
-    labelEl.style.cssText = "font-weight: 500; margin-bottom: 5px; display: block;";
+    labelEl.style.cssText =
+      "font-weight: 500; margin-bottom: 5px; display: block;";
 
     const textarea = document.createElement("textarea");
     textarea.id = id;
@@ -508,7 +540,8 @@ export async function handleDhereloContragent() {
 
   const receiverLabel = document.createElement("label");
   receiverLabel.textContent = "Рахунок Одержувач:";
-  receiverLabel.style.cssText = "font-weight: 500; margin-bottom: 5px; display: block;";
+  receiverLabel.style.cssText =
+    "font-weight: 500; margin-bottom: 5px; display: block;";
 
   const receiverInput = document.createElement("textarea");
   receiverInput.id = "contragent-receiver";
@@ -540,14 +573,14 @@ export async function handleDhereloContragent() {
   const { wrapper: nameWrapper, textarea: nameInput } = createTextarea(
     "contragent-name",
     "Акт ЗАТВЕРДЖУЮ:",
-    "Введіть назву контрагента..."
+    "Введіть назву контрагента...",
   );
 
   // Від Замовника
   const { wrapper: noteWrapper, textarea: noteInput } = createTextarea(
     "contragent-note",
     "Акт Від Замовника:",
-    "Введіть примітку..."
+    "Введіть примітку...",
   );
 
   // Дата і кнопка
@@ -597,21 +630,23 @@ export async function handleDhereloContragent() {
 
     receiverDropdown.classList.add("hidden-all_other_bases");
 
-    updateAllBd(JSON.stringify({
-      table: "faktura",
-      faktura_id: item.faktura_id,
-      name: item.name,
-      oderjyvach: item.oderjyvach,
-      prumitka: item.prumitka,
-      data: item.data,
-    }));
+    updateAllBd(
+      JSON.stringify({
+        table: "faktura",
+        faktura_id: item.faktura_id,
+        name: item.name,
+        oderjyvach: item.oderjyvach,
+        prumitka: item.prumitka,
+        data: item.data,
+      }),
+    );
   };
 
   // Оновлення dropdown
   const updateReceiverDropdown = (query: string) => {
     receiverDropdown.innerHTML = "";
     const filtered = contragentData
-      .filter(item => item.oderjyvach?.toLowerCase().includes(query))
+      .filter((item) => item.oderjyvach?.toLowerCase().includes(query))
       .slice(0, 50);
 
     if (!filtered.length) {
@@ -619,7 +654,7 @@ export async function handleDhereloContragent() {
       return;
     }
 
-    filtered.forEach(item => {
+    filtered.forEach((item) => {
       const option = document.createElement("div");
       option.className = "contragent-dropdown-item custom-dropdown-item";
       option.style.cssText = `
@@ -630,7 +665,7 @@ export async function handleDhereloContragent() {
       option.addEventListener("mouseenter", () => {
         option.classList.add("selected");
         option.style.background = "#e3f2fd";
-        Array.from(receiverDropdown.children).forEach(child => {
+        Array.from(receiverDropdown.children).forEach((child) => {
           if (child !== option) {
             child.classList.remove("selected");
             (child as HTMLElement).style.background = "white";
@@ -677,7 +712,7 @@ export async function handleDhereloContragent() {
 
   dateInput.addEventListener("click", (e) => {
     e.stopPropagation();
-    document.querySelectorAll(".contragent-calendar").forEach(cal => {
+    document.querySelectorAll(".contragent-calendar").forEach((cal) => {
       if (cal !== calendar) (cal as HTMLElement).style.display = "none";
     });
     receiverDropdown.classList.add("hidden-all_other_bases");
@@ -713,7 +748,9 @@ export async function handleDhereloContragent() {
   formContainer.appendChild(dateAndButtonWrapper);
 
   // Додаємо кнопку до контейнера кнопок
-  const buttonsDiv = rightPanel.querySelector(".yes-no-buttons-all_other_bases");
+  const buttonsDiv = rightPanel.querySelector(
+    ".yes-no-buttons-all_other_bases",
+  );
   if (buttonsDiv) {
     (buttonsDiv as HTMLElement).style.display = "flex";
     (buttonsDiv as HTMLElement).style.justifyContent = "space-between";
@@ -739,6 +776,9 @@ export async function handleDhereloContragent() {
     "contragent-note",
     "contragent-date",
   ]);
+
+  // ✅ Отримуємо дані контрагентів (паралельно з побудовою форми)
+  contragentData = await contragentDataPromise;
 }
 
 export function clearContragentForm() {
@@ -747,7 +787,7 @@ export function clearContragentForm() {
 
   removeActButton();
 
-  document.querySelectorAll(".contragent-calendar").forEach(cal => {
+  document.querySelectorAll(".contragent-calendar").forEach((cal) => {
     (cal as HTMLElement).style.display = "none";
   });
 
@@ -773,10 +813,18 @@ async function getNextFakturaId(): Promise<number | null> {
 }
 
 function readFakturaFormPayload() {
-  const nameEl = document.getElementById("contragent-name") as HTMLTextAreaElement | null;
-  const receiverEl = document.getElementById("contragent-receiver") as HTMLTextAreaElement | null;
-  const noteEl = document.getElementById("contragent-note") as HTMLTextAreaElement | null;
-  const dateEl = document.getElementById("contragent-date") as HTMLInputElement | null;
+  const nameEl = document.getElementById(
+    "contragent-name",
+  ) as HTMLTextAreaElement | null;
+  const receiverEl = document.getElementById(
+    "contragent-receiver",
+  ) as HTMLTextAreaElement | null;
+  const noteEl = document.getElementById(
+    "contragent-note",
+  ) as HTMLTextAreaElement | null;
+  const dateEl = document.getElementById(
+    "contragent-date",
+  ) as HTMLInputElement | null;
 
   const name = (nameEl?.value ?? "").trim();
   const oderjyvach = (receiverEl?.value ?? "").trim();
@@ -790,11 +838,9 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
   const mode = CRUD;
   const payload = readFakturaFormPayload();
 
-
   try {
     // ========== ДОДАВАННЯ ==========
     if (mode === "Додати") {
-
       if (!payload.name) {
         toast("⚠️ Заповніть назву контрагента", "#ff9800");
         return false;
@@ -831,7 +877,6 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
     }
 
     if (mode === "Редагувати") {
-
       const { error } = await supabase
         .from("faktura")
         .update(payload)
@@ -850,7 +895,6 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
     }
 
     if (mode === "Видалити") {
-
       const { error } = await supabase
         .from("faktura")
         .delete()

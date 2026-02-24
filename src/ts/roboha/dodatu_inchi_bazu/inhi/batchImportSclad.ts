@@ -28,6 +28,95 @@ let scladIdsMap: Map<string, string> = new Map();
 let warehouseListCache: string[] = []; // Кеш активних складів (номери)
 let warehouseProcentMap: Map<string, number> = new Map(); // Кеш відсотків складів: warehouse_id -> procent
 let usersListCache: string[] = []; // Кеш користувачів (не Слюсарів)
+
+// ===== Стан сортування таблиці =====
+let sortColumn: string | null = null; // Поточна колонка сортування
+let sortDirection: 'asc' | 'desc' = 'desc'; // Напрямок сортування
+
+// Тип колонки: date, number, text
+function getColumnSortType(col: string): 'date' | 'number' | 'text' {
+  if (col === 'date') return 'date';
+  if (['qty', 'price', 'clientPrice', 'warehouse', 'invoice', 'actNo'].includes(col)) return 'number';
+  return 'text';
+}
+
+// Парсинг дати dd.mm.yy або yyyy-mm-dd → timestamp для порівняння
+function parseDateForSort(dateStr: string): number {
+  if (!dateStr) return 0;
+  // Формат ISO: yyyy-mm-dd
+  if (dateStr.includes('-')) {
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+  // Формат: dd.mm.yy
+  const parts = dateStr.split('.');
+  if (parts.length !== 3) return 0;
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  let year = parseInt(parts[2], 10);
+  if (year < 100) year += 2000;
+  return new Date(year, month, day).getTime();
+}
+
+// Сортування parsedDataGlobal та повторний рендер
+function sortTableByColumn(col: string) {
+  if (sortColumn === col) {
+    // Той самий стовпець — міняємо напрямок
+    sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+  } else {
+    // Новий стовпець
+    sortColumn = col;
+    // Для дати: перший клік = desc (від нової до старої)
+    // Для чисел: перший клік = desc (від більшого до меншого)
+    // Для тексту: перший клік = asc (А→Я)
+    const type = getColumnSortType(col);
+    sortDirection = type === 'text' ? 'asc' : 'desc';
+  }
+
+  const type = getColumnSortType(col);
+
+  parsedDataGlobal.sort((a: any, b: any) => {
+    let valA = a[col];
+    let valB = b[col];
+
+    let cmp = 0;
+    if (type === 'date') {
+      const tA = parseDateForSort(String(valA || ''));
+      const tB = parseDateForSort(String(valB || ''));
+      cmp = tA - tB;
+    } else if (type === 'number') {
+      const nA = parseFloat(valA) || 0;
+      const nB = parseFloat(valB) || 0;
+      cmp = nA - nB;
+    } else {
+      // text — алфавітний порядок
+      const sA = String(valA || '').toLowerCase();
+      const sB = String(valB || '').toLowerCase();
+      cmp = sA.localeCompare(sB, 'uk');
+    }
+
+    return sortDirection === 'asc' ? cmp : -cmp;
+  });
+
+  renderBatchTable(parsedDataGlobal);
+  updateSortIndicators();
+}
+
+// Оновлення індикаторів сортування в шапці
+function updateSortIndicators() {
+  const thead = document.querySelector('#batch-table-Excel thead tr');
+  if (!thead) return;
+  thead.querySelectorAll('th').forEach((th) => {
+    const col = (th as HTMLElement).dataset.col;
+    // Видаляємо попередній індикатор
+    const baseText = (th.textContent || '').replace(/\s*[🔽🔼]$/, '').trim();
+    if (col === sortColumn) {
+      th.textContent = baseText + (sortDirection === 'desc' ? ' 🔽' : ' 🔼');
+    } else {
+      th.textContent = baseText;
+    }
+  });
+}
 let partNumbersCache: string[] = []; // Кеш каталог номерів з бази sclad
 let partNumberNameMap: Map<string, string> = new Map(); // Кеш каталог номер → назва деталі
 let usersIdMap: Map<string, number> = new Map(); // Кеш ПІБ → slyusar_id
@@ -1403,6 +1492,28 @@ function renderBatchTable(data: any[]) {
   attachInputHandlers(tbody);
   // Ініціалізуємо кастомний DatePicker для всіх полів дати
   initCustomDatePicker(tbody);
+  // Навішуємо обробники сортування на шапку
+  attachSortHandlers();
+}
+
+// ===== Навішування обробників сортування на th =====
+function attachSortHandlers() {
+  const thead = document.querySelector('#batch-table-Excel thead tr');
+  if (!thead) return;
+  thead.querySelectorAll('th').forEach((th) => {
+    const col = (th as HTMLElement).dataset.col;
+    if (!col || col === 'status') return; // Г-ть не сортуємо
+    // Видаляємо попередні обробники (якщо є)
+    const newTh = th.cloneNode(true) as HTMLElement;
+    th.parentNode?.replaceChild(newTh, th);
+    newTh.style.cursor = 'pointer';
+    newTh.style.userSelect = 'none';
+    newTh.addEventListener('click', () => {
+      sortTableByColumn(col);
+    });
+  });
+  // Оновити індикатори після навішування
+  updateSortIndicators();
 }
 // ===== Валідація рядка при редагуванні =====
 function revalidateRow(index: number) {

@@ -445,6 +445,26 @@ $radius-xlarge: 16px;
     letter-spacing: 0.2px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     border-bottom: 2px solid $border-strong;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+
+    &:hover {
+      background: linear-gradient(180deg,
+          color.adjust($bg-header, $lightness: -4%) 0%,
+          color.adjust($bg-header, $lightness: -8%) 100%);
+    }
+
+    // Остання колонка (Г-ть) не сортується
+    &:last-child {
+      cursor: default;
+
+      &:hover {
+        background: linear-gradient(180deg,
+            $bg-header 0%,
+            color.adjust($bg-header, $lightness: -3%) 100%);
+      }
+    }
   }
 
   tbody tr {

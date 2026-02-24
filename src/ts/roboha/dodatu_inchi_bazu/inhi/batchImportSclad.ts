@@ -132,41 +132,58 @@ function toIsoDate(dateStr: string): string {
   return "";
 }
 async function fetchNames(table: TableName): Promise<string[]> {
-  // Отримуємо повні дані, щоб коректно обробити різні ключі (Name, name, Назва)
-  const { data: rows2, error: error2 } = await supabase
-    .from(table)
-    .select("data")
-    .not("data", "is", null);
-
-  if (error2 || !Array.isArray(rows2)) {
-    console.error(`[${table}] load error:`, error2);
-    return [];
-  }
+  // Завантажуємо ВСІ дані з пагінацією (Supabase обмежує 1000 рядків за запит)
   const names: string[] = [];
-  for (const r of rows2) {
-    const d = (r as any)?.data;
-    if (typeof d === "string") {
-      const s = d.trim();
-      if (!s) continue;
-      if (looksLikeJson(s)) {
-        try {
-          const j = JSON.parse(s);
-          const nm = readName(j);
-          if (nm) names.push(nm);
-          else names.push(s);
-        } catch {
+  let offset = 0;
+  const batchSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data: rows2, error: error2 } = await supabase
+      .from(table)
+      .select("data")
+      .not("data", "is", null)
+      .range(offset, offset + batchSize - 1);
+
+    if (error2 || !Array.isArray(rows2)) {
+      console.error(`[${table}] load error:`, error2);
+      break;
+    }
+
+    if (rows2.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    for (const r of rows2) {
+      const d = (r as any)?.data;
+      if (typeof d === "string") {
+        const s = d.trim();
+        if (!s) continue;
+        if (looksLikeJson(s)) {
+          try {
+            const j = JSON.parse(s);
+            const nm = readName(j);
+            if (nm) names.push(nm);
+            else names.push(s);
+          } catch {
+            names.push(s);
+          }
+        } else {
           names.push(s);
         }
-      } else {
-        names.push(s);
+        continue;
       }
-      continue;
+      if (d && typeof d === "object") {
+        const nm = readName(d);
+        if (nm) names.push(nm);
+      }
     }
-    if (d && typeof d === "object") {
-      const nm = readName(d);
-      if (nm) names.push(nm);
-    }
+
+    offset += batchSize;
+    hasMore = rows2.length === batchSize;
   }
+
   return uniqAndSort(names);
 }
 async function loadShopsList(): Promise<string[]> {
@@ -285,31 +302,46 @@ function getSlyusarIdByName(name: string): number | null {
   return usersIdMap.get(trimmedName) ?? null;
 }
 
-/* Завантаження унікальних part_number та name з таблиці sclad */
+/* Завантаження унікальних part_number та name з таблиці sclad (з пагінацією) */
 async function loadPartNumbers(): Promise<string[]> {
   try {
-    const { data, error } = await supabase
-      .from("sclad")
-      .select("part_number, name")
-      .order("part_number", { ascending: true });
-    if (error) {
-      console.error("Помилка завантаження каталог номерів:", error);
-      return [];
-    }
-    // Збираємо унікальні непорожні part_number + зберігаємо назву деталі
     const unique = new Set<string>();
     partNumberNameMap.clear();
-    (data || []).forEach((row: any) => {
-      const pn = String(row.part_number || "").trim();
-      const name = String(row.name || "").trim();
-      if (pn) {
-        unique.add(pn);
-        // Зберігаємо перше знайдене ім'я для кожного part_number
-        if (!partNumberNameMap.has(pn) && name) {
-          partNumberNameMap.set(pn, name);
-        }
+
+    let offset = 0;
+    const batchSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("sclad")
+        .select("part_number, name")
+        .order("part_number", { ascending: true })
+        .range(offset, offset + batchSize - 1);
+
+      if (error) {
+        console.error("Помилка завантаження каталог номерів:", error);
+        break;
       }
-    });
+
+      if (!data || data.length === 0) break;
+
+      data.forEach((row: any) => {
+        const pn = String(row.part_number || "").trim();
+        const name = String(row.name || "").trim();
+        if (pn) {
+          unique.add(pn);
+          // Зберігаємо перше знайдене ім'я для кожного part_number
+          if (!partNumberNameMap.has(pn) && name) {
+            partNumberNameMap.set(pn, name);
+          }
+        }
+      });
+
+      offset += batchSize;
+      hasMore = data.length === batchSize;
+    }
+
     return Array.from(unique).sort();
   } catch (e) {
     console.error("Помилка завантаження каталог номерів:", e);

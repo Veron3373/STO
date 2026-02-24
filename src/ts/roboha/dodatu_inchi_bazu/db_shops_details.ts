@@ -308,16 +308,36 @@ async function deleteDetailById(detail_id: number): Promise<boolean> {
 }
 
 async function detailExistsByName(name: string): Promise<boolean> {
-  const { data: rows, error } = await supabase.from("details").select("data");
-  if (error) {
-    console.error("Помилка перевірки існування деталі:", error);
-    return false;
-  }
   const needle = normalizeName(name);
-  for (const r of rows ?? []) {
-    const nm = normalizeName((r as any)?.data ?? "");
-    if (nm && nm === needle) return true;
+  if (!needle) return false;
+
+  // Пагінація — Supabase обмежує 1000 рядків за запит
+  let offset = 0;
+  const batchSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data: rows, error } = await supabase
+      .from("details")
+      .select("data")
+      .range(offset, offset + batchSize - 1);
+
+    if (error) {
+      console.error("Помилка перевірки існування деталі:", error);
+      return false;
+    }
+
+    if (!rows || rows.length === 0) break;
+
+    for (const r of rows) {
+      const nm = normalizeName((r as any)?.data ?? "");
+      if (nm && nm === needle) return true;
+    }
+
+    offset += batchSize;
+    hasMore = rows.length === batchSize;
   }
+
   return false;
 }
 

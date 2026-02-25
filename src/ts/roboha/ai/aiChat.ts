@@ -72,142 +72,218 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
   const todayStr = today.toISOString().split("T")[0];
   const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
 
-  let context = `Ти - AI асистент для автосервісу СТО. Аналізуй дані та відповідай ТІЛЬКИ українською мовою. Будь конкретним, лаконічним і корисним.\n\n`;
+  let context = `Ти - AI асистент "Механік" для автосервісу (СТО). У тебе є ПОВНИЙ ДОСТУП до бази даних СТО.
+Відповідай ТІЛЬКИ українською мовою. Будь конкретним, лаконічним і корисним.
+Аналізуй надані дані детально. Якщо питають про конкретний акт, клієнта, слюсаря або авто — шукай в наданих даних.
+Суми вказуй в грн. Дати — в українському форматі.\n\n`;
 
-  // Визначаємо що завантажувати залежно від запиту
-  const queryLower = userQuery.toLowerCase();
-  const needsActs = queryLower.includes("акт") || queryLower.includes("закри") || queryLower.includes("відкри") || queryLower.includes("сьогодн") || queryLower.includes("закрито") || queryLower.includes("відкрито");
-  const needsSlyusar = queryLower.includes("слюсар") || queryLower.includes("заробив") || queryLower.includes("зарплат") || queryLower.includes("прац");
-  const needsWorks = queryLower.includes("робот") || queryLower.includes("послуг") || queryLower.includes("виконан");
-  const needsDetails = queryLower.includes("детал") || queryLower.includes("запчастин") || queryLower.includes("склад");
-  const needsFinance = queryLower.includes("сум") || queryLower.includes("гривн") || queryLower.includes("заробив") || queryLower.includes("прибуток") || queryLower.includes("гроші");
+  // Допоміжна функція парсингу даних акту
+  const parseActData = (a: any) => {
+    let d: any = {};
+    try { d = typeof a.data === "string" ? JSON.parse(a.data) : (a.data || {}); } catch { }
+
+    const worksArr = Array.isArray(d["Роботи"]) ? d["Роботи"] : [];
+    const detailsArr = Array.isArray(d["Деталі"]) ? d["Деталі"] : [];
+    const worksSum = worksArr.reduce((s: number, w: any) => s + Number(w["Ціна"] || 0) * Number(w["Кількість"] || 1), 0);
+    const detailsSum = detailsArr.reduce((s: number, det: any) => s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1), 0);
+    const discount = Number(d["Знижка"] || 0);
+    const total = worksSum + detailsSum - discount;
+
+    return {
+      actId: a.act_id,
+      client: d["ПІБ"] || d["Клієнт"] || "—",
+      phone: d["Телефон"] || "",
+      car: `${d["Марка"] || ""} ${d["Модель"] || ""}`.trim() || "—",
+      plate: d["Держ. номер"] || d["ДержНомер"] || "",
+      vin: d["VIN"] || "",
+      mileage: d["Пробіг"] || "",
+      receiver: d["Приймальник"] || "—",
+      reason: d["Причина звернення"] || "",
+      recommendations: d["Рекомендації"] || "",
+      works: worksArr.map((w: any) => `${w["Назва"] || w["Робота"] || "?"}: ${w["Ціна"] || 0} грн x ${w["Кількість"] || 1}`),
+      details: detailsArr.map((det: any) => `${det["Назва"] || det["Деталь"] || "?"}: ${det["Ціна"] || 0} грн x ${det["Кількість"] || 1}`),
+      worksSum,
+      detailsSum,
+      discount,
+      total,
+      advance: Number(d["Аванс"] || 0),
+      dateOn: a.date_on || "",
+      dateOff: a.date_off || "",
+      isClosed: !!a.date_off,
+      slusarsOn: a.slusarsOn || false,
+      raw: d
+    };
+  };
+
+  // Форматує акт для контексту
+  const formatAct = (p: ReturnType<typeof parseActData>, detailed: boolean = false) => {
+    let s = `Акт #${p.actId}: Клієнт: ${p.client}`;
+    if (p.phone) s += ` | Тел: ${p.phone}`;
+    s += ` | Авто: ${p.car}`;
+    if (p.plate) s += ` (${p.plate})`;
+    s += ` | Приймальник: ${p.receiver}`;
+    s += ` | Сума: ${p.total} грн (роботи: ${p.worksSum}, деталі: ${p.detailsSum}`;
+    if (p.discount > 0) s += `, знижка: ${p.discount}`;
+    s += `)`;
+    if (p.advance > 0) s += ` | Аванс: ${p.advance} грн`;
+    s += ` | Відкрито: ${p.dateOn}`;
+    if (p.isClosed) s += ` | Закрито: ${p.dateOff}`;
+    else s += ` | ВІДКРИТИЙ`;
+    if (p.slusarsOn && !p.isClosed) s += ` | ✅ Роботи завершено`;
+
+    if (detailed) {
+      if (p.mileage) s += `\n    Пробіг: ${p.mileage}`;
+      if (p.reason) s += `\n    Причина: ${p.reason}`;
+      if (p.works.length > 0) s += `\n    Роботи: ${p.works.join("; ")}`;
+      if (p.details.length > 0) s += `\n    Деталі: ${p.details.join("; ")}`;
+      if (p.recommendations) s += `\n    Рекомендації: ${p.recommendations}`;
+    }
+    return s;
+  };
 
   try {
-    // === АКТИ (поточний день / місяць) ===
-    if (needsActs || needsFinance || queryLower.includes("скільки") || userQuery.length < 50) {
-      let actsToday: any[] = [];
-      let actsMonth: any[] = [];
+    // ============================================================
+    // 1. ЗАВАНТАЖУЄМО ВСІ АКТУАЛЬНІ АКТИ З БАЗИ ДАНИХ
+    // ============================================================
 
-      // Спробуємо завантажити з фільтром по date_on
+    // Відкриті акти (без date_off) — ЗАВЖДИ завантажуємо
+    let openActs: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from("acts")
+        .select("*")
+        .is("date_off", null)
+        .order("act_id", { ascending: false })
+        .limit(100);
+      if (!error && data) openActs = data;
+    } catch { /* ignore */ }
+
+    // Закриті акти за цей місяць
+    let closedMonthActs: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from("acts")
+        .select("*")
+        .not("date_off", "is", null)
+        .gte("date_on", monthStart)
+        .order("act_id", { ascending: false })
+        .limit(200);
+      if (!error && data) closedMonthActs = data;
+    } catch { /* ignore */ }
+
+    // Fallback — якщо помилка запитів, завантажуємо всі
+    if (openActs.length === 0 && closedMonthActs.length === 0) {
       try {
-        const { data: d1, error: e1 } = await supabase
+        const { data } = await supabase
           .from("acts")
           .select("*")
-          .gte("date_on", todayStr)
-          .order("act_id", { ascending: false })
-          .limit(50);
-        if (!e1 && d1) actsToday = d1;
-      } catch { /* ignore */ }
-
-      try {
-        const { data: d2, error: e2 } = await supabase
-          .from("acts")
-          .select("*")
-          .gte("date_on", monthStart)
           .order("act_id", { ascending: false })
           .limit(200);
-        if (!e2 && d2) actsMonth = d2;
+        if (data) {
+          openActs = data.filter((a: any) => !a.date_off);
+          closedMonthActs = data.filter((a: any) => !!a.date_off);
+        }
       } catch { /* ignore */ }
+    }
 
-      // Fallback: якщо 400 — беремо останні акти без фільтра
-      if (actsToday.length === 0 && actsMonth.length === 0) {
-        try {
-          const { data: fallback } = await supabase
-            .from("acts")
-            .select("*")
-            .order("act_id", { ascending: false })
-            .limit(100);
-          const all = fallback || [];
-          actsToday = all.filter((a: any) => (a.date_on || "").slice(0, 10) >= todayStr);
-          actsMonth = all.filter((a: any) => (a.date_on || "").slice(0, 10) >= monthStart);
-        } catch { /* ignore */ }
-      }
+    // --- Парсимо всі акти ---
+    const parsedOpen = openActs.map(parseActData);
+    const parsedClosed = closedMonthActs.map(parseActData);
+    const closedToday = parsedClosed.filter(a => (a.dateOff || "").slice(0, 10) >= todayStr);
 
-      // Закритий = є date_off, відкритий = немає date_off
-      const closed = actsToday.filter((a: any) => !!a.date_off);
-      const open = actsToday.filter((a: any) => !a.date_off);
-
-
-      context += `=== АКТИ СЬОГОДНІ (${today.toLocaleDateString("uk-UA")}) ===\n`;
-      context += `Закритих актів: ${closed.length}\n`;
-      if (closed.length > 0) {
-        closed.forEach((a: any) => {
-          let d: any = {};
-          try { d = typeof a.data === "string" ? JSON.parse(a.data) : (a.data || {}); } catch { }
-          const client = d["ПІБ"] || d["Клієнт"] || "—";
-          const car = d["Марка"] || d["Авто"] || "—";
-          const slyusar = d["Приймальник"] || "—";
-          const worksSum = Array.isArray(d["Роботи"]) ? d["Роботи"].reduce((s: number, w: any) => s + Number(w["Ціна"] || 0) * Number(w["Кількість"] || 1), 0) : 0;
-          const detailsSum = Array.isArray(d["Деталі"]) ? d["Деталі"].reduce((s: number, det: any) => s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1), 0) : 0;
-          const total = worksSum + detailsSum;
-          context += `  - Акт #${a.act_id}: ${client} | ${car} | Приймальник: ${slyusar} | Сума: ${total} грн | Закрито: ${a.date_off || "сьогодні"}\n`;
-        });
-      }
-
-      context += `Відкритих актів: ${open.length}\n`;
-      if (open.length > 0) {
-        open.slice(0, 10).forEach((a: any) => {
-          let d: any = {};
-          try { d = typeof a.data === "string" ? JSON.parse(a.data) : (a.data || {}); } catch { }
-          const client = d["ПІБ"] || "—";
-          const car = d["Марка"] || "—";
-          context += `  - Акт #${a.act_id}: ${client} | ${car} | Відкрито: ${a.date_on || "—"}\n`;
-        });
-      }
-
-      // Місячна статистика
-      const monthClosed = actsMonth.filter((a: any) => !!a.date_off);
-      let monthTotal = 0;
-      let monthWorksTotal = 0;
-      let monthDetailsTotal = 0;
-      monthClosed.forEach((a: any) => {
-        let d: any = {};
-        try { d = typeof a.data === "string" ? JSON.parse(a.data) : (a.data || {}); } catch { }
-        const ws = Array.isArray(d["Роботи"]) ? d["Роботи"].reduce((s: number, w: any) => s + Number(w["Ціна"] || 0) * Number(w["Кількість"] || 1), 0) : 0;
-        const ds = Array.isArray(d["Деталі"]) ? d["Деталі"].reduce((s: number, det: any) => s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1), 0) : 0;
-        monthWorksTotal += ws;
-        monthDetailsTotal += ds;
-        monthTotal += ws + ds;
+    // --- Контекст: відкриті акти (детально) ---
+    context += `=== ВІДКРИТІ АКТИ (${parsedOpen.length}) ===\n`;
+    if (parsedOpen.length > 0) {
+      parsedOpen.forEach(p => {
+        context += `  ${formatAct(p, true)}\n`;
       });
-
-      context += `\n=== СТАТИСТИКА МІСЯЦЯ (${today.toLocaleDateString("uk-UA", { month: "long", year: "numeric" })}) ===\n`;
-      context += `Закрито актів: ${monthClosed.length}\n`;
-      context += `Загальна виручка: ${monthTotal.toLocaleString("uk-UA")} грн\n`;
-      context += `  з них роботи: ${monthWorksTotal.toLocaleString("uk-UA")} грн\n`;
-      context += `  з них деталі: ${monthDetailsTotal.toLocaleString("uk-UA")} грн\n`;
+    } else {
+      context += "  Немає відкритих актів.\n";
     }
 
-    // === СЛЮСАРІ ===
-    if (needsSlyusar || needsFinance) {
-      const slyusars = globalCache.slyusars || [];
-      if (slyusars.length > 0) {
-        context += `\n=== СЛЮСАРІ (${slyusars.length}) ===\n`;
-        slyusars.slice(0, 20).forEach((s: any) => {
-          context += `  - ${s.Name || "—"}\n`;
-        });
-      }
+    // --- Контекст: закриті сьогодні ---
+    context += `\n=== ЗАКРИТІ СЬОГОДНІ (${closedToday.length}) ===\n`;
+    closedToday.forEach(p => {
+      context += `  ${formatAct(p, true)}\n`;
+    });
+
+    // --- Контекст: закриті за місяць (короткий формат) ---
+    const otherClosed = parsedClosed.filter(a => (a.dateOff || "").slice(0, 10) < todayStr);
+    if (otherClosed.length > 0) {
+      context += `\n=== ЗАКРИТІ ЗА МІСЯЦЬ (ще ${otherClosed.length} актів) ===\n`;
+      otherClosed.slice(0, 50).forEach(p => {
+        context += `  ${formatAct(p, false)}\n`;
+      });
     }
 
-    // === РОБОТИ (найпопулярніші) ===
-    if (needsWorks) {
-      const works = globalCache.works || [];
+    // --- Місячна статистика ---
+    const monthWorksTotal = parsedClosed.reduce((s, p) => s + p.worksSum, 0);
+    const monthDetailsTotal = parsedClosed.reduce((s, p) => s + p.detailsSum, 0);
+    const monthTotal = parsedClosed.reduce((s, p) => s + p.total, 0);
+    context += `\n=== СТАТИСТИКА МІСЯЦЯ (${today.toLocaleDateString("uk-UA", { month: "long", year: "numeric" })}) ===\n`;
+    context += `Закрито актів за місяць: ${parsedClosed.length}\n`;
+    context += `Загальна виручка: ${monthTotal.toLocaleString("uk-UA")} грн\n`;
+    context += `  Роботи: ${monthWorksTotal.toLocaleString("uk-UA")} грн\n`;
+    context += `  Деталі: ${monthDetailsTotal.toLocaleString("uk-UA")} грн\n`;
+    context += `Відкритих актів: ${parsedOpen.length}\n`;
+
+    // ============================================================
+    // 2. СЛЮСАРІ
+    // ============================================================
+    const slyusars = globalCache.slyusars || [];
+    if (slyusars.length > 0) {
+      context += `\n=== СЛЮСАРІ (${slyusars.length}) ===\n`;
+      slyusars.forEach((s: any) => {
+        context += `  - ${s.Name || "—"}`;
+        if (s.Phone) context += ` | Тел: ${s.Phone}`;
+        if (s.Посада) context += ` | Посада: ${s.Посада}`;
+        context += "\n";
+      });
+    }
+
+    // ============================================================
+    // 3. ДОВІДНИК РОБІТ
+    // ============================================================
+    const works = globalCache.works || [];
+    if (works.length > 0) {
       context += `\n=== ДОВІДНИК РОБІТ (${works.length} позицій) ===\n`;
-      context += works.slice(0, 30).join(", ") + "\n";
+      context += works.slice(0, 50).join(", ") + "\n";
     }
 
-    // === СКЛАД ===
-    if (needsDetails) {
-      const parts = globalCache.skladParts || [];
+    // ============================================================
+    // 4. СКЛАД
+    // ============================================================
+    const parts = globalCache.skladParts || [];
+    if (parts.length > 0) {
       context += `\n=== СКЛАД (${parts.length} позицій) ===\n`;
-      const lowStock = parts.filter(p => p.quantity <= 2 && p.quantity >= 0).slice(0, 10);
+      const lowStock = parts.filter(p => p.quantity <= 2 && p.quantity >= 0).slice(0, 15);
       if (lowStock.length > 0) {
         context += `⚠️ Мало на складі:\n`;
         lowStock.forEach(p => {
           context += `  - ${p.name} (${p.part_number}): ${p.quantity} шт, ціна ${p.price} грн\n`;
         });
       }
-      context += `Загальна кількість позицій: ${parts.length}\n`;
+      context += `Всього позицій: ${parts.length}\n`;
     }
+
+    // ============================================================
+    // 5. КЛІЄНТИ ТА АВТО (з globalCache або з Supabase)
+    // ============================================================
+    try {
+      const { data: clients } = await supabase
+        .from("clients")
+        .select("*")
+        .order("client_id", { ascending: false })
+        .limit(100);
+      if (clients && clients.length > 0) {
+        context += `\n=== КЛІЄНТИ (${clients.length}) ===\n`;
+        clients.slice(0, 30).forEach((c: any) => {
+          context += `  - ${c.name || c.Name || "—"}`;
+          if (c.phone || c.Phone) context += ` | Тел: ${c.phone || c.Phone}`;
+          context += "\n";
+        });
+      }
+    } catch { /* ignore */ }
 
   } catch (err) {
     console.warn("⚠️ Помилка збору контексту:", err);
@@ -216,6 +292,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
   context += `\n=== ЗАПИТ КОРИСТУВАЧА ===\n${userQuery}`;
   return context;
 }
+
 
 // ============================================================
 // ВИКЛИК GEMINI API

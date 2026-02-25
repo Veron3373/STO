@@ -16,7 +16,14 @@ interface ChatMessage {
 
 interface DailyStats {
   closedCount: number;
-  closedActs: Array<{ id: number; client: string; car: string; total: number; slyusar: string; dateOff: string }>;
+  closedActs: Array<{
+    id: number;
+    client: string;
+    car: string;
+    total: number;
+    slyusar: string;
+    dateOff: string;
+  }>;
   openCount: number;
   openActs: Array<{ id: number; client: string; car: string; dateOn: string }>;
   totalWorksSum: number;
@@ -30,37 +37,78 @@ interface DailyStats {
 // ============================================================
 
 const CHAT_MODAL_ID = "ai-chat-modal";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 let chatHistory: ChatMessage[] = [];
-let geminiApiKey = "";
+let geminiApiKeys: string[] = []; // Всі 3 ключі (setting_id 20, 21, 22)
+let currentKeyIndex = 0; // Поточний активний ключ
+let keysLoaded = false;
 let isLoading = false;
 
 // ============================================================
-// ЗАВАНТАЖЕННЯ КЛЮЧА GEMINI
+// ЗАВАНТАЖЕННЯ КЛЮЧІВ GEMINI (3 ключі з фолбеком)
 // ============================================================
 
-async function loadGeminiKey(): Promise<string> {
-  if (geminiApiKey) return geminiApiKey;
+async function loadAllGeminiKeys(): Promise<string[]> {
+  if (keysLoaded && geminiApiKeys.length > 0) return geminiApiKeys;
+
+  const keys: string[] = [];
   try {
-    // Спочатку перевіряємо середовище
+    // Спочатку перевіряємо env
     const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
-    if (envKey) {
-      geminiApiKey = envKey;
-      return geminiApiKey;
-    }
-    // Потім шукаємо в БД settings (setting_id=20 — Gemini key)
+    if (envKey) keys.push(envKey);
+
+    // Завантажуємо всі 3 ключі з БД (setting_id 20, 21, 22)
     const { data } = await supabase
       .from("settings")
-      .select("Загальні")
-      .eq("setting_id", 20)
-      .single();
-    const row = data as Record<string, string> | null;
-    if (row?.["Загальні"]) {
-      geminiApiKey = row["Загальні"];
-      return geminiApiKey;
+      .select('setting_id, "Загальні"')
+      .in("setting_id", [20, 21, 22])
+      .order("setting_id");
+
+    if (data) {
+      for (const row of data) {
+        const val = (row as any)["Загальні"];
+        if (val && typeof val === "string" && val.trim()) {
+          // Уникаємо дублікатів (env може збігатися з setting_id=20)
+          if (!keys.includes(val.trim())) {
+            keys.push(val.trim());
+          }
+        }
+      }
     }
-  } catch { /* ignore */ }
-  return "";
+  } catch {
+    /* ignore */
+  }
+
+  geminiApiKeys = keys;
+  keysLoaded = true;
+  currentKeyIndex = 0;
+  return keys;
+}
+
+/**
+ * Скидає кеш ключів — при наступному запиті ключі будуть перезавантажені з БД
+ */
+export function resetGeminiKeysCache(): void {
+  geminiApiKeys = [];
+  keysLoaded = false;
+  currentKeyIndex = 0;
+  updateKeyIndicator();
+  console.log("🔑 Gemini: кеш ключів скинуто");
+}
+
+/**
+ * Оновлює індикатор номера ключа в хедері чату
+ */
+function updateKeyIndicator(): void {
+  const el = document.getElementById("ai-key-indicator");
+  if (!el) return;
+  if (geminiApiKeys.length === 0) {
+    el.textContent = "";
+    return;
+  }
+  el.textContent = `🔑${currentKeyIndex + 1}`;
+  el.title = `Активний API ключ #${currentKeyIndex + 1} з ${geminiApiKeys.length}`;
 }
 
 // ============================================================
@@ -80,12 +128,22 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
   // Допоміжна функція парсингу даних акту
   const parseActData = (a: any) => {
     let d: any = {};
-    try { d = typeof a.data === "string" ? JSON.parse(a.data) : (a.data || {}); } catch { }
+    try {
+      d = typeof a.data === "string" ? JSON.parse(a.data) : a.data || {};
+    } catch {}
 
     const worksArr = Array.isArray(d["Роботи"]) ? d["Роботи"] : [];
     const detailsArr = Array.isArray(d["Деталі"]) ? d["Деталі"] : [];
-    const worksSum = worksArr.reduce((s: number, w: any) => s + Number(w["Ціна"] || 0) * Number(w["Кількість"] || 1), 0);
-    const detailsSum = detailsArr.reduce((s: number, det: any) => s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1), 0);
+    const worksSum = worksArr.reduce(
+      (s: number, w: any) =>
+        s + Number(w["Ціна"] || 0) * Number(w["Кількість"] || 1),
+      0,
+    );
+    const detailsSum = detailsArr.reduce(
+      (s: number, det: any) =>
+        s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1),
+      0,
+    );
     const discount = Number(d["Знижка"] || 0);
     const total = worksSum + detailsSum - discount;
 
@@ -100,8 +158,14 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       receiver: d["Приймальник"] || "—",
       reason: d["Причина звернення"] || "",
       recommendations: d["Рекомендації"] || "",
-      works: worksArr.map((w: any) => `${w["Назва"] || w["Робота"] || "?"}: ${w["Ціна"] || 0} грн x ${w["Кількість"] || 1}`),
-      details: detailsArr.map((det: any) => `${det["Назва"] || det["Деталь"] || "?"}: ${det["Ціна"] || 0} грн x ${det["Кількість"] || 1}`),
+      works: worksArr.map(
+        (w: any) =>
+          `${w["Назва"] || w["Робота"] || "?"}: ${w["Ціна"] || 0} грн x ${w["Кількість"] || 1}`,
+      ),
+      details: detailsArr.map(
+        (det: any) =>
+          `${det["Назва"] || det["Деталь"] || "?"}: ${det["Ціна"] || 0} грн x ${det["Кількість"] || 1}`,
+      ),
       worksSum,
       detailsSum,
       discount,
@@ -111,12 +175,15 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       dateOff: a.date_off || "",
       isClosed: !!a.date_off,
       slusarsOn: a.slusarsOn || false,
-      raw: d
+      raw: d,
     };
   };
 
   // Форматує акт для контексту
-  const formatAct = (p: ReturnType<typeof parseActData>, detailed: boolean = false) => {
+  const formatAct = (
+    p: ReturnType<typeof parseActData>,
+    detailed: boolean = false,
+  ) => {
     let s = `Акт #${p.actId}: Клієнт: ${p.client}`;
     if (p.phone) s += ` | Тел: ${p.phone}`;
     s += ` | Авто: ${p.car}`;
@@ -156,7 +223,9 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         .order("act_id", { ascending: false })
         .limit(100);
       if (!error && data) openActs = data;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Закриті акти за цей місяць
     let closedMonthActs: any[] = [];
@@ -169,7 +238,9 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         .order("act_id", { ascending: false })
         .limit(200);
       if (!error && data) closedMonthActs = data;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Fallback — якщо помилка запитів, завантажуємо всі
     if (openActs.length === 0 && closedMonthActs.length === 0) {
@@ -183,18 +254,22 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
           openActs = data.filter((a: any) => !a.date_off);
           closedMonthActs = data.filter((a: any) => !!a.date_off);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     // --- Парсимо всі акти ---
     const parsedOpen = openActs.map(parseActData);
     const parsedClosed = closedMonthActs.map(parseActData);
-    const closedToday = parsedClosed.filter(a => (a.dateOff || "").slice(0, 10) >= todayStr);
+    const closedToday = parsedClosed.filter(
+      (a) => (a.dateOff || "").slice(0, 10) >= todayStr,
+    );
 
     // --- Контекст: відкриті акти (детально) ---
     context += `=== ВІДКРИТІ АКТИ (${parsedOpen.length}) ===\n`;
     if (parsedOpen.length > 0) {
-      parsedOpen.forEach(p => {
+      parsedOpen.forEach((p) => {
         context += `  ${formatAct(p, true)}\n`;
       });
     } else {
@@ -203,22 +278,27 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
 
     // --- Контекст: закриті сьогодні ---
     context += `\n=== ЗАКРИТІ СЬОГОДНІ (${closedToday.length}) ===\n`;
-    closedToday.forEach(p => {
+    closedToday.forEach((p) => {
       context += `  ${formatAct(p, true)}\n`;
     });
 
     // --- Контекст: закриті за місяць (короткий формат) ---
-    const otherClosed = parsedClosed.filter(a => (a.dateOff || "").slice(0, 10) < todayStr);
+    const otherClosed = parsedClosed.filter(
+      (a) => (a.dateOff || "").slice(0, 10) < todayStr,
+    );
     if (otherClosed.length > 0) {
       context += `\n=== ЗАКРИТІ ЗА МІСЯЦЬ (ще ${otherClosed.length} актів) ===\n`;
-      otherClosed.slice(0, 50).forEach(p => {
+      otherClosed.slice(0, 50).forEach((p) => {
         context += `  ${formatAct(p, false)}\n`;
       });
     }
 
     // --- Місячна статистика ---
     const monthWorksTotal = parsedClosed.reduce((s, p) => s + p.worksSum, 0);
-    const monthDetailsTotal = parsedClosed.reduce((s, p) => s + p.detailsSum, 0);
+    const monthDetailsTotal = parsedClosed.reduce(
+      (s, p) => s + p.detailsSum,
+      0,
+    );
     const monthTotal = parsedClosed.reduce((s, p) => s + p.total, 0);
     context += `\n=== СТАТИСТИКА МІСЯЦЯ (${today.toLocaleDateString("uk-UA", { month: "long", year: "numeric" })}) ===\n`;
     context += `Закрито актів за місяць: ${parsedClosed.length}\n`;
@@ -256,10 +336,12 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
     const parts = globalCache.skladParts || [];
     if (parts.length > 0) {
       context += `\n=== СКЛАД (${parts.length} позицій) ===\n`;
-      const lowStock = parts.filter(p => p.quantity <= 2 && p.quantity >= 0).slice(0, 15);
+      const lowStock = parts
+        .filter((p) => p.quantity <= 2 && p.quantity >= 0)
+        .slice(0, 15);
       if (lowStock.length > 0) {
         context += `⚠️ Мало на складі:\n`;
-        lowStock.forEach(p => {
+        lowStock.forEach((p) => {
           context += `  - ${p.name} (${p.part_number}): ${p.quantity} шт, ціна ${p.price} грн\n`;
         });
       }
@@ -283,8 +365,9 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
           context += "\n";
         });
       }
-    } catch { /* ignore */ }
-
+    } catch {
+      /* ignore */
+    }
   } catch (err) {
     console.warn("⚠️ Помилка збору контексту:", err);
   }
@@ -293,17 +376,19 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
   return context;
 }
 
-
 // ============================================================
 // ВИКЛИК GEMINI API
 // ============================================================
 
 async function callGemini(userMessage: string): Promise<string> {
-  const apiKey = await loadGeminiKey();
+  const keys = await loadAllGeminiKeys();
 
-  if (!apiKey) {
-    return `⚠️ Для роботи AI PRO потрібно вказати **Gemini API ключ** у налаштуваннях (setting_id=20 в БД або VITE_GEMINI_API_KEY у .env).\n\nОтримати безкоштовно: [aistudio.google.com](https://aistudio.google.com/app/apikey)`;
+  if (keys.length === 0) {
+    return `⚠️ Для роботи AI PRO потрібно вказати **Gemini API ключ** у налаштуваннях (🤖 → API Ключі).\n\nОтримати безкоштовно: [aistudio.google.com](https://aistudio.google.com/app/apikey)`;
   }
+
+  // Оновлюємо індикатор на початку запиту
+  updateKeyIndicator();
 
   try {
     // Збираємо контекст з бази
@@ -317,44 +402,82 @@ async function callGemini(userMessage: string): Promise<string> {
     for (const msg of recentHistory) {
       contents.push({
         role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.text }]
+        parts: [{ text: msg.text }],
       });
     }
 
     // Поточне повідомлення з контекстом
     contents.push({
       role: "user",
-      parts: [{ text: enrichedPrompt }]
+      parts: [{ text: enrichedPrompt }],
     });
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-          topP: 0.95,
-        },
-        systemInstruction: {
-          parts: [{ text: "Ти - помічник для автосервісу СТО. Відповідай ТІЛЬКИ УКРАЇНСЬКОЮ мовою. Використовуй emoji для наочності. Надавай точні числові дані з бази. Якщо даних немає - так і написи." }]
-        }
-      })
+    const requestBody = JSON.stringify({
+      contents,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+        topP: 0.95,
+      },
+      systemInstruction: {
+        parts: [
+          {
+            text: "Ти - помічник для автосервісу СТО. Відповідай ТІЛЬКИ УКРАЇНСЬКОЮ мовою. Використовуй emoji для наочності. Надавай точні числові дані з бази. Якщо даних немає - так і написи.",
+          },
+        ],
+      },
     });
 
-    if (!response.ok) {
+    // Спробувати всі ключі по черзі при 429
+    const triedIndices = new Set<number>();
+    let startIndex = currentKeyIndex;
+
+    while (triedIndices.size < keys.length) {
+      const keyIdx = startIndex % keys.length;
+      triedIndices.add(keyIdx);
+      const apiKey = keys[keyIdx];
+
+      console.log(`🔑 Gemini: спроба ключ #${keyIdx + 1} з ${keys.length}`);
+
+      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      });
+
+      if (response.ok) {
+        currentKeyIndex = keyIdx; // Запам'ятовуємо робочий ключ
+        updateKeyIndicator();
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        return text || "🤔 Не вдалося отримати відповідь від AI.";
+      }
+
+      if (response.status === 429) {
+        console.warn(
+          `⚠️ Gemini ключ #${keyIdx + 1}: ліміт вичерпано, перемикаємо...`,
+        );
+        // Перемикаємо на наступний ключ і запам'ятовуємо
+        currentKeyIndex = (keyIdx + 1) % keys.length;
+        updateKeyIndicator();
+        startIndex = keyIdx + 1;
+        continue; // Пробуємо наступний ключ
+      }
+
+      // Інша помилка — не пробуємо інші ключі
       const errText = await response.text();
       console.error("Gemini API error:", errText);
-      if (response.status === 400) return "❌ Помилка запиту до Gemini. Перевірте API ключ.";
-      if (response.status === 429) return "⏳ Перевищено ліміт запитів Gemini. Спробуйте через хвилину.";
+      if (response.status === 400)
+        return "❌ Помилка запиту до Gemini. Перевірте API ключ.";
       return `❌ Помилка Gemini API (${response.status}). Спробуйте пізніше.`;
     }
 
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text || "🤔 Не вдалося отримати відповідь від AI.";
-
+    // Всі ключі вичерпані — скидаємо кеш щоб при наступному запиті ключі перезавантажились з БД
+    keysLoaded = false;
+    if (keys.length === 1) {
+      return `⏳ Ліміт Gemini вичерпано. У вас лише **1 API ключ**. Додайте ще ключі в налаштуваннях (🤖 → API Ключі) або спробуйте через хвилину.`;
+    }
+    return `⏳ Ліміт вичерпано на всіх ${keys.length} API ключах. Спробуйте через хвилину або додайте додаткові ключі в налаштуваннях (🤖 → API Ключі).`;
   } catch (err: any) {
     console.error("Gemini call error:", err);
     return `❌ Помилка зв'язку з AI: ${err.message || "Мережева помилка"}`;
@@ -377,7 +500,7 @@ async function loadDailyStats(): Promise<DailyStats> {
     totalWorksSum: 0,
     totalDetailsSum: 0,
     totalSum: 0,
-    worksCount: 0
+    worksCount: 0,
   };
 
   try {
@@ -390,7 +513,9 @@ async function loadDailyStats(): Promise<DailyStats> {
         .order("act_id", { ascending: false })
         .limit(100);
       if (!error && data) acts = data;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Fallback: якщо запит з date_on падає
     if (acts.length === 0) {
@@ -401,14 +526,20 @@ async function loadDailyStats(): Promise<DailyStats> {
           .order("act_id", { ascending: false })
           .limit(100);
         if (data) {
-          acts = data.filter((a: any) => (a.date_on || "").slice(0, 10) >= todayStr);
+          acts = data.filter(
+            (a: any) => (a.date_on || "").slice(0, 10) >= todayStr,
+          );
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     (acts || []).forEach((a: any) => {
       let d: any = {};
-      try { d = typeof a.data === "string" ? JSON.parse(a.data) : (a.data || {}); } catch { }
+      try {
+        d = typeof a.data === "string" ? JSON.parse(a.data) : a.data || {};
+      } catch {}
 
       const client = d["ПІБ"] || d["Клієнт"] || "—";
       const car = `${d["Марка"] || ""} ${d["Модель"] || ""}`.trim() || "—";
@@ -417,20 +548,40 @@ async function loadDailyStats(): Promise<DailyStats> {
       const worksArr = Array.isArray(d["Роботи"]) ? d["Роботи"] : [];
       const detailsArr = Array.isArray(d["Деталі"]) ? d["Деталі"] : [];
 
-      const worksSum = worksArr.reduce((s: number, w: any) => s + Number(w["Ціна"] || 0) * Number(w["Кількість"] || 1), 0);
-      const detailsSum = detailsArr.reduce((s: number, det: any) => s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1), 0);
+      const worksSum = worksArr.reduce(
+        (s: number, w: any) =>
+          s + Number(w["Ціна"] || 0) * Number(w["Кількість"] || 1),
+        0,
+      );
+      const detailsSum = detailsArr.reduce(
+        (s: number, det: any) =>
+          s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1),
+        0,
+      );
       const total = worksSum + detailsSum;
 
       if (a.date_off) {
         stats.closedCount++;
-        stats.closedActs.push({ id: a.act_id, client, car, total, slyusar, dateOff: a.date_off || "сьогодні" });
+        stats.closedActs.push({
+          id: a.act_id,
+          client,
+          car,
+          total,
+          slyusar,
+          dateOff: a.date_off || "сьогодні",
+        });
         stats.totalWorksSum += worksSum;
         stats.totalDetailsSum += detailsSum;
         stats.totalSum += total;
         stats.worksCount += worksArr.length;
       } else {
         stats.openCount++;
-        stats.openActs.push({ id: a.act_id, client, car, dateOn: a.date_on || "—" });
+        stats.openActs.push({
+          id: a.act_id,
+          client,
+          car,
+          dateOn: a.date_on || "—",
+        });
       }
     });
   } catch (err) {
@@ -448,7 +599,10 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
   const div = document.createElement("div");
   div.className = `ai-chat-message ai-chat-message--${msg.role}`;
 
-  const time = msg.timestamp.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  const time = msg.timestamp.toLocaleTimeString("uk-UA", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   // Перетворюємо markdown-ліке форматування
   let html = msg.text
@@ -470,7 +624,10 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
 }
 
 function renderDashboard(stats: DailyStats, container: HTMLElement): void {
-  const today = new Date().toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+  const today = new Date().toLocaleDateString("uk-UA", {
+    day: "numeric",
+    month: "long",
+  });
 
   container.innerHTML = `
     <div class="ai-dashboard">
@@ -499,11 +656,15 @@ function renderDashboard(stats: DailyStats, container: HTMLElement): void {
         </div>
       </div>
 
-      ${stats.closedActs.length > 0 ? `
+      ${
+        stats.closedActs.length > 0
+          ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">✅ Закриті акти сьогодні</div>
         <div class="ai-dashboard-acts-list">
-          ${stats.closedActs.map(a => `
+          ${stats.closedActs
+            .map(
+              (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">#${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -511,20 +672,28 @@ function renderDashboard(stats: DailyStats, container: HTMLElement): void {
               <span class="ai-act-slyusar">${a.slyusar}</span>
               <span class="ai-act-sum">${a.total.toLocaleString("uk-UA")} грн</span>
             </div>
-          `).join("")}
+          `,
+            )
+            .join("")}
         </div>
         <div class="ai-dashboard-totals">
           <span>Роботи: <strong>${stats.totalWorksSum.toLocaleString("uk-UA")} грн</strong></span>
           <span>Деталі: <strong>${stats.totalDetailsSum.toLocaleString("uk-UA")} грн</strong></span>
           <span>Разом: <strong>${stats.totalSum.toLocaleString("uk-UA")} грн</strong></span>
         </div>
-      </div>` : ""}
+      </div>`
+          : ""
+      }
 
-      ${stats.openActs.length > 0 ? `
+      ${
+        stats.openActs.length > 0
+          ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">🔧 Відкриті акти</div>
         <div class="ai-dashboard-acts-list">
-          ${stats.openActs.map(a => `
+          ${stats.openActs
+            .map(
+              (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">#${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -532,9 +701,13 @@ function renderDashboard(stats: DailyStats, container: HTMLElement): void {
               <span class="ai-act-slyusar">—</span>
               <span class="ai-act-sum open">відкрито</span>
             </div>
-          `).join("")}
+          `,
+            )
+            .join("")}
         </div>
-      </div>` : ""}
+      </div>`
+          : ""
+      }
     </div>
   `;
 }
@@ -573,7 +746,7 @@ export async function createAIChatModal(): Promise<void> {
         <div class="ai-chat-header-info">
           <div class="ai-chat-avatar">🤖</div>
           <div class="ai-chat-header-text">
-            <div class="ai-chat-title">Механік AI</div>
+            <div class="ai-chat-title">Механік AI <span id="ai-key-indicator" class="ai-key-indicator" title="Активний API ключ"></span></div>
           </div>
         </div>
         <div class="ai-chat-header-actions">
@@ -604,11 +777,13 @@ export async function createAIChatModal(): Promise<void> {
 
         <!-- Quick prompts -->
         <div class="ai-chat-quick-prompts" id="ai-quick-prompts">
-          ${QUICK_PROMPTS.map(p => `
+          ${QUICK_PROMPTS.map(
+            (p) => `
             <button class="ai-quick-prompt-btn" data-prompt="${p.text}">
               ${p.icon} ${p.text}
             </button>
-          `).join("")}
+          `,
+          ).join("")}
         </div>
 
         <!-- Input -->
@@ -651,16 +826,32 @@ function initAIChatHandlers(modal: HTMLElement): void {
   const messagesEl = modal.querySelector("#ai-chat-messages") as HTMLElement;
   const inputEl = modal.querySelector("#ai-chat-input") as HTMLTextAreaElement;
   const sendBtn = modal.querySelector("#ai-chat-send-btn") as HTMLButtonElement;
-  const closeBtn = modal.querySelector("#ai-chat-close-btn") as HTMLButtonElement;
-  const clearBtn = modal.querySelector("#ai-chat-clear-btn") as HTMLButtonElement;
-  const dashboardBtn = modal.querySelector("#ai-chat-dashboard-btn") as HTMLButtonElement;
-  const quickPromptsEl = modal.querySelector("#ai-quick-prompts") as HTMLElement;
+  const closeBtn = modal.querySelector(
+    "#ai-chat-close-btn",
+  ) as HTMLButtonElement;
+  const clearBtn = modal.querySelector(
+    "#ai-chat-clear-btn",
+  ) as HTMLButtonElement;
+  const dashboardBtn = modal.querySelector(
+    "#ai-chat-dashboard-btn",
+  ) as HTMLButtonElement;
+  const quickPromptsEl = modal.querySelector(
+    "#ai-quick-prompts",
+  ) as HTMLElement;
   const tabChat = modal.querySelector("#tab-chat") as HTMLButtonElement;
-  const tabDashboard = modal.querySelector("#tab-dashboard") as HTMLButtonElement;
+  const tabDashboard = modal.querySelector(
+    "#tab-dashboard",
+  ) as HTMLButtonElement;
   const panelChat = modal.querySelector("#ai-panel-chat") as HTMLElement;
-  const panelDashboard = modal.querySelector("#ai-panel-dashboard") as HTMLElement;
-  const dashboardLoading = modal.querySelector("#ai-dashboard-loading") as HTMLElement;
-  const dashboardContent = modal.querySelector("#ai-dashboard-content") as HTMLElement;
+  const panelDashboard = modal.querySelector(
+    "#ai-panel-dashboard",
+  ) as HTMLElement;
+  const dashboardLoading = modal.querySelector(
+    "#ai-dashboard-loading",
+  ) as HTMLElement;
+  const dashboardContent = modal.querySelector(
+    "#ai-dashboard-content",
+  ) as HTMLElement;
 
   // ── Закрити ──
   closeBtn?.addEventListener("click", () => {
@@ -723,7 +914,11 @@ function initAIChatHandlers(modal: HTMLElement): void {
     quickPromptsEl.style.display = "none";
 
     // Додаємо повідомлення користувача
-    const userMsg: ChatMessage = { role: "user", text: text.trim(), timestamp: new Date() };
+    const userMsg: ChatMessage = {
+      role: "user",
+      text: text.trim(),
+      timestamp: new Date(),
+    };
     chatHistory.push(userMsg);
     renderMessage(userMsg, messagesEl);
 
@@ -734,7 +929,8 @@ function initAIChatHandlers(modal: HTMLElement): void {
     isLoading = true;
     sendBtn.disabled = true;
     const loaderDiv = document.createElement("div");
-    loaderDiv.className = "ai-chat-message ai-chat-message--assistant ai-chat-loading";
+    loaderDiv.className =
+      "ai-chat-message ai-chat-message--assistant ai-chat-loading";
     loaderDiv.innerHTML = `
       <div class="ai-chat-bubble">
         <div class="ai-typing-indicator">
@@ -749,7 +945,11 @@ function initAIChatHandlers(modal: HTMLElement): void {
     const reply = await callGemini(text.trim());
     loaderDiv.remove();
 
-    const assistantMsg: ChatMessage = { role: "assistant", text: reply, timestamp: new Date() };
+    const assistantMsg: ChatMessage = {
+      role: "assistant",
+      text: reply,
+      timestamp: new Date(),
+    };
     chatHistory.push(assistantMsg);
     renderMessage(assistantMsg, messagesEl);
 
@@ -813,10 +1013,11 @@ export function initAIChatButton(): void {
     menuItems.appendChild(li);
   }
 
-  document.getElementById("ai-chat-menu-btn")?.addEventListener("click", async () => {
-    await createAIChatModal();
-    const modal = document.getElementById(CHAT_MODAL_ID);
-    if (modal) modal.classList.remove("hidden");
-  });
+  document
+    .getElementById("ai-chat-menu-btn")
+    ?.addEventListener("click", async () => {
+      await createAIChatModal();
+      const modal = document.getElementById(CHAT_MODAL_ID);
+      if (modal) modal.classList.remove("hidden");
+    });
 }
-

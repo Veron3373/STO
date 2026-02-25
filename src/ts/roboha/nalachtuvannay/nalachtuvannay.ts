@@ -8,6 +8,7 @@ import {
   applyWallpapers,
 } from "../zakaz_naraudy/globalCache";
 import { resetAISettingsCache } from "../ai/aiService";
+import { initAIChatButton, resetGeminiKeysCache } from "../ai/aiChat";
 
 const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
@@ -395,6 +396,15 @@ function handleAdminSettingsChange(settingId: number, newRecord: any): void {
     case 9: // toggle-ai-pro
       globalCache.generalSettings.aiChatEnabled = !!value;
       saveGeneralSettingsToLocalStorage();
+      // Одразу показати/приховати кнопку ШІ PRO в меню
+      if (!!value) {
+        initAIChatButton();
+      } else {
+        const chatBtn = document.getElementById("ai-chat-menu-btn");
+        if (chatBtn) chatBtn.closest("li")?.remove();
+        const chatModal = document.getElementById("ai-chat-modal");
+        if (chatModal) chatModal.classList.add("hidden");
+      }
       break;
   }
 
@@ -1933,6 +1943,8 @@ async function saveAiProKeys(modal: HTMLElement): Promise<void> {
     }
 
     showNotification("API ключі збережено!", "success", 1500);
+    // Скидаємо кеш ключів Gemini щоб нові ключі працювали одразу
+    resetGeminiKeysCache();
   } catch (err) {
     console.error("Помилка збереження API ключів:", err);
     showNotification("Помилка збереження API ключів", "error", 2000);
@@ -2073,6 +2085,17 @@ export async function createSettingsModal(): Promise<void> {
     aiProToggle.addEventListener("change", () => {
       globalCache.generalSettings.aiChatEnabled = aiProToggle.checked;
       saveGeneralSettingsToLocalStorage();
+
+      // Одразу показати/приховати кнопку ШІ PRO в меню
+      if (aiProToggle.checked) {
+        initAIChatButton();
+      } else {
+        // Видаляємо кнопку з меню та закриваємо модалку чату
+        const chatBtn = document.getElementById("ai-chat-menu-btn");
+        if (chatBtn) chatBtn.closest("li")?.remove();
+        const chatModal = document.getElementById("ai-chat-modal");
+        if (chatModal) chatModal.classList.add("hidden");
+      }
     });
   }
 

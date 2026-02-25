@@ -549,6 +549,25 @@
   font-size: 15px;
   font-weight: 700;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-key-indicator {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  cursor: default;
+
+  &:empty {
+    display: none;
+  }
 }
 
 .ai-chat-status {

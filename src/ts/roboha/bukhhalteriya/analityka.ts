@@ -326,7 +326,7 @@ function calcTopWorks(): TopWork[] {
     .slice(0, 10);
 }
 
-/** Ефективність механіків */
+/** Ефективність механіків (з урахуванням фільтра дат) */
 function calcMechanicStats(): MechanicStats[] {
   const stats: MechanicStats[] = [];
 
@@ -343,6 +343,14 @@ function calcMechanicStats(): MechanicStats[] {
 
     const history = data.Історія;
     for (const dateKey of Object.keys(history)) {
+      // Фільтруємо по даті
+      if (filterDateFrom || filterDateTo) {
+        const d = new Date(dateKey);
+        if (isNaN(d.getTime())) continue;
+        if (filterDateFrom && d < filterDateFrom) continue;
+        if (filterDateTo && d > filterDateTo) continue;
+      }
+
       const entries = history[dateKey];
       if (!Array.isArray(entries)) continue;
 
@@ -744,9 +752,21 @@ function renderSummaryCards(
         ? "#f44336"
         : "#ff9800";
 
-  // Порівняння з минулим місяцем
+  // Порівняння з минулим місяцем (або останні 2 місяці у фільтрі)
   let changePercent = "";
-  if (currentMonth && prevMonth && prevMonth.revenue > 0) {
+  const hasFilter = filterDateFrom || filterDateTo;
+  if (hasFilter && monthly.length >= 2) {
+    // При фільтрі: порівнюємо останній місяць у діапазоні з передостаннім
+    const last = monthly[monthly.length - 1];
+    const prev = monthly[monthly.length - 2];
+    if (prev.revenue > 0) {
+      const pct = Math.round(
+        ((last.revenue - prev.revenue) / prev.revenue) * 100,
+      );
+      const sign = pct >= 0 ? "+" : "";
+      changePercent = `<span class="analityka-card-sub" style="color:${pct >= 0 ? "#4caf50" : "#f44336"}">${sign}${pct}%</span>`;
+    }
+  } else if (!hasFilter && currentMonth && prevMonth && prevMonth.revenue > 0) {
     const pct = Math.round(
       ((currentMonth.revenue - prevMonth.revenue) / prevMonth.revenue) * 100,
     );
@@ -755,7 +775,6 @@ function renderSummaryCards(
   }
 
   // Визначаємо дохід в залежності від фільтра
-  const hasFilter = filterDateFrom || filterDateTo;
   const incomeLabel = hasFilter ? "Дохід за період" : "Дохід місяця";
   const incomeValue = hasFilter ? totalRevenue : currentMonth?.revenue || 0;
 
@@ -946,6 +965,132 @@ function calcTopCarsByFrequency(): TopCar[] {
   return Array.from(map.values())
     .sort((a, b) => b.actsCount - a.actsCount)
     .slice(0, 10);
+}
+
+// ===================== ТОП ДЕТАЛЕЙ =====================
+
+interface TopPart {
+  name: string;
+  totalSum: number;
+  totalQty: number;
+  actsCount: number;
+}
+
+/** Топ-10 найдорожчих деталей (за загальною сумою) */
+function calcTopPartsBySum(): TopPart[] {
+  const map = new Map<string, TopPart>();
+  for (const act of getFilteredActs()) {
+    const details = act.data?.Деталі;
+    if (!details) continue;
+    for (const det of details) {
+      const name = det.Деталь?.trim();
+      if (!name) continue;
+      const qty = det.Кількість || 1;
+      const price = det.Ціна || 0;
+      const sum = qty * price;
+      if (!map.has(name)) {
+        map.set(name, { name, totalSum: 0, totalQty: 0, actsCount: 0 });
+      }
+      const p = map.get(name)!;
+      p.totalSum += sum;
+      p.totalQty += qty;
+      p.actsCount++;
+    }
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.totalSum - a.totalSum)
+    .slice(0, 10);
+}
+
+/** Топ-10 деталей, що встановлюються найчастіше */
+function calcTopPartsByFrequency(): TopPart[] {
+  const map = new Map<string, TopPart>();
+  for (const act of getFilteredActs()) {
+    const details = act.data?.Деталі;
+    if (!details) continue;
+    for (const det of details) {
+      const name = det.Деталь?.trim();
+      if (!name) continue;
+      const qty = det.Кількість || 1;
+      const price = det.Ціна || 0;
+      const sum = qty * price;
+      if (!map.has(name)) {
+        map.set(name, { name, totalSum: 0, totalQty: 0, actsCount: 0 });
+      }
+      const p = map.get(name)!;
+      p.totalSum += sum;
+      p.totalQty += qty;
+      p.actsCount++;
+    }
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.actsCount - a.actsCount || b.totalQty - a.totalQty)
+    .slice(0, 10);
+}
+
+function renderTopPartsSection(): void {
+  const container = document.getElementById("analityka-top-parts");
+  if (!container) return;
+
+  const bySum = calcTopPartsBySum();
+  const byFreq = calcTopPartsByFrequency();
+
+  // Перетин
+  const sumNames = new Set(bySum.map((p) => p.name));
+  const freqNames = new Set(byFreq.map((p) => p.name));
+  const overlap = new Set([...sumNames].filter((n) => freqNames.has(n)));
+
+  const rowsSum = bySum
+    .map((p, i) => {
+      const cls = overlap.has(p.name) ? "analityka-overlap-row" : "";
+      const badge = overlap.has(p.name)
+        ? ' <span class="analityka-overlap-badge">⭐</span>'
+        : "";
+      return `<tr class="${cls}">
+      <td>${i + 1}</td>
+      <td>${truncateText(p.name, 40)}${badge}</td>
+      <td>${formatMoney(p.totalSum)} грн</td>
+      <td>${p.totalQty}</td>
+      <td>${p.actsCount}</td>
+    </tr>`;
+    })
+    .join("");
+
+  const rowsFreq = byFreq
+    .map((p, i) => {
+      const cls = overlap.has(p.name) ? "analityka-overlap-row" : "";
+      const badge = overlap.has(p.name)
+        ? ' <span class="analityka-overlap-badge">⭐</span>'
+        : "";
+      return `<tr class="${cls}">
+      <td>${i + 1}</td>
+      <td>${truncateText(p.name, 40)}${badge}</td>
+      <td>${p.actsCount}</td>
+      <td>${p.totalQty}</td>
+      <td>${formatMoney(p.totalSum)} грн</td>
+    </tr>`;
+    })
+    .join("");
+
+  container.innerHTML = `
+    <div class="analityka-row">
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">🔩 Топ-10 найдорожчих деталей</h3>
+        <table class="analityka-table">
+          <thead><tr><th>#</th><th>Деталь</th><th>Сума</th><th>Кіл.</th><th>Актів</th></tr></thead>
+          <tbody>${rowsSum || '<tr><td colspan="5" style="text-align:center;color:#999">Немає даних</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">🔄 Топ-10 найчастіших деталей</h3>
+        <table class="analityka-table">
+          <thead><tr><th>#</th><th>Деталь</th><th>Актів</th><th>Кіл.</th><th>Сума</th></tr></thead>
+          <tbody>${rowsFreq || '<tr><td colspan="5" style="text-align:center;color:#999">Немає даних</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    ${overlap.size > 0 ? `<div class="analityka-overlap-legend">⭐ — деталь у обох списках (найдорожча + найчастіша)</div>` : ""}
+  `;
 }
 
 function renderTopClientsSection(): void {
@@ -1175,6 +1320,7 @@ function redrawDashboard(): void {
   renderTopWorksChart(topWorks);
   renderMechanicsChart(mechanicStats);
   renderMechanicsTable(mechanicStats);
+  renderTopPartsSection();
   renderTopClientsSection();
   renderTopCarsSection();
   renderAnomalies(anomalies);
@@ -1390,7 +1536,10 @@ export async function initAnalityka(): Promise<void> {
       <div id="analityka-mechanics-table"></div>
     </div>
 
-    <!-- 👤 Топ клієнтів -->
+    <!-- � Топ деталей -->
+    <div id="analityka-top-parts"></div>
+
+    <!-- �👤 Топ клієнтів -->
     <div id="analityka-top-clients"></div>
 
     <!-- 🚗 Топ машин -->

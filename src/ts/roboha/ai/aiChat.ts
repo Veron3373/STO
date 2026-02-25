@@ -92,7 +92,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       try {
         const { data: d1, error: e1 } = await supabase
           .from("acts")
-          .select("act_id, data, date_on, date_off")
+          .select("*")
           .gte("date_on", todayStr)
           .order("act_id", { ascending: false })
           .limit(50);
@@ -102,7 +102,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       try {
         const { data: d2, error: e2 } = await supabase
           .from("acts")
-          .select("act_id, data, date_on, date_off")
+          .select("*")
           .gte("date_on", monthStart)
           .order("act_id", { ascending: false })
           .limit(200);
@@ -114,7 +114,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         try {
           const { data: fallback } = await supabase
             .from("acts")
-            .select("act_id, data, date_on, date_off")
+            .select("*")
             .order("act_id", { ascending: false })
             .limit(100);
           const all = fallback || [];
@@ -304,12 +304,30 @@ async function loadDailyStats(): Promise<DailyStats> {
   };
 
   try {
-    const { data: acts } = await supabase
-      .from("acts")
-      .select("act_id, data, date_on, date_off, status")
-      .gte("date_on", todayStr)
-      .order("act_id", { ascending: false })
-      .limit(100);
+    let acts: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from("acts")
+        .select("*")
+        .gte("date_on", todayStr)
+        .order("act_id", { ascending: false })
+        .limit(100);
+      if (!error && data) acts = data;
+    } catch { /* ignore */ }
+
+    // Fallback: якщо запит з date_on падає
+    if (acts.length === 0) {
+      try {
+        const { data } = await supabase
+          .from("acts")
+          .select("*")
+          .order("act_id", { ascending: false })
+          .limit(100);
+        if (data) {
+          acts = data.filter((a: any) => (a.date_on || "").slice(0, 10) >= todayStr);
+        }
+      } catch { /* ignore */ }
+    }
 
     (acts || []).forEach((a: any) => {
       let d: any = {};
@@ -326,7 +344,7 @@ async function loadDailyStats(): Promise<DailyStats> {
       const detailsSum = detailsArr.reduce((s: number, det: any) => s + Number(det["Ціна"] || 0) * Number(det["Кількість"] || 1), 0);
       const total = worksSum + detailsSum;
 
-      if (a.date_off || a.status === "closed") {
+      if (a.date_off) {
         stats.closedCount++;
         stats.closedActs.push({ id: a.act_id, client, car, total, slyusar, dateOff: a.date_off || "сьогодні" });
         stats.totalWorksSum += worksSum;

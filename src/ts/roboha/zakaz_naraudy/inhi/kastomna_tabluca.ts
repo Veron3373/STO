@@ -662,6 +662,15 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
           ) as HTMLElement;
           if (nameCell) nameCell.setAttribute("data-type", "details");
         }
+
+        // ✅ Автозаповнення кількості = 1 якщо поле порожнє (вибір через каталог)
+        const qtyCellCat = row.querySelector(
+          '[data-name="id_count"]',
+        ) as HTMLElement | null;
+        if (qtyCellCat && !qtyCellCat.textContent?.trim()) {
+          qtyCellCat.textContent = "1";
+          qtyCellCat.dispatchEvent(new Event("input", { bubbles: true }));
+        }
       } else if (dataName === "name") {
         // Suppress next focusin/input trigger
         _suppressAutocomplete = true;
@@ -732,6 +741,15 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
             }
             // НЕ очищаємо pib_magazin якщо вибрано деталь
           }
+        }
+
+        // ✅ Автозаповнення кількості = 1 якщо поле порожнє
+        const qtyCell = row.querySelector(
+          '[data-name="id_count"]',
+        ) as HTMLElement | null;
+        if (qtyCell && !qtyCell.textContent?.trim()) {
+          qtyCell.textContent = "1";
+          qtyCell.dispatchEvent(new Event("input", { bubbles: true }));
         }
 
         (target as any)._fromAutocomplete = true;

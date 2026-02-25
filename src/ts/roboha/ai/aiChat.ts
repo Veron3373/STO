@@ -30,7 +30,7 @@ interface DailyStats {
 // ============================================================
 
 const CHAT_MODAL_ID = "ai-chat-modal";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 let chatHistory: ChatMessage[] = [];
 let geminiApiKey = "";
 let isLoading = false;
@@ -85,22 +85,47 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
   try {
     // === АКТИ (поточний день / місяць) ===
     if (needsActs || needsFinance || queryLower.includes("скільки") || userQuery.length < 50) {
-      const { data: actsToday } = await supabase
-        .from("acts")
-        .select("act_id, data, date_on, date_off, status")
-        .gte("date_on", todayStr)
-        .order("act_id", { ascending: false })
-        .limit(50);
+      let actsToday: any[] = [];
+      let actsMonth: any[] = [];
 
-      const { data: actsMonth } = await supabase
-        .from("acts")
-        .select("act_id, data, date_on, date_off, status")
-        .gte("date_on", monthStart)
-        .order("act_id", { ascending: false })
-        .limit(200);
+      // Спробуємо завантажити з фільтром по date_on
+      try {
+        const { data: d1, error: e1 } = await supabase
+          .from("acts")
+          .select("act_id, data, date_on, date_off, status")
+          .gte("date_on", todayStr)
+          .order("act_id", { ascending: false })
+          .limit(50);
+        if (!e1 && d1) actsToday = d1;
+      } catch { /* ignore */ }
 
-      const closed = (actsToday || []).filter((a: any) => a.status === "closed" || a.date_off);
-      const open = (actsToday || []).filter((a: any) => !a.date_off && a.status !== "closed");
+      try {
+        const { data: d2, error: e2 } = await supabase
+          .from("acts")
+          .select("act_id, data, date_on, date_off, status")
+          .gte("date_on", monthStart)
+          .order("act_id", { ascending: false })
+          .limit(200);
+        if (!e2 && d2) actsMonth = d2;
+      } catch { /* ignore */ }
+
+      // Fallback: якщо 400 — беремо останні акти без фільтра
+      if (actsToday.length === 0 && actsMonth.length === 0) {
+        try {
+          const { data: fallback } = await supabase
+            .from("acts")
+            .select("act_id, data, date_on, date_off, status")
+            .order("act_id", { ascending: false })
+            .limit(100);
+          const all = fallback || [];
+          actsToday = all.filter((a: any) => (a.date_on || "").slice(0, 10) >= todayStr);
+          actsMonth = all.filter((a: any) => (a.date_on || "").slice(0, 10) >= monthStart);
+        } catch { /* ignore */ }
+      }
+
+      const closed = actsToday.filter((a: any) => a.status === "closed" || a.date_off);
+      const open = actsToday.filter((a: any) => !a.date_off && a.status !== "closed");
+
 
       context += `=== АКТИ СЬОГОДНІ (${today.toLocaleDateString("uk-UA")}) ===\n`;
       context += `Закритих актів: ${closed.length}\n`;

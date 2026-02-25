@@ -30,7 +30,7 @@ interface DailyStats {
 // ============================================================
 
 const CHAT_MODAL_ID = "ai-chat-modal";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
 let chatHistory: ChatMessage[] = [];
 let geminiApiKey = "";
 let isLoading = false;
@@ -92,7 +92,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       try {
         const { data: d1, error: e1 } = await supabase
           .from("acts")
-          .select("act_id, data, date_on, date_off, status")
+          .select("act_id, data, date_on, date_off")
           .gte("date_on", todayStr)
           .order("act_id", { ascending: false })
           .limit(50);
@@ -102,7 +102,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       try {
         const { data: d2, error: e2 } = await supabase
           .from("acts")
-          .select("act_id, data, date_on, date_off, status")
+          .select("act_id, data, date_on, date_off")
           .gte("date_on", monthStart)
           .order("act_id", { ascending: false })
           .limit(200);
@@ -114,7 +114,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         try {
           const { data: fallback } = await supabase
             .from("acts")
-            .select("act_id, data, date_on, date_off, status")
+            .select("act_id, data, date_on, date_off")
             .order("act_id", { ascending: false })
             .limit(100);
           const all = fallback || [];
@@ -123,8 +123,9 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         } catch { /* ignore */ }
       }
 
-      const closed = actsToday.filter((a: any) => a.status === "closed" || a.date_off);
-      const open = actsToday.filter((a: any) => !a.date_off && a.status !== "closed");
+      // Закритий = є date_off, відкритий = немає date_off
+      const closed = actsToday.filter((a: any) => !!a.date_off);
+      const open = actsToday.filter((a: any) => !a.date_off);
 
 
       context += `=== АКТИ СЬОГОДНІ (${today.toLocaleDateString("uk-UA")}) ===\n`;
@@ -155,7 +156,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       }
 
       // Місячна статистика
-      const monthClosed = (actsMonth || []).filter((a: any) => a.date_off || a.status === "closed");
+      const monthClosed = actsMonth.filter((a: any) => !!a.date_off);
       let monthTotal = 0;
       let monthWorksTotal = 0;
       let monthDetailsTotal = 0;

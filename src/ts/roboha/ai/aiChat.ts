@@ -30,7 +30,7 @@ interface DailyStats {
 // ============================================================
 
 const CHAT_MODAL_ID = "ai-chat-modal";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 let chatHistory: ChatMessage[] = [];
 let geminiApiKey = "";
 let isLoading = false;

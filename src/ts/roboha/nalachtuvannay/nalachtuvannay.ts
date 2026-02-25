@@ -1722,6 +1722,15 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         }
         globalCache.generalSettings.aiChatEnabled = newValueAIPro;
         saveGeneralSettingsToLocalStorage();
+        // Одразу показати/приховати кнопку ШІ PRO в меню
+        if (newValueAIPro) {
+          initAIChatButton();
+        } else {
+          const chatBtn = document.getElementById("ai-chat-menu-btn");
+          if (chatBtn) chatBtn.closest("li")?.remove();
+          const chatModal = document.getElementById("ai-chat-modal");
+          if (chatModal) chatModal.classList.add("hidden");
+        }
         changesCount++;
       }
     } else if (role === "Загальні") {
@@ -1856,39 +1865,22 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
 
 async function loadAiProKeys(modal: HTMLElement): Promise<void> {
   try {
+    const settingIds = Array.from({ length: 10 }, (_, i) => 20 + i); // 20-29
     const { data, error } = await supabase
       .from("settings")
       .select('setting_id, "Загальні"')
-      .in("setting_id", [20, 21, 22])
+      .in("setting_id", settingIds)
       .order("setting_id");
 
     if (error) throw error;
 
     data?.forEach((row: any) => {
       const value = row["Загальні"] || "";
-      switch (row.setting_id) {
-        case 20: {
-          const input1 = modal.querySelector(
-            "#ai-pro-key-1",
-          ) as HTMLInputElement;
-          if (input1) input1.value = value;
-          break;
-        }
-        case 21: {
-          const input2 = modal.querySelector(
-            "#ai-pro-key-2",
-          ) as HTMLInputElement;
-          if (input2) input2.value = value;
-          break;
-        }
-        case 22: {
-          const input3 = modal.querySelector(
-            "#ai-pro-key-3",
-          ) as HTMLInputElement;
-          if (input3) input3.value = value;
-          break;
-        }
-      }
+      const inputNum = row.setting_id - 19; // 20 -> 1, 21 -> 2, ..., 29 -> 10
+      const input = modal.querySelector(
+        `#ai-pro-key-${inputNum}`,
+      ) as HTMLInputElement;
+      if (input) input.value = value;
     });
   } catch (err) {
     console.error("Помилка завантаження API ключів:", err);
@@ -1898,26 +1890,12 @@ async function loadAiProKeys(modal: HTMLElement): Promise<void> {
 
 async function saveAiProKeys(modal: HTMLElement): Promise<void> {
   try {
-    const keys = [
-      {
-        id: 20,
-        value:
-          (modal.querySelector("#ai-pro-key-1") as HTMLInputElement)?.value ||
-          "",
-      },
-      {
-        id: 21,
-        value:
-          (modal.querySelector("#ai-pro-key-2") as HTMLInputElement)?.value ||
-          "",
-      },
-      {
-        id: 22,
-        value:
-          (modal.querySelector("#ai-pro-key-3") as HTMLInputElement)?.value ||
-          "",
-      },
-    ];
+    const keys = Array.from({ length: 10 }, (_, i) => ({
+      id: 20 + i,
+      value:
+        (modal.querySelector(`#ai-pro-key-${i + 1}`) as HTMLInputElement)
+          ?.value || "",
+    }));
 
     for (const { id, value } of keys) {
       const { data: existingRow, error: selectError } = await supabase
@@ -1968,18 +1946,14 @@ async function openAiProKeysModal(): Promise<void> {
     <div class="ai-pro-keys-window">
       <h3 class="ai-pro-keys-title">🔑 API Ключі ШІ PRO</h3>
       <div class="ai-pro-keys-inputs">
+        ${Array.from(
+          { length: 10 },
+          (_, i) => `
         <div class="ai-pro-key-group">
-          <label for="ai-pro-key-1">API Ключ 1</label>
-          <input type="text" id="ai-pro-key-1" placeholder="Введіть API ключ..." />
-        </div>
-        <div class="ai-pro-key-group">
-          <label for="ai-pro-key-2">API Ключ 2</label>
-          <input type="text" id="ai-pro-key-2" placeholder="Введіть API ключ..." />
-        </div>
-        <div class="ai-pro-key-group">
-          <label for="ai-pro-key-3">API Ключ 3</label>
-          <input type="text" id="ai-pro-key-3" placeholder="Введіть API ключ..." />
-        </div>
+          <label for="ai-pro-key-${i + 1}">API Ключ ${i + 1}</label>
+          <input type="text" id="ai-pro-key-${i + 1}" placeholder="Введіть API ключ..." />
+        </div>`,
+        ).join("")}
       </div>
       <div class="ai-pro-keys-actions">
         <button type="button" id="ai-pro-keys-cancel">Вийти</button>
@@ -2079,25 +2053,8 @@ export async function createSettingsModal(): Promise<void> {
     });
   }
 
-  // Обробник для AI PRO toggle
-  const aiProToggle = modal.querySelector("#toggle-ai-pro") as HTMLInputElement;
-  if (aiProToggle) {
-    aiProToggle.addEventListener("change", () => {
-      globalCache.generalSettings.aiChatEnabled = aiProToggle.checked;
-      saveGeneralSettingsToLocalStorage();
-
-      // Одразу показати/приховати кнопку ШІ PRO в меню
-      if (aiProToggle.checked) {
-        initAIChatButton();
-      } else {
-        // Видаляємо кнопку з меню та закриваємо модалку чату
-        const chatBtn = document.getElementById("ai-chat-menu-btn");
-        if (chatBtn) chatBtn.closest("li")?.remove();
-        const chatModal = document.getElementById("ai-chat-modal");
-        if (chatModal) chatModal.classList.add("hidden");
-      }
-    });
-  }
+  // AI PRO toggle — зміни застосовуються тільки при натисканні ОК (збереження)
+  // Немає обробника change, бо toggle зберігається через кнопку ОК
 
   // 🤖 Обробник для кліку на емодзі 🤖 в ШІ PRO — відкриває модалку API ключів
   const aiProEmojiBtn = modal.querySelector(".ai-pro-emoji-btn");

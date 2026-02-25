@@ -40,7 +40,8 @@ const CHAT_MODAL_ID = "ai-chat-modal";
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 let chatHistory: ChatMessage[] = [];
-let geminiApiKeys: string[] = []; // Всі 3 ключі (setting_id 20, 21, 22)
+let geminiApiKeys: string[] = []; // Всі 10 ключів (setting_id 20-29)
+let geminiKeySettingIds: number[] = []; // setting_id для кожного ключа (для збереження API column)
 let currentKeyIndex = 0; // Поточний активний ключ
 let keysLoaded = false;
 let isLoading = false;
@@ -53,25 +54,39 @@ async function loadAllGeminiKeys(): Promise<string[]> {
   if (keysLoaded && geminiApiKeys.length > 0) return geminiApiKeys;
 
   const keys: string[] = [];
+  const settingIds: number[] = [];
+  let activeSettingId: number | null = null;
+
   try {
     // Спочатку перевіряємо env
     const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
-    if (envKey) keys.push(envKey);
+    if (envKey) {
+      keys.push(envKey);
+      settingIds.push(-1); // env ключ не має setting_id
+    }
 
-    // Завантажуємо всі 3 ключі з БД (setting_id 20, 21, 22)
+    // Завантажуємо всі 10 ключів з БД (setting_id 20-29) + колонку API
     const { data } = await supabase
       .from("settings")
-      .select('setting_id, "Загальні"')
-      .in("setting_id", [20, 21, 22])
+      .select('setting_id, "Загальні", "API"')
+      .in(
+        "setting_id",
+        Array.from({ length: 10 }, (_, i) => 20 + i),
+      )
       .order("setting_id");
 
     if (data) {
       for (const row of data) {
         const val = (row as any)["Загальні"];
+        const isActive = (row as any)["API"];
         if (val && typeof val === "string" && val.trim()) {
-          // Уникаємо дублікатів (env може збігатися з setting_id=20)
           if (!keys.includes(val.trim())) {
             keys.push(val.trim());
+            settingIds.push(row.setting_id);
+            // Запам'ятовуємо setting_id з API=true
+            if (isActive === true) {
+              activeSettingId = row.setting_id;
+            }
           }
         }
       }
@@ -81,9 +96,52 @@ async function loadAllGeminiKeys(): Promise<string[]> {
   }
 
   geminiApiKeys = keys;
+  geminiKeySettingIds = settingIds;
   keysLoaded = true;
-  currentKeyIndex = 0;
+
+  // Визначаємо стартовий індекс: з БД (API=true) або 0
+  if (activeSettingId !== null) {
+    const idx = settingIds.indexOf(activeSettingId);
+    currentKeyIndex = idx >= 0 ? idx : 0;
+  } else {
+    currentKeyIndex = 0;
+  }
+
+  console.log(
+    `🔑 Gemini: завантажено ${keys.length} ключів, активний #${currentKeyIndex + 1}`,
+  );
   return keys;
+}
+
+/**
+ * Зберігає активний ключ у БД (колонка API: true для активного, false для решти)
+ */
+async function persistActiveKeyInDB(): Promise<void> {
+  if (geminiKeySettingIds.length === 0) return;
+  try {
+    // Скидаємо API=false для всіх ключів 20-29
+    await supabase
+      .from("settings")
+      .update({ API: false })
+      .in(
+        "setting_id",
+        Array.from({ length: 10 }, (_, i) => 20 + i),
+      );
+
+    // Ставимо API=true для активного ключа
+    const activeSettingId = geminiKeySettingIds[currentKeyIndex];
+    if (activeSettingId && activeSettingId > 0) {
+      await supabase
+        .from("settings")
+        .update({ API: true })
+        .eq("setting_id", activeSettingId);
+    }
+    console.log(
+      `🔑 Gemini: збережено активний ключ #${currentKeyIndex + 1} (setting_id=${activeSettingId}) в БД`,
+    );
+  } catch (err) {
+    console.warn("⚠️ Не вдалося зберегти активний ключ в БД:", err);
+  }
 }
 
 /**
@@ -91,6 +149,7 @@ async function loadAllGeminiKeys(): Promise<string[]> {
  */
 export function resetGeminiKeysCache(): void {
   geminiApiKeys = [];
+  geminiKeySettingIds = [];
   keysLoaded = false;
   currentKeyIndex = 0;
   updateKeyIndicator();
@@ -108,7 +167,65 @@ function updateKeyIndicator(): void {
     return;
   }
   el.textContent = `🔑${currentKeyIndex + 1}`;
-  el.title = `Активний API ключ #${currentKeyIndex + 1} з ${geminiApiKeys.length}`;
+  el.title = `Активний API ключ #${currentKeyIndex + 1} з ${geminiApiKeys.length}. Натисніть для вибору.`;
+}
+
+/**
+ * Показує/ховає випадаючий список ключів для ручного вибору
+ */
+function toggleKeyDropdown(): void {
+  // Закрити, якщо вже відкритий
+  const existing = document.getElementById("ai-key-dropdown");
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const indicator = document.getElementById("ai-key-indicator");
+  if (!indicator || geminiApiKeys.length === 0) return;
+
+  const dropdown = document.createElement("div");
+  dropdown.id = "ai-key-dropdown";
+  dropdown.className = "ai-key-dropdown";
+
+  let html = '<div class="ai-key-dropdown-title">Оберіть ключ:</div>';
+  for (let i = 0; i < geminiApiKeys.length; i++) {
+    const isActive = i === currentKeyIndex;
+    html += `<button class="ai-key-dropdown-item${isActive ? " active" : ""}" data-key-index="${i}">
+      <span class="ai-key-dropdown-num">🔑 ${i + 1}</span>
+      ${isActive ? '<span class="ai-key-dropdown-badge">активний</span>' : ""}
+    </button>`;
+  }
+  dropdown.innerHTML = html;
+
+  // Позиціюємо відносно індикатора
+  indicator.style.position = "relative";
+  indicator.appendChild(dropdown);
+
+  // Обробник вибору ключа
+  dropdown.addEventListener("click", async (e) => {
+    const btn = (e.target as HTMLElement).closest("[data-key-index]");
+    if (!btn) return;
+    const idx = parseInt(btn.getAttribute("data-key-index") || "0", 10);
+    if (idx === currentKeyIndex) {
+      dropdown.remove();
+      return; // Вже активний
+    }
+    currentKeyIndex = idx;
+    updateKeyIndicator();
+    dropdown.remove();
+    await persistActiveKeyInDB();
+    console.log(`🔑 Gemini: вручну обрано ключ #${idx + 1}`);
+  });
+
+  // Закрити при кліку поза dropdown
+  const closeHandler = (e: MouseEvent) => {
+    if (!dropdown.contains(e.target as Node) && e.target !== indicator) {
+      dropdown.remove();
+      document.removeEventListener("click", closeHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener("click", closeHandler), 10);
 }
 
 // ============================================================
@@ -448,6 +565,7 @@ async function callGemini(userMessage: string): Promise<string> {
       if (response.ok) {
         currentKeyIndex = keyIdx; // Запам'ятовуємо робочий ключ
         updateKeyIndicator();
+        persistActiveKeyInDB(); // Зберігаємо в БД без await
         const data = await response.json();
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         return text || "🤔 Не вдалося отримати відповідь від AI.";
@@ -460,6 +578,7 @@ async function callGemini(userMessage: string): Promise<string> {
         // Перемикаємо на наступний ключ і запам'ятовуємо
         currentKeyIndex = (keyIdx + 1) % keys.length;
         updateKeyIndicator();
+        persistActiveKeyInDB(); // Зберігаємо новий активний ключ в БД
         startIndex = keyIdx + 1;
         continue; // Пробуємо наступний ключ
       }
@@ -747,6 +866,7 @@ export async function createAIChatModal(): Promise<void> {
           <div class="ai-chat-avatar">🤖</div>
           <div class="ai-chat-header-text">
             <div class="ai-chat-title">Механік AI <span id="ai-key-indicator" class="ai-key-indicator" title="Активний API ключ"></span></div>
+
           </div>
         </div>
         <div class="ai-chat-header-actions">
@@ -876,6 +996,15 @@ function initAIChatHandlers(modal: HTMLElement): void {
     `;
     quickPromptsEl.style.display = "";
   });
+
+  // ── Клік на індикатор ключа → випадаючий список ──
+  const keyIndicator = modal.querySelector("#ai-key-indicator");
+  if (keyIndicator) {
+    keyIndicator.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleKeyDropdown();
+    });
+  }
 
   // ── Таби ──
   function switchTab(activeTab: "chat" | "dashboard") {

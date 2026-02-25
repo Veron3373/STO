@@ -563,10 +563,95 @@
   border-radius: 8px;
   letter-spacing: 0.5px;
   transition: all 0.3s ease;
-  cursor: default;
+  cursor: pointer;
+  position: relative;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.35);
+  }
 
   &:empty {
     display: none;
+  }
+}
+
+.ai-key-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 150px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: aiKeyDropIn 0.15s ease-out;
+
+  .ai-key-dropdown-title {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 8px 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+
+  .ai-key-dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background: rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      font-weight: 600;
+    }
+
+    .ai-key-dropdown-num {
+      font-size: 13px;
+    }
+
+    .ai-key-dropdown-badge {
+      font-size: 9px;
+      background: #3b82f6;
+      color: #fff;
+      padding: 1px 6px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+  }
+}
+
+@keyframes aiKeyDropIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
 

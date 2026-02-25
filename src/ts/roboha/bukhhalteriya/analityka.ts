@@ -16,6 +16,7 @@ interface ActRow {
   avans: number | string | null;
   tupOplatu: string | null;
   client_id: number | null;
+  cars_id: number | null;
 }
 
 interface ActData {
@@ -72,13 +73,23 @@ interface VutratuRow {
   opys_vytraty: string | null;
 }
 
+interface ClientRow {
+  client_id: number;
+  data: { ПІБ?: string; Телефон?: string } | null;
+}
+
+interface CarRow {
+  cars_id: number;
+  data: { Авто?: string; "Номер авто"?: string } | null;
+}
+
 interface MonthlyRevenue {
-  month: string; // "2025-01"
-  label: string; // "Січ 2025"
-  revenue: number; // дохід
-  expenses: number; // витрати
-  profit: number; // прибуток
-  actsCount: number; // кількість актів
+  month: string;
+  label: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+  actsCount: number;
 }
 
 interface TopWork {
@@ -90,15 +101,30 @@ interface TopWork {
 interface MechanicStats {
   name: string;
   actsCount: number;
-  totalEarned: number; // скільки заробив для СТО
-  totalSalary: number; // скільки зарплата
-  avgPerAct: number; // середня сума акту
+  totalEarned: number;
+  totalSalary: number;
+  avgPerAct: number;
 }
 
 interface Anomaly {
   type: "warning" | "danger" | "info";
   icon: string;
   message: string;
+}
+
+interface TopClient {
+  clientId: number;
+  pib: string;
+  totalSum: number;
+  actsCount: number;
+}
+
+interface TopCar {
+  carsId: number;
+  carName: string;
+  plate: string;
+  totalSum: number;
+  actsCount: number;
 }
 
 // ===================== СТАН МОДУЛЯ =====================
@@ -112,33 +138,70 @@ let isLoading = false;
 let cachedActs: ActRow[] = [];
 let cachedSlyusars: SlyusarRow[] = [];
 let cachedVutratu: VutratuRow[] = [];
+let cachedClients: ClientRow[] = [];
+let cachedCars: CarRow[] = [];
+
+// Фільтр дат
+let filterDateFrom: Date | null = null;
+let filterDateTo: Date | null = null;
+
+/** Повертає акти, відфільтровані по обраному діапазону дат */
+function getFilteredActs(): ActRow[] {
+  if (!filterDateFrom && !filterDateTo) return cachedActs;
+  return cachedActs.filter((a) => {
+    const dateStr = a.date_off || a.date_on;
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (filterDateFrom && d < filterDateFrom) return false;
+    if (filterDateTo && d > filterDateTo) return false;
+    return true;
+  });
+}
+
+function getFilteredVutratu(): VutratuRow[] {
+  if (!filterDateFrom && !filterDateTo) return cachedVutratu;
+  return cachedVutratu.filter((v) => {
+    if (!v.dataOnn) return false;
+    const d = new Date(v.dataOnn);
+    if (filterDateFrom && d < filterDateFrom) return false;
+    if (filterDateTo && d > filterDateTo) return false;
+    return true;
+  });
+}
 
 // ===================== ЗАВАНТАЖЕННЯ ДАНИХ =====================
 
 async function loadAnalyticsData(): Promise<boolean> {
   try {
     // Паралельне завантаження всіх даних
-    const [actsRes, slyusarsRes, vutratuRes] = await Promise.all([
-      supabase
-        .from("acts")
-        .select(
-          "act_id, date_on, date_off, rosraxovano, data, avans, tupOplatu, client_id",
-        )
-        .order("date_on", { ascending: false }),
-      supabase.from("slyusars").select("slyusar_id, data"),
-      supabase
-        .from("vutratu")
-        .select("vutratu_id, dataOnn, kategoria, suma, act, opys_vytraty")
-        .order("dataOnn", { ascending: false }),
-    ]);
+    const [actsRes, slyusarsRes, vutratuRes, clientsRes, carsRes] =
+      await Promise.all([
+        supabase
+          .from("acts")
+          .select(
+            "act_id, date_on, date_off, rosraxovano, data, avans, tupOplatu, client_id, cars_id",
+          )
+          .order("date_on", { ascending: false }),
+        supabase.from("slyusars").select("slyusar_id, data"),
+        supabase
+          .from("vutratu")
+          .select("vutratu_id, dataOnn, kategoria, suma, act, opys_vytraty")
+          .order("dataOnn", { ascending: false }),
+        supabase.from("clients").select("client_id, data"),
+        supabase.from("cars").select("cars_id, data"),
+      ]);
 
     if (actsRes.error) throw actsRes.error;
     if (slyusarsRes.error) throw slyusarsRes.error;
     if (vutratuRes.error) throw vutratuRes.error;
+    if (clientsRes.error) throw clientsRes.error;
+    if (carsRes.error) throw carsRes.error;
 
     cachedActs = (actsRes.data || []) as ActRow[];
     cachedSlyusars = (slyusarsRes.data || []) as SlyusarRow[];
     cachedVutratu = (vutratuRes.data || []) as VutratuRow[];
+    cachedClients = (clientsRes.data || []) as ClientRow[];
+    cachedCars = (carsRes.data || []) as CarRow[];
 
     return true;
   } catch (err) {
@@ -168,8 +231,10 @@ function calcMonthlyRevenue(): MonthlyRevenue[] {
     "Гру",
   ];
 
+  const acts = getFilteredActs();
+
   // Дохід з актів (по date_off — закриті)
-  for (const act of cachedActs) {
+  for (const act of acts) {
     const dateStr = act.date_off || act.date_on;
     if (!dateStr) continue;
 
@@ -199,7 +264,7 @@ function calcMonthlyRevenue(): MonthlyRevenue[] {
   }
 
   // Витрати (тільки від'ємні суми без актів)
-  for (const v of cachedVutratu) {
+  for (const v of getFilteredVutratu()) {
     if (!v.dataOnn || v.act) continue;
     const d = new Date(v.dataOnn);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -238,7 +303,7 @@ function calcMonthlyRevenue(): MonthlyRevenue[] {
 function calcTopWorks(): TopWork[] {
   const workMap = new Map<string, TopWork>();
 
-  for (const act of cachedActs) {
+  for (const act of getFilteredActs()) {
     const works = act.data?.Роботи;
     if (!works) continue;
 
@@ -310,9 +375,10 @@ function calcMechanicStats(): MechanicStats[] {
 /** Аномалії */
 function detectAnomalies(): Anomaly[] {
   const anomalies: Anomaly[] = [];
+  const acts = getFilteredActs();
 
   // 1. Акти без зарплати (закриті, але зарплата = 0)
-  for (const act of cachedActs) {
+  for (const act of acts) {
     if (!act.date_off) continue;
     const data = act.data;
     if (!data) continue;
@@ -334,7 +400,7 @@ function detectAnomalies(): Anomaly[] {
   }
 
   // 2. Акти з нульовою сумою (закриті)
-  for (const act of cachedActs) {
+  for (const act of acts) {
     if (!act.date_off) continue;
     const data = act.data;
     if (!data) continue;
@@ -351,7 +417,7 @@ function detectAnomalies(): Anomaly[] {
   // 3. Відкриті акти старше 30 днів
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  for (const act of cachedActs) {
+  for (const act of acts) {
     if (act.date_off) continue;
     if (!act.date_on) continue;
     const openDate = new Date(act.date_on);
@@ -619,6 +685,8 @@ function renderSummaryCards(
   const container = document.getElementById("analityka-summary-cards");
   if (!container) return;
 
+  const acts = getFilteredActs();
+
   // Поточний місяць
   const now = new Date();
   const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -627,9 +695,9 @@ function renderSummaryCards(
   const prevMonth = monthly.find((m) => m.month === prevKey);
 
   const totalRevenue = monthly.reduce((s, m) => s + m.revenue, 0);
-  const totalActs = cachedActs.length;
-  const openActs = cachedActs.filter((a) => !a.date_off).length;
-  const closedActs = cachedActs.filter((a) => !!a.date_off);
+  const totalActs = acts.length;
+  const openActs = acts.filter((a) => !a.date_off).length;
+  const closedActs = acts.filter((a) => !!a.date_off);
 
   // Середній чек (по закритих актах)
   const avgCheck =
@@ -653,9 +721,7 @@ function renderSummaryCards(
   }
 
   // Клієнтів обслуговано (унікальні client_id в актах)
-  const uniqueClients = new Set(
-    cachedActs.map((a) => a.client_id).filter(Boolean),
-  );
+  const uniqueClients = new Set(acts.map((a) => a.client_id).filter(Boolean));
 
   // Середній час закриття акту (днів)
   let avgDays = 0;
@@ -685,63 +751,328 @@ function renderSummaryCards(
       ((currentMonth.revenue - prevMonth.revenue) / prevMonth.revenue) * 100,
     );
     const sign = pct >= 0 ? "+" : "";
-    changePercent = `<span style="color: ${pct >= 0 ? "#4caf50" : "#f44336"}; font-size: 13px;">${sign}${pct}% від мин. місяця</span>`;
+    changePercent = `<span class="analityka-card-sub" style="color:${pct >= 0 ? "#4caf50" : "#f44336"}">${sign}${pct}%</span>`;
   }
+
+  // Визначаємо дохід в залежності від фільтра
+  const hasFilter = filterDateFrom || filterDateTo;
+  const incomeLabel = hasFilter ? "Дохід за період" : "Дохід місяця";
+  const incomeValue = hasFilter ? totalRevenue : currentMonth?.revenue || 0;
 
   container.innerHTML = `
     <div class="analityka-card">
       <div class="analityka-card-icon">💰</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Дохід цього місяця</div>
-        <div class="analityka-card-value">${formatMoney(currentMonth?.revenue || 0)} грн</div>
+        <div class="analityka-card-label">${incomeLabel}</div>
+        <div class="analityka-card-value">${formatMoney(incomeValue)}</div>
         ${changePercent}
       </div>
     </div>
     <div class="analityka-card">
       <div class="analityka-card-icon">🧾</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Середній чек</div>
-        <div class="analityka-card-value">${formatMoney(avgCheck)} грн</div>
-        <span style="color: #666; font-size: 12px;">з ${closedActs.length} закритих актів</span>
+        <div class="analityka-card-label">Сер. чек</div>
+        <div class="analityka-card-value">${formatMoney(avgCheck)}</div>
+        <span class="analityka-card-sub">${closedActs.length} закр.</span>
       </div>
     </div>
     <div class="analityka-card">
       <div class="analityka-card-icon">📋</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Актів / відкритих</div>
+        <div class="analityka-card-label">Актів / відкр.</div>
         <div class="analityka-card-value">${totalActs} / <span style="color:#f44336">${openActs}</span></div>
-        <span style="color: #666; font-size: 12px;">⏱️ Сер. закриття: ${avgDays} дн.</span>
+        <span class="analityka-card-sub">⏱ ${avgDays} дн.</span>
       </div>
     </div>
     <div class="analityka-card">
       <div class="analityka-card-icon">👥</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Клієнтів обслуговано</div>
+        <div class="analityka-card-label">Клієнтів</div>
         <div class="analityka-card-value">${uniqueClients.size}</div>
       </div>
     </div>
     <div class="analityka-card">
       <div class="analityka-card-icon">📊</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Дохід за ${monthly.length} міс.</div>
-        <div class="analityka-card-value">${formatMoney(totalRevenue)} грн</div>
+        <div class="analityka-card-label">Всього</div>
+        <div class="analityka-card-value">${formatMoney(totalRevenue)}</div>
+        <span class="analityka-card-sub">${monthly.length} міс.</span>
       </div>
     </div>
     <div class="analityka-card">
       <div class="analityka-card-icon">🏆</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Найдорожчий акт</div>
-        <div class="analityka-card-value">#${maxAct.id} — ${formatMoney(maxAct.total)} грн</div>
+        <div class="analityka-card-label">Макс. акт</div>
+        <div class="analityka-card-value">#${maxAct.id}</div>
+        <span class="analityka-card-sub">${formatMoney(maxAct.total)} грн</span>
       </div>
     </div>
     <div class="analityka-card" style="border-left: 3px solid ${trendColor}">
       <div class="analityka-card-icon">${trendIcon}</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Прогноз: ${forecast.nextMonthLabel}</div>
-        <div class="analityka-card-value">${formatMoney(forecast.forecastRevenue)} грн</div>
-        <span style="color: #666; font-size: 12px;">Прибуток: ~${formatMoney(forecast.forecastProfit)} грн</span>
+        <div class="analityka-card-label">Прогноз</div>
+        <div class="analityka-card-value">${formatMoney(forecast.forecastRevenue)}</div>
+        <span class="analityka-card-sub">${forecast.nextMonthLabel}</span>
       </div>
     </div>
+  `;
+}
+
+// ===================== ТОП КЛІЄНТІВ / МАШИН =====================
+
+function getClientPIB(clientId: number | null): string {
+  if (!clientId) return "Невідомий";
+  const c = cachedClients.find((cl) => cl.client_id === clientId);
+  const d = c?.data;
+  if (typeof d === "string") {
+    try {
+      return JSON.parse(d)?.["ПІБ"] || "Невідомий";
+    } catch {
+      return "Невідомий";
+    }
+  }
+  return d?.["ПІБ"] || "Невідомий";
+}
+
+function getCarNamePlate(carsId: number | null): {
+  name: string;
+  plate: string;
+} {
+  if (!carsId) return { name: "Невідомо", plate: "" };
+  const c = cachedCars.find((cr) => cr.cars_id === carsId);
+  let d = c?.data;
+  if (typeof d === "string") {
+    try {
+      d = JSON.parse(d);
+    } catch {
+      return { name: "Невідомо", plate: "" };
+    }
+  }
+  return {
+    name: (d as any)?.["Авто"] || "Невідомо",
+    plate: (d as any)?.["Номер авто"] || "",
+  };
+}
+
+function getActTotal(act: ActRow): number {
+  const d = act.data;
+  if (!d) return 0;
+  return (d["За роботу"] || 0) + (d["За деталі"] || 0);
+}
+
+function calcTopClientsBySum(): TopClient[] {
+  const map = new Map<number, TopClient>();
+  for (const act of getFilteredActs()) {
+    if (!act.client_id) continue;
+    if (!map.has(act.client_id)) {
+      map.set(act.client_id, {
+        clientId: act.client_id,
+        pib: getClientPIB(act.client_id),
+        totalSum: 0,
+        actsCount: 0,
+      });
+    }
+    const c = map.get(act.client_id)!;
+    c.totalSum += getActTotal(act);
+    c.actsCount++;
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.totalSum - a.totalSum)
+    .slice(0, 10);
+}
+
+function calcTopClientsByFrequency(): TopClient[] {
+  const map = new Map<number, TopClient>();
+  for (const act of getFilteredActs()) {
+    if (!act.client_id) continue;
+    if (!map.has(act.client_id)) {
+      map.set(act.client_id, {
+        clientId: act.client_id,
+        pib: getClientPIB(act.client_id),
+        totalSum: 0,
+        actsCount: 0,
+      });
+    }
+    const c = map.get(act.client_id)!;
+    c.totalSum += getActTotal(act);
+    c.actsCount++;
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.actsCount - a.actsCount)
+    .slice(0, 10);
+}
+
+function calcTopCarsBySum(): TopCar[] {
+  const map = new Map<number, TopCar>();
+  for (const act of getFilteredActs()) {
+    if (!act.cars_id) continue;
+    if (!map.has(act.cars_id)) {
+      const info = getCarNamePlate(act.cars_id);
+      map.set(act.cars_id, {
+        carsId: act.cars_id,
+        carName: info.name,
+        plate: info.plate,
+        totalSum: 0,
+        actsCount: 0,
+      });
+    }
+    const c = map.get(act.cars_id)!;
+    c.totalSum += getActTotal(act);
+    c.actsCount++;
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.totalSum - a.totalSum)
+    .slice(0, 10);
+}
+
+function calcTopCarsByFrequency(): TopCar[] {
+  const map = new Map<number, TopCar>();
+  for (const act of getFilteredActs()) {
+    if (!act.cars_id) continue;
+    if (!map.has(act.cars_id)) {
+      const info = getCarNamePlate(act.cars_id);
+      map.set(act.cars_id, {
+        carsId: act.cars_id,
+        carName: info.name,
+        plate: info.plate,
+        totalSum: 0,
+        actsCount: 0,
+      });
+    }
+    const c = map.get(act.cars_id)!;
+    c.totalSum += getActTotal(act);
+    c.actsCount++;
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.actsCount - a.actsCount)
+    .slice(0, 10);
+}
+
+function renderTopClientsSection(): void {
+  const container = document.getElementById("analityka-top-clients");
+  if (!container) return;
+
+  const bySum = calcTopClientsBySum();
+  const byFreq = calcTopClientsByFrequency();
+
+  // Знаходимо тих, хто в обох списках
+  const sumIds = new Set(bySum.map((c) => c.clientId));
+  const freqIds = new Set(byFreq.map((c) => c.clientId));
+  const overlap = new Set([...sumIds].filter((id) => freqIds.has(id)));
+
+  const rowsSum = bySum
+    .map((c, i) => {
+      const cls = overlap.has(c.clientId) ? "analityka-overlap-row" : "";
+      const badge = overlap.has(c.clientId)
+        ? ' <span class="analityka-overlap-badge">⭐</span>'
+        : "";
+      return `<tr class="${cls}">
+      <td>${i + 1}</td>
+      <td>${c.pib}${badge}</td>
+      <td>${formatMoney(c.totalSum)} грн</td>
+      <td>${c.actsCount}</td>
+    </tr>`;
+    })
+    .join("");
+
+  const rowsFreq = byFreq
+    .map((c, i) => {
+      const cls = overlap.has(c.clientId) ? "analityka-overlap-row" : "";
+      const badge = overlap.has(c.clientId)
+        ? ' <span class="analityka-overlap-badge">⭐</span>'
+        : "";
+      return `<tr class="${cls}">
+      <td>${i + 1}</td>
+      <td>${c.pib}${badge}</td>
+      <td>${c.actsCount}</td>
+      <td>${formatMoney(c.totalSum)} грн</td>
+    </tr>`;
+    })
+    .join("");
+
+  container.innerHTML = `
+    <div class="analityka-row">
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">💰 Топ-10 клієнтів (найбільший чек)</h3>
+        <table class="analityka-table">
+          <thead><tr><th>#</th><th>Клієнт</th><th>Сума</th><th>Актів</th></tr></thead>
+          <tbody>${rowsSum}</tbody>
+        </table>
+      </div>
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">🔄 Топ-10 постійних клієнтів</h3>
+        <table class="analityka-table">
+          <thead><tr><th>#</th><th>Клієнт</th><th>Актів</th><th>Сума</th></tr></thead>
+          <tbody>${rowsFreq}</tbody>
+        </table>
+      </div>
+    </div>
+    ${overlap.size > 0 ? `<div class="analityka-overlap-legend">⭐ — клієнт у обох списках (найбільший чек + постійний)</div>` : ""}
+  `;
+}
+
+function renderTopCarsSection(): void {
+  const container = document.getElementById("analityka-top-cars");
+  if (!container) return;
+
+  const bySum = calcTopCarsBySum();
+  const byFreq = calcTopCarsByFrequency();
+
+  // Знаходимо тих, хто в обох списках
+  const sumIds = new Set(bySum.map((c) => c.carsId));
+  const freqIds = new Set(byFreq.map((c) => c.carsId));
+  const overlap = new Set([...sumIds].filter((id) => freqIds.has(id)));
+
+  const rowsSum = bySum
+    .map((c, i) => {
+      const cls = overlap.has(c.carsId) ? "analityka-overlap-row" : "";
+      const badge = overlap.has(c.carsId)
+        ? ' <span class="analityka-overlap-badge">⭐</span>'
+        : "";
+      return `<tr class="${cls}">
+      <td>${i + 1}</td>
+      <td>${c.carName}${badge}</td>
+      <td>${c.plate}</td>
+      <td>${formatMoney(c.totalSum)} грн</td>
+      <td>${c.actsCount}</td>
+    </tr>`;
+    })
+    .join("");
+
+  const rowsFreq = byFreq
+    .map((c, i) => {
+      const cls = overlap.has(c.carsId) ? "analityka-overlap-row" : "";
+      const badge = overlap.has(c.carsId)
+        ? ' <span class="analityka-overlap-badge">⭐</span>'
+        : "";
+      return `<tr class="${cls}">
+      <td>${i + 1}</td>
+      <td>${c.carName}${badge}</td>
+      <td>${c.plate}</td>
+      <td>${c.actsCount}</td>
+      <td>${formatMoney(c.totalSum)} грн</td>
+    </tr>`;
+    })
+    .join("");
+
+  container.innerHTML = `
+    <div class="analityka-row">
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">💰 Топ-10 авто (найбільший чек)</h3>
+        <table class="analityka-table">
+          <thead><tr><th>#</th><th>Авто</th><th>Номер</th><th>Сума</th><th>Актів</th></tr></thead>
+          <tbody>${rowsSum}</tbody>
+        </table>
+      </div>
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">🔄 Топ-10 постійних авто</h3>
+        <table class="analityka-table">
+          <thead><tr><th>#</th><th>Авто</th><th>Номер</th><th>Актів</th><th>Сума</th></tr></thead>
+          <tbody>${rowsFreq}</tbody>
+        </table>
+      </div>
+    </div>
+    ${overlap.size > 0 ? `<div class="analityka-overlap-legend">⭐ — авто у обох списках (найбільший чек + постійне)</div>` : ""}
   `;
 }
 
@@ -817,6 +1148,162 @@ function truncateText(text: string, max: number): string {
 
 // ===================== ГОЛОВНА ФУНКЦІЯ =====================
 
+/** Перемальовує все без повторного завантаження з бази */
+function redrawDashboard(): void {
+  const monthlyData = calcMonthlyRevenue();
+  const topWorks = calcTopWorks();
+  const mechanicStats = calcMechanicStats();
+  const anomalies = detectAnomalies();
+  const forecast = calcForecast(monthlyData);
+
+  // Знищуємо старі графіки
+  if (revenueChart) {
+    revenueChart.destroy();
+    revenueChart = null;
+  }
+  if (topWorksChart) {
+    topWorksChart.destroy();
+    topWorksChart = null;
+  }
+  if (mechanicsChart) {
+    mechanicsChart.destroy();
+    mechanicsChart = null;
+  }
+
+  renderSummaryCards(monthlyData, forecast);
+  renderRevenueChart(monthlyData);
+  renderTopWorksChart(topWorks);
+  renderMechanicsChart(mechanicStats);
+  renderMechanicsTable(mechanicStats);
+  renderTopClientsSection();
+  renderTopCarsSection();
+  renderAnomalies(anomalies);
+}
+
+/** Форматує дату для input[type=date] */
+function fmtInputDate(d: Date): string {
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/** Швидкий вибір діапазону */
+function applyQuickRange(type: string): void {
+  const now = new Date();
+  const fromInput = document.getElementById(
+    "analityka-date-from",
+  ) as HTMLInputElement;
+  const toInput = document.getElementById(
+    "analityka-date-to",
+  ) as HTMLInputElement;
+
+  let from: Date;
+  let to: Date = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+  );
+
+  switch (type) {
+    case "week":
+      from = new Date(now);
+      from.setDate(now.getDate() - 7);
+      break;
+    case "month":
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case "quarter": {
+      const qMonth = Math.floor(now.getMonth() / 3) * 3;
+      from = new Date(now.getFullYear(), qMonth, 1);
+      break;
+    }
+    case "year":
+      from = new Date(now.getFullYear(), 0, 1);
+      break;
+    case "all":
+      filterDateFrom = null;
+      filterDateTo = null;
+      if (fromInput) fromInput.value = "";
+      if (toInput) toInput.value = "";
+      highlightQuickBtn(type);
+      redrawDashboard();
+      return;
+    default:
+      return;
+  }
+
+  filterDateFrom = new Date(
+    from.getFullYear(),
+    from.getMonth(),
+    from.getDate(),
+    0,
+    0,
+    0,
+  );
+  filterDateTo = to;
+
+  if (fromInput) fromInput.value = fmtInputDate(filterDateFrom);
+  if (toInput) toInput.value = fmtInputDate(filterDateTo);
+
+  highlightQuickBtn(type);
+  redrawDashboard();
+}
+
+function highlightQuickBtn(active: string): void {
+  const btns = document.querySelectorAll(".analityka-quick-btn");
+  btns.forEach((btn) => {
+    btn.classList.toggle(
+      "active",
+      (btn as HTMLElement).dataset.range === active,
+    );
+  });
+}
+
+function setupDateFilter(): void {
+  const fromInput = document.getElementById(
+    "analityka-date-from",
+  ) as HTMLInputElement;
+  const toInput = document.getElementById(
+    "analityka-date-to",
+  ) as HTMLInputElement;
+
+  if (!fromInput || !toInput) return;
+
+  const onChange = () => {
+    if (fromInput.value) {
+      const [y, m, d] = fromInput.value.split("-").map(Number);
+      filterDateFrom = new Date(y, m - 1, d, 0, 0, 0);
+    } else {
+      filterDateFrom = null;
+    }
+    if (toInput.value) {
+      const [y, m, d] = toInput.value.split("-").map(Number);
+      filterDateTo = new Date(y, m - 1, d, 23, 59, 59);
+    } else {
+      filterDateTo = null;
+    }
+    // Знімаємо виділення кнопок
+    highlightQuickBtn("");
+    redrawDashboard();
+  };
+
+  fromInput.addEventListener("change", onChange);
+  toInput.addEventListener("change", onChange);
+
+  // Кнопки швидкого вибору
+  const quickBtns = document.querySelectorAll(".analityka-quick-btn");
+  quickBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const range = (btn as HTMLElement).dataset.range;
+      if (range) applyQuickRange(range);
+    });
+  });
+}
+
 /** Ініціалізувати та відобразити аналітику */
 export async function initAnalityka(): Promise<void> {
   if (isLoading) return;
@@ -843,15 +1330,39 @@ export async function initAnalityka(): Promise<void> {
     return;
   }
 
-  // Обчислення
-  const monthlyData = calcMonthlyRevenue();
-  const topWorks = calcTopWorks();
-  const mechanicStats = calcMechanicStats();
-  const anomalies = detectAnomalies();
-  const forecast = calcForecast(monthlyData);
+  // Знаходимо найстарішу дату
+  let minDate = "";
+  for (const a of cachedActs) {
+    if (a.date_on && (!minDate || a.date_on < minDate)) minDate = a.date_on;
+  }
+  const minDateObj = minDate ? new Date(minDate) : new Date(2025, 0, 1);
+  const todayStr = fmtInputDate(new Date());
+  const minDateStr = fmtInputDate(minDateObj);
 
   // Рендеримо структуру
   container.innerHTML = `
+    <!-- 📅 Фільтр по датах -->
+    <div class="analityka-date-filter">
+      <div class="analityka-date-inputs">
+        <label class="analityka-date-label">
+          <span>Від</span>
+          <input type="date" id="analityka-date-from" class="analityka-date-input" min="${minDateStr}" max="${todayStr}" />
+        </label>
+        <span class="analityka-date-separator">—</span>
+        <label class="analityka-date-label">
+          <span>До</span>
+          <input type="date" id="analityka-date-to" class="analityka-date-input" min="${minDateStr}" max="${todayStr}" />
+        </label>
+      </div>
+      <div class="analityka-quick-btns">
+        <button class="analityka-quick-btn" data-range="week">Тиждень</button>
+        <button class="analityka-quick-btn" data-range="month">Місяць</button>
+        <button class="analityka-quick-btn" data-range="quarter">Квартал</button>
+        <button class="analityka-quick-btn" data-range="year">Рік</button>
+        <button class="analityka-quick-btn active" data-range="all">Все</button>
+      </div>
+    </div>
+
     <!-- Картки -->
     <div id="analityka-summary-cards" class="analityka-summary-cards"></div>
 
@@ -879,6 +1390,12 @@ export async function initAnalityka(): Promise<void> {
       <div id="analityka-mechanics-table"></div>
     </div>
 
+    <!-- 👤 Топ клієнтів -->
+    <div id="analityka-top-clients"></div>
+
+    <!-- 🚗 Топ машин -->
+    <div id="analityka-top-cars"></div>
+
     <!-- Аномалії -->
     <div class="analityka-chart-block">
       <h3 class="analityka-chart-title">⚠️ Аномалії та попередження</h3>
@@ -886,19 +1403,21 @@ export async function initAnalityka(): Promise<void> {
     </div>
   `;
 
-  // Рендеримо компоненти
-  renderSummaryCards(monthlyData, forecast);
-  renderRevenueChart(monthlyData);
-  renderTopWorksChart(topWorks);
-  renderMechanicsChart(mechanicStats);
-  renderMechanicsTable(mechanicStats);
-  renderAnomalies(anomalies);
+  // Підключаємо фільтр дат
+  setupDateFilter();
+
+  // Рендеримо дані
+  redrawDashboard();
 
   isLoading = false;
 }
 
 /** Оновити дані аналітики */
 export async function refreshAnalityka(): Promise<void> {
+  // Зберігаємо поточний фільтр
+  const savedFrom = filterDateFrom;
+  const savedTo = filterDateTo;
+
   // Знищуємо старі графіки
   if (revenueChart) {
     revenueChart.destroy();
@@ -914,4 +1433,19 @@ export async function refreshAnalityka(): Promise<void> {
   }
 
   await initAnalityka();
+
+  // Відновлюємо фільтр
+  if (savedFrom || savedTo) {
+    filterDateFrom = savedFrom;
+    filterDateTo = savedTo;
+    const fromInput = document.getElementById(
+      "analityka-date-from",
+    ) as HTMLInputElement;
+    const toInput = document.getElementById(
+      "analityka-date-to",
+    ) as HTMLInputElement;
+    if (fromInput && savedFrom) fromInput.value = fmtInputDate(savedFrom);
+    if (toInput && savedTo) toInput.value = fmtInputDate(savedTo);
+    redrawDashboard();
+  }
 }

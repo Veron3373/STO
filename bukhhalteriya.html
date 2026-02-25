@@ -410,6 +410,11 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Аналітика Dashboard -->
+      <div id="analityka-table-container" style="display: none;">
+        <div id="analityka-dashboard" class="analityka-dashboard"></div>
+      </div>
     </div>
 
     <!-- Контрольна секція -->
@@ -427,6 +432,9 @@
 
         <button id="tab-btn-vutratu" class="Bukhhalter-tab-btn" style="display: none;"
           onclick="switchTab(event, 'vutratu')">💰 Прибуток</button>
+
+        <button id="tab-btn-analityka" class="Bukhhalter-tab-btn" style="display: none;"
+          onclick="switchTab(event, 'analityka')">📊 Аналітика</button>
       </div>
 
       <div class="Bukhhalter-form-container">
@@ -793,6 +801,19 @@
             </button>
           </div>
 
+        </div>
+
+        <!-- Форма Аналітики -->
+        <div id="Bukhhalter-analityka-section" class="Bukhhalter-form-section">
+          <h2 class="Bukhhalter-section-title">📊 Аналітика СТО</h2>
+          <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+            Графіки доходів, топ робіт, ефективність механіків, аномалії та прогнози
+          </p>
+          <div class="Bukhhalter-field-group">
+            <button class="Bukhhalter-action-button Bukhhalter-add-button" onclick="refreshAnalityka()">
+              🔄 Оновити дані
+            </button>
+          </div>
         </div>
 
         <!-- Кнопки (загальні для всіх вкладок) -->

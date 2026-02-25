@@ -12,6 +12,8 @@ import {
   runMassPaymentCalculationForvutratu,
 } from "./prubutok";
 
+import { initAnalityka, refreshAnalityka } from "./analityka";
+
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { redirectToIndex } from "../../utils/gitUtils";
 
@@ -60,7 +62,7 @@ import {
   clearDetailsForm,
 } from "./poAktam";
 
-type TabName = "podlegle" | "magazine" | "details" | "vutratu";
+type TabName = "podlegle" | "magazine" | "details" | "vutratu" | "analityka";
 
 let currentTab: TabName = "magazine";
 let selectedRowIndex: number | null = null;
@@ -146,6 +148,14 @@ export function updateTotalSum(): void {
     return;
   }
 
+  // Для аналітики ховаємо суму
+  if (currentTab === "analityka") {
+    if (totalSumElement) {
+      totalSumElement.textContent = "";
+    }
+    return;
+  }
+
   // Fallback для невідомих вкладок
   const total = calculateTotalSum();
   if (totalSumElement) {
@@ -166,7 +176,7 @@ export function switchTab(e: Event, tabName: TabName) {
 
   // Видаляємо активний клас з всіх форм
   const sections = document.querySelectorAll<HTMLElement>(
-    ".Bukhhalter-form-section"
+    ".Bukhhalter-form-section",
   );
   sections.forEach((section) => section.classList.remove("Bukhhalter-active"));
 
@@ -186,11 +196,13 @@ function updateTableDisplay(): void {
   const podlegleContainer = byId<HTMLDivElement>("podlegle-table-container");
   const detailsContainer = byId<HTMLDivElement>("details-table-container");
   const vutratuContainer = byId<HTMLDivElement>("vutratu-table-container");
+  const analitykaContainer = byId<HTMLDivElement>("analityka-table-container");
 
   if (podlegleContainer) podlegleContainer.style.display = "none";
   if (magazineContainer) magazineContainer.style.display = "none";
   if (detailsContainer) detailsContainer.style.display = "none";
   if (vutratuContainer) vutratuContainer.style.display = "none";
+  if (analitykaContainer) analitykaContainer.style.display = "none";
 
   if (currentTab === "magazine") {
     if (tableTitle) tableTitle.innerHTML = "🏪 Дані по складу";
@@ -208,6 +220,10 @@ function updateTableDisplay(): void {
     if (tableTitle) tableTitle.innerHTML = "💰 Дані по витратам";
     if (vutratuContainer) vutratuContainer.style.display = "block";
     updatevutratuTable();
+  } else if (currentTab === "analityka") {
+    if (tableTitle) tableTitle.innerHTML = "📊 Аналітика";
+    if (analitykaContainer) analitykaContainer.style.display = "block";
+    initAnalityka();
   }
 
   updateTotalSum();
@@ -216,7 +232,7 @@ function updateTableDisplay(): void {
 function handleRowClick(index: number): void {
   if (selectedRowIndex !== null) {
     const prevRow = document.querySelector(
-      `.Bukhhalter-data-table tbody tr:nth-child(${selectedRowIndex + 1})`
+      `.Bukhhalter-data-table tbody tr:nth-child(${selectedRowIndex + 1})`,
     );
     if (prevRow) {
       prevRow.classList.remove("selected-row");
@@ -225,7 +241,7 @@ function handleRowClick(index: number): void {
 
   selectedRowIndex = index;
   const currentRow = document.querySelector(
-    `.Bukhhalter-data-table tbody tr:nth-child(${index + 1})`
+    `.Bukhhalter-data-table tbody tr:nth-child(${index + 1})`,
   );
   if (currentRow) {
     currentRow.classList.add("selected-row");
@@ -248,7 +264,7 @@ function togglePayment(index: number, type: TabName): void {
 // Стало:
 function setSearchButtonLoadingEl(
   btn: HTMLButtonElement | null,
-  isLoading: boolean
+  isLoading: boolean,
 ): void {
   if (!btn) return;
   if (isLoading) {
@@ -285,7 +301,7 @@ export async function addRecord(e?: Event): Promise<void> {
     null;
 
   setSearchButtonLoadingEl(btn, true);
-  
+
   // 🔐 Перевіряємо доступ до сторінки перед оновленням даних
   const hasAccess = await checkCurrentPageAccess();
   if (!hasAccess) {
@@ -293,7 +309,7 @@ export async function addRecord(e?: Event): Promise<void> {
     redirectToIndex();
     return;
   }
-  
+
   try {
     if (currentTab === "podlegle") {
       handlepodlegleAddRecord();
@@ -338,7 +354,7 @@ function setButtonLoadingEl(
   btn: HTMLButtonElement | null,
   isLoading: boolean,
   loadingLabel: string,
-  fallbackLabel?: string
+  fallbackLabel?: string,
 ): void {
   if (!btn) return;
   if (isLoading) {
@@ -362,7 +378,7 @@ function setButtonLoadingEl(
 // [НОВИЙ КОД]
 export function clearForm(): void {
   const activeSection = document.querySelector<HTMLElement>(
-    ".Bukhhalter-form-section.Bukhhalter-active"
+    ".Bukhhalter-form-section.Bukhhalter-active",
   );
   if (!activeSection) return;
 
@@ -395,7 +411,7 @@ export function clearForm(): void {
       // Запасний варіант, якщо імпорт не спрацював
       console.error("clearpodlegleForm is not imported or not a function");
       const inputs = activeSection.querySelectorAll<HTMLInputElement>(
-        "input:not([readonly])"
+        "input:not([readonly])",
       );
       inputs.forEach((input) => {
         input.value = "";
@@ -414,7 +430,7 @@ export function clearForm(): void {
   // Цей код не має виконуватись, якщо всі вкладки оброблені
   console.warn(`Невідома вкладка для очищення: ${currentTab}`);
   const inputs = activeSection.querySelectorAll<HTMLInputElement>(
-    "input:not([readonly])"
+    "input:not([readonly])",
   );
   inputs.forEach((input) => {
     input.value = "";
@@ -446,16 +462,14 @@ function loadXLSXIfNeeded(): Promise<boolean> {
   // Якщо вже йде завантаження - повертаємо існуючий Promise
   if (xlsxLoadingPromise) return xlsxLoadingPromise;
 
-
   xlsxLoadingPromise = new Promise<boolean>((resolve) => {
     try {
       // Перевіряємо чи скрипт вже в DOM
       const existing = document.querySelector(
-        'script[src*="cdnjs.cloudflare.com/ajax/libs/xlsx"]'
+        'script[src*="cdnjs.cloudflare.com/ajax/libs/xlsx"]',
       ) as HTMLScriptElement | null;
 
       if (existing) {
-
         // Скрипт є, але бібліотека ще не завантажилась - чекаємо
         let attempts = 0;
         const maxAttempts = 50; // 5 секунд (50 * 100ms)
@@ -524,7 +538,7 @@ function downloadpodlegleToExcel(): void {
         showNotification(
           "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
-          5000
+          5000,
         );
         return;
       }
@@ -535,7 +549,7 @@ function downloadpodlegleToExcel(): void {
 
   // Читаємо дані безпосередньо з HTML таблиці
   const tbody = document.querySelector(
-    "#podlegle-table-container .Bukhhalter-data-table tbody"
+    "#podlegle-table-container .Bukhhalter-data-table tbody",
   ) as HTMLTableSectionElement | null;
 
   if (!tbody) {
@@ -605,7 +619,7 @@ function downloadpodlegleToExcel(): void {
   XLSX.writeFile(workbook, fileName);
   showNotification(
     `Експортовано ${excelData.length} записів підлеглих`,
-    "success"
+    "success",
   );
 }
 
@@ -620,7 +634,7 @@ function downloadMagazineToExcel(): void {
         showNotification(
           "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
-          5000
+          5000,
         );
         return;
       }
@@ -632,7 +646,7 @@ function downloadMagazineToExcel(): void {
   const XLSX = (window as any).XLSX;
 
   const tbody = document.querySelector(
-    "#magazine-table-container .Bukhhalter-data-table tbody"
+    "#magazine-table-container .Bukhhalter-data-table tbody",
   ) as HTMLTableSectionElement | null;
 
   if (!tbody) {
@@ -703,7 +717,7 @@ function downloadMagazineToExcel(): void {
   XLSX.writeFile(workbook, fileName);
   showNotification(
     `Експортовано ${excelData.length} записів магазину`,
-    "success"
+    "success",
   );
 }
 
@@ -718,7 +732,7 @@ function downloadDetailsToExcel(): void {
         showNotification(
           "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
-          5000
+          5000,
         );
         return;
       }
@@ -804,7 +818,7 @@ function downloadDetailsToExcel(): void {
   XLSX.writeFile(workbook, fileName);
   showNotification(
     `Експортовано ${excelData.length} записів деталей`,
-    "success"
+    "success",
   );
 }
 
@@ -819,7 +833,7 @@ function downloadvutratuToExcel(): void {
         showNotification(
           "❌ Помилка завантаження бібліотеки Excel. Перевірте інтернет-з'єднання.",
           "error",
-          5000
+          5000,
         );
         return;
       }
@@ -832,7 +846,7 @@ function downloadvutratuToExcel(): void {
 
   // Читаємо дані безпосередньо з HTML таблиці
   const tbody = document.querySelector(
-    "#vutratu-table-container .Bukhhalter-data-table tbody"
+    "#vutratu-table-container .Bukhhalter-data-table tbody",
   ) as HTMLTableSectionElement | null;
 
   if (!tbody) {
@@ -896,16 +910,15 @@ function downloadvutratuToExcel(): void {
   XLSX.writeFile(workbook, fileName);
   showNotification(
     `Експортовано ${excelData.length} записів витрат`,
-    "success"
+    "success",
   );
 }
 
 export function downloadToExcel(): void {
   try {
-
     // ВИПРАВЛЕНО: правильний клас кнопки
     const activeTab = document.querySelector(
-      ".Bukhhalter-tab-btn.Bukhhalter-active"
+      ".Bukhhalter-tab-btn.Bukhhalter-active",
     );
     if (!activeTab) {
       showNotification("Не вдалося визначити активну вкладку", "error");
@@ -951,16 +964,16 @@ export async function runMassPaymentCalculation(e?: Event): Promise<void> {
 
   // Визначаємо активну вкладку по видимості контейнерів
   const podlegleTable = document.getElementById(
-    "podlegle-table-container"
+    "podlegle-table-container",
   ) as HTMLElement | null;
   const magazineTable = document.getElementById(
-    "magazine-table-container"
+    "magazine-table-container",
   ) as HTMLElement | null;
   const detailsTable = document.getElementById(
-    "details-table-container"
+    "details-table-container",
   ) as HTMLElement | null;
   const vutratuTable = document.getElementById(
-    "vutratu-table-container"
+    "vutratu-table-container",
   ) as HTMLElement | null;
 
   const isPodlegleVisible =
@@ -984,7 +997,7 @@ export async function runMassPaymentCalculation(e?: Event): Promise<void> {
     } else {
       showNotification(
         "Спочатку оберіть вкладку 👨‍🔧 Зарплата, 🏪 Магазин, ⚙️ Деталі або 💰 Прибуток",
-        "info"
+        "info",
       );
     }
   } catch (error) {
@@ -1010,8 +1023,7 @@ function initializeDateInputs(): void {
 
     // Removed focus listener to prevent NotAllowedError
 
-    input.addEventListener("change", function () {
-    });
+    input.addEventListener("change", function () {});
   });
 }
 
@@ -1020,10 +1032,12 @@ function initializeDateInputs(): void {
 window.addEventListener("load", async function () {
   // Перевіряємо чи це сторінка бухгалтерії - якщо ні, виходимо
   const currentPath = window.location.pathname;
-  if (!currentPath.includes("bukhhalteriya.html") && !currentPath.endsWith("bukhhalteriya")) {
+  if (
+    !currentPath.includes("bukhhalteriya.html") &&
+    !currentPath.endsWith("bukhhalteriya")
+  ) {
     return;
   }
-  
 
   // Перевірка наявності XLSX
   if (typeof (window as any).XLSX !== "undefined") {
@@ -1033,7 +1047,7 @@ window.addEventListener("load", async function () {
 
   // [FIX] Контейнер тепер прихований за замовчуванням через CSS (style="display: none; visibility: hidden;")
   const mainContainer = document.querySelector(
-    ".Bukhhalter-container"
+    ".Bukhhalter-container",
   ) as HTMLElement;
 
   try {
@@ -1046,6 +1060,7 @@ window.addEventListener("load", async function () {
     const btnZarplata = document.getElementById("tab-btn-podlegle");
     const btnVutratu = document.getElementById("tab-btn-vutratu");
     const btnDetails = document.getElementById("tab-btn-details");
+    const btnAnalityka = document.getElementById("tab-btn-analityka");
 
     // 3. Логіка відображення кнопок (ХОВАЄМО/ПОКАЗУЄМО)
 
@@ -1069,6 +1084,9 @@ window.addEventListener("load", async function () {
     if (btnVutratu) {
       btnVutratu.style.display = isAdmin ? "" : "none";
     }
+    if (btnAnalityka) {
+      btnAnalityka.style.display = isAdmin ? "" : "none";
+    }
 
     // 4. Ініціалізація даних (завантажуємо довідники, селекти тощо)
     await loadSlyusarsData();
@@ -1088,7 +1106,7 @@ window.addEventListener("load", async function () {
 
     // 5. 🎯 АВТО-КЛІК АБО БЛОКУВАННЯ
     const allTabButtons = document.querySelectorAll<HTMLElement>(
-      ".Bukhhalter-tab-btn"
+      ".Bukhhalter-tab-btn",
     );
     let firstVisibleTab: HTMLElement | null = null;
 
@@ -1102,7 +1120,6 @@ window.addEventListener("load", async function () {
     }
 
     if (firstVisibleTab) {
-
       // [FIX] Якщо є доступні вкладки, показуємо ВЕСЬ контейнер
       if (mainContainer) {
         mainContainer.style.display = "";
@@ -1192,3 +1209,5 @@ window.handleRowClick = handleRowClick;
 window.togglePayment = togglePayment;
 // @ts-ignore
 window.runMassPaymentCalculation = runMassPaymentCalculation;
+// @ts-ignore
+window.refreshAnalityka = refreshAnalityka;

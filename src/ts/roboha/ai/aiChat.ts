@@ -5,6 +5,25 @@ import { supabase } from "../../vxid/supabaseClient";
 import { globalCache } from "../zakaz_naraudy/globalCache";
 
 // ============================================================
+// УТИЛІТИ
+// ============================================================
+
+/** Форматує дату з ISO/timestamp → ДД.ММ.РР */
+function fmtDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}.${mm}.${yy}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+// ============================================================
 // ТИПИ
 // ============================================================
 
@@ -432,8 +451,8 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       discount,
       total,
       advance: Number(d["Аванс"] || 0),
-      dateOn: a.date_on || "",
-      dateOff: a.date_off || "",
+      dateOn: fmtDate(a.date_on),
+      dateOff: fmtDate(a.date_off),
       isClosed: !!a.date_off,
       slusarsOn: a.slusarsOn || false,
       raw: d,
@@ -925,18 +944,14 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         if (lowStock.length > 0) {
           context += `⚠️ Мало на складі / закінчується (${lowStock.length}):\n`;
           lowStock.forEach((p) => {
-            const lastDelivery = p.time_on
-              ? new Date(p.time_on).toLocaleDateString("uk-UA")
-              : "невідомо";
+            const lastDelivery = p.time_on ? fmtDate(p.time_on) : "невідомо";
             context += `  - ${p.name} | Арт: ${p.part_number} | Залишок: ${p.quantity} ${p.unit || "шт"} | Ціна: ${p.price} грн | Остання поставка: ${lastDelivery}${p.shop ? ` | Магазин: ${p.shop}` : ""}${p.scladNomer ? ` | Полиця: ${p.scladNomer}` : ""}\n`;
           });
         }
         // Всі деталі складу
         context += `Повний склад:\n`;
         parts.slice(0, 100).forEach((p) => {
-          const lastDelivery = p.time_on
-            ? new Date(p.time_on).toLocaleDateString("uk-UA")
-            : "";
+          const lastDelivery = p.time_on ? fmtDate(p.time_on) : "";
           context += `  ${p.name} | Арт: ${p.part_number} | ${p.quantity} ${p.unit || "шт"} | ${p.price} грн${p.shop ? ` | ${p.shop}` : ""}${lastDelivery ? ` | Поставка: ${lastDelivery}` : ""}${p.scladNomer ? ` | Полиця: ${p.scladNomer}` : ""}\n`;
         });
         if (parts.length > 100) {
@@ -1214,8 +1229,8 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 🔴 0 шт КРИТИЧНО | 🟠 1–2 МАЛО | 🟡 3–5 НИЗЬКО | 🟢 6+ НОРМА
 
 ‼️ ФОРМАТ СКЛАДУ — МАКСИМАЛЬНО КОРОТКО, одна стрічка на позицію:
-🔴 Поршень ВАЗ 2108  PS-2108-76  0 шт  150 грн  12.01.2026
-🟠 Масло 5W-40  OIL-5W40  2 л  420 грн  05.02.2026
+🔴 Поршень ВАЗ 2108  PS-2108-76  0 шт  150 грн  12.01.26
+🟠 Масло 5W-40  OIL-5W40  2 л  420 грн  05.02.26
 НЕ розбивай на ├─ └─. НЕ пиши "Арт:", "Залишок:", "Ціна:", "Полиця:", "Поставка:" — просто значення через пробіли.
 Підсумок: 💡 Замовити N поз. на ~XXX грн
 
@@ -1243,7 +1258,7 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📏 ПРАВИЛА
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. ТІЛЬКИ українська. 2. Тільки реальні дані. 3. Суми: 18 200 грн. 4. Дати: 25.02.2026.
+1. ТІЛЬКИ українська. 2. Тільки реальні дані. 3. Суми: 18 200 грн. 4. Дати ЗАВЖДИ у форматі ДД.ММ.РР (наприклад 25.02.26). НІКОЛИ не пиши ISO (2026-02-25).
 5. Списки >10 → топ-5 + "показати всі?" 6. Завжди підсумок: Всього N | Разом XXX грн.
 7. Нема даних → "Даних не знайдено — спробуємо по-іншому?"
 
@@ -1413,7 +1428,7 @@ async function loadDailyStats(): Promise<DailyStats> {
           car,
           total,
           slyusar,
-          dateOff: a.date_off || "сьогодні",
+          dateOff: fmtDate(a.date_off) || "сьогодні",
         });
         stats.totalWorksSum += worksSum;
         stats.totalDetailsSum += detailsSum;
@@ -1425,7 +1440,7 @@ async function loadDailyStats(): Promise<DailyStats> {
           id: a.act_id,
           client,
           car,
-          dateOn: a.date_on || "—",
+          dateOn: fmtDate(a.date_on),
         });
       }
     });

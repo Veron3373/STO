@@ -9,30 +9,30 @@ import { globalCache } from "../zakaz_naraudy/globalCache";
 // ============================================================================
 
 export interface AISettings {
-  enabled: boolean;           // Чи увімкнено ШІ (setting_id: 10)
-  apiToken: string;           // API токен OpenAI (setting_id: 11)
-  model: string;              // Модель (setting_id: 12, за замовчуванням gpt-4o-mini)
+  enabled: boolean; // Чи увімкнено ШІ (setting_id: 10)
+  apiToken: string; // API токен OpenAI (setting_id: 11)
+  model: string; // Модель (setting_id: 12, за замовчуванням gpt-4o-mini)
 }
 
 export interface PriceSuggestion {
-  avgPrice: number;           // Середня ціна
-  minPrice: number;           // Мінімальна ціна
-  maxPrice: number;           // Максимальна ціна
-  count: number;              // Кількість записів для розрахунку
-  source: "history" | "ai";   // Джерело даних
-  confirmed: boolean;         // Чи підтверджено користувачем
+  avgPrice: number; // Середня ціна
+  minPrice: number; // Мінімальна ціна
+  maxPrice: number; // Максимальна ціна
+  count: number; // Кількість записів для розрахунку
+  source: "history" | "ai"; // Джерело даних
+  confirmed: boolean; // Чи підтверджено користувачем
   // Додаткові підказки для робіт
-  avgQuantity?: number;       // Середня кількість
-  avgSalary?: number;         // Середня зарплата
+  avgQuantity?: number; // Середня кількість
+  avgSalary?: number; // Середня зарплата
   mostFrequentSlyusar?: string; // Найчастіший виконавець
 }
 
 export interface SalarySuggestion {
-  amount: number;             // Сума зарплати
-  percent: number;            // Відсоток
-  source: "history" | "ai";   // Джерело
-  slyusarName: string;        // Ім'я слюсаря
-  workName: string;           // Назва роботи
+  amount: number; // Сума зарплати
+  percent: number; // Відсоток
+  source: "history" | "ai"; // Джерело
+  slyusarName: string; // Ім'я слюсаря
+  workName: string; // Назва роботи
 }
 
 // ============================================================================
@@ -68,14 +68,16 @@ export async function loadAISettings(): Promise<AISettings> {
 
   aiSettingsCache = settings;
   aiSettingsCacheLoaded = true;
-  
+
   return settings;
 }
 
 /**
  * Зберігає налаштування AI в базу даних
  */
-export async function saveAISettings(settings: Partial<AISettings>): Promise<boolean> {
+export async function saveAISettings(
+  settings: Partial<AISettings>,
+): Promise<boolean> {
   try {
     const updates: Array<{ id: number; value: string }> = [];
 
@@ -100,21 +102,23 @@ export async function saveAISettings(settings: Partial<AISettings>): Promise<boo
       if (existing) {
         const { error } = await supabase
           .from("settings")
-          .update({ "Загальні": value })
+          .update({ Загальні: value })
           .eq("setting_id", id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("settings")
-          .insert({ setting_id: id, "Загальні": value, data: false });
+          .insert({ setting_id: id, Загальні: value, data: false });
         if (error) throw error;
       }
     }
 
     // Оновлюємо кеш
     if (aiSettingsCache) {
-      if (settings.enabled !== undefined) aiSettingsCache.enabled = settings.enabled;
-      if (settings.apiToken !== undefined) aiSettingsCache.apiToken = settings.apiToken;
+      if (settings.enabled !== undefined)
+        aiSettingsCache.enabled = settings.enabled;
+      if (settings.apiToken !== undefined)
+        aiSettingsCache.apiToken = settings.apiToken;
       if (settings.model !== undefined) aiSettingsCache.model = settings.model;
     }
 
@@ -155,10 +159,10 @@ export function resetAISettingsCache(): void {
  */
 export async function getAveragePriceFromHistory(
   itemName: string,
-  itemType: "work" | "detail"
+  itemType: "work" | "detail",
 ): Promise<PriceSuggestion | null> {
   const cacheKey = `${itemType}:${itemName.toLowerCase()}`;
-  
+
   // Перевіряємо кеш
   if (avgPriceCache.has(cacheKey)) {
     return avgPriceCache.get(cacheKey)!;
@@ -171,121 +175,135 @@ export async function getAveragePriceFromHistory(
       .select("data")
       .not("data", "is", null)
       .order("act_id", { ascending: false })
-      .limit(500); // Останні 500 актів
+      .limit(50); // Останні 50 актів для швидкості
 
     if (error) {
-        console.error("Помилка отримання історії цін:", error);
-        showNotification(`Помилка отримання історії цін: ${error.message}`, 'error');
-        return null;
+      console.error("Помилка отримання історії цін:", error);
+      showNotification(
+        `Помилка отримання історії цін: ${error.message}`,
+        "error",
+      );
+      return null;
     }
 
     if (acts) {
-        const prices: number[] = [];
-        const quantities: number[] = [];
-        const salaries: number[] = [];
-        const slyusarNames: string[] = [];
-        const itemNameLower = itemName.toLowerCase(); // Для порівняння без урахування регістру
+      const prices: number[] = [];
+      const quantities: number[] = [];
+      const salaries: number[] = [];
+      const slyusarNames: string[] = [];
+      const itemNameLower = itemName.toLowerCase(); // Для порівняння без урахування регістру
 
-        acts.forEach(act => {
-            let actData = act.data;
-            
-            // Парсимо JSON, якщо це рядок
-            if (typeof actData === 'string') {
-                try {
-                    actData = JSON.parse(actData);
-                } catch(e) {
-                    return; // Пропускаємо некоректний JSON
-                }
+      acts.forEach((act) => {
+        let actData = act.data;
+
+        // Парсимо JSON, якщо це рядок
+        if (typeof actData === "string") {
+          try {
+            actData = JSON.parse(actData);
+          } catch (e) {
+            return; // Пропускаємо некоректний JSON
+          }
+        }
+
+        if (!actData || typeof actData !== "object") {
+          return; // Пропускаємо, якщо дані відсутні або некоректні
+        }
+
+        // Визначаємо масив для пошуку залежно від типу
+        let itemsArray: any[] = [];
+        if (itemType === "work") {
+          itemsArray = Array.isArray(actData["Роботи"])
+            ? actData["Роботи"]
+            : [];
+        } else if (itemType === "detail") {
+          itemsArray = Array.isArray(actData["Деталі"])
+            ? actData["Деталі"]
+            : [];
+        }
+
+        // Шукаємо ціни в відповідному масиві
+        itemsArray.forEach((item: any) => {
+          // Для робіт: item["Робота"], для деталей: item["Найменування"]
+          const itemName =
+            itemType === "work" ? item["Робота"] : item["Найменування"];
+          const itemPrice = Number(item["Ціна"] || 0);
+          const itemQuantity = Number(item["Кількість"] || 1);
+          const itemSalary =
+            itemType === "work" ? Number(item["Зар-та"] || 0) : 0;
+          const itemSlyusar =
+            itemType === "work" ? (item["ПІБ _ Магазин"] || "").trim() : "";
+
+          if (itemName && typeof itemName === "string" && itemPrice > 0) {
+            const nameLower = itemName.toLowerCase();
+            // Перевірка на частковий збіг в обидві сторони
+            if (
+              nameLower.includes(itemNameLower) ||
+              itemNameLower.includes(nameLower)
+            ) {
+              prices.push(itemPrice);
+              quantities.push(itemQuantity);
+              if (itemSalary > 0) salaries.push(itemSalary);
+              if (itemSlyusar) slyusarNames.push(itemSlyusar);
             }
-            
-            if (!actData || typeof actData !== 'object') {
-                return; // Пропускаємо, якщо дані відсутні або некоректні
-            }
-
-            // Визначаємо масив для пошуку залежно від типу
-            let itemsArray: any[] = [];
-            if (itemType === 'work') {
-                itemsArray = Array.isArray(actData["Роботи"]) ? actData["Роботи"] : [];
-            } else if (itemType === 'detail') {
-                itemsArray = Array.isArray(actData["Деталі"]) ? actData["Деталі"] : [];
-            }
-
-            // Шукаємо ціни в відповідному масиві
-            itemsArray.forEach((item: any) => {
-                // Для робіт: item["Робота"], для деталей: item["Найменування"]
-                const itemName = itemType === 'work' 
-                    ? item["Робота"] 
-                    : item["Найменування"];
-                const itemPrice = Number(item["Ціна"] || 0);
-                const itemQuantity = Number(item["Кількість"] || 1);
-                const itemSalary = itemType === 'work' ? Number(item["Зар-та"] || 0) : 0;
-                const itemSlyusar = itemType === 'work' ? (item["ПІБ _ Магазин"] || "").trim() : "";
-
-                if (itemName && typeof itemName === 'string' && itemPrice > 0) {
-                    const nameLower = itemName.toLowerCase();
-                    // Перевірка на частковий збіг в обидві сторони
-                    if (nameLower.includes(itemNameLower) || itemNameLower.includes(nameLower)) {
-                        prices.push(itemPrice);
-                        quantities.push(itemQuantity);
-                        if (itemSalary > 0) salaries.push(itemSalary);
-                        if (itemSlyusar) slyusarNames.push(itemSlyusar);
-                    }
-                }
-            });
+          }
         });
+      });
 
-        if (prices.length < 1) {
-            return null; // Недостатньо даних
-        }
+      if (prices.length < 1) {
+        return null; // Недостатньо даних
+      }
 
-        // Розраховуємо статистику
-        const sum = prices.reduce((a, b) => a + b, 0);
-        const avgPrice = Math.round(sum / prices.length);
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
+      // Розраховуємо статистику — беремо НАЙНИЖЧУ ціну
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const avgPrice = minPrice; // Показуємо найнижчу ціну
 
-        // Середня кількість
-        const avgQuantity = quantities.length > 0 
-            ? Math.round(quantities.reduce((a, b) => a + b, 0) / quantities.length)
-            : undefined;
+      // Середня кількість
+      const avgQuantity =
+        quantities.length > 0
+          ? Math.round(
+              quantities.reduce((a, b) => a + b, 0) / quantities.length,
+            )
+          : undefined;
 
-        // Середня зарплата
-        const avgSalary = salaries.length > 0
-            ? Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length)
-            : undefined;
+      // Середня зарплата
+      const avgSalary =
+        salaries.length > 0
+          ? Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length)
+          : undefined;
 
-        // Найчастіший слюсар
-        let mostFrequentSlyusar: string | undefined;
-        if (slyusarNames.length > 0) {
-            const slyusarCounts = new Map<string, number>();
-            slyusarNames.forEach(name => {
-                slyusarCounts.set(name, (slyusarCounts.get(name) || 0) + 1);
-            });
-            let maxCount = 0;
-            slyusarCounts.forEach((count, name) => {
-                if (count > maxCount) {
-                    maxCount = count;
-                    mostFrequentSlyusar = name;
-                }
-            });
-        }
+      // Найчастіший слюсар
+      let mostFrequentSlyusar: string | undefined;
+      if (slyusarNames.length > 0) {
+        const slyusarCounts = new Map<string, number>();
+        slyusarNames.forEach((name) => {
+          slyusarCounts.set(name, (slyusarCounts.get(name) || 0) + 1);
+        });
+        let maxCount = 0;
+        slyusarCounts.forEach((count, name) => {
+          if (count > maxCount) {
+            maxCount = count;
+            mostFrequentSlyusar = name;
+          }
+        });
+      }
 
-        const suggestion: PriceSuggestion = {
-          avgPrice,
-          minPrice,
-          maxPrice,
-          count: prices.length,
-          source: "history",
-          confirmed: false,
-          avgQuantity,
-          avgSalary,
-          mostFrequentSlyusar,
-        };
+      const suggestion: PriceSuggestion = {
+        avgPrice,
+        minPrice,
+        maxPrice,
+        count: prices.length,
+        source: "history",
+        confirmed: false,
+        avgQuantity,
+        avgSalary,
+        mostFrequentSlyusar,
+      };
 
-        // Зберігаємо в кеш
-        avgPriceCache.set(cacheKey, suggestion);
+      // Зберігаємо в кеш
+      avgPriceCache.set(cacheKey, suggestion);
 
-        return suggestion;
+      return suggestion;
     }
 
     // Якщо `acts` не існує, але помилки не було (малоймовірно, але можливо)
@@ -306,10 +324,10 @@ export async function getAveragePriceFromHistory(
 export async function findSalaryInHistory(
   slyusarName: string,
   workName: string,
-  price: number
+  price: number,
 ): Promise<SalarySuggestion | null> {
   const cacheKey = `salary:${slyusarName.toLowerCase()}:${workName.toLowerCase()}`;
-  
+
   if (salaryCacheMap.has(cacheKey)) {
     return salaryCacheMap.get(cacheKey)!;
   }
@@ -326,7 +344,7 @@ export async function findSalaryInHistory(
 
     const slyusar = slyusars[0] as any;
     const history = slyusar["Історія"] as Record<string, any>;
-    
+
     if (!history || typeof history !== "object") return null;
 
     const workNameLower = workName.toLowerCase();
@@ -343,7 +361,7 @@ export async function findSalaryInHistory(
 
         for (const record of zapisi) {
           const recordWorkLower = (record.Робота || "").toLowerCase();
-          
+
           // Шукаємо схожі роботи
           if (
             recordWorkLower.includes(workNameLower) ||
@@ -363,8 +381,9 @@ export async function findSalaryInHistory(
     if (salaryEntries.length === 0) return null;
 
     // Обчислюємо середній відсоток
-    const percentages = salaryEntries.map(e => (e.salary / e.price) * 100);
-    const avgPercent = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+    const percentages = salaryEntries.map((e) => (e.salary / e.price) * 100);
+    const avgPercent =
+      percentages.reduce((a, b) => a + b, 0) / percentages.length;
     const calculatedSalary = Math.round((price * avgPercent) / 100);
 
     const suggestion: SalarySuggestion = {
@@ -437,9 +456,13 @@ export function showAITokenModal(onSave?: (token: string) => void): void {
 
   // Завантажуємо поточні налаштування
   loadAISettings().then((settings) => {
-    const tokenInput = modal.querySelector("#ai-token-input") as HTMLInputElement;
-    const modelSelect = modal.querySelector("#ai-model-select") as HTMLSelectElement;
-    
+    const tokenInput = modal.querySelector(
+      "#ai-token-input",
+    ) as HTMLInputElement;
+    const modelSelect = modal.querySelector(
+      "#ai-model-select",
+    ) as HTMLSelectElement;
+
     if (tokenInput && settings.apiToken) {
       tokenInput.value = settings.apiToken;
     }
@@ -450,11 +473,17 @@ export function showAITokenModal(onSave?: (token: string) => void): void {
 
   // Обробники
   const closeBtn = modal.querySelector("#ai-token-close") as HTMLButtonElement;
-  const cancelBtn = modal.querySelector("#ai-token-cancel") as HTMLButtonElement;
+  const cancelBtn = modal.querySelector(
+    "#ai-token-cancel",
+  ) as HTMLButtonElement;
   const saveBtn = modal.querySelector("#ai-token-save") as HTMLButtonElement;
-  const toggleBtn = modal.querySelector("#ai-token-toggle") as HTMLButtonElement;
+  const toggleBtn = modal.querySelector(
+    "#ai-token-toggle",
+  ) as HTMLButtonElement;
   const tokenInput = modal.querySelector("#ai-token-input") as HTMLInputElement;
-  const modelSelect = modal.querySelector("#ai-model-select") as HTMLSelectElement;
+  const modelSelect = modal.querySelector(
+    "#ai-model-select",
+  ) as HTMLSelectElement;
 
   const closeModal = () => {
     modal.classList.add("closing");
@@ -463,7 +492,7 @@ export function showAITokenModal(onSave?: (token: string) => void): void {
 
   closeBtn?.addEventListener("click", closeModal);
   cancelBtn?.addEventListener("click", closeModal);
-  
+
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
   });
@@ -497,7 +526,11 @@ export function showAITokenModal(onSave?: (token: string) => void): void {
     saveBtn.disabled = true;
     saveBtn.textContent = "Збереження...";
 
-    const success = await saveAISettings({ apiToken: token, model, enabled: true });
+    const success = await saveAISettings({
+      apiToken: token,
+      model,
+      enabled: true,
+    });
 
     if (success) {
       showNotification("✅ AI налаштування збережено", "success", 2000);
@@ -524,7 +557,9 @@ export function showAITokenModal(onSave?: (token: string) => void): void {
  * Форматує ціну для відображення
  */
 export function formatPriceForDisplay(price: number): string {
-  return Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return Math.round(price)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 /**
@@ -532,7 +567,7 @@ export function formatPriceForDisplay(price: number): string {
  */
 export async function validateAPIToken(token: string): Promise<boolean> {
   if (!token || !token.startsWith("sk-")) return false;
-  
+
   // Базова валідація - токен має бути достатньо довгим
   return token.length > 20;
 }

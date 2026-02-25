@@ -24,3 +24,16 @@ import "./roboha/zakaz_naraudy/inhi/settings_realtime_init";
 import "./vxid/url_obfuscator";
 import "./roboha/planyvannya/planyvannya";
 import "./roboha/planyvannya/planyvannya_post";
+
+// 🤖 AI Chat — ініціалізація кнопки в меню (якщо aiChatEnabled = true)
+import { initAIChatButton } from "./roboha/ai/aiChat";
+
+// Запускаємо після того як система авторизується і меню стає видимим
+document.addEventListener("aiChatReady", () => {
+    initAIChatButton();
+});
+
+// Fallback: якщо подія не спрацювала — спробуємо через 2 секунди
+setTimeout(() => {
+    initAIChatButton();
+}, 2000);

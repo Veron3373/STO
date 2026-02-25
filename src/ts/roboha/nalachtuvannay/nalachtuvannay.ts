@@ -22,6 +22,7 @@ const SETTINGS = {
   6: { id: "toggle-print", label: "Шапка акту в кольорі", class: "_print" },
   7: { id: "toggle-ai", label: "🤖 ШІ підказки", class: "_ai" },
   8: { id: "toggle-phone-admin", label: "📞 Телефон", class: "_phone" },
+  9: { id: "toggle-ai-pro", label: "🤖 ШІ PRO", class: "_ai_pro" },
 };
 
 const ROLES = [
@@ -385,6 +386,10 @@ function handleAdminSettingsChange(settingId: number, newRecord: any): void {
       break;
     case 8: // toggle-phone-admin
       applyPhoneIndicatorVisibility(!!value);
+      break;
+    case 9: // toggle-ai-pro
+      globalCache.generalSettings.aiChatEnabled = !!value;
+      saveGeneralSettingsToLocalStorage();
       break;
   }
 
@@ -943,14 +948,13 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${
-        isFrozen
-          ? `<div class="percentage-buttons-container">
+      ${isFrozen
+      ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-      }
+      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+    }
     </div>
   `;
 
@@ -1223,7 +1227,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     });
 
     // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
-    [1, 2, 3, 5, 6, 7, 8].forEach((id) => {
+    [1, 2, 3, 5, 6, 7, 8, 9].forEach((id) => {
       if (!initialSettingsState.has(`checkbox_${id}`)) {
         const setting = SETTINGS[id as keyof typeof SETTINGS];
         if (setting) {
@@ -1676,6 +1680,32 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         }
         changesCount++;
       }
+
+      // 🤖 Збереження toggle-ai-pro (setting_id 9)
+      const checkboxAIPro = modal.querySelector("#toggle-ai-pro") as HTMLInputElement;
+      const newValueAIPro = checkboxAIPro?.checked ?? false;
+      if (initialSettingsState.get("checkbox_9") !== newValueAIPro) {
+        const { data: existing9 } = await supabase
+          .from("settings")
+          .select("setting_id")
+          .eq("setting_id", 9)
+          .single();
+        if (existing9) {
+          const { error: updateError9 } = await supabase
+            .from("settings")
+            .update({ [column]: newValueAIPro })
+            .eq("setting_id", 9);
+          if (updateError9) throw updateError9;
+        } else {
+          const { error: insertError9 } = await supabase
+            .from("settings")
+            .insert({ setting_id: 9, [column]: newValueAIPro });
+          if (insertError9) throw insertError9;
+        }
+        globalCache.generalSettings.aiChatEnabled = newValueAIPro;
+        saveGeneralSettingsToLocalStorage();
+        changesCount++;
+      }
     } else if (role === "Загальні") {
       // Зберегти налаштування для секції "Загальні"
       changesCount = await saveGeneralSettings(modal);
@@ -1870,6 +1900,15 @@ export async function createSettingsModal(): Promise<void> {
   if (aiToggle) {
     aiToggle.addEventListener("change", () => {
       resetAISettingsCache();
+    });
+  }
+
+  // Обробник для AI PRO toggle
+  const aiProToggle = modal.querySelector("#toggle-ai-pro") as HTMLInputElement;
+  if (aiProToggle) {
+    aiProToggle.addEventListener("change", () => {
+      globalCache.generalSettings.aiChatEnabled = aiProToggle.checked;
+      saveGeneralSettingsToLocalStorage();
     });
   }
 

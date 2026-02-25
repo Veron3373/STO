@@ -34,6 +34,13 @@ import {
   subscribeToSettingsRealtime,
 } from "../nalachtuvannay/nalachtuvannay";
 
+// 🔍 РОЗУМНИЙ ПОШУК
+import {
+  parseSmartSearch,
+  applySmartFilters,
+  getSmartSearchHint,
+} from "./smartSearch";
+
 document.addEventListener("click", (e) => {
   const target = e.target as HTMLElement | null;
   if (target && target.closest("#logout-link")) {
@@ -1467,7 +1474,32 @@ function filterActs(
   clients: any[],
   cars: any[],
 ): any[] {
-  if (!searchTerm) return acts;
+  if (!searchTerm) {
+    updateSmartSearchHint("");
+    return acts;
+  }
+
+  // 🔍 Спочатку пробуємо розумний пошук
+  const smartFilters = parseSmartSearch(searchTerm);
+
+  if (smartFilters.length > 0) {
+    // Показуємо підказку що розпізнано
+    const hint = getSmartSearchHint(smartFilters);
+    updateSmartSearchHint(hint);
+
+    return applySmartFilters(acts, smartFilters, clients, cars, {
+      safeParseJSON,
+      getClientInfo,
+      getCarInfo,
+      getActAmount,
+      getActDateAsDate,
+      isActClosed,
+      getActDiscount,
+    });
+  }
+
+  // Fallback: старий key:value парсер
+  updateSmartSearchHint("");
   const filters = parseSearchTerm(searchTerm);
 
   return acts.filter((act) => {
@@ -1524,6 +1556,33 @@ function filterActs(
       }
     });
   });
+}
+
+/** 🔍 Оновлює підказку розумного пошуку під полем вводу */
+function updateSmartSearchHint(hint: string): void {
+  let hintEl = document.getElementById("smart-search-hint");
+
+  if (!hint) {
+    if (hintEl) hintEl.style.display = "none";
+    return;
+  }
+
+  if (!hintEl) {
+    hintEl = document.createElement("div");
+    hintEl.id = "smart-search-hint";
+    hintEl.className = "smart-search-hint";
+    // Вставляємо після searchInput
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput?.parentElement) {
+      searchInput.parentElement.style.position = "relative";
+      searchInput.parentElement.appendChild(hintEl);
+    } else {
+      return;
+    }
+  }
+
+  hintEl.textContent = `🔍 ${hint}`;
+  hintEl.style.display = "block";
 }
 
 function parseSearchTerm(searchTerm: string): { key: string; value: string }[] {

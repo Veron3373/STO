@@ -15,6 +15,7 @@ interface ActRow {
   data: ActData | null;
   avans: number | string | null;
   tupOplatu: string | null;
+  client_id: number | null;
 }
 
 interface ActData {
@@ -121,7 +122,7 @@ async function loadAnalyticsData(): Promise<boolean> {
       supabase
         .from("acts")
         .select(
-          "act_id, date_on, date_off, rosraxovano, data, avans, tupOplatu",
+          "act_id, date_on, date_off, rosraxovano, data, avans, tupOplatu, client_id",
         )
         .order("date_on", { ascending: false }),
       supabase.from("slyusars").select("slyusar_id, data"),
@@ -628,6 +629,45 @@ function renderSummaryCards(
   const totalRevenue = monthly.reduce((s, m) => s + m.revenue, 0);
   const totalActs = cachedActs.length;
   const openActs = cachedActs.filter((a) => !a.date_off).length;
+  const closedActs = cachedActs.filter((a) => !!a.date_off);
+
+  // Середній чек (по закритих актах)
+  const avgCheck =
+    closedActs.length > 0
+      ? Math.round(
+          closedActs.reduce((sum, a) => {
+            const d = a.data;
+            return (
+              sum + (d ? (d["За роботу"] || 0) + (d["За деталі"] || 0) : 0)
+            );
+          }, 0) / closedActs.length,
+        )
+      : 0;
+
+  // Найдорожчий акт
+  let maxAct = { id: 0, total: 0 };
+  for (const a of closedActs) {
+    const d = a.data;
+    const total = d ? (d["За роботу"] || 0) + (d["За деталі"] || 0) : 0;
+    if (total > maxAct.total) maxAct = { id: a.act_id, total };
+  }
+
+  // Клієнтів обслуговано (унікальні client_id в актах)
+  const uniqueClients = new Set(
+    cachedActs.map((a) => a.client_id).filter(Boolean),
+  );
+
+  // Середній час закриття акту (днів)
+  let avgDays = 0;
+  const closedWithDates = closedActs.filter((a) => a.date_on && a.date_off);
+  if (closedWithDates.length > 0) {
+    const totalDays = closedWithDates.reduce((sum, a) => {
+      const diff =
+        new Date(a.date_off!).getTime() - new Date(a.date_on!).getTime();
+      return sum + Math.max(0, diff / (1000 * 60 * 60 * 24));
+    }, 0);
+    avgDays = Math.round((totalDays / closedWithDates.length) * 10) / 10;
+  }
 
   const trendIcon =
     forecast.trend === "up" ? "📈" : forecast.trend === "down" ? "📉" : "➡️";
@@ -658,10 +698,26 @@ function renderSummaryCards(
       </div>
     </div>
     <div class="analityka-card">
+      <div class="analityka-card-icon">🧾</div>
+      <div class="analityka-card-body">
+        <div class="analityka-card-label">Середній чек</div>
+        <div class="analityka-card-value">${formatMoney(avgCheck)} грн</div>
+        <span style="color: #666; font-size: 12px;">з ${closedActs.length} закритих актів</span>
+      </div>
+    </div>
+    <div class="analityka-card">
       <div class="analityka-card-icon">📋</div>
       <div class="analityka-card-body">
-        <div class="analityka-card-label">Актів всього / відкритих</div>
+        <div class="analityka-card-label">Актів / відкритих</div>
         <div class="analityka-card-value">${totalActs} / <span style="color:#f44336">${openActs}</span></div>
+        <span style="color: #666; font-size: 12px;">⏱️ Сер. закриття: ${avgDays} дн.</span>
+      </div>
+    </div>
+    <div class="analityka-card">
+      <div class="analityka-card-icon">👥</div>
+      <div class="analityka-card-body">
+        <div class="analityka-card-label">Клієнтів обслуговано</div>
+        <div class="analityka-card-value">${uniqueClients.size}</div>
       </div>
     </div>
     <div class="analityka-card">
@@ -669,6 +725,13 @@ function renderSummaryCards(
       <div class="analityka-card-body">
         <div class="analityka-card-label">Дохід за ${monthly.length} міс.</div>
         <div class="analityka-card-value">${formatMoney(totalRevenue)} грн</div>
+      </div>
+    </div>
+    <div class="analityka-card">
+      <div class="analityka-card-icon">🏆</div>
+      <div class="analityka-card-body">
+        <div class="analityka-card-label">Найдорожчий акт</div>
+        <div class="analityka-card-value">#${maxAct.id} — ${formatMoney(maxAct.total)} грн</div>
       </div>
     </div>
     <div class="analityka-card" style="border-left: 3px solid ${trendColor}">

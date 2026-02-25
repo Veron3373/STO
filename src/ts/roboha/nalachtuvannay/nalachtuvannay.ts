@@ -22,7 +22,12 @@ const SETTINGS = {
   6: { id: "toggle-print", label: "Шапка акту в кольорі", class: "_print" },
   7: { id: "toggle-ai", label: "🤖 ШІ підказки", class: "_ai" },
   8: { id: "toggle-phone-admin", label: "📞 Телефон", class: "_phone" },
-  9: { id: "toggle-ai-pro", label: "🤖 ШІ PRO", class: "_ai_pro" },
+  9: {
+    id: "toggle-ai-pro",
+    label:
+      '<span class="ai-pro-emoji-btn" title="Налаштування API ключів">🤖</span> ШІ PRO',
+    class: "_ai_pro",
+  },
 };
 
 const ROLES = [
@@ -948,13 +953,14 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${isFrozen
-      ? `<div class="percentage-buttons-container">
+      ${
+        isFrozen
+          ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-    }
+          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+      }
     </div>
   `;
 
@@ -1682,7 +1688,9 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       }
 
       // 🤖 Збереження toggle-ai-pro (setting_id 9)
-      const checkboxAIPro = modal.querySelector("#toggle-ai-pro") as HTMLInputElement;
+      const checkboxAIPro = modal.querySelector(
+        "#toggle-ai-pro",
+      ) as HTMLInputElement;
       const newValueAIPro = checkboxAIPro?.checked ?? false;
       if (initialSettingsState.get("checkbox_9") !== newValueAIPro) {
         const { data: existing9 } = await supabase
@@ -1780,8 +1788,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
 
 function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
   const container = modal.querySelector("#role-toggles-container");
-  const mainToggles = modal.querySelector("#main-toggles-container");
-  const percentageControl = modal.querySelector(".percentage-control");
+  const adminScrollWrapper = modal.querySelector(".admin-scroll-wrapper");
   const modalWindow = modal.querySelector(".modal-window") as HTMLElement;
   const roleButton = modal.querySelector("#role-toggle-button") as HTMLElement;
 
@@ -1803,23 +1810,20 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
 
   if (role === "Адміністратор") {
     container.innerHTML = "";
-    if (mainToggles) (mainToggles as HTMLElement).style.display = "";
-    if (percentageControl)
-      (percentageControl as HTMLElement).style.display = "";
+    if (adminScrollWrapper)
+      (adminScrollWrapper as HTMLElement).style.display = "";
     loadSettings(modal);
   } else if (role === "Загальні") {
     // Обробка секції "Загальні"
-    if (mainToggles) (mainToggles as HTMLElement).style.display = "none";
-    if (percentageControl)
-      (percentageControl as HTMLElement).style.display = "none";
+    if (adminScrollWrapper)
+      (adminScrollWrapper as HTMLElement).style.display = "none";
 
     container.innerHTML = createGeneralSettingsHTML();
     initGeneralSettingsHandlers(modal);
     loadGeneralSettings(modal);
   } else {
-    if (mainToggles) (mainToggles as HTMLElement).style.display = "none";
-    if (percentageControl)
-      (percentageControl as HTMLElement).style.display = "none";
+    if (adminScrollWrapper)
+      (adminScrollWrapper as HTMLElement).style.display = "none";
 
     const togglesHTML = createRoleToggles(role);
     container.innerHTML = togglesHTML;
@@ -1834,6 +1838,164 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
 
     loadRoleSettings(modal, role);
   }
+}
+
+// ============================================================
+// 🔑 AI PRO API KEYS MODAL
+// ============================================================
+
+async function loadAiProKeys(modal: HTMLElement): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select('setting_id, "Загальні"')
+      .in("setting_id", [20, 21, 22])
+      .order("setting_id");
+
+    if (error) throw error;
+
+    data?.forEach((row: any) => {
+      const value = row["Загальні"] || "";
+      switch (row.setting_id) {
+        case 20: {
+          const input1 = modal.querySelector(
+            "#ai-pro-key-1",
+          ) as HTMLInputElement;
+          if (input1) input1.value = value;
+          break;
+        }
+        case 21: {
+          const input2 = modal.querySelector(
+            "#ai-pro-key-2",
+          ) as HTMLInputElement;
+          if (input2) input2.value = value;
+          break;
+        }
+        case 22: {
+          const input3 = modal.querySelector(
+            "#ai-pro-key-3",
+          ) as HTMLInputElement;
+          if (input3) input3.value = value;
+          break;
+        }
+      }
+    });
+  } catch (err) {
+    console.error("Помилка завантаження API ключів:", err);
+    showNotification("Помилка завантаження API ключів", "error", 2000);
+  }
+}
+
+async function saveAiProKeys(modal: HTMLElement): Promise<void> {
+  try {
+    const keys = [
+      {
+        id: 20,
+        value:
+          (modal.querySelector("#ai-pro-key-1") as HTMLInputElement)?.value ||
+          "",
+      },
+      {
+        id: 21,
+        value:
+          (modal.querySelector("#ai-pro-key-2") as HTMLInputElement)?.value ||
+          "",
+      },
+      {
+        id: 22,
+        value:
+          (modal.querySelector("#ai-pro-key-3") as HTMLInputElement)?.value ||
+          "",
+      },
+    ];
+
+    for (const { id, value } of keys) {
+      const { data: existingRow, error: selectError } = await supabase
+        .from("settings")
+        .select("setting_id")
+        .eq("setting_id", id)
+        .single();
+
+      if (selectError && selectError.code !== "PGRST116") throw selectError;
+
+      if (existingRow) {
+        const { error } = await supabase
+          .from("settings")
+          .update({ Загальні: value })
+          .eq("setting_id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("settings")
+          .insert({ setting_id: id, Загальні: value, data: false });
+        if (error) throw error;
+      }
+    }
+
+    showNotification("API ключі збережено!", "success", 1500);
+  } catch (err) {
+    console.error("Помилка збереження API ключів:", err);
+    showNotification("Помилка збереження API ключів", "error", 2000);
+  }
+}
+
+async function openAiProKeysModal(): Promise<void> {
+  let keysModal = document.getElementById("ai-pro-keys-modal");
+
+  if (keysModal) {
+    keysModal.classList.remove("hidden");
+    await loadAiProKeys(keysModal);
+    return;
+  }
+
+  keysModal = document.createElement("div");
+  keysModal.id = "ai-pro-keys-modal";
+  keysModal.className = "ai-pro-keys-modal";
+
+  keysModal.innerHTML = `
+    <div class="ai-pro-keys-window">
+      <h3 class="ai-pro-keys-title">🔑 API Ключі ШІ PRO</h3>
+      <div class="ai-pro-keys-inputs">
+        <div class="ai-pro-key-group">
+          <label for="ai-pro-key-1">API Ключ 1</label>
+          <input type="text" id="ai-pro-key-1" placeholder="Введіть API ключ..." />
+        </div>
+        <div class="ai-pro-key-group">
+          <label for="ai-pro-key-2">API Ключ 2</label>
+          <input type="text" id="ai-pro-key-2" placeholder="Введіть API ключ..." />
+        </div>
+        <div class="ai-pro-key-group">
+          <label for="ai-pro-key-3">API Ключ 3</label>
+          <input type="text" id="ai-pro-key-3" placeholder="Введіть API ключ..." />
+        </div>
+      </div>
+      <div class="ai-pro-keys-actions">
+        <button type="button" id="ai-pro-keys-cancel">Вийти</button>
+        <button type="button" id="ai-pro-keys-ok">ОК</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(keysModal);
+
+  await loadAiProKeys(keysModal);
+
+  keysModal
+    .querySelector("#ai-pro-keys-ok")
+    ?.addEventListener("click", async () => {
+      await saveAiProKeys(keysModal!);
+      keysModal!.classList.add("hidden");
+    });
+
+  keysModal
+    .querySelector("#ai-pro-keys-cancel")
+    ?.addEventListener("click", () => {
+      keysModal!.classList.add("hidden");
+    });
+
+  keysModal.addEventListener("click", (e) => {
+    if (e.target === keysModal) keysModal!.classList.add("hidden");
+  });
 }
 
 export async function createSettingsModal(): Promise<void> {
@@ -1859,28 +2021,30 @@ export async function createSettingsModal(): Promise<void> {
 
       <div id="role-toggles-container"></div>
 
-      <div id="main-toggles-container">
-        ${toggles}
-      </div>
+      <div class="admin-scroll-wrapper">
+        <div id="main-toggles-container">
+          ${toggles}
+        </div>
 
-      <div class="percentage-control">
-        <label class="percentage-label">
-          <span class="percentage-title">Націнка на запчастини</span>
-          <div class="percentage-rows-wrapper">
-            <div class="percentage-row" data-setting-id="1">
-              <span class="percentage-number">1</span>
-              <div class="percentage-input-wrapper">
-                <input type="range" id="percentage-slider-1" class="percentage-slider" min="0" max="100" value="0" step="1" />
-                <div class="percentage-value-display">
-                  <input type="number" id="percentage-input-1" class="percentage-input" min="0" max="100" value="0" />
-                  <span class="percent-sign">%</span>
+        <div class="percentage-control">
+          <label class="percentage-label">
+            <span class="percentage-title">Націнка на запчастини</span>
+            <div class="percentage-rows-wrapper">
+              <div class="percentage-row" data-setting-id="1">
+                <span class="percentage-number">1</span>
+                <div class="percentage-input-wrapper">
+                  <input type="range" id="percentage-slider-1" class="percentage-slider" min="0" max="100" value="0" step="1" />
+                  <div class="percentage-value-display">
+                    <input type="number" id="percentage-input-1" class="percentage-input" min="0" max="100" value="0" />
+                    <span class="percent-sign">%</span>
+                  </div>
                 </div>
+                <button type="button" class="add-percentage-btn" id="add-percentage-row" title="Додати ще один склад">+</button>
               </div>
-              <button type="button" class="add-percentage-btn" id="add-percentage-row" title="Додати ще один склад">+</button>
+              <div id="additional-percentage-rows"></div>
             </div>
-            <div id="additional-percentage-rows"></div>
-          </div>
-        </label>
+          </label>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -1910,6 +2074,35 @@ export async function createSettingsModal(): Promise<void> {
       globalCache.generalSettings.aiChatEnabled = aiProToggle.checked;
       saveGeneralSettingsToLocalStorage();
     });
+  }
+
+  // 🤖 Обробник для кліку на емодзі 🤖 в ШІ PRO — відкриває модалку API ключів
+  const aiProEmojiBtn = modal.querySelector(".ai-pro-emoji-btn");
+  if (aiProEmojiBtn) {
+    aiProEmojiBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const aiProCb = modal.querySelector("#toggle-ai-pro") as HTMLInputElement;
+      if (aiProCb?.checked) {
+        openAiProKeysModal();
+      }
+    });
+  }
+
+  // 🔒 Приховуємо ШІ PRO для не-адміністраторів
+  const USER_DATA_KEY_CHECK = "userAuthData";
+  const storedUserData = localStorage.getItem(USER_DATA_KEY_CHECK);
+  if (storedUserData) {
+    try {
+      const userData = JSON.parse(storedUserData);
+      const userRole = userData?.["Доступ"];
+      if (userRole !== "Адміністратор") {
+        const aiProLabel = modal.querySelector(".toggle-switch._ai_pro");
+        if (aiProLabel) (aiProLabel as HTMLElement).style.display = "none";
+      }
+    } catch (_) {
+      /* ігноруємо */
+    }
   }
 
   // Обробник для кнопки додавання нового рядка відсотків

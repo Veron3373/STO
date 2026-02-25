@@ -574,10 +574,6 @@ export async function createAIChatModal(): Promise<void> {
           <div class="ai-chat-avatar">🤖</div>
           <div class="ai-chat-header-text">
             <div class="ai-chat-title">Механік AI</div>
-            <div class="ai-chat-status" id="ai-chat-status">
-              <span class="ai-status-dot"></span>
-              Онлайн — Gemini 2.0 Flash
-            </div>
           </div>
         </div>
         <div class="ai-chat-header-actions">

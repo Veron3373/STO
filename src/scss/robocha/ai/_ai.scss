@@ -266,7 +266,7 @@
     width: 0;
     height: 0;
 
-    &:checked+.ai-toggle-slider {
+    &:checked + .ai-toggle-slider {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
       &::before {
@@ -494,7 +494,9 @@
 .ai-chat-window {
   background: #ffffff;
   border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 4px 20px rgba(102, 126, 234, 0.15);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.25),
+    0 4px 20px rgba(102, 126, 234, 0.15);
   display: flex;
   flex-direction: column;
   height: 560px;
@@ -808,7 +810,6 @@
 }
 
 @keyframes typingBounce {
-
   0%,
   60%,
   100% {
@@ -1132,8 +1133,15 @@
 
 .toggle-switch._ai_pro.active .label-text {
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+}
+
+.ai-pro-emoji-btn {
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: transform 0.2s;
+  display: inline-block;
+
+  &:hover {
+    transform: scale(1.2);
+  }
 }

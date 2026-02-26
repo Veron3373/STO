@@ -2069,6 +2069,7 @@ async function openAiProKeysModal(): Promise<void> {
   keysModal.innerHTML = `
     <div class="ai-pro-keys-window">
       <h3 class="ai-pro-keys-title">🔑 API Ключі ШІ Атлас</h3>
+      <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noopener noreferrer" class="ai-pro-keys-link">🔗 Отримати API ключ на aistudio.google.com</a>
       <div class="ai-pro-keys-inputs">
         ${Array.from(
           { length: 10 },

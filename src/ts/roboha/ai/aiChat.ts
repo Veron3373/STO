@@ -1380,8 +1380,8 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 // ШВИДКІ ЗАПИТИ (ДАШБОРД)
 // ============================================================
 
-async function loadDailyStats(): Promise<DailyStats> {
-  const today = new Date();
+async function loadDailyStats(date?: Date): Promise<DailyStats> {
+  const today = date || new Date();
   const todayStr = today.toISOString().split("T")[0];
 
   const stats: DailyStats = {
@@ -1395,32 +1395,76 @@ async function loadDailyStats(): Promise<DailyStats> {
     worksCount: 0,
   };
 
+  const isToday = todayStr === new Date().toISOString().split("T")[0];
+
   try {
     let acts: any[] = [];
     try {
-      const { data, error } = await supabase
-        .from("acts")
-        .select("*")
-        .gte("date_on", todayStr)
-        .order("act_id", { ascending: false })
-        .limit(100);
-      if (!error && data) acts = data;
+      if (isToday) {
+        // Сьогодні: всі акти відкриті сьогодні або пізніше
+        const { data, error } = await supabase
+          .from("acts")
+          .select("*")
+          .gte("date_on", todayStr)
+          .order("act_id", { ascending: false })
+          .limit(100);
+        if (!error && data) acts = data;
+      } else {
+        // Інша дата: акти відкриті У ЦЕЙ день АБО закриті У ЦЕЙ день
+        const nextDay = new Date(today);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayStr = nextDay.toISOString().split("T")[0];
+
+        const [openedRes, closedRes] = await Promise.all([
+          supabase
+            .from("acts")
+            .select("*")
+            .gte("date_on", todayStr)
+            .lt("date_on", nextDayStr)
+            .order("act_id", { ascending: false })
+            .limit(100),
+          supabase
+            .from("acts")
+            .select("*")
+            .gte("date_off", todayStr)
+            .lt("date_off", nextDayStr)
+            .order("act_id", { ascending: false })
+            .limit(100),
+        ]);
+
+        const openedActs =
+          !openedRes.error && openedRes.data ? openedRes.data : [];
+        const closedActs =
+          !closedRes.error && closedRes.data ? closedRes.data : [];
+
+        // Об'єднуємо без дублікатів
+        const seen = new Set<number>();
+        for (const a of [...openedActs, ...closedActs]) {
+          if (!seen.has(a.act_id)) {
+            seen.add(a.act_id);
+            acts.push(a);
+          }
+        }
+      }
     } catch {
       /* ignore */
     }
 
-    // Fallback: якщо запит з date_on падає
+    // Fallback: якщо запит падає
     if (acts.length === 0) {
       try {
         const { data } = await supabase
           .from("acts")
           .select("*")
           .order("act_id", { ascending: false })
-          .limit(100);
+          .limit(200);
         if (data) {
-          acts = data.filter(
-            (a: any) => (a.date_on || "").slice(0, 10) >= todayStr,
-          );
+          acts = data.filter((a: any) => {
+            const dateOn = (a.date_on || "").slice(0, 10);
+            const dateOff = (a.date_off || "").slice(0, 10);
+            if (isToday) return dateOn >= todayStr;
+            return dateOn === todayStr || dateOff === todayStr;
+          });
         }
       } catch {
         /* ignore */
@@ -1515,21 +1559,39 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
   container.scrollTop = container.scrollHeight;
 }
 
-function renderDashboard(stats: DailyStats, container: HTMLElement): void {
-  const today = new Date().toLocaleDateString("uk-UA", {
+function renderDashboard(
+  stats: DailyStats,
+  container: HTMLElement,
+  selectedDate?: Date,
+): void {
+  const dateObj = selectedDate || new Date();
+  const displayDate = dateObj.toLocaleDateString("uk-UA", {
     day: "numeric",
     month: "long",
   });
+  const isoDate = dateObj.toISOString().split("T")[0];
+  const isToday = isoDate === new Date().toISOString().split("T")[0];
+  const closedLabel = isToday ? "Закрито сьогодні" : `Закрито ${displayDate}`;
+  const closedSectionTitle = isToday
+    ? "✅ Закриті акти сьогодні"
+    : `✅ Закриті акти ${displayDate}`;
 
   container.innerHTML = `
     <div class="ai-dashboard">
-      <div class="ai-dashboard-title">📊 Дашборд — ${today}</div>
+      <div class="ai-dashboard-title">
+        📊 Дашборд — 
+        <span class="ai-dashboard-date-picker">
+          <span class="ai-dashboard-date-label" id="ai-dashboard-date-label">${displayDate}</span>
+          <span class="ai-dashboard-date-icon">📅</span>
+          <input type="date" id="ai-dashboard-date-input" class="ai-dashboard-date-input" value="${isoDate}" />
+        </span>
+      </div>
       
       <div class="ai-dashboard-cards">
         <div class="ai-dashboard-card ai-dashboard-card--closed">
           <div class="ai-dashboard-card-icon">✅</div>
           <div class="ai-dashboard-card-value">${stats.closedCount}</div>
-          <div class="ai-dashboard-card-label">Закрито сьогодні</div>
+          <div class="ai-dashboard-card-label">${closedLabel}</div>
         </div>
         <div class="ai-dashboard-card ai-dashboard-card--open">
           <div class="ai-dashboard-card-icon">🔧</div>
@@ -1552,7 +1614,7 @@ function renderDashboard(stats: DailyStats, container: HTMLElement): void {
         stats.closedActs.length > 0
           ? `
       <div class="ai-dashboard-section">
-        <div class="ai-dashboard-section-title">✅ Закриті акти сьогодні</div>
+        <div class="ai-dashboard-section-title">${closedSectionTitle}</div>
         <div class="ai-dashboard-acts-list">
           ${stats.closedActs
             .map(
@@ -1860,12 +1922,28 @@ function initAIChatHandlers(modal: HTMLElement): void {
   dashboardBtn?.addEventListener("click", () => switchTab("dashboard"));
 
   // ── Завантаження дашборду ──
-  async function loadDashboardData() {
+  let dashboardSelectedDate: Date = new Date();
+
+  async function loadDashboardData(date?: Date) {
+    if (date) dashboardSelectedDate = date;
     dashboardLoading.style.display = "flex";
     dashboardContent.innerHTML = "";
-    const stats = await loadDailyStats();
+    const stats = await loadDailyStats(dashboardSelectedDate);
     dashboardLoading.style.display = "none";
-    renderDashboard(stats, dashboardContent);
+    renderDashboard(stats, dashboardContent, dashboardSelectedDate);
+
+    // Підключаємо обробник зміни дати
+    const dateInput = dashboardContent.querySelector(
+      "#ai-dashboard-date-input",
+    ) as HTMLInputElement;
+    if (dateInput) {
+      dateInput.addEventListener("change", () => {
+        const newDate = new Date(dateInput.value + "T00:00:00");
+        if (!isNaN(newDate.getTime())) {
+          loadDashboardData(newDate);
+        }
+      });
+    }
   }
 
   // ── Відправка повідомлення ──

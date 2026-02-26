@@ -1313,6 +1313,27 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 
 Працюй швидко, точно, компактно.`;
 
+    // === Компактний промпт для Groq (ліміт ~12k TPM) ===
+    const groqSystemPrompt = `Ти — AI-асистент "Атлас" для автосервісу (СТО). Відповідай ТІЛЬКИ українською. Будь стислим.
+⚠️ Показуй лише реальні дані — не вигадуй. Кожна позиція — в одну стрічку з emoji.
+📋 Формат акту: #id ✅/🔄 | 📅 дата | 👤 ПІБ | 🚗 Авто | 👷 Слюсар | 💰 Сума
+📦 Склад: 🔴 0шт 🟠 1-2 🟡 3-5 🟢 6+. Одна стрічка на позицію.
+💰 Фінанси: Виручка=Роботи+Деталі. Суми: "18 200 грн". Дати: ДД.ММ.РР.
+🔒 Паролі — ЗАБОРОНЕНО.
+🔎 Фільтрація: "відфільтруй X" → додай [FILTER:ключові слова] в кінці відповіді.
+  Для слюсаря: [FILTER:слюсар:Прізвище]. Мінімум слів.`;
+
+    // Для Groq обрізаємо контекст — ліміт ~18000 символів (~7k токенів)
+    const GROQ_CONTEXT_LIMIT = 18000;
+    const groqEnrichedPrompt =
+      enrichedPrompt.length > GROQ_CONTEXT_LIMIT
+        ? enrichedPrompt.slice(0, GROQ_CONTEXT_LIMIT) +
+          "\n...(контекст обрізано)"
+        : enrichedPrompt;
+
+    // Для Groq менше історії (4 замість 10)
+    const groqHistory = chatHistory.slice(-4);
+
     // === Формат Gemini ===
     const contents: any[] = [];
     for (const msg of recentHistory) {
@@ -1329,21 +1350,21 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
       systemInstruction: { parts: [{ text: systemPromptText }] },
     });
 
-    // === Формат Groq (OpenAI-сумісний) ===
-    const groqMessages: any[] = [{ role: "system", content: systemPromptText }];
-    for (const msg of recentHistory) {
+    // === Формат Groq (OpenAI-сумісний, компактний) ===
+    const groqMessages: any[] = [{ role: "system", content: groqSystemPrompt }];
+    for (const msg of groqHistory) {
       groqMessages.push({
         role: msg.role === "user" ? "user" : "assistant",
         content: msg.text,
       });
     }
-    groqMessages.push({ role: "user", content: enrichedPrompt });
+    groqMessages.push({ role: "user", content: groqEnrichedPrompt });
 
     const groqRequestBody = JSON.stringify({
       model: GROQ_MODEL,
       messages: groqMessages,
       temperature: 0.5,
-      max_tokens: 8192,
+      max_tokens: 4096,
       top_p: 0.9,
     });
 
@@ -1393,9 +1414,11 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
         return text || "🤔 Не вдалося отримати відповідь від AI.";
       }
 
-      if (response.status === 429) {
+      if (response.status === 429 || response.status === 413) {
+        const reason =
+          response.status === 413 ? "запит завеликий" : "ліміт вичерпано";
         console.warn(
-          `⚠️ ${provider} ключ №${keyIdx + 1}: ліміт вичерпано, перемикаємо...`,
+          `⚠️ ${provider} ключ №${keyIdx + 1}: ${reason}, перемикаємо...`,
         );
         currentKeyIndex = (keyIdx + 1) % keys.length;
         updateKeyIndicator();

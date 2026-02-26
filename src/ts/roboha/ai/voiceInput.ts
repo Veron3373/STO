@@ -326,7 +326,11 @@ ${slyusarNames.join(", ")}
   const requestBody = JSON.stringify({
     contents: [{ role: "user", parts: [{ text: `Розбери: "${transcript}"` }] }],
     systemInstruction: { parts: [{ text: systemPrompt }] },
-    generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+      responseMimeType: "application/json",
+    },
   });
 
   return await callGeminiForObject(requestBody);
@@ -464,15 +468,32 @@ async function callGeminiForObject(
       if (response.ok) {
         currentKeyIndex = keyIdx;
         const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        // Збираємо ВСІ частини відповіді
+        const allParts = data?.candidates?.[0]?.content?.parts || [];
+        const text = allParts.map((p: any) => p.text || "").join("");
         if (!text) return null;
 
+        console.log("🎤 Gemini відповідь (повна):", text);
+
+        // Спочатку пробуємо знайти повний JSON
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          console.warn("🎤 Gemini не повернув JSON:", text);
-          return null;
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[0]);
+          } catch (e) {
+            console.warn("🎤 JSON parse error, спроба відновити:", e);
+          }
         }
-        return JSON.parse(jsonMatch[0]);
+
+        // Фолбек: спробувати відновити обрізаний JSON
+        const repaired = tryRepairJson(text);
+        if (repaired) {
+          console.log("🎤 JSON відновлено:", repaired);
+          return repaired;
+        }
+
+        console.warn("🎤 Gemini не повернув валідний JSON:", text);
+        return null;
       }
 
       if (response.status === 429) {
@@ -485,6 +506,77 @@ async function callGeminiForObject(
       if (triedIndices.size >= keys.length) throw err;
       startIndex = keyIdx + 1;
     }
+  }
+  return null;
+}
+
+// ============================================================
+// ВІДНОВЛЕННЯ ОБРІЗАНОГО JSON
+// ============================================================
+
+function tryRepairJson(text: string): ParsedFullRow | null {
+  // Знайти початок JSON
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+
+  let jsonStr = text.substring(start);
+
+  // Видалити markdown обгортки
+  jsonStr = jsonStr.replace(/```[\s\S]*$/g, "").trim();
+
+  // Якщо немає закриваючої } — додати
+  if (!jsonStr.endsWith("}")) {
+    // Рахуємо відкриті дужки
+    let braceCount = 0;
+    for (const ch of jsonStr) {
+      if (ch === "{") braceCount++;
+      if (ch === "}") braceCount--;
+    }
+
+    // Обрізаємо після останнього повного значення
+    // Шукаємо останню кому або двокрапку
+    const lastComma = jsonStr.lastIndexOf(",");
+    const lastColon = jsonStr.lastIndexOf(":");
+    const lastNull = jsonStr.lastIndexOf("null");
+    const lastQuote = jsonStr.lastIndexOf('"');
+
+    // Якщо обрізано посередині значення — відрізаємо до останньої коми
+    if (
+      lastColon > lastComma &&
+      lastColon > lastNull &&
+      lastColon > lastQuote
+    ) {
+      // Значення після : не завершено — відрізаємо це поле
+      jsonStr = jsonStr.substring(0, lastComma > 0 ? lastComma : lastColon);
+    }
+
+    // Закриваємо JSON
+    while (braceCount > 0) {
+      jsonStr += "}";
+      braceCount--;
+    }
+    if (!jsonStr.endsWith("}")) jsonStr += "}";
+  }
+
+  // Виправляємо trailing comma
+  jsonStr = jsonStr.replace(/,\s*}/g, "}");
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    // Перевіряємо мінімальну структуру
+    if (parsed.type && typeof parsed.name === "string") {
+      return {
+        type: parsed.type === "detail" ? "detail" : "work",
+        name: parsed.name || "",
+        price: typeof parsed.price === "number" ? parsed.price : null,
+        quantity: typeof parsed.quantity === "number" ? parsed.quantity : null,
+        slyusar: parsed.slyusar || null,
+        slyusarSum:
+          typeof parsed.slyusarSum === "number" ? parsed.slyusarSum : null,
+      };
+    }
+  } catch (e) {
+    console.warn("🎤 Не вдалося відновити JSON:", jsonStr, e);
   }
   return null;
 }

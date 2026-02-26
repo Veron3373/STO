@@ -289,6 +289,9 @@ export function parseSmartSearch(input: string): SmartFilter[] {
   // 1) Спеціальні префікси СФ- / ОУ-
   remaining = extractSpecialPrefixes(remaining, filters);
 
+  // 1.5) Префікси слюсар: / приймальник:
+  remaining = extractPersonPrefixes(remaining, filters);
+
   // 2) Номер акту (#123 або "акт 123")
   remaining = extractActNumber(remaining, filters);
 
@@ -330,6 +333,39 @@ function extractSpecialPrefixes(text: string, filters: SmartFilter[]): string {
     });
     return "";
   });
+}
+
+/**
+ * Витягує префікси "слюсар:Ім'я" та "приймальник:Ім'я"
+ * Підтримує формати: слюсар:Петренко, слюсар: Петренко, слюсар Петренко
+ */
+function extractPersonPrefixes(text: string, filters: SmartFilter[]): string {
+  // Формат з двокрапкою: слюсар:Петренко або слюсар: Петренко
+  let result = text.replace(
+    /(?:слюсар[яьіу]?|механік[аіу]?)\s*:\s*(\S+)/gi,
+    (_match, name) => {
+      filters.push({
+        type: "slusar",
+        value: name,
+        label: `Слюсар: ${name}`,
+      });
+      return "";
+    },
+  );
+
+  result = result.replace(
+    /(?:приймальник[аіу]?)\s*:\s*(\S+)/gi,
+    (_match, name) => {
+      filters.push({
+        type: "pruimalnyk",
+        value: name,
+        label: `Приймальник: ${name}`,
+      });
+      return "";
+    },
+  );
+
+  return result;
 }
 
 function extractActNumber(text: string, filters: SmartFilter[]): string {

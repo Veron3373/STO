@@ -377,30 +377,89 @@ body {
 }
 
 .Bukhhalter-tab-btn {
-  background: #e0e0e0;
   border: none;
   padding: 5px 2px;
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  transition: var(--transition);
+  transition: all 0.3s ease;
   border-radius: 20px;
   flex: 1;
   min-width: 0;
   text-align: center;
-  color: #333;
-}
+  color: #555;
+  position: relative;
+  overflow: hidden;
 
-.Bukhhalter-tab-btn.Bukhhalter-active {
-  background: var(--primary-color);
-  color: white;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  /* Кожна кнопка отримує свій м'який колір */
+  &#tab-btn-magazine {
+    background: #e8f5e9; /* зелений — Склад */
+    &.Bukhhalter-active {
+      background: #43a047;
+      color: white;
+      box-shadow: 0 4px 14px rgba(67, 160, 71, 0.45);
+    }
+    &:not(.Bukhhalter-active):hover {
+      background: #c8e6c9;
+    }
+  }
+
+  &#tab-btn-podlegle {
+    background: #e3f2fd; /* блакитний — Зарплата */
+    &.Bukhhalter-active {
+      background: #1e88e5;
+      color: white;
+      box-shadow: 0 4px 14px rgba(30, 136, 229, 0.45);
+    }
+    &:not(.Bukhhalter-active):hover {
+      background: #bbdefb;
+    }
+  }
+
+  &#tab-btn-details {
+    background: #fce4ec; /* рожевий — Деталі */
+    &.Bukhhalter-active {
+      background: #e53935;
+      color: white;
+      box-shadow: 0 4px 14px rgba(229, 57, 53, 0.4);
+    }
+    &:not(.Bukhhalter-active):hover {
+      background: #f8bbd0;
+    }
+  }
+
+  &#tab-btn-vutratu {
+    background: #fff8e1; /* жовтий — Прибуток */
+    &.Bukhhalter-active {
+      background: #f9a825;
+      color: white;
+      box-shadow: 0 4px 14px rgba(249, 168, 37, 0.45);
+    }
+    &:not(.Bukhhalter-active):hover {
+      background: #ffecb3;
+    }
+  }
+
+  &#tab-btn-analityka {
+    background: #ede7f6; /* фіолетовий — Аналітика */
+    &.Bukhhalter-active {
+      background: #7b1fa2;
+      color: white;
+      box-shadow: 0 4px 14px rgba(123, 31, 162, 0.45);
+    }
+    &:not(.Bukhhalter-active):hover {
+      background: #d1c4e9;
+    }
+  }
 }
 
 .Bukhhalter-tab-btn:not(.Bukhhalter-active):hover {
-  background: #ccc;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.Bukhhalter-tab-btn.Bukhhalter-active {
+  transform: scale(1.04);
 }
 
 /* ==================== ФОРМИ ==================== */

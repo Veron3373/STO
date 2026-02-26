@@ -1584,6 +1584,15 @@ function filterActs(
             return true;
           if ((actData?.["Примітки"] || "").toLowerCase().includes(val))
             return true;
+          // Слюсар (в кожній роботі)
+          if (
+            works.some((w: any) =>
+              (w["Слюсар"] || "").toLowerCase().includes(val),
+            )
+          )
+            return true;
+          // Приймальник
+          if ((act.pruimalnyk || "").toLowerCase().includes(val)) return true;
           return false;
         }
       }

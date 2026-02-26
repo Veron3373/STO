@@ -127,14 +127,34 @@ function startListening(): Promise<string> {
     recognition.lang = "uk-UA";
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    // Отримуємо до 5 альтернатив для кращого розпізнавання
+    recognition.maxAlternatives = 5;
 
     recognition.onresult = (event: any) => {
+      // Збираємо всі альтернативи для логування
+      const alternatives: string[] = [];
+      for (let i = 0; i < event.results[0].length; i++) {
+        alternatives.push(
+          `${event.results[0][i].transcript} (${Math.round(event.results[0][i].confidence * 100)}%)`,
+        );
+      }
+      console.log(`🎤 Варіанти розпізнавання:`, alternatives);
+
+      // Беремо найкращий варіант, але зберігаємо всі для аналізу
       const transcript = event.results[0][0].transcript;
       const confidence = event.results[0][0].confidence;
       console.log(
         `🎤 Розпізнано (${Math.round(confidence * 100)}%): "${transcript}"`,
       );
+
+      // Зберігаємо альтернативи для подальшого аналізу
+      (window as any).__lastSpeechAlternatives = [];
+      for (let i = 0; i < event.results[0].length; i++) {
+        (window as any).__lastSpeechAlternatives.push(
+          event.results[0][i].transcript,
+        );
+      }
+
       resolve(transcript);
     };
 
@@ -296,6 +316,16 @@ async function parseFullRowWithGemini(
 НАВІТЬ якщо сказано лише одне слово ("заміна", "фільтр", "масло") — знайди найближчу назву зі списку що МІСТИТЬ це слово.
 НІКОЛИ не повертай порожнє name ("") та НІКОЛИ не додавай "..." до назви.
 Якщо є кілька варіантів — обери перший з підходящих.
+
+⚠️ ВАЖЛИВО — ТИПОВІ ПОМИЛКИ РОЗПІЗНАВАННЯ:
+Голосовий рушій часто ОБРІЗАЄ початок слів. Якщо бачиш:
+- "аміна" → це "заміна" (шукай роботу з "заміна")
+- "ільтр" → це "фільтр"
+- "асло" → це "масло"
+- "бслуговування" → це "обслуговування"
+- "іагностика" → це "діагностика"
+- "емонт" → це "ремонт"
+Завжди намагайся ВІДНОВИТИ повне слово за контекстом СТО!
 
 КЛЮЧОВІ СЛОВА:
 - "кількість" / "штук" / "штуки" + число → кількість

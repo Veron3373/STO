@@ -285,7 +285,7 @@ export function cacheHiddenColumnsData(actDetails: any): void {
 
 function readTableNewNumbers(): Map<number, number> {
   const tableRows = document.querySelectorAll(
-    `№${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   const numberMap = new Map<number, number>();
 
@@ -318,7 +318,7 @@ function readTableNewNumbers(): Map<number, number> {
 
 export function parseTableRows(): ParsedItem[] {
   const tableRows = document.querySelectorAll(
-    `№${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   const items: ParsedItem[] = [];
 
@@ -718,7 +718,7 @@ function processItems(items: ParsedItem[]) {
 
 async function cleanupEmptyRows(): Promise<void> {
   document
-    .querySelectorAll(`№${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`)
+    .querySelectorAll(`#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`)
     .forEach((row) => {
       const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
       if (!nameCell?.textContent?.trim()) {

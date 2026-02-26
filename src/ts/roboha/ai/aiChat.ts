@@ -309,7 +309,9 @@ function analyzeQuery(query: string): {
       ),
     needsActs: true, // Акти завжди потрібні
     needsSklad:
-      /складі?|запчаст|деталі?|артикул|зап.*частин|залишок|наявн/i.test(q),
+      /складі?|запчаст|деталі?|артикул|зап.*частин|залишок|наявн|закінч|замов|полиц|постачальн|рахун|розрах|повернен/i.test(
+        q,
+      ),
     needsSlyusars:
       /слюсар|майстер|механік|працівник|хто.*робить|хто.*працю|хто.*виконує/i.test(
         q,
@@ -956,31 +958,202 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
     }
 
     // ============================================================
-    // 5. СКЛАД
+    // 5. СКЛАД — ПРЯМИЙ ЗАПИТ ДО БД (100% доступ)
     // ============================================================
-    if (analysis.needsSklad) {
-      const parts = globalCache.skladParts || [];
-      if (parts.length > 0) {
-        context += `\n=== СКЛАД (${parts.length} позицій) ===\n`;
-        const lowStock = parts.filter(
-          (p) => p.quantity <= 2 && p.quantity >= 0,
+    {
+      let skladParts: Array<{
+        sclad_id: number;
+        name: string;
+        part_number: string;
+        price: number;
+        kilkist_on: number;
+        kilkist_off: number;
+        quantity: number;
+        unit_measurement: string | null;
+        shops: string | null;
+        time_on: string | null;
+        time_off: string | null;
+        scladNomer: string | null;
+        statys: string | null;
+        akt: number | null;
+        rahunok: string | null;
+        rosraxovano: string | null;
+        date_open: string | null;
+        xto_zamovuv: number | null;
+        povernennya: string | null;
+        xto_povernyv: string | null;
+      }> = [];
+
+      try {
+        // Завантажуємо ВСІ записи складу напряму з Supabase
+        const { data: scladData, error: scladErr } = await supabase
+          .from("sclad")
+          .select("*")
+          .order("sclad_id", { ascending: false });
+
+        if (scladErr) {
+          console.warn("⚠️ Помилка завантаження складу:", scladErr);
+        }
+
+        if (scladData && scladData.length > 0) {
+          skladParts = scladData.map((row: any) => ({
+            sclad_id: row.sclad_id,
+            name: row.name || "—",
+            part_number: row.part_number || "",
+            price: Number(row.price || 0),
+            kilkist_on: Number(row.kilkist_on || 0),
+            kilkist_off: Number(row.kilkist_off || 0),
+            quantity:
+              Number(row.kilkist_on || 0) - Number(row.kilkist_off || 0),
+            unit_measurement: row.unit_measurement || null,
+            shops: row.shops || null,
+            time_on: row.time_on || null,
+            time_off: row.time_off || null,
+            scladNomer: row.scladNomer || null,
+            statys: row.statys || null,
+            akt: row.akt || null,
+            rahunok: row.rahunok || null,
+            rosraxovano: row.rosraxovano || null,
+            date_open: row.date_open || null,
+            xto_zamovuv: row.xto_zamovuv || null,
+            povernennya: row.povernennya || null,
+            xto_povernyv: row.xto_povernyv || null,
+          }));
+        }
+      } catch (err) {
+        console.warn("⚠️ Помилка завантаження складу (catch):", err);
+        // Фолбек на globalCache
+        const cacheParts = globalCache.skladParts || [];
+        if (cacheParts.length > 0) {
+          skladParts = cacheParts.map((p) => ({
+            sclad_id: p.sclad_id,
+            name: p.name,
+            part_number: p.part_number,
+            price: p.price,
+            kilkist_on: p.kilkist_on,
+            kilkist_off: p.kilkist_off,
+            quantity: p.quantity,
+            unit_measurement: p.unit || null,
+            shops: p.shop || null,
+            time_on: p.time_on || null,
+            time_off: null,
+            scladNomer: p.scladNomer ? String(p.scladNomer) : null,
+            statys: p.statys || null,
+            akt: null,
+            rahunok: null,
+            rosraxovano: null,
+            date_open: null,
+            xto_zamovuv: null,
+            povernennya: null,
+            xto_povernyv: null,
+          }));
+        }
+      }
+
+      if (skladParts.length > 0) {
+        context += `\n=== СКЛАД — ПОВНІ ДАНІ З БД (${skladParts.length} позицій) ===\n`;
+
+        // Критичні / мало на складі
+        const criticalStock = skladParts.filter((p) => p.quantity <= 0);
+        const lowStock = skladParts.filter(
+          (p) => p.quantity > 0 && p.quantity <= 2,
         );
-        if (lowStock.length > 0) {
-          context += `⚠️ Мало на складі / закінчується (${lowStock.length}):\n`;
-          lowStock.forEach((p) => {
-            const lastDelivery = p.time_on ? fmtDate(p.time_on) : "невідомо";
-            context += `  - ${p.name} | Арт: ${p.part_number} | Залишок: ${p.quantity} ${p.unit || "шт"} | Ціна: ${p.price} грн | Остання поставка: ${lastDelivery}${p.shop ? ` | Магазин: ${p.shop}` : ""}${p.scladNomer ? ` | Полиця: ${p.scladNomer}` : ""}\n`;
+        const mediumStock = skladParts.filter(
+          (p) => p.quantity > 2 && p.quantity <= 5,
+        );
+        const normalStock = skladParts.filter((p) => p.quantity > 5);
+
+        context += `📊 СТАТИСТИКА СКЛАДУ:\n`;
+        context += `  🔴 Критично (0 або менше): ${criticalStock.length} позицій\n`;
+        context += `  🟠 Мало (1-2): ${lowStock.length} позицій\n`;
+        context += `  🟡 Низько (3-5): ${mediumStock.length} позицій\n`;
+        context += `  🟢 Норма (6+): ${normalStock.length} позицій\n`;
+        context += `  Загальна вартість складу: ${skladParts.reduce((s, p) => s + p.price * Math.max(p.quantity, 0), 0).toLocaleString("uk-UA")} грн\n`;
+
+        // Не розраховані позиції
+        const notPaid = skladParts.filter((p) => !p.rosraxovano && p.price > 0);
+        if (notPaid.length > 0) {
+          const notPaidSum = notPaid.reduce(
+            (s, p) => s + p.price * Math.max(p.quantity, 0),
+            0,
+          );
+          context += `  💳 Не розраховано: ${notPaid.length} позицій на ${notPaidSum.toLocaleString("uk-UA")} грн\n`;
+        }
+
+        // Деталізація: критичні + мало
+        if (criticalStock.length > 0) {
+          context += `\n🔴 КРИТИЧНО — ЗАКІНЧИЛИСЬ (${criticalStock.length}):\n`;
+          criticalStock.forEach((p) => {
+            context += `  ${p.name} | Арт: ${p.part_number} | Залишок: ${p.quantity} ${p.unit_measurement || "шт"} | Ціна: ${p.price} грн`;
+            if (p.shops) context += ` | Магазин: ${p.shops}`;
+            if (p.scladNomer) context += ` | Полиця: ${p.scladNomer}`;
+            if (p.time_on) context += ` | Поставка: ${fmtDate(p.time_on)}`;
+            if (p.akt) context += ` | Акт: №${p.akt}`;
+            if (p.rahunok) context += ` | Рахунок: ${p.rahunok}`;
+            if (!p.rosraxovano) context += ` | 💳 Не розраховано`;
+            context += "\n";
           });
         }
-        // Всі деталі складу
-        context += `Повний склад:\n`;
-        parts.slice(0, 100).forEach((p) => {
-          const lastDelivery = p.time_on ? fmtDate(p.time_on) : "";
-          context += `  ${p.name} | Арт: ${p.part_number} | ${p.quantity} ${p.unit || "шт"} | ${p.price} грн${p.shop ? ` | ${p.shop}` : ""}${lastDelivery ? ` | Поставка: ${lastDelivery}` : ""}${p.scladNomer ? ` | Полиця: ${p.scladNomer}` : ""}\n`;
-        });
-        if (parts.length > 100) {
-          context += `  ... та ще ${parts.length - 100} позицій\n`;
+
+        if (lowStock.length > 0) {
+          context += `\n🟠 МАЛО НА СКЛАДІ (${lowStock.length}):\n`;
+          lowStock.forEach((p) => {
+            context += `  ${p.name} | Арт: ${p.part_number} | Залишок: ${p.quantity} ${p.unit_measurement || "шт"} | Ціна: ${p.price} грн`;
+            if (p.shops) context += ` | Магазин: ${p.shops}`;
+            if (p.scladNomer) context += ` | Полиця: ${p.scladNomer}`;
+            if (p.time_on) context += ` | Поставка: ${fmtDate(p.time_on)}`;
+            if (p.akt) context += ` | Акт: №${p.akt}`;
+            if (!p.rosraxovano) context += ` | 💳 Не розраховано`;
+            context += "\n";
+          });
         }
+
+        if (analysis.needsSklad || mediumStock.length > 0) {
+          if (mediumStock.length > 0) {
+            context += `\n🟡 НИЗЬКИЙ ЗАЛИШОК (${mediumStock.length}):\n`;
+            mediumStock.forEach((p) => {
+              context += `  ${p.name} | Арт: ${p.part_number} | ${p.quantity} ${p.unit_measurement || "шт"} | ${p.price} грн`;
+              if (p.shops) context += ` | ${p.shops}`;
+              if (p.time_on) context += ` | ${fmtDate(p.time_on)}`;
+              if (p.akt) context += ` | Акт №${p.akt}`;
+              context += "\n";
+            });
+          }
+        }
+
+        // Повний склад — якщо запит про склад
+        if (analysis.needsSklad) {
+          context += `\n🟢 ПОВНИЙ СКЛАД (всі ${skladParts.length} позицій):\n`;
+          skladParts.forEach((p) => {
+            context += `  ID:${p.sclad_id} | ${p.name} | Арт: ${p.part_number} | ${p.quantity} ${p.unit_measurement || "шт"} | ${p.price} грн`;
+            if (p.shops) context += ` | ${p.shops}`;
+            if (p.time_on) context += ` | Поставка: ${fmtDate(p.time_on)}`;
+            if (p.scladNomer) context += ` | Полиця: ${p.scladNomer}`;
+            if (p.akt) context += ` | Акт №${p.akt}`;
+            if (p.rahunok) context += ` | Рах: ${p.rahunok}`;
+            if (p.rosraxovano)
+              context += ` | Розрах: ${fmtDate(p.rosraxovano)}`;
+            else if (p.price > 0) context += ` | 💳 Не розрах.`;
+            if (p.statys) context += ` | Статус: ${p.statys}`;
+            if (p.povernennya) context += ` | Повернення: ${p.povernennya}`;
+            context += "\n";
+          });
+        } else {
+          // Скорочений варіант — показати всіх з нормальним залишком компактно
+          if (normalStock.length > 0) {
+            context += `\n🟢 НОРМА (${normalStock.length} позицій, показано перші 50):\n`;
+            normalStock.slice(0, 50).forEach((p) => {
+              context += `  ${p.name} | ${p.part_number} | ${p.quantity} ${p.unit_measurement || "шт"} | ${p.price} грн`;
+              if (p.shops) context += ` | ${p.shops}`;
+              context += "\n";
+            });
+            if (normalStock.length > 50) {
+              context += `  ... та ще ${normalStock.length - 50} позицій з нормальним залишком\n`;
+            }
+          }
+        }
+      } else {
+        context += `\n=== СКЛАД: Порожній або дані не завантажились ===\n`;
       }
     }
 
@@ -1074,16 +1247,240 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
     }
 
     // ============================================================
-    // 8. МАГАЗИНИ
+    // 8. МАГАЗИНИ/ПОСТАЧАЛЬНИКИ — ПОВНІ ДАНІ З БД
     // ============================================================
-    const shops = globalCache.shops || [];
-    if (shops.length > 0) {
-      context += `\n=== МАГАЗИНИ/ПОСТАЧАЛЬНИКИ (${shops.length}) ===\n`;
-      shops.forEach((s: any) => {
-        context += `  - ${s.Name || "—"}`;
-        if (s.Phone) context += ` | ${s.Phone}`;
-        context += "\n";
-      });
+    try {
+      const { data: shopsData } = await supabase
+        .from("shops")
+        .select("*")
+        .order("shop_id");
+
+      if (shopsData && shopsData.length > 0) {
+        context += `\n=== МАГАЗИНИ/ПОСТАЧАЛЬНИКИ (${shopsData.length}) ===\n`;
+        shopsData.forEach((s: any) => {
+          let d: any = {};
+          try {
+            d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
+          } catch {}
+          context += `  ID:${s.shop_id} | ${d.Name || d["Назва"] || "—"}`;
+          if (d["Про магазин"]) context += ` | ${d["Про магазин"]}`;
+          if (d.Phone || d["Телефон"])
+            context += ` | Тел: ${d.Phone || d["Телефон"]}`;
+          // Склад магазину
+          if (d["Склад"] && typeof d["Склад"] === "object") {
+            const skladKeys = Object.keys(d["Склад"]);
+            if (skladKeys.length > 0)
+              context += ` | Склад: ${skladKeys.length} позицій`;
+          }
+          // Історія магазину — кількість записів
+          if (d["Історія"] && typeof d["Історія"] === "object") {
+            const historyDates = Object.keys(d["Історія"]);
+            let totalRecords = 0;
+            historyDates.forEach((date: string) => {
+              const arr = Array.isArray(d["Історія"][date])
+                ? d["Історія"][date]
+                : [];
+              totalRecords += arr.length;
+            });
+            if (totalRecords > 0)
+              context += ` | Історія: ${totalRecords} записів`;
+          }
+          context += "\n";
+        });
+      } else {
+        // Фолбек на globalCache
+        const shops = globalCache.shops || [];
+        if (shops.length > 0) {
+          context += `\n=== МАГАЗИНИ/ПОСТАЧАЛЬНИКИ (${shops.length}) ===\n`;
+          shops.forEach((s: any) => {
+            context += `  - ${s.Name || "—"}`;
+            if (s.Phone) context += ` | ${s.Phone}`;
+            context += "\n";
+          });
+        }
+      }
+    } catch {
+      // Фолбек
+      const shops = globalCache.shops || [];
+      if (shops.length > 0) {
+        context += `\n=== МАГАЗИНИ/ПОСТАЧАЛЬНИКИ (${shops.length}) ===\n`;
+        shops.forEach((s: any) => {
+          context += `  - ${s.Name || "—"}`;
+          if (s.Phone) context += ` | ${s.Phone}`;
+          context += "\n";
+        });
+      }
+    }
+
+    // ============================================================
+    // 9. ФАКТУРИ — прямий доступ до БД
+    // ============================================================
+    try {
+      const { data: fakturaData } = await supabase
+        .from("faktura")
+        .select("*")
+        .order("faktura_id", { ascending: false })
+        .limit(50);
+
+      if (fakturaData && fakturaData.length > 0) {
+        context += `\n=== ФАКТУРИ (останні ${fakturaData.length}) ===\n`;
+        fakturaData.forEach((f: any) => {
+          context += `  Фактура №${f.faktura_id}`;
+          if (f.namber) context += ` | Номер: ${f.namber}`;
+          if (f.name) context += ` | ${f.name}`;
+          if (f.oderjyvach) context += ` | Одержувач: ${f.oderjyvach}`;
+          if (f.act_id) context += ` | Акт №${f.act_id}`;
+          if (f.contrAgent_raxunok)
+            context += ` | Рахунок: ${f.contrAgent_raxunok}`;
+          if (f.contrAgent_raxunok_data)
+            context += ` від ${f.contrAgent_raxunok_data}`;
+          if (f.prumitka) context += ` | Примітка: ${f.prumitka}`;
+          context += "\n";
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // ============================================================
+    // 10. ВИТРАТИ — ЗАВЖДИ ПІДВАНТАЖУЄМО (не тільки для бухгалтерії)
+    // ============================================================
+    if (!analysis.needsAccounting) {
+      // Якщо бухгалтерія не запитана — все одно додаємо стислу інфо про витрати
+      try {
+        const { data: expenses } = await supabase
+          .from("vutratu")
+          .select("*")
+          .gte("dataOnn", monthStart)
+          .order("dataOnn", { ascending: false })
+          .limit(100);
+
+        if (expenses && expenses.length > 0) {
+          const totalExpenses = expenses.reduce(
+            (s: number, e: any) => s + Number(e.suma || 0),
+            0,
+          );
+          context += `\n=== ВИТРАТИ ЗА МІСЯЦЬ (${expenses.length} записів, ${totalExpenses.toLocaleString("uk-UA")} грн) ===\n`;
+          // Групуємо за категоріями
+          const byCategory: Record<string, number> = {};
+          expenses.forEach((e: any) => {
+            const cat = e.kategoria || "Без категорії";
+            byCategory[cat] = (byCategory[cat] || 0) + Number(e.suma || 0);
+          });
+          for (const [cat, sum] of Object.entries(byCategory)) {
+            context += `  ${cat}: ${(sum as number).toLocaleString("uk-UA")} грн\n`;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // ============================================================
+    // 11. СПОВІЩЕННЯ ПРО ЗМІНИ В АКТАХ
+    // ============================================================
+    try {
+      const { data: notifications } = await supabase
+        .from("act_changes_notifications")
+        .select("*")
+        .eq("delit", false)
+        .order("data", { ascending: false })
+        .limit(30);
+
+      if (notifications && notifications.length > 0) {
+        context += `\n=== СПОВІЩЕННЯ ПРО ЗМІНИ (${notifications.length} непрочитаних) ===\n`;
+        notifications.forEach((n: any) => {
+          const action = n.dodav_vudaluv ? "Додано" : "Видалено";
+          context += `  Акт №${n.act_id} | ${action}: ${n.item_name || "—"} | Ціна: ${n.cina || 0} грн | К-сть: ${n.kilkist || 0}`;
+          if (n.zarplata) context += ` | ЗП: ${n.zarplata}`;
+          if (n.changed_by_surname)
+            context += ` | Змінив: ${n.changed_by_surname}`;
+          if (n.pib) context += ` | Клієнт: ${n.pib}`;
+          if (n.auto) context += ` | Авто: ${n.auto}`;
+          if (n.data) context += ` | ${fmtDate(n.data)}`;
+          context += "\n";
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // ============================================================
+    // 12. СЛЮСАР ЗАВЕРШИВ — СПОВІЩЕННЯ
+    // ============================================================
+    try {
+      const { data: completeNotifs } = await supabase
+        .from("slusar_complete_notifications")
+        .select("*")
+        .eq("delit", false)
+        .eq("viewed", false)
+        .order("notification_id", { ascending: false })
+        .limit(20);
+
+      if (completeNotifs && completeNotifs.length > 0) {
+        context += `\n=== СЛЮСАР ЗАВЕРШИВ РОБОТУ (${completeNotifs.length} непереглянутих) ===\n`;
+        completeNotifs.forEach((n: any) => {
+          context += `  Акт №${n.act_id}`;
+          if (n.pruimalnyk) context += ` | Приймальник: ${n.pruimalnyk}`;
+          context += "\n";
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // ============================================================
+    // 13. ДЖЕРЕЛА КЛІЄНТІВ
+    // ============================================================
+    try {
+      const { data: incomesData } = await supabase.from("incomes").select("*");
+
+      if (incomesData && incomesData.length > 0) {
+        const incomeNames = incomesData
+          .map((i: any) => {
+            let d: any = {};
+            try {
+              d =
+                typeof i.data === "string" ? JSON.parse(i.data) : i.data || {};
+            } catch {}
+            return d.Name || "—";
+          })
+          .filter((n: string) => n !== "—");
+
+        if (incomeNames.length > 0) {
+          context += `\n=== ДЖЕРЕЛА КЛІЄНТІВ (${incomeNames.length}) ===\n`;
+          context += `  ${incomeNames.join(", ")}\n`;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // ============================================================
+    // 14. НАЛАШТУВАННЯ СИСТЕМИ
+    // ============================================================
+    try {
+      const { data: settingsData } = await supabase
+        .from("settings")
+        .select("*")
+        .order("setting_id");
+
+      if (settingsData && settingsData.length > 0) {
+        context += `\n=== НАЛАШТУВАННЯ СИСТЕМИ ===\n`;
+        settingsData.forEach((s: any) => {
+          // Не передаємо API ключі та паролі!
+          if (s.setting_id >= 20 && s.setting_id <= 29) return; // API ключі — пропустити
+          const val = s["Загальні"] || "";
+          if (val && typeof val === "string" && val.length < 200) {
+            context += `  ID:${s.setting_id} | ${val}`;
+            if (s.procent !== null && s.procent !== undefined)
+              context += ` | Процент: ${s.procent}%`;
+            context += "\n";
+          }
+        });
+      }
+    } catch {
+      /* ignore */
     }
   } catch (err) {
     console.warn("⚠️ Помилка збору контексту:", err);
@@ -1869,27 +2266,7 @@ function applyFilterFromAI(filterText: string): void {
     }
   }
 
-  const searchInput = document.getElementById(
-    "searchInput",
-  ) as HTMLInputElement;
-  if (!searchInput) {
-    console.warn("⚠️ AI Filter: #searchInput не знайдено");
-    return;
-  }
-
-  // Показуємо поле пошуку якщо воно сховане
-  searchInput.style.visibility = "visible";
-  searchInput.style.width = "200px";
-  searchInput.style.padding = "3px 7px";
-  searchInput.style.opacity = "1";
-
-  // Встановлюємо значення
-  searchInput.value = filterText;
-
-  // Тригеримо input подію для пошукового обробника
-  searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-
-  // Також напряму викликаємо loadActsTable з searchTerm як фолбек
+  // Викликаємо loadActsTable напряму — БЕЗ запису в #searchInput
   try {
     loadActsTable(null, null, null, filterText);
   } catch (err) {

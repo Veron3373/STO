@@ -1082,6 +1082,14 @@ function matchFilter(
       // Приймальник
       if ((act.pruimalnyk || "").toLowerCase().includes(val)) return true;
 
+      // Рекомендації
+      if ((actData?.["Рекомендації"] || "").toLowerCase().includes(val))
+        return true;
+
+      // Причина звернення
+      if ((actData?.["Причина звернення"] || "").toLowerCase().includes(val))
+        return true;
+
       // Примітки
       if ((actData?.["Примітки"] || "").toLowerCase().includes(val))
         return true;

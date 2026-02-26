@@ -1541,18 +1541,51 @@ function filterActs(
             .includes(filter.value.toLowerCase());
         case "номер":
           return carInfo.number.includes(filter.value);
-        default:
-          return (
-            clientInfo.pib.toLowerCase().includes(filter.value.toLowerCase()) ||
+        default: {
+          const val = filter.value.toLowerCase();
+          // Основні поля
+          if (
+            clientInfo.pib.toLowerCase().includes(val) ||
             clientInfo.phone.includes(filter.value) ||
             carInfo.number.includes(filter.value) ||
-            carInfo.name.toLowerCase().includes(filter.value.toLowerCase()) ||
+            carInfo.name.toLowerCase().includes(val) ||
             act.act_id?.toString().includes(filter.value) ||
             formattedDate.includes(filter.value) ||
             amount.toString().includes(filter.value) ||
             raxunokNum.toString().includes(filter.value) ||
             actNum.toString().includes(filter.value)
-          );
+          )
+            return true;
+          // Роботи, деталі, рекомендації, причина звернення
+          const actData = safeParseJSON(act.info || act.data || act.details);
+          const works = Array.isArray(actData?.["Роботи"])
+            ? actData["Роботи"]
+            : [];
+          const details = Array.isArray(actData?.["Деталі"])
+            ? actData["Деталі"]
+            : [];
+          if (
+            works.some((w: any) =>
+              (w["Робота"] || w["Назва"] || "").toLowerCase().includes(val),
+            )
+          )
+            return true;
+          if (
+            details.some((d: any) =>
+              (d["Деталь"] || d["Назва"] || "").toLowerCase().includes(val),
+            )
+          )
+            return true;
+          if ((actData?.["Рекомендації"] || "").toLowerCase().includes(val))
+            return true;
+          if (
+            (actData?.["Причина звернення"] || "").toLowerCase().includes(val)
+          )
+            return true;
+          if ((actData?.["Примітки"] || "").toLowerCase().includes(val))
+            return true;
+          return false;
+        }
       }
     });
   });

@@ -1471,15 +1471,71 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       }
     }
 
+    // Збираємо всі client_id та cars_id для пакетного запиту
+    const clientIds = [
+      ...new Set((acts || []).map((a: any) => a.client_id).filter(Boolean)),
+    ];
+    const carsIds = [
+      ...new Set((acts || []).map((a: any) => a.cars_id).filter(Boolean)),
+    ];
+
+    // Завантажуємо клієнтів та авто паралельно
+    const [clientsRes, carsRes] = await Promise.all([
+      clientIds.length > 0
+        ? supabase
+            .from("clients")
+            .select("client_id, data")
+            .in("client_id", clientIds)
+        : Promise.resolve({ data: [] as any[], error: null }),
+      carsIds.length > 0
+        ? supabase.from("cars").select("cars_id, data").in("cars_id", carsIds)
+        : Promise.resolve({ data: [] as any[], error: null }),
+    ]);
+
+    const clientsMap = new Map<number, any>();
+    (clientsRes.data || []).forEach((c: any) => {
+      let cd: any = {};
+      try {
+        cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
+      } catch {}
+      clientsMap.set(c.client_id, cd);
+    });
+
+    const carsMap = new Map<number, any>();
+    (carsRes.data || []).forEach((c: any) => {
+      let cd: any = {};
+      try {
+        cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
+      } catch {}
+      carsMap.set(c.cars_id, cd);
+    });
+
     (acts || []).forEach((a: any) => {
       let d: any = {};
       try {
-        d = typeof a.data === "string" ? JSON.parse(a.data) : a.data || {};
+        const raw = a.info || a.data || a.details;
+        d = typeof raw === "string" ? JSON.parse(raw) : raw || {};
       } catch {}
 
-      const client = d["ПІБ"] || d["Клієнт"] || "—";
-      const car = `${d["Марка"] || ""} ${d["Модель"] || ""}`.trim() || "—";
-      const slyusar = d["Приймальник"] || "—";
+      // ПІБ клієнта: спочатку з JSON акту, потім з таблиці clients
+      let client = d["ПІБ"] || d["Клієнт"] || "";
+      if (!client && a.client_id) {
+        const cd = clientsMap.get(a.client_id);
+        if (cd) client = cd["ПІБ"] || cd["Клієнт"] || "";
+      }
+      if (!client) client = "—";
+
+      // Авто: спочатку з JSON акту, потім з таблиці cars
+      let car = `${d["Марка"] || ""} ${d["Модель"] || ""}`.trim();
+      if (!car && a.cars_id) {
+        const cd = carsMap.get(a.cars_id);
+        if (cd)
+          car =
+            cd["Авто"] || `${cd["Марка"] || ""} ${cd["Модель"] || ""}`.trim();
+      }
+      if (!car) car = "—";
+
+      const slyusar = d["Приймальник"] || a.pruimalnyk || "—";
 
       const worksArr = Array.isArray(d["Роботи"]) ? d["Роботи"] : [];
       const detailsArr = Array.isArray(d["Деталі"]) ? d["Деталі"] : [];

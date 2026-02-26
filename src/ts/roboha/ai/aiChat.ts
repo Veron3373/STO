@@ -1588,7 +1588,12 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       );
       const total = worksSum + detailsSum;
 
-      if (a.date_off) {
+      // Закритий акт рахуємо тільки якщо date_off потрапляє в обраний день
+      const dateOffDay = a.date_off ? (a.date_off as string).slice(0, 10) : "";
+      const isClosed = !!a.date_off;
+      const isClosedOnSelectedDay = isClosed && dateOffDay === todayStr;
+
+      if (isClosedOnSelectedDay) {
         stats.closedCount++;
         stats.closedActs.push({
           id: a.act_id,
@@ -1602,7 +1607,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
         stats.totalDetailsSum += detailsSum;
         stats.totalSum += total;
         stats.worksCount += worksArr.length;
-      } else {
+      } else if (!isClosed) {
         stats.openCount++;
         stats.openActs.push({
           id: a.act_id,

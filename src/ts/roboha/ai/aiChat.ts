@@ -2125,8 +2125,6 @@ function initAIChatHandlers(modal: HTMLElement): void {
           inputEl.style.height = "auto";
           inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
           inputEl.focus();
-          // Автоматично відправляємо
-          sendMessage(text.trim());
         }
       } catch (err: any) {
         voiceBtn.classList.remove("ai-chat-voice-btn--listening");

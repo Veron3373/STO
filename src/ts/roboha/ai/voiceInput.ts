@@ -121,14 +121,26 @@ function startListening(): Promise<string> {
     recognition.lang = "uk-UA";
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 1;
+
+    // Таймаут — якщо за 7с нічого немає, зупиняємо
+    const timeout = setTimeout(() => {
+      try {
+        recognition?.stop();
+      } catch {
+        /* ignore */
+      }
+      reject(new Error("Час очікування вичерпано"));
+    }, 7000);
 
     recognition.onresult = (event: any) => {
+      clearTimeout(timeout);
       const transcript = event.results[0][0].transcript;
       resolve(transcript);
     };
 
     recognition.onerror = (event: any) => {
+      clearTimeout(timeout);
       if (event.error === "no-speech")
         reject(new Error("Мову не виявлено. Спробуйте ще раз."));
       else if (event.error === "audio-capture")
@@ -139,6 +151,7 @@ function startListening(): Promise<string> {
     };
 
     recognition.onend = () => {
+      clearTimeout(timeout);
       recognition = null;
     };
     recognition.start();
@@ -993,23 +1006,20 @@ function fillSingleCell(
 
 function updateMicButton(btn: HTMLElement, state: VoiceState): void {
   voiceState = state;
-  btn.classList.remove("voice-idle", "voice-listening", "voice-processing");
+  btn.classList.remove("ai-chat-voice-btn--listening");
 
   switch (state) {
     case "idle":
-      btn.classList.add("voice-idle");
-      btn.innerHTML = `<span class="voice-btn-icon">🎙️</span><span class="voice-btn-text">Голос</span>`;
-      btn.title =
-        "🎙️ Голос. Скажіть: [поле] [значення] або [рядок N] [колонка] [значення]";
+      btn.innerHTML = "🎙️";
+      btn.title = "Голосове введення";
       break;
     case "listening":
-      btn.classList.add("voice-listening");
-      btn.innerHTML = `<span class="voice-btn-icon voice-pulse">🔴</span><span class="voice-btn-text">Слухаю...</span>`;
+      btn.classList.add("ai-chat-voice-btn--listening");
+      btn.innerHTML = `<span class="ai-voice-pulse">🔴</span>`;
       btn.title = "Слухаю... Натисніть для зупинки";
       break;
     case "processing":
-      btn.classList.add("voice-processing");
-      btn.innerHTML = `<span class="voice-btn-icon voice-spin">⚙️</span><span class="voice-btn-text">Аналізую...</span>`;
+      btn.innerHTML = `<span class="ai-voice-pulse">⚙️</span>`;
       btn.title = "Обробка...";
       break;
   }
@@ -1248,11 +1258,10 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
 export function createVoiceButton(): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.id = "voice-input-button";
-  btn.className = "action-button voice-input-button voice-idle";
+  btn.className = "ai-chat-voice-btn";
   btn.type = "button";
-  btn.innerHTML = `<span class="voice-btn-icon">�️</span><span class="voice-btn-text">Голос</span>`;
-  btn.title =
-    "🎙️ Голос: скажіть [поле] [значення] або [рядок N] [колонка] [значення]";
+  btn.innerHTML = "🎙️";
+  btn.title = "Голосове введення";
 
   btn.addEventListener("click", (e) => {
     e.preventDefault();

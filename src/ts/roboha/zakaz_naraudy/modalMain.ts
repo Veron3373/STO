@@ -68,6 +68,7 @@ import {
 
 import { checkAndHighlightChanges } from "./inhi/act_changes_highlighter";
 import { removeNotificationsForAct } from "../tablucya/povidomlennya_tablucya";
+import { initVoiceInput } from "../ai/voiceInput";
 import { handleSmsButtonClick } from "../sms/sendActSMS";
 import {
   refreshActsTable,
@@ -1564,6 +1565,9 @@ async function addModalHandlers(
       // Застосовуємо обмеження доступу для ВСІХ ролей
       await applyAccessRestrictionsToNewRow();
     });
+
+    // 🎤 Голосове введення в наряд
+    initVoiceInput();
   }
 
   const avansInput = document.getElementById(

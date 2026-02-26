@@ -1402,14 +1402,48 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
     let acts: any[] = [];
     try {
       if (isToday) {
-        // Сьогодні: всі акти відкриті сьогодні або пізніше
-        const { data, error } = await supabase
-          .from("acts")
-          .select("*")
-          .gte("date_on", todayStr)
-          .order("act_id", { ascending: false })
-          .limit(100);
-        if (!error && data) acts = data;
+        // Сьогодні: акти відкриті сьогодні АБО закриті сьогодні
+        const [openedTodayRes, closedTodayRes, stillOpenRes] =
+          await Promise.all([
+            supabase
+              .from("acts")
+              .select("*")
+              .gte("date_on", todayStr)
+              .order("act_id", { ascending: false })
+              .limit(100),
+            supabase
+              .from("acts")
+              .select("*")
+              .gte("date_off", todayStr)
+              .order("act_id", { ascending: false })
+              .limit(100),
+            supabase
+              .from("acts")
+              .select("*")
+              .is("date_off", null)
+              .order("act_id", { ascending: false })
+              .limit(200),
+          ]);
+
+        const opened =
+          !openedTodayRes.error && openedTodayRes.data
+            ? openedTodayRes.data
+            : [];
+        const closed =
+          !closedTodayRes.error && closedTodayRes.data
+            ? closedTodayRes.data
+            : [];
+        const stillOpen =
+          !stillOpenRes.error && stillOpenRes.data ? stillOpenRes.data : [];
+
+        // Об'єднуємо без дублікатів
+        const seen = new Set<number>();
+        for (const a of [...opened, ...closed, ...stillOpen]) {
+          if (!seen.has(a.act_id)) {
+            seen.add(a.act_id);
+            acts.push(a);
+          }
+        }
       } else {
         // Інша дата: акти відкриті У ЦЕЙ день АБО закриті У ЦЕЙ день
         const nextDay = new Date(today);
@@ -1463,7 +1497,8 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
           acts = data.filter((a: any) => {
             const dateOn = (a.date_on || "").slice(0, 10);
             const dateOff = (a.date_off || "").slice(0, 10);
-            if (isToday) return dateOn >= todayStr;
+            if (isToday)
+              return dateOn >= todayStr || dateOff >= todayStr || !a.date_off;
             return dateOn === todayStr || dateOff === todayStr;
           });
         }

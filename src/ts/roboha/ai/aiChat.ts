@@ -2318,6 +2318,8 @@ const QUICK_PROMPTS = [
 export async function createAIChatModal(): Promise<void> {
   if (document.getElementById(CHAT_MODAL_ID)) {
     document.getElementById(CHAT_MODAL_ID)!.classList.remove("hidden");
+    // При кожному відкритті — підвантажуємо ключі та показуємо активний
+    loadAllGeminiKeys().then(() => updateKeyIndicator());
     return;
   }
 
@@ -2406,6 +2408,9 @@ export async function createAIChatModal(): Promise<void> {
 
   document.body.appendChild(modal);
   initAIChatHandlers(modal);
+
+  // Підвантажуємо ключі одразу при відкритті, щоб показати активний
+  loadAllGeminiKeys().then(() => updateKeyIndicator());
 }
 
 // ============================================================

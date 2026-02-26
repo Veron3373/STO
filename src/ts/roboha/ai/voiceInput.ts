@@ -119,28 +119,108 @@ function startListening(): Promise<string> {
 
     recognition = new SpeechRecognition();
     recognition.lang = "uk-UA";
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    // Таймаут — якщо за 7с нічого немає, зупиняємо
-    const timeout = setTimeout(() => {
+    let fullTranscript = "";
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+    let resolved = false;
+
+    // Кодові слова для зупинки
+    const STOP_PHRASES = [
+      "це все",
+      "це всі",
+      "усе",
+      "все",
+      "готово",
+      "стоп",
+      "кінець",
+    ];
+
+    function finishRecognition() {
+      if (resolved) return;
+      resolved = true;
+      if (silenceTimer) clearTimeout(silenceTimer);
       try {
         recognition?.stop();
       } catch {
         /* ignore */
       }
-      reject(new Error("Час очікування вичерпано"));
-    }, 7000);
+
+      // Прибираємо кодове слово з кінця тексту
+      let result = fullTranscript.trim();
+      const lower = result.toLowerCase();
+      for (const phrase of STOP_PHRASES) {
+        if (lower.endsWith(phrase)) {
+          result = result.slice(0, -phrase.length).trim();
+          // Прибираємо можливу кому/крапку перед кодовим словом
+          result = result.replace(/[,.\s]+$/, "");
+          break;
+        }
+      }
+
+      resolve(result || "");
+    }
+
+    // Скидаємо таймер тиші при кожному новому результаті
+    function resetSilenceTimer() {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        finishRecognition();
+      }, 2000); // 2 секунди тиші → зупинка
+    }
+
+    // Загальний таймаут — 30с максимум
+    const maxTimeout = setTimeout(() => {
+      finishRecognition();
+    }, 30000);
 
     recognition.onresult = (event: any) => {
-      clearTimeout(timeout);
-      const transcript = event.results[0][0].transcript;
-      resolve(transcript);
+      let interim = "";
+      let final = "";
+
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          final += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+
+      fullTranscript = final;
+      const currentText = (final + interim).toLowerCase().trim();
+
+      // Перевірка кодових слів зупинки
+      for (const phrase of STOP_PHRASES) {
+        if (
+          currentText.endsWith(phrase) ||
+          currentText.endsWith(phrase + ".") ||
+          currentText.endsWith(phrase + ",")
+        ) {
+          clearTimeout(maxTimeout);
+          // Невелика затримка щоб зафіксувати фінальний результат
+          setTimeout(() => finishRecognition(), 300);
+          return;
+        }
+      }
+
+      // Скидаємо таймер тиші
+      resetSilenceTimer();
     };
 
     recognition.onerror = (event: any) => {
-      clearTimeout(timeout);
+      if (resolved) return;
+      clearTimeout(maxTimeout);
+      if (silenceTimer) clearTimeout(silenceTimer);
+
+      // Якщо вже є текст — повертаємо його
+      if (fullTranscript.trim()) {
+        finishRecognition();
+        return;
+      }
+
       if (event.error === "no-speech")
         reject(new Error("Мову не виявлено. Спробуйте ще раз."));
       else if (event.error === "audio-capture")
@@ -151,9 +231,33 @@ function startListening(): Promise<string> {
     };
 
     recognition.onend = () => {
-      clearTimeout(timeout);
-      recognition = null;
+      clearTimeout(maxTimeout);
+      if (!resolved) {
+        // Браузер сам зупинив — повертаємо що є
+        if (fullTranscript.trim()) {
+          finishRecognition();
+        } else {
+          recognition = null;
+        }
+      } else {
+        recognition = null;
+      }
     };
+
+    // Початковий таймер тиші — якщо 7с нічого не сказано
+    silenceTimer = setTimeout(() => {
+      if (!fullTranscript.trim()) {
+        resolved = true;
+        clearTimeout(maxTimeout);
+        try {
+          recognition?.stop();
+        } catch {
+          /* ignore */
+        }
+        reject(new Error("Мову не виявлено. Спробуйте ще раз."));
+      }
+    }, 7000);
+
     recognition.start();
   });
 }
@@ -1306,9 +1410,9 @@ export function initVoiceInput(): void {
 // ============================================================
 
 /**
- * Швидке розпізнавання голосу для AI чату.
- * Повертає розпізнаний текст — без парсингу команд.
- * interimResults = true для швидкого відгуку.
+ * Розпізнавання голосу для AI чату.
+ * continuous: true — слухає довгі фрази.
+ * Зупинка: кодове слово "це все" або 2 секунди тиші.
  */
 export function startChatVoiceInput(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -1323,28 +1427,93 @@ export function startChatVoiceInput(): Promise<string> {
 
     const rec = new SpeechRecognition();
     rec.lang = "uk-UA";
-    rec.continuous = false;
-    rec.interimResults = false;
+    rec.continuous = true;
+    rec.interimResults = true;
     rec.maxAlternatives = 1;
 
-    // Таймаут — якщо за 7с нічого немає, зупиняємо
-    const timeout = setTimeout(() => {
+    let fullTranscript = "";
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+    let resolved = false;
+
+    const STOP_PHRASES = [
+      "це все",
+      "це всі",
+      "усе",
+      "все",
+      "готово",
+      "стоп",
+      "кінець",
+    ];
+
+    function finish() {
+      if (resolved) return;
+      resolved = true;
+      if (silenceTimer) clearTimeout(silenceTimer);
+      clearTimeout(maxTimeout);
       try {
         rec.stop();
       } catch {
         /* ignore */
       }
-      reject(new Error("Час очікування вичерпано"));
-    }, 7000);
+
+      let result = fullTranscript.trim();
+      const lower = result.toLowerCase();
+      for (const phrase of STOP_PHRASES) {
+        if (lower.endsWith(phrase)) {
+          result = result
+            .slice(0, -phrase.length)
+            .trim()
+            .replace(/[,.\s]+$/, "");
+          break;
+        }
+      }
+      resolve(result || "");
+    }
+
+    function resetSilenceTimer() {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => finish(), 2000);
+    }
+
+    // Максимум 30 секунд
+    const maxTimeout = setTimeout(() => finish(), 30000);
 
     rec.onresult = (event: any) => {
-      clearTimeout(timeout);
-      const transcript = event.results[0][0].transcript;
-      resolve(transcript || "");
+      let interim = "";
+      let final = "";
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript;
+        } else {
+          interim += event.results[i][0].transcript;
+        }
+      }
+      fullTranscript = final;
+      const currentText = (final + interim).toLowerCase().trim();
+
+      for (const phrase of STOP_PHRASES) {
+        if (
+          currentText.endsWith(phrase) ||
+          currentText.endsWith(phrase + ".") ||
+          currentText.endsWith(phrase + ",")
+        ) {
+          setTimeout(() => finish(), 300);
+          return;
+        }
+      }
+      resetSilenceTimer();
     };
 
     rec.onerror = (event: any) => {
-      clearTimeout(timeout);
+      if (resolved) return;
+      clearTimeout(maxTimeout);
+      if (silenceTimer) clearTimeout(silenceTimer);
+
+      if (fullTranscript.trim()) {
+        finish();
+        return;
+      }
+
       if (event.error === "no-speech") reject(new Error("Мову не виявлено"));
       else if (event.error === "audio-capture")
         reject(new Error("Мікрофон не знайдено"));
@@ -1354,8 +1523,27 @@ export function startChatVoiceInput(): Promise<string> {
     };
 
     rec.onend = () => {
-      clearTimeout(timeout);
+      clearTimeout(maxTimeout);
+      if (!resolved) {
+        if (fullTranscript.trim()) {
+          finish();
+        }
+      }
     };
+
+    // Початковий таймер — 7с якщо нічого не сказано
+    silenceTimer = setTimeout(() => {
+      if (!fullTranscript.trim()) {
+        resolved = true;
+        clearTimeout(maxTimeout);
+        try {
+          rec.stop();
+        } catch {
+          /* ignore */
+        }
+        reject(new Error("Мову не виявлено"));
+      }
+    }, 7000);
 
     rec.start();
   });

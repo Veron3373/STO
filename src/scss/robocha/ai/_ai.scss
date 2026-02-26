@@ -554,12 +554,23 @@
   gap: 6px;
 }
 
+// ── Статус-бар під полем введення ──
+.ai-chat-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 6px;
+  background: #0f172a;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
 .ai-key-indicator {
   font-size: 11px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.2);
-  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 8px;
   border-radius: 8px;
   letter-spacing: 0.5px;
   transition: all 0.3s ease;
@@ -567,11 +578,56 @@
   position: relative;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.3);
   }
 
   &:empty {
     display: none;
+  }
+}
+
+.ai-context-level {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+
+  option {
+    background: #1e293b;
+    color: white;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  &:focus {
+    border-color: #3b82f6;
+  }
+}
+
+.ai-token-counter {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: auto;
+  letter-spacing: 0.3px;
+
+  &.ai-tokens-low {
+    color: #4ade80;
+  }
+  &.ai-tokens-mid {
+    color: #fbbf24;
+  }
+  &.ai-tokens-high {
+    color: #f87171;
   }
 }
 

@@ -76,6 +76,10 @@ let currentKeyIndex = 0; // Поточний активний ключ
 let keysLoaded = false;
 let isLoading = false;
 
+/** Рівень використання токенів: light=мінімальний, medium=середній, heavy=повний */
+type AIContextLevel = "light" | "medium" | "heavy";
+let aiContextLevel: AIContextLevel = "light";
+
 // ============================================================
 // ЗАВАНТАЖЕННЯ КЛЮЧІВ GEMINI (3 ключі з фолбеком)
 // ============================================================
@@ -210,6 +214,27 @@ function updateKeyIndicator(): void {
 }
 
 /**
+ * Оновлює лічильник токенів у статус-барі
+ */
+function updateTokenCounter(tokens: number): void {
+  const el = document.getElementById("ai-token-counter");
+  if (!el) return;
+  if (tokens <= 0) {
+    el.textContent = "🎫 —";
+    return;
+  }
+  const formatted =
+    tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}k` : String(tokens);
+  el.textContent = `🎫 ~${formatted}`;
+  el.title = `Останній запит: ~${tokens.toLocaleString("uk-UA")} токенів (контекст)`;
+  // Колір залежить від кількості
+  el.classList.remove("ai-tokens-low", "ai-tokens-mid", "ai-tokens-high");
+  if (tokens < 3000) el.classList.add("ai-tokens-low");
+  else if (tokens < 10000) el.classList.add("ai-tokens-mid");
+  else el.classList.add("ai-tokens-high");
+}
+
+/**
  * Показує/ховає випадаючий список ключів для ручного вибору
  */
 function toggleKeyDropdown(): void {
@@ -278,6 +303,23 @@ function toggleKeyDropdown(): void {
 /**
  * Аналізує запит користувача для визначення, яку інформацію завантажувати
  */
+/**
+ * 💡 Детектор тривіальних запитів — пропускаємо ВСІ запити до БД
+ */
+function isTrivialQuery(query: string): boolean {
+  const q = query.toLowerCase().trim();
+  // Короткі привітання/подяки/загальні питання
+  if (
+    q.length < 40 &&
+    /^(привіт|здоров|здрастуй|вітаю|салам|хай|hello|hi|дякую|спасибі|спс|дяка|ок|окей|зрозуміло|добре|ясно|лады|хорош|гуд|бувай|до побачення|поки|пока|хто ти|як тебе|що ти вмієш|що ти можеш|допоможи|help|як справи|що нового|що можеш)\b/i.test(
+      q,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function analyzeQuery(query: string): {
   needsPlanner: boolean;
   needsAccounting: boolean;
@@ -290,32 +332,52 @@ function analyzeQuery(query: string): {
   searchName: string | null;
 } {
   const q = query.toLowerCase();
+
+  const needsPlanner =
+    /план|пост|бокс|підйомник|яма|завантаж|зайнят|вільн|бронюв|записан|календар|розклад/i.test(
+      q,
+    );
+  const needsAccounting =
+    /бухг|витрат|прибут|виручк|маржа|зарплат|націнк|заробі|розрахун|каса|оплат|борг|дохід|видат/i.test(
+      q,
+    );
+  const needsClients =
+    /клієнт|піб|прізвищ|імен|телефон|контакт|номер.*тел|знайди.*людин|хто.*приїжджа|відфільтр|фільтр/i.test(
+      q,
+    );
+  const needsCars =
+    /авто|машин|марк|модел|мерседес|бмв|тойот|фольксваген|ауд|рено|шкод|хюнд|кіа|номер.*авто|держ.*номер|vin|вінкод|двигун|пробіг|відфільтр|фільтр/i.test(
+      q,
+    );
+  const needsSklad =
+    /складі?|запчаст|деталі?|артикул|зап.*частин|залишок|наявн|закінч|замов|полиц|постачальн|рахун|розрах|повернен/i.test(
+      q,
+    );
+  const needsSlyusars =
+    /слюсар|майстер|механік|працівник|хто.*робить|хто.*працю|хто.*виконує/i.test(
+      q,
+    );
+
+  // 💡 Акти — тільки коли реально потрібно (загальні запити, фінанси, клієнти, фільтри)
+  const needsActs =
+    /акт|заказ|наряд|відкри|закри|сьогодн|вчора|тижн|місяц|звіт|загальн|стат|виру|дохід|прибут|зарплат|сума|грн|оплат|борг|фільтр|відфільтр/i.test(
+      q,
+    ) ||
+    needsAccounting ||
+    needsClients ||
+    needsCars ||
+    needsSlyusars ||
+    extractClientName(q) !== null ||
+    extractCarBrand(q) !== null;
+
   return {
-    needsPlanner:
-      /план|пост|бокс|підйомник|яма|завантаж|зайнят|вільн|бронюв|записан|календар|розклад/i.test(
-        q,
-      ),
-    needsAccounting:
-      /бухг|витрат|прибут|виручк|маржа|зарплат|націнк|заробі|розрахун|каса|оплат|борг|дохід|видат/i.test(
-        q,
-      ),
-    needsClients:
-      /клієнт|піб|прізвищ|імен|телефон|контакт|номер.*тел|знайди.*людин|хто.*приїжджа|відфільтр|фільтр/i.test(
-        q,
-      ),
-    needsCars:
-      /авто|машин|марк|модел|мерседес|бмв|тойот|фольксваген|ауд|рено|шкод|хюнд|кіа|номер.*авто|держ.*номер|vin|вінкод|двигун|пробіг|відфільтр|фільтр/i.test(
-        q,
-      ),
-    needsActs: true, // Акти завжди потрібні
-    needsSklad:
-      /складі?|запчаст|деталі?|артикул|зап.*частин|залишок|наявн|закінч|замов|полиц|постачальн|рахун|розрах|повернен/i.test(
-        q,
-      ),
-    needsSlyusars:
-      /слюсар|майстер|механік|працівник|хто.*робить|хто.*працю|хто.*виконує/i.test(
-        q,
-      ),
+    needsPlanner,
+    needsAccounting,
+    needsClients,
+    needsCars,
+    needsActs,
+    needsSklad,
+    needsSlyusars,
     searchBrand: extractCarBrand(q),
     searchName: extractClientName(q),
   };
@@ -407,11 +469,27 @@ function extractClientName(q: string): string | null {
   return null;
 }
 
-async function gatherSTOContext(userQuery: string): Promise<string> {
+async function gatherSTOContext(
+  userQuery: string,
+  level: AIContextLevel = "light",
+): Promise<string> {
+  const isHeavy = level === "heavy";
+  const isMedium = level === "medium";
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
   const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
   const analysis = analyzeQuery(userQuery);
+
+  // 💡 У heavy/medium режимі — всі секції завжди підвантажуються
+  if (isHeavy || isMedium) {
+    analysis.needsActs = true;
+    analysis.needsClients = true;
+    analysis.needsCars = true;
+    analysis.needsSklad = true;
+    analysis.needsSlyusars = true;
+    analysis.needsAccounting = isMedium ? analysis.needsAccounting : true;
+    analysis.needsPlanner = isMedium ? analysis.needsPlanner : true;
+  }
 
   let context = `СЬОГОДНІ: ${today.toLocaleDateString("uk-UA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} (${todayStr})\n`;
 
@@ -517,92 +595,117 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
 
   try {
     // ============================================================
-    // 1. АКТИ — відкриті + закриті за місяць
+    // 1. АКТИ — 💡 тільки коли потрібні (needsActs)
     // ============================================================
     let openActs: any[] = [];
     let closedMonthActs: any[] = [];
+    let parsedOpen: ReturnType<typeof parseActData>[] = [];
+    let parsedClosed: ReturnType<typeof parseActData>[] = [];
+    let monthTotal = 0,
+      monthWorksTotal = 0,
+      monthDetailsTotal = 0,
+      monthDiscount = 0;
 
-    try {
-      const [openRes, closedRes] = await Promise.all([
-        supabase
-          .from("acts")
-          .select("*")
-          .is("date_off", null)
-          .order("act_id", { ascending: false })
-          .limit(200),
-        supabase
-          .from("acts")
-          .select("*")
-          .not("date_off", "is", null)
-          .gte("date_off", monthStart)
-          .order("act_id", { ascending: false })
-          .limit(500),
-      ]);
-      if (openRes.data) openActs = openRes.data;
-      if (closedRes.data) closedMonthActs = closedRes.data;
-    } catch {
-      /* fallback */
+    if (analysis.needsActs) {
+      // 💡 ОПТИМІЗАЦІЯ: обмежуємо кількість актів для зменшення токенів
+      // 💡 Ліміти залежать від рівня
+      const OPEN_ACTS_LIMIT = isHeavy ? 200 : isMedium ? 100 : 50;
+      const CLOSED_TODAY_LIMIT = isHeavy ? 100 : isMedium ? 50 : 20;
+      const CLOSED_MONTH_LIMIT = isHeavy ? 500 : isMedium ? 200 : 100;
+
       try {
-        const { data } = await supabase
-          .from("acts")
-          .select("*")
-          .order("act_id", { ascending: false })
-          .limit(500);
-        if (data) {
-          openActs = data.filter((a: any) => !a.date_off);
-          closedMonthActs = data.filter((a: any) => !!a.date_off);
-        }
+        const [openRes, closedRes] = await Promise.all([
+          supabase
+            .from("acts")
+            .select("*")
+            .is("date_off", null)
+            .order("act_id", { ascending: false })
+            .limit(OPEN_ACTS_LIMIT),
+          supabase
+            .from("acts")
+            .select("*")
+            .not("date_off", "is", null)
+            .gte("date_off", monthStart)
+            .order("act_id", { ascending: false })
+            .limit(CLOSED_MONTH_LIMIT),
+        ]);
+        if (openRes.data) openActs = openRes.data;
+        if (closedRes.data) closedMonthActs = closedRes.data;
       } catch {
-        /* ignore */
+        /* fallback */
+        try {
+          const { data } = await supabase
+            .from("acts")
+            .select("*")
+            .order("act_id", { ascending: false })
+            .limit(CLOSED_MONTH_LIMIT);
+          if (data) {
+            openActs = data
+              .filter((a: any) => !a.date_off)
+              .slice(0, OPEN_ACTS_LIMIT);
+            closedMonthActs = data.filter((a: any) => !!a.date_off);
+          }
+        } catch {
+          /* ignore */
+        }
       }
-    }
 
-    const parsedOpen = openActs.map(parseActData);
-    const parsedClosed = closedMonthActs.map(parseActData);
-    const closedToday = parsedClosed.filter(
-      (a) => (a.dateOff || "").slice(0, 10) >= todayStr,
-    );
+      parsedOpen = openActs.map(parseActData);
+      parsedClosed = closedMonthActs.map(parseActData);
+      const closedToday = parsedClosed.filter(
+        (a) => (a.dateOff || "").slice(0, 10) >= todayStr,
+      );
 
-    context += `=== ВІДКРИТІ АКТИ (${parsedOpen.length}) ===\n`;
-    parsedOpen.forEach((p) => {
-      context += `  ${formatAct(p, true)}\n`;
-    });
-    if (parsedOpen.length === 0) context += "  Немає відкритих актів.\n";
-
-    context += `\n=== ЗАКРИТІ СЬОГОДНІ (${closedToday.length}) ===\n`;
-    closedToday.forEach((p) => {
-      context += `  ${formatAct(p, true)}\n`;
-    });
-
-    const otherClosed = parsedClosed.filter(
-      (a) => (a.dateOff || "").slice(0, 10) < todayStr,
-    );
-    if (otherClosed.length > 0) {
-      context += `\n=== ЗАКРИТІ ЗА МІСЯЦЬ (${otherClosed.length}) ===\n`;
-      otherClosed.forEach((p) => {
-        context += `  ${formatAct(p, false)}\n`;
+      // 💡 Відкриті акти — деталізація залежить від рівня
+      context += `=== ВІДКРИТІ АКТИ (${parsedOpen.length}) ===\n`;
+      parsedOpen.forEach((p) => {
+        context += `  ${formatAct(p, isHeavy || isMedium)}\n`;
       });
-    }
+      if (parsedOpen.length === 0) context += "  Немає відкритих актів.\n";
 
-    // Статистика місяця
-    const monthWorksTotal = parsedClosed.reduce((s, p) => s + p.worksSum, 0);
-    const monthDetailsTotal = parsedClosed.reduce(
-      (s, p) => s + p.detailsSum,
-      0,
-    );
-    const monthTotal = parsedClosed.reduce((s, p) => s + p.total, 0);
-    const monthDiscount = parsedClosed.reduce((s, p) => s + p.discount, 0);
-    context += `\n=== СТАТИСТИКА МІСЯЦЯ (${today.toLocaleDateString("uk-UA", { month: "long", year: "numeric" })}) ===\n`;
-    context += `Закрито актів: ${parsedClosed.length} | Відкритих: ${parsedOpen.length}\n`;
-    context += `Виручка: ${monthTotal.toLocaleString("uk-UA")} грн (роботи: ${monthWorksTotal.toLocaleString("uk-UA")}, деталі: ${monthDetailsTotal.toLocaleString("uk-UA")})\n`;
-    if (monthDiscount > 0)
-      context += `Знижки: ${monthDiscount.toLocaleString("uk-UA")} грн\n`;
+      // Закриті сьогодні — детально
+      const closedTodayLimited = closedToday.slice(0, CLOSED_TODAY_LIMIT);
+      context += `\n=== ЗАКРИТІ СЬОГОДНІ (${closedToday.length}) ===\n`;
+      closedTodayLimited.forEach((p) => {
+        context += `  ${formatAct(p, true)}\n`;
+      });
+      if (closedToday.length > CLOSED_TODAY_LIMIT) {
+        context += `  ... та ще ${closedToday.length - CLOSED_TODAY_LIMIT} актів\n`;
+      }
 
-    // Статистика сьогодні
-    const todayWorksTotal = closedToday.reduce((s, p) => s + p.worksSum, 0);
-    const todayDetailsTotal = closedToday.reduce((s, p) => s + p.detailsSum, 0);
-    const todayTotal = closedToday.reduce((s, p) => s + p.total, 0);
-    context += `\nСЬОГОДНІ: закрито ${closedToday.length} | виручка ${todayTotal.toLocaleString("uk-UA")} грн (роботи: ${todayWorksTotal.toLocaleString("uk-UA")}, деталі: ${todayDetailsTotal.toLocaleString("uk-UA")})\n`;
+      // 💡 Закриті за місяць — heavy: всі детально, medium: компактно, light: тільки статистика
+      monthWorksTotal = parsedClosed.reduce((s, p) => s + p.worksSum, 0);
+      monthDetailsTotal = parsedClosed.reduce((s, p) => s + p.detailsSum, 0);
+      monthTotal = parsedClosed.reduce((s, p) => s + p.total, 0);
+      monthDiscount = parsedClosed.reduce((s, p) => s + p.discount, 0);
+
+      if (isHeavy) {
+        context += `\n=== ВСІ ЗАКРИТІ ЗА МІСЯЦЬ (${parsedClosed.length}) ===\n`;
+        parsedClosed.forEach((p) => {
+          context += `  ${formatAct(p, true)}\n`;
+        });
+      } else if (isMedium) {
+        context += `\n=== ЗАКРИТІ ЗА МІСЯЦЬ (${parsedClosed.length}) ===\n`;
+        parsedClosed.forEach((p) => {
+          context += `  ${formatAct(p, false)}\n`;
+        });
+      }
+
+      context += `\n=== СТАТИСТИКА МІСЯЦЯ (${today.toLocaleDateString("uk-UA", { month: "long", year: "numeric" })}) ===\n`;
+      context += `Закрито актів: ${parsedClosed.length} | Відкритих: ${parsedOpen.length}\n`;
+      context += `Виручка: ${monthTotal.toLocaleString("uk-UA")} грн (роботи: ${monthWorksTotal.toLocaleString("uk-UA")}, деталі: ${monthDetailsTotal.toLocaleString("uk-UA")})\n`;
+      if (monthDiscount > 0)
+        context += `Знижки: ${monthDiscount.toLocaleString("uk-UA")} грн\n`;
+
+      // Статистика сьогодні
+      const todayWorksTotal = closedToday.reduce((s, p) => s + p.worksSum, 0);
+      const todayDetailsTotal = closedToday.reduce(
+        (s, p) => s + p.detailsSum,
+        0,
+      );
+      const todayTotal = closedToday.reduce((s, p) => s + p.total, 0);
+      context += `\nСЬОГОДНІ: закрито ${closedToday.length} | виручка ${todayTotal.toLocaleString("uk-UA")} грн (роботи: ${todayWorksTotal.toLocaleString("uk-UA")}, деталі: ${todayDetailsTotal.toLocaleString("uk-UA")})\n`;
+    } // end needsActs
 
     // ============================================================
     // 2. СЛЮСАРІ — повна інформація
@@ -627,18 +730,16 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         } catch {}
         const name = d.Name || d["Ім'я"] || "—";
         const role = d["Доступ"] || "";
-        context += `  ID: ${s.slyusar_id} | ${name}`;
-        if (role) context += ` | Роль: ${role}`;
-        if (d.Phone || d["Телефон"])
-          context += ` | Тел: ${d.Phone || d["Телефон"]}`;
-        if (d["Посада"]) context += ` | Посада: ${d["Посада"]}`;
-        if (d["ПроцентРоботи"])
-          context += ` | % роботи: ${d["ПроцентРоботи"]}%`;
-        if (s.post_sluysar) context += ` | Пост ID: ${s.post_sluysar}`;
-        context += "\n";
+        // 💡 Компактний формат: все в одну стрічку
+        context += `  ${s.slyusar_id}|${name}`;
+        if (role) context += `|${role}`;
+        if (d["ПроцентРоботи"]) context += `|${d["ПроцентРоботи"]}%`;
 
-        // Зарплатна статистика за місяць (якщо є Історія)
-        if (analysis.needsAccounting && d["Історія"]) {
+        // 💡 Зарплатна статистика — тільки якщо потрібна бухгалтерія або слюсарі
+        if (
+          (analysis.needsAccounting || analysis.needsSlyusars) &&
+          d["Історія"]
+        ) {
           let monthSalary = 0;
           let monthActsCount = 0;
           for (const [date, records] of Object.entries(d["Історія"])) {
@@ -653,9 +754,10 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
             }
           }
           if (monthActsCount > 0) {
-            context += `    Місяць: ${monthActsCount} актів, зарплата: ${monthSalary.toLocaleString("uk-UA")} грн\n`;
+            context += `|${monthActsCount}акт|ЗП:${monthSalary}`;
           }
         }
+        context += "\n";
       });
     }
 
@@ -832,7 +934,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
     }
 
     // ============================================================
-    // 4. КЛІЄНТИ ТА АВТО — повна база
+    // 4. КЛІЄНТИ ТА АВТО — 💡 тільки при конкретному пошуку
     // ============================================================
     if (
       analysis.needsClients ||
@@ -840,18 +942,34 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       analysis.searchBrand ||
       analysis.searchName
     ) {
+      // 💡 Обмежуємо: ліміти залежать від рівня
+      const clientLimit = isHeavy
+        ? 2000
+        : isMedium
+          ? 500
+          : analysis.searchName || analysis.searchBrand
+            ? 500
+            : 100;
+      const carLimit = isHeavy
+        ? 5000
+        : isMedium
+          ? 1000
+          : analysis.searchName || analysis.searchBrand
+            ? 1000
+            : 200;
+
       try {
         const [clientsRes, carsRes] = await Promise.all([
           supabase
             .from("clients")
             .select("*")
             .order("client_id", { ascending: false })
-            .limit(1000),
+            .limit(clientLimit),
           supabase
             .from("cars")
             .select("*")
             .order("cars_id", { ascending: false })
-            .limit(2000),
+            .limit(carLimit),
         ]);
 
         const allClients = clientsRes.data || [];
@@ -934,23 +1052,22 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
           });
         }
 
-        // Загальна інфо (якщо не конкретний пошук)
+        // 💡 Загальна інфо — кількість залежить від рівня
         if (!analysis.searchBrand && !analysis.searchName) {
-          context += `\n=== КЛІЄНТИ В БАЗІ: ${parsedClients.length} ===\n`;
-          // Виводимо останніх 50 клієнтів з їхніми авто
-          parsedClients.slice(0, 50).forEach((cl) => {
-            context += `  ID:${cl.id} | ${cl.name}`;
-            if (cl.phone) context += ` | ${cl.phone}`;
+          const showCount = isHeavy ? parsedClients.length : isMedium ? 50 : 15;
+          context += `\n=== КЛІЄНТИ В БАЗІ: ${parsedClients.length} | АВТО: ${parsedCars.length} ===\n`;
+          parsedClients.slice(0, showCount).forEach((cl) => {
+            context += `  ${cl.id}|${cl.name}`;
+            if (cl.phone) context += `|${cl.phone}`;
             const clientCars = parsedCars.filter((c) => c.clientId === cl.id);
             if (clientCars.length > 0) {
-              context += ` | Авто: ${clientCars.map((c) => `${c.car}${c.plate ? ` (${c.plate})` : ""}`).join(", ")}`;
+              context += `|${clientCars.map((c) => `${c.car}${c.plate ? `(${c.plate})` : ""}`).join(",")}`;
             }
             context += "\n";
           });
-          if (parsedClients.length > 50) {
-            context += `  ... та ще ${parsedClients.length - 50} клієнтів\n`;
+          if (parsedClients.length > showCount) {
+            context += `  ...ще ${parsedClients.length - showCount} клієнтів (запитай конкретного)\n`;
           }
-          context += `\n  Всього авто в базі: ${parsedCars.length}\n`;
         }
       } catch (err) {
         console.warn("⚠️ Помилка завантаження клієнтів/авто:", err);
@@ -1051,8 +1168,6 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
       }
 
       if (skladParts.length > 0) {
-        context += `\n=== СКЛАД — ПОВНІ ДАНІ З БД (${skladParts.length} позицій) ===\n`;
-
         // Критичні / мало на складі
         const criticalStock = skladParts.filter((p) => p.quantity <= 0);
         const lowStock = skladParts.filter(
@@ -1063,97 +1178,53 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
         );
         const normalStock = skladParts.filter((p) => p.quantity > 5);
 
-        context += `📊 СТАТИСТИКА СКЛАДУ:\n`;
-        context += `  🔴 Критично (0 або менше): ${criticalStock.length} позицій\n`;
-        context += `  🟠 Мало (1-2): ${lowStock.length} позицій\n`;
-        context += `  🟡 Низько (3-5): ${mediumStock.length} позицій\n`;
-        context += `  🟢 Норма (6+): ${normalStock.length} позицій\n`;
-        context += `  Загальна вартість складу: ${skladParts.reduce((s, p) => s + p.price * Math.max(p.quantity, 0), 0).toLocaleString("uk-UA")} грн\n`;
+        // 💡 ЗАВЖДИ: тільки статистика + критичні/мало (компактно)
+        context += `\n=== СКЛАД (${skladParts.length} поз) ===\n`;
+        context += `🔴${criticalStock.length} 🟠${lowStock.length} 🟡${mediumStock.length} 🟢${normalStock.length} | Вартість: ${skladParts.reduce((s, p) => s + p.price * Math.max(p.quantity, 0), 0).toLocaleString("uk-UA")} грн\n`;
 
-        // Не розраховані позиції
+        // Не розраховані позиції — тільки кількість
         const notPaid = skladParts.filter((p) => !p.rosraxovano && p.price > 0);
         if (notPaid.length > 0) {
-          const notPaidSum = notPaid.reduce(
-            (s, p) => s + p.price * Math.max(p.quantity, 0),
-            0,
-          );
-          context += `  💳 Не розраховано: ${notPaid.length} позицій на ${notPaidSum.toLocaleString("uk-UA")} грн\n`;
+          context += `💳 Не розрах: ${notPaid.length} поз\n`;
         }
 
-        // Деталізація: критичні + мало
+        // 💡 Критичні та мало — КОМПАКТНО, одна стрічка
         if (criticalStock.length > 0) {
-          context += `\n🔴 КРИТИЧНО — ЗАКІНЧИЛИСЬ (${criticalStock.length}):\n`;
+          context += `🔴 ЗАКІНЧИЛИСЬ:\n`;
           criticalStock.forEach((p) => {
-            context += `  ${p.name} | Арт: ${p.part_number} | Залишок: ${p.quantity} ${p.unit_measurement || "шт"} | Ціна: ${p.price} грн`;
-            if (p.shops) context += ` | Магазин: ${p.shops}`;
-            if (p.scladNomer) context += ` | Полиця: ${p.scladNomer}`;
-            if (p.time_on) context += ` | Поставка: ${fmtDate(p.time_on)}`;
-            if (p.akt) context += ` | Акт: №${p.akt}`;
-            if (p.rahunok) context += ` | Рахунок: ${p.rahunok}`;
-            if (!p.rosraxovano) context += ` | 💳 Не розраховано`;
+            context += `  ${p.name}|${p.part_number}|${p.quantity}${p.unit_measurement || "шт"}|${p.price}грн`;
+            if (p.shops) context += `|${p.shops}`;
+            if (p.akt) context += `|акт${p.akt}`;
             context += "\n";
           });
         }
-
         if (lowStock.length > 0) {
-          context += `\n🟠 МАЛО НА СКЛАДІ (${lowStock.length}):\n`;
+          context += `🟠 МАЛО:\n`;
           lowStock.forEach((p) => {
-            context += `  ${p.name} | Арт: ${p.part_number} | Залишок: ${p.quantity} ${p.unit_measurement || "шт"} | Ціна: ${p.price} грн`;
-            if (p.shops) context += ` | Магазин: ${p.shops}`;
-            if (p.scladNomer) context += ` | Полиця: ${p.scladNomer}`;
-            if (p.time_on) context += ` | Поставка: ${fmtDate(p.time_on)}`;
-            if (p.akt) context += ` | Акт: №${p.akt}`;
-            if (!p.rosraxovano) context += ` | 💳 Не розраховано`;
+            context += `  ${p.name}|${p.part_number}|${p.quantity}${p.unit_measurement || "шт"}|${p.price}грн`;
+            if (p.shops) context += `|${p.shops}`;
             context += "\n";
           });
         }
 
-        if (analysis.needsSklad || mediumStock.length > 0) {
+        // 💡 Середній та повний — залежить від рівня або запиту про склад
+        if (analysis.needsSklad || isHeavy || isMedium) {
           if (mediumStock.length > 0) {
-            context += `\n🟡 НИЗЬКИЙ ЗАЛИШОК (${mediumStock.length}):\n`;
+            context += `🟡 НИЗЬКО:\n`;
             mediumStock.forEach((p) => {
-              context += `  ${p.name} | Арт: ${p.part_number} | ${p.quantity} ${p.unit_measurement || "шт"} | ${p.price} грн`;
-              if (p.shops) context += ` | ${p.shops}`;
-              if (p.time_on) context += ` | ${fmtDate(p.time_on)}`;
-              if (p.akt) context += ` | Акт №${p.akt}`;
-              context += "\n";
+              context += `  ${p.name}|${p.part_number}|${p.quantity}${p.unit_measurement || "шт"}|${p.price}грн\n`;
             });
           }
-        }
-
-        // Повний склад — якщо запит про склад
-        if (analysis.needsSklad) {
-          context += `\n🟢 ПОВНИЙ СКЛАД (всі ${skladParts.length} позицій):\n`;
-          skladParts.forEach((p) => {
-            context += `  ID:${p.sclad_id} | ${p.name} | Арт: ${p.part_number} | ${p.quantity} ${p.unit_measurement || "шт"} | ${p.price} грн`;
-            if (p.shops) context += ` | ${p.shops}`;
-            if (p.time_on) context += ` | Поставка: ${fmtDate(p.time_on)}`;
-            if (p.scladNomer) context += ` | Полиця: ${p.scladNomer}`;
-            if (p.akt) context += ` | Акт №${p.akt}`;
-            if (p.rahunok) context += ` | Рах: ${p.rahunok}`;
-            if (p.rosraxovano)
-              context += ` | Розрах: ${fmtDate(p.rosraxovano)}`;
-            else if (p.price > 0) context += ` | 💳 Не розрах.`;
-            if (p.statys) context += ` | Статус: ${p.statys}`;
-            if (p.povernennya) context += ` | Повернення: ${p.povernennya}`;
+          context += `🟢 НОРМА (${normalStock.length}):\n`;
+          normalStock.forEach((p) => {
+            context += `  ${p.name}|${p.part_number}|${p.quantity}${p.unit_measurement || "шт"}|${p.price}грн`;
+            if (p.shops) context += `|${p.shops}`;
+            if (p.scladNomer) context += `|п${p.scladNomer}`;
             context += "\n";
           });
-        } else {
-          // Скорочений варіант — показати всіх з нормальним залишком компактно
-          if (normalStock.length > 0) {
-            context += `\n🟢 НОРМА (${normalStock.length} позицій, показано перші 50):\n`;
-            normalStock.slice(0, 50).forEach((p) => {
-              context += `  ${p.name} | ${p.part_number} | ${p.quantity} ${p.unit_measurement || "шт"} | ${p.price} грн`;
-              if (p.shops) context += ` | ${p.shops}`;
-              context += "\n";
-            });
-            if (normalStock.length > 50) {
-              context += `  ... та ще ${normalStock.length - 50} позицій з нормальним залишком\n`;
-            }
-          }
         }
       } else {
-        context += `\n=== СКЛАД: Порожній або дані не завантажились ===\n`;
+        context += `\n=== СКЛАД: порожній ===\n`;
       }
     }
 
@@ -1247,128 +1318,74 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
     }
 
     // ============================================================
-    // 8. МАГАЗИНИ/ПОСТАЧАЛЬНИКИ — ПОВНІ ДАНІ З БД
+    // 8. МАГАЗИНИ — 💡 компактно, тільки імена
     // ============================================================
-    try {
-      const { data: shopsData } = await supabase
-        .from("shops")
-        .select("*")
-        .order("shop_id");
+    const shops = globalCache.shops || [];
+    if (shops.length > 0) {
+      context += `\n=== МАГАЗИНИ (${shops.length}) ===\n`;
+      context += shops.map((s: any) => s.Name || "—").join(", ") + "\n";
+    }
 
-      if (shopsData && shopsData.length > 0) {
-        context += `\n=== МАГАЗИНИ/ПОСТАЧАЛЬНИКИ (${shopsData.length}) ===\n`;
-        shopsData.forEach((s: any) => {
-          let d: any = {};
-          try {
-            d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-          } catch {}
-          context += `  ID:${s.shop_id} | ${d.Name || d["Назва"] || "—"}`;
-          if (d["Про магазин"]) context += ` | ${d["Про магазин"]}`;
-          if (d.Phone || d["Телефон"])
-            context += ` | Тел: ${d.Phone || d["Телефон"]}`;
-          // Склад магазину
-          if (d["Склад"] && typeof d["Склад"] === "object") {
-            const skladKeys = Object.keys(d["Склад"]);
-            if (skladKeys.length > 0)
-              context += ` | Склад: ${skladKeys.length} позицій`;
-          }
-          // Історія магазину — кількість записів
-          if (d["Історія"] && typeof d["Історія"] === "object") {
-            const historyDates = Object.keys(d["Історія"]);
-            let totalRecords = 0;
-            historyDates.forEach((date: string) => {
-              const arr = Array.isArray(d["Історія"][date])
-                ? d["Історія"][date]
-                : [];
-              totalRecords += arr.length;
-            });
-            if (totalRecords > 0)
-              context += ` | Історія: ${totalRecords} записів`;
-          }
-          context += "\n";
-        });
-      } else {
-        // Фолбек на globalCache
-        const shops = globalCache.shops || [];
-        if (shops.length > 0) {
-          context += `\n=== МАГАЗИНИ/ПОСТАЧАЛЬНИКИ (${shops.length}) ===\n`;
-          shops.forEach((s: any) => {
-            context += `  - ${s.Name || "—"}`;
-            if (s.Phone) context += ` | ${s.Phone}`;
+    // ============================================================
+    // 9. ФАКТУРИ — 💡 тільки якщо запит про фактури/рахунки/бухгалтерію
+    // ============================================================
+    if (
+      isHeavy ||
+      isMedium ||
+      analysis.needsAccounting ||
+      /фактур|рахунок|контрагент/i.test(userQuery)
+    ) {
+      try {
+        const { data: fakturaData } = await supabase
+          .from("faktura")
+          .select("*")
+          .order("faktura_id", { ascending: false })
+          .limit(20);
+
+        if (fakturaData && fakturaData.length > 0) {
+          context += `\n=== ФАКТУРИ (${fakturaData.length}) ===\n`;
+          fakturaData.forEach((f: any) => {
+            context += `  №${f.faktura_id}`;
+            if (f.namber) context += `|${f.namber}`;
+            if (f.name) context += `|${f.name}`;
+            if (f.act_id) context += `|акт${f.act_id}`;
+            if (f.oderjyvach) context += `|${f.oderjyvach}`;
             context += "\n";
           });
         }
-      }
-    } catch {
-      // Фолбек
-      const shops = globalCache.shops || [];
-      if (shops.length > 0) {
-        context += `\n=== МАГАЗИНИ/ПОСТАЧАЛЬНИКИ (${shops.length}) ===\n`;
-        shops.forEach((s: any) => {
-          context += `  - ${s.Name || "—"}`;
-          if (s.Phone) context += ` | ${s.Phone}`;
-          context += "\n";
-        });
+      } catch {
+        /* ignore */
       }
     }
 
     // ============================================================
-    // 9. ФАКТУРИ — прямий доступ до БД
+    // 10. ВИТРАТИ — 💡 тільки якщо запит фінансовий
     // ============================================================
-    try {
-      const { data: fakturaData } = await supabase
-        .from("faktura")
-        .select("*")
-        .order("faktura_id", { ascending: false })
-        .limit(50);
-
-      if (fakturaData && fakturaData.length > 0) {
-        context += `\n=== ФАКТУРИ (останні ${fakturaData.length}) ===\n`;
-        fakturaData.forEach((f: any) => {
-          context += `  Фактура №${f.faktura_id}`;
-          if (f.namber) context += ` | Номер: ${f.namber}`;
-          if (f.name) context += ` | ${f.name}`;
-          if (f.oderjyvach) context += ` | Одержувач: ${f.oderjyvach}`;
-          if (f.act_id) context += ` | Акт №${f.act_id}`;
-          if (f.contrAgent_raxunok)
-            context += ` | Рахунок: ${f.contrAgent_raxunok}`;
-          if (f.contrAgent_raxunok_data)
-            context += ` від ${f.contrAgent_raxunok_data}`;
-          if (f.prumitka) context += ` | Примітка: ${f.prumitka}`;
-          context += "\n";
-        });
-      }
-    } catch {
-      /* ignore */
-    }
-
-    // ============================================================
-    // 10. ВИТРАТИ — ЗАВЖДИ ПІДВАНТАЖУЄМО (не тільки для бухгалтерії)
-    // ============================================================
-    if (!analysis.needsAccounting) {
-      // Якщо бухгалтерія не запитана — все одно додаємо стислу інфо про витрати
+    if (
+      isHeavy ||
+      (!analysis.needsAccounting && /витрат|видат|каса|прибут/i.test(userQuery))
+    ) {
       try {
         const { data: expenses } = await supabase
           .from("vutratu")
           .select("*")
           .gte("dataOnn", monthStart)
           .order("dataOnn", { ascending: false })
-          .limit(100);
+          .limit(50);
 
         if (expenses && expenses.length > 0) {
           const totalExpenses = expenses.reduce(
             (s: number, e: any) => s + Number(e.suma || 0),
             0,
           );
-          context += `\n=== ВИТРАТИ ЗА МІСЯЦЬ (${expenses.length} записів, ${totalExpenses.toLocaleString("uk-UA")} грн) ===\n`;
-          // Групуємо за категоріями
+          context += `\n=== ВИТРАТИ (${expenses.length} зап, ${totalExpenses.toLocaleString("uk-UA")} грн) ===\n`;
           const byCategory: Record<string, number> = {};
           expenses.forEach((e: any) => {
-            const cat = e.kategoria || "Без категорії";
+            const cat = e.kategoria || "—";
             byCategory[cat] = (byCategory[cat] || 0) + Number(e.suma || 0);
           });
           for (const [cat, sum] of Object.entries(byCategory)) {
-            context += `  ${cat}: ${(sum as number).toLocaleString("uk-UA")} грн\n`;
+            context += `  ${cat}: ${(sum as number).toLocaleString("uk-UA")}\n`;
           }
         }
       } catch {
@@ -1377,106 +1394,37 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
     }
 
     // ============================================================
-    // 11. СПОВІЩЕННЯ ПРО ЗМІНИ В АКТАХ
+    // 11-12. СПОВІЩЕННЯ — 💡 тільки якщо є непереглянуті (компактно)
     // ============================================================
     try {
-      const { data: notifications } = await supabase
-        .from("act_changes_notifications")
-        .select("*")
-        .eq("delit", false)
-        .order("data", { ascending: false })
-        .limit(30);
+      const [notifRes, completeRes] = await Promise.all([
+        supabase
+          .from("act_changes_notifications")
+          .select("act_id, item_name, dodav_vudaluv, changed_by_surname")
+          .eq("delit", false)
+          .order("data", { ascending: false })
+          .limit(10),
+        supabase
+          .from("slusar_complete_notifications")
+          .select("act_id, pruimalnyk")
+          .eq("delit", false)
+          .eq("viewed", false)
+          .limit(10),
+      ]);
 
-      if (notifications && notifications.length > 0) {
-        context += `\n=== СПОВІЩЕННЯ ПРО ЗМІНИ (${notifications.length} непрочитаних) ===\n`;
-        notifications.forEach((n: any) => {
-          const action = n.dodav_vudaluv ? "Додано" : "Видалено";
-          context += `  Акт №${n.act_id} | ${action}: ${n.item_name || "—"} | Ціна: ${n.cina || 0} грн | К-сть: ${n.kilkist || 0}`;
-          if (n.zarplata) context += ` | ЗП: ${n.zarplata}`;
-          if (n.changed_by_surname)
-            context += ` | Змінив: ${n.changed_by_surname}`;
-          if (n.pib) context += ` | Клієнт: ${n.pib}`;
-          if (n.auto) context += ` | Авто: ${n.auto}`;
-          if (n.data) context += ` | ${fmtDate(n.data)}`;
-          context += "\n";
+      const notifs = notifRes.data || [];
+      const completes = completeRes.data || [];
+
+      if (notifs.length > 0) {
+        context += `\n=== СПОВІЩЕННЯ ЗМІН (${notifs.length}) ===\n`;
+        notifs.forEach((n: any) => {
+          context += `  акт${n.act_id}|${n.dodav_vudaluv ? "+" : "-"}${n.item_name || "?"}|${n.changed_by_surname || ""}\n`;
         });
       }
-    } catch {
-      /* ignore */
-    }
-
-    // ============================================================
-    // 12. СЛЮСАР ЗАВЕРШИВ — СПОВІЩЕННЯ
-    // ============================================================
-    try {
-      const { data: completeNotifs } = await supabase
-        .from("slusar_complete_notifications")
-        .select("*")
-        .eq("delit", false)
-        .eq("viewed", false)
-        .order("notification_id", { ascending: false })
-        .limit(20);
-
-      if (completeNotifs && completeNotifs.length > 0) {
-        context += `\n=== СЛЮСАР ЗАВЕРШИВ РОБОТУ (${completeNotifs.length} непереглянутих) ===\n`;
-        completeNotifs.forEach((n: any) => {
-          context += `  Акт №${n.act_id}`;
-          if (n.pruimalnyk) context += ` | Приймальник: ${n.pruimalnyk}`;
-          context += "\n";
-        });
-      }
-    } catch {
-      /* ignore */
-    }
-
-    // ============================================================
-    // 13. ДЖЕРЕЛА КЛІЄНТІВ
-    // ============================================================
-    try {
-      const { data: incomesData } = await supabase.from("incomes").select("*");
-
-      if (incomesData && incomesData.length > 0) {
-        const incomeNames = incomesData
-          .map((i: any) => {
-            let d: any = {};
-            try {
-              d =
-                typeof i.data === "string" ? JSON.parse(i.data) : i.data || {};
-            } catch {}
-            return d.Name || "—";
-          })
-          .filter((n: string) => n !== "—");
-
-        if (incomeNames.length > 0) {
-          context += `\n=== ДЖЕРЕЛА КЛІЄНТІВ (${incomeNames.length}) ===\n`;
-          context += `  ${incomeNames.join(", ")}\n`;
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-
-    // ============================================================
-    // 14. НАЛАШТУВАННЯ СИСТЕМИ
-    // ============================================================
-    try {
-      const { data: settingsData } = await supabase
-        .from("settings")
-        .select("*")
-        .order("setting_id");
-
-      if (settingsData && settingsData.length > 0) {
-        context += `\n=== НАЛАШТУВАННЯ СИСТЕМИ ===\n`;
-        settingsData.forEach((s: any) => {
-          // Не передаємо API ключі та паролі!
-          if (s.setting_id >= 20 && s.setting_id <= 29) return; // API ключі — пропустити
-          const val = s["Загальні"] || "";
-          if (val && typeof val === "string" && val.length < 200) {
-            context += `  ID:${s.setting_id} | ${val}`;
-            if (s.procent !== null && s.procent !== undefined)
-              context += ` | Процент: ${s.procent}%`;
-            context += "\n";
-          }
+      if (completes.length > 0) {
+        context += `=== ЗАВЕРШЕНО СЛЮСАРЕМ (${completes.length}) ===\n`;
+        completes.forEach((n: any) => {
+          context += `  акт${n.act_id}\n`;
         });
       }
     } catch {
@@ -1505,210 +1453,68 @@ async function callGemini(userMessage: string): Promise<string> {
   updateKeyIndicator();
 
   try {
-    // Збираємо контекст з бази
-    const enrichedPrompt = await gatherSTOContext(userMessage);
+    // 💡 Тривіальні запити — без контексту БД (економія ~95% токенів)
+    const trivial = isTrivialQuery(userMessage);
+    let enrichedPrompt: string;
+    if (trivial) {
+      enrichedPrompt = `СЬОГОДНІ: ${new Date().toLocaleDateString("uk-UA")}\n\n${userMessage}`;
+    } else if (aiContextLevel === "light") {
+      // Легкий — оптимізований контекст (умовні секції, компакт)
+      enrichedPrompt = await gatherSTOContext(userMessage);
+    } else if (aiContextLevel === "medium") {
+      // Середній — більше даних (акти завжди, більше лімітів)
+      enrichedPrompt = await gatherSTOContext(userMessage, "medium");
+    } else {
+      // Важкий — повний контекст без обрізань
+      enrichedPrompt = await gatherSTOContext(userMessage, "heavy");
+    }
 
-    // Попередні повідомлення з контексту (останні 10)
-    const recentHistory = chatHistory.slice(-10);
+    // 💡 Логування розміру контексту для моніторингу токенів
+    const contextChars = enrichedPrompt.length;
+    const estimatedTokens = Math.round(contextChars / 3.5);
+    console.log(
+      `📊 AI контекст [${aiContextLevel}]: ${contextChars.toLocaleString()} симв. ≈ ${estimatedTokens.toLocaleString()} токенів${trivial ? " (тривіальний запит)" : ""}`,
+    );
+    // Оновлюємо лічильник токенів у UI
+    updateTokenCounter(estimatedTokens);
+
+    // 💡 Історія залежить від рівня
+    const historySize =
+      aiContextLevel === "heavy" ? 10 : aiContextLevel === "medium" ? 8 : 6;
+    const recentHistory = chatHistory.slice(-historySize);
 
     // Системний промпт (спільний для Gemini і Groq)
-    const systemPromptText = `Ти — AI-асистент "Атлас" для автосервісу (СТО). Повний доступ до БД. Відповідай ТІЛЬКИ українською.
-⚠️ Показуй лише те, що реально є в отриманих даних — не вигадуй і не домислюй.
-🎯 ГОЛОВНЕ ПРАВИЛО: БУДЬ СТИСЛИМ. Кожна позиція — В ОДНУ СТРІЧКУ з кольорами/emoji. Не розписуй окремо назву, ціну, кількість на різних рядках — пиши все в одній компактній стрічці.
+    const systemPromptText = `Ти — AI "Атлас" для СТО. Відповідай ТІЛЬКИ українською. Тільки реальні дані — НЕ вигадуй.
+СТИСЛО: кожна позиція — 1 стрічка з emoji. Дати: ДД.ММ.РР. Суми: "18 200 грн".
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 ПОВНА СТРУКТУРА БАЗИ ДАНИХ (Supabase/PostgreSQL)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 БД (Supabase):
+acts: act_id,date_on,date_off(null=відкритий),slusarsOn,client_id→clients,cars_id→cars,avans,pruimalnyk,data{ПІБ,Телефон,Марка,Модель,Держ.номер,VIN,Пробіг,Приймальник,Слюсар,Причина,Рекомендації,Знижка,Роботи[{Робота,К-сть,Ціна,Зарплата}],Деталі[{Деталь,К-сть,Ціна,Каталог,Магазин,sclad_id}]}
+clients: client_id,data{ПІБ,Телефон,Джерело}
+cars: cars_id,client_id→clients,data{Авто,Номер авто,VIN,Рік,Обʼєм,Пальне,КодДВЗ}
+slyusars: slyusar_id,Name,data{Доступ(Адмін/Слюсар/Приймальник/Запчастист),ПроцентРоботи,Історія{дата:[{Акт,ЗарплатаРоботи,ЗарплатаЗапчастин}]}} 🔒Пароль-ЗАБОРОНЕНО
+sclad: sclad_id,name,part_number,price,kilkist_on,kilkist_off,quantity(залишок),shops,rahunok,scladNomer,akt→acts,rosraxovano
+post_category: category_id,category | post_name: post_id,name,category
+post_arxiv: slyusar_id→slyusars,name_post→post_name,client_id,cars_id,status(Запланований/В роботі/Відремонтований/Не приїхав),data_on,data_off,act_id
+shops: shop_id,data{Name,Склад,Історія} | vutratu: vutratu_id,dataOnn,kategoria,suma,opys_vytraty
+faktura: faktura_id,name,namber,act_id,oderjyvach | works/details: довідники
 
-1. "acts" — Акти (заказ-наряди):
-   act_id (PK), date_on (timestamp), date_off (timestamp|null=відкритий), slusarsOn (bool),
-   client_id (FK→clients), cars_id (FK→cars), avans (numeric), pruimalnyk (text),
-   tupOplatu (text|null), photo_url (text), sms (timestamp),
-   contrAgent_raxunok (text), contrAgent_raxunok_data (text),
-   data (JSONB): ПІБ, Клієнт, Телефон, Марка, Модель, Держ. номер/ДержНомер, VIN, Пробіг,
-     Приймальник, Слюсар, Причина звернення, Рекомендації, Примітки,
-     Знижка, Аванс, За деталі, За роботу, Загальна сума, Прибуток за деталі, Прибуток за роботу, Дзвінок,
-     Роботи [{Робота, Кількість, Ціна, Зарплата, Прибуток, recordId}],
-     Деталі [{Деталь, Кількість, Ціна, Сума, Каталог, Магазин, sclad_id, recordId}]
+🔗 clients→cars(1:N), clients→acts(1:N), acts→sclad.akt(1:N), acts→faktura(1:N), post_name→post_arxiv(1:N)
 
-2. "clients" — Клієнти:
-   client_id (PK), data (JSONB): ПІБ, Телефон, Додаткові, Додатковий, Джерело
+📊 Виручка=Σ(Роботи.Ціна×К-сть)+Σ(Деталі.Ціна×К-сть) | Прибуток=Виручка−Витрати
+📦 Склад: 🔴0шт 🟠1-2 🟡3-5 🟢6+ — одна стрічка/позиція, без ├─└─
 
-3. "cars" — Автомобілі:
-   cars_id (PK), client_id (FK→clients),
-   data (JSONB): Авто ("Toyota Camry"), Номер авто, Vincode/VIN, Рік, Об'єм/Обʼєм, Пальне, КодДВЗ
+📋 Формати:
+АКТ: #id ✅/🔄 📅дата 👤ПІБ 🚗Авто 👷Слюсар 💰Сума
+СКЛАД: 🔴Назва арт кількість ціна дата — без "Арт:","Ціна:" просто значення
+Списки>10→топ-5+"показати всі?" Завжди підсумок.
 
-4. "slyusars" — Працівники:
-   slyusar_id (PK), Name (text), namber (int), post_sluysar (FK→post_name),
-   data (JSONB): Name, Ім'я, Доступ (Адміністратор/Слюсар/Приймальник/Запчастист),
-     Phone/Телефон, Посада, ПроцентРоботи, Склад, Опис, Пароль — 🔒ЗАБОРОНЕНО,
-     Історія {дата:[{Акт, Деталі, Клієнт, Автомобіль, ДатаЗакриття, ЗарплатаРоботи, ЗарплатаЗапчастин, Статус}]}
+👥 Адмін—все. Слюсар—тільки своє. Приймальник—клієнти. Запчастист—склад. ЗП всіх→тільки адмін.
 
-5. "sclad" — Склад (запчастини):
-   sclad_id (PK), name (text), part_number (артикул), price (numeric),
-   kilkist_on (прихід), kilkist_off (витрата), quantity=kilkist_on−kilkist_off (ЗАЛИШОК),
-   unit_measurement (шт/л/м), shops (постачальник), rahunok (рахунок),
-   time_on (дата поставки), time_off (дата витрати), date_open (text),
-   scladNomer (полиця), statys (text), akt (FK→acts),
-   rosraxovano (дата розрахунку|null), data (JSONB),
-   xto_zamovuv (int|null), povernennya (text|null), xto_povernyv (text|null)
+🔎 ФІЛЬТРАЦІЯ: "відфільтруй X" → додай [FILTER:ключові слова] останнім рядком.
+Для слюсаря: [FILTER:слюсар:Прізвище]. Для приймальника: [FILTER:приймальник:Прізвище].
+Мінімум слів, без "всі","акти","покажи". Один фільтр на відповідь.
 
-6. "post_category" — Цехи: category_id (PK), category (text)
-7. "post_name" — Пости/Бокси: post_id (PK), name (text), category (FK→post_category)
-
-8. "post_arxiv" — Бронювання (планувальник):
-   post_arxiv_id (PK), slyusar_id (FK→slyusars), name_post (FK→post_name),
-   client_id (FK→clients або "ПІБ|||Телефон"), cars_id (FK→cars або "Авто|||Номер"),
-   status (Запланований/В роботі/Відремонтований/Не приїхав),
-   data_on, data_off, komentar, act_id (FK→acts), xto_zapusav
-
-9. "works" — Довідник робіт: work_id (PK), name/data (text)
-10. "details" — Довідник деталей: detail_id (PK), name/data (text)
-
-11. "shops" — Постачальники:
-    shop_id (PK), data (JSONB): Name, Про магазин,
-    Склад (obj), Історія {дата:[{Акт, Деталі[{sclad_id, Ціна, Каталог, Рахунок, Кількість, Найменування, Розраховано}], Клієнт, Автомобіль, ДатаЗакриття, Статус}]}
-
-12. "vutratu" — Витрати:
-    vutratu_id (PK), dataOnn (timestamp), dataOff (timestamp), kategoria (text),
-    act (int/text), opys_vytraty (text), suma (numeric), sposob_oplaty (text),
-    prymitky (text), xto_zapusav (text)
-
-13. "faktura" — Фактури:
-    faktura_id (PK), name, namber (int), oderjyvach, prumitka,
-    data (JSONB), act_id (FK→acts), contrAgent_raxunok, contrAgent_raxunok_data
-
-14. "incomes" — Джерела клієнтів: data (JSONB): Name
-15. "settings" — Налаштування: setting_id (PK), data, Загальні (text), API (bool), procent (numeric|null)
-16. "sms" — SMS: sms_id (PK), data (JSONB): token, alphaName
-
-17. "act_changes_notifications" — Сповіщення змін в актах:
-    notification_id (PK), act_id (FK→acts), item_name, cina, kilkist, zarplata,
-    dodav_vudaluv (bool), changed_by_surname, delit (bool), data (timestamp), pib, auto, pruimalnyk
-
-18. "slusar_complete_notifications" — Слюсар завершив:
-    notification_id (PK), act_id (FK→acts), delit (bool), viewed (bool), pruimalnyk
-
-🔗 ЗВ'ЯЗКИ:
-clients→cars (1:N), clients→acts (1:N), cars→acts (1:N), acts→sclad.akt (1:N),
-acts→act_changes_notifications (1:N), acts→slusar_complete_notifications (1:N),
-acts→faktura (1:N), acts→post_arxiv (1:1), post_category→post_name (1:N),
-post_name→slyusars.post_sluysar (1:N), post_name→post_arxiv (1:N), slyusars→post_arxiv (1:N)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧠 РОЗУМІННЯ ЗАПИТІВ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Розумій розмовні, неточні запити: "камрі іванова" → клієнт+авто, "хто на ямі" → пости, "скільки масла" → склад.
-Якщо 0 результатів → спробуй схожі варіанти написання. Неоднозначно → найімовірніший + 1 уточнення.
-⏰ ДАТИ: сьогодні/вчора/тижня/місяця/кварталу/року — автоматично. Без дати → поточний місяць.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔍 ЛОГІКА ПОШУКУ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Клієнт → clients.data.ПІБ + acts.data.ПІБ (часткове, ILIKE)
-Авто → cars.data.Авто/Номер авто + acts.data.Марка/Модель/Держ. номер
-VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефон
-Слюсар → slyusars.data.Name + acts.data.Слюсар
-Фінанси → acts(роботи+деталі) + vutratu | Зарплата → slyusars.data.Історія
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 ФІНАНСИ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Виручка = Σ(Роботи.Ціна×К-сть) + Σ(Деталі.Ціна×К-сть) | Витрати = Σ(vutratu.suma)
-Прибуток = Виручка−Витрати | Маржа = Прибуток÷Виручка×100% | Чек = Виручка÷актів
-🔼 +15% / 🔽 −8% / ➡️ без змін — завжди порівнюй з минулим періодом
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 СКЛАД — РІВНІ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔴 0 шт КРИТИЧНО | 🟠 1–2 МАЛО | 🟡 3–5 НИЗЬКО | 🟢 6+ НОРМА
-
-‼️ ФОРМАТ СКЛАДУ — МАКСИМАЛЬНО КОРОТКО, одна стрічка на позицію:
-🔴 Поршень ВАЗ 2108  PS-2108-76  0 шт  150 грн  12.01.26
-🟠 Масло 5W-40  OIL-5W40  2 л  420 грн  05.02.26
-НЕ розбивай на ├─ └─. НЕ пиши "Арт:", "Залишок:", "Ціна:", "Полиця:", "Поставка:" — просто значення через пробіли.
-Підсумок: 💡 Замовити N поз. на ~XXX грн
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 ФОРМАТИ — КОМПАКТНО
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-АКТ: 📋 #id 🔄/✅ | 📅 date_on→date_off | 👤 ПІБ 📞 Тел | 🚗 Авто 🔖 Номер | 👷 Слюсар
-  🔧 Роботи: 1. Назва — Ціна×К-сть=Сума  |  🔩 Деталі: 1. Назва — Ціна×К-сть=Сума
-  💰 РАЗОМ: XXX грн (роботи XXX + деталі XXX − знижка XXX)
-
-КЛІЄНТ: 👤 ПІБ | 📞 Тел | 📣 Джерело | 🏅 🆕/⭐/💎 | 🚗 N авто | 📋 N актів на XXX грн
-СЛЮСАР: 👷 ПІБ — Посада | 📞 Тел | 🏭 Пост | ⚙️ XX% | 📊 N актів | 💰 ЗП: XXX грн | 🏆 місце
-ПОСТ: 🏭 Пост: 🔴/🟢 | 👤 Клієнт 🚗 Авто | 👷 Слюсар | 🕐 час→час
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ ШВИДКІ КОМАНДИ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"сьогодні" → бронювання+акти | "склад!" → залишок≤5 | "відкриті" → date_off IS NULL
-"звіт" → фінзвіт | "рейтинг" → топ слюсарів | "акт #N" → повний акт
-"клієнт X" → картка | "авто X" → авто+власник | "вільні пости" → вільні зараз
-"зарплата X" → ЗП | "замовлення" → що замовити | "нові клієнти" → нові за місяць
-"топ роботи" → популярні | "должники" → аванс без закриття | "не приїхали" → Не приїхав за тиждень
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📏 ПРАВИЛА
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. ТІЛЬКИ українська. 2. Тільки реальні дані. 3. Суми: 18 200 грн. 4. Дати ЗАВЖДИ у форматі ДД.ММ.РР (наприклад 25.02.26). НІКОЛИ не пиши ISO (2026-02-25).
-5. Списки >10 → топ-5 + "показати всі?" 6. Завжди підсумок: Всього N | Разом XXX грн.
-7. Нема даних → "Даних не знайдено — спробуємо по-іншому?"
-
-‼️ СТИЛЬ — СТИСЛО:
-▸ КОЖНА позиція (деталь, робота, акт, слюсар) — максимум 1-2 стрічки з emoji + кольорами
-▸ НЕ розбивай одну позицію на 5+ рядків з ├─ └─ (це занадто довго)
-▸ Короткий запит → коротка відповідь. Складний → структурована але компактна
-▸ Проактивні підказки 💡 — тільки якщо є щось ВАЖЛИВЕ (критичний залишок, довго відкритий акт)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 БЕЗПЕКА
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔴 НІКОЛИ: Пароль, whitelist, скидання паролів → "🔒 Захищена інформація."
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👥 РОЛІ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Роль — в контексті "ПОТОЧНИЙ КОРИСТУВАЧ".
-🔑 Адміністратор — все. 🔧 Слюсар — тільки своє (акти, ЗП). 📋 Приймальник — клієнти, графік. 📦 Запчастист — склад.
-Невідома роль → НЕ адмін. Фінанси/ЗП всіх → тільки Адміністратор.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔎 КОМАНДА ФІЛЬТРАЦІЇ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Коли користувач просить «відфільтруй», «відфільтрувати», «покажи тільки», «знайди в таблиці», «фільтрани» або подібне — ти маєш:
-1. Проаналізувати запит і визначити ключові слова для пошуку (марка авто, назва роботи, ПІБ клієнта, деталь, слюсар тощо).
-2. Сформувати КОРОТКИЙ пошуковий рядок із найважливіших слів.
-3. Обов'язково додати в КІНЦІ відповіді спеціальний тег: [FILTER:пошуковий рядок]
-   Приклади:
-   - «відфільтруй мерседеси з поліровкою колінвалу» → [FILTER:Mercedes поліровка колінвалу]
-   - «покажи тільки BMW які міняли масло» → [FILTER:BMW масло]
-   - «знайди акти Іваненка» → [FILTER:Іваненко]
-   - «відфільтруй Тойоти за зиму» → [FILTER:Toyota за зиму]
-   - «фільтрани по гальмівним колодкам» → [FILTER:гальмівні колодки]
-   - «відфільтруй по гільзовці» → [FILTER:гільзовка]
-   - «покажи акти слюсаря Петренка» → [FILTER:слюсар:Петренко]
-   - «всі акти слюсаря Іванов» → [FILTER:слюсар:Іванов]
-   - «відфільтруй гільзовку по слюсарю Сидоренко» → [FILTER:гільзовка слюсар:Сидоренко]
-   - «роботи приймальника Коваль» → [FILTER:приймальник:Коваль]
-4. ⚠️ ВАЖЛИВО для пошукового рядка:
-   - Лише ключові слова: марка авто, назва роботи/деталі, ПІБ, період.
-   - НЕ додавай зайвих слів: "всі", "акти", "які", "покажи".
-   - НЕ додавай назву СТО/компанії ("брацлавець", "A-Service" тощо) — це не пошуковий критерій.
-   - Пошук шукає по ВСІХ полях акту: ПІБ, авто, роботи, деталі, рекомендації, причина звернення, примітки, слюсар, приймальник.
-   - Якщо користувач каже кілька критеріїв — кожне слово має ОКРЕМО зустрічатися в акті, тому використовуй МІНІМУМ слів.
-   - Одне важливе ключове слово краще за три розмиті.
-   - 🔧 Для фільтрації по СЛЮСАРЮ — використовуй префікс «слюсар:» перед прізвищем. Наприклад: слюсар:Петренко
-   - 📋 Для фільтрації по ПРИЙМАЛЬНИКУ — використовуй префікс «приймальник:» перед прізвищем. Наприклад: приймальник:Коваль
-   - Якщо користувач просить "все по слюсарю Х" або "акти слюсаря Х" — використовуй ТІЛЬКИ слюсар:Х без інших слів.
-5. Перед тегом [FILTER:...] коротко опиши що фільтруєш.
-⚠️ Тег [FILTER:...] має бути ОСТАННІМ рядком відповіді. Один фільтр на відповідь.
-
-Працюй швидко, точно, компактно.`;
+Стисло. Точно. Компактно.`;
 
     // === Компактний промпт для Groq (ліміт ~12k TPM) ===
     const groqSystemPrompt = `Ти — AI-асистент "Атлас" для автосервісу (СТО). Відповідай ТІЛЬКИ українською. Будь стислим.
@@ -1720,16 +1526,34 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 🔎 Фільтрація: "відфільтруй X" → додай [FILTER:ключові слова] в кінці відповіді.
   Для слюсаря: [FILTER:слюсар:Прізвище]. Мінімум слів.`;
 
-    // Для Groq обрізаємо контекст — ліміт ~18000 символів (~7k токенів)
-    const GROQ_CONTEXT_LIMIT = 18000;
+    // 💡 Ліміти та параметри залежать від рівня
+    const GROQ_CONTEXT_LIMIT =
+      aiContextLevel === "heavy"
+        ? 30000
+        : aiContextLevel === "medium"
+          ? 20000
+          : 12000;
     const groqEnrichedPrompt =
       enrichedPrompt.length > GROQ_CONTEXT_LIMIT
         ? enrichedPrompt.slice(0, GROQ_CONTEXT_LIMIT) +
           "\n...(контекст обрізано)"
         : enrichedPrompt;
 
-    // Для Groq менше історії (4 замість 10)
-    const groqHistory = chatHistory.slice(-4);
+    const groqHistorySize =
+      aiContextLevel === "heavy" ? 8 : aiContextLevel === "medium" ? 5 : 3;
+    const groqHistory = chatHistory.slice(-groqHistorySize);
+
+    const GEMINI_CONTEXT_LIMIT =
+      aiContextLevel === "heavy"
+        ? 120000
+        : aiContextLevel === "medium"
+          ? 60000
+          : 40000;
+    const geminiEnrichedPrompt =
+      enrichedPrompt.length > GEMINI_CONTEXT_LIMIT
+        ? enrichedPrompt.slice(0, GEMINI_CONTEXT_LIMIT) +
+          "\n...(контекст обрізано)"
+        : enrichedPrompt;
 
     // === Формат Gemini ===
     const contents: any[] = [];
@@ -1739,11 +1563,21 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
         parts: [{ text: msg.text }],
       });
     }
-    contents.push({ role: "user", parts: [{ text: enrichedPrompt }] });
+    contents.push({ role: "user", parts: [{ text: geminiEnrichedPrompt }] });
 
+    const geminiMaxOutput =
+      aiContextLevel === "heavy"
+        ? 8192
+        : aiContextLevel === "medium"
+          ? 6144
+          : 4096;
     const geminiRequestBody = JSON.stringify({
       contents,
-      generationConfig: { temperature: 0.5, maxOutputTokens: 8192, topP: 0.9 },
+      generationConfig: {
+        temperature: 0.5,
+        maxOutputTokens: geminiMaxOutput,
+        topP: 0.9,
+      },
       systemInstruction: { parts: [{ text: systemPromptText }] },
     });
 
@@ -1757,11 +1591,17 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
     }
     groqMessages.push({ role: "user", content: groqEnrichedPrompt });
 
+    const groqMaxTokens =
+      aiContextLevel === "heavy"
+        ? 4096
+        : aiContextLevel === "medium"
+          ? 3072
+          : 2048;
     const groqRequestBody = JSON.stringify({
       model: GROQ_MODEL,
       messages: groqMessages,
       temperature: 0.5,
-      max_tokens: 4096,
+      max_tokens: groqMaxTokens,
       top_p: 0.9,
     });
 
@@ -2334,7 +2174,7 @@ export async function createAIChatModal(): Promise<void> {
         <div class="ai-chat-header-info">
           <div class="ai-chat-avatar">🤖</div>
           <div class="ai-chat-header-text">
-            <div class="ai-chat-title">Атлас AI <span id="ai-key-indicator" class="ai-key-indicator" title="Активний API ключ"></span></div>
+            <div class="ai-chat-title">Атлас AI</div>
 
           </div>
         </div>
@@ -2392,6 +2232,17 @@ export async function createAIChatModal(): Promise<void> {
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
           </button>
+        </div>
+
+        <!-- Статус-бар: ключ + рівень + токени -->
+        <div class="ai-chat-statusbar">
+          <span id="ai-key-indicator" class="ai-key-indicator" title="Активний API ключ"></span>
+          <select id="ai-context-level" class="ai-context-level" title="Рівень контексту">
+            <option value="light" ${aiContextLevel === "light" ? " selected" : ""}>⚡ Легкий</option>
+            <option value="medium"${aiContextLevel === "medium" ? " selected" : ""}>⚖️ Середній</option>
+            <option value="heavy"${aiContextLevel === "heavy" ? " selected" : ""}>💪 Важкий</option>
+          </select>
+          <span id="ai-token-counter" class="ai-token-counter" title="Останній запит">🎫 —</span>
         </div>
       </div>
 
@@ -2478,6 +2329,18 @@ function initAIChatHandlers(modal: HTMLElement): void {
     keyIndicator.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleKeyDropdown();
+    });
+  }
+
+  // ── Зміна рівня контексту ──
+  const levelSelect = modal.querySelector(
+    "#ai-context-level",
+  ) as HTMLSelectElement | null;
+  if (levelSelect) {
+    levelSelect.addEventListener("change", () => {
+      aiContextLevel = levelSelect.value as AIContextLevel;
+      localStorage.setItem("aiContextLevel", aiContextLevel);
+      console.log(`⚙️ AI рівень контексту: ${aiContextLevel}`);
     });
   }
 

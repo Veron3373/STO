@@ -128,7 +128,7 @@ async function loadAllGeminiKeys(): Promise<string[]> {
   }
 
   console.log(
-    `🔑 Gemini: завантажено ${keys.length} ключів, активний #${currentKeyIndex + 1}`,
+    `🔑 Gemini: завантажено ${keys.length} ключів, активний №${currentKeyIndex + 1}`,
   );
   return keys;
 }
@@ -157,7 +157,7 @@ async function persistActiveKeyInDB(): Promise<void> {
         .eq("setting_id", activeSettingId);
     }
     console.log(
-      `🔑 Gemini: збережено активний ключ #${currentKeyIndex + 1} (setting_id=${activeSettingId}) в БД`,
+      `🔑 Gemini: збережено активний ключ №${currentKeyIndex + 1} (setting_id=${activeSettingId}) в БД`,
     );
   } catch (err) {
     console.warn("⚠️ Не вдалося зберегти активний ключ в БД:", err);
@@ -187,7 +187,7 @@ function updateKeyIndicator(): void {
     return;
   }
   el.textContent = `🔑${currentKeyIndex + 1}`;
-  el.title = `Активний API ключ #${currentKeyIndex + 1} з ${geminiApiKeys.length}. Натисніть для вибору.`;
+  el.title = `Активний API ключ №${currentKeyIndex + 1} з ${geminiApiKeys.length}. Натисніть для вибору.`;
 }
 
 /**
@@ -235,7 +235,7 @@ function toggleKeyDropdown(): void {
     updateKeyIndicator();
     dropdown.remove();
     await persistActiveKeyInDB();
-    console.log(`🔑 Gemini: вручну обрано ключ #${idx + 1}`);
+    console.log(`🔑 Gemini: вручну обрано ключ №${idx + 1}`);
   });
 
   // Закрити при кліку поза dropdown
@@ -464,7 +464,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
     p: ReturnType<typeof parseActData>,
     detailed: boolean = false,
   ) => {
-    let s = `Акт #${p.actId}: ${p.client}`;
+    let s = `Акт №${p.actId}: ${p.client}`;
     if (p.phone) s += ` | Тел: ${p.phone}`;
     s += ` | ${p.car}`;
     if (p.plate) s += ` (${p.plate})`;
@@ -785,7 +785,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
 
             context += `  ${timeOn}-${timeOff} | ${postName} | Слюсар: ${slName} | ${clientInfo} | ${carInfo} | Статус: ${b.status || "—"}`;
             if (b.komentar) context += ` | ${b.komentar}`;
-            if (b.act_id) context += ` | Акт #${b.act_id}`;
+            if (b.act_id) context += ` | Акт №${b.act_id}`;
             context += "\n";
           }
 
@@ -1327,7 +1327,7 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
       triedIndices.add(keyIdx);
       const apiKey = keys[keyIdx];
 
-      console.log(`🔑 Gemini: спроба ключ #${keyIdx + 1} з ${keys.length}`);
+      console.log(`🔑 Gemini: спроба ключ №${keyIdx + 1} з ${keys.length}`);
 
       const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
         method: "POST",
@@ -1346,7 +1346,7 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 
       if (response.status === 429) {
         console.warn(
-          `⚠️ Gemini ключ #${keyIdx + 1}: ліміт вичерпано, перемикаємо...`,
+          `⚠️ Gemini ключ №${keyIdx + 1}: ліміт вичерпано, перемикаємо...`,
         );
         // Перемикаємо на наступний ключ і запам'ятовуємо
         currentKeyIndex = (keyIdx + 1) % keys.length;
@@ -1620,7 +1620,7 @@ function renderDashboard(
             .map(
               (a) => `
             <div class="ai-dashboard-act-row">
-              <span class="ai-act-id">#${a.id}</span>
+              <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
               <span class="ai-act-car">${a.car}</span>
               <span class="ai-act-slyusar">${a.slyusar}</span>
@@ -1649,7 +1649,7 @@ function renderDashboard(
             .map(
               (a) => `
             <div class="ai-dashboard-act-row">
-              <span class="ai-act-id">#${a.id}</span>
+              <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
               <span class="ai-act-car">${a.car}</span>
               <span class="ai-act-slyusar">—</span>

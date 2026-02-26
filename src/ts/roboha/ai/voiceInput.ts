@@ -1443,6 +1443,7 @@ export function startChatVoiceInput(): Promise<string> {
       "готово",
       "стоп",
       "кінець",
+      "кінець",      
     ];
 
     function finish() {

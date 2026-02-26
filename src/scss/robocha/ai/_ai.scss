@@ -633,7 +633,7 @@
 
 .ai-key-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
   background: #1e293b;
@@ -687,6 +687,12 @@
       font-size: 13px;
     }
 
+    .ai-key-dropdown-tokens {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-left: 6px;
+    }
+
     .ai-key-dropdown-badge {
       font-size: 9px;
       background: #3b82f6;
@@ -703,7 +709,7 @@
 @keyframes aiKeyDropIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-4px);
+    transform: translateX(-50%) translateY(4px);
   }
   to {
     opacity: 1;

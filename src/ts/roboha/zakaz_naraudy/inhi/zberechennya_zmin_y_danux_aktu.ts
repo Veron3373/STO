@@ -285,7 +285,7 @@ export function cacheHiddenColumnsData(actDetails: any): void {
 
 function readTableNewNumbers(): Map<number, number> {
   const tableRows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
+    `№${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   const numberMap = new Map<number, number>();
 
@@ -318,7 +318,7 @@ function readTableNewNumbers(): Map<number, number> {
 
 export function parseTableRows(): ParsedItem[] {
   const tableRows = document.querySelectorAll(
-    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
+    `№${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`,
   );
   const items: ParsedItem[] = [];
 
@@ -576,7 +576,7 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
 
       if (upErr) {
         throw new Error(
-          `Помилка оновлення складу #${update.sclad_id}: ${upErr.message}`,
+          `Помилка оновлення складу №${update.sclad_id}: ${upErr.message}`,
         );
       }
     }
@@ -718,7 +718,7 @@ function processItems(items: ParsedItem[]) {
 
 async function cleanupEmptyRows(): Promise<void> {
   document
-    .querySelectorAll(`#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`)
+    .querySelectorAll(`№${ACT_ITEMS_TABLE_CONTAINER_ID} tbody tr`)
     .forEach((row) => {
       const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
       if (!nameCell?.textContent?.trim()) {
@@ -1193,7 +1193,7 @@ async function syncPruimalnikHistory(
 
   if (actError || !actData || !actData.pruimalnyk) {
     console.warn(
-      `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту #${actId}. Історія приймальника НЕ оновлюється, але історія Запчастистів буде оновлена.`,
+      `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту №${actId}. Історія приймальника НЕ оновлюється, але історія Запчастистів буде оновлена.`,
     );
     // ✅ НЕ виходимо! Продовжуємо для оновлення історії Запчастистів
     pruimalnykName = "";
@@ -1247,7 +1247,7 @@ async function syncPruimalnikHistory(
 
   // --- ЗБІР ДАНИХ З DOM ---
   const tableBody = document.querySelector<HTMLTableSectionElement>(
-    "#act-items-table-container tbody",
+    "№act-items-table-container tbody",
   );
 
   if (!tableBody) {

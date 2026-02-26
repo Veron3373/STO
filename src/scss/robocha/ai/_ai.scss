@@ -659,6 +659,28 @@
   }
 }
 
+.ai-reset-tokens-btn {
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+
+  &:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
 .ai-chat-status {
   display: flex;
   align-items: center;

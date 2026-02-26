@@ -214,23 +214,34 @@ function initFocusTracking(): void {
   // Делегуємо: ловимо focusin/click на будь-якій комірці
   container.addEventListener("focusin", (e: FocusEvent) => {
     const target = e.target as HTMLElement;
+    const td = target.closest("td[data-name]") as HTMLElement | null;
     const row = target.closest("tr") as HTMLTableRowElement | null;
     if (row && row.closest("tbody")) {
       lastFocusedRow = row;
-      lastFocusedColumn = getCellColumn(target);
+      if (td) {
+        const col = getCellColumn(td);
+        if (col !== "unknown") lastFocusedColumn = col;
+      }
+      console.log(
+        `🎤 Фокус: рядок=${row.querySelector(".row-index")?.textContent?.trim()}, колонка=${lastFocusedColumn}`,
+      );
       updateVoiceBtnHint();
     }
   });
 
   container.addEventListener("click", (e: MouseEvent) => {
     const target = e.target as HTMLElement;
+    const td = target.closest("td[data-name]") as HTMLElement | null;
     const row = target.closest("tr") as HTMLTableRowElement | null;
     if (row && row.closest("tbody")) {
       lastFocusedRow = row;
-      const col = getCellColumn(target);
-      if (col !== "unknown") {
-        lastFocusedColumn = col;
+      if (td) {
+        const col = getCellColumn(td);
+        if (col !== "unknown") lastFocusedColumn = col;
       }
+      console.log(
+        `🎤 Клік: рядок=${row.querySelector(".row-index")?.textContent?.trim()}, колонка=${lastFocusedColumn}`,
+      );
       updateVoiceBtnHint();
     }
   });
@@ -281,8 +292,12 @@ async function parseFullRowWithGemini(
   const systemPrompt = `Ти — парсер голосових команд для автомобільного СТО (Україна).
 Механік каже фразу яка описує ОДИН рядок в акті: назву роботи/деталі та характеристики.
 
-ПРАВИЛА: Користувач говорить в ДОВІЛЬНОМУ порядку, використовуючи ключові слова:
-- Слово(а) перед/без ключових — це НАЗВА роботи/деталі
+ГОЛОВНЕ ПРАВИЛО: Знайди НАЙБІЛЬШ СХОЖУ назву з доступних списків.
+НАВІТЬ якщо сказано лише одне слово ("заміна", "фільтр", "масло") — знайди найближчу назву зі списку що МІСТИТЬ це слово.
+НІКОЛИ не повертай порожнє name ("") та НІКОЛИ не додавай "..." до назви.
+Якщо є кілька варіантів — обери перший з підходящих.
+
+КЛЮЧОВІ СЛОВА:
 - "кількість" / "штук" / "штуки" + число → кількість
 - "ціна" / "за" / "по" / "коштує" / просто число після назви → ціна
 - "зарплата" / "зп" / "зарплатня" + число → зарплата слюсаря
@@ -298,30 +313,28 @@ ${detailNames.join("\n")}
 СЛЮСАРІ:
 ${slyusarNames.join(", ")}
 
-ФОРМАТ ВІДПОВІДІ — ТІЛЬКИ JSON об'єкт (без markdown, без \`\`\`):
+ФОРМАТ ВІДПОВІДІ — ТІЛЬКИ JSON:
 {
   "type": "work" або "detail",
-  "name": "точна назва з доступного списку",
+  "name": "ТОЧНА назва зі списку вище (без скорочень, без ...)",
   "price": число або null,
   "quantity": число або null,
   "slyusar": "Ім'я слюсаря" або null,
   "slyusarSum": число або null
 }
 
-Якщо не розпізнано — поверни: {"type":"work","name":"","price":null,"quantity":null,"slyusar":null,"slyusarSum":null}
-
 ПРИКЛАДИ:
-"Заміна масла кількість один ціна тисяча зарплата п'ятсот Петренко"
+"заміна масла ціна тисяча зарплата п'ятсот Петренко"
 → {"type":"work","name":"Заміна масла двигуна","price":1000,"quantity":1,"slyusar":"Петренко","slyusarSum":500}
 
 "фільтр масляний дві штуки по триста"
 → {"type":"detail","name":"Фільтр масляний","price":300,"quantity":2,"slyusar":null,"slyusarSum":null}
 
-"заміна"
-→ {"type":"work","name":"Заміна...","price":null,"quantity":null,"slyusar":null,"slyusarSum":null}
+"заміна шарової"
+→ {"type":"work","name":"Заміна шарової опори","price":null,"quantity":1,"slyusar":null,"slyusarSum":null}
 
-"розвал сходження вісімсот"
-→ {"type":"work","name":"Розвал-сходження","price":800,"quantity":1,"slyusar":null,"slyusarSum":null}`;
+"заміна"
+→ {"type":"work","name":"(перша робота зі списку що містить слово Заміна)","price":null,"quantity":1,"slyusar":null,"slyusarSum":null}`;
 
   const requestBody = JSON.stringify({
     contents: [{ role: "user", parts: [{ text: `Розбери: "${transcript}"` }] }],
@@ -1011,6 +1024,10 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
   const targetRow = lastFocusedRow;
   const targetColumn = lastFocusedColumn;
 
+  console.log(
+    `🎤 Голос для: рядок=${targetRow.querySelector(".row-index")?.textContent?.trim()}, колонка=${targetColumn}`,
+  );
+
   // Підказка що говорити
   const hints: Record<ColumnType, string> = {
     name: "назву роботи/деталі (+ кількість, ціну, зарплату, ПІБ)",
@@ -1039,9 +1056,40 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
     if (targetColumn === "name") {
       // === ПОВНИЙ РЯДОК ===
       showNotification(`🔄 Аналізую: "${transcript}"`, "info", 2000);
-      const parsed = await parseFullRowWithGemini(transcript);
 
-      if (parsed && parsed.name) {
+      // 1) Спочатку спробувати локально (без Gemini)
+      const localMatch =
+        findBestMatch(transcript, "work") ||
+        findBestMatch(transcript, "detail");
+
+      let parsed = await parseFullRowWithGemini(transcript);
+
+      // 2) Якщо Gemini повернув пусте/"..." — підставити локальний збіг
+      if (
+        parsed &&
+        (!parsed.name || parsed.name.includes("...") || parsed.name.length < 3)
+      ) {
+        if (localMatch) {
+          parsed.name = localMatch.name;
+          parsed.type = localMatch.workId ? "work" : "detail";
+          console.log(`🎤 Локальний фолбек: "${localMatch.name}"`);
+        }
+      }
+
+      // 3) Якщо Gemini зовсім не повернув — створити з локального
+      if (!parsed && localMatch) {
+        parsed = {
+          type: localMatch.workId ? "work" : "detail",
+          name: localMatch.name,
+          price: null,
+          quantity: 1,
+          slyusar: null,
+          slyusarSum: null,
+        };
+        console.log(`🎤 Повний локальний фолбек: "${localMatch.name}"`);
+      }
+
+      if (parsed && parsed.name && !parsed.name.includes("...")) {
         fillFullRow(targetRow, parsed);
         const match = findBestMatch(parsed.name, parsed.type);
         const finalName = match?.name || parsed.name;
@@ -1057,6 +1105,7 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
         showNotification(`✅ ${parts[0]}`, "success", 3000);
         showVoiceResult(transcript, targetColumn, true, parts.join(" | "));
       } else {
+        // Останній шанс — записати текст як є
         showNotification(
           `❌ Не вдалося розібрати: "${transcript}"`,
           "warning",
@@ -1066,7 +1115,15 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
       }
     } else {
       // === ОДНА КЛІТИНКА ===
-      const value = await parseSingleFieldWithGemini(transcript, targetColumn);
+      let value = await parseSingleFieldWithGemini(transcript, targetColumn);
+
+      // Фолбек: записати текст як є (для каталогу, ПІБ і т.д.)
+      if (
+        value === null &&
+        (targetColumn === "catalog" || targetColumn === "pib_magazin")
+      ) {
+        value = transcript.trim();
+      }
 
       if (value !== null) {
         fillSingleCell(targetRow, targetColumn, value);

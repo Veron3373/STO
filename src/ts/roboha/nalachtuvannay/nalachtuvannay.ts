@@ -112,21 +112,21 @@ const ROLE_SETTINGS = {
     { id: 18, label: "📋 Акт Створити Рахунок і Акт виконаних робіт 🗂️" },
     { id: 19, label: "📋 Акт Створити PDF Акту 🖨️" },
     { id: 20, label: "📋 Акт SMS ✉️" },
+    { id: 23, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
     { divider: true },
     { id: 21, label: "Планування" },
     { divider: true },
     { id: 22, label: "Акти Телефон 📞" },
-    { id: 23, label: "🎙️ Голосове введення", class: "_voice" },
   ],
   Слюсар: [
     { id: 1, label: "📋 Акт Зарплата 💲" },
     { id: 2, label: "📋 Акт Ціна та Сума" },
     { id: 3, label: "📋 Акт Завершення робіт 🗝️" },
+    { id: 8, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
     { divider: true },
     { id: 6, label: "Планування" },
     { divider: true },
     { id: 7, label: "Акти Телефон 📞" },
-    { id: 8, label: "🎙️ Голосове введення", class: "_voice" },
   ],
   Запчастист: [
     { id: 1, label: "Додати" },
@@ -157,11 +157,11 @@ const ROLE_SETTINGS = {
     { id: 20, label: "📋 Акт Створити PDF Акту 🖨️" },
     { id: 21, label: "📋 Акт SMS ✉️" },
     { id: 22, label: "📋 Акт ➕ Додати рядок 💾 Зберегти зміни 🗑️ Видалити" },
+    { id: 25, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
     { divider: true },
     { id: 23, label: "Планування" },
     { divider: true },
     { id: 24, label: "Акти Телефон 📞" },
-    { id: 25, label: "🎙️ Голосове введення", class: "_voice" },
   ],
   Складовщик: [
     { id: 1, label: "Додати" },
@@ -189,11 +189,11 @@ const ROLE_SETTINGS = {
     { id: 17, label: "📋 Акт Створити PDF Акту 🖨️" },
     { id: 18, label: "📋 Акт SMS ✉️" },
     { id: 19, label: "📋 Акт ➕ Додати рядок 💾 Зберегти зміни 🗑️ Видалити" },
+    { id: 22, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
     { divider: true },
     { id: 20, label: "Планування" },
     { divider: true },
     { id: 21, label: "Акти Телефон 📞" },
-    { id: 22, label: "🎙️ Голосове введення", class: "_voice" },
   ],
 };
 
@@ -341,7 +341,6 @@ export async function loadAndApplyVoiceInputSetting(): Promise<void> {
       .single();
 
     if (error && error.code !== "PGRST116") {
-      console.warn("Помилка завантаження налаштування голосу:", error);
       applyVoiceInputVisibility(false);
       return;
     }
@@ -351,7 +350,6 @@ export async function loadAndApplyVoiceInputSetting(): Promise<void> {
     saveGeneralSettingsToLocalStorage();
     applyVoiceInputVisibility(showVoice);
   } catch (err) {
-    console.error("Помилка застосування налаштування голосу:", err);
     applyVoiceInputVisibility(false);
   }
 }
@@ -531,9 +529,6 @@ function handleRoleSettingsChange(
       globalCache.generalSettings.voiceInputEnabled = !!value;
       saveGeneralSettingsToLocalStorage();
       applyVoiceInputVisibility(!!value);
-      console.log(
-        `🎙️ Realtime: оновлено голосове введення для ${currentRole}: ${!!value}`,
-      );
     }
   }
 }
@@ -1342,7 +1337,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     });
 
     // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
-    [1, 2, 3, 5, 6, 7, 8, 9, 10].forEach((id) => {
+    [1, 2, 3, 5, 6, 7, 8, 9].forEach((id) => {
       if (!initialSettingsState.has(`checkbox_${id}`)) {
         const setting = SETTINGS[id as keyof typeof SETTINGS];
         if (setting) {

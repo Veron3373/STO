@@ -125,15 +125,10 @@ function startListening(): Promise<string> {
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
-      const confidence = event.results[0][0].confidence;
-      console.log(
-        `🎤 Розпізнано (${Math.round(confidence * 100)}%): "${transcript}"`,
-      );
       resolve(transcript);
     };
 
     recognition.onerror = (event: any) => {
-      console.error("🎤 Помилка:", event.error);
       if (event.error === "no-speech")
         reject(new Error("Мову не виявлено. Спробуйте ще раз."));
       else if (event.error === "audio-capture")
@@ -703,8 +698,6 @@ async function callGeminiForObject(
         const text = allParts.map((p: any) => p.text || "").join("");
         if (!text) return null;
 
-        console.log("🎤 Gemini:", text);
-
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           try {
@@ -881,10 +874,7 @@ async function parseSingleFieldWithGemini(
 /** Записує значення у верхнє поле акту (Пробіг, Причина, тощо) */
 function fillField(fieldId: string, value: string): void {
   const el = document.getElementById(fieldId);
-  if (!el) {
-    console.warn(`🎤 Елемент #${fieldId} не знайдено`);
-    return;
-  }
+  if (!el) return;
 
   // Для input — value, для contenteditable — textContent/innerText
   if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
@@ -1062,7 +1052,6 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
       return;
     }
 
-    console.log(`🎤 Транскрипт: "${transcript}"`);
     updateMicButton(btn, "processing");
 
     // Парсимо ключову фразу
@@ -1242,7 +1231,6 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
       }
     }
   } catch (err: any) {
-    console.error("🎤 Помилка:", err);
     showNotification(
       `❌ ${err.message || "Помилка голосового введення"}`,
       "error",
@@ -1283,12 +1271,7 @@ export function createVoiceButton(): HTMLButtonElement {
 export function initVoiceInput(): void {
   if (globalCache.isActClosed) return;
 
-  if (!isSpeechRecognitionSupported()) {
-    console.log(
-      "🎙️ Голосове введення недоступне: Web Speech API не підтримується",
-    );
-    return;
-  }
+  if (!isSpeechRecognitionSupported()) return;
 
   const container = document.querySelector(".zakaz_narayd-buttons-container");
   if (!container) return;

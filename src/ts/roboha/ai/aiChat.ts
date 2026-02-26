@@ -510,7 +510,7 @@ async function gatherSTOContext(userQuery: string): Promise<string> {
           .from("acts")
           .select("*")
           .not("date_off", "is", null)
-          .gte("date_on", monthStart)
+          .gte("date_off", monthStart)
           .order("act_id", { ascending: false })
           .limit(500),
       ]);

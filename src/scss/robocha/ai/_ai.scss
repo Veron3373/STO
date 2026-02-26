@@ -641,43 +641,59 @@
   }
 }
 
-.ai-token-counter {
-  font-size: 11px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+// ── Toggle фіксації ключа ──
+.ai-lock-key-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
-  letter-spacing: 0.3px;
-
-  &.ai-tokens-low {
-    color: #4ade80;
-  }
-  &.ai-tokens-mid {
-    color: #fbbf24;
-  }
-  &.ai-tokens-high {
-    color: #f87171;
-  }
-}
-
-.ai-reset-tokens-btn {
-  font-size: 13px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.7);
-  padding: 2px 6px;
-  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
-  outline: none;
+  user-select: none;
 
-  &:hover {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.4);
-    color: #fbbf24;
+  input[type="checkbox"] {
+    display: none;
   }
 
-  &:active {
-    transform: scale(0.95);
+  .ai-lock-key-slider {
+    position: relative;
+    width: 32px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    transition: background 0.3s;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      transition:
+        transform 0.3s,
+        background 0.3s;
+    }
+  }
+
+  input:checked + .ai-lock-key-slider {
+    background: rgba(59, 130, 246, 0.5);
+
+    &::after {
+      transform: translateX(16px);
+      background: #60a5fa;
+    }
+  }
+
+  .ai-lock-key-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.3s;
+  }
+
+  input:checked ~ .ai-lock-key-label {
+    color: #60a5fa;
   }
 }
 

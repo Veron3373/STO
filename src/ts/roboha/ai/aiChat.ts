@@ -1771,6 +1771,36 @@ function renderDashboard(
  * Програмно застосовує фільтр: вводить текст у #searchInput та перезавантажує таблицю
  */
 function applyFilterFromAI(filterText: string): void {
+  // Перевірка на спеціальний префікс статус:
+  const statusMatch = filterText.match(/статус:(\S+)/i);
+  if (statusMatch) {
+    const status = statusMatch[1].toLowerCase();
+    const filterType: "open" | "closed" | null = status.includes("закрит")
+      ? "closed"
+      : status.includes("відкрит")
+        ? "open"
+        : null;
+
+    if (filterType) {
+      // Видаляємо статус: з пошукового рядка, залишаємо інші ключові слова
+      const remaining = filterText.replace(/статус:\S+/gi, "").trim();
+
+      try {
+        loadActsTable(null, null, filterType, remaining || null);
+      } catch (err) {
+        console.warn("⚠️ AI Filter: помилка loadActsTable", err);
+      }
+
+      // Закриваємо AI модалку
+      const modal = document.getElementById(CHAT_MODAL_ID);
+      if (modal) modal.classList.add("hidden");
+      console.log(
+        `🔎 AI Filter: статус=${filterType}${remaining ? `, пошук="${remaining}"` : ""}`,
+      );
+      return;
+    }
+  }
+
   const searchInput = document.getElementById(
     "searchInput",
   ) as HTMLInputElement;

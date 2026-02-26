@@ -319,7 +319,27 @@ function parseVoiceCommand(
     }
   }
 
-  // --- 3. "додати рядок [найменування]" — додає порожній рядок і вписує
+  // --- 3. Колонка БЕЗ номера рядка: "найменування заміна масла", "ціна 500", "піб Петренко"
+  // → знаходимо перший порожній рядок в цій колонці, або останній рядок
+  for (const col of COLUMN_KEYWORDS) {
+    for (const kw of col.keywords) {
+      if (text.startsWith(kw)) {
+        const value = transcript.trim().substring(kw.length).trim();
+        const targetRow = findFirstEmptyRowForColumn(col.column);
+        return {
+          target: {
+            kind: "cell",
+            rowIndex: targetRow,
+            column: col.column,
+            label: col.label,
+          },
+          value: value || "",
+        };
+      }
+    }
+  }
+
+  // --- 4. "додати рядок [найменування]" — додає порожній рядок і вписує
   const addRowMatch = text.match(
     /^(?:додати рядок|новий рядок|додати)\s*(.*)$/i,
   );
@@ -337,8 +357,19 @@ function parseVoiceCommand(
     };
   }
 
-  // --- 4. Якщо нічого не розпізнано — показуємо підказку
-  return null;
+  // --- 5. Якщо не розпізнано як команду — трактуємо як найменування для першого порожнього рядка
+  {
+    const targetRow = findFirstEmptyRowForColumn("name");
+    return {
+      target: {
+        kind: "cell",
+        rowIndex: targetRow,
+        column: "name",
+        label: "Найменування",
+      },
+      value: transcript.trim(),
+    };
+  }
 }
 
 // ============================================================
@@ -363,6 +394,31 @@ function getRowCount(): number {
   );
   if (!tbody) return 0;
   return tbody.querySelectorAll("tr").length;
+}
+
+/** Знайти перший рядок де колонка порожня. Якщо всі заповнені — повертає -1 (додати новий) */
+function findFirstEmptyRowForColumn(column: string): number {
+  const tbody = document.querySelector(
+    `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`,
+  );
+  if (!tbody) return -1;
+
+  const rows = tbody.querySelectorAll("tr");
+  if (rows.length === 0) return -1;
+
+  for (let i = 0; i < rows.length; i++) {
+    const cell = rows[i].querySelector(
+      `[data-name="${column}"]`,
+    ) as HTMLElement;
+    if (cell) {
+      const text = cell.textContent?.trim() || "";
+      if (!text) return i + 1; // 1-based
+    }
+  }
+
+  // Всі заповнені → останній рядок якщо це не name, інакше додати новий
+  if (column === "name") return -1;
+  return rows.length;
 }
 
 // ============================================================

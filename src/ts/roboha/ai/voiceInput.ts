@@ -1,15 +1,13 @@
 // src/ts/roboha/ai/voiceInput.ts
 // 🎤 Голосове введення в наряд — Web Speech API + Gemini парсинг
+// Контекстне: заповнює рядок/клітинку на якій стоїть фокус
 
 import { supabase } from "../../vxid/supabaseClient";
 import {
   globalCache,
   ACT_ITEMS_TABLE_CONTAINER_ID,
 } from "../zakaz_naraudy/globalCache";
-import {
-  addNewRow,
-  updateCalculatedSumsInFooter,
-} from "../zakaz_naraudy/modalUI";
+import { updateCalculatedSumsInFooter } from "../zakaz_naraudy/modalUI";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { handleItemSelection } from "./aiPriceHelper";
 
@@ -17,8 +15,18 @@ import { handleItemSelection } from "./aiPriceHelper";
 // ТИПИ
 // ============================================================
 
-/** Результат парсингу одного рядка роботи/деталі */
-interface ParsedVoiceItem {
+/** Яка колонка зараз у фокусі */
+type ColumnType =
+  | "name"
+  | "id_count"
+  | "price"
+  | "slyusar_sum"
+  | "pib_magazin"
+  | "catalog"
+  | "unknown";
+
+/** Результат парсингу повного рядка (від Найменування) */
+interface ParsedFullRow {
   type: "work" | "detail";
   name: string;
   price: number | null;
@@ -38,13 +46,17 @@ const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 let voiceState: VoiceState = "idle";
-let recognition: any = null; // SpeechRecognition instance
+let recognition: any = null;
 let geminiApiKeys: string[] = [];
 let currentKeyIndex = 0;
 let keysLoaded = false;
 
+/** Останній сфокусований рядок та комірка */
+let lastFocusedRow: HTMLTableRowElement | null = null;
+let lastFocusedColumn: ColumnType = "unknown";
+
 // ============================================================
-// ЗАВАНТАЖЕННЯ КЛЮЧІВ GEMINI (спільна з aiChat.ts логіка)
+// ЗАВАНТАЖЕННЯ КЛЮЧІВ GEMINI
 // ============================================================
 
 async function loadGeminiKeys(): Promise<string[]> {
@@ -55,9 +67,7 @@ async function loadGeminiKeys(): Promise<string[]> {
 
   try {
     const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
-    if (envKey) {
-      keys.push(envKey);
-    }
+    if (envKey) keys.push(envKey);
 
     const { data } = await supabase
       .from("settings")
@@ -89,22 +99,19 @@ async function loadGeminiKeys(): Promise<string[]> {
   geminiApiKeys = keys;
   keysLoaded = true;
   currentKeyIndex = activeIndex;
-
   return keys;
 }
 
 // ============================================================
-// WEB SPEECH API — РОЗПІЗНАВАННЯ МОВИ
+// WEB SPEECH API
 // ============================================================
 
-/** Перевіряє підтримку Web Speech API у браузері */
 export function isSpeechRecognitionSupported(): boolean {
   return !!(
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   );
 }
 
-/** Запускає розпізнавання мови та повертає текст */
 function startListening(): Promise<string> {
   return new Promise((resolve, reject) => {
     const SpeechRecognition =
@@ -117,9 +124,9 @@ function startListening(): Promise<string> {
     }
 
     recognition = new SpeechRecognition();
-    recognition.lang = "uk-UA"; // Українська мова
-    recognition.continuous = false; // Одна фраза
-    recognition.interimResults = false; // Тільки фінальний результат
+    recognition.lang = "uk-UA";
+    recognition.continuous = false;
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: any) => {
@@ -139,9 +146,7 @@ function startListening(): Promise<string> {
         reject(new Error("Мікрофон не знайдено. Перевірте підключення."));
       } else if (event.error === "not-allowed") {
         reject(
-          new Error(
-            "Доступ до мікрофона заборонений. Дозвольте у налаштуваннях браузера.",
-          ),
+          new Error("Доступ до мікрофона заборонений. Дозвольте у браузері."),
         );
       } else {
         reject(new Error(`Помилка: ${event.error}`));
@@ -149,7 +154,6 @@ function startListening(): Promise<string> {
     };
 
     recognition.onend = () => {
-      // Якщо не було результату — таймаут
       recognition = null;
     };
 
@@ -157,7 +161,6 @@ function startListening(): Promise<string> {
   });
 }
 
-/** Зупиняє розпізнавання, якщо воно активне */
 export function stopListening(): void {
   if (recognition) {
     try {
@@ -170,94 +173,279 @@ export function stopListening(): void {
 }
 
 // ============================================================
-// GEMINI ПАРСИНГ — РОЗБІР РОЗПІЗНАНОГО ТЕКСТУ
+// ТРЕКІНГ ФОКУСУ — яка клітинка/рядок зараз активний
 // ============================================================
 
 /**
- * Відправляє розпізнаний текст у Gemini для парсингу.
- * Gemini отримує список доступних робіт/деталей/слюсарів і парсить фразу.
+ * Визначає data-name комірки (колонки)
  */
-async function parseVoiceWithGemini(
+function getCellColumn(cell: HTMLElement): ColumnType {
+  const dataName =
+    cell.getAttribute("data-name") ||
+    cell.closest("[data-name]")?.getAttribute("data-name") ||
+    "";
+
+  switch (dataName) {
+    case "name":
+      return "name";
+    case "id_count":
+      return "id_count";
+    case "price":
+      return "price";
+    case "slyusar_sum":
+      return "slyusar_sum";
+    case "pib_magazin":
+      return "pib_magazin";
+    case "catalog":
+      return "catalog";
+    default:
+      return "unknown";
+  }
+}
+
+/**
+ * Ініціалізує трекінг фокусу на клітинках таблиці.
+ * Запам'ятовує останній сфокусований рядок та колонку.
+ */
+function initFocusTracking(): void {
+  const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
+  if (!container) return;
+
+  // Делегуємо: ловимо focusin/click на будь-якій комірці
+  container.addEventListener("focusin", (e: FocusEvent) => {
+    const target = e.target as HTMLElement;
+    const row = target.closest("tr") as HTMLTableRowElement | null;
+    if (row && row.closest("tbody")) {
+      lastFocusedRow = row;
+      lastFocusedColumn = getCellColumn(target);
+      updateVoiceBtnHint();
+    }
+  });
+
+  container.addEventListener("click", (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const row = target.closest("tr") as HTMLTableRowElement | null;
+    if (row && row.closest("tbody")) {
+      lastFocusedRow = row;
+      const col = getCellColumn(target);
+      if (col !== "unknown") {
+        lastFocusedColumn = col;
+      }
+      updateVoiceBtnHint();
+    }
+  });
+}
+
+/**
+ * Оновлює підказку на кнопці голосу
+ */
+function updateVoiceBtnHint(): void {
+  const btn = document.getElementById("voice-input-button");
+  if (!btn || voiceState !== "idle") return;
+
+  const colLabels: Record<ColumnType, string> = {
+    name: "Найменування → весь рядок",
+    id_count: "Кількість",
+    price: "Ціна",
+    slyusar_sum: "Зарплата",
+    pib_magazin: "ПІБ / Магазин",
+    catalog: "Каталог",
+    unknown: "оберіть клітинку",
+  };
+
+  if (lastFocusedRow && lastFocusedColumn !== "unknown") {
+    const rowIdx =
+      lastFocusedRow.querySelector(".row-index")?.textContent?.trim() || "";
+    btn.title = `🎤 Голос → рядок ${rowIdx}, ${colLabels[lastFocusedColumn]}`;
+  } else {
+    btn.title = "🎤 Голос — спочатку клікніть на клітинку в таблиці";
+  }
+}
+
+// ============================================================
+// GEMINI: ПОВНИЙ ПАРСИНГ РЯДКА (коли фокус на Найменуванні)
+// ============================================================
+
+async function parseFullRowWithGemini(
   transcript: string,
-): Promise<ParsedVoiceItem[]> {
+): Promise<ParsedFullRow | null> {
   const keys = await loadGeminiKeys();
   if (keys.length === 0) {
     throw new Error("Немає API ключів Gemini. Додайте ключі в налаштуваннях.");
   }
 
-  // Збираємо списки з глобального кешу
-  const workNames = globalCache.works.slice(0, 200); // Обмежуємо для промпту
+  const workNames = globalCache.works.slice(0, 200);
   const detailNames = globalCache.details.slice(0, 200);
   const slyusarNames = globalCache.slyusars.map((s) => s.Name).filter(Boolean);
 
-  const systemPrompt = `Ти — парсер голосових команд для автомобільного СТО.
-Користувач (механік) говорить фразу про роботу/деталь яку потрібно додати в акт.
+  const systemPrompt = `Ти — парсер голосових команд для автомобільного СТО (Україна).
+Механік каже фразу яка описує ОДИН рядок в акті: назву роботи/деталі та характеристики.
 
-ТВОЄ ЗАВДАННЯ: розібрати фразу і витягнути структуровані дані.
+ПРАВИЛА: Користувач говорить в ДОВІЛЬНОМУ порядку, використовуючи ключові слова:
+- Слово(а) перед/без ключових — це НАЗВА роботи/деталі
+- "кількість" / "штук" / "штуки" + число → кількість
+- "ціна" / "за" / "по" / "коштує" / просто число після назви → ціна
+- "зарплата" / "зп" / "зарплатня" + число → зарплата слюсаря
+- Прізвище (якщо збігається зі СЛЮСАРЕМ) → слюсар
+- Числа словами: "тисяча двісті" = 1200, "п'ятсот" = 500
 
-ДОСТУПНІ РОБОТИ (назви з бази):
+ДОСТУПНІ РОБОТИ:
 ${workNames.join("\n")}
 
-ДОСТУПНІ ДЕТАЛІ (назви з бази):
+ДОСТУПНІ ДЕТАЛІ:
 ${detailNames.join("\n")}
 
-ДОСТУПНІ СЛЮСАРІ:
+СЛЮСАРІ:
 ${slyusarNames.join(", ")}
 
-ПРАВИЛА ПАРСИНГУ:
-1. Визнач тип: "work" (робота/послуга) або "detail" (деталь/запчастина).
-2. Знайди найбільш відповідну назву з ДОСТУПНИХ СПИСКІВ. Якщо точного збігу нема — вибери найближчу.
-3. Якщо користувач каже число (словами чи цифрами) після "ціна", "по", "за", "коштує", "за ціною" — це ціна.
-4. Якщо каже "кількість", "штук", "два", "три" тощо — це кількість.
-5. Якщо каже ім'я/прізвище — шукай серед СЛЮСАРІВ.
-6. Якщо каже "зарплата", "зп" + число — це зарплата слюсаря.
-7. Одна фраза може містити КІЛЬКА робіт/деталей, розділених "та", "і", "ще", "також", "плюс".
-8. Числа можуть бути словами: "тисяча двісті" = 1200, "п'ятсот" = 500, "дві тисячі" = 2000.
+ФОРМАТ ВІДПОВІДІ — ТІЛЬКИ JSON об'єкт (без markdown, без \`\`\`):
+{
+  "type": "work" або "detail",
+  "name": "точна назва з доступного списку",
+  "price": число або null,
+  "quantity": число або null,
+  "slyusar": "Ім'я слюсаря" або null,
+  "slyusarSum": число або null
+}
 
-ФОРМАТ ВІДПОВІДІ — ТІЛЬКИ JSON масив (без markdown, без коментарів):
-[
-  {
-    "type": "work" або "detail",
-    "name": "точна назва з доступного списку",
-    "price": число або null,
-    "quantity": число або null,
-    "slyusar": "Ім'я слюсаря" або null,
-    "slyusarSum": число або null
-  }
-]
-
-Якщо не вдалося розпізнати — поверни порожній масив: []
+Якщо не розпізнано — поверни: {"type":"work","name":"","price":null,"quantity":null,"slyusar":null,"slyusarSum":null}
 
 ПРИКЛАДИ:
-Фраза: "Заміна гальмівних колодок спереду, ціна тисяча двісті"
-→ [{"type":"work","name":"Заміна гальмівних колодок спереду","price":1200,"quantity":1,"slyusar":null,"slyusarSum":null}]
+"Заміна масла кількість один ціна тисяча зарплата п'ятсот Петренко"
+→ {"type":"work","name":"Заміна масла двигуна","price":1000,"quantity":1,"slyusar":"Петренко","slyusarSum":500}
 
-Фраза: "Масляний фільтр дві штуки по триста п'ятдесят"
-→ [{"type":"detail","name":"Фільтр масляний","price":350,"quantity":2,"slyusar":null,"slyusarSum":null}]
+"фільтр масляний дві штуки по триста"
+→ {"type":"detail","name":"Фільтр масляний","price":300,"quantity":2,"slyusar":null,"slyusarSum":null}
 
-Фраза: "Заміна масла на Петренко зарплата п'ятсот"
-→ [{"type":"work","name":"Заміна масла двигуна","price":null,"quantity":1,"slyusar":"Петренко","slyusarSum":500}]
+"заміна"
+→ {"type":"work","name":"Заміна...","price":null,"quantity":null,"slyusar":null,"slyusarSum":null}
 
-Фраза: "Розвал сходження ціна вісімсот та балансування коліс по чотириста"
-→ [{"type":"work","name":"Розвал-сходження","price":800,"quantity":1,"slyusar":null,"slyusarSum":null},{"type":"work","name":"Балансування коліс","price":400,"quantity":1,"slyusar":null,"slyusarSum":null}]`;
+"розвал сходження вісімсот"
+→ {"type":"work","name":"Розвал-сходження","price":800,"quantity":1,"slyusar":null,"slyusarSum":null}`;
 
   const requestBody = JSON.stringify({
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: `Розбери фразу: "${transcript}"` }],
-      },
-    ],
-    systemInstruction: {
-      parts: [{ text: systemPrompt }],
-    },
-    generationConfig: {
-      temperature: 0.1, // Низька температура для точності
-      maxOutputTokens: 1024,
-    },
+    contents: [{ role: "user", parts: [{ text: `Розбери: "${transcript}"` }] }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
   });
 
-  // Спробувати ключі з ротацією
+  return await callGeminiForObject(requestBody);
+}
+
+/**
+ * Парсить значення одного поля через Gemini
+ */
+async function parseSingleFieldWithGemini(
+  transcript: string,
+  column: ColumnType,
+): Promise<string | number | null> {
+  // Для чисел — спочатку локально
+  if (column === "id_count" || column === "price" || column === "slyusar_sum") {
+    const localNum = tryParseNumberLocally(transcript);
+    if (localNum !== null) return localNum;
+  }
+
+  // Для ПІБ — шукаємо серед слюсарів/магазинів
+  if (column === "pib_magazin") {
+    const localMatch = findSlyusarOrShop(transcript);
+    if (localMatch) return localMatch;
+  }
+
+  const keys = await loadGeminiKeys();
+  if (keys.length === 0) throw new Error("Немає API ключів Gemini.");
+
+  const columnLabel: Record<string, string> = {
+    id_count: "КІЛЬКІСТЬ (ціле число)",
+    price: "ЦІНА (число в гривнях)",
+    slyusar_sum: "ЗАРПЛАТА слюсаря (число в гривнях)",
+    pib_magazin: "ПІБ слюсаря або назва магазину",
+    catalog: "Каталожний номер",
+    name: "Назва роботи або деталі",
+  };
+
+  let contextList = "";
+  if (column === "pib_magazin") {
+    const names = [
+      ...globalCache.slyusars.map((s) => s.Name),
+      ...globalCache.shops.map((s) => s.Name),
+    ].filter(Boolean);
+    contextList = `\nДОСТУПНІ ІМЕНА:\n${names.join(", ")}`;
+  }
+  if (column === "name") {
+    contextList = `\nДОСТУПНІ РОБОТИ:\n${globalCache.works.slice(0, 100).join("\n")}\n\nДОСТУПНІ ДЕТАЛІ:\n${globalCache.details.slice(0, 100).join("\n")}`;
+  }
+
+  const systemPrompt = `Ти парсер голосового введення. Користувач каже значення для поля: ${columnLabel[column] || column}.
+${contextList}
+
+Відповідай ТІЛЬКИ значенням — без пояснень, без лапок, без JSON.
+Для чисел: переведи слова в цифри. "тисяча двісті" → 1200, "п'ятсот" → 500, "два" → 2, "п'ять" → 5.
+Для імен: знайди найближче з доступних.
+Для назв: знайди найближчу з доступних списків.`;
+
+  const requestBody = JSON.stringify({
+    contents: [{ role: "user", parts: [{ text: transcript }] }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: { temperature: 0.1, maxOutputTokens: 128 },
+  });
+
+  const triedIndices = new Set<number>();
+  let startIndex = currentKeyIndex;
+
+  while (triedIndices.size < keys.length) {
+    const keyIdx = startIndex % keys.length;
+    triedIndices.add(keyIdx);
+    const apiKey = keys[keyIdx];
+
+    try {
+      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      });
+
+      if (response.ok) {
+        currentKeyIndex = keyIdx;
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (!text) return null;
+
+        // Числове поле — витягти число
+        if (
+          column === "id_count" ||
+          column === "price" ||
+          column === "slyusar_sum"
+        ) {
+          const num = parseFloat(
+            text.replace(/[^\d.,]/g, "").replace(",", "."),
+          );
+          return isNaN(num) ? null : Math.round(num);
+        }
+
+        return text;
+      }
+
+      if (response.status === 429) {
+        currentKeyIndex = (keyIdx + 1) % keys.length;
+        startIndex = keyIdx + 1;
+        continue;
+      }
+      return null;
+    } catch {
+      startIndex = keyIdx + 1;
+    }
+  }
+  return null;
+}
+
+// ============================================================
+// GEMINI API (спільний виклик для повного рядка)
+// ============================================================
+
+async function callGeminiForObject(
+  requestBody: string,
+): Promise<ParsedFullRow | null> {
+  const keys = geminiApiKeys;
   const triedIndices = new Set<number>();
   let startIndex = currentKeyIndex;
 
@@ -277,61 +465,150 @@ ${slyusarNames.join(", ")}
         currentKeyIndex = keyIdx;
         const data = await response.json();
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) throw new Error("Порожня відповідь від Gemini");
+        if (!text) return null;
 
-        // Витягуємо JSON з відповіді (може бути обгорнуто в ```)
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
           console.warn("🎤 Gemini не повернув JSON:", text);
-          return [];
+          return null;
         }
-
-        const parsed: ParsedVoiceItem[] = JSON.parse(jsonMatch[0]);
-        return parsed;
+        return JSON.parse(jsonMatch[0]);
       }
 
       if (response.status === 429) {
-        console.warn(`⚠️ Gemini ключ №${keyIdx + 1}: ліміт, перемикаємо...`);
         currentKeyIndex = (keyIdx + 1) % keys.length;
         startIndex = keyIdx + 1;
         continue;
       }
-
-      throw new Error(`Gemini API помилка: ${response.status}`);
-    } catch (err: any) {
+      return null;
+    } catch (err) {
       if (triedIndices.size >= keys.length) throw err;
       startIndex = keyIdx + 1;
     }
   }
-
-  throw new Error("Всі ключі Gemini вичерпано. Спробуйте пізніше.");
+  return null;
 }
 
 // ============================================================
-// ЗАПОВНЕННЯ РЯДКА ТАБЛИЦІ — ІНТЕГРАЦІЯ
+// ЛОКАЛЬНИЙ ПАРСИНГ ЧИСЕЛ (без Gemini — швидко)
 // ============================================================
 
-/**
- * Знаходить найближчу роботу/деталь з кешу за назвою від Gemini
- */
+const UKR_NUMBERS: Record<string, number> = {
+  нуль: 0,
+  один: 1,
+  одна: 1,
+  одне: 1,
+  два: 2,
+  дві: 2,
+  три: 3,
+  чотири: 4,
+  "п'ять": 5,
+  пять: 5,
+  шість: 6,
+  сім: 7,
+  вісім: 8,
+  "дев'ять": 9,
+  девять: 9,
+  десять: 10,
+  одинадцять: 11,
+  дванадцять: 12,
+  тринадцять: 13,
+  чотирнадцять: 14,
+  "п'ятнадцять": 15,
+  шістнадцять: 16,
+  сімнадцять: 17,
+  вісімнадцять: 18,
+  "дев'ятнадцять": 19,
+  двадцять: 20,
+  тридцять: 30,
+  сорок: 40,
+  "п'ятдесят": 50,
+  пятдесят: 50,
+  шістдесят: 60,
+  сімдесят: 70,
+  вісімдесят: 80,
+  "дев'яносто": 90,
+  сто: 100,
+  двісті: 200,
+  триста: 300,
+  чотириста: 400,
+  "п'ятсот": 500,
+  пятсот: 500,
+  шістсот: 600,
+  сімсот: 700,
+  вісімсот: 800,
+  "дев'ятсот": 900,
+  девятсот: 900,
+  тисяча: 1000,
+  тисячі: 1000,
+  тисяч: 1000,
+};
+
+function tryParseNumberLocally(text: string): number | null {
+  const cleaned = text
+    .trim()
+    .toLowerCase()
+    .replace(/[.,;!?]/g, "");
+
+  // Просте число цифрами
+  const numMatch = cleaned.match(/^(\d+)$/);
+  if (numMatch) return parseInt(numMatch[1], 10);
+
+  // "1200 грн"
+  const numSuffix = cleaned.match(/^(\d+)\s*(грн|грив|шт|штук)?$/);
+  if (numSuffix) return parseInt(numSuffix[1], 10);
+
+  // Українські числівники
+  const words = cleaned.split(/[\s-]+/);
+  let total = 0;
+  let current = 0;
+  let hasNumber = false;
+
+  for (const word of words) {
+    if (["грн", "гривень", "штук", "штуки", "штука"].includes(word)) continue;
+
+    const val = UKR_NUMBERS[word];
+    if (val !== undefined) {
+      hasNumber = true;
+      if (val === 1000) {
+        current = current === 0 ? 1000 : current * 1000;
+        total += current;
+        current = 0;
+      } else if (val >= 100) {
+        current += val;
+      } else {
+        current += val;
+      }
+    } else {
+      const digitMatch = word.match(/^\d+$/);
+      if (digitMatch) {
+        hasNumber = true;
+        current += parseInt(digitMatch[0], 10);
+      }
+    }
+  }
+
+  total += current;
+  return hasNumber && total > 0 ? total : null;
+}
+
+// ============================================================
+// ПОШУК ЗБІГІВ У КЕШІ
+// ============================================================
+
 function findBestMatch(
   parsedName: string,
   type: "work" | "detail",
-): {
-  name: string;
-  workId?: string;
-  scladId?: number;
-} | null {
-  const nameLower = parsedName.toLowerCase();
+): { name: string; workId?: string; scladId?: number } | null {
+  const nameLower = parsedName.toLowerCase().trim();
+  if (!nameLower) return null;
 
   if (type === "work") {
-    // Шукаємо точний збіг
     const exact = globalCache.worksWithId.find(
       (w) => w.name.toLowerCase() === nameLower,
     );
     if (exact) return { name: exact.name, workId: exact.work_id };
 
-    // Шукаємо часткове входження
     const partial = globalCache.worksWithId.find(
       (w) =>
         w.name.toLowerCase().includes(nameLower) ||
@@ -339,234 +616,189 @@ function findBestMatch(
     );
     if (partial) return { name: partial.name, workId: partial.work_id };
 
-    // Шукаємо за окремими словами (мінімум 2 збіги)
-    const words = nameLower.split(/\s+/).filter((w) => w.length > 2);
-    let bestMatch: { name: string; workId: string; score: number } | null =
-      null;
+    const searchWords = nameLower.split(/\s+/).filter((w) => w.length > 2);
+    let best: { name: string; workId: string; score: number } | null = null;
     for (const w of globalCache.worksWithId) {
-      const wLower = w.name.toLowerCase();
-      const score = words.filter((word) => wLower.includes(word)).length;
-      if (score >= 2 && (!bestMatch || score > bestMatch.score)) {
-        bestMatch = { name: w.name, workId: w.work_id, score };
+      const wL = w.name.toLowerCase();
+      const score = searchWords.filter((sw) => wL.includes(sw)).length;
+      if (score >= 1 && (!best || score > best.score)) {
+        best = { name: w.name, workId: w.work_id, score };
       }
     }
-    if (bestMatch) return { name: bestMatch.name, workId: bestMatch.workId };
-
+    if (best) return { name: best.name, workId: best.workId };
     return null;
   } else {
-    // Деталі — шукаємо в складі та в деталях
-    const exactSklad = globalCache.skladParts.find(
+    const exactS = globalCache.skladParts.find(
       (p) => p.name.toLowerCase() === nameLower,
     );
-    if (exactSklad)
-      return { name: exactSklad.name, scladId: exactSklad.sclad_id };
+    if (exactS) return { name: exactS.name, scladId: exactS.sclad_id };
 
-    const partialSklad = globalCache.skladParts.find(
+    const partS = globalCache.skladParts.find(
       (p) =>
         p.name.toLowerCase().includes(nameLower) ||
         nameLower.includes(p.name.toLowerCase()),
     );
-    if (partialSklad)
-      return { name: partialSklad.name, scladId: partialSklad.sclad_id };
+    if (partS) return { name: partS.name, scladId: partS.sclad_id };
 
-    const exactDetail = globalCache.details.find(
+    const exactD = globalCache.details.find(
       (d) => d.toLowerCase() === nameLower,
     );
-    if (exactDetail) return { name: exactDetail };
+    if (exactD) return { name: exactD };
 
-    const partialDetail = globalCache.details.find(
+    const partD = globalCache.details.find(
       (d) =>
         d.toLowerCase().includes(nameLower) ||
         nameLower.includes(d.toLowerCase()),
     );
-    if (partialDetail) return { name: partialDetail };
-
+    if (partD) return { name: partD };
     return null;
   }
 }
 
-/**
- * Знаходить слюсаря з кешу за іменем/прізвищем
- */
-function findSlyusar(name: string): string | null {
-  if (!name) return null;
-  const nameLower = name.trim().toLowerCase();
+function findSlyusarOrShop(text: string): string | null {
+  const t = text.trim().toLowerCase();
+  if (!t) return null;
 
-  const exact = globalCache.slyusars.find(
-    (s) => s.Name.toLowerCase() === nameLower,
-  );
-  if (exact) return exact.Name;
-
-  const partial = globalCache.slyusars.find(
-    (s) =>
-      s.Name.toLowerCase().includes(nameLower) ||
-      nameLower.includes(s.Name.toLowerCase()),
-  );
-  if (partial) return partial.Name;
-
+  for (const s of globalCache.slyusars) {
+    if (s.Name.toLowerCase() === t) return s.Name;
+  }
+  for (const s of globalCache.slyusars) {
+    if (s.Name.toLowerCase().includes(t) || t.includes(s.Name.toLowerCase()))
+      return s.Name;
+  }
+  for (const s of globalCache.shops) {
+    if (s.Name.toLowerCase() === t) return s.Name;
+  }
+  for (const s of globalCache.shops) {
+    if (s.Name.toLowerCase().includes(t) || t.includes(s.Name.toLowerCase()))
+      return s.Name;
+  }
   return null;
 }
 
+// ============================================================
+// ЗАПОВНЕННЯ РЯДКА / КЛІТИНКИ
+// ============================================================
+
 /**
- * Заповнює рядки таблиці розпізнаними даними.
- * Для кожного ParsedVoiceItem:
- * 1. Додає новий рядок (або використовує існуючий пустий)
- * 2. Заповнює назву, кількість, ціну, слюсаря, зарплату
+ * Заповнює повний рядок (коли фокус на Найменуванні)
  */
-async function fillTableRows(items: ParsedVoiceItem[]): Promise<number> {
-  let filledCount = 0;
+function fillFullRow(row: HTMLTableRowElement, parsed: ParsedFullRow): void {
+  const match = findBestMatch(parsed.name, parsed.type);
+  const finalName = match?.name || parsed.name;
+  const isWork = parsed.type === "work";
 
-  for (const item of items) {
-    try {
-      // Знаходимо відповідну назву з бази
-      const match = findBestMatch(item.name, item.type);
-      const finalName = match?.name || item.name;
+  // Назва
+  const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
+  if (nameCell && finalName) {
+    nameCell.textContent = finalName;
+    nameCell.setAttribute("data-full-name", finalName);
+    nameCell.setAttribute("data-type", isWork ? "works" : "details");
+  }
 
-      // Знаходимо пустий рядок або створюємо новий
-      const tableBody = document.querySelector<HTMLTableSectionElement>(
-        `#${ACT_ITEMS_TABLE_CONTAINER_ID} tbody`,
-      );
-      if (!tableBody) continue;
+  // Іконка рядка
+  const indexCell = row.querySelector(".row-index");
+  if (indexCell) {
+    const icon = isWork ? "🛠️" : "⚙️";
+    const idx = indexCell.textContent?.match(/\d+/)?.[0] || "1";
+    indexCell.innerHTML = `${icon} ${idx}`;
+  }
 
-      // Шукаємо пустий рядок (без назви)
-      let targetRow: HTMLTableRowElement | null = null;
-      const rows = tableBody.querySelectorAll("tr");
-      for (const row of rows) {
-        const nameCell = row.querySelector('[data-name="name"]');
-        if (nameCell && !nameCell.textContent?.trim()) {
-          targetRow = row as HTMLTableRowElement;
-          break;
-        }
-      }
+  // Каталог
+  if (isWork && match?.workId) {
+    const catCell = row.querySelector('[data-name="catalog"]') as HTMLElement;
+    if (catCell) catCell.textContent = match.workId;
+  }
+  if (!isWork && match?.scladId) {
+    const catCell = row.querySelector('[data-name="catalog"]') as HTMLElement;
+    if (catCell) catCell.setAttribute("data-sclad-id", String(match.scladId));
+  }
 
-      // Якщо пустого рядка нема — додаємо
-      if (!targetRow) {
-        addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
-        const updatedRows = tableBody.querySelectorAll("tr");
-        targetRow = updatedRows[updatedRows.length - 1] as HTMLTableRowElement;
-      }
+  // Кількість
+  const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement;
+  if (qtyCell) qtyCell.textContent = String(parsed.quantity ?? 1);
 
-      if (!targetRow) continue;
+  // Ціна
+  const priceCell = row.querySelector('[data-name="price"]') as HTMLElement;
+  if (priceCell && parsed.price !== null) {
+    priceCell.textContent = String(parsed.price);
+  }
 
-      // --- Заповнюємо НАЗВУ ---
-      const nameCell = targetRow.querySelector(
-        '[data-name="name"]',
+  // Сума
+  const sumCell = row.querySelector('[data-name="sum"]') as HTMLElement;
+  if (sumCell && parsed.price !== null) {
+    sumCell.textContent = String(parsed.price * (parsed.quantity ?? 1));
+  }
+
+  // Слюсар
+  if (parsed.slyusar) {
+    const found = findSlyusarOrShop(parsed.slyusar);
+    if (found) {
+      const pibCell = row.querySelector(
+        '[data-name="pib_magazin"]',
       ) as HTMLElement;
-      if (nameCell) {
-        nameCell.textContent = finalName;
-        // Зберігаємо повну назву
-        nameCell.setAttribute("data-full-name", finalName);
-
-        // Встановлюємо тип (робота/деталь) та іконку
-        const isWork = item.type === "work";
-        nameCell.setAttribute("data-type", isWork ? "works" : "details");
-
-        // Оновлюємо іконку номера рядка
-        const indexCell = targetRow.querySelector(".row-index");
-        if (indexCell) {
-          const currentIcon = isWork ? "🛠️" : "⚙️";
-          const index = indexCell.textContent?.match(/\d+/)?.[0] || "1";
-          indexCell.innerHTML = `${currentIcon} ${index}`;
-        }
-
-        // Встановлюємо каталог для робіт
-        if (isWork && match?.workId) {
-          const catalogCell = targetRow.querySelector(
-            '[data-name="catalog"]',
-          ) as HTMLElement;
-          if (catalogCell) {
-            catalogCell.textContent = match.workId;
-          }
-        }
-
-        // Встановлюємо sclad_id для деталей зі складу
-        if (!isWork && match?.scladId) {
-          const catalogCell = targetRow.querySelector(
-            '[data-name="catalog"]',
-          ) as HTMLElement;
-          if (catalogCell) {
-            catalogCell.setAttribute("data-sclad-id", String(match.scladId));
-          }
-        }
+      if (pibCell) {
+        pibCell.textContent = found;
+        pibCell.setAttribute("data-type", "slyusars");
       }
-
-      // --- Заповнюємо КІЛЬКІСТЬ ---
-      const qtyCell = targetRow.querySelector(
-        '[data-name="id_count"]',
-      ) as HTMLElement;
-      if (qtyCell) {
-        qtyCell.textContent = String(item.quantity ?? 1);
-      }
-
-      // --- Заповнюємо ЦІНУ ---
-      const priceCell = targetRow.querySelector(
-        '[data-name="price"]',
-      ) as HTMLElement;
-      if (priceCell && item.price !== null) {
-        priceCell.textContent = String(item.price);
-      }
-
-      // --- Рахуємо СУМУ ---
-      const sumCell = targetRow.querySelector(
-        '[data-name="sum"]',
-      ) as HTMLElement;
-      if (sumCell && item.price !== null) {
-        const qty = item.quantity ?? 1;
-        sumCell.textContent = String(item.price * qty);
-      }
-
-      // --- Заповнюємо СЛЮСАРЯ ---
-      if (item.slyusar) {
-        const slyusarName = findSlyusar(item.slyusar);
-        if (slyusarName) {
-          const pibCell = targetRow.querySelector(
-            '[data-name="pib_magazin"]',
-          ) as HTMLElement;
-          if (pibCell) {
-            pibCell.textContent = slyusarName;
-            pibCell.setAttribute("data-type", "slyusars");
-          }
-        }
-      }
-
-      // --- Заповнюємо ЗАРПЛАТУ СЛЮСАРЯ ---
-      if (item.slyusarSum !== null) {
-        const slyusarSumCell = targetRow.querySelector(
-          '[data-name="slyusar_sum"]',
-        ) as HTMLElement;
-        if (slyusarSumCell) {
-          slyusarSumCell.textContent = String(item.slyusarSum);
-        }
-      }
-
-      // Якщо ціна не задана голосом — запускаємо AI підказку ціни
-      if (item.price === null && finalName) {
-        try {
-          await handleItemSelection(targetRow, finalName, item.type);
-        } catch {
-          /* ignore */
-        }
-      }
-
-      filledCount++;
-    } catch (err) {
-      console.error("🎤 Помилка заповнення рядка:", err);
     }
   }
 
-  // Оновлюємо підсумки
-  updateCalculatedSumsInFooter();
+  // Зарплата
+  if (parsed.slyusarSum !== null) {
+    const sCell = row.querySelector('[data-name="slyusar_sum"]') as HTMLElement;
+    if (sCell) sCell.textContent = String(parsed.slyusarSum);
+  }
 
-  return filledCount;
+  // ШІ-підказка ціни якщо не вказана
+  if (parsed.price === null && finalName) {
+    handleItemSelection(row, finalName, parsed.type).catch(() => {});
+  }
+
+  updateCalculatedSumsInFooter();
+}
+
+/**
+ * Заповнює одну клітинку
+ */
+function fillSingleCell(
+  row: HTMLTableRowElement,
+  column: ColumnType,
+  value: string | number,
+): void {
+  const cell = row.querySelector(`[data-name="${column}"]`) as HTMLElement;
+  if (!cell) return;
+
+  if (column === "pib_magazin") {
+    const found = findSlyusarOrShop(String(value));
+    cell.textContent = found || String(value);
+    if (found) {
+      const isSlyusar = globalCache.slyusars.some((s) => s.Name === found);
+      cell.setAttribute("data-type", isSlyusar ? "slyusars" : "shops");
+    }
+  } else {
+    cell.textContent = String(value);
+  }
+
+  // Перерахунок суми
+  if (column === "price" || column === "id_count") {
+    const priceEl = row.querySelector('[data-name="price"]') as HTMLElement;
+    const qtyEl = row.querySelector('[data-name="id_count"]') as HTMLElement;
+    const sumEl = row.querySelector('[data-name="sum"]') as HTMLElement;
+    const price = parseFloat(priceEl?.textContent?.replace(/\s/g, "") || "0");
+    const qty = parseFloat(qtyEl?.textContent?.replace(/\s/g, "") || "1");
+    if (sumEl && !isNaN(price) && !isNaN(qty)) {
+      sumEl.textContent = String(Math.round(price * qty));
+    }
+  }
+
+  updateCalculatedSumsInFooter();
 }
 
 // ============================================================
-// ГОЛОВНА ФУНКЦІЯ — КНОПКА МІКРОФОНА
+// КНОПКА МІКРОФОНА — UI
 // ============================================================
 
-/**
- * Оновлює візуальний стан кнопки мікрофона
- */
 function updateMicButton(btn: HTMLElement, state: VoiceState): void {
   voiceState = state;
   btn.classList.remove("voice-idle", "voice-listening", "voice-processing");
@@ -575,7 +807,7 @@ function updateMicButton(btn: HTMLElement, state: VoiceState): void {
     case "idle":
       btn.classList.add("voice-idle");
       btn.innerHTML = `<span class="voice-btn-icon">🎤</span><span class="voice-btn-text">Голос</span>`;
-      btn.title = "Голосове введення — натисніть і говоріть";
+      updateVoiceBtnHint();
       break;
     case "listening":
       btn.classList.add("voice-listening");
@@ -585,75 +817,65 @@ function updateMicButton(btn: HTMLElement, state: VoiceState): void {
     case "processing":
       btn.classList.add("voice-processing");
       btn.innerHTML = `<span class="voice-btn-icon voice-spin">⚙️</span><span class="voice-btn-text">Аналізую...</span>`;
-      btn.title = "Зачекайте, обробка...";
+      btn.title = "Обробка...";
       break;
   }
 }
 
 /**
- * Показує overlay із розпізнаним текстом та результатом парсингу
+ * Показує результат голосового введення
  */
-function showVoiceResultOverlay(
+function showVoiceResult(
   transcript: string,
-  items: ParsedVoiceItem[],
+  column: ColumnType,
+  success: boolean,
+  details?: string,
 ): void {
-  // Видаляємо попередній overlay якщо є
   document.getElementById("voice-result-overlay")?.remove();
 
   const overlay = document.createElement("div");
   overlay.id = "voice-result-overlay";
   overlay.className = "voice-result-overlay";
 
-  const itemsHtml =
-    items.length > 0
-      ? items
-          .map((it, i) => {
-            const icon = it.type === "work" ? "🛠️" : "⚙️";
-            const priceTxt = it.price !== null ? `${it.price} грн` : "—";
-            const qtyTxt = it.quantity !== null ? `×${it.quantity}` : "";
-            const slyusarTxt = it.slyusar ? ` → ${it.slyusar}` : "";
-            return `<div class="voice-result-item">
-          <span>${icon} ${i + 1}.</span>
-          <strong>${it.name}</strong> ${qtyTxt} — ${priceTxt}${slyusarTxt}
-        </div>`;
-          })
-          .join("")
-      : `<div class="voice-result-item voice-result-empty">❌ Не вдалося розпізнати роботу/деталь</div>`;
+  const colNames: Record<ColumnType, string> = {
+    name: "Найменування",
+    id_count: "Кількість",
+    price: "Ціна",
+    slyusar_sum: "Зарплата",
+    pib_magazin: "ПІБ/Магазин",
+    catalog: "Каталог",
+    unknown: "—",
+  };
+
+  const statusIcon = success ? "✅" : "❌";
+  const statusText = success ? details || "Записано" : "Не вдалося розпізнати";
 
   overlay.innerHTML = `
     <div class="voice-result-content">
       <div class="voice-result-header">
-        <span>🎤 Розпізнано:</span>
+        <span>🎤 ${colNames[column]}:</span>
         <button class="voice-result-close" id="voice-result-close-btn">✕</button>
       </div>
       <div class="voice-result-transcript">"${transcript}"</div>
-      <div class="voice-result-items">${itemsHtml}</div>
+      <div class="voice-result-items">
+        <div class="voice-result-item ${success ? "" : "voice-result-empty"}">${statusIcon} ${statusText}</div>
+      </div>
     </div>
   `;
 
-  // Додаємо в модалку акту
   const modalBody = document.getElementById("zakaz_narayd-body");
-  if (modalBody) {
-    modalBody.appendChild(overlay);
-  } else {
-    document.body.appendChild(overlay);
-  }
+  (modalBody || document.body).appendChild(overlay);
 
-  // Закриття
   document
     .getElementById("voice-result-close-btn")
-    ?.addEventListener("click", () => {
-      overlay.remove();
-    });
-
-  // Автозакриття через 5 секунд
-  setTimeout(() => overlay.remove(), 5000);
+    ?.addEventListener("click", () => overlay.remove());
+  setTimeout(() => overlay.remove(), 4000);
 }
 
-/**
- * Головний обробник натискання на кнопку мікрофона.
- * Цикл: idle → listening → processing → idle
- */
+// ============================================================
+// ГОЛОВНИЙ ОБРОБНИК
+// ============================================================
+
 export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
   // Якщо вже слухаємо — зупинити
   if (voiceState === "listening") {
@@ -661,74 +883,110 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
     updateMicButton(btn, "idle");
     return;
   }
-
-  // Якщо обробляємо — ігноруємо
   if (voiceState === "processing") return;
 
-  // Перевіряємо підтримку
   if (!isSpeechRecognitionSupported()) {
     showNotification(
-      "❌ Ваш браузер не підтримує розпізнавання мови. Використовуйте Chrome.",
+      "❌ Браузер не підтримує розпізнавання мови. Використовуйте Chrome.",
       "error",
       4000,
     );
     return;
   }
 
-  try {
-    // Стан: Слухаємо
-    updateMicButton(btn, "listening");
+  // Перевіряємо чи є фокус на рядку
+  if (!lastFocusedRow || lastFocusedColumn === "unknown") {
     showNotification(
-      "🎤 Говоріть... (наприклад: «Заміна масла, ціна тисяча»)",
-      "info",
+      "⚠️ Спочатку клікніть на клітинку в таблиці, потім натисніть 🎤",
+      "warning",
       3000,
     );
+    return;
+  }
+
+  // Перевіряємо чи рядок ще існує
+  if (!lastFocusedRow.closest("tbody")) {
+    showNotification(
+      "⚠️ Рядок видалено. Клікніть на інший рядок.",
+      "warning",
+      2500,
+    );
+    lastFocusedRow = null;
+    lastFocusedColumn = "unknown";
+    return;
+  }
+
+  const targetRow = lastFocusedRow;
+  const targetColumn = lastFocusedColumn;
+
+  // Підказка що говорити
+  const hints: Record<ColumnType, string> = {
+    name: "назву роботи/деталі (+ кількість, ціну, зарплату, ПІБ)",
+    id_count: "кількість (число)",
+    price: "ціну (число)",
+    slyusar_sum: "зарплату (число)",
+    pib_magazin: "прізвище слюсаря або магазин",
+    catalog: "номер каталогу",
+    unknown: "",
+  };
+
+  try {
+    updateMicButton(btn, "listening");
+    showNotification(`🎤 Говоріть ${hints[targetColumn]}...`, "info", 3000);
 
     const transcript = await startListening();
 
-    if (!transcript || !transcript.trim()) {
-      showNotification(
-        "🎤 Мову не розпізнано. Спробуйте ще раз.",
-        "warning",
-        2500,
-      );
+    if (!transcript?.trim()) {
+      showNotification("🎤 Мову не розпізнано. Спробуйте ще.", "warning", 2500);
       updateMicButton(btn, "idle");
       return;
     }
 
-    // Стан: Обробляємо
     updateMicButton(btn, "processing");
-    showNotification(`🔄 Аналізую: "${transcript}"`, "info", 2000);
 
-    // Парсинг через Gemini
-    const parsedItems = await parseVoiceWithGemini(transcript);
+    if (targetColumn === "name") {
+      // === ПОВНИЙ РЯДОК ===
+      showNotification(`🔄 Аналізую: "${transcript}"`, "info", 2000);
+      const parsed = await parseFullRowWithGemini(transcript);
 
-    if (!parsedItems || parsedItems.length === 0) {
-      showNotification(
-        `❌ Не вдалося розібрати: "${transcript}". Спробуйте чіткіше.`,
-        "warning",
-        3500,
-      );
-      showVoiceResultOverlay(transcript, []);
-      updateMicButton(btn, "idle");
-      return;
+      if (parsed && parsed.name) {
+        fillFullRow(targetRow, parsed);
+        const match = findBestMatch(parsed.name, parsed.type);
+        const finalName = match?.name || parsed.name;
+        const icon = parsed.type === "work" ? "🛠️" : "⚙️";
+
+        // Збираємо деталі що заповнено
+        const parts: string[] = [`${icon} ${finalName}`];
+        if (parsed.quantity) parts.push(`К-ть: ${parsed.quantity}`);
+        if (parsed.price) parts.push(`Ціна: ${parsed.price}`);
+        if (parsed.slyusarSum) parts.push(`Зар-та: ${parsed.slyusarSum}`);
+        if (parsed.slyusar) parts.push(`ПІБ: ${parsed.slyusar}`);
+
+        showNotification(`✅ ${parts[0]}`, "success", 3000);
+        showVoiceResult(transcript, targetColumn, true, parts.join(" | "));
+      } else {
+        showNotification(
+          `❌ Не вдалося розібрати: "${transcript}"`,
+          "warning",
+          3500,
+        );
+        showVoiceResult(transcript, targetColumn, false);
+      }
+    } else {
+      // === ОДНА КЛІТИНКА ===
+      const value = await parseSingleFieldWithGemini(transcript, targetColumn);
+
+      if (value !== null) {
+        fillSingleCell(targetRow, targetColumn, value);
+        showNotification(`✅ Записано: ${value}`, "success", 2500);
+        showVoiceResult(transcript, targetColumn, true, String(value));
+      } else {
+        showNotification(`❌ Не розпізнано: "${transcript}"`, "warning", 3000);
+        showVoiceResult(transcript, targetColumn, false);
+      }
     }
-
-    // Заповнюємо рядки таблиці
-    const filledCount = await fillTableRows(parsedItems);
-
-    // Успіх!
-    const workWord =
-      filledCount === 1 ? "рядок" : filledCount < 5 ? "рядки" : "рядків";
-    showNotification(
-      `✅ Додано ${filledCount} ${workWord} голосом!`,
-      "success",
-      3000,
-    );
-
-    showVoiceResultOverlay(transcript, parsedItems);
   } catch (err: any) {
-    console.error("🎤 Помилка голосового введення:", err);
+    console.error("🎤 Помилка:", err);
     showNotification(
       `❌ ${err.message || "Помилка голосового введення"}`,
       "error",
@@ -740,19 +998,16 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
 }
 
 // ============================================================
-// СТВОРЕННЯ КНОПКИ МІКРОФОНА
+// СТВОРЕННЯ ТА ІНІЦІАЛІЗАЦІЯ
 // ============================================================
 
-/**
- * Створює кнопку 🎤 і додає її поруч із "Додати рядок"
- */
 export function createVoiceButton(): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.id = "voice-input-button";
   btn.className = "action-button voice-input-button voice-idle";
   btn.type = "button";
   btn.innerHTML = `<span class="voice-btn-icon">🎤</span><span class="voice-btn-text">Голос</span>`;
-  btn.title = "Голосове введення — натисніть і говоріть";
+  btn.title = "🎤 Голос — спочатку клікніть на клітинку";
 
   btn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -764,37 +1019,33 @@ export function createVoiceButton(): HTMLButtonElement {
 }
 
 /**
- * Ініціалізує кнопку голосового введення в модалці акту.
- * Викликати після рендерингу модалки.
+ * Ініціалізує голосове введення:
+ * 1. Трекінг фокусу на клітинках таблиці
+ * 2. Кнопка 🎤 між "Додати рядок" та "Зберегти"
  */
 export function initVoiceInput(): void {
-  // Не додаємо якщо акт закритий
   if (globalCache.isActClosed) return;
 
-  // Не додаємо якщо браузер не підтримує
   if (!isSpeechRecognitionSupported()) {
     console.log(
-      "🎤 Голосове введення недоступне: браузер не підтримує Web Speech API",
+      "🎤 Голосове введення недоступне: Web Speech API не підтримується",
     );
     return;
   }
 
-  // Шукаємо контейнер кнопок
-  const buttonsContainer = document.querySelector(
-    ".zakaz_narayd-buttons-container",
-  );
-  if (!buttonsContainer) return;
+  // Трекінг фокусу клітинок
+  initFocusTracking();
 
-  // Не додаємо дублікат
+  // Кнопка
+  const container = document.querySelector(".zakaz_narayd-buttons-container");
+  if (!container) return;
   if (document.getElementById("voice-input-button")) return;
 
   const voiceBtn = createVoiceButton();
-
-  // Вставляємо між "Додати рядок" та "Зберегти зміни"
   const saveBtn = document.getElementById("save-act-data");
   if (saveBtn) {
-    buttonsContainer.insertBefore(voiceBtn, saveBtn);
+    container.insertBefore(voiceBtn, saveBtn);
   } else {
-    buttonsContainer.appendChild(voiceBtn);
+    container.appendChild(voiceBtn);
   }
 }

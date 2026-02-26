@@ -28,9 +28,10 @@ import {
   loadAndShowExistingNotifications,
 } from "./povidomlennya_tablucya";
 
-// 📞 ІМПОРТ ФУНКЦІЇ ЗАСТОСУВАННЯ НАЛАШТУВАННЯ ТЕЛЕФОНУ ТА REALTIME ПІДПИСКИ
+// 📞 ІМПОРТ ФУНКЦІЇ ЗАСТОСУВАННЯ НАЛАШТУВАННЯ ТЕЛЕФОНУ, ГОЛОСУ ТА REALTIME ПІДПИСКИ
 import {
   loadAndApplyPhoneIndicatorSetting,
+  loadAndApplyVoiceInputSetting,
   subscribeToSettingsRealtime,
 } from "../nalachtuvannay/nalachtuvannay";
 
@@ -2061,6 +2062,9 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 📞 ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ВІДОБРАЖЕННЯ ТЕЛЕФОНУ
     await loadAndApplyPhoneIndicatorSetting();
+
+    // 🎙️ ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ГОЛОСОВОГО ВВЕДЕННЯ
+    await loadAndApplyVoiceInputSetting();
 
     // ⚙️ REALTIME ПІДПИСКА НА ЗМІНИ НАЛАШТУВАНЬ
     subscribeToSettingsRealtime();

@@ -26,8 +26,13 @@ const SETTINGS = {
   9: {
     id: "toggle-ai-pro",
     label:
-      '<span class="ai-pro-emoji-btn" title="Налаштування API ключів">🤖</span> ШІ PRO',
+      '<span class="ai-pro-emoji-btn" title="Налаштування API ключів">🤖</span> ШІ Атлас',
     class: "_ai_pro",
+  },
+  10: {
+    id: "toggle-voice-input",
+    label: "🎙️ Голосове введення",
+    class: "_voice",
   },
 };
 
@@ -111,6 +116,7 @@ const ROLE_SETTINGS = {
     { id: 21, label: "Планування" },
     { divider: true },
     { id: 22, label: "Акти Телефон 📞" },
+    { id: 23, label: "🎙️ Голосове введення", class: "_voice" },
   ],
   Слюсар: [
     { id: 1, label: "📋 Акт Зарплата 💲" },
@@ -120,6 +126,7 @@ const ROLE_SETTINGS = {
     { id: 6, label: "Планування" },
     { divider: true },
     { id: 7, label: "Акти Телефон 📞" },
+    { id: 8, label: "🎙️ Голосове введення", class: "_voice" },
   ],
   Запчастист: [
     { id: 1, label: "Додати" },
@@ -154,6 +161,7 @@ const ROLE_SETTINGS = {
     { id: 23, label: "Планування" },
     { divider: true },
     { id: 24, label: "Акти Телефон 📞" },
+    { id: 25, label: "🎙️ Голосове введення", class: "_voice" },
   ],
   Складовщик: [
     { id: 1, label: "Додати" },
@@ -185,6 +193,7 @@ const ROLE_SETTINGS = {
     { id: 20, label: "Планування" },
     { divider: true },
     { id: 21, label: "Акти Телефон 📞" },
+    { id: 22, label: "🎙️ Голосове введення", class: "_voice" },
   ],
 };
 
@@ -198,6 +207,18 @@ const PHONE_SETTINGS_MAP: Record<
   Слюсар: { settingId: 7, toggleId: 7 },
   Запчастист: { settingId: 24, toggleId: 24 },
   Складовщик: { settingId: 21, toggleId: 21 },
+};
+
+// 🎙️ Конфігурація setting_id для налаштування "Голосове введення" по ролям
+const VOICE_SETTINGS_MAP: Record<
+  string,
+  { settingId: number; toggleId: number }
+> = {
+  Адміністратор: { settingId: 10, toggleId: 10 },
+  Приймальник: { settingId: 23, toggleId: 23 },
+  Слюсар: { settingId: 8, toggleId: 8 },
+  Запчастист: { settingId: 25, toggleId: 25 },
+  Складовщик: { settingId: 22, toggleId: 22 },
 };
 
 const ROLE_TO_COLUMN = {
@@ -283,6 +304,65 @@ function applyPhoneIndicatorVisibility(show: boolean): void {
     document.body.classList.remove("hide-call-indicators");
   } else {
     document.body.classList.add("hide-call-indicators");
+  }
+}
+
+/**
+ * 🎙️ Завантажує та застосовує налаштування відображення кнопки голосового введення
+ * Викликати при завантаженні сторінки після авторизації
+ */
+export async function loadAndApplyVoiceInputSetting(): Promise<void> {
+  try {
+    const USER_DATA_KEY = "userAuthData";
+    const storedData = localStorage.getItem(USER_DATA_KEY);
+    if (!storedData) return;
+
+    const userData = JSON.parse(storedData);
+    const role = userData?.["Доступ"] as string;
+
+    if (!role || !VOICE_SETTINGS_MAP[role]) {
+      // Якщо роль невідома — приховуємо кнопку голосу за замовчуванням
+      applyVoiceInputVisibility(false);
+      return;
+    }
+
+    const { settingId } = VOICE_SETTINGS_MAP[role];
+    const column = ROLE_TO_COLUMN[role as keyof typeof ROLE_TO_COLUMN];
+
+    if (!column) {
+      applyVoiceInputVisibility(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("settings")
+      .select(`"${column}"`)
+      .eq("setting_id", settingId)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      console.warn("Помилка завантаження налаштування голосу:", error);
+      applyVoiceInputVisibility(false);
+      return;
+    }
+
+    const showVoice = data ? !!data[column] : false;
+    globalCache.generalSettings.voiceInputEnabled = showVoice;
+    saveGeneralSettingsToLocalStorage();
+    applyVoiceInputVisibility(showVoice);
+  } catch (err) {
+    console.error("Помилка застосування налаштування голосу:", err);
+    applyVoiceInputVisibility(false);
+  }
+}
+
+/**
+ * Застосовує видимість кнопки голосового введення
+ */
+function applyVoiceInputVisibility(show: boolean): void {
+  const voiceBtn = document.getElementById("voice-input-button");
+  if (voiceBtn) {
+    voiceBtn.style.display = show ? "" : "none";
   }
 }
 
@@ -396,7 +476,7 @@ function handleAdminSettingsChange(settingId: number, newRecord: any): void {
     case 9: // toggle-ai-pro
       globalCache.generalSettings.aiChatEnabled = !!value;
       saveGeneralSettingsToLocalStorage();
-      // Одразу показати/приховати кнопку ШІ PRO в меню
+      // Одразу показати/приховати кнопку ШІ Атлас в меню
       if (!!value) {
         initAIChatButton();
       } else {
@@ -405,6 +485,11 @@ function handleAdminSettingsChange(settingId: number, newRecord: any): void {
         const chatModal = document.getElementById("ai-chat-modal");
         if (chatModal) chatModal.classList.add("hidden");
       }
+      break;
+    case 10: // toggle-voice-input
+      globalCache.generalSettings.voiceInputEnabled = !!value;
+      saveGeneralSettingsToLocalStorage();
+      applyVoiceInputVisibility(!!value);
       break;
   }
 
@@ -437,6 +522,20 @@ function handleRoleSettingsChange(
 
   // Тут можна додати обробку інших налаштувань ролі при потребі
   // Наприклад, оновлення кешу прав доступу
+
+  // 🎙️ Перевіряємо чи ця зміна стосується налаштування "Голосове введення" для поточної ролі
+  const voiceConfig = VOICE_SETTINGS_MAP[currentRole];
+  if (voiceConfig && settingId === voiceConfig.settingId) {
+    const value = newRecord?.[column];
+    if (value !== undefined) {
+      globalCache.generalSettings.voiceInputEnabled = !!value;
+      saveGeneralSettingsToLocalStorage();
+      applyVoiceInputVisibility(!!value);
+      console.log(
+        `🎙️ Realtime: оновлено голосове введення для ${currentRole}: ${!!value}`,
+      );
+    }
+  }
 }
 
 /**
@@ -1243,7 +1342,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
     });
 
     // Для відсутніх записів по ключових адмін-перемикачах — виставляємо дефолт false у початковому стані
-    [1, 2, 3, 5, 6, 7, 8, 9].forEach((id) => {
+    [1, 2, 3, 5, 6, 7, 8, 9, 10].forEach((id) => {
       if (!initialSettingsState.has(`checkbox_${id}`)) {
         const setting = SETTINGS[id as keyof typeof SETTINGS];
         if (setting) {
@@ -1343,8 +1442,8 @@ async function loadRoleSettings(
     // 🔹 Очищуємо попередній стан
     initialSettingsState.clear();
 
-    // Охоплюємо повний діапазон id 1..24
-    const settingIds = Array.from({ length: 24 }, (_, i) => i + 1);
+    // Охоплюємо повний діапазон id 1..25
+    const settingIds = Array.from({ length: 25 }, (_, i) => i + 1);
 
     const { data, error } = await supabase
       .from("settings")
@@ -1722,7 +1821,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         }
         globalCache.generalSettings.aiChatEnabled = newValueAIPro;
         saveGeneralSettingsToLocalStorage();
-        // Одразу показати/приховати кнопку ШІ PRO в меню
+        // Одразу показати/приховати кнопку ШІ Атлас в меню
         if (newValueAIPro) {
           initAIChatButton();
         } else {
@@ -1733,12 +1832,42 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
         }
         changesCount++;
       }
+
+      // 🎙️ Збереження toggle-voice-input (setting_id 10)
+      const checkboxVoice = modal.querySelector(
+        "#toggle-voice-input",
+      ) as HTMLInputElement;
+      const newValueVoice = checkboxVoice?.checked ?? false;
+      if (initialSettingsState.get("checkbox_10") !== newValueVoice) {
+        const { data: existing10 } = await supabase
+          .from("settings")
+          .select("setting_id")
+          .eq("setting_id", 10)
+          .single();
+        if (existing10) {
+          const { error: updateError10 } = await supabase
+            .from("settings")
+            .update({ [column]: newValueVoice })
+            .eq("setting_id", 10);
+          if (updateError10) throw updateError10;
+        } else {
+          const { error: insertError10 } = await supabase
+            .from("settings")
+            .insert({ setting_id: 10, [column]: newValueVoice });
+          if (insertError10) throw insertError10;
+        }
+        globalCache.generalSettings.voiceInputEnabled = newValueVoice;
+        saveGeneralSettingsToLocalStorage();
+        // Одразу показати/приховати кнопку голосу в акті
+        applyVoiceInputVisibility(newValueVoice);
+        changesCount++;
+      }
     } else if (role === "Загальні") {
       // Зберегти налаштування для секції "Загальні"
       changesCount = await saveGeneralSettings(modal);
     } else {
-      // Зберегти налаштування для інших ролей — покриваємо id 1..24, працюємо лише з наявними чекбоксами
-      for (let id = 1; id <= 24; id++) {
+      // Зберегти налаштування для інших ролей — покриваємо id 1..25, працюємо лише з наявними чекбоксами
+      for (let id = 1; id <= 25; id++) {
         const checkbox = modal.querySelector(
           `#role-toggle-${id}`,
         ) as HTMLInputElement;
@@ -1944,7 +2073,7 @@ async function openAiProKeysModal(): Promise<void> {
 
   keysModal.innerHTML = `
     <div class="ai-pro-keys-window">
-      <h3 class="ai-pro-keys-title">🔑 API Ключі ШІ PRO</h3>
+      <h3 class="ai-pro-keys-title">🔑 API Ключі ШІ Атлас</h3>
       <div class="ai-pro-keys-inputs">
         ${Array.from(
           { length: 10 },
@@ -2056,7 +2185,7 @@ export async function createSettingsModal(): Promise<void> {
   // AI PRO toggle — зміни застосовуються тільки при натисканні ОК (збереження)
   // Немає обробника change, бо toggle зберігається через кнопку ОК
 
-  // 🤖 Обробник для кліку на емодзі 🤖 в ШІ PRO — відкриває модалку API ключів
+  // 🤖 Обробник для кліку на емодзі 🤖 в ШІ Атлас — відкриває модалку API ключів
   const aiProEmojiBtn = modal.querySelector(".ai-pro-emoji-btn");
   if (aiProEmojiBtn) {
     aiProEmojiBtn.addEventListener("click", (e) => {
@@ -2069,7 +2198,7 @@ export async function createSettingsModal(): Promise<void> {
     });
   }
 
-  // 🔒 Приховуємо ШІ PRO для не-адміністраторів
+  // 🔒 Приховуємо ШІ Атлас для не-адміністраторів
   const USER_DATA_KEY_CHECK = "userAuthData";
   const storedUserData = localStorage.getItem(USER_DATA_KEY_CHECK);
   if (storedUserData) {

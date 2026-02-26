@@ -1,5 +1,5 @@
 // src/ts/roboha/ai/voiceInput.ts
-// 🎤 Голосове введення в акт — ключові фрази визначають ціль
+// 🎙️ Голосове введення в акт — ключові фрази визначають ціль
 // Формат: "[ключ] [значення]"
 // Наприклад: "пробіг 150000", "рядок 2 найменування заміна масла"
 
@@ -640,7 +640,7 @@ async function parseFullRowWithGemini(
 НАВІТЬ якщо сказано одне слово ("заміна", "фільтр") — знайди роботу/деталь зі списку що МІСТИТЬ це слово.
 НІКОЛИ не повертай порожнє name ("") та НІКОЛИ не додавай "..." до назви.
 
-⚠️ ТИПОВІ ПОМИЛКИ РОЗПІЗНАВАННЯ (голосовий рушій часто обрізає початок):
+⚠️ ТИПОВІ ПОМИЛКИ РОЗПІЗНАВАННЯ (Голосове рушій часто обрізає початок):
 - "аміна" → "заміна", "ільтр" → "фільтр", "асло" → "масло"
 - "емонт" → "ремонт", "іагностика" → "діагностика"
 Завжди відновлюй повне слово!
@@ -1010,7 +1010,7 @@ function updateMicButton(btn: HTMLElement, state: VoiceState): void {
       btn.classList.add("voice-idle");
       btn.innerHTML = `<span class="voice-btn-icon">🎤</span><span class="voice-btn-text">Голос</span>`;
       btn.title =
-        "🎤 Голос. Скажіть: [поле] [значення] або [рядок N] [колонка] [значення]";
+        "🎙️ Голос. Скажіть: [поле] [значення] або [рядок N] [колонка] [значення]";
       break;
     case "listening":
       btn.classList.add("voice-listening");
@@ -1264,7 +1264,7 @@ export function createVoiceButton(): HTMLButtonElement {
   btn.type = "button";
   btn.innerHTML = `<span class="voice-btn-icon">🎤</span><span class="voice-btn-text">Голос</span>`;
   btn.title =
-    "🎤 Голос: скажіть [поле] [значення] або [рядок N] [колонка] [значення]";
+    "🎙️ Голос: скажіть [поле] [значення] або [рядок N] [колонка] [значення]";
 
   btn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -1278,13 +1278,14 @@ export function createVoiceButton(): HTMLButtonElement {
 /**
  * Ініціалізує голосове введення — кнопка 🎤
  * Без трекінгу фокусу, команди визначаються ключовими словами
+ * Видимість кнопки визначається налаштуванням voiceInputEnabled
  */
 export function initVoiceInput(): void {
   if (globalCache.isActClosed) return;
 
   if (!isSpeechRecognitionSupported()) {
     console.log(
-      "🎤 Голосове введення недоступне: Web Speech API не підтримується",
+      "🎙️ Голосове введення недоступне: Web Speech API не підтримується",
     );
     return;
   }
@@ -1294,6 +1295,12 @@ export function initVoiceInput(): void {
   if (document.getElementById("voice-input-button")) return;
 
   const voiceBtn = createVoiceButton();
+
+  // 🎙️ Перевіряємо налаштування видимості
+  if (!globalCache.generalSettings.voiceInputEnabled) {
+    voiceBtn.style.display = "none";
+  }
+
   const saveBtn = document.getElementById("save-act-data");
   if (saveBtn) {
     container.insertBefore(voiceBtn, saveBtn);

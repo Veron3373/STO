@@ -1566,7 +1566,7 @@ async function addModalHandlers(
       await applyAccessRestrictionsToNewRow();
     });
 
-    // 🎤 Голосове введення в наряд
+    // 🎙️ Голосове введення в наряд
     initVoiceInput();
   }
 

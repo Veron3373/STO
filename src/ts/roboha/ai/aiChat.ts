@@ -2100,7 +2100,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
 // ============================================================
 
 export function initAIChatButton(): void {
-  // Перевіряємо чи увімкнено ШІ PRO
+  // Перевіряємо чи увімкнено ШІ Атлас
   if (!globalCache.generalSettings.aiChatEnabled) return;
 
   // Перевіряємо чи вже є кнопка

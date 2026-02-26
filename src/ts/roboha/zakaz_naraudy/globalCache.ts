@@ -84,7 +84,8 @@ export interface GeneralSettings {
   printColorMode: boolean; // Режим друку: true = кольоровий, false = чорнобілий (setting_id: 6, data)
   wallpaperMain: string; // Шпалери основні (setting_id: 7, Загальні)
   aiEnabled: boolean; // ШІ підказки (setting_id: 7, data)
-  aiChatEnabled: boolean; // ШІ PRO - чат асистент (setting_id: 9, data)
+  aiChatEnabled: boolean; // ШІ Атлас - чат асистент (setting_id: 9, data)
+  voiceInputEnabled: boolean; // 🎙️ Голосове введення (setting_id: 10, data)
   smsTextBefore: string; // SMS текст перед сумою (setting_id: 8)
   smsTextAfter: string; // SMS текст після суми (setting_id: 9)
 }
@@ -108,8 +109,8 @@ export interface GlobalDataCache {
   worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
   detailsWithId: Array<{ detail_id: number; name: string }>;
-  slyusars: Array<{ Name: string;[k: string]: any }>;
-  shops: Array<{ Name: string;[k: string]: any }>;
+  slyusars: Array<{ Name: string; [k: string]: any }>;
+  shops: Array<{ Name: string; [k: string]: any }>;
   settings: {
     showPibMagazin: boolean;
     showCatalog: boolean;
@@ -172,7 +173,8 @@ export const globalCache: GlobalDataCache = {
     printColorMode: true, // За замовчуванням кольоровий друк
     wallpaperMain: "",
     aiEnabled: false, // За замовчуванням ШІ вимкнено
-    aiChatEnabled: false, // За замовчуванням ШІ PRO вимкнено
+    aiChatEnabled: false, // За замовчуванням ШІ Атлас вимкнено
+    voiceInputEnabled: false, // За замовчуванням голосове введення вимкнено
     smsTextBefore: "Ваше замовлення виконане. Сума:", // SMS текст перед сумою
     smsTextAfter: "грн. Дякуємо за довіру!", // SMS текст після суми
   },
@@ -218,7 +220,12 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
           parsed.printColorMode !== undefined ? parsed.printColorMode : true,
         wallpaperMain: parsed.wallpaperMain || "",
         aiEnabled: parsed.aiEnabled !== undefined ? parsed.aiEnabled : false,
-        aiChatEnabled: parsed.aiChatEnabled !== undefined ? parsed.aiChatEnabled : false,
+        aiChatEnabled:
+          parsed.aiChatEnabled !== undefined ? parsed.aiChatEnabled : false,
+        voiceInputEnabled:
+          parsed.voiceInputEnabled !== undefined
+            ? parsed.voiceInputEnabled
+            : false,
         smsTextBefore:
           parsed.smsTextBefore || "Ваше замовлення виконане. Сума:",
         smsTextAfter: parsed.smsTextAfter || "грн. Дякуємо за довіру!",
@@ -256,12 +263,12 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
       .select("setting_id, Загальні, data")
       .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9])
       .order("setting_id")) as {
-        data: Array<{
-          setting_id: number;
-          Загальні: string | null;
-          data: boolean | null;
-        }> | null;
-      };
+      data: Array<{
+        setting_id: number;
+        Загальні: string | null;
+        data: boolean | null;
+      }> | null;
+    };
 
     if (generalSettingsRows) {
       for (const row of generalSettingsRows) {
@@ -298,8 +305,13 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
           case 9:
             globalCache.generalSettings.smsTextAfter =
               value || "грн. Дякуємо за довіру!";
-            // ШІ PRO - записується в setting_id=9 data
+            // ШІ Атлас - записується в setting_id=9 data
             globalCache.generalSettings.aiChatEnabled =
+              (row as any).data === true || (row as any).data === "true";
+            break;
+          case 10:
+            // 🎙️ Голосове введення — записується в setting_id=10 data
+            globalCache.generalSettings.voiceInputEnabled =
               (row as any).data === true || (row as any).data === "true";
             break;
         }
@@ -373,8 +385,9 @@ function dedupeSklad<
   const seen = new Set<string>();
   const out: T[] = [];
   for (const r of rows) {
-    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${r.quantity
-      }`;
+    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${
+      r.quantity
+    }`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -531,7 +544,7 @@ export async function loadGlobalData(
         .filter(Boolean) || [];
 
     // магазини: ТЕПЕР витягуємо Name і з об'єктів, і з подвійно-JSON-рядків, і з «просто рядка»
-    const shopsParsed: Array<{ Name: string;[k: string]: any }> = [];
+    const shopsParsed: Array<{ Name: string; [k: string]: any }> = [];
     for (const row of shopsData || []) {
       let raw = row?.data;
 
@@ -907,7 +920,7 @@ export function initDetailsRealtimeSubscription() {
         handleDetailsChange(payload);
       },
     )
-    .subscribe(() => { });
+    .subscribe(() => {});
 }
 
 function handleDetailsChange(payload: any) {

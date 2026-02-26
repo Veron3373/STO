@@ -3,6 +3,7 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import { globalCache } from "../zakaz_naraudy/globalCache";
+import { loadActsTable } from "../tablucya/tablucya";
 
 // ============================================================
 // УТИЛІТИ
@@ -276,11 +277,11 @@ function analyzeQuery(query: string): {
         q,
       ),
     needsClients:
-      /клієнт|піб|прізвищ|імен|телефон|контакт|номер.*тел|знайди.*людин|хто.*приїжджа/i.test(
+      /клієнт|піб|прізвищ|імен|телефон|контакт|номер.*тел|знайди.*людин|хто.*приїжджа|відфільтр|фільтр/i.test(
         q,
       ),
     needsCars:
-      /авто|машин|марк|модел|мерседес|бмв|тойот|фольксваген|ауд|рено|шкод|хюнд|кіа|номер.*авто|держ.*номер|vin|вінкод|двигун|пробіг/i.test(
+      /авто|машин|марк|модел|мерседес|бмв|тойот|фольксваген|ауд|рено|шкод|хюнд|кіа|номер.*авто|держ.*номер|vin|вінкод|двигун|пробіг|відфільтр|фільтр/i.test(
         q,
       ),
     needsActs: true, // Акти завжди потрібні
@@ -1280,6 +1281,23 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 🔑 Адміністратор — все. 🔧 Слюсар — тільки своє (акти, ЗП). 📋 Приймальник — клієнти, графік. 📦 Запчастист — склад.
 Невідома роль → НЕ адмін. Фінанси/ЗП всіх → тільки Адміністратор.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔎 КОМАНДА ФІЛЬТРАЦІЇ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Коли користувач просить «відфільтруй», «відфільтрувати», «покажи тільки», «знайди в таблиці», «фільтрани» або подібне — ти маєш:
+1. Проаналізувати запит і визначити ключові слова для пошуку (марка авто, назва роботи, ПІБ клієнта, деталь тощо).
+2. Сформувати КОРОТКИЙ пошуковий рядок із найважливіших слів, які допоможуть знайти потрібні акти.
+3. Обов'язково додати в КІНЦІ відповіді спеціальний тег: [FILTER:пошуковий рядок]
+   Приклади:
+   - «відфільтруй мерседеси з поліровкою колінвалу» → [FILTER:Mercedes поліровка колінвалу]
+   - «покажи тільки BMW які міняли масло» → [FILTER:BMW масло]
+   - «знайди акти Іваненка» → [FILTER:Іваненко]
+   - «відфільтруй Тойоти за зиму» → [FILTER:Toyota за зиму]
+   - «фільтрани по гальмівним колодкам» → [FILTER:гальмівні колодки]
+4. Пошуковий рядок повинен містити лише ключові слова для фільтрації (марка авто латиницею якщо можливо, назва роботи/деталі, ПІБ). НЕ додавай зайвих слів типу "всі", "акти", "які".
+5. Перед тегом [FILTER:...] коротко опиши що фільтруєш.
+⚠️ Тег [FILTER:...] має бути ОСТАННІМ рядком відповіді. Один фільтр на відповідь.
+
 Працюй швидко, точно, компактно.`,
           },
         ],
@@ -1573,6 +1591,64 @@ function renderDashboard(stats: DailyStats, container: HTMLElement): void {
 }
 
 // ============================================================
+// ФІЛЬТРАЦІЯ ТАБЛИЦІ З AI
+// ============================================================
+
+/**
+ * Програмно застосовує фільтр: вводить текст у #searchInput та перезавантажує таблицю
+ */
+function applyFilterFromAI(filterText: string): void {
+  const searchInput = document.getElementById(
+    "searchInput",
+  ) as HTMLInputElement;
+  if (!searchInput) {
+    console.warn("⚠️ AI Filter: #searchInput не знайдено");
+    return;
+  }
+
+  // Показуємо поле пошуку якщо воно сховане
+  searchInput.style.visibility = "visible";
+  searchInput.style.width = "200px";
+  searchInput.style.padding = "3px 7px";
+  searchInput.style.opacity = "1";
+
+  // Встановлюємо значення
+  searchInput.value = filterText;
+
+  // Тригеримо input подію для пошукового обробника
+  searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+  // Також напряму викликаємо loadActsTable з searchTerm як фолбек
+  try {
+    loadActsTable(null, null, null, filterText);
+  } catch (err) {
+    console.warn("⚠️ AI Filter: помилка loadActsTable", err);
+  }
+
+  // Закриваємо AI модалку щоб побачити результат
+  const modal = document.getElementById(CHAT_MODAL_ID);
+  if (modal) modal.classList.add("hidden");
+
+  console.log(`🔎 AI Filter: застосовано фільтр "${filterText}"`);
+}
+
+/**
+ * Парсить відповідь AI і витягує тег [FILTER:...], якщо є
+ * Повертає { cleanText, filterText } або null
+ */
+function extractFilterTag(
+  response: string,
+): { cleanText: string; filterText: string } | null {
+  const filterMatch = response.match(/\[FILTER:([^\]]+)\]/i);
+  if (!filterMatch) return null;
+
+  const filterText = filterMatch[1].trim();
+  const cleanText = response.replace(/\[FILTER:[^\]]+\]/gi, "").trim();
+
+  return { cleanText, filterText };
+}
+
+// ============================================================
 // ШВИДКІ ПІДКАЗКИ
 // ============================================================
 
@@ -1583,6 +1659,7 @@ const QUICK_PROMPTS = [
   { icon: "🚗", text: "Покажи всі відкриті акти з деталями" },
   { icon: "📦", text: "Що закінчується на складі?" },
   { icon: "🔍", text: "Покажи всіх клієнтів та їхні авто" },
+  { icon: "🔎", text: "Відфільтруй всі BMW які міняли масло" },
 ];
 
 // ============================================================
@@ -1815,13 +1892,25 @@ function initAIChatHandlers(modal: HTMLElement): void {
     const reply = await callGemini(text.trim());
     loaderDiv.remove();
 
+    // Перевіряємо чи є тег [FILTER:...] у відповіді
+    const filterResult = extractFilterTag(reply);
+    const displayText = filterResult ? filterResult.cleanText : reply;
+
     const assistantMsg: ChatMessage = {
       role: "assistant",
-      text: reply,
+      text: displayText,
       timestamp: new Date(),
     };
     chatHistory.push(assistantMsg);
     renderMessage(assistantMsg, messagesEl);
+
+    // Якщо є фільтр — застосовуємо його до таблиці
+    if (filterResult && filterResult.filterText) {
+      // Невелика затримка щоб користувач побачив відповідь
+      setTimeout(() => {
+        applyFilterFromAI(filterResult.filterText);
+      }, 1200);
+    }
 
     isLoading = false;
     sendBtn.disabled = false;

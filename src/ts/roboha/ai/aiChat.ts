@@ -60,6 +60,15 @@ interface DailyStats {
 const CHAT_MODAL_ID = "ai-chat-modal";
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+/** Визначає провайдера за форматом ключа */
+function getKeyProvider(key: string): "gemini" | "groq" {
+  if (key.startsWith("gsk_")) return "groq";
+  return "gemini";
+}
+
 let chatHistory: ChatMessage[] = [];
 let geminiApiKeys: string[] = []; // Всі 10 ключів (setting_id 20-29)
 let geminiKeySettingIds: number[] = []; // setting_id для кожного ключа (для збереження API column)
@@ -128,8 +137,10 @@ async function loadAllGeminiKeys(): Promise<string[]> {
     currentKeyIndex = 0;
   }
 
+  const activeProvider =
+    keys.length > 0 ? getKeyProvider(keys[currentKeyIndex]) : "?";
   console.log(
-    `🔑 Gemini: завантажено ${keys.length} ключів, активний №${currentKeyIndex + 1}`,
+    `🔑 AI: завантажено ${keys.length} ключів, активний №${currentKeyIndex + 1} (${activeProvider})`,
   );
   return keys;
 }
@@ -157,8 +168,12 @@ async function persistActiveKeyInDB(): Promise<void> {
         .update({ API: true })
         .eq("setting_id", activeSettingId);
     }
+    const savedProvider =
+      geminiApiKeys.length > 0
+        ? getKeyProvider(geminiApiKeys[currentKeyIndex])
+        : "?";
     console.log(
-      `🔑 Gemini: збережено активний ключ №${currentKeyIndex + 1} (setting_id=${activeSettingId}) в БД`,
+      `🔑 ${savedProvider}: збережено активний ключ №${currentKeyIndex + 1} (setting_id=${activeSettingId}) в БД`,
     );
   } catch (err) {
     console.warn("⚠️ Не вдалося зберегти активний ключ в БД:", err);
@@ -174,7 +189,7 @@ export function resetGeminiKeysCache(): void {
   keysLoaded = false;
   currentKeyIndex = 0;
   updateKeyIndicator();
-  console.log("🔑 Gemini: кеш ключів скинуто");
+  console.log("🔑 AI: кеш ключів скинуто");
 }
 
 /**
@@ -187,8 +202,11 @@ function updateKeyIndicator(): void {
     el.textContent = "";
     return;
   }
-  el.textContent = `🔑${currentKeyIndex + 1}`;
-  el.title = `Активний API ключ №${currentKeyIndex + 1} з ${geminiApiKeys.length}. Натисніть для вибору.`;
+  const currentKey = geminiApiKeys[currentKeyIndex] || "";
+  const provider = getKeyProvider(currentKey);
+  const providerLabel = provider === "groq" ? "Groq" : "Gemini";
+  el.textContent = `🔑${currentKeyIndex + 1} ${providerLabel}`;
+  el.title = `Активний API ключ №${currentKeyIndex + 1} з ${geminiApiKeys.length} (${providerLabel}). Натисніть для вибору.`;
 }
 
 /**
@@ -212,8 +230,11 @@ function toggleKeyDropdown(): void {
   let html = '<div class="ai-key-dropdown-title">Оберіть ключ:</div>';
   for (let i = 0; i < geminiApiKeys.length; i++) {
     const isActive = i === currentKeyIndex;
+    const keyProvider = getKeyProvider(geminiApiKeys[i]);
+    const providerIcon = keyProvider === "groq" ? "⚡" : "💎";
+    const providerName = keyProvider === "groq" ? "Groq" : "Gemini";
     html += `<button class="ai-key-dropdown-item${isActive ? " active" : ""}" data-key-index="${i}">
-      <span class="ai-key-dropdown-num">🔑 ${i + 1}</span>
+      <span class="ai-key-dropdown-num">${providerIcon} ${i + 1} ${providerName}</span>
       ${isActive ? '<span class="ai-key-dropdown-badge">активний</span>' : ""}
     </button>`;
   }
@@ -236,7 +257,8 @@ function toggleKeyDropdown(): void {
     updateKeyIndicator();
     dropdown.remove();
     await persistActiveKeyInDB();
-    console.log(`🔑 Gemini: вручну обрано ключ №${idx + 1}`);
+    const chosenProvider = getKeyProvider(geminiApiKeys[idx]);
+    console.log(`🔑 ${chosenProvider}: вручну обрано ключ №${idx + 1}`);
   });
 
   // Закрити при кліку поза dropdown
@@ -1079,7 +1101,7 @@ async function callGemini(userMessage: string): Promise<string> {
   const keys = await loadAllGeminiKeys();
 
   if (keys.length === 0) {
-    return `⚠️ Для роботи AI PRO потрібно вказати **Gemini API ключ** у налаштуваннях (🤖 → API Ключі).\n\nОтримати безкоштовно: [aistudio.google.com](https://aistudio.google.com/app/apikey)`;
+    return `⚠️ Для роботи AI PRO потрібно вказати **API ключ** (Gemini або Groq) у налаштуваннях (🤖 → API Ключі).\n\nGemini: [aistudio.google.com](https://aistudio.google.com/app/apikey)\nGroq: [console.groq.com](https://console.groq.com/keys)`;
   }
 
   // Оновлюємо індикатор на початку запиту
@@ -1089,35 +1111,11 @@ async function callGemini(userMessage: string): Promise<string> {
     // Збираємо контекст з бази
     const enrichedPrompt = await gatherSTOContext(userMessage);
 
-    // Будуємо messages для Gemini
-    const contents: any[] = [];
-
-    // Попередні повідомлення з контексту (останні 5)
+    // Попередні повідомлення з контексту (останні 10)
     const recentHistory = chatHistory.slice(-10);
-    for (const msg of recentHistory) {
-      contents.push({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.text }],
-      });
-    }
 
-    // Поточне повідомлення з контекстом
-    contents.push({
-      role: "user",
-      parts: [{ text: enrichedPrompt }],
-    });
-
-    const requestBody = JSON.stringify({
-      contents,
-      generationConfig: {
-        temperature: 0.5,
-        maxOutputTokens: 8192,
-        topP: 0.9,
-      },
-      systemInstruction: {
-        parts: [
-          {
-            text: `Ти — AI-асистент "Атлас" для автосервісу (СТО). Повний доступ до БД. Відповідай ТІЛЬКИ українською.
+    // Системний промпт (спільний для Gemini і Groq)
+    const systemPromptText = `Ти — AI-асистент "Атлас" для автосервісу (СТО). Повний доступ до БД. Відповідай ТІЛЬКИ українською.
 ⚠️ Показуй лише те, що реально є в отриманих даних — не вигадуй і не домислюй.
 🎯 ГОЛОВНЕ ПРАВИЛО: БУДЬ СТИСЛИМ. Кожна позиція — В ОДНУ СТРІЧКУ з кольорами/emoji. Не розписуй окремо назву, ціну, кількість на різних рядках — пиши все в одній компактній стрічці.
 
@@ -1313,10 +1311,40 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 5. Перед тегом [FILTER:...] коротко опиши що фільтруєш.
 ⚠️ Тег [FILTER:...] має бути ОСТАННІМ рядком відповіді. Один фільтр на відповідь.
 
-Працюй швидко, точно, компактно.`,
-          },
-        ],
-      },
+Працюй швидко, точно, компактно.`;
+
+    // === Формат Gemini ===
+    const contents: any[] = [];
+    for (const msg of recentHistory) {
+      contents.push({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.text }],
+      });
+    }
+    contents.push({ role: "user", parts: [{ text: enrichedPrompt }] });
+
+    const geminiRequestBody = JSON.stringify({
+      contents,
+      generationConfig: { temperature: 0.5, maxOutputTokens: 8192, topP: 0.9 },
+      systemInstruction: { parts: [{ text: systemPromptText }] },
+    });
+
+    // === Формат Groq (OpenAI-сумісний) ===
+    const groqMessages: any[] = [{ role: "system", content: systemPromptText }];
+    for (const msg of recentHistory) {
+      groqMessages.push({
+        role: msg.role === "user" ? "user" : "assistant",
+        content: msg.text,
+      });
+    }
+    groqMessages.push({ role: "user", content: enrichedPrompt });
+
+    const groqRequestBody = JSON.stringify({
+      model: GROQ_MODEL,
+      messages: groqMessages,
+      temperature: 0.5,
+      max_tokens: 8192,
+      top_p: 0.9,
     });
 
     // Спробувати всі ключі по черзі при 429
@@ -1327,52 +1355,69 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
       const keyIdx = startIndex % keys.length;
       triedIndices.add(keyIdx);
       const apiKey = keys[keyIdx];
+      const provider = getKeyProvider(apiKey);
 
-      console.log(`🔑 Gemini: спроба ключ №${keyIdx + 1} з ${keys.length}`);
+      console.log(
+        `🔑 ${provider}: спроба ключ №${keyIdx + 1} з ${keys.length}`,
+      );
 
-      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
+      let response: Response;
+      if (provider === "groq") {
+        response = await fetch(GROQ_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: groqRequestBody,
+        });
+      } else {
+        response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: geminiRequestBody,
+        });
+      }
 
       if (response.ok) {
-        currentKeyIndex = keyIdx; // Запам'ятовуємо робочий ключ
+        currentKeyIndex = keyIdx;
         updateKeyIndicator();
-        persistActiveKeyInDB(); // Зберігаємо в БД без await
+        persistActiveKeyInDB();
         const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        let text: string | undefined;
+        if (provider === "groq") {
+          text = data?.choices?.[0]?.message?.content;
+        } else {
+          text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        }
         return text || "🤔 Не вдалося отримати відповідь від AI.";
       }
 
       if (response.status === 429) {
         console.warn(
-          `⚠️ Gemini ключ №${keyIdx + 1}: ліміт вичерпано, перемикаємо...`,
+          `⚠️ ${provider} ключ №${keyIdx + 1}: ліміт вичерпано, перемикаємо...`,
         );
-        // Перемикаємо на наступний ключ і запам'ятовуємо
         currentKeyIndex = (keyIdx + 1) % keys.length;
         updateKeyIndicator();
-        persistActiveKeyInDB(); // Зберігаємо новий активний ключ в БД
+        persistActiveKeyInDB();
         startIndex = keyIdx + 1;
-        continue; // Пробуємо наступний ключ
+        continue;
       }
 
-      // Інша помилка — не пробуємо інші ключі
       const errText = await response.text();
-      console.error("Gemini API error:", errText);
+      console.error(`${provider} API error:`, errText);
       if (response.status === 400)
-        return "❌ Помилка запиту до Gemini. Перевірте API ключ.";
-      return `❌ Помилка Gemini API (${response.status}). Спробуйте пізніше.`;
+        return `❌ Помилка запиту до ${provider}. Перевірте API ключ.`;
+      return `❌ Помилка ${provider} API (${response.status}). Спробуйте пізніше.`;
     }
 
-    // Всі ключі вичерпані — скидаємо кеш щоб при наступному запиті ключі перезавантажились з БД
     keysLoaded = false;
     if (keys.length === 1) {
-      return `⏳ Ліміт Gemini вичерпано. У вас лише **1 API ключ**. Додайте ще ключі в налаштуваннях (🤖 → API Ключі) або спробуйте через хвилину.`;
+      return `⏳ Ліміт вичерпано. У вас лише **1 API ключ**. Додайте ще ключі в налаштуваннях (🤖 → API Ключі) або спробуйте через хвилину.`;
     }
     return `⏳ Ліміт вичерпано на всіх ${keys.length} API ключах. Спробуйте через хвилину або додайте додаткові ключі в налаштуваннях (🤖 → API Ключі).`;
   } catch (err: any) {
-    console.error("Gemini call error:", err);
+    console.error("AI call error:", err);
     return `❌ Помилка зв'язку з AI: ${err.message || "Мережева помилка"}`;
   }
 }

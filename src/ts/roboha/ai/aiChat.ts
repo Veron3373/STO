@@ -4,6 +4,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { globalCache } from "../zakaz_naraudy/globalCache";
 import { loadActsTable } from "../tablucya/tablucya";
+import { startChatVoiceInput } from "./voiceInput";
 
 // ============================================================
 // УТИЛІТИ
@@ -1859,6 +1860,9 @@ export async function createAIChatModal(): Promise<void> {
 
         <!-- Input -->
         <div class="ai-chat-input-area">
+          <button id="ai-chat-voice-btn" class="ai-chat-voice-btn" title="Голосове введення" type="button">
+            🎙️
+          </button>
           <textarea
             id="ai-chat-input"
             class="ai-chat-input"
@@ -2093,6 +2097,43 @@ function initAIChatHandlers(modal: HTMLElement): void {
       sendMessage(prompt);
     }
   });
+
+  // ── Голосове введення в чат ──
+  const voiceBtn = modal.querySelector(
+    "#ai-chat-voice-btn",
+  ) as HTMLButtonElement;
+  if (voiceBtn) {
+    voiceBtn.addEventListener("click", async () => {
+      // Якщо вже слухає — зупинити
+      if (voiceBtn.classList.contains("ai-chat-voice-btn--listening")) {
+        voiceBtn.classList.remove("ai-chat-voice-btn--listening");
+        voiceBtn.innerHTML = "🎙️";
+        return;
+      }
+
+      try {
+        voiceBtn.classList.add("ai-chat-voice-btn--listening");
+        voiceBtn.innerHTML = `<span class="ai-voice-pulse">🔴</span>`;
+
+        const text = await startChatVoiceInput();
+
+        voiceBtn.classList.remove("ai-chat-voice-btn--listening");
+        voiceBtn.innerHTML = "🎙️";
+
+        if (text?.trim()) {
+          inputEl.value = text.trim();
+          inputEl.style.height = "auto";
+          inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+          inputEl.focus();
+          // Автоматично відправляємо
+          sendMessage(text.trim());
+        }
+      } catch (err: any) {
+        voiceBtn.classList.remove("ai-chat-voice-btn--listening");
+        voiceBtn.innerHTML = "🎙️";
+      }
+    });
+  }
 }
 
 // ============================================================

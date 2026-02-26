@@ -998,7 +998,7 @@ function updateMicButton(btn: HTMLElement, state: VoiceState): void {
   switch (state) {
     case "idle":
       btn.classList.add("voice-idle");
-      btn.innerHTML = `<span class="voice-btn-icon">🎤</span><span class="voice-btn-text">Голос</span>`;
+      btn.innerHTML = `<span class="voice-btn-icon">🎙️</span><span class="voice-btn-text">Голос</span>`;
       btn.title =
         "🎙️ Голос. Скажіть: [поле] [значення] або [рядок N] [колонка] [значення]";
       break;
@@ -1039,7 +1039,7 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
   try {
     updateMicButton(btn, "listening");
     showNotification(
-      `🎤 Говоріть команду, наприклад:\n• "пробіг 150000"\n• "причина звернення ТО"\n• "рядок 1 найменування заміна масла"\n• "2 ціна тисяча"\n• "додати рядок фільтр масляний"`,
+      `�️ Говоріть команду, наприклад:\n• "пробіг 150000"\n• "причина звернення ТО"\n• "рядок 1 найменування заміна масла"\n• "2 ціна тисяча"\n• "додати рядок фільтр масляний"`,
       "info",
       5000,
     );
@@ -1047,7 +1047,7 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
     const transcript = await startListening();
 
     if (!transcript?.trim()) {
-      showNotification("🎤 Мову не розпізнано. Спробуйте ще.", "warning", 2500);
+      showNotification("�️ Мову не розпізнано. Спробуйте ще.", "warning", 2500);
       updateMicButton(btn, "idle");
       return;
     }
@@ -1250,7 +1250,7 @@ export function createVoiceButton(): HTMLButtonElement {
   btn.id = "voice-input-button";
   btn.className = "action-button voice-input-button voice-idle";
   btn.type = "button";
-  btn.innerHTML = `<span class="voice-btn-icon">🎤</span><span class="voice-btn-text">Голос</span>`;
+  btn.innerHTML = `<span class="voice-btn-icon">�️</span><span class="voice-btn-text">Голос</span>`;
   btn.title =
     "🎙️ Голос: скажіть [поле] [значення] або [рядок N] [колонка] [значення]";
 
@@ -1264,7 +1264,7 @@ export function createVoiceButton(): HTMLButtonElement {
 }
 
 /**
- * Ініціалізує голосове введення — кнопка 🎤
+ * Ініціалізує голосове введення — кнопка �️
  * Без трекінгу фокусу, команди визначаються ключовими словами
  * Видимість кнопки визначається налаштуванням voiceInputEnabled
  */
@@ -1290,4 +1290,64 @@ export function initVoiceInput(): void {
   } else {
     container.appendChild(voiceBtn);
   }
+}
+
+// ============================================================
+// 🎙️ ШВИДКЕ ГОЛОСОВЕ ВВЕДЕННЯ ДЛЯ ЧАТУ
+// ============================================================
+
+/**
+ * Швидке розпізнавання голосу для AI чату.
+ * Повертає розпізнаний текст — без парсингу команд.
+ * interimResults = true для швидкого відгуку.
+ */
+export function startChatVoiceInput(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      reject(new Error("Браузер не підтримує розпізнавання мови"));
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = "uk-UA";
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+
+    // Таймаут — якщо за 7с нічого немає, зупиняємо
+    const timeout = setTimeout(() => {
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+      reject(new Error("Час очікування вичерпано"));
+    }, 7000);
+
+    rec.onresult = (event: any) => {
+      clearTimeout(timeout);
+      const transcript = event.results[0][0].transcript;
+      resolve(transcript || "");
+    };
+
+    rec.onerror = (event: any) => {
+      clearTimeout(timeout);
+      if (event.error === "no-speech") reject(new Error("Мову не виявлено"));
+      else if (event.error === "audio-capture")
+        reject(new Error("Мікрофон не знайдено"));
+      else if (event.error === "not-allowed")
+        reject(new Error("Доступ до мікрофона заборонено"));
+      else reject(new Error(event.error));
+    };
+
+    rec.onend = () => {
+      clearTimeout(timeout);
+    };
+
+    rec.start();
+  });
 }

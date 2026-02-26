@@ -333,7 +333,7 @@ async function toggleKeyDropdown(): Promise<void> {
   );
   const allTokens = await Promise.all(tokenPromises);
 
-  let html = '<div class="ai-key-dropdown-title">Оберіть ключ:</div>';
+  let html = '<div class="ai-key-dropdown-title">🔑 Оберіть ключ</div>';
   for (let i = 0; i < geminiApiKeys.length; i++) {
     const isActive = i === currentKeyIndex;
     const keyProvider = getKeyProvider(geminiApiKeys[i]);
@@ -345,31 +345,40 @@ async function toggleKeyDropdown(): Promise<void> {
         ? `${(tokens / 1_000_000).toFixed(1)}M`
         : tokens >= 1000
           ? `${(tokens / 1000).toFixed(1)}k`
-          : String(tokens);
+          : tokens > 0
+            ? `${tokens}`
+            : "0";
     html += `<button class="ai-key-dropdown-item${isActive ? " active" : ""}" data-key-index="${i}">
-      <span class="ai-key-dropdown-num">${providerIcon} ${i + 1} ${providerName}</span>
-      <span class="ai-key-dropdown-tokens">🎫${tokenLabel}</span>
-      ${isActive ? '<span class="ai-key-dropdown-badge">активний</span>' : ""}
+      <span class="ai-key-dropdown-num">${providerIcon} ${providerName} №${i + 1}</span>
+      <span class="ai-key-dropdown-tokens">🎫 ${tokenLabel}</span>
+      ${isActive ? '<span class="ai-key-dropdown-badge">✓</span>' : ""}
     </button>`;
   }
   dropdown.innerHTML = html;
 
-  // Позиціюємо відносно індикатора
-  indicator.style.position = "relative";
-  indicator.appendChild(dropdown);
+  // ── Рендеримо в body, щоб не обрізалось overflow ──
+  document.body.appendChild(dropdown);
+
+  // Позиціюємо над індикатором
+  const rect = indicator.getBoundingClientRect();
+  const dropH = Math.min(geminiApiKeys.length * 40 + 50, 340);
+  const top = rect.top - dropH - 8;
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 210));
+
+  dropdown.style.position = "fixed";
+  dropdown.style.top = `${top}px`;
+  dropdown.style.left = `${left}px`;
+  dropdown.style.minWidth = `${Math.max(rect.width + 80, 200)}px`;
 
   // Обробник вибору ключа
   dropdown.addEventListener("click", async (e) => {
     const btn = (e.target as HTMLElement).closest("[data-key-index]");
     if (!btn) return;
     const idx = parseInt(btn.getAttribute("data-key-index") || "0", 10);
-    if (idx === currentKeyIndex) {
-      dropdown.remove();
-      return; // Вже активний
-    }
+    dropdown.remove();
+    if (idx === currentKeyIndex) return;
     currentKeyIndex = idx;
     await updateKeyIndicator();
-    dropdown.remove();
     await persistActiveKeyInDB();
     const chosenProvider = getKeyProvider(geminiApiKeys[idx]);
     console.log(`🔑 ${chosenProvider}: вручну обрано ключ №${idx + 1}`);
@@ -379,10 +388,10 @@ async function toggleKeyDropdown(): Promise<void> {
   const closeHandler = (e: MouseEvent) => {
     if (!dropdown.contains(e.target as Node) && e.target !== indicator) {
       dropdown.remove();
-      document.removeEventListener("click", closeHandler);
+      document.removeEventListener("mousedown", closeHandler);
     }
   };
-  setTimeout(() => document.addEventListener("click", closeHandler), 10);
+  setTimeout(() => document.addEventListener("mousedown", closeHandler), 10);
 }
 
 // ============================================================

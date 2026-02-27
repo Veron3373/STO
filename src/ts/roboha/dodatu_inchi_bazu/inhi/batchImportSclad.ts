@@ -109,6 +109,7 @@ function sortTableByColumn(col: string) {
 
 // Оригінальні назви заголовків колонок (щоб не накопичувались індикатори)
 const columnHeaderNames: Record<string, string> = {
+  rowNum: "№",
   date: "Дата",
   shop: "Магазин",
   catno: "Каталог номер",
@@ -850,6 +851,7 @@ function createBatchImportModal() {
           <table id="batch-table-Excel" class="batch-table-Excel">
             <thead>
               <tr>
+                <th data-col="rowNum" style="width:2%;text-align:center;">№</th>
                 <th data-col="date">Дата</th>
                 <th data-col="shop">Магазин</th>
                 <th data-col="catno">Каталог номер</th>
@@ -1470,6 +1472,9 @@ function renderBatchTable(data: any[]) {
     // Конвертуємо дату в ISO формат для input type="date"
     const isoDateForInput = toIsoDate(row.date) || row.date;
     tr.innerHTML = `
+      <td class="row-num-cell-Excel" style="text-align:center;font-weight:bold;color:#888;user-select:none;">
+        <span class="row-num-Excel">${index + 1}</span>
+      </td>
       <td>
         ${createInput("date", isoDateForInput, "date", index)}
       </td>
@@ -1619,7 +1624,7 @@ function attachSortHandlers() {
   if (!thead) return;
   thead.querySelectorAll("th").forEach((th) => {
     const col = (th as HTMLElement).dataset.col;
-    if (!col || col === "status") return; // Г-ть не сортуємо
+    if (!col || col === "status" || col === "rowNum") return; // Г-ть і № не сортуємо
     // Видаляємо попередні обробники (якщо є)
     const newTh = th.cloneNode(true) as HTMLElement;
     th.parentNode?.replaceChild(newTh, th);
@@ -3193,7 +3198,7 @@ export function initBatchImport() {
 
   // === Голосове введення ===
   initVoiceInputExcel({
-    addRow: () => {
+    addRow: (): number => {
       const newRow = createEmptyRow();
       parsedDataGlobal.push(newRow);
       renderBatchTable(parsedDataGlobal);
@@ -3202,6 +3207,7 @@ export function initBatchImport() {
         setTimeout(() => {
           tc.scrollTop = tc.scrollHeight;
         }, 50);
+      return parsedDataGlobal.length - 1; // повертаємо індекс нового рядка
     },
     sortColumn: (col: string) => {
       sortTableByColumn(col);

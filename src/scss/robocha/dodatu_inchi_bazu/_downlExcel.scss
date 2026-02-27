@@ -342,6 +342,22 @@ $radius-xlarge: 16px;
   }
 }
 
+// Номер рядка (колонка №)
+.row-num-cell-Excel {
+  width: 2% !important;
+  min-width: 28px;
+  max-width: 40px;
+  padding: 2px 4px !important;
+
+  .row-num-Excel {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #999;
+    line-height: 1;
+  }
+}
+
 .batch-btn-Excel {
   @include button-base;
   flex: 1;

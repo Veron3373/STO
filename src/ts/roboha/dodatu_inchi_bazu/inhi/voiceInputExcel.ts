@@ -14,7 +14,7 @@ let voiceState: VoiceExcelState = "idle";
 let recognition: any = null;
 
 // Зовнішні колбеки — встановлюються з batchImportSclad
-let onAddRow: (() => void) | null = null;
+let onAddRow: (() => number) | null = null; // повертає індекс нового рядка
 let onSortColumn: ((col: string) => void) | null = null;
 let getParsedData: (() => any[]) | null = null;
 
@@ -101,7 +101,7 @@ const ACTION_VALUES: Record<string, string> = {
  * @param callbacks - зовнішні колбеки для взаємодії з batchImportSclad
  */
 export function initVoiceInputExcel(callbacks: {
-  addRow: () => void;
+  addRow: () => number; // повертає індекс нового рядка
   sortColumn: (col: string) => void;
   getParsedData: () => any[];
   renderTable: (data: any[]) => void;
@@ -323,11 +323,38 @@ function stopVoiceExcel(): void {
 function processVoiceCommand(transcript: string): void {
   const text = transcript.toLowerCase().trim();
 
-  // 1. Команда «Додати рядок»
-  if (matchAddRow(text)) {
+  // 1. Команда «Додати рядок» (можливо з даними після)
+  const addRowResult = matchAddRow(text);
+  if (addRowResult.matched) {
     if (onAddRow) {
-      onAddRow();
-      showNotification("➕ Додано новий рядок", "success", 1500);
+      const newRowIndex = onAddRow();
+      showNotification(`➕ Додано рядок №${newRowIndex + 1}`, "success", 1500);
+
+      // Якщо є дані після "додати рядок" — заповнюємо новий рядок
+      if (addRowResult.rest) {
+        const restText = addRowResult.rest;
+        const restOriginal = transcript.substring(
+          transcript.toLowerCase().indexOf(restText.toLowerCase()),
+        );
+
+        // Спроба розпарсити декілька полів з решти тексту
+        const fieldsApplied = applyMultipleFields(
+          newRowIndex,
+          restText,
+          restOriginal,
+        );
+        if (!fieldsApplied) {
+          // Спроба як одне поле
+          const parsed = parseColumnAndValue(
+            restText,
+            transcript,
+            restOriginal,
+          );
+          if (parsed) {
+            applyFieldValue(newRowIndex, parsed.field, parsed.value);
+          }
+        }
+      }
     }
     return;
   }
@@ -346,7 +373,7 @@ function processVoiceCommand(transcript: string): void {
     return;
   }
 
-  // 3. Заповнення поля — «[рядок N] [колонка] [значення]»
+  // 3. Заповнення поля — «[рядок N / № N] [колонка] [значення]»
   const fieldResult = matchFieldCommand(text, transcript);
   if (fieldResult) {
     applyFieldValue(fieldResult.rowIndex, fieldResult.field, fieldResult.value);
@@ -369,16 +396,118 @@ function processVoiceCommand(transcript: string): void {
 // ПАРСИНГ КОМАНД
 // ============================================================
 
-/** Перевірка: команда "додати рядок" */
-function matchAddRow(text: string): boolean {
+/** Перевірка: команда "додати рядок" (з можливими даними після) */
+function matchAddRow(text: string): { matched: boolean; rest: string } {
   const patterns = [
-    /додати\s+рядок/i,
-    /новий\s+рядок/i,
-    /додай\s+рядок/i,
-    /додай\s+строку/i,
-    /новий\s+запис/i,
+    /^(?:додати\s+рядок|новий\s+рядок|додай\s+рядок|додай\s+строку|новий\s+запис)\s*(.*)/i,
   ];
-  return patterns.some((p) => p.test(text));
+  for (const p of patterns) {
+    const match = text.match(p);
+    if (match) {
+      return { matched: true, rest: (match[1] || "").trim() };
+    }
+  }
+  return { matched: false, rest: "" };
+}
+
+/**
+ * Спроба застосувати декілька полів з тексту.
+ * Наприклад: "додати рядок деталь фільтр масла ціна 500 кількість 2"
+ */
+function applyMultipleFields(
+  rowIndex: number,
+  text: string,
+  _originalText: string,
+): boolean {
+  // Шукаємо всі ключові слова колонок у тексті та їхні позиції
+  const normalized = text.toLowerCase();
+  const positions: { pos: number; field: string; kwLen: number }[] = [];
+
+  const sorted = [...COLUMN_KEYWORDS].sort(
+    (a, b) =>
+      Math.max(...b.keywords.map((k) => k.length)) -
+      Math.max(...a.keywords.map((k) => k.length)),
+  );
+
+  for (const col of sorted) {
+    for (const kw of col.keywords) {
+      let searchFrom = 0;
+      while (searchFrom < normalized.length) {
+        const idx = normalized.indexOf(kw, searchFrom);
+        if (idx === -1) break;
+        // Перевіряємо що це початок слова
+        if (idx > 0 && /\p{L}/u.test(normalized[idx - 1])) {
+          searchFrom = idx + 1;
+          continue;
+        }
+        // Перевіряємо що ця позиція не зайнята довшим ключовим словом
+        const alreadyCovered = positions.some(
+          (p) => idx >= p.pos && idx < p.pos + p.kwLen,
+        );
+        if (!alreadyCovered) {
+          positions.push({ pos: idx, field: col.field, kwLen: kw.length });
+        }
+        break;
+      }
+    }
+  }
+
+  if (positions.length === 0) return false;
+
+  // Сортуємо за позицією
+  positions.sort((a, b) => a.pos - b.pos);
+
+  // Витягуємо значення між ключовими словами
+  let applied = 0;
+  for (let i = 0; i < positions.length; i++) {
+    const current = positions[i];
+    const valueStart = current.pos + current.kwLen;
+    const valueEnd =
+      i + 1 < positions.length ? positions[i + 1].pos : text.length;
+    let value = text.substring(valueStart, valueEnd).trim();
+
+    if (!value) continue;
+
+    // Спеціальна обробка для різних типів полів
+    const field = current.field;
+
+    if (field === "orderStatus") {
+      const mapped = mapStatusValue(
+        text.substring(current.pos, current.pos + current.kwLen),
+        value,
+      );
+      if (mapped) {
+        applyFieldValue(rowIndex, field, mapped);
+        applied++;
+      }
+      continue;
+    }
+
+    if (field === "action") {
+      const mapped = mapActionValue(
+        text.substring(current.pos, current.pos + current.kwLen),
+        value,
+      );
+      if (mapped) {
+        applyFieldValue(rowIndex, field, mapped);
+        applied++;
+      }
+      continue;
+    }
+
+    if (["qty", "price", "clientPrice"].includes(field)) {
+      value = convertWordsToNumber(value);
+    }
+
+    if (field === "catno") {
+      value = value.replace(/\s+/g, "").toUpperCase();
+    }
+
+    applyFieldValue(rowIndex, field, value);
+    applied++;
+  }
+
+  return applied > 0;
 }
 
 /** Перевірка: команда "фільтр / відфільтрувати [колонка]" */
@@ -442,7 +571,7 @@ function matchFieldCommand(
 
   // Спочатку з номером рядка
   const rowPatterns = [
-    /^(?:рядок|строка|ряд)\s+(\d+)\s+(.+)$/i,
+    /^(?:рядок|строка|ряд|номер|№)\s+(\d+)\s+(.+)$/i,
     /^(\d+)\s+(.+)$/i,
   ];
 

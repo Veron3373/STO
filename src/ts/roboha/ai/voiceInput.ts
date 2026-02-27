@@ -387,6 +387,33 @@ function parseVoiceCommand(
   const text = transcript.trim().toLowerCase();
   if (!text) return null;
 
+  // --- 0. Визначаємо чи це складна команда з кількома полями → Gemini
+  //    Якщо в тексті 2+ різних ключових слів колонок — це мульти-поле, Gemini краще справиться
+  let matchedKeywordGroups = 0;
+  const checkedGroups = new Set<string>();
+  for (const col of COLUMN_KEYWORDS) {
+    if (checkedGroups.has(col.column)) continue;
+    for (const kw of col.keywords) {
+      if (text.includes(kw)) {
+        matchedKeywordGroups++;
+        checkedGroups.add(col.column);
+        break;
+      }
+    }
+  }
+  for (const f of FIELD_KEYWORDS) {
+    if (checkedGroups.has(f.fieldId)) continue;
+    for (const kw of f.keywords) {
+      if (text.includes(kw)) {
+        matchedKeywordGroups++;
+        checkedGroups.add(f.fieldId);
+        break;
+      }
+    }
+  }
+  // Якщо знайдено 3+ різних ключових груп — точно складна команда → null для Gemini
+  if (matchedKeywordGroups >= 3) return null;
+
   // --- 1. Перевірка полів акту (Пробіг, Причина звернення, Рекомендації, Примітки, Аванс, Знижка)
   for (const field of FIELD_KEYWORDS) {
     for (const kw of field.keywords) {
@@ -466,9 +493,9 @@ function parseVoiceCommand(
     }
   }
 
-  // --- 4. "додати рядок [найменування]" — додає порожній рядок і вписує
+  // --- 4. "додати/додай рядок [найменування]" — додає порожній рядок і вписує
   const addRowMatch = text.match(
-    /^(?:додати рядок|новий рядок|додати)\s*(.*)$/i,
+    /^(?:додати рядок|додай рядок|додати стрічку|додай стрічку|новий рядок|нова стрічка|додати|додай)\s*(.*)$/i,
   );
   if (addRowMatch) {
     const value = addRowMatch[1].trim();

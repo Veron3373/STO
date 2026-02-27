@@ -1,8 +1,10 @@
 // src/ts/roboha/dodatu_inchi_bazu/inhi/voiceInputExcel.ts
 // 🎙️ Голосове введення для модального вікна Excel (batchImportSclad)
 // Команди: заповнення полів, фільтрація/сортування, додавання рядків
+// 🧠 Gemini Intelligent Parser — для натурального голосу
 
 import { showNotification } from "../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import { supabase } from "../../../vxid/supabaseClient";
 
 // ============================================================
 // ТИПИ ТА СТАН
@@ -12,6 +14,35 @@ type VoiceExcelState = "idle" | "listening";
 
 let voiceState: VoiceExcelState = "idle";
 let recognition: any = null;
+
+// Gemini стан
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+let geminiApiKeys: string[] = [];
+let currentKeyIndex = 0;
+let geminiKeysLoaded = false;
+
+/** Результат інтелектуального парсингу */
+interface ParsedExcelCommand {
+  action: "ADD" | "FILL";
+  rowIndex?: number | null;
+  fields: {
+    date?: string;
+    shop?: string;
+    catno?: string;
+    detail?: string;
+    qty?: number;
+    price?: number;
+    clientPrice?: number;
+    warehouse?: string;
+    invoice?: string;
+    actNo?: string;
+    unit?: string;
+    orderStatus?: string;
+    notes?: string;
+    action?: string;
+  };
+}
 
 // Зовнішні колбеки — встановлюються з batchImportSclad
 let onAddRow: (() => number) | null = null; // повертає індекс нового рядка
@@ -223,7 +254,10 @@ function startVoiceExcel(): void {
     recognition = null;
 
     if (result.trim()) {
-      processVoiceCommand(result.trim());
+      processVoiceCommand(result.trim()).catch((err) => {
+        console.error("Voice command error:", err);
+        showNotification("❌ Помилка обробки команди", "error", 2000);
+      });
     } else {
       showNotification("Мову не виявлено. Спробуйте ще раз.", "error", 2000);
     }
@@ -339,10 +373,232 @@ function stopVoiceExcel(): void {
 }
 
 // ============================================================
+// GEMINI — ЗАВАНТАЖЕННЯ КЛЮЧІВ
+// ============================================================
+
+async function loadGeminiKeysExcel(): Promise<string[]> {
+  if (geminiKeysLoaded && geminiApiKeys.length > 0) return geminiApiKeys;
+
+  const keys: string[] = [];
+  let activeIndex = 0;
+
+  try {
+    const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    if (envKey) keys.push(envKey);
+
+    const { data } = await supabase
+      .from("settings")
+      .select('setting_id, "Загальні", "API"')
+      .in(
+        "setting_id",
+        Array.from({ length: 10 }, (_, i) => 20 + i),
+      )
+      .order("setting_id");
+
+    if (data) {
+      let idx = keys.length;
+      for (const row of data) {
+        const val = (row as any)["Загальні"];
+        const isActive = (row as any)["API"];
+        if (val && typeof val === "string" && val.trim()) {
+          if (!keys.includes(val.trim())) {
+            keys.push(val.trim());
+            if (isActive === true) activeIndex = idx;
+            idx++;
+          }
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  geminiApiKeys = keys;
+  geminiKeysLoaded = true;
+  currentKeyIndex = activeIndex;
+  return keys;
+}
+
+// ============================================================
+// GEMINI — ІНТЕЛЕКТУАЛЬНИЙ ПАРСИНГ КОМАНДИ
+// ============================================================
+
+/**
+ * 🧠 Парсинг натуральної голосової команди для Excel-таблиці через Gemini.
+ * Приклади:
+ * - "Додай стрічку магазин Автотехнікс деталь поршні ціна 3300 кількість 4"
+ * - "Магазин автозапчастини деталь фільтр масляний ціна 250"
+ * - "Дата 27.02.26 деталь колодки статус замовити"
+ */
+async function parseNaturalExcelCommandWithGemini(
+  transcript: string,
+): Promise<ParsedExcelCommand | null> {
+  const keys = await loadGeminiKeysExcel();
+  if (keys.length === 0) return null;
+
+  const systemPrompt = `Ти — інтелектуальний парсер голосових команд для таблиці закупівлі запчастин на СТО (Україна).
+Механік каже фразу природною мовою. Ти маєш витягти СТРУКТУРОВАНІ дані для заповнення рядка таблиці.
+
+📋 КОЛОНКИ ТАБЛИЦІ (field → опис):
+- date: Дата (формат YYYY-MM-DD). "27 лютого 26-й рік" → "2026-02-27", "сьогодні" → поточна дата
+- shop: Магазин/постачальник. Наприклад: "Автотехнікс", "АвтоЗІП", "Лоял", "Форнетті"
+- catno: Каталожний номер / артикул (англ. літери + цифри). Прибирай пробіли. "OC 90" → "OC90"
+- detail: Назва деталі/запчастини: фільтр масляний, колодки гальмівні, поршні, ремінь ГРМ тощо
+- qty: Кількість (число). "4 штуки" → 4, "дві" → 2. Якщо не вказано → 1
+- price: Закупівельна ціна (число). "по 3300" → 3300, "за 250 грн" → 250
+- clientPrice: Ціна клієнта (число). "клієнту 400" → 400
+- warehouse: Склад. Наприклад: "Основний", "Запасний"
+- invoice: Номер рахунку. "рахунок 1234" → "1234"
+- actNo: Номер акту. "акт 567" → "567"
+- unit: Одиниця виміру. "штук"/"шт" → "шт", "літрів"/"л" → "л", "комплект"/"к-т" → "к-т"
+- orderStatus: Статус (тільки одне з: "Замовити", "Замовлено", "Прибула"). "замовити" → "Замовити"
+- notes: Примітка / коментар
+- action: Дія (тільки одне з: "Записати", "Видалити"). За замовчуванням "Записати"
+
+🔧 ДІЇ:
+- "ADD": додати новий рядок з вказаними полями (за замовчуванням)
+- "FILL": заповнити поля існуючого рядка (якщо сказано "рядок N" або "стрічка N")
+
+🔑 ПРАВИЛА:
+- Фраза типу "додай рядок/стрічку ..." → action: "ADD"
+- "рядок 5 магазин Лоял" → action: "FILL", rowIndex: 5
+- Якщо йдуть ДЕКІЛЬКА полів підряд — витягни всі: "магазин Лоял деталь фільтр ціна 200 кількість 3"
+- Числа словами: "три" = 3, "тисяча двісті" = 1200, "двадцять п'ять" = 25
+- "по 500" / "за 500" / "ціна 500" → price: 500
+- "4 штуки" / "кількість чотири" → qty: 4
+- Слова "запиши" / "записати" → action: "Записати"
+- "статус замовити" / "замовлена" → orderStatus: "Замовити" або "Замовлено"
+- Якщо не вказані qty → не включай qty (не ставити 1 за замовчуванням)
+- Якщо не вказана action → не включай action
+
+⚠️ ПОМИЛКИ РОЗПІЗНАВАННЯ (Голосовий рушій часто обрізає/змінює слова):
+- "апиши" → "запиши", "агазин" → "магазин", "еталь" → "деталь"
+- "ціну" → ціна, "автотехнікс" → "Автотехнікс"
+- "з випадаючого списку" — ігноруй ці фрагменти
+- "то дай" → "додай", "стрічку" → рядок (ADD)
+Завжди відновлюй повне слово!
+
+Відповідь — ТІЛЬКИ JSON:
+{"action":"ADD","rowIndex":null,"fields":{"shop":"Автотехнікс","detail":"Поршні","price":3300,"qty":4}}`;
+
+  const requestBody = JSON.stringify({
+    contents: [
+      { role: "user", parts: [{ text: `Команда: "${transcript}"` }] },
+    ],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+      responseMimeType: "application/json",
+    },
+  });
+
+  const triedIndices = new Set<number>();
+  let startIndex = currentKeyIndex;
+
+  while (triedIndices.size < keys.length) {
+    const keyIdx = startIndex % keys.length;
+    triedIndices.add(keyIdx);
+    const apiKey = keys[keyIdx];
+
+    try {
+      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      });
+
+      if (response.ok) {
+        currentKeyIndex = keyIdx;
+        const data = await response.json();
+        const allParts = data?.candidates?.[0]?.content?.parts || [];
+        const text = allParts.map((p: any) => p.text || "").join("");
+        if (!text) return null;
+
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.action && parsed.fields) return parsed as ParsedExcelCommand;
+          } catch { /* fallthrough */ }
+        }
+        return null;
+      }
+
+      if (response.status === 429) {
+        currentKeyIndex = (keyIdx + 1) % keys.length;
+        startIndex = keyIdx + 1;
+        continue;
+      }
+      return null;
+    } catch {
+      startIndex = keyIdx + 1;
+    }
+  }
+  return null;
+}
+
+/**
+ * Виконує команду від Gemini — заповнює поля рядка Excel-таблиці
+ */
+function executeExcelCommand(result: ParsedExcelCommand): void {
+  const data = getParsedData ? getParsedData() : [];
+
+  let rowIndex: number;
+
+  if (result.action === "ADD") {
+    // Додаємо новий рядок
+    if (onAddRow) {
+      rowIndex = onAddRow();
+      showNotification(`➕ Додано рядок №${rowIndex + 1}`, "success", 1500);
+    } else {
+      rowIndex = data.length > 0 ? data.length - 1 : 0;
+    }
+  } else {
+    // FILL — заповнюємо існуючий рядок
+    if (result.rowIndex && result.rowIndex >= 1) {
+      rowIndex = result.rowIndex - 1;
+      if (rowIndex >= data.length) {
+        showNotification(
+          `Рядок ${result.rowIndex} не існує (всього ${data.length})`,
+          "error",
+          2000,
+        );
+        return;
+      }
+    } else {
+      rowIndex = data.length > 0 ? data.length - 1 : 0;
+    }
+  }
+
+  // Заповнюємо всі поля з fields
+  const fields = result.fields;
+  const appliedFields: string[] = [];
+
+  const fieldEntries: [string, any][] = Object.entries(fields);
+  for (const [field, value] of fieldEntries) {
+    if (value === null || value === undefined || value === "") continue;
+
+    const strValue = String(value);
+    applyFieldValue(rowIndex, field, strValue);
+    const label = getColumnLabel(field);
+    appliedFields.push(`${label}: ${strValue}`);
+  }
+
+  if (appliedFields.length > 0) {
+    showNotification(
+      `✅ Рядок ${rowIndex + 1}:\n${appliedFields.join("\n")}`,
+      "success",
+      3000,
+    );
+  }
+}
+
+// ============================================================
 // ОБРОБКА ГОЛОСОВОЇ КОМАНДИ
 // ============================================================
 
-function processVoiceCommand(transcript: string): void {
+async function processVoiceCommand(transcript: string): Promise<void> {
   const text = transcript.toLowerCase().trim();
 
   // 1. Команда «Додати рядок» (можливо з даними після)
@@ -411,7 +667,23 @@ function processVoiceCommand(transcript: string): void {
     return;
   }
 
-  showNotification(`🎙️ Не розпізнано: "${transcript}"`, "error", 3000);
+  // 5. 🧠 Gemini Intelligent Parser — спроба розпарсити через ШІ
+  showNotification(`🧠 Аналізую: "${transcript}"`, "info", 2500);
+  try {
+    const geminiResult = await parseNaturalExcelCommandWithGemini(transcript);
+    if (geminiResult && geminiResult.fields && Object.keys(geminiResult.fields).length > 0) {
+      executeExcelCommand(geminiResult);
+      return;
+    }
+  } catch (err) {
+    console.warn("🎙️ Gemini Excel parse failed:", err);
+  }
+
+  showNotification(
+    `🎙️ Не розпізнано: "${transcript}"\n\nСпробуйте:\n• "Додай рядок магазин Автотехнікс"\n• "Деталь фільтр масляний ціна 250"\n• "Рядок 3 кількість 4"`,
+    "error",
+    4000,
+  );
 }
 
 // ============================================================

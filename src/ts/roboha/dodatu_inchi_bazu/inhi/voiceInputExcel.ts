@@ -31,7 +31,14 @@ const COLUMN_KEYWORDS: { keywords: string[]; field: string; label: string }[] =
       label: "Магазин",
     },
     {
-      keywords: ["каталог", "каталог номер", "каталожний", "артикул"],
+      keywords: [
+        "каталожний номер",
+        "каталог номер",
+        "каталожний",
+        "каталог",
+        "артикул",
+        "номер каталог",
+      ],
       field: "catno",
       label: "Каталог номер",
     },
@@ -68,7 +75,15 @@ const COLUMN_KEYWORDS: { keywords: string[]; field: string; label: string }[] =
       label: "О-ця",
     },
     {
-      keywords: ["статус", "замовити", "замовлено", "прибула"],
+      keywords: [
+        "статус",
+        "замовити",
+        "замовлено",
+        "замовлена",
+        "замовлене",
+        "прибула",
+        "прибуло",
+      ],
       field: "orderStatus",
       label: "Статус",
     },
@@ -88,7 +103,10 @@ const COLUMN_KEYWORDS: { keywords: string[]; field: string; label: string }[] =
 const STATUS_VALUES: Record<string, string> = {
   замовити: "Замовити",
   замовлено: "Замовлено",
+  замовлена: "Замовлено",
+  замовлене: "Замовлено",
   прибула: "Прибула",
+  прибуло: "Прибула",
 };
 
 const ACTION_VALUES: Record<string, string> = {
@@ -403,7 +421,7 @@ function processVoiceCommand(transcript: string): void {
 /** Перевірка: команда "додати рядок" (з можливими даними після) */
 function matchAddRow(text: string): { matched: boolean; rest: string } {
   const patterns = [
-    /^(?:додати\s+(?:рядок|стрічку|стрічка)|новий\s+(?:рядок|стрічку|стрічка)|додай\s+(?:рядок|стрічку|стрічка)|додай\s+строку|новий\s+запис)\s*(.*)/i,
+    /^(?:(?:додати|додай|добрати|добрай|добавити|добавити)\s+(?:рядок|стрічку|стрічка|стрічок|строку|запис)|новий\s+(?:рядок|стрічку|стрічка|строку|запис)|нова\s+(?:стрічка|строка))\s*(.*)/i,
   ];
   for (const p of patterns) {
     const match = text.match(p);
@@ -573,9 +591,10 @@ function matchFieldCommand(
   const data = getParsedData ? getParsedData() : [];
   const lastRowIndex = data.length > 0 ? data.length - 1 : 0;
 
-  // 1. З номером рядка (цифрою): "рядок 9 ...", "9 ..."
+  // 1. З номером рядка (цифрою): "рядок 9 ...", "9 ...", "восьма стрічка ..."
   const rowPatternsDigit = [
-    /^(?:рядок|стрічка|стрічку|строка|ряд|номер|№)\s+(\d+)\s+(.+)$/i,
+    /^(?:рядок|стрічка|стрічку|стрічок|строка|ряд|номер|№)\s+(\d+)\s+(.+)$/i,
+    /^(\d+)\s+(?:рядок|стрічка|стрічку|стрічок|строка|ряд)\s+(.+)$/i,
     /^(\d+)\s+(.+)$/i,
   ];
 
@@ -602,9 +621,10 @@ function matchFieldCommand(
     }
   }
 
-  // 2. З номером рядка (словом): "рядок дев'ять змінити статус на замовлено"
+  // 2. З номером рядка (словом): "рядок дев'ять ...", "восьма стрічка ..."
+  // Патерн А: "рядок/стрічка <слово-число> <решта>"
   const rowWordMatch = text.match(
-    /^(?:рядок|стрічка|стрічку|строка|ряд|номер|№)\s+(\S+)\s+(.+)$/i,
+    /^(?:рядок|стрічка|стрічку|стрічок|строка|ряд|номер|№)\s+(\S+)\s+(.+)$/i,
   );
   if (rowWordMatch) {
     const wordNum = wordToRowNumber(rowWordMatch[1]);
@@ -625,6 +645,37 @@ function matchFieldCommand(
         rest,
         originalTranscript,
         rowWordMatch[2],
+      );
+      if (parsed) {
+        return { rowIndex, field: parsed.field, value: parsed.value };
+      }
+    }
+  }
+
+  // 2b. Зворотний порядок: "<слово-число> стрічка/рядок <решта>"
+  // Наприклад: "восьма стрічка статус замовлена"
+  const reversedMatch = text.match(
+    /^(\S+)\s+(?:рядок|стрічка|стрічку|стрічок|строка|ряд)\s+(.+)$/i,
+  );
+  if (reversedMatch) {
+    const wordNum = wordToRowNumber(reversedMatch[1]);
+    if (wordNum > 0) {
+      const rest = reversedMatch[2].trim();
+      const rowIndex = wordNum - 1;
+
+      if (rowIndex >= data.length) {
+        showNotification(
+          `Рядок ${wordNum} не існує (всього ${data.length})`,
+          "error",
+          2000,
+        );
+        return null;
+      }
+
+      const parsed = parseColumnAndValue(
+        rest,
+        originalTranscript,
+        reversedMatch[2],
       );
       if (parsed) {
         return { rowIndex, field: parsed.field, value: parsed.value };
@@ -656,32 +707,48 @@ function wordToRowNumber(word: string): number {
     одна: 1,
     перший: 1,
     перша: 1,
+    перше: 1,
     два: 2,
     дві: 2,
     другий: 2,
     друга: 2,
+    друге: 2,
     три: 3,
     третій: 3,
     третя: 3,
+    третє: 3,
     чотири: 4,
     четвертий: 4,
+    четверта: 4,
+    четверте: 4,
     "p'ять": 5,
     "п'ять": 5,
     пять: 5,
     "п'ятий": 5,
+    "п'ята": 5,
     пятий: 5,
+    пята: 5,
     шість: 6,
     шостий: 6,
+    шоста: 6,
+    шосте: 6,
     сім: 7,
     сьомий: 7,
+    сьома: 7,
+    сьоме: 7,
     вісім: 8,
     восьмий: 8,
+    восьма: 8,
+    восьме: 8,
     "дев'ять": 9,
     девять: 9,
     "дев'ятий": 9,
+    "дев'ята": 9,
     девятий: 9,
+    девята: 9,
     десять: 10,
     десятий: 10,
+    десята: 10,
     одинадцять: 11,
     дванадцять: 12,
     тринадцять: 13,

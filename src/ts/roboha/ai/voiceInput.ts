@@ -34,6 +34,21 @@ interface ParsedFullRow {
   slyusarSum: number | null;
 }
 
+/** Результат інтелектуального парсингу натуральної команди */
+interface ParsedNaturalCommand {
+  action: "ADD" | "DELETE" | "EDIT" | "FIELD";
+  items?: Array<{
+    type: "work" | "detail";
+    name: string;
+    price: number | null;
+    quantity: number | null;
+    slyusar: string | null;
+    slyusarSum: number | null;
+  }>;
+  targetRow?: number | null;
+  field?: { fieldId: string; value: string } | null;
+}
+
 type VoiceState = "idle" | "listening" | "processing";
 
 // ============================================================
@@ -469,19 +484,8 @@ function parseVoiceCommand(
     };
   }
 
-  // --- 5. Якщо не розпізнано як команду — трактуємо як найменування для першого порожнього рядка
-  {
-    const targetRow = findFirstEmptyRowForColumn("name");
-    return {
-      target: {
-        kind: "cell",
-        rowIndex: targetRow,
-        column: "name",
-        label: "Найменування",
-      },
-      value: transcript.trim(),
-    };
-  }
+  // --- 5. Не розпізнано як ключову команду → повертаємо null для обробки Gemini
+  return null;
 }
 
 // ============================================================
@@ -787,6 +791,270 @@ ${slyusarNames.join(", ")}
   });
 
   return await callGeminiForObject(requestBody);
+}
+
+/**
+ * 🧠 Інтелектуальний парсинг натуральної голосової команди через Gemini.
+ * Приклади: "Додай поршні 4 штуки по 3300 гривень", "Видали другий рядок",
+ * "Запиши фільтр масляний і колодки гальмівні передні 2 штуки по 450"
+ */
+async function parseNaturalCommandWithGemini(
+  transcript: string,
+): Promise<ParsedNaturalCommand | null> {
+  const keys = await loadGeminiKeys();
+  if (keys.length === 0) return null;
+
+  const workNames = globalCache.works.slice(0, 200);
+  const detailNames = globalCache.details.slice(0, 200);
+  const slyusarNames = globalCache.slyusars.map((s) => s.Name).filter(Boolean);
+
+  // Список полів акту для FIELD команд
+  const fieldsList = FIELD_KEYWORDS.map(
+    (f) => `"${f.keywords[0]}" → fieldId: "${f.fieldId}"`,
+  ).join("\n");
+
+  const systemPrompt = `Ти — інтелектуальний парсер голосових команд для автосервісу (СТО, Україна).
+Механік каже фразу природною мовою. Ти маєш визначити ДІЮ та витягти СТРУКТУРОВАНІ дані.
+
+🔧 ДОСТУПНІ ДІЇ:
+1. "ADD" — додати один або кілька рядків (робіт/деталей) в таблицю акту
+2. "DELETE" — видалити рядок з таблиці (targetRow = номер рядка)
+3. "EDIT" — змінити конкретний рядок (targetRow + items[0])
+4. "FIELD" — заповнити поле акту (пробіг, причина звернення тощо)
+
+📋 ПОЛЯ АКТУ (action=FIELD):
+${fieldsList}
+
+🔑 ПРАВИЛА ПАРСИНГУ:
+- Фраза може містити КІЛЬКА позицій: "додай фільтр масляний і колодки гальмівні" → 2 items
+- "по 500"/"за 500"/"ціна 500"/"коштує 500" → price
+- "3 штуки"/"кількість 3" → quantity (якщо не вказано → 1)
+- "слюсар Петренко"/"зп 300" → slyusar, slyusarSum
+- Числа словами: "тисяча двісті" = 1200, "три" = 3
+- "видали рядок 3"/"видалити третій" → DELETE, targetRow: 3
+- "зміни рядок 2 ціну на 500" → EDIT, targetRow: 2
+- "пробіг 150000" → FIELD
+- Якщо не сказано "рядок N" → action=ADD (додати новий)
+
+⚠️ ПОМИЛКИ РОЗПІЗНАВАННЯ:
+- "апоршні" → "поршні", "аміна" → "заміна", "ільтр" → "фільтр"
+- "емонт" → "ремонт", "іагностика" → "діагностика"
+Завжди відновлюй повне слово!
+
+📦 ВИЗНАЧЕННЯ ТИПУ (work/detail):
+- Якщо назва є в РОБОТАХ → type: "work"
+- Якщо назва є в ДЕТАЛЯХ → type: "detail"
+- Запчастини (фільтр, масло, колодки, поршні, вкладиші, ремень, свічки) → "detail"
+- Послуги (заміна, ремонт, діагностика, розбирання, шліфування) → "work"
+
+РОБОТИ (знайди НАЙБІЛЬШ СХОЖУ назву):
+${workNames.join("\n")}
+
+ДЕТАЛІ:
+${detailNames.join("\n")}
+
+СЛЮСАРІ:
+${slyusarNames.join(", ")}
+
+Відповідь — ТІЛЬКИ JSON:
+{"action":"ADD","items":[{"type":"detail","name":"Точна назва зі списку","price":3300,"quantity":4,"slyusar":null,"slyusarSum":null}],"targetRow":null,"field":null}`;
+
+  const requestBody = JSON.stringify({
+    contents: [
+      { role: "user", parts: [{ text: `Команда: "${transcript}"` }] },
+    ],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+      responseMimeType: "application/json",
+    },
+  });
+
+  const triedIndices = new Set<number>();
+  let startIndex = currentKeyIndex;
+
+  while (triedIndices.size < keys.length) {
+    const keyIdx = startIndex % keys.length;
+    triedIndices.add(keyIdx);
+    const apiKey = keys[keyIdx];
+
+    try {
+      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      });
+
+      if (response.ok) {
+        currentKeyIndex = keyIdx;
+        const data = await response.json();
+        const allParts = data?.candidates?.[0]?.content?.parts || [];
+        const text = allParts.map((p: any) => p.text || "").join("");
+        if (!text) return null;
+
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.action) return parsed as ParsedNaturalCommand;
+          } catch { /* fallthrough */ }
+        }
+        return null;
+      }
+
+      if (response.status === 429) {
+        currentKeyIndex = (keyIdx + 1) % keys.length;
+        startIndex = keyIdx + 1;
+        continue;
+      }
+      return null;
+    } catch {
+      startIndex = keyIdx + 1;
+    }
+  }
+  return null;
+}
+
+/**
+ * Обробляє результат інтелектуального парсингу — виконує дії з таблицею
+ */
+async function executeNaturalCommand(
+  result: ParsedNaturalCommand,
+): Promise<void> {
+  switch (result.action) {
+    case "FIELD": {
+      if (!result.field) {
+        showNotification("⚠️ Не вдалося визначити поле", "warning", 3000);
+        return;
+      }
+      fillField(result.field.fieldId, result.field.value);
+      const fieldLabel =
+        FIELD_KEYWORDS.find((f) => f.fieldId === result.field!.fieldId)
+          ?.label || result.field.fieldId;
+      showNotification(
+        `✅ ${fieldLabel}: ${result.field.value}`,
+        "success",
+        3000,
+      );
+      return;
+    }
+
+    case "DELETE": {
+      if (!result.targetRow || result.targetRow < 1) {
+        showNotification(
+          "⚠️ Вкажіть номер рядка для видалення",
+          "warning",
+          3000,
+        );
+        return;
+      }
+      const row = getTableRow(result.targetRow);
+      if (!row) {
+        showNotification(
+          `❌ Рядок ${result.targetRow} не існує`,
+          "error",
+          3000,
+        );
+        return;
+      }
+      const delBtn = row.querySelector(".remove-row-btn") as HTMLElement;
+      if (delBtn) {
+        delBtn.click();
+        showNotification(
+          `🗑️ Видалено рядок ${result.targetRow}`,
+          "success",
+          3000,
+        );
+      } else {
+        row.remove();
+        updateCalculatedSumsInFooter();
+        showNotification(
+          `🗑️ Видалено рядок ${result.targetRow}`,
+          "success",
+          3000,
+        );
+      }
+      return;
+    }
+
+    case "EDIT": {
+      if (!result.targetRow || !result.items?.length) {
+        showNotification(
+          "⚠️ Не вдалося визначити рядок для редагування",
+          "warning",
+          3000,
+        );
+        return;
+      }
+      const editRow = getTableRow(result.targetRow);
+      if (!editRow) {
+        showNotification(
+          `❌ Рядок ${result.targetRow} не існує`,
+          "error",
+          3000,
+        );
+        return;
+      }
+      fillFullRow(editRow, result.items[0] as ParsedFullRow);
+      showNotification(
+        `✏️ Рядок ${result.targetRow} оновлено`,
+        "success",
+        3000,
+      );
+      return;
+    }
+
+    case "ADD": {
+      if (!result.items?.length) {
+        showNotification(
+          "⚠️ Не вдалося визначити що додати",
+          "warning",
+          3000,
+        );
+        return;
+      }
+
+      const addedNames: string[] = [];
+
+      for (const item of result.items) {
+        // Додаємо новий рядок
+        addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
+        const newCount = getRowCount();
+        const newRow = getTableRow(newCount);
+        if (!newRow) continue;
+
+        // Заповнюємо
+        const parsed: ParsedFullRow = {
+          type: item.type || "work",
+          name: item.name || "",
+          price: item.price ?? null,
+          quantity: item.quantity ?? 1,
+          slyusar: item.slyusar ?? null,
+          slyusarSum: item.slyusarSum ?? null,
+        };
+
+        fillFullRow(newRow, parsed);
+
+        const match = findBestMatch(parsed.name, parsed.type);
+        const finalName = match?.name || parsed.name;
+        const icon = parsed.type === "work" ? "🛠️" : "⚙️";
+        const priceStr = parsed.price ? ` × ${parsed.quantity ?? 1} = ${(parsed.price * (parsed.quantity ?? 1)).toLocaleString("uk-UA")} грн` : "";
+        addedNames.push(`${icon} ${finalName}${priceStr}`);
+      }
+
+      if (addedNames.length === 1) {
+        showNotification(`✅ Додано: ${addedNames[0]}`, "success", 4000);
+      } else {
+        showNotification(
+          `✅ Додано ${addedNames.length} позицій:\n${addedNames.join("\n")}`,
+          "success",
+          5000,
+        );
+      }
+      return;
+    }
+  }
 }
 
 async function callGeminiForObject(
@@ -1153,7 +1421,7 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
   try {
     updateMicButton(btn, "listening");
     showNotification(
-      `�️ Говоріть команду, наприклад:\n• "пробіг 150000"\n• "причина звернення ТО"\n• "рядок 1 найменування заміна масла"\n• "2 ціна тисяча"\n• "додати рядок фільтр масляний"`,
+      `🎙️ Говоріть команду, наприклад:\n• "Додай поршні 4 штуки по 3300"\n• "Фільтр масляний і колодки гальмівні"\n• "пробіг 150000"\n• "рядок 2 ціна 500"\n• "видали рядок 3"`,
       "info",
       5000,
     );
@@ -1171,9 +1439,54 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
     // Парсимо ключову фразу
     const command = parseVoiceCommand(transcript);
 
+    // === Якщо ключовий парсер не розпізнав → Gemini "інтелектуальний парсер" ===
     if (!command) {
+      showNotification(`🧠 Аналізую: "${transcript}"`, "info", 2500);
+
+      try {
+        const naturalResult = await parseNaturalCommandWithGemini(transcript);
+
+        if (naturalResult && naturalResult.action) {
+          await executeNaturalCommand(naturalResult);
+          updateMicButton(btn, "idle");
+          return;
+        }
+      } catch (err) {
+        console.warn("🎙️ Gemini natural parse failed, using fallback:", err);
+      }
+
+      // Останній фолбек — спробувати як назву деталі/роботи
+      const localMatch =
+        findBestMatch(transcript, "work") ||
+        findBestMatch(transcript, "detail");
+
+      if (localMatch) {
+        addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
+        const newCount = getRowCount();
+        const newRow = getTableRow(newCount);
+        if (newRow) {
+          const parsed: ParsedFullRow = {
+            type: localMatch.workId ? "work" : "detail",
+            name: localMatch.name,
+            price: null,
+            quantity: 1,
+            slyusar: null,
+            slyusarSum: null,
+          };
+          fillFullRow(newRow, parsed);
+          const icon = parsed.type === "work" ? "🛠️" : "⚙️";
+          showNotification(
+            `✅ Додано: ${icon} ${localMatch.name}`,
+            "success",
+            3000,
+          );
+          updateMicButton(btn, "idle");
+          return;
+        }
+      }
+
       showNotification(
-        `❌ Не розпізнано команду: "${transcript}"\n\nВикористовуйте формат:\n• пробіг [число]\n• причина звернення [текст]\n• рядок [N] найменування [назва]\n• [N] ціна [число]`,
+        `❌ Не розпізнано: "${transcript}"\n\nСпробуйте:\n• "Додай поршні 4 штуки по 3300"\n• "пробіг 150000"\n• "рядок 2 ціна 500"`,
         "warning",
         5000,
       );

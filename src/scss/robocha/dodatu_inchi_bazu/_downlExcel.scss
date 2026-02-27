@@ -21,7 +21,8 @@ $bg-error: #ffebee;
 $shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
 $shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.2);
 $shadow-confirm: 0 10px 40px rgba(0, 0, 0, 0.3);
-$shadow-dropdown: 0 8px 24px rgba(33, 150, 243, 0.25),
+$shadow-dropdown:
+  0 8px 24px rgba(33, 150, 243, 0.25),
   0 4px 8px rgba(0, 0, 0, 0.1);
 $transition: all 0.3s ease;
 $transition-fast: all 0.2s ease;
@@ -35,9 +36,11 @@ $radius-xlarge: 16px;
   $lightness-start: if($hover, -5%, 0%);
   $lightness-end: if($hover, -15%, -10%);
 
-  background: linear-gradient(135deg,
-      color.adjust($color, $lightness: $lightness-start) 0%,
-      color.adjust($color, $lightness: $lightness-end) 100%);
+  background: linear-gradient(
+    135deg,
+    color.adjust($color, $lightness: $lightness-start) 0%,
+    color.adjust($color, $lightness: $lightness-end) 100%
+  );
 }
 
 @mixin button-base {
@@ -296,6 +299,47 @@ $radius-xlarge: 16px;
   flex-shrink: 0;
   padding-top: 8px;
   margin-top: auto;
+  align-items: center;
+}
+
+// Кнопка голосового введення в Excel-модалці
+.voice-btn-Excel {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  font-size: 20px;
+  border-radius: 12px;
+  border: 1.5px solid #e0e0f0;
+  background: #f8f9fb;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #667eea;
+    background: #eef0ff;
+    transform: scale(1.08);
+  }
+
+  &.ai-chat-voice-btn--listening {
+    border-color: #e53e3e;
+    background: #fff5f5;
+    animation: voice-excel-glow 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes voice-excel-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(229, 62, 62, 0);
+  }
 }
 
 .batch-btn-Excel {
@@ -432,9 +476,11 @@ $radius-xlarge: 16px;
 
   th {
     padding: 5px 4px;
-    background: linear-gradient(180deg,
-        $bg-header 0%,
-        color.adjust($bg-header, $lightness: -3%) 100%);
+    background: linear-gradient(
+      180deg,
+      $bg-header 0%,
+      color.adjust($bg-header, $lightness: -3%) 100%
+    );
     font-weight: 700;
     color: $text-dark;
     position: sticky;
@@ -450,9 +496,11 @@ $radius-xlarge: 16px;
     transition: background 0.2s;
 
     &:hover {
-      background: linear-gradient(180deg,
-          color.adjust($bg-header, $lightness: -4%) 0%,
-          color.adjust($bg-header, $lightness: -8%) 100%);
+      background: linear-gradient(
+        180deg,
+        color.adjust($bg-header, $lightness: -4%) 0%,
+        color.adjust($bg-header, $lightness: -8%) 100%
+      );
     }
 
     // Остання колонка (Г-ть) не сортується
@@ -460,9 +508,11 @@ $radius-xlarge: 16px;
       cursor: default;
 
       &:hover {
-        background: linear-gradient(180deg,
-            $bg-header 0%,
-            color.adjust($bg-header, $lightness: -3%) 100%);
+        background: linear-gradient(
+          180deg,
+          $bg-header 0%,
+          color.adjust($bg-header, $lightness: -3%) 100%
+        );
       }
     }
   }
@@ -471,11 +521,12 @@ $radius-xlarge: 16px;
     transition: background-color 0.2s;
 
     &:hover {
-
       // Всі колонки крім останньої (Г-ть / статус) - ще світліший зелений
       td:not(:last-child) {
-        background-color: color.adjust($primary-green,
-            $lightness: 48%) !important;
+        background-color: color.adjust(
+          $primary-green,
+          $lightness: 48%
+        ) !important;
       }
 
       // Інпути також стають зеленими при ховері на рядок (крім останньої колонки)
@@ -740,9 +791,11 @@ $radius-xlarge: 16px;
 
   &:hover,
   &:focus {
-    background: linear-gradient(90deg,
-        color.adjust($primary-blue, $lightness: 48%) 0%,
-        color.adjust($primary-blue, $lightness: 45%) 100%);
+    background: linear-gradient(
+      90deg,
+      color.adjust($primary-blue, $lightness: 48%) 0%,
+      color.adjust($primary-blue, $lightness: 45%) 100%
+    );
     color: color.adjust($primary-blue, $lightness: -25%);
     font-weight: 600;
     outline: none;
@@ -820,7 +873,6 @@ $radius-xlarge: 16px;
 }
 
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);
@@ -855,7 +907,8 @@ $radius-xlarge: 16px;
 }
 
 /* Повністю вимикаємо нативний date-picker */
-.batch-table-Excel input.cell-input-Excel[type="date"]::-webkit-calendar-picker-indicator {
+.batch-table-Excel
+  input.cell-input-Excel[type="date"]::-webkit-calendar-picker-indicator {
   display: none !important;
   -webkit-appearance: none;
   opacity: 0;
@@ -864,7 +917,8 @@ $radius-xlarge: 16px;
   pointer-events: none;
 }
 
-.batch-table-Excel input.cell-input-Excel[type="date"]::-webkit-inner-spin-button,
+.batch-table-Excel
+  input.cell-input-Excel[type="date"]::-webkit-inner-spin-button,
 .batch-table-Excel input.cell-input-Excel[type="date"]::-webkit-clear-button {
   display: none !important;
   -webkit-appearance: none;

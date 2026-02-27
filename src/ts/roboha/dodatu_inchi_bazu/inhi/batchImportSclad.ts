@@ -17,6 +17,7 @@ import { showNotification } from "../../zakaz_naraudy/inhi/vspluvauhe_povidomlen
 import { supabase } from "../../../vxid/supabaseClient";
 import { userName as currentUserName } from "../../tablucya/users";
 import { initCustomDatePicker } from "./customDatePicker";
+import { initVoiceInputExcel } from "./voiceInputExcel";
 const batchModalId = "batch-import-modal-Excel";
 const confirmModalId = "batch-confirm-modal-Excel";
 let parsedDataGlobal: any[] = [];
@@ -31,25 +32,30 @@ let usersListCache: string[] = []; // Кеш користувачів (не Сл
 
 // ===== Стан сортування таблиці =====
 let sortColumn: string | null = null; // Поточна колонка сортування
-let sortDirection: 'asc' | 'desc' = 'desc'; // Напрямок сортування
+let sortDirection: "asc" | "desc" = "desc"; // Напрямок сортування
 
 // Тип колонки: date, number, text
-function getColumnSortType(col: string): 'date' | 'number' | 'text' {
-  if (col === 'date') return 'date';
-  if (['qty', 'price', 'clientPrice', 'warehouse', 'invoice', 'actNo'].includes(col)) return 'number';
-  return 'text';
+function getColumnSortType(col: string): "date" | "number" | "text" {
+  if (col === "date") return "date";
+  if (
+    ["qty", "price", "clientPrice", "warehouse", "invoice", "actNo"].includes(
+      col,
+    )
+  )
+    return "number";
+  return "text";
 }
 
 // Парсинг дати dd.mm.yy або yyyy-mm-dd → timestamp для порівняння
 function parseDateForSort(dateStr: string): number {
   if (!dateStr) return 0;
   // Формат ISO: yyyy-mm-dd
-  if (dateStr.includes('-')) {
+  if (dateStr.includes("-")) {
     const t = new Date(dateStr).getTime();
     return isNaN(t) ? 0 : t;
   }
   // Формат: dd.mm.yy
-  const parts = dateStr.split('.');
+  const parts = dateStr.split(".");
   if (parts.length !== 3) return 0;
   const day = parseInt(parts[0], 10);
   const month = parseInt(parts[1], 10) - 1;
@@ -62,7 +68,7 @@ function parseDateForSort(dateStr: string): number {
 function sortTableByColumn(col: string) {
   if (sortColumn === col) {
     // Той самий стовпець — міняємо напрямок
-    sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+    sortDirection = sortDirection === "desc" ? "asc" : "desc";
   } else {
     // Новий стовпець
     sortColumn = col;
@@ -70,7 +76,7 @@ function sortTableByColumn(col: string) {
     // Для чисел: перший клік = desc (від більшого до меншого)
     // Для тексту: перший клік = asc (А→Я)
     const type = getColumnSortType(col);
-    sortDirection = type === 'text' ? 'asc' : 'desc';
+    sortDirection = type === "text" ? "asc" : "desc";
   }
 
   const type = getColumnSortType(col);
@@ -80,22 +86,22 @@ function sortTableByColumn(col: string) {
     let valB = b[col];
 
     let cmp = 0;
-    if (type === 'date') {
-      const tA = parseDateForSort(String(valA || ''));
-      const tB = parseDateForSort(String(valB || ''));
+    if (type === "date") {
+      const tA = parseDateForSort(String(valA || ""));
+      const tB = parseDateForSort(String(valB || ""));
       cmp = tA - tB;
-    } else if (type === 'number') {
+    } else if (type === "number") {
       const nA = parseFloat(valA) || 0;
       const nB = parseFloat(valB) || 0;
       cmp = nA - nB;
     } else {
       // text — алфавітний порядок
-      const sA = String(valA || '').toLowerCase();
-      const sB = String(valB || '').toLowerCase();
-      cmp = sA.localeCompare(sB, 'uk');
+      const sA = String(valA || "").toLowerCase();
+      const sB = String(valB || "").toLowerCase();
+      cmp = sA.localeCompare(sB, "uk");
     }
 
-    return sortDirection === 'asc' ? cmp : -cmp;
+    return sortDirection === "asc" ? cmp : -cmp;
   });
 
   renderBatchTable(parsedDataGlobal);
@@ -103,22 +109,34 @@ function sortTableByColumn(col: string) {
 
 // Оригінальні назви заголовків колонок (щоб не накопичувались індикатори)
 const columnHeaderNames: Record<string, string> = {
-  date: 'Дата', shop: 'Магазин', catno: 'Каталог номер', detail: 'Деталь',
-  qty: 'К-ть', price: 'Ціна', clientPrice: 'Клієнта', warehouse: 'Склад',
-  invoice: 'Рах. №', actNo: 'Акт №', unit: 'О-ця', orderStatus: 'Статус',
-  createdBy: 'Замовив', notes: 'Примітка', action: 'Дія', status: 'Г-ть',
+  date: "Дата",
+  shop: "Магазин",
+  catno: "Каталог номер",
+  detail: "Деталь",
+  qty: "К-ть",
+  price: "Ціна",
+  clientPrice: "Клієнта",
+  warehouse: "Склад",
+  invoice: "Рах. №",
+  actNo: "Акт №",
+  unit: "О-ця",
+  orderStatus: "Статус",
+  createdBy: "Замовив",
+  notes: "Примітка",
+  action: "Дія",
+  status: "Г-ть",
 };
 
 // Оновлення індикаторів сортування в шапці
 function updateSortIndicators() {
-  const thead = document.querySelector('#batch-table-Excel thead tr');
+  const thead = document.querySelector("#batch-table-Excel thead tr");
   if (!thead) return;
-  thead.querySelectorAll('th').forEach((th) => {
+  thead.querySelectorAll("th").forEach((th) => {
     const col = (th as HTMLElement).dataset.col;
     if (!col) return;
     const baseText = columnHeaderNames[col] || col;
     if (col === sortColumn) {
-      const arrow = sortDirection === 'desc' ? '&#9660;' : '&#9650;';
+      const arrow = sortDirection === "desc" ? "&#9660;" : "&#9650;";
       th.innerHTML = `${baseText} <span style="color:#2196f3;font-size:8px;vertical-align:middle;">${arrow}</span>`;
     } else {
       th.textContent = baseText;
@@ -598,7 +616,9 @@ async function updateActWithDetails(
       const newCatNo = String(detailData["Каталог"]).trim().toLowerCase();
       if (newCatNo && newCatNo !== "?") {
         existingIndex = actJsonData["Деталі"].findIndex((d: any) => {
-          const existingCatNo = String(d["Каталог"] || "").trim().toLowerCase();
+          const existingCatNo = String(d["Каталог"] || "")
+            .trim()
+            .toLowerCase();
           return existingCatNo === newCatNo;
         });
       }
@@ -630,7 +650,9 @@ async function updateActWithDetails(
         actJsonData["Загальна сума"] =
           (actJsonData["Загальна сума"] || 0) + sumDiff;
       }
-      console.log(`🔄 Оновлено існуючу деталь в акті №${actNo}: ${detailData["Каталог"]} (індекс: ${existingIndex})`);
+      console.log(
+        `🔄 Оновлено існуючу деталь в акті №${actNo}: ${detailData["Каталог"]} (індекс: ${existingIndex})`,
+      );
     } else {
       // Нова деталь — додаємо
       actJsonData["Деталі"].push(detailData);
@@ -639,7 +661,9 @@ async function updateActWithDetails(
         actJsonData["Загальна сума"] =
           (actJsonData["Загальна сума"] || 0) + detailSum;
       }
-      console.log(`➕ Додано нову деталь в акт №${actNo}: ${detailData["Каталог"]}`);
+      console.log(
+        `➕ Додано нову деталь в акт №${actNo}: ${detailData["Каталог"]}`,
+      );
     }
 
     const { error: updateError } = await supabase
@@ -850,6 +874,7 @@ function createBatchImportModal() {
         <div class="batch-buttons-Excel">
           <button id="batch-parse-btn-Excel" class="batch-btn-Excel parse-Excel">📋 Розпарсити</button>
           <button id="batch-add-row-btn-Excel" class="batch-btn-Excel add-row-Excel">➕ Додати рядок</button>
+          <button id="voice-input-btn-Excel" class="ai-chat-voice-btn voice-btn-Excel" type="button" title="Голосове введення">🎙️</button>
           <button id="batch-upload-btn-Excel" class="batch-btn-Excel upload-Excel hidden-all_other_bases">✅ Записати</button>
         </div>
       </div>
@@ -1205,10 +1230,11 @@ function positionDropdown(input: HTMLElement, list: HTMLElement) {
 
   list.style.maxHeight = `${listHeight}px`;
 
-  list.style.top = `${useAbove
-    ? scrollY + rect.top - listHeight - gap
-    : scrollY + rect.bottom + gap
-    }px`;
+  list.style.top = `${
+    useAbove
+      ? scrollY + rect.top - listHeight - gap
+      : scrollY + rect.bottom + gap
+  }px`;
   list.style.left = `${scrollX + rect.left}px`;
 }
 function showDropdownList(input: HTMLElement, options: string[]) {
@@ -1566,13 +1592,14 @@ function renderBatchTable(data: any[]) {
           style="color: ${row.action === "Видалити" ? "#ef4444" : "#2D7244"}; font-weight: bold; cursor: pointer; background: transparent;"
         >
       </td>
-      <td class="status-cell-Excel ${row.status === "Готовий"
-        ? "ready-Excel"
-        : row.status?.includes("Помилка")
-          ? "error-Excel"
-          : row.status?.includes("Успішно")
-            ? "success-Excel"
-            : "error-Excel"
+      <td class="status-cell-Excel ${
+        row.status === "Готовий"
+          ? "ready-Excel"
+          : row.status?.includes("Помилка")
+            ? "error-Excel"
+            : row.status?.includes("Успішно")
+              ? "success-Excel"
+              : "error-Excel"
       }">
         <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || "Помилка"}">🗑️</button>
       </td>
@@ -1588,17 +1615,17 @@ function renderBatchTable(data: any[]) {
 
 // ===== Навішування обробників сортування на th =====
 function attachSortHandlers() {
-  const thead = document.querySelector('#batch-table-Excel thead tr');
+  const thead = document.querySelector("#batch-table-Excel thead tr");
   if (!thead) return;
-  thead.querySelectorAll('th').forEach((th) => {
+  thead.querySelectorAll("th").forEach((th) => {
     const col = (th as HTMLElement).dataset.col;
-    if (!col || col === 'status') return; // Г-ть не сортуємо
+    if (!col || col === "status") return; // Г-ть не сортуємо
     // Видаляємо попередні обробники (якщо є)
     const newTh = th.cloneNode(true) as HTMLElement;
     th.parentNode?.replaceChild(newTh, th);
-    newTh.style.cursor = 'pointer';
-    newTh.style.userSelect = 'none';
-    newTh.addEventListener('click', () => {
+    newTh.style.cursor = "pointer";
+    newTh.style.userSelect = "none";
+    newTh.addEventListener("click", () => {
       sortTableByColumn(col);
     });
   });
@@ -2438,7 +2465,7 @@ async function loadScladPendingRecords(): Promise<any[]> {
       const actValid = !actNo || actsListCache.includes(actNo);
       const actClosed = actNo
         ? actsDateOffMap.has(parseInt(actNo)) &&
-        actsDateOffMap.get(parseInt(actNo)) !== null
+          actsDateOffMap.get(parseInt(actNo)) !== null
         : false;
 
       const allValid =
@@ -2585,7 +2612,10 @@ async function uploadBatchData(data: any[]) {
     if (row?.data && typeof row.data === "object") newData = { ...row.data };
     if (!newData.Name && !newData.name && !newData["Назва"]) {
       newData.Name = name;
-      await supabase.from("details").update({ data: newData }).eq("detail_id", id);
+      await supabase
+        .from("details")
+        .update({ data: newData })
+        .eq("detail_id", id);
     }
   }
 
@@ -2910,7 +2940,8 @@ async function uploadBatchData(data: any[]) {
       uploadBtn.textContent = "✅ Записано";
     }
     showNotification(
-      `Успішно завантажено ${successCount} ${successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
+      `Успішно завантажено ${successCount} ${
+        successCount === 1 ? "запис" : successCount < 5 ? "записи" : "записів"
       }`,
       "success",
       4000,
@@ -3024,34 +3055,48 @@ export function initBatchImport() {
       modal.classList.remove("hidden-all_other_bases");
 
       // 2. Показуємо skeleton loader, ховаємо контент
-      const skeleton = document.getElementById('batch-skeleton-loader');
-      const tableContainer = document.getElementById('batch-table-container-Excel');
-      const textarea = document.getElementById('batch-textarea-Excel') as HTMLTextAreaElement;
-      const instructions = document.querySelector('.batch-instructions-Excel') as HTMLElement;
-      const parseBtn = document.getElementById('batch-parse-btn-Excel') as HTMLButtonElement;
-      const uploadBtn = document.getElementById('batch-upload-btn-Excel') as HTMLButtonElement;
+      const skeleton = document.getElementById("batch-skeleton-loader");
+      const tableContainer = document.getElementById(
+        "batch-table-container-Excel",
+      );
+      const textarea = document.getElementById(
+        "batch-textarea-Excel",
+      ) as HTMLTextAreaElement;
+      const instructions = document.querySelector(
+        ".batch-instructions-Excel",
+      ) as HTMLElement;
+      const parseBtn = document.getElementById(
+        "batch-parse-btn-Excel",
+      ) as HTMLButtonElement;
+      const uploadBtn = document.getElementById(
+        "batch-upload-btn-Excel",
+      ) as HTMLButtonElement;
 
-      if (skeleton) skeleton.style.display = 'block';
-      if (tableContainer) tableContainer.classList.add('hidden-all_other_bases');
-      if (textarea) textarea.style.display = 'none';
-      if (instructions) instructions.style.display = 'none';
-      if (parseBtn) parseBtn.style.display = 'none';
-      if (uploadBtn) uploadBtn.classList.add('hidden-all_other_bases');
+      if (skeleton) skeleton.style.display = "block";
+      if (tableContainer)
+        tableContainer.classList.add("hidden-all_other_bases");
+      if (textarea) textarea.style.display = "none";
+      if (instructions) instructions.style.display = "none";
+      if (parseBtn) parseBtn.style.display = "none";
+      if (uploadBtn) uploadBtn.classList.add("hidden-all_other_bases");
 
       // 3. Завантажуємо дані у фоні (модалка вже видима зі skeleton)
       try {
-        const [shops, details, acts, warehouses, users, partNumbers] = await Promise.all([
-          loadShopsList(),
-          loadDetailsList(),
-          loadActsList(),
-          loadWarehouseList(),
-          loadUsersList(),
-          loadPartNumbers(),
-        ]);
+        const [shops, details, acts, warehouses, users, partNumbers] =
+          await Promise.all([
+            loadShopsList(),
+            loadDetailsList(),
+            loadActsList(),
+            loadWarehouseList(),
+            loadUsersList(),
+            loadPartNumbers(),
+          ]);
         shopsListCache = shops;
         detailsListCache = details;
         shopsListCacheNormalized = shopsListCache.map(normalizeNameForCompare);
-        detailsListCacheNormalized = detailsListCache.map(normalizeNameForCompare);
+        detailsListCacheNormalized = detailsListCache.map(
+          normalizeNameForCompare,
+        );
         actsListCache = acts.list;
         actsDateOffMap = acts.map;
         warehouseListCache = warehouses;
@@ -3065,7 +3110,7 @@ export function initBatchImport() {
       await resetModalState();
 
       // 5. Ховаємо skeleton, показуємо таблицю
-      if (skeleton) skeleton.style.display = 'none';
+      if (skeleton) skeleton.style.display = "none";
     };
   }
 
@@ -3108,7 +3153,8 @@ export function initBatchImport() {
           .getElementById("batch-upload-btn-Excel")
           ?.classList.remove("hidden-all_other_bases");
         showNotification(
-          `Розпарсовано ${data.length} ${data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
+          `Розпарсовано ${data.length} ${
+            data.length === 1 ? "рядок" : data.length < 5 ? "рядки" : "рядків"
           }`,
           "success",
         );
@@ -3144,6 +3190,27 @@ export function initBatchImport() {
       }
     };
   }
+
+  // === Голосове введення ===
+  initVoiceInputExcel({
+    addRow: () => {
+      const newRow = createEmptyRow();
+      parsedDataGlobal.push(newRow);
+      renderBatchTable(parsedDataGlobal);
+      const tc = document.getElementById("batch-table-container-Excel");
+      if (tc)
+        setTimeout(() => {
+          tc.scrollTop = tc.scrollHeight;
+        }, 50);
+    },
+    sortColumn: (col: string) => {
+      sortTableByColumn(col);
+    },
+    getParsedData: () => parsedDataGlobal,
+    renderTable: (data: any[]) => {
+      renderBatchTable(data);
+    },
+  });
 
   const uploadBtn = document.getElementById(
     "batch-upload-btn-Excel",

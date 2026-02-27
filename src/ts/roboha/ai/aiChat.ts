@@ -3,7 +3,7 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 import { globalCache } from "../zakaz_naraudy/globalCache";
-import { loadActsTable } from "../tablucya/tablucya";
+
 import { startChatVoiceInput } from "./voiceInput";
 
 // ============================================================
@@ -326,6 +326,13 @@ function subscribeToTokenReset(): void {
           console.log(
             `🔄 Realtime: токени скинуто (setting_id=${settingId}, date=${newDate ? toDateStr(new Date(newDate)) : "?"})`,
           );
+        } else if (typeof newToken === "number") {
+          // Оновлюємо токени одразу як змінились
+          const keyIndex = geminiKeySettingIds.indexOf(settingId);
+          if (keyIndex >= 0) {
+            geminiKeyTokens[keyIndex] = newToken;
+            updateKeySelect();
+          }
         }
       },
     )
@@ -661,7 +668,7 @@ async function gatherSTOContext(
     let d: any = {};
     try {
       d = typeof a.data === "string" ? JSON.parse(a.data) : a.data || {};
-    } catch {}
+    } catch { }
 
     const worksArr = Array.isArray(d["Роботи"]) ? d["Роботи"] : [];
     const detailsArr = Array.isArray(d["Деталі"]) ? d["Деталі"] : [];
@@ -875,7 +882,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || d["Ім'я"] || "—";
         const role = d["Доступ"] || "";
 
@@ -967,7 +974,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || d["Ім'я"] || "—";
 
         // Шукаємо акти де цей слюсар вказаний в полі "Слюсар"
@@ -1047,7 +1054,7 @@ async function gatherSTOContext(
                   typeof c.data === "string"
                     ? JSON.parse(c.data)
                     : c.data || {};
-              } catch {}
+              } catch { }
               const name = d["ПІБ"] || "—";
               const phone = d["Телефон"] || "";
               clientsMap.set(
@@ -1072,7 +1079,7 @@ async function gatherSTOContext(
                   typeof c.data === "string"
                     ? JSON.parse(c.data)
                     : c.data || {};
-              } catch {}
+              } catch { }
               const car = d["Авто"] || "—";
               const plate = d["Номер авто"] || "";
               carsMap.set(c.cars_id, plate ? `${car} (${plate})` : car);
@@ -1102,19 +1109,19 @@ async function gatherSTOContext(
                   ? JSON.parse(slyusarRow.data)
                   : slyusarRow.data || {};
               slName = sd.Name || "—";
-            } catch {}
+            } catch { }
 
             const timeOn = b.data_on
               ? new Date(b.data_on).toLocaleTimeString("uk-UA", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "—";
             const timeOff = b.data_off
               ? new Date(b.data_off).toLocaleTimeString("uk-UA", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "—";
 
             // Клієнт: підтягуємо ПІБ з БД
@@ -1209,7 +1216,7 @@ async function gatherSTOContext(
           let d: any = {};
           try {
             d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-          } catch {}
+          } catch { }
           return {
             id: c.client_id,
             name: d["ПІБ"] || d["Клієнт"] || "—",
@@ -1224,7 +1231,7 @@ async function gatherSTOContext(
           let d: any = {};
           try {
             d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-          } catch {}
+          } catch { }
           return {
             id: c.cars_id,
             clientId: c.client_id,
@@ -1510,7 +1517,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || "—";
         const percentage = d["ПроцентРоботи"] || 0;
 
@@ -1899,18 +1906,6 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 Невідома роль → НЕ адмін. Фінанси/ЗП всіх → тільки Адміністратор.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔎 КОМАНДА ФІЛЬТРАЦІЇ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Коли користувач просить «відфільтруй», «відфільтрувати», «покажи тільки», «знайди в таблиці», «фільтрани» або подібне — ти маєш:
-1. Проаналізувати запит і визначити ключові слова для пошуку.
-2. Сформувати КОРОТКИЙ пошуковий рядок із найважливіших слів.
-3. Додати в КІНЦІ відповіді тег: [FILTER:пошуковий рядок]
-   Приклади:
-   - «відфільтруй мерседеси» → [FILTER:Mercedes]
-   - «покажи акти слюсаря Петренка» → [FILTER:слюсар:Петренко]
-   - «роботи приймальника Коваль» → [FILTER:приймальник:Коваль]
-4. ⚠️ Лише ключові слова. НЕ "всі","акти","покажи". Один фільтр на відповідь.
-⚠️ Тег [FILTER:...] має бути ОСТАННІМ рядком відповіді.
 
 Працюй швидко, точно, компактно.`
         : `Ти — AI "Атлас" для СТО. Відповідай ТІЛЬКИ українською. Тільки реальні дані — НЕ вигадуй.
@@ -1939,10 +1934,6 @@ faktura: faktura_id,name,namber,act_id,oderjyvach | works/details: довідн�
 
 👥 Адмін—все. Слюсар—тільки своє. Приймальник—клієнти. Запчастист—склад. ЗП всіх→тільки адмін.
 
-🔎 ФІЛЬТРАЦІЯ: "відфільтруй X" → додай [FILTER:ключові слова] останнім рядком.
-Для слюсаря: [FILTER:слюсар:Прізвище]. Для приймальника: [FILTER:приймальник:Прізвище].
-Мінімум слів, без "всі","акти","покажи". Один фільтр на відповідь.
-
 Стисло. Точно. Компактно.`;
 
     // === Промпт для Groq — залежить від рівня ===
@@ -1962,16 +1953,13 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
 📋 АКТ: #id ✅/🔄 📅дата 👤ПІБ 📞Тел 🚗Авто 👷Слюсар 💰Сума
 📦 Склад: 🔴0шт 🟠1-2 🟡3-5 🟢6+ — одна стрічка. Дати: ДД.ММ.РР. Суми: "18 200 грн"
 ⚠️ ЗАВЖДИ показуй телефони, ПІБ, суми, ЗП. НЕ кажи "не маю доступу" — у тебе Є доступ до ВСЬОГО!
-🔒 Паролі — ЗАБОРОНЕНО. 👥 Адмін—все, Слюсар—своє, Приймальник—клієнти, Запчастист—склад.
-🔎 Фільтрація: [FILTER:ключові слова]. Для слюсаря: [FILTER:слюсар:Прізвище]. Один фільтр, останній рядок.`
+🔒 Паролі — ЗАБОРОНЕНО. 👥 Адмін—все, Слюсар—своє, Приймальник—клієнти, Запчастист—склад.`
         : `Ти — AI-асистент "Атлас" для автосервісу (СТО). Відповідай ТІЛЬКИ українською. Будь стислим.
 ⚠️ Показуй лише реальні дані — не вигадуй. Кожна позиція — в одну стрічку з emoji.
 📋 Формат акту: #id ✅/🔄 | 📅 дата | 👤 ПІБ | 🚗 Авто | 👷 Слюсар | 💰 Сума
 📦 Склад: 🔴 0шт 🟠 1-2 🟡 3-5 🟢 6+. Одна стрічка на позицію.
 💰 Фінанси: Виручка=Роботи+Деталі. Суми: "18 200 грн". Дати: ДД.ММ.РР.
-🔒 Паролі — ЗАБОРОНЕНО.
-🔎 Фільтрація: "відфільтруй X" → додай [FILTER:ключові слова] в кінці відповіді.
-  Для слюсаря: [FILTER:слюсар:Прізвище]. Мінімум слів.`;
+🔒 Паролі — ЗАБОРОНЕНО.`;
 
     // 💡 Ліміти та параметри залежать від рівня
     const GROQ_CONTEXT_LIMIT =
@@ -1983,7 +1971,7 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
     const groqEnrichedPrompt =
       enrichedPrompt.length > GROQ_CONTEXT_LIMIT
         ? enrichedPrompt.slice(0, GROQ_CONTEXT_LIMIT) +
-          "\n...(контекст обрізано)"
+        "\n...(контекст обрізано)"
         : enrichedPrompt;
 
     const groqHistorySize =
@@ -1999,7 +1987,7 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
     const geminiEnrichedPrompt =
       enrichedPrompt.length > GEMINI_CONTEXT_LIMIT
         ? enrichedPrompt.slice(0, GEMINI_CONTEXT_LIMIT) +
-          "\n...(контекст обрізано)"
+        "\n...(контекст обрізано)"
         : enrichedPrompt;
 
     // === Формат Gemini ===
@@ -2293,9 +2281,9 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
     const [clientsRes, carsRes] = await Promise.all([
       clientIds.length > 0
         ? supabase
-            .from("clients")
-            .select("client_id, data")
-            .in("client_id", clientIds)
+          .from("clients")
+          .select("client_id, data")
+          .in("client_id", clientIds)
         : Promise.resolve({ data: [] as any[], error: null }),
       carsIds.length > 0
         ? supabase.from("cars").select("cars_id, data").in("cars_id", carsIds)
@@ -2307,7 +2295,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       let cd: any = {};
       try {
         cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-      } catch {}
+      } catch { }
       clientsMap.set(c.client_id, cd);
     });
 
@@ -2316,7 +2304,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       let cd: any = {};
       try {
         cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-      } catch {}
+      } catch { }
       carsMap.set(c.cars_id, cd);
     });
 
@@ -2325,7 +2313,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       try {
         const raw = a.info || a.data || a.details;
         d = typeof raw === "string" ? JSON.parse(raw) : raw || {};
-      } catch {}
+      } catch { }
 
       // ПІБ клієнта: спочатку з JSON акту, потім з таблиці clients
       let client = d["ПІБ"] || d["Клієнт"] || "";
@@ -2481,15 +2469,14 @@ function renderDashboard(
         </div>
       </div>
 
-      ${
-        stats.closedActs.length > 0
-          ? `
+      ${stats.closedActs.length > 0
+      ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">${closedSectionTitle}</div>
         <div class="ai-dashboard-acts-list">
           ${stats.closedActs
-            .map(
-              (a) => `
+        .map(
+          (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -2498,8 +2485,8 @@ function renderDashboard(
               <span class="ai-act-sum">${a.total.toLocaleString("uk-UA")} грн</span>
             </div>
           `,
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
         <div class="ai-dashboard-totals">
           <span>Роботи: <strong>${stats.totalWorksSum.toLocaleString("uk-UA")} грн</strong></span>
@@ -2507,18 +2494,17 @@ function renderDashboard(
           <span>Разом: <strong>${stats.totalSum.toLocaleString("uk-UA")} грн</strong></span>
         </div>
       </div>`
-          : ""
-      }
+      : ""
+    }
 
-      ${
-        stats.openActs.length > 0
-          ? `
+      ${stats.openActs.length > 0
+      ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">🔧 Відкриті акти</div>
         <div class="ai-dashboard-acts-list">
           ${stats.openActs
-            .map(
-              (a) => `
+        .map(
+          (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -2527,83 +2513,14 @@ function renderDashboard(
               <span class="ai-act-sum open">відкрито</span>
             </div>
           `,
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
       </div>`
-          : ""
-      }
+      : ""
+    }
     </div>
   `;
-}
-
-// ============================================================
-// ФІЛЬТРАЦІЯ ТАБЛИЦІ З AI
-// ============================================================
-
-/**
- * Програмно застосовує фільтр: вводить текст у #searchInput та перезавантажує таблицю
- */
-function applyFilterFromAI(filterText: string): void {
-  // Перевірка на спеціальний префікс статус:
-  const statusMatch = filterText.match(/статус:(\S+)/i);
-  if (statusMatch) {
-    const status = statusMatch[1].toLowerCase();
-    const filterType: "open" | "closed" | null = status.includes("закрит")
-      ? "closed"
-      : status.includes("відкрит")
-        ? "open"
-        : null;
-
-    if (filterType) {
-      // Видаляємо статус: з пошукового рядка, залишаємо інші ключові слова
-      const remaining = filterText.replace(/статус:\S+/gi, "").trim();
-
-      try {
-        loadActsTable(null, null, filterType, remaining || null);
-      } catch (err) {
-        console.warn("⚠️ AI Filter: помилка loadActsTable", err);
-      }
-
-      // Приховуємо підказку розумного пошуку (AI фільтр не потребує підказок)
-      const hintEl = document.getElementById("smart-search-hint");
-      if (hintEl) hintEl.style.display = "none";
-
-      console.log(
-        `🔎 AI Filter: статус=${filterType}${remaining ? `, пошук="${remaining}"` : ""}`,
-      );
-      return;
-    }
-  }
-
-  // Викликаємо loadActsTable напряму — БЕЗ запису в #searchInput
-  try {
-    loadActsTable(null, null, null, filterText);
-  } catch (err) {
-    console.warn("⚠️ AI Filter: помилка loadActsTable", err);
-  }
-
-  // Приховуємо підказку розумного пошуку (AI фільтр не потребує підказок)
-  const hintEl = document.getElementById("smart-search-hint");
-  if (hintEl) hintEl.style.display = "none";
-
-  console.log(`🔎 AI Filter: застосовано фільтр "${filterText}"`);
-}
-
-/**
- * Парсить відповідь AI і витягує тег [FILTER:...], якщо є
- * Повертає { cleanText, filterText } або null
- */
-function extractFilterTag(
-  response: string,
-): { cleanText: string; filterText: string } | null {
-  const filterMatch = response.match(/\[FILTER:([^\]]+)\]/i);
-  if (!filterMatch) return null;
-
-  const filterText = filterMatch[1].trim();
-  const cleanText = response.replace(/\[FILTER:[^\]]+\]/gi, "").trim();
-
-  return { cleanText, filterText };
 }
 
 // ============================================================
@@ -2677,12 +2594,12 @@ export async function createAIChatModal(): Promise<void> {
         <!-- Quick prompts -->
         <div class="ai-chat-quick-prompts" id="ai-quick-prompts">
           ${QUICK_PROMPTS.map(
-            (p) => `
+    (p) => `
             <button class="ai-quick-prompt-btn" data-prompt="${p.text}">
               ${p.icon} ${p.text}
             </button>
           `,
-          ).join("")}
+  ).join("")}
         </div>
 
         <!-- Input -->
@@ -2930,25 +2847,13 @@ function initAIChatHandlers(modal: HTMLElement): void {
     const reply = await callGemini(text.trim());
     loaderDiv.remove();
 
-    // Перевіряємо чи є тег [FILTER:...] у відповіді
-    const filterResult = extractFilterTag(reply);
-    const displayText = filterResult ? filterResult.cleanText : reply;
-
     const assistantMsg: ChatMessage = {
       role: "assistant",
-      text: displayText,
+      text: reply,
       timestamp: new Date(),
     };
     chatHistory.push(assistantMsg);
     renderMessage(assistantMsg, messagesEl);
-
-    // Якщо є фільтр — застосовуємо його до таблиці
-    if (filterResult && filterResult.filterText) {
-      // Невелика затримка щоб користувач побачив відповідь
-      setTimeout(() => {
-        applyFilterFromAI(filterResult.filterText);
-      }, 1200);
-    }
 
     isLoading = false;
     sendBtn.disabled = false;

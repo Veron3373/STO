@@ -360,6 +360,7 @@ const COLUMN_KEYWORDS: { keywords: string[]; column: string; label: string }[] =
     {
       keywords: [
         "піб",
+        "пі ",
         "слюсар",
         "виконавець",
         "прізвище",
@@ -1388,7 +1389,79 @@ function fillFullRow(row: HTMLTableRowElement, parsed: ParsedFullRow): void {
   updateCalculatedSumsInFooter();
 }
 
-/** Заповнює одну клітинку рядка */
+/**
+ * Локальний парсер переліку полів:
+ * "найменування шарова кількість 15 ціна 8 зарплата 5 піб Брацлавець"
+ * заповнює відповідні клітинки рядка без Gemini.
+ */
+function fillMultiFieldsFromText(
+  row: HTMLTableRowElement,
+  text: string,
+): boolean {
+  const normalized = text.toLowerCase().trim();
+
+  // Сортуємо по довжині ключового слова (довші першими)
+  const sorted = [...COLUMN_KEYWORDS].sort(
+    (a, b) =>
+      Math.max(...b.keywords.map((k) => k.length)) -
+      Math.max(...a.keywords.map((k) => k.length)),
+  );
+
+  const positions: { pos: number; column: string; kwLen: number }[] = [];
+
+  for (const col of sorted) {
+    for (const kw of col.keywords) {
+      const kw2 = kw.trim(); // "пі " → "пі"
+      let searchFrom = 0;
+      while (searchFrom < normalized.length) {
+        const idx = normalized.indexOf(kw2, searchFrom);
+        if (idx === -1) break;
+        // Перевіряємо що перед нім не буква (початок слова)
+        if (idx > 0 && /[\u0400-\u04FFa-z]/i.test(normalized[idx - 1])) {
+          searchFrom = idx + 1;
+          continue;
+        }
+        // Перевіряємо що після ключового слова не йде буква (напр. "пі" ≠ "після")
+        const charAfter = normalized[idx + kw2.length];
+        if (charAfter && /[\u0400-\u04FFa-z]/i.test(charAfter)) {
+          searchFrom = idx + 1;
+          continue;
+        }
+        const alreadyCovered = positions.some(
+          (p) => idx >= p.pos && idx < p.pos + p.kwLen,
+        );
+        if (!alreadyCovered) {
+          positions.push({ pos: idx, column: col.column, kwLen: kw2.length });
+        }
+        break;
+      }
+    }
+  }
+
+  if (positions.length === 0) return false;
+  positions.sort((a, b) => a.pos - b.pos);
+
+  let applied = 0;
+  for (let i = 0; i < positions.length; i++) {
+    const current = positions[i];
+    const valueStart = current.pos + current.kwLen;
+    const valueEnd =
+      i + 1 < positions.length ? positions[i + 1].pos : text.length;
+    let rawValue = text.substring(valueStart, valueEnd).trim();
+    if (!rawValue) continue;
+
+    if (["id_count", "price", "slyusar_sum"].includes(current.column)) {
+      const num = tryParseNumberLocally(rawValue);
+      if (num !== null) rawValue = String(num);
+    }
+
+    fillSingleCell(row, current.column, rawValue);
+    applied++;
+  }
+
+  updateCalculatedSumsInFooter();
+  return applied > 0;
+}
 function fillSingleCell(
   row: HTMLTableRowElement,
   column: string,
@@ -1532,6 +1605,35 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
           );
           updateMicButton(btn, "idle");
           return;
+        }
+      }
+
+      // Фолбек 2: "додай рядок [поле значення поле значення...]" — локальний парсер переліку полів
+      const addRowMultiMatch = transcript
+        .trim()
+        .match(
+          /^(?:додай рядок|додати рядок|додай стрічку|додати стрічку|новий рядок|нова стрічка|додай|додати)\s+(.+)$/i,
+        );
+      if (addRowMultiMatch) {
+        addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
+        const newCount = getRowCount();
+        const newRow = getTableRow(newCount);
+        if (newRow) {
+          const restText = addRowMultiMatch[1];
+          const filled = fillMultiFieldsFromText(newRow, restText);
+          if (filled) {
+            const nameCell = newRow.querySelector(
+              '[data-name="name"]',
+            ) as HTMLElement;
+            const nameFilled = nameCell?.textContent?.trim() || "";
+            showNotification(
+              `✅ Додано рядок ${newCount}${nameFilled ? ": " + nameFilled : ""}`,
+              "success",
+              3000,
+            );
+            updateMicButton(btn, "idle");
+            return;
+          }
         }
       }
 

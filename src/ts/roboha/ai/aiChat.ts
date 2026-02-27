@@ -352,8 +352,17 @@ export function resetGeminiKeysCache(): void {
   console.log("🔑 AI: кеш ключів скинуто");
 }
 
+/** Форматує токени для відображення */
+function fmtTokens(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
+  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k`;
+  return String(tokens);
+}
+
 /**
- * Оновлює select ключів + завантажує токени з БД
+ * Оновлює select ключів + лічильник токенів.
+ * Використовує інкрементальне оновлення — не перебудовує HTML,
+ * якщо кількість опцій не змінилася (запобігає збою change-event).
  */
 function updateKeySelect(): void {
   const selectEl = document.getElementById(
@@ -363,36 +372,48 @@ function updateKeySelect(): void {
 
   if (geminiApiKeys.length === 0) {
     selectEl.innerHTML = '<option value="">— Немає ключів —</option>';
+    updateTokenCounter(0, 0);
     return;
   }
 
-  // Використовуємо кешовані токени (без зайвих запитів до БД)
   const allTokens = geminiKeyTokens;
+  const existingOptions = selectEl.options;
 
-  // Генеруємо опції
-  let html = "";
-  for (let i = 0; i < geminiApiKeys.length; i++) {
-    const key = geminiApiKeys[i];
-    const provider = getKeyProvider(key);
-    const icon = provider === "groq" ? "⚡" : "💎";
-    const label = provider === "groq" ? "Groq" : "Gemini";
-    const tokens = allTokens[i] || 0;
-    const tokenLabel =
-      tokens >= 1_000_000
-        ? `${(tokens / 1_000_000).toFixed(1)}M`
-        : tokens >= 1000
-          ? `${(tokens / 1000).toFixed(1)}k`
-          : tokens > 0
-            ? `${tokens}`
-            : "0";
-    const selected = i === currentKeyIndex ? " selected" : "";
-    html += `<option value="${i}"${selected}>${icon} ${label} №${i + 1} 🎫${tokenLabel}</option>`;
+  // Якщо кількість опцій збігається — лише оновлюємо текст і selected
+  if (existingOptions.length === geminiApiKeys.length) {
+    for (let i = 0; i < geminiApiKeys.length; i++) {
+      const key = geminiApiKeys[i];
+      const provider = getKeyProvider(key);
+      const icon = provider === "groq" ? "⚡" : "💎";
+      const label = provider === "groq" ? "Groq" : "Gemini";
+      const tokens = allTokens[i] ?? 0;
+      const newText = `${icon} ${label} №${i + 1} 🎫${fmtTokens(tokens)}`;
+      if (existingOptions[i].textContent !== newText) {
+        existingOptions[i].textContent = newText;
+      }
+    }
+    // Оновлюємо selected без перебудови
+    if (selectEl.selectedIndex !== currentKeyIndex) {
+      selectEl.selectedIndex = currentKeyIndex;
+    }
+  } else {
+    // Кількість ключів змінилась — повна перебудова
+    let html = "";
+    for (let i = 0; i < geminiApiKeys.length; i++) {
+      const key = geminiApiKeys[i];
+      const provider = getKeyProvider(key);
+      const icon = provider === "groq" ? "⚡" : "💎";
+      const label = provider === "groq" ? "Groq" : "Gemini";
+      const tokens = allTokens[i] ?? 0;
+      const selected = i === currentKeyIndex ? " selected" : "";
+      html += `<option value="${i}"${selected}>${icon} ${label} №${i + 1} 🎫${fmtTokens(tokens)}</option>`;
+    }
+    selectEl.innerHTML = html;
   }
-  selectEl.innerHTML = html;
 
-  // Оновлюємо лічильник токенів для поточного ключа (з кешу)
+  // Завжди оновлюємо лічильник з реальним значенням (включно з 0)
   const cachedTokens = geminiKeyTokens[currentKeyIndex] ?? 0;
-  updateTokenCounter(0, cachedTokens > 0 ? cachedTokens : undefined);
+  updateTokenCounter(0, cachedTokens);
 }
 
 /**
@@ -404,43 +425,23 @@ function updateTokenCounter(requestTokens: number, totalTokens?: number): void {
   const el = document.getElementById("ai-token-counter");
   if (!el) return;
 
-  // Якщо є накопичені токени з БД — показуємо їх
-  if (totalTokens !== undefined && totalTokens > 0) {
-    const fmtTotal =
-      totalTokens >= 1_000_000
-        ? `${(totalTokens / 1_000_000).toFixed(1)}M`
-        : totalTokens >= 1000
-          ? `${(totalTokens / 1000).toFixed(1)}k`
-          : String(totalTokens);
+  // Визначаємо загальну суму: якщо передано — використовуємо, інакше з кешу
+  const total = totalTokens ?? geminiKeyTokens[currentKeyIndex] ?? 0;
+  const fmtTotal = fmtTokens(total);
 
-    if (requestTokens > 0) {
-      const fmtReq =
-        requestTokens >= 1000
-          ? `${(requestTokens / 1000).toFixed(1)}k`
-          : String(requestTokens);
-      el.textContent = `🎫 Σ${fmtTotal} (+${fmtReq})`;
-      el.title = `Всього: ${totalTokens.toLocaleString("uk-UA")} токенів. Останній запит: +${requestTokens.toLocaleString("uk-UA")}`;
-    } else {
-      el.textContent = `🎫 Σ${fmtTotal}`;
-      el.title = `Всього накопичено: ${totalTokens.toLocaleString("uk-UA")} токенів для цього ключа`;
-    }
-  } else if (requestTokens > 0) {
-    const formatted =
-      requestTokens >= 1000
-        ? `${(requestTokens / 1000).toFixed(1)}k`
-        : String(requestTokens);
-    el.textContent = `🎫 ~${formatted}`;
-    el.title = `Останній запит: ~${requestTokens.toLocaleString("uk-UA")} токенів`;
+  if (requestTokens > 0) {
+    const fmtReq = fmtTokens(requestTokens);
+    el.textContent = `🎫 Σ${fmtTotal} (+${fmtReq})`;
+    el.title = `Всього: ${total.toLocaleString("uk-UA")} токенів. Останній запит: +${requestTokens.toLocaleString("uk-UA")}`;
   } else {
-    el.textContent = "🎫 —";
-    return;
+    el.textContent = `🎫 Σ${fmtTotal}`;
+    el.title = `Всього накопичено: ${total.toLocaleString("uk-UA")} токенів для цього ключа`;
   }
 
-  // Колір залежить від кількості (використовуємо total якщо є, інакше request)
-  const colorVal = totalTokens && totalTokens > 0 ? totalTokens : requestTokens;
+  // Колір залежить від кількості
   el.classList.remove("ai-tokens-low", "ai-tokens-mid", "ai-tokens-high");
-  if (colorVal < 100_000) el.classList.add("ai-tokens-low");
-  else if (colorVal < 500_000) el.classList.add("ai-tokens-mid");
+  if (total < 100_000) el.classList.add("ai-tokens-low");
+  else if (total < 500_000) el.classList.add("ai-tokens-mid");
   else el.classList.add("ai-tokens-high");
 }
 
@@ -2746,9 +2747,17 @@ function initAIChatHandlers(modal: HTMLElement): void {
   if (keySelect) {
     keySelect.addEventListener("change", async () => {
       const idx = parseInt(keySelect.value, 10);
-      if (isNaN(idx) || idx === currentKeyIndex) return;
+      if (
+        isNaN(idx) ||
+        idx < 0 ||
+        idx >= geminiApiKeys.length ||
+        idx === currentKeyIndex
+      )
+        return;
       currentKeyIndex = idx;
-      updateKeySelect();
+      // Оновлюємо лише лічильник — select вже показує правильний вибір
+      const cachedTokens = geminiKeyTokens[currentKeyIndex] ?? 0;
+      updateTokenCounter(0, cachedTokens);
       await persistActiveKeyInDB();
       const chosenProvider = getKeyProvider(geminiApiKeys[idx]);
       console.log(`🔑 ${chosenProvider}: вручну обрано ключ №${idx + 1}`);

@@ -843,7 +843,7 @@ async function parseNaturalCommandWithGemini(
   const shopNames = globalCache.shops.map((s) => s.Name).filter(Boolean);
   const today = new Date().toISOString().split("T")[0];
 
-  const systemPrompt = `Ти — голосовий помічник механіка автосервісу "Брацлавець" (Брацлав, Україна).
+  const systemPrompt = `Ти — голосовий помічник механіка автосервісу "A-Service" (A-Service, Україна).
 Механік диктує природною мовою (суржик, жаргон, помилки розпізнавання).
 Твоє завдання: визначити ДІЮ та повернути ТІЛЬКИ чистий JSON.
 

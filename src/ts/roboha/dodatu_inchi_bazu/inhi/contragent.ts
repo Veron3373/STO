@@ -173,7 +173,7 @@ async function showActNumberModal() {
   // Зберігаємо faktura_id для подальшого оновлення
   let targetFakturaId: number | null = null;
 
-  // Завантаження поточного номера з faktura.namber (де name містить "Брацлавець")
+  // Завантаження поточного номера з faktura.namber (де name містить "Атлас")
   try {
     const { data, error } = await supabase
       .from("faktura")

@@ -25,7 +25,11 @@ let getParsedData: (() => any[]) | null = null;
 const COLUMN_KEYWORDS: { keywords: string[]; field: string; label: string }[] =
   [
     { keywords: ["дата", "дату"], field: "date", label: "Дата" },
-    { keywords: ["магазин", "магазину"], field: "shop", label: "Магазин" },
+    {
+      keywords: ["магазин", "магазину", "магащзин", "магазін", "магаз"],
+      field: "shop",
+      label: "Магазин",
+    },
     {
       keywords: ["каталог", "каталог номер", "каталожний", "артикул"],
       field: "catno",
@@ -399,7 +403,7 @@ function processVoiceCommand(transcript: string): void {
 /** Перевірка: команда "додати рядок" (з можливими даними після) */
 function matchAddRow(text: string): { matched: boolean; rest: string } {
   const patterns = [
-    /^(?:додати\s+рядок|новий\s+рядок|додай\s+рядок|додай\s+строку|новий\s+запис)\s*(.*)/i,
+    /^(?:додати\s+(?:рядок|стрічку|стрічка)|новий\s+(?:рядок|стрічку|стрічка)|додай\s+(?:рядок|стрічку|стрічка)|додай\s+строку|новий\s+запис)\s*(.*)/i,
   ];
   for (const p of patterns) {
     const match = text.match(p);
@@ -571,7 +575,7 @@ function matchFieldCommand(
 
   // 1. З номером рядка (цифрою): "рядок 9 ...", "9 ..."
   const rowPatternsDigit = [
-    /^(?:рядок|строка|ряд|номер|№)\s+(\d+)\s+(.+)$/i,
+    /^(?:рядок|стрічка|стрічку|строка|ряд|номер|№)\s+(\d+)\s+(.+)$/i,
     /^(\d+)\s+(.+)$/i,
   ];
 
@@ -600,7 +604,7 @@ function matchFieldCommand(
 
   // 2. З номером рядка (словом): "рядок дев'ять змінити статус на замовлено"
   const rowWordMatch = text.match(
-    /^(?:рядок|строка|ряд|номер|№)\s+(\S+)\s+(.+)$/i,
+    /^(?:рядок|стрічка|стрічку|строка|ряд|номер|№)\s+(\S+)\s+(.+)$/i,
   );
   if (rowWordMatch) {
     const wordNum = wordToRowNumber(rowWordMatch[1]);

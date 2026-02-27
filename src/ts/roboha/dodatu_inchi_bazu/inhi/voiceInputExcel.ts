@@ -561,26 +561,26 @@ function matchFieldCommand(
 ): { rowIndex: number; field: string; value: string } | null {
   // Патерни:
   // "рядок 2 деталь фільтр масла"
+  // "рядок дев'ять змінити статус на замовлено"
   // "3 ціна 500"
   // "дата 25.02.2026"
   // "магазин Автозапчастини"
-  // "статус замовлено"
 
   const data = getParsedData ? getParsedData() : [];
   const lastRowIndex = data.length > 0 ? data.length - 1 : 0;
 
-  // Спочатку з номером рядка
-  const rowPatterns = [
+  // 1. З номером рядка (цифрою): "рядок 9 ...", "9 ..."
+  const rowPatternsDigit = [
     /^(?:рядок|строка|ряд|номер|№)\s+(\d+)\s+(.+)$/i,
     /^(\d+)\s+(.+)$/i,
   ];
 
-  for (const pattern of rowPatterns) {
+  for (const pattern of rowPatternsDigit) {
     const match = text.match(pattern);
     if (match) {
       const rowNum = parseInt(match[1], 10);
       const rest = match[2].trim();
-      const rowIndex = rowNum - 1; // 0-based
+      const rowIndex = rowNum - 1;
 
       if (rowIndex < 0 || rowIndex >= data.length) {
         showNotification(
@@ -598,7 +598,37 @@ function matchFieldCommand(
     }
   }
 
-  // Без номера рядка — останній рядок
+  // 2. З номером рядка (словом): "рядок дев'ять змінити статус на замовлено"
+  const rowWordMatch = text.match(
+    /^(?:рядок|строка|ряд|номер|№)\s+(\S+)\s+(.+)$/i,
+  );
+  if (rowWordMatch) {
+    const wordNum = wordToRowNumber(rowWordMatch[1]);
+    if (wordNum > 0) {
+      const rest = rowWordMatch[2].trim();
+      const rowIndex = wordNum - 1;
+
+      if (rowIndex >= data.length) {
+        showNotification(
+          `Рядок ${wordNum} не існує (всього ${data.length})`,
+          "error",
+          2000,
+        );
+        return null;
+      }
+
+      const parsed = parseColumnAndValue(
+        rest,
+        originalTranscript,
+        rowWordMatch[2],
+      );
+      if (parsed) {
+        return { rowIndex, field: parsed.field, value: parsed.value };
+      }
+    }
+  }
+
+  // 3. Без номера рядка — останній рядок
   const parsed = parseColumnAndValue(
     text,
     originalTranscript,
@@ -611,6 +641,68 @@ function matchFieldCommand(
   return null;
 }
 
+/**
+ * Конвертація слова-числа в номер рядка (1-99)
+ * "дев'ять" → 9, "двадцять" → 20
+ */
+function wordToRowNumber(word: string): number {
+  const w = word.toLowerCase().replace(/['’]/g, "'");
+  const map: Record<string, number> = {
+    один: 1,
+    одна: 1,
+    перший: 1,
+    перша: 1,
+    два: 2,
+    дві: 2,
+    другий: 2,
+    друга: 2,
+    три: 3,
+    третій: 3,
+    третя: 3,
+    чотири: 4,
+    четвертий: 4,
+    "p'ять": 5,
+    "п'ять": 5,
+    пять: 5,
+    "п'ятий": 5,
+    пятий: 5,
+    шість: 6,
+    шостий: 6,
+    сім: 7,
+    сьомий: 7,
+    вісім: 8,
+    восьмий: 8,
+    "дев'ять": 9,
+    девять: 9,
+    "дев'ятий": 9,
+    девятий: 9,
+    десять: 10,
+    десятий: 10,
+    одинадцять: 11,
+    дванадцять: 12,
+    тринадцять: 13,
+    чотирнадцять: 14,
+    "п'ятнадцять": 15,
+    пятнадцять: 15,
+    шістнадцять: 16,
+    сімнадцять: 17,
+    вісімнадцять: 18,
+    "дев'ятнадцять": 19,
+    девятнадцять: 19,
+    двадцять: 20,
+    тридцять: 30,
+    сорок: 40,
+    "п'ятдесят": 50,
+    пятдесят: 50,
+  };
+  // Якщо цифра
+  const num = parseInt(w, 10);
+  if (!isNaN(num) && num > 0) return num;
+  // Якщо слово
+  if (map[w] !== undefined) return map[w];
+  return 0;
+}
+
 /** Парсинг «колонка значення» з тексту */
 function parseColumnAndValue(
   text: string,
@@ -619,6 +711,48 @@ function parseColumnAndValue(
 ): { field: string; value: string } | null {
   const normalized = text.toLowerCase().trim();
 
+  // === Патерн: "змінити/поставити/встановити [колонка] на [значення]" ===
+  const changeMatch = normalized.match(
+    /^(?:змінити|поставити|встановити|зміни|постав)\s+(.+?)\s+на\s+(.+)$/i,
+  );
+  if (changeMatch) {
+    const colText = changeMatch[1].trim();
+    const valueText = changeMatch[2].trim();
+    const col = findColumnByKeyword(colText);
+    if (col) {
+      // Маппінг для статусу/дії
+      if (col === "orderStatus") {
+        const mapped = mapStatusValue(valueText, "");
+        if (mapped) return { field: col, value: mapped };
+      }
+      if (col === "action") {
+        const mapped = mapActionValue(valueText, "");
+        if (mapped) return { field: col, value: mapped };
+      }
+      return { field: col, value: valueText };
+    }
+  }
+
+  // === Патерн: "[колонка] на [значення]" (без "змінити") ===
+  const simpleChangeMatch = normalized.match(/^(.+?)\s+на\s+(.+)$/i);
+  if (simpleChangeMatch) {
+    const colText = simpleChangeMatch[1].trim();
+    const valueText = simpleChangeMatch[2].trim();
+    const col = findColumnByKeyword(colText);
+    if (col) {
+      if (col === "orderStatus") {
+        const mapped = mapStatusValue(valueText, "");
+        if (mapped) return { field: col, value: mapped };
+      }
+      if (col === "action") {
+        const mapped = mapActionValue(valueText, "");
+        if (mapped) return { field: col, value: mapped };
+      }
+      return { field: col, value: valueText };
+    }
+  }
+
+  // === Стандартний патерн: "[колонка] [значення]" ===
   // Довші ключові слова першими
   const sorted = [...COLUMN_KEYWORDS].sort(
     (a, b) =>

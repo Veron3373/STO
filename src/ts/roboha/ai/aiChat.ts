@@ -248,25 +248,30 @@ async function resetAllTokens(): Promise<void> {
 }
 
 /**
- * Перевіряє чи минула доба з останнього скидання токенів
- * Якщо так — автоматично скидає (токени API обнуляються щодня)
+ * Перевіряє чи настав новий календарний день з останнього скидання токенів
+ * Якщо так — автоматично скидає всі токени в 0 та перезаписує БД
  */
 async function checkAndResetTokensDaily(): Promise<void> {
+  const toDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const now = new Date();
+  const todayStr = toDateStr(now);
+
   const lastReset = localStorage.getItem("aiTokensLastReset");
   if (!lastReset) {
-    // Перший запуск — встановлюємо дату
-    localStorage.setItem("aiTokensLastReset", new Date().toISOString());
+    // Перший запуск — записуємо поточний день
+    localStorage.setItem("aiTokensLastReset", now.toISOString());
     return;
   }
 
-  const lastResetDate = new Date(lastReset);
-  const now = new Date();
-  const hoursSinceReset =
-    (now.getTime() - lastResetDate.getTime()) / (1000 * 60 * 60);
+  const lastResetDateStr = toDateStr(new Date(lastReset));
 
-  // Якщо минуло більше 24 годин — скидаємо автоматично
-  if (hoursSinceReset >= 24) {
-    console.log("🔄 Автоматичне скидання токенів (минула доба)");
+  // Якщо дата змінилася (новий день) — скидаємо всі токени в 0
+  if (lastResetDateStr !== todayStr) {
+    console.log(
+      `🔄 Новий день (${lastResetDateStr} → ${todayStr}): автоматичне скидання токенів`,
+    );
     await resetAllTokens();
   }
 }

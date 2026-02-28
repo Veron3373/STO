@@ -3216,7 +3216,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
       if (toggleLabel)
         toggleLabel.setAttribute(
           "title",
-          lockKey ? "Вимкнути перебір ключів" : "Увімкнути перебір ключів",
+          lockKey ?"Увімкнути перебір ключів":"Вимкнути перебір ключів" ,
         );
     });
   }

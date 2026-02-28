@@ -1316,12 +1316,13 @@
   // ─── Actions ───────────────────────────────────────────────
   .ai-pro-keys-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 10px;
     padding-top: 1rem;
     border-top: 1px solid rgba(102, 126, 234, 0.12);
 
     button {
+      flex: 1;
       padding: 7px 18px;
       border: none;
       border-radius: 8px;

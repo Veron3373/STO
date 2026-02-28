@@ -3136,14 +3136,14 @@ function parseClientDataFromAI(text: string): ParsedClientData {
   result.fuel = extractField(text, [
     /(?:пальне|паливо|тип\s*(?:пального|палива))\s*[:：—–-]\s*(.+)/im,
   ]);
-  // Авто-визначення з контексту
+  // Нормалізуємо пальне через normalizeFuel — якщо не впізнано, буде ""
+  if (result.fuel) {
+    result.fuel = normalizeFuel(result.fuel) || undefined;
+  }
+  // Авто-визначення з контексту (весь текст) — тільки якщо парсер не знайшов
   if (!result.fuel) {
-    const t = text.toLowerCase();
-    if (/\bдизел/i.test(t)) result.fuel = "Дизель";
-    else if (/\bбензин/i.test(t)) result.fuel = "Бензин";
-    else if (/\bгаз/i.test(t)) result.fuel = "Газ";
-    else if (/\bелектр/i.test(t)) result.fuel = "Електро";
-    else if (/\bгібрид/i.test(t)) result.fuel = "Гібрид";
+    const detected = normalizeFuel(text);
+    if (detected) result.fuel = detected;
   }
 
   // ── Код ДВЗ ──
@@ -3164,6 +3164,41 @@ function parseClientDataFromAI(text: string): ParsedClientData {
   return result;
 }
 
+/**
+ * Нормалізує пальне з техпаспорта.
+ * Шукає знайомі ключові слова; якщо нічого не впізнається — повертає "" (не заповнювати).
+ * Пріоритет: газ/гбо → дизель → бензин → електро → гібрид.
+ * "Бензин або газ" → "Газ" (ГБО встановлено).
+ */
+function normalizeFuel(raw: string): string {
+  const s = raw.trim().toLowerCase();
+  if (!s) return "";
+
+  // Газ / ГБО (перевіряємо першим — "Бензин або газ" = ГБО)
+  if (/гбо|\bгаз\b/i.test(s)) return "Газ";
+  // Дизель / ДТ
+  if (/дизел|\bдт\b/i.test(s)) return "Дизель";
+  // Бензин / бенз
+  if (/бензин|бенз/i.test(s)) return "Бензин";
+  // Електро / EV
+  if (/електр|\bev\b/i.test(s)) return "Електро";
+  // Гібрид / hybrid
+  if (/гібрид|hybrid/i.test(s)) return "Гібрид";
+
+  // Одиночні літери (кирилиця / латиниця)
+  // "Б" або латинське "B" → Бензин
+  if (/^[бb]$/i.test(s)) return "Бензин";
+  // "Д" або латинське "D" → Дизель
+  if (/^[дd]$/i.test(s)) return "Дизель";
+  // "Г" → Газ
+  if (/^г$/i.test(s)) return "Газ";
+  // "Е" → Електро
+  if (/^е$/i.test(s)) return "Електро";
+
+  // Нічого не впізнано — НЕ заповнювати
+  return "";
+}
+
 /** Програмно розблокувати замок форми */
 function unlockFormButton(): void {
   const btn = document.getElementById(
@@ -3181,10 +3216,13 @@ function fillCarFieldsFromParsed(parsed: ParsedClientData): void {
   const setVal = (id: string, val: string | undefined) => {
     if (!val) return;
     const el = document.getElementById(id) as HTMLInputElement | null;
-    if (el) el.value = val;
+    if (el) {
+      // Знімаємо readonly якщо є (поля Рік, Obj'єм тощо)
+      el.removeAttribute("readonly");
+      el.value = val;
+    }
   };
   setVal("car-number-input-create-sakaz_narad", parsed.carNumber);
-  setVal("car-vin-create-sakaz_narad", parsed.vin);
   setVal("car-year-create-sakaz_narad", parsed.year);
   setVal("car-engine-create-sakaz_narad", parsed.engine);
   setVal("car-code-create-sakaz_narad", parsed.engineCode);
@@ -3194,8 +3232,13 @@ function fillCarFieldsFromParsed(parsed: ParsedClientData): void {
       | HTMLSelectElement
       | HTMLInputElement
       | null;
-    if (fuelEl) fuelEl.value = parsed.fuel;
+    if (fuelEl) {
+      fuelEl.removeAttribute("readonly");
+      fuelEl.value = parsed.fuel;
+    }
   }
+  // VIN — останнім серед полів (перед Автомобілем)
+  setVal("car-vin-create-sakaz_narad", parsed.vin);
 }
 
 /** Визначає що вводити в поле Автомобіль: Модель → Марка → Авто */

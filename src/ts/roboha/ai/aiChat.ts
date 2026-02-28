@@ -424,39 +424,6 @@ function updateKeySelect(): void {
     selectEl.innerHTML = html;
   }
 
-  // Додаємо логіку скролу: при фокусі size=10, при Blur / Change size=1 (якщо більше 10 ключів)
-  if (geminiApiKeys.length > 10) {
-    // Встановлюємо подію лише раз
-    if (!selectEl.hasAttribute("data-scroll-init")) {
-      selectEl.setAttribute("data-scroll-init", "true");
-
-      const shrinkSelect = () => {
-        selectEl.size = 1;
-        selectEl.style.position = "";
-        selectEl.style.zIndex = "";
-      };
-
-      const expandSelect = () => {
-        selectEl.size = Math.min(10, geminiApiKeys.length);
-        // Фіксуємо поверх інших елементів щоб не розсувало верстку
-        selectEl.style.position = "absolute";
-        selectEl.style.zIndex = "1000";
-      };
-
-      selectEl.addEventListener("focus", expandSelect);
-      selectEl.addEventListener("blur", shrinkSelect);
-      selectEl.addEventListener("change", () => {
-        shrinkSelect();
-        selectEl.blur();
-      });
-    }
-  } else {
-    selectEl.size = 1;
-    selectEl.style.position = "";
-    selectEl.style.zIndex = "";
-    selectEl.removeAttribute("data-scroll-init");
-  }
-
   // Завжди оновлюємо лічильник з реальним значенням (включно з 0)
   const cachedTokens = geminiKeyTokens[currentKeyIndex] ?? 0;
   updateTokenCounter(0, cachedTokens);

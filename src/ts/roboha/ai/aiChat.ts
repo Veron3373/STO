@@ -3226,7 +3226,7 @@ export async function createAIChatModal(): Promise<void> {
           <textarea
             id="ai-chat-input"
             class="ai-chat-input"
-            placeholder="Запитай... (Ctrl+V — скріншот, 📎 — фото)"
+            placeholder="Запитай... (Ctrl+V скріншот, фото)"
             rows="1"
           ></textarea>
           <button id="ai-chat-send-btn" class="ai-chat-send-btn" title="Відправити">

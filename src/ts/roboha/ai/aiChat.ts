@@ -3017,6 +3017,7 @@ interface ParsedClientData {
   fuel?: string; // Тип пального
   engineCode?: string; // Код ДВЗ
   source?: string; // Джерело
+  address?: string; // Адреса
   extra?: string; // Додатково
 }
 
@@ -3167,6 +3168,11 @@ function parseClientDataFromAI(text: string): ParsedClientData {
     /(?:джерело|звідки|рекомендація)\s*[:：—–-]\s*(.+)/im,
   ]);
 
+  // ── Адреса ──
+  result.address = extractField(text, [
+    /(?:адреса|місце\s*проживання|місце\s*реєстрації)\s*[:：—–-]\s*(.+)/im,
+  ]);
+
   // ── Додатково ──
   result.extra = extractField(text, [
     /(?:додаткова?\s*(?:інформація|дані)?|примітка|коментар)\s*[:：—–-]\s*(.+)/im,
@@ -3308,8 +3314,26 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
     }
   }
 
+  // Хелпер: переключити кнопку confirm-toggle
+  const setConfirmToggle = (mode: "new" | "existing") => {
+    const btn = document.getElementById(
+      "confirm-toggle",
+    ) as HTMLButtonElement | null;
+    if (!btn) return;
+    if (mode === "new") {
+      btn.textContent = "➕";
+      btn.className = "confirm-button yes";
+      btn.title = "Підтвердити";
+    } else {
+      btn.textContent = "🔁";
+      btn.className = "confirm-button";
+      btn.title = "Очікування підтвердження";
+    }
+  };
+
   if (foundClient) {
     // ── 2. Клієнт знайдений — підтягуємо дані клієнта ──
+    setConfirmToggle("existing");
     setSelectedIds(foundClient.client_id, null);
     await fillClientInfo(foundClient.client_id);
 
@@ -3360,6 +3384,7 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
     }
   } else {
     // ── Сценарій 3: Клієнта НЕМАЄ → розблокуємо, вводимо все з AI ──
+    setConfirmToggle("new");
     unlockFormButton();
 
     // Заповнюємо ПІБ
@@ -3386,12 +3411,20 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
       if (sourceEl) sourceEl.value = parsed.source;
     }
 
-    // Заповнюємо Додатково
-    if (parsed.extra) {
-      const extraEl = document.getElementById(
-        "extra-create-sakaz_narad",
-      ) as HTMLInputElement | null;
-      if (extraEl) extraEl.value = parsed.extra;
+    // Заповнюємо Додатково (адреса + додатково)
+    {
+      const parts: string[] = [];
+      if (parsed.address) parts.push(parsed.address);
+      if (parsed.extra) parts.push(parsed.extra);
+      if (parts.length > 0) {
+        const extraEl = document.getElementById(
+          "extra-create-sakaz_narad",
+        ) as HTMLInputElement | null;
+        if (extraEl) {
+          extraEl.removeAttribute("readonly");
+          extraEl.value = parts.join("; ");
+        }
+      }
     }
 
     // ОСТАННІМ — Автомобіль з фокусом для автокомплітера

@@ -74,9 +74,9 @@ export async function hideSlusarNotificationsForAct(
       // Ігноруємо 404 - таблиця просто не опублікована в REST API
       // Це не критично, тому що ця таблиця опціональна
       if (error.code !== "PGRST116") {
-        console.debug(
-          "ℹ️ [SlusarNotification] Таблиця slusar_complete_notifications недоступна (не опублікована)",
-        );
+        // console.debug(
+          // "ℹ️ [SlusarNotification] Таблиця slusar_complete_notifications недоступна (не опублікована)",
+        // );
       }
       return;
     }

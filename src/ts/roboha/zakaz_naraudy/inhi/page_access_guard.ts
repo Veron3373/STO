@@ -45,7 +45,7 @@ function getCurrentPageName(): string | null {
  */
 export async function checkCurrentPageAccess(): Promise<boolean> {
   const pageName = getCurrentPageName();
-  
+
   // Якщо це не захищена сторінка - дозволяємо
   if (!pageName || !PAGE_ACCESS_SETTINGS[pageName]) {
     return true;
@@ -72,11 +72,11 @@ export async function checkCurrentPageAccess(): Promise<boolean> {
   // Перевіряємо в БД
   try {
     const roleColumn = userAccessLevel; // "Приймальник", "Слюсар", "Запчастист", "Складовщик"
-    
+
     if (!roleColumn) {
       return true;
     }
-    
+
     const { data, error } = await supabase
       .from("settings")
       .select(`setting_id, "${roleColumn}"`)
@@ -84,16 +84,16 @@ export async function checkCurrentPageAccess(): Promise<boolean> {
       .single();
 
     if (error) {
-      console.error("❌ Помилка перевірки доступу:", error);
+      // console.error("❌ Помилка перевірки доступу:", error);
       return true; // На всяк випадок дозволяємо
     }
 
-    const hasAccess = data && roleColumn in data ? !!(data as any)[roleColumn] : false;
-    
+    const hasAccess =
+      data && roleColumn in data ? !!(data as any)[roleColumn] : false;
 
     return hasAccess;
   } catch (err) {
-    console.error("❌ Критична помилка перевірки:", err);
+    // console.error("❌ Критична помилка перевірки:", err);
     return true; // Безпечно дозволяємо
   }
 }
@@ -103,13 +103,14 @@ export async function checkCurrentPageAccess(): Promise<boolean> {
  */
 export async function enforcePageAccess(): Promise<void> {
   const hasAccess = await checkCurrentPageAccess();
-  
+
   if (!hasAccess) {
-    const pageName = getCurrentPageName();
-    console.warn(`⛔ Доступ до ${pageName} для ${userAccessLevel} заборонено адміністратором`);
-    
-    alert(`⚠️ Адміністратор обмежив ваш доступ до цієї сторінки.\nВи будете перенаправлені на головну.`);
-    
+    // console.warn(`⛔ Доступ заборонено адміністратором`);
+
+    alert(
+      `⚠️ Адміністратор обмежив ваш доступ до цієї сторінки.\nВи будете перенаправлені на головну.`,
+    );
+
     // Редирект на main.html
     window.location.replace("main.html");
   }

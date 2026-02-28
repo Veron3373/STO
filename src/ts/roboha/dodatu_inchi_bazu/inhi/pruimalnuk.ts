@@ -264,7 +264,7 @@ const loadDatabaseData = async (buttonText: string) => {
       config.needsJsonParsing
     );
   } catch (err) {
-    console.error(`Помилка завантаження з ${buttonText}`, err);
+    // console.error(`Помилка завантаження з ${buttonText}`, err);
   }
 };
 

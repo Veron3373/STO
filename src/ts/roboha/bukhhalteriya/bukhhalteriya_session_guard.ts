@@ -17,12 +17,12 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
       .single();
     if (error?.code === "PGRST116") return false;
     if (error) {
-      console.error("❌ Помилка whitelist:", error);
+      // console.error("❌ Помилка whitelist:", error);
       return false;
     }
     return !!data;
   } catch (err) {
-    console.error("❌ Виняток whitelist:", err);
+    // console.error("❌ Виняток whitelist:", err);
     return false;
   }
 }
@@ -35,7 +35,7 @@ async function checkGoogleSession() {
     } = await supabase.auth.getSession();
 
     if (error || !session) {
-      console.warn("⛔ [Бухгалтерія] Немає Google сесії");
+      // console.warn("⛔ [Бухгалтерія] Немає Google сесії");
       const indexUrl = await getGitUrl("index.html");
       window.location.replace(indexUrl);
       return;
@@ -45,7 +45,7 @@ async function checkGoogleSession() {
     const allowed = await isEmailAllowed(email);
 
     if (!allowed) {
-      console.warn("⛔ [Бухгалтерія] Email не в whitelist:", email);
+      // console.warn("⛔ [Бухгалтерія] Email не в whitelist:", email);
       await supabase.auth.signOut();
       const indexUrl = await getGitUrl("index.html");
       window.location.replace(indexUrl);
@@ -58,7 +58,7 @@ async function checkGoogleSession() {
     
     // Дозволяємо завантаження сторінки - модалка пароля покаже users.ts
   } catch (err) {
-    console.error("❌ [Бухгалтерія] Помилка перевірки:", err);
+    // console.error("❌ [Бухгалтерія] Помилка перевірки:", err);
     const fallbackUrl = await getFallbackUrl("index.html");
     window.location.replace(fallbackUrl);
   }

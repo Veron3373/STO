@@ -56,7 +56,7 @@ export async function sendActClosedSMS(
         .eq("act_id", actId);
 
       if (updateError) {
-        console.error("❌ Помилка оновлення поля sms:", updateError);
+        // console.error("❌ Помилка оновлення поля sms:", updateError);
         showNotification(
           "SMS відправлено, але не вдалося оновити дату в БД",
           "warning",
@@ -72,7 +72,7 @@ export async function sendActClosedSMS(
       return false;
     }
   } catch (error: any) {
-    console.error("💥 Критична помилка при відправці SMS:", error);
+    // console.error("💥 Критична помилка при відправці SMS:", error);
     showNotification(`❌ Критична помилка SMS: ${error.message}`, "error", 4000);
     return false;
   }
@@ -92,7 +92,7 @@ export async function handleSmsButtonClick(actId: number): Promise<void> {
       .single();
 
     if (settingError) {
-      console.error("Помилка перевірки налаштувань:", settingError);
+      // console.error("Помилка перевірки налаштувань:", settingError);
       showNotification("Помилка перевірки налаштувань SMS", "error");
       return;
     }
@@ -180,7 +180,7 @@ export async function handleSmsButtonClick(actId: number): Promise<void> {
         .eq("act_id", actId);
 
       if (updateError) {
-        console.error("Помилка оновлення статусу SMS:", updateError);
+        // console.error("Помилка оновлення статусу SMS:", updateError);
       }
 
       showNotification(`✅ SMS успішно відправлено!`, "success", 3000);
@@ -210,7 +210,7 @@ export async function handleSmsButtonClick(actId: number): Promise<void> {
     }
 
   } catch (error: any) {
-    console.error("Помилка handleSmsButtonClick:", error);
+    // console.error("Помилка handleSmsButtonClick:", error);
     showNotification("Критична помилка при відправці SMS", "error");
   }
 }

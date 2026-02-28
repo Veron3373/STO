@@ -18,12 +18,12 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
       .single();
     if (error?.code === "PGRST116") return false;
     if (error) {
-      console.error("❌ Помилка whitelist:", error);
+      // console.error("❌ Помилка whitelist:", error);
       return false;
     }
     return !!data;
   } catch (err) {
-    console.error("❌ Виняток whitelist:", err);
+    // console.error("❌ Виняток whitelist:", err);
     return false;
   }
 }
@@ -36,7 +36,7 @@ async function checkAuthOnPageLoad(): Promise<void> {
   } = await supabase.auth.getSession();
 
   if (error || !session) {
-    console.warn("⛔ Доступ заблоковано. Немає сесії.");
+    // console.warn("⛔ Доступ заблоковано. Немає сесії.");
     const mainUrl = await getGitUrl("main.html");
     window.location.replace(mainUrl);
     return;
@@ -45,7 +45,7 @@ async function checkAuthOnPageLoad(): Promise<void> {
   // ✅ Перевірка email в whitelist
   const allowed = await isEmailAllowed(session.user.email);
   if (!allowed) {
-    console.warn("⛔ Email не в whitelist:", session.user.email);
+    // console.warn("⛔ Email не в whitelist:", session.user.email);
     await supabase.auth.signOut();
     const baseUrl = await getGitUrl();
     window.location.replace(baseUrl);

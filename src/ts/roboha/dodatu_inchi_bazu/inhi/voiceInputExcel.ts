@@ -255,8 +255,8 @@ function startVoiceExcel(): void {
     recognition = null;
 
     if (result.trim()) {
-      processVoiceCommand(result.trim()).catch((err) => {
-        console.error("Voice command error:", err);
+      processVoiceCommand(result.trim()).catch((_err) => {
+        // console.error("Voice command error:", _err);
         showNotification("❌ Помилка обробки команди", "error", 2000);
       });
     } else {
@@ -440,9 +440,10 @@ async function parseNaturalExcelCommandWithGemini(
   // Динамічні дані з кешу
   const shopNames = globalCache.shops.map((s) => s.Name).filter(Boolean);
   const detailNames = globalCache.details.slice(0, 150);
-  const shopsLine = shopNames.length > 0
-    ? shopNames.join(", ")
-    : "Автотехнікс, АвтоЗІП, Еліт, Інтеркарс, Омега, Лоял, Форнетті";
+  const shopsLine =
+    shopNames.length > 0
+      ? shopNames.join(", ")
+      : "Автотехнікс, АвтоЗІП, Еліт, Інтеркарс, Омега, Лоял, Форнетті";
   const today = new Date().toISOString().split("T")[0];
 
   const systemPrompt = `Ти — інтелектуальний голосовий парсер для автосервісу "Атлас" (Атлас, Україна).
@@ -515,9 +516,7 @@ ${detailNames.slice(0, 80).join(", ")}
 {"action":"ADD","rowIndex":null,"fields":{"shop":"Еліт","detail":"Сальник клапана","qty":24,"price":131}}`;
 
   const requestBody = JSON.stringify({
-    contents: [
-      { role: "user", parts: [{ text: `Команда: "${transcript}"` }] },
-    ],
+    contents: [{ role: "user", parts: [{ text: `Команда: "${transcript}"` }] }],
     systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.1,
@@ -552,8 +551,11 @@ ${detailNames.slice(0, 80).join(", ")}
         if (jsonMatch) {
           try {
             const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed.action && parsed.fields) return parsed as ParsedExcelCommand;
-          } catch { /* fallthrough */ }
+            if (parsed.action && parsed.fields)
+              return parsed as ParsedExcelCommand;
+          } catch {
+            /* fallthrough */
+          }
         }
         return null;
       }
@@ -582,7 +584,11 @@ function executeExcelCommand(result: ParsedExcelCommand): void {
     const rowNum = result.rowIndex ?? data.length;
     const delIndex = rowNum - 1;
     if (delIndex < 0 || delIndex >= data.length) {
-      showNotification(`Рядок ${rowNum} не існує (всього ${data.length})`, "error", 2000);
+      showNotification(
+        `Рядок ${rowNum} не існує (всього ${data.length})`,
+        "error",
+        2000,
+      );
       return;
     }
     const tbody = document.querySelector("#batch-table-Excel tbody");
@@ -590,7 +596,9 @@ function executeExcelCommand(result: ParsedExcelCommand): void {
     const tr = tbody.querySelectorAll("tr")[delIndex];
     if (tr) {
       // Спроба натиснути кнопку видалення
-      const delBtn = tr.querySelector(".delete-row-btn, .remove-row-btn, [data-action='delete']") as HTMLElement;
+      const delBtn = tr.querySelector(
+        ".delete-row-btn, .remove-row-btn, [data-action='delete']",
+      ) as HTMLElement;
       if (delBtn) {
         delBtn.click();
       } else {
@@ -731,12 +739,16 @@ async function processVoiceCommand(transcript: string): Promise<void> {
   showNotification(`🧠 Аналізую: "${transcript}"`, "info", 2500);
   try {
     const geminiResult = await parseNaturalExcelCommandWithGemini(transcript);
-    if (geminiResult && geminiResult.fields && Object.keys(geminiResult.fields).length > 0) {
+    if (
+      geminiResult &&
+      geminiResult.fields &&
+      Object.keys(geminiResult.fields).length > 0
+    ) {
       executeExcelCommand(geminiResult);
       return;
     }
   } catch (err) {
-    console.warn("🎙️ Gemini Excel parse failed:", err);
+    // console.warn("🎙️ Gemini Excel parse failed:", err);
   }
 
   showNotification(

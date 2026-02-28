@@ -65,7 +65,7 @@ export async function loadWarehousePercents(): Promise<void> {
     }
     warehousePercentsCacheLoaded = true;
   } catch (err) {
-    console.error("Помилка завантаження відсотків складів:", err);
+    // console.error("Помилка завантаження відсотків складів:", err);
   }
 }
 
@@ -1704,8 +1704,8 @@ async function applyCatalogSelectionById(
   const typeFromCell = nameCell?.getAttribute("data-type");
 
   if (typeFromCell === "works") {
-    calculateRowSum(row).catch((err) => {
-      console.error("Помилка при розрахунку суми після вибору каталогу:", err);
+    calculateRowSum(row).catch((_err) => {
+      // console.error("Помилка при розрахунку суми після вибору каталогу:", _err);
     });
   } else {
     recalcRowSum(row);

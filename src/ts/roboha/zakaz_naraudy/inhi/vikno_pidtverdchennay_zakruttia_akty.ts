@@ -67,9 +67,9 @@ export function checkForWarnings(): boolean {
     slyusarSumWarnings.length === 0;
 
   if (!pomulka) {
-    console.warn(
-      `Знайдено попередження: кількість=${qtyWarnings.length}, ціна=${priceWarnings.length}, зарплата=${slyusarSumWarnings.length}`
-    );
+    // console.warn(
+      // `Знайдено попередження: кількість=${qtyWarnings.length}, ціна=${priceWarnings.length}, зарплата=${slyusarSumWarnings.length}`
+    // );
   }
 
   return pomulka;
@@ -124,7 +124,7 @@ export function showViknoPidtverdchennayZakruttiaAkty(
     ) as HTMLButtonElement | null;
 
     if (!confirmBtn || !cancelBtn) {
-      console.error("Кнопки підтвердження/скасування не знайдені");
+      // console.error("Кнопки підтвердження/скасування не знайдені");
       modal.style.display = "none";
       return resolve(false);
     }
@@ -167,10 +167,10 @@ export function showViknoPidtverdchennayZakruttiaAkty(
           .eq("act_id", actId);
 
         if (updatePaymentError) {
-          console.error(
-            "❌ Помилка збереження типу оплати:",
-            updatePaymentError
-          );
+          // console.error(
+            // "❌ Помилка збереження типу оплати:",
+            // updatePaymentError
+          // );
         } else {
         }
 
@@ -187,7 +187,7 @@ export function showViknoPidtverdchennayZakruttiaAkty(
 
         resolve(true);
       } catch (e: any) {
-        console.error(e);
+        // console.error(e);
         showNotification(
           "Помилка при закритті акту: " + (e?.message || e),
           "error",

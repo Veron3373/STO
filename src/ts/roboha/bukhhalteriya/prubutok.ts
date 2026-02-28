@@ -214,7 +214,7 @@ function getKyivDate(iso: string | null): string | null {
             timeZone: "Europe/Kyiv",
         });
     } catch (error) {
-        console.error("❌ Помилка конвертації дати:", error);
+        // console.error("❌ Помилка конвертації дати:", error);
         return null;
     }
 }
@@ -238,7 +238,7 @@ export function formatDateKyiv(iso?: string | null): string {
             .format(date)
             .replace(", ", " / ");
     } catch (e) {
-        console.error("❌ Помилка форматування дати:", e);
+        // console.error("❌ Помилка форматування дати:", e);
         return "N/A";
     }
 }
@@ -429,7 +429,7 @@ async function loadReceipterSalaries(): Promise<void> {
             .select("*");
 
         if (error) {
-            console.error("❌ Помилка завантаження slyusars:", error);
+            // console.error("❌ Помилка завантаження slyusars:", error);
             return;
         }
 
@@ -495,7 +495,7 @@ async function loadReceipterSalaries(): Promise<void> {
             }
         }
     } catch (err: any) {
-        console.error("❌ Помилка завантаження зарплат приймальника:", err);
+        // console.error("❌ Помилка завантаження зарплат приймальника:", err);
     }
 }
 
@@ -554,7 +554,7 @@ async function getClientData(clientId: number): Promise<string> {
             .single();
 
         if (error || !data) {
-            console.warn(`⚠️ Клієнт ${clientId} не знайдено`);
+            // console.warn(`⚠️ Клієнт ${clientId} не знайдено`);
             return "-";
         }
 
@@ -583,7 +583,7 @@ async function getClientData(clientId: number): Promise<string> {
 
         return result;
     } catch (error) {
-        console.error(`❌ Помилка завантаження клієнта ${clientId}:`, error);
+        // console.error(`❌ Помилка завантаження клієнта ${clientId}:`, error);
         return "-";
     }
 }
@@ -597,7 +597,7 @@ async function getCarData(carId: number): Promise<string> {
             .single();
 
         if (error || !data) {
-            console.warn(`⚠️ Авто ${carId} не знайдено`);
+            // console.warn(`⚠️ Авто ${carId} не знайдено`);
             return "-";
         }
 
@@ -624,7 +624,7 @@ async function getCarData(carId: number): Promise<string> {
 
         return `🚗 ${car}\n🔢 ${plate}${engineInfo}${fuelInfo}`;
     } catch (error) {
-        console.error(`❌ Помилка завантаження авто ${carId}:`, error);
+        // console.error(`❌ Помилка завантаження авто ${carId}:`, error);
         return "-";
     }
 }
@@ -704,7 +704,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const { data: vutratuDataRaw, error: vutratuError } = await queryVutratu;
 
         if (vutratuError) {
-            console.error("❌ Помилка завантаження витрат:", vutratuError);
+            // console.error("❌ Помилка завантаження витрат:", vutratuError);
             throw new Error(`Помилка завантаження: ${vutratuError.message}`);
         }
 
@@ -736,7 +736,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
         const { data: actsDataRaw, error: actsError } = await queryActs;
 
         if (actsError) {
-            console.error("❌ Помилка завантаження актів:", actsError);
+            // console.error("❌ Помилка завантаження актів:", actsError);
             throw new Error(`Помилка завантаження актів: ${actsError.message}`);
         }
 
@@ -777,9 +777,9 @@ async function loadvutratuFromDatabase(): Promise<void> {
                     try {
                         actData = JSON.parse(actItem.data);
                     } catch (e) {
-                        console.warn(
-                            `⚠️ Не вдалося розпарсити data для акту ${actItem.act_id}`,
-                        );
+                        // console.warn(
+                            // `⚠️ Не вдалося розпарсити data для акту ${actItem.act_id}`,
+                        // );
                     }
                 } else if (typeof actItem.data === "object" && actItem.data !== null) {
                     actData = actItem.data;
@@ -862,7 +862,7 @@ async function loadvutratuFromDatabase(): Promise<void> {
         filteredvutratuData = [...vutratuData];
         updatevutratuTable();
     } catch (error) {
-        console.error("❌ Помилка завантаження даних:", error);
+        // console.error("❌ Помилка завантаження даних:", error);
         showNotification(
             "⚠️ Не вдалося завантажити дані з бази даних",
             "error",
@@ -900,7 +900,7 @@ async function saveExpenseToDatabase(
                 .single();
 
             if (error) {
-                console.error("❌ Помилка додавання витрати:", error);
+                // console.error("❌ Помилка додавання витрати:", error);
                 throw error;
             }
 
@@ -914,14 +914,14 @@ async function saveExpenseToDatabase(
                 .eq("vutratu_id", expense.id);
 
             if (error) {
-                console.error("❌ Помилка оновлення витрати:", error);
+                // console.error("❌ Помилка оновлення витрати:", error);
                 throw error;
             }
         }
 
         return true;
     } catch (error: any) {
-        console.error("❌ Помилка збереження витрати:", error);
+        // console.error("❌ Помилка збереження витрати:", error);
         showNotification(`❌ Помилка: ${error.message}`, "error", 7000);
         return false;
     }
@@ -1702,7 +1702,7 @@ async function handleDeleteExpense(): Promise<void> {
             .eq("vutratu_id", expense.id);
 
         if (error) {
-            console.error("❌ Помилка видалення з БД:", error);
+            // console.error("❌ Помилка видалення з БД:", error);
             showNotification("❌ Помилка видалення з бази даних", "error");
             return;
         }
@@ -1714,7 +1714,7 @@ async function handleDeleteExpense(): Promise<void> {
         closeExpenseModal();
         selectedExpenseId = null;
     } catch (error) {
-        console.error("❌ Критична помилка видалення:", error);
+        // console.error("❌ Критична помилка видалення:", error);
         showNotification("❌ Не вдалося видалити витрату", "error");
     } finally {
         setSaveButtonLoading(false);
@@ -1999,7 +1999,7 @@ async function toggleActPayment(index: number): Promise<void> {
                 .eq("act_id", actId);
 
             if (error) {
-                console.error("❌ Помилка скасування розрахунку:", error);
+                // console.error("❌ Помилка скасування розрахунку:", error);
                 showNotification("❌ Помилка скасування розрахунку", "error");
                 return;
             }
@@ -2019,7 +2019,7 @@ async function toggleActPayment(index: number): Promise<void> {
                 .eq("act_id", actId);
 
             if (error) {
-                console.error("❌ Помилка встановлення розрахунку:", error);
+                // console.error("❌ Помилка встановлення розрахунку:", error);
                 showNotification("❌ Помилка встановлення розрахунку", "error");
                 return;
             }
@@ -2031,7 +2031,7 @@ async function toggleActPayment(index: number): Promise<void> {
         await loadvutratuFromDatabase();
         filtervutratuData();
     } catch (error) {
-        console.error("❌ Критична помилка:", error);
+        // console.error("❌ Критична помилка:", error);
         showNotification("❌ Не вдалося оновити розрахунок", "error");
     }
 }

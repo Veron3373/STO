@@ -24,7 +24,11 @@ function showSettingsNotification(): void {
   if (_notifDebounceTimer) clearTimeout(_notifDebounceTimer);
   _notifDebounceTimer = setTimeout(() => {
     _notifDebounceTimer = null;
-    showNotification("Налаштування оновлено — перезавантажте сторінку", "info", 3500);
+    showNotification(
+      "Налаштування оновлено — перезавантажте сторінку",
+      "info",
+      3500,
+    );
   }, 800);
 }
 
@@ -72,7 +76,7 @@ async function refreshSettingsCache(): Promise<void> {
       saveMargins: globalCache.settings.saveMargins,
     };
   } catch (error) {
-    console.error("❌ Помилка оновлення settings:", error);
+    // console.error("❌ Помилка оновлення settings:", error);
   }
 }
 
@@ -132,7 +136,7 @@ async function updateMenuVisibility(): Promise<void> {
     clearSettingsCache();
     await updateUIBasedOnAccess(userAccessLevel);
   } catch (error) {
-    console.error("❌ Помилка оновлення меню:", error);
+    // console.error("❌ Помилка оновлення меню:", error);
   }
 }
 
@@ -152,7 +156,7 @@ async function updateActButtonsVisibility(): Promise<void> {
       .select(`setting_id, "${roleColumn}"`);
 
     if (error || !settings) {
-      console.error("❌ Помилка отримання налаштувань кнопок:", error);
+      // console.error("❌ Помилка отримання налаштувань кнопок:", error);
       return;
     }
 
@@ -228,7 +232,7 @@ async function updateActButtonsVisibility(): Promise<void> {
       }
     });
   } catch (error) {
-    console.error("❌ Помилка оновлення кнопок актів:", error);
+    // console.error("❌ Помилка оновлення кнопок актів:", error);
   }
 }
 
@@ -318,9 +322,9 @@ function toggleActsTableSumaColumn(show: boolean): void {
 
   // Якщо стовпець "Сума" не існує і потрібно показати - перезавантажуємо таблицю
   if (sumaColumnIndex === -1 && show) {
-    refreshActsTable().catch((err) =>
-      console.error("Помилка оновлення таблиці:", err),
-    );
+    refreshActsTable().catch(() => {
+      /* silent */
+    });
     return;
   }
 
@@ -352,7 +356,12 @@ async function handleSettingsChange(payload: any): Promise<void> {
   if (!settingId) return;
 
   // AI-специфічні колонки — не впливають на UI налаштувань, ігноруємо повністю
-  const AI_ONLY_COLUMNS = new Set(["API", "token", "date", "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0456"]);
+  const AI_ONLY_COLUMNS = new Set([
+    "API",
+    "token",
+    "date",
+    "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0456",
+  ]);
 
   let changedColumn: string | undefined;
   if (eventType === "UPDATE" && oldRecord) {
@@ -405,23 +414,23 @@ export function initializeSettingsSubscription(): void {
         } else if (status === "CHANNEL_ERROR") {
           settingsRetryCount++;
           if (!settingsErrorLogged) {
-            console.warn(
-              "⚠️ Помилка підписки settings. Спроба перепідключення...",
-            );
+            // console.warn(
+            // "⚠️ Помилка підписки settings. Спроба перепідключення...",
+            // );
             settingsErrorLogged = true;
           }
           if (settingsRetryCount >= MAX_SETTINGS_RETRIES) {
-            console.error(
-              "❌ Не вдалось підключитись до settings після",
-              MAX_SETTINGS_RETRIES,
-              "спроб",
-            );
+            // console.error(
+            // "❌ Не вдалось підключитись до settings після",
+            // MAX_SETTINGS_RETRIES,
+            // "спроб",
+            // );
             settingsChannel?.unsubscribe();
           }
         }
       });
   } catch (error) {
-    console.error("❌ Помилка ініціалізації:", error);
+    // console.error("❌ Помилка ініціалізації:", error);
   }
 }
 

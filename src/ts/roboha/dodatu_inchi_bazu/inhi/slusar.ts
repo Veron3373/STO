@@ -31,7 +31,7 @@ const getCurrentUserFromLocalStorage = (): {
       access: userData.Доступ || "",
     };
   } catch (error) {
-    console.error("Помилка отримання даних користувача з localStorage:", error);
+    // console.error("Помилка отримання даних користувача з localStorage:", error);
     return null;
   }
 };
@@ -64,7 +64,7 @@ export const checkEmployeeExists = async (name: string): Promise<boolean> => {
       .from("slyusars")
       .select("data");
     if (error) {
-      console.error("Помилка перевірки існування співробітника:", error);
+      // console.error("Помилка перевірки існування співробітника:", error);
       return false;
     }
     const needle = normalizeName(name);
@@ -77,7 +77,7 @@ export const checkEmployeeExists = async (name: string): Promise<boolean> => {
     }
     return false;
   } catch (error) {
-    console.error("Помилка при перевірці існування співробітника:", error);
+    // console.error("Помилка при перевірці існування співробітника:", error);
     return false;
   }
 };
@@ -278,7 +278,7 @@ const getWarehouseNumbers = async (): Promise<number[]> => {
       .not("procent", "is", null);
 
     if (error) {
-      console.error("Помилка завантаження складів:", error);
+      // console.error("Помилка завантаження складів:", error);
       return [0]; // Повертаємо тільки 0 при помилці
     }
 
@@ -292,7 +292,7 @@ const getWarehouseNumbers = async (): Promise<number[]> => {
     // Завжди додаємо 0 на початку
     return [0, ...ids];
   } catch (error) {
-    console.error("Помилка при отриманні номерів складів:", error);
+    // console.error("Помилка при отриманні номерів складів:", error);
     return [0];
   }
 };
@@ -707,7 +707,7 @@ const fetchAndDisplayEmployeeStats = async () => {
       .select("data");
 
     if (error || !rows) {
-      console.error("Помилка завантаження статистики співробітників:", error);
+      // console.error("Помилка завантаження статистики співробітників:", error);
       return;
     }
 
@@ -726,7 +726,7 @@ const fetchAndDisplayEmployeeStats = async () => {
           accessLevelCounts[accessLevel] = 1;
         }
       } catch (e) {
-        console.error("Помилка парсингу даних співробітника:", e);
+        // console.error("Помилка парсингу даних співробітника:", e);
       }
     });
 
@@ -741,7 +741,7 @@ const fetchAndDisplayEmployeeStats = async () => {
       statsContainer.textContent = statsText;
     }
   } catch (error) {
-    console.error("Критична помилка при отриманні статистики:", error);
+    // console.error("Критична помилка при отриманні статистики:", error);
   }
 };
 
@@ -948,7 +948,7 @@ const loadDatabaseData = async (buttonText: string) => {
       await updateAllBdFromInput(currentUser.name, true);
     }
   } catch (err) {
-    console.error(`Помилка завантаження з ${buttonText}`, err);
+    // console.error(`Помилка завантаження з ${buttonText}`, err);
   }
 };
 
@@ -1066,14 +1066,14 @@ export const saveSlusarData = async (): Promise<boolean> => {
   // Перевірка прав доступу для не-адміністраторів
   if (!isAdmin) {
     if (normalizeName(name) !== normalizeName(currentUser?.name || "")) {
-      console.error(`Спроба редагувати іншого користувача: ${name}`);
+      // console.error(`Спроба редагувати іншого користувача: ${name}`);
       return false;
     }
   }
 
   // Валідація відсотка
   if (isNaN(percentValue) || percentValue < 0 || percentValue > 100) {
-    console.error("Невалідне значення проценту роботи:", percentValue);
+    // console.error("Невалідне значення проценту роботи:", percentValue);
     return false;
   }
 
@@ -1085,10 +1085,10 @@ export const saveSlusarData = async (): Promise<boolean> => {
       percentPartsValue < 0 ||
       percentPartsValue > 100
     ) {
-      console.error(
-        "Невалідне значення проценту запчастин:",
-        percentPartsValue,
-      );
+      // console.error(
+        // "Невалідне значення проценту запчастин:",
+        // percentPartsValue,
+      // );
       percentPartsValue = 0;
     }
   }
@@ -1111,9 +1111,9 @@ export const saveSlusarData = async (): Promise<boolean> => {
     const isEditMode = modeButton && modeButton.textContent === "Редагувати";
 
     if (isEditMode && lastValidSlyusarId !== null) {
-      console.warn(
-        `Редагування по ID: ${lastValidSlyusarId}, нове ім'я: ${name}`,
-      );
+      // console.warn(
+        // `Редагування по ID: ${lastValidSlyusarId}, нове ім'я: ${name}`,
+      // );
       query = query.eq("slyusar_id", lastValidSlyusarId);
     } else {
       query = query.eq("data->>Name", name);
@@ -1122,7 +1122,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
     const { data: rows, error } = await query.single();
 
     if (error || !rows) {
-      console.error("Слюсар не знайдений або помилка:", error);
+      // console.error("Слюсар не знайдений або помилка:", error);
       return false;
     }
 
@@ -1163,7 +1163,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
       .eq("slyusar_id", rows.slyusar_id);
 
     if (updateError) {
-      console.error("Помилка при оновленні даних:", updateError);
+      // console.error("Помилка при оновленні даних:", updateError);
       return false;
     }
 
@@ -1183,7 +1183,7 @@ export const saveSlusarData = async (): Promise<boolean> => {
 
     return true;
   } catch (error) {
-    console.error("Помилка при обробці даних співробітника:", error);
+    // console.error("Помилка при обробці даних співробітника:", error);
     return false;
   }
 };

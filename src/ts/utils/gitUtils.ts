@@ -94,7 +94,7 @@ export async function getFallbackUrl(path: string = ""): Promise<string> {
   try {
     return await getGitUrl(path);
   } catch (error) {
-    console.error("❌ Помилка отримання URL, використовую fallback:", error);
+    // console.error("❌ Помилка отримання URL, використовую fallback:", error);
     return buildGitUrl(getGitNameFallback(), path);
   }
 }

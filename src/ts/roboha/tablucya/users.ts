@@ -43,7 +43,7 @@ function saveUserDataToLocalStorage(
 
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   } catch (error) {
-    console.error("❌ Помилка при збереженні в localStorage:", error);
+    // console.error("❌ Помилка при збереженні в localStorage:", error);
   }
 }
 
@@ -75,7 +75,7 @@ function getSavedUserDataFromLocalStorage(): {
       clearSavedUserDataFromLocalStorage();
     }
   } catch (error) {
-    console.error("❌ Помилка при читанні з localStorage:", error);
+    // console.error("❌ Помилка при читанні з localStorage:", error);
     clearSavedUserDataFromLocalStorage();
   }
   return null;
@@ -85,7 +85,7 @@ function clearSavedUserDataFromLocalStorage(): void {
   try {
     localStorage.removeItem(USER_DATA_KEY);
   } catch (error) {
-    console.error("❌ Помилка при видаленні з localStorage:", error);
+    // console.error("❌ Помилка при видаленні з localStorage:", error);
   }
 }
 
@@ -126,7 +126,7 @@ async function checkPassword(inputPassword: string): Promise<{
     // console.log("📦 Supabase response:", { slyusars, error });
 
     if (error || !slyusars) {
-      console.error("❌ Помилка:", error);
+      // console.error("❌ Помилка:", error);
       return {
         isValid: false,
         accessLevel: null,
@@ -161,7 +161,7 @@ async function checkPassword(inputPassword: string): Promise<{
       slyusar_id: null,
     };
   } catch (error) {
-    console.error("💥 Критична помилка при перевірці пароля:", error);
+    // console.error("💥 Критична помилка при перевірці пароля:", error);
     return {
       isValid: false,
       accessLevel: null,
@@ -203,10 +203,10 @@ async function getSettingValue(
       .single();
 
     if (error) {
-      console.error(
-        `❌ Помилка при отриманні налаштування (ID:${settingId}, Key:${roleKey}):`,
-        error,
-      );
+      // console.error(
+        // `❌ Помилка при отриманні налаштування (ID:${settingId}, Key:${roleKey}):`,
+        // error,
+      // );
       return false;
     }
 
@@ -217,7 +217,7 @@ async function getSettingValue(
 
     return value;
   } catch (error) {
-    console.error("💥 Критична помилка запиту налаштувань:", error);
+    // console.error("💥 Критична помилка запиту налаштувань:", error);
     return false;
   }
 }
@@ -420,7 +420,7 @@ export async function attemptAutoLogin(): Promise<{
       return { accessLevel: null, userName: null };
     }
   } catch (error) {
-    console.error("💥 Помилка при автоматичному вході:", error);
+    // console.error("💥 Помилка при автоматичному вході:", error);
     return { accessLevel: null, userName: null };
   }
 }
@@ -558,7 +558,7 @@ export function createLoginModal(): Promise<string | null> {
           input.select();
         }
       } catch (error) {
-        console.error("💥 Помилка при перевірці пароля:", error);
+        // console.error("💥 Помилка при перевірці пароля:", error);
         showLoginError("Помилка з'єднання. Спробуйте ще раз");
         setLoadingState(false);
         resolve(null);
@@ -608,9 +608,9 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    console.warn(
-      "⛔ Немає авторизації Google. Модальне вікно пароля приховано.",
-    );
+    // console.warn(
+      // "⛔ Немає авторизації Google. Модальне вікно пароля приховано.",
+    // );
     redirectToIndex();
     return null;
   }
@@ -643,14 +643,14 @@ export function logoutFromSystemAndRedirect(): void {
     localStorage.removeItem("sto_general_settings"); // Загальні налаштування СТО
     localStorage.removeItem("current_act_pruimalnyk"); // Тимчасові дані акту
   } catch (e) {
-    console.warn("⚠️ Помилка при очищенні додаткових даних localStorage:", e);
+    // console.warn("⚠️ Помилка при очищенні додаткових даних localStorage:", e);
   }
 
   // Очищаємо sessionStorage (прапори сесії)
   try {
     sessionStorage.clear();
   } catch (e) {
-    console.warn("⚠️ Помилка при очищенні sessionStorage:", e);
+    // console.warn("⚠️ Помилка при очищенні sessionStorage:", e);
   }
 
   isAuthenticated = false;
@@ -696,7 +696,7 @@ async function getSettingBoolFromSettings(
       .single();
 
     if (error) {
-      console.error("Помилка читання settings:", error);
+      // console.error("Помилка читання settings:", error);
       return true;
     }
 
@@ -712,7 +712,7 @@ async function getSettingBoolFromSettings(
 
     return true;
   } catch (e) {
-    console.error("Виняток при читанні settings:", e);
+    // console.error("Виняток при читанні settings:", e);
     return true;
   }
 }
@@ -724,9 +724,9 @@ export async function canUserSeePriceColumns(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню.",
+    // );
     return true;
   }
 
@@ -755,7 +755,7 @@ export async function canUserSeePriceColumns(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не обмежуємо Ціна/Сума.`);
+      // console.warn(`Невідома роль "${role}", не обмежуємо Ціна/Сума.`);
       return true;
   }
 
@@ -774,7 +774,7 @@ export async function canUserCloseActsNormal(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, не обмежуємо закриття акту.");
+    // console.warn("userAccessLevel порожній, не обмежуємо закриття акту.");
     return true;
   }
 
@@ -801,7 +801,7 @@ export async function canUserCloseActsNormal(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не обмежуємо закриття акту.`);
+      // console.warn(`Невідома роль "${role}", не обмежуємо закриття акту.`);
       return true;
   }
 
@@ -820,7 +820,7 @@ export async function canUserCloseActsWithWarnings(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, не обмежуємо закриття акту.");
+    // console.warn("userAccessLevel порожній, не обмежуємо закриття акту.");
     return true;
   }
 
@@ -848,7 +848,7 @@ export async function canUserCloseActsWithWarnings(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не обмежуємо закриття акту.`);
+      // console.warn(`Невідома роль "${role}", не обмежуємо закриття акту.`);
       return true;
   }
 
@@ -866,9 +866,9 @@ export async function canUserOpenClosedActs(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню.",
+    // );
     return true;
   }
 
@@ -897,7 +897,7 @@ export async function canUserOpenClosedActs(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не обмежуємо відкриття актів.`);
+      // console.warn(`Невідома роль "${role}", не обмежуємо відкриття актів.`);
       return true;
   }
 
@@ -915,9 +915,9 @@ export async function canUserAddRowToAct(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню.",
+    // );
     return true;
   }
 
@@ -938,7 +938,7 @@ export async function canUserAddRowToAct(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", дозволяємо додавання рядків.`);
+      // console.warn(`Невідома роль "${role}", дозволяємо додавання рядків.`);
       return true;
   }
 
@@ -956,9 +956,9 @@ export async function canUserSeeEmployeeButton(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню.",
+    // );
     return true;
   }
 
@@ -1074,9 +1074,9 @@ export async function canUserPayMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, дозволяємо розрахунок по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, дозволяємо розрахунок по замовчуванню.",
+    // );
     return true;
   }
 
@@ -1101,7 +1101,7 @@ export async function canUserPayMagazine(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не дозволяємо розрахунок.`);
+      // console.warn(`Невідома роль "${role}", не дозволяємо розрахунок.`);
       return false;
   }
 
@@ -1119,9 +1119,9 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, дозволяємо відміну розрахунку по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, дозволяємо відміну розрахунку по замовчуванню.",
+    // );
     return true;
   }
 
@@ -1146,9 +1146,9 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(
-        `Невідома роль "${role}", не дозволяємо відміну розрахунку.`,
-      );
+      // console.warn(
+        // `Невідома роль "${role}", не дозволяємо відміну розрахунку.`,
+      // );
       return false;
   }
 
@@ -1166,9 +1166,9 @@ export async function canUserReturnMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, дозволяємо повернення по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, дозволяємо повернення по замовчуванню.",
+    // );
     return true;
   }
 
@@ -1193,7 +1193,7 @@ export async function canUserReturnMagazine(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(`Невідома роль "${role}", не дозволяємо повернення.`);
+      // console.warn(`Невідома роль "${role}", не дозволяємо повернення.`);
       return false;
   }
 
@@ -1211,9 +1211,9 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn(
-      "userAccessLevel порожній, дозволяємо відміну повернення по замовчуванню.",
-    );
+    // console.warn(
+      // "userAccessLevel порожній, дозволяємо відміну повернення по замовчуванню.",
+    // );
     return true;
   }
 
@@ -1238,9 +1238,9 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
       columnName = "Складовщик";
       break;
     default:
-      console.warn(
-        `Невідома роль "${role}", не дозволяємо відміну повернення.`,
-      );
+      // console.warn(
+        // `Невідома роль "${role}", не дозволяємо відміну повернення.`,
+      // );
       return false;
   }
 
@@ -1258,7 +1258,7 @@ export async function canSlusarCompleteTasks(): Promise<boolean> {
   const role = userAccessLevel;
 
   if (!role) {
-    console.warn("userAccessLevel порожній, блокуємо завершення робіт.");
+    // console.warn("userAccessLevel порожній, блокуємо завершення робіт.");
     return false;
   }
 

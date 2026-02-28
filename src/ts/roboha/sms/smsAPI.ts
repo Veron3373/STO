@@ -28,7 +28,7 @@ export async function sendSMS(
     // ← ДОДАНО: Детальне логування
 
     if (error) {
-      console.error("❌ Помилка виклику Edge Function:", error);
+      // console.error("❌ Помилка виклику Edge Function:", error);
       // ← ДОДАНО: Показуємо повну помилку
       return {
         success: false,
@@ -37,7 +37,7 @@ export async function sendSMS(
     }
 
     if (data?.success === false) {
-      console.error("❌ Edge Function повернула помилку:", data.error);
+      // console.error("❌ Edge Function повернула помилку:", data.error);
       return {
         success: false,
         error: data.error || "Невідома помилка Edge Function",
@@ -52,20 +52,20 @@ export async function sendSMS(
     }
 
     if (data?.result?.error_request) {
-      console.error("❌ Помилка SMS API:", data.result.error_request);
+      // console.error("❌ Помилка SMS API:", data.result.error_request);
       return {
         success: false,
         error: `SMS API: ${data.result.error_request.code} - ${data.result.error_request.info}`,
       };
     }
 
-    console.error("⚠️ Неочікувана відповідь від API:", data);
+    // console.error("⚠️ Неочікувана відповідь від API:", data);
     return {
       success: false,
       error: `Неочікувана відповідь: ${JSON.stringify(data)}`,
     };
   } catch (error: any) {
-    console.error("💥 Критична помилка відправки SMS:", error);
+    // console.error("💥 Критична помилка відправки SMS:", error);
     return {
       success: false,
       error: error.message || "Невідома помилка",

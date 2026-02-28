@@ -42,7 +42,7 @@ export function initUserFromLocalStorage(): void {
       setUserData(name, access);
     }
   } catch (error) {
-    console.error("❌ Помилка ініціалізації користувача з localStorage:", error);
+    // console.error("❌ Помилка ініціалізації користувача з localStorage:", error);
   }
 }
 

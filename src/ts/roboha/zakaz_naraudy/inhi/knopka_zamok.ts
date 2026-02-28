@@ -63,7 +63,7 @@ async function fetchActDates(
     .eq("act_id", actId)
     .single();
   if (error) {
-    console.warn("Не вдалося прочитати дати акту:", error.message);
+    // console.warn("Не вдалося прочитати дати акту:", error.message);
     return { date_on: null, date_off: null };
   }
   return { date_on: data?.date_on ?? null, date_off: data?.date_off ?? null };
@@ -81,7 +81,7 @@ async function fetchScladMeta(
     .in("sclad_id", Array.from(new Set(scladIds)));
 
   if (error) {
-    console.warn("fetchScladMeta():", error.message);
+    // console.warn("fetchScladMeta():", error.message);
     return new Map();
   }
 
@@ -106,7 +106,7 @@ async function fetchShopByName(shopName: string): Promise<ShopRow | null> {
     .maybeSingle();
 
   if (error) {
-    console.warn(`fetchShopByName(${shopName}):`, error.message);
+    // console.warn(`fetchShopByName(${shopName}):`, error.message);
     return null;
   }
   if (!data) return null;
@@ -465,7 +465,7 @@ async function syncSlyusarsHistoryForAct(params: {
       .select("*");
 
     if (fetchError) {
-      console.warn("Не вдалося отримати дані з slyusars:", fetchError.message);
+      // console.warn("Не вдалося отримати дані з slyusars:", fetchError.message);
       return;
     }
 
@@ -494,9 +494,9 @@ async function syncSlyusarsHistoryForAct(params: {
     }
 
     if (!primaryKey) {
-      console.error("❌ Не вдалося визначити первинний ключ для slyusars");
-      console.error("💡 Доступні ключі:", availableKeys);
-      console.error("💡 Шукали:", primaryKeyCandidates);
+      // console.error("❌ Не вдалося визначити первинний ключ для slyusars");
+      // console.error("💡 Доступні ключі:", availableKeys);
+      // console.error("💡 Шукали:", primaryKeyCandidates);
       return;
     }
 
@@ -512,9 +512,9 @@ async function syncSlyusarsHistoryForAct(params: {
         try {
           slyusarData = JSON.parse(slyusarRow.data);
         } catch (e) {
-          console.warn(
-            `⚠️ Не вдалося розпарсити дані для запису ${slyusarRow[primaryKey]}`,
-          );
+          // console.warn(
+          // `⚠️ Не вдалося розпарсити дані для запису ${slyusarRow[primaryKey]}`,
+          // );
           continue;
         }
       } else if (
@@ -523,7 +523,7 @@ async function syncSlyusarsHistoryForAct(params: {
       ) {
         slyusarData = slyusarRow.data;
       } else {
-        console.warn(`⚠️ Невалідні дані для запису ${slyusarRow[primaryKey]}`);
+        // console.warn(`⚠️ Невалідні дані для запису ${slyusarRow[primaryKey]}`);
         continue;
       }
 
@@ -581,10 +581,10 @@ async function syncSlyusarsHistoryForAct(params: {
           .eq(primaryKey, slyusarRow[primaryKey]);
 
         if (updateError) {
-          console.error(
-            `❌ Помилка оновлення slyusars#${slyusarRow[primaryKey]}:`,
-            updateError.message,
-          );
+          // console.error(
+          // `❌ Помилка оновлення slyusars#${slyusarRow[primaryKey]}:`,
+          // updateError.message,
+          // );
         } else {
           updatedCount++;
         }
@@ -598,9 +598,9 @@ async function syncSlyusarsHistoryForAct(params: {
         2000,
       );
     } else {
-      console.warn(
-        `⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`,
-      );
+      // console.warn(
+      // `⚠️ Акт ${params.actId} не знайдено в історії жодного приймальника`,
+      // );
       showNotification(
         `⚠️ Акт ${params.actId} не знайдено у приймальників`,
         "info",
@@ -608,7 +608,7 @@ async function syncSlyusarsHistoryForAct(params: {
       );
     }
   } catch (err) {
-    console.error("❌ Помилка синхронізації slyusars:", err);
+    // console.error("❌ Помилка синхронізації slyusars:", err);
     showNotification("❌ Помилка синхронізації історії приймальника", "error");
   }
 }
@@ -655,7 +655,7 @@ export function initStatusLockDelegation(): void {
     const actIdAttr = btn.getAttribute("data-act-id");
     const actId = actIdAttr ? Number(actIdAttr) : NaN;
     if (!Number.isFinite(actId)) {
-      console.error("data-act-id на кнопці відсутній/некоректний");
+      // console.error("data-act-id на кнопці відсутній/некоректний");
       showNotification("Помилка: не визначено ID акту", "error");
       return;
     }
@@ -682,7 +682,7 @@ export function initStatusLockDelegation(): void {
         try {
           canToggleSlusarsOn = await canSlusarCompleteTasks();
         } catch (err) {
-          console.error("Помилка перевірки прав Слюсаря:", err);
+          // console.error("Помилка перевірки прав Слюсаря:", err);
         }
 
         if (!canToggleSlusarsOn) {
@@ -703,7 +703,7 @@ export function initStatusLockDelegation(): void {
           .single();
 
         if (actFetchError) {
-          console.error("Помилка отримання даних акту:", actFetchError);
+          // console.error("Помилка отримання даних акту:", actFetchError);
           showNotification("Помилка перевірки стану акту", "error");
           btn.disabled = false;
           return;
@@ -737,7 +737,7 @@ export function initStatusLockDelegation(): void {
           .eq("act_id", actId);
 
         if (updateError) {
-          console.error("Помилка оновлення slusarsOn:", updateError);
+          // console.error("Помилка оновлення slusarsOn:", updateError);
           showNotification("Помилка збереження", "error");
           btn.disabled = false;
           return;
@@ -759,10 +759,10 @@ export function initStatusLockDelegation(): void {
             pruimalnyk,
           );
         } catch (notifError) {
-          console.error(
-            "⚠️ Помилка створення повідомлення (не критично):",
-            notifError,
-          );
+          // console.error(
+          // "⚠️ Помилка створення повідомлення (не критично):",
+          // notifError,
+          // );
           // Не блокуємо операцію, якщо повідомлення не створилось
         }
 
@@ -799,7 +799,7 @@ export function initStatusLockDelegation(): void {
           try {
             canOpen = await canUserOpenClosedActs();
           } catch (permErr) {
-            console.error("Помилка перевірки прав відкриття акту:", permErr);
+            // console.error("Помилка перевірки прав відкриття акту:", permErr);
             // Якщо помилка при читанні settings — блокуємо доступ для безпеки
             canOpen = false;
           }
@@ -894,7 +894,7 @@ export function initStatusLockDelegation(): void {
             try {
               canClose = await canUserCloseActsNormal();
             } catch (permErr) {
-              console.error("Помилка перевірки прав закриття акту:", permErr);
+              // console.error("Помилка перевірки прав закриття акту:", permErr);
               canClose = true;
             }
 
@@ -912,7 +912,7 @@ export function initStatusLockDelegation(): void {
             try {
               canClose = await canUserCloseActsWithWarnings();
             } catch (permErr) {
-              console.error("Помилка перевірки прав закриття акту:", permErr);
+              // console.error("Помилка перевірки прав закриття акту:", permErr);
               // Якщо щось пішло не так при читанні settings — МИ НЕ БЛОКУЄМО,
               // щоб не покласти роботу. Але це можна змінити, якщо хочеш.
               canClose = true;
@@ -940,12 +940,12 @@ export function initStatusLockDelegation(): void {
               "error",
               5000,
             );
-            console.warn(
-              "Помилки валідації таблиці перед закриттям:",
-              validationResult.errors,
-            );
-            validationResult.errors.forEach((err) => {
-              console.warn(`  • ${err}`);
+            // console.warn(
+            // "Помилки валідації таблиці перед закриттям:",
+            // validationResult.errors,
+            // );
+            validationResult.errors.forEach((_err) => {
+              // console.warn(`  • ${_err}`);
             });
             btn.disabled = false;
             return;
@@ -1002,20 +1002,20 @@ export function initStatusLockDelegation(): void {
         try {
           await hideSlusarNotificationsForAct(actId);
         } catch (hideError) {
-          console.error(
-            "⚠️ Помилка приховування повідомлень (не критично):",
-            hideError,
-          );
+          // console.error(
+          // "⚠️ Помилка приховування повідомлень (не критично):",
+          // hideError,
+          // );
         }
 
         // 🗑️ ВИДАЛЕННЯ ПОВІДОМЛЕНЬ ПРО ЗМІНИ В АКТІ (act_changes_notifications)
         try {
           await deleteActNotificationsOnClose(actId);
         } catch (deleteNotifError) {
-          console.error(
-            "⚠️ Помилка видалення повідомлень про зміни (не критично):",
-            deleteNotifError,
-          );
+          // console.error(
+          // "⚠️ Помилка видалення повідомлень про зміни (не критично):",
+          // deleteNotifError,
+          // );
         }
 
         // Используем то же время, что и для записи в БД, чтобы избежать рассинхрона
@@ -1047,7 +1047,7 @@ export function initStatusLockDelegation(): void {
         showNotification("Акт успішно закрито", "success");
       }
     } catch (err: any) {
-      console.error("Помилка в обробнику статус-замка:", err);
+      // console.error("Помилка в обробнику статус-замка:", err);
       showNotification("Помилка: " + (err?.message || err), "error");
     } finally {
       btn.disabled = false;

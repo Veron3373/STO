@@ -71,7 +71,7 @@ export function initModalActRaxunokHandlers(): void {
       await renderInvoicePreviewModal(actData);
       closeModalActRaxunok();
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       showNotification("Помилка при створенні рахунку", "error");
     }
   });
@@ -109,7 +109,7 @@ export function initModalActRaxunokHandlers(): void {
           .single();
 
         if (error) {
-          console.error("❌ Помилка пошуку в БД acts:", error);
+          // console.error("❌ Помилка пошуку в БД acts:", error);
         } else if (dbData) {
           // 4. Записуємо отримані дані
           actData.foundFakturaId = dbData.faktura_id;
@@ -124,7 +124,7 @@ export function initModalActRaxunokHandlers(): void {
 
       closeModalActRaxunok();
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       showNotification("Помилка при створенні акту", "error");
     }
   });

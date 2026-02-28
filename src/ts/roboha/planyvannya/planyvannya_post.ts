@@ -858,8 +858,8 @@ export class PostModal {
       await this.refreshAutocompleteData();
       this.close();
     } catch (error) {
-      console.error('❌ Помилка операції з БД:', error);
-      console.error('❌ Деталі помилки:', JSON.stringify(error, null, 2));
+      // console.error('❌ Помилка операції з БД:', error);
+      // console.error('❌ Деталі помилки:', JSON.stringify(error, null, 2));
 
       // Показуємо більш детальну помилку
       const errorMessage = error instanceof Error ? error.message : String(error);

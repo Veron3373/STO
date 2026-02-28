@@ -10,7 +10,7 @@ export class SearchHandler {
         this.searchInput = document.getElementById('searchInput') as HTMLInputElement;
         
         if (!this.searchIcon || !this.searchInput) {
-            console.error('❌ Елементи пошуку не знайдено в DOM');
+            // console.error('❌ Елементи пошуку не знайдено в DOM');
             return;
         }
 

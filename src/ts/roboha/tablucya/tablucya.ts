@@ -172,7 +172,7 @@ async function saveCallToDatabase(
       .single();
 
     if (fetchError) {
-      console.error("📞 Помилка отримання акту:", fetchError);
+      // console.error("📞 Помилка отримання акту:", fetchError);
       return;
     }
 
@@ -193,10 +193,10 @@ async function saveCallToDatabase(
       .eq("act_id", actId);
 
     if (updateError) {
-      console.error("📞 Помилка збереження дзвінка:", updateError);
+      // console.error("📞 Помилка збереження дзвінка:", updateError);
     }
   } catch (err) {
-    console.error("📞 Критична помилка збереження дзвінка:", err);
+    // console.error("📞 Критична помилка збереження дзвінка:", err);
   }
 }
 
@@ -319,7 +319,7 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
       .eq("delit", false); // ✅ тільки "не видалені" нотифікації
 
     if (error) {
-      console.error("❌ Помилка завантаження сповіщень:", error);
+      // console.error("❌ Помилка завантаження сповіщень:", error);
       return new Set();
     }
 
@@ -333,7 +333,7 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
     const currentUserName = userData?.name;
 
     if (!currentUserName) {
-      console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+      // console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
       return new Set();
     }
 
@@ -344,7 +344,7 @@ async function fetchModifiedActIds(): Promise<Set<number>> {
       .eq("pruimalnyk", currentUserName); // ✅ Фільтр по приймальнику
 
     if (error) {
-      console.error("❌ Помилка завантаження сповіщень:", error);
+      // console.error("❌ Помилка завантаження сповіщень:", error);
       return new Set();
     }
 
@@ -370,7 +370,7 @@ async function fetchActNotificationCounts(): Promise<Map<number, number>> {
       .eq("delit", false);
 
     if (error) {
-      console.error("❌ Помилка завантаження кількості повідомлень:", error);
+      // console.error("❌ Помилка завантаження кількості повідомлень:", error);
       return counts;
     }
 
@@ -389,7 +389,7 @@ async function fetchActNotificationCounts(): Promise<Map<number, number>> {
     const currentUserName = userData?.name;
 
     if (!currentUserName) {
-      console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+      // console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
       return counts;
     }
 
@@ -400,7 +400,7 @@ async function fetchActNotificationCounts(): Promise<Map<number, number>> {
       .eq("pruimalnyk", currentUserName);
 
     if (error) {
-      console.error("❌ Помилка завантаження кількості повідомлень:", error);
+      // console.error("❌ Помилка завантаження кількості повідомлень:", error);
       return counts;
     }
 
@@ -554,10 +554,10 @@ function subscribeToGlobalActPresence() {
     try {
       supabase.removeChannel(globalPresenceChannel);
     } catch (err) {
-      console.warn(
-        "⚠️ [subscribeToGlobalActPresence] Помилка при видаленні каналу:",
-        err,
-      );
+      // console.warn(
+        // "⚠️ [subscribeToGlobalActPresence] Помилка при видаленні каналу:",
+        // err,
+      // );
     } finally {
       globalPresenceChannel = null;
     }
@@ -793,7 +793,7 @@ function highlightRowInDom(actId: number) {
     "#table-container-modal-sakaz_narad table",
   );
   if (!table) {
-    console.warn(`⚠️ [highlightRowInDom] Таблиця не знайдена`);
+    // console.warn(`⚠️ [highlightRowInDom] Таблиця не знайдена`);
     return;
   }
 
@@ -818,7 +818,7 @@ function highlightRowInDom(actId: number) {
   });
 
   if (!found) {
-    console.warn(`❌ [highlightRowInDom] Рядок для акту #${actId} НЕ ЗНАЙДЕНО`);
+    // console.warn(`❌ [highlightRowInDom] Рядок для акту #${actId} НЕ ЗНАЙДЕНО`);
   }
 }
 
@@ -830,7 +830,7 @@ export function updateNotificationBadgeInDom(actId: number, count: number) {
     "#table-container-modal-sakaz_narad table",
   );
   if (!table) {
-    console.warn(`⚠️ [updateBadge] Таблиця не знайдена`);
+    // console.warn(`⚠️ [updateBadge] Таблиця не знайдена`);
     return;
   }
 
@@ -873,7 +873,7 @@ export function updateNotificationBadgeInDom(actId: number, count: number) {
   });
 
   if (!found) {
-    console.warn(`❌ [updateBadge] Рядок для акту #${actId} НЕ ЗНАЙДЕНО`);
+    // console.warn(`❌ [updateBadge] Рядок для акту #${actId} НЕ ЗНАЙДЕНО`);
   }
 }
 
@@ -1045,7 +1045,7 @@ function createClientCell(
         smsHtml = `<div style="font-size: 0.9em; line-height: 1.2; white-space: nowrap;">📨 ${timeHtml} / ${dateHtml}</div>`;
       }
     } catch (e) {
-      console.warn(`Error parsing SMS date for act ${actId}:`, e);
+      // console.warn(`Error parsing SMS date for act ${actId}:`, e);
     }
   }
 
@@ -1666,7 +1666,7 @@ async function loadActsFromDB(
   query = query.order("act_id", { ascending: false });
   const { data: acts, error: actsError } = await query;
   if (actsError) {
-    console.error("❌ Помилка при отриманні актів:", actsError);
+    // console.error("❌ Помилка при отриманні актів:", actsError);
     return null;
   }
   return acts || [];
@@ -1923,7 +1923,7 @@ export async function loadActsTable(
     container.innerHTML = "";
     container.appendChild(table);
   } catch (error) {
-    console.error("💥 Критична помилка:", error);
+    // console.error("💥 Критична помилка:", error);
   }
 }
 
@@ -2071,7 +2071,7 @@ export async function initializeActsSystem(): Promise<void> {
 
     watchDateRangeChanges();
   } catch (error) {
-    console.error("💥 Помилка ініціалізації:", error);
+    // console.error("💥 Помилка ініціалізації:", error);
     showNoDataMessage("❌ Помилка");
   }
 }

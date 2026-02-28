@@ -22,7 +22,7 @@ export async function getSMSConfig(): Promise<SMSConfig> {
       .single();
 
     if (error) {
-      console.error("Помилка завантаження налаштувань SMS:", error);
+      // console.error("Помилка завантаження налаштувань SMS:", error);
       throw error;
     }
 
@@ -42,7 +42,7 @@ export async function getSMSConfig(): Promise<SMSConfig> {
       alphaName: smsSettings.alphaName || "REMONT",
     };
   } catch (err: any) {
-    console.error("❌ Помилка завантаження SMS конфігурації:", err);
+    // console.error("❌ Помилка завантаження SMS конфігурації:", err);
     throw new Error(`Не вдалося завантажити налаштування SMS: ${err.message}`);
   }
 }

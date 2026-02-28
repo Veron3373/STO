@@ -33,7 +33,7 @@ async function syncNotificationsWithDatabaseAfterDelete() {
     .eq("delit", false);
 
   if (error) {
-    console.error("❌ Помилка при перевірці нотифікацій:", error);
+    // console.error("❌ Помилка при перевірці нотифікацій:", error);
     return;
   }
 
@@ -108,9 +108,9 @@ export async function initActChangesSubscription(): Promise<void> {
           removeRealtimeNotification(deletedId);
         } else {
           // Нічого корисного в payload.old (типова історія без REPLICA IDENTITY FULL)
-          console.warn(
-            "⚠️ DELETE без notification_id → запускаємо синхронізацію з БД."
-          );
+          // console.warn(
+            // "⚠️ DELETE без notification_id → запускаємо синхронізацію з БД."
+          // );
           await syncNotificationsWithDatabaseAfterDelete();
         }
       }

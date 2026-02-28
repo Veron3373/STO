@@ -133,8 +133,12 @@ function createPasswordConfirmationModal(
         h.style.color = "#4ade80";
         inp.classList.add("input-success");
         ok.innerHTML = "✓ Успішно";
-        ok.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
-        setTimeout(() => { modal.remove(); resolve(true); }, 500);
+        ok.style.background =
+          "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+        setTimeout(() => {
+          modal.remove();
+          resolve(true);
+        }, 500);
       } else {
         showModalError("Невірний пароль");
         inp.focus();
@@ -378,8 +382,8 @@ class DetailsSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -404,8 +408,9 @@ class DetailsSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-      <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+      <div class="dropdown-item ${
+        index === this.selectedIndex ? "selected" : ""
+      }" 
            data-index="${index}">
         ${this.highlightMatch(item, this.input.value)}
       </div>
@@ -621,10 +626,10 @@ function ensureDetailsSmartDropdowns(): void {
         try {
           return new DetailsSmartDropdown(config);
         } catch (error) {
-          console.warn(
-            `Failed to create details dropdown for ${config.inputId}:`,
-            error,
-          );
+          // console.warn(
+          // `Failed to create details dropdown for ${config.inputId}:`,
+          // error,
+          // );
           return null;
         }
       })
@@ -864,13 +869,13 @@ async function fetchShopData(): Promise<ShopData[]> {
     const { data, error } = await supabase.from("shops").select("*");
 
     if (error) {
-      console.error("Помилка Supabase:", error);
+      // console.error("Помилка Supabase:", error);
       throw new Error(`Помилка завантаження: ${error.message}`);
     }
 
     if (data && Array.isArray(data)) {
       shopsData = data
-        .map((item, index) => {
+        .map((item, _index) => {
           try {
             let parsedData;
             if (typeof item.data === "string") {
@@ -878,28 +883,28 @@ async function fetchShopData(): Promise<ShopData[]> {
             } else if (typeof item.data === "object" && item.data !== null) {
               parsedData = item.data;
             } else {
-              console.warn(
-                `Пропущений запис ${index}: невірний формат data`,
-                item,
-              );
+              // console.warn(
+              // `Пропущений запис ${index}: невірний формат data`,
+              // item,
+              // );
               return null;
             }
 
             if (!parsedData || !parsedData.Name) {
-              console.warn(
-                `Пропущений запис ${index}: немає поля Name`,
-                parsedData,
-              );
+              // console.warn(
+              // `Пропущений запис ${index}: немає поля Name`,
+              // parsedData,
+              // );
               return null;
             }
 
             return parsedData;
           } catch (parseError) {
-            console.error(
-              `Помилка парсингу запису ${index}:`,
-              parseError,
-              item,
-            );
+            // console.error(
+            // `Помилка парсингу запису ${index}:`,
+            // parseError,
+            // item,
+            // );
             return null;
           }
         })
@@ -910,7 +915,7 @@ async function fetchShopData(): Promise<ShopData[]> {
       throw new Error("Невірний формат даних з Supabase");
     }
   } catch (error) {
-    console.error("Помилка завантаження даних магазинів:", error);
+    // console.error("Помилка завантаження даних магазинів:", error);
     showNotification("Помилка завантаження даних магазинів", "error", 5000);
     return [];
   }
@@ -926,7 +931,7 @@ async function saveShopsDataToDatabase(): Promise<void> {
       .select("*");
 
     if (fetchError) {
-      console.error("Помилка отримання даних:", fetchError);
+      // console.error("Помилка отримання даних:", fetchError);
       throw new Error(`Помилка отримання даних: ${fetchError.message}`);
     }
 
@@ -953,7 +958,7 @@ async function saveShopsDataToDatabase(): Promise<void> {
         });
 
         if (!target) {
-          console.warn(`Не знайдено запис для магазину: ${shop.Name}`);
+          // console.warn(`Не знайдено запис для магазину: ${shop.Name}`);
           continue;
         }
 
@@ -964,7 +969,7 @@ async function saveShopsDataToDatabase(): Promise<void> {
             .eq(primaryKey, target[primaryKey]);
 
           if (updErr) {
-            console.error(`Помилка оновлення ${shop.Name}:`, updErr);
+            // console.error(`Помилка оновлення ${shop.Name}:`, updErr);
             throw updErr;
           }
         } else {
@@ -974,19 +979,19 @@ async function saveShopsDataToDatabase(): Promise<void> {
             .contains("data", { Name: shop.Name });
 
           if (updErr) {
-            console.error(`Помилка оновлення (fallback) ${shop.Name}:`, updErr);
+            // console.error(`Помилка оновлення (fallback) ${shop.Name}:`, updErr);
             throw updErr;
           }
         }
       } catch (recordError) {
-        console.error(`Помилка обробки запису для ${shop.Name}:`, recordError);
+        // console.error(`Помилка обробки запису для ${shop.Name}:`, recordError);
         throw recordError;
       }
     }
 
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
-    console.error("❌ Помилка збереження в базу shops:", error);
+    // console.error("❌ Помилка збереження в базу shops:", error);
     let errorMessage = "Невідома помилка";
     if (error instanceof Error) errorMessage = error.message;
 
@@ -1049,8 +1054,8 @@ export function updateDetailsTable(): void {
       const purchasePriceHtml =
         item.purchasePrice !== undefined
           ? `<div style="font-size: 0.85em; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">${formatNumber(
-            item.purchasePrice,
-          )}</div>`
+              item.purchasePrice,
+            )}</div>`
           : '<div style="font-size: 0.85em; color: #999; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 2px;">-</div>';
 
       const salePriceHtml = `<div style="font-size: 0.95em; font-weight: 500;">${formatNumber(
@@ -1065,22 +1070,25 @@ export function updateDetailsTable(): void {
 
       const marginHtml =
         item.margin !== undefined
-          ? `<div style="font-size: 0.85em; color: ${item.margin >= 0 ? "#28a745" : "#dc3545"
-          }; font-weight: 500; margin-top: 2px;">${item.margin >= 0 ? "+" : ""}${formatNumber(
-            item.margin,
-          )}${discountIndicator}</div>`
+          ? `<div style="font-size: 0.85em; color: ${
+              item.margin >= 0 ? "#28a745" : "#dc3545"
+            }; font-weight: 500; margin-top: 2px;">${item.margin >= 0 ? "+" : ""}${formatNumber(
+              item.margin,
+            )}${discountIndicator}</div>`
           : "";
 
       return `
         <tr class="${rowClass} ${paidClass}" onclick="handleRowClick(${index})">
           <td>
-            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
-        }" 
+            <button class="Bukhhalter-payment-btn ${
+              item.isPaid ? "paid" : "unpaid"
+            }" 
                     onclick="event.stopPropagation(); toggleDetailsPaymentWithConfirmation(${originalIndex})" 
-                    title="${item.isPaid
-          ? `Розраховано ${item.paymentDate || ""}`
-          : "Не розраховано"
-        }">
+                    title="${
+                      item.isPaid
+                        ? `Розраховано ${item.paymentDate || ""}`
+                        : "Не розраховано"
+                    }">
               ${paymentButtonText}
             </button>
           </td>
@@ -1088,8 +1096,9 @@ export function updateDetailsTable(): void {
           <td>${formatDate(item.dateClose || "")}</td>
           <td>
             <button class="Bukhhalter-act-btn"
-                    onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
-        })"
+                    onclick="event.stopPropagation(); openActModalWithClient(${
+                      Number(item.act) || 0
+                    })"
                     title="Відкрити акт №${item.act}">
               📋 ${item.act || "-"}
             </button>
@@ -1136,15 +1145,16 @@ function updateDetailsTotalSumDisplay(
     totalSumElement.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
         <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-      saleTotal,
-    )}</strong> грн</span>
+          saleTotal,
+        )}</strong> грн</span>
         <span style="color: #666;">-</span>
         <span><strong style="color: #8B0000;">💶 ${formatNumber(
-      purchaseTotal,
-    )}</strong> грн</span>
+          purchaseTotal,
+        )}</strong> грн</span>
         <span style="color: #666;">=</span>
-        <span><strong style="color: ${marginTotal >= 0 ? "#006400 " : "#8B0000"
-      };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
+        <span><strong style="color: ${
+          marginTotal >= 0 ? "#006400 " : "#8B0000"
+        };">📈 ${marginSign}${formatNumber(marginTotal)}</strong> грн</span>
       </div>
     `;
   }
@@ -1221,7 +1231,7 @@ async function fetchScladData(): Promise<ScladItem[]> {
     const { data, error } = await supabase.from("sclad").select("*");
 
     if (error) {
-      console.error("Помилка завантаження складу:", error);
+      // console.error("Помилка завантаження складу:", error);
       return [];
     }
 
@@ -1263,7 +1273,7 @@ async function fetchScladData(): Promise<ScladItem[]> {
 
     return [];
   } catch (error) {
-    console.error("Помилка завантаження даних складу:", error);
+    // console.error("Помилка завантаження даних складу:", error);
     return [];
   }
 }
@@ -1276,7 +1286,7 @@ async function fetchSlyusarsNames(): Promise<void> {
       .select("slyusar_id, data");
 
     if (error) {
-      console.error("Помилка завантаження слюсарів:", error);
+      // console.error("Помилка завантаження слюсарів:", error);
       return;
     }
 
@@ -1295,7 +1305,7 @@ async function fetchSlyusarsNames(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Помилка завантаження імен слюсарів:", error);
+    // console.error("Помилка завантаження імен слюсарів:", error);
   }
 }
 
@@ -1324,7 +1334,7 @@ async function fetchActsDiscounts(): Promise<void> {
     const { data, error } = await supabase.from("acts").select("act_id, data");
 
     if (error) {
-      console.error("Помилка завантаження знижок з актів:", error);
+      // console.error("Помилка завантаження знижок з актів:", error);
       return;
     }
 
@@ -1341,7 +1351,7 @@ async function fetchActsDiscounts(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Помилка завантаження знижок:", error);
+    // console.error("Помилка завантаження знижок:", error);
   }
 }
 
@@ -1507,7 +1517,7 @@ export function createDetailsStatusToggle(): void {
   const toggle = byId<HTMLInputElement>("poAktam-status-filter-toggle");
 
   if (!toggle) {
-    console.error("❌ Елемент poAktam-status-filter-toggle не знайдено в HTML");
+    // console.error("❌ Елемент poAktam-status-filter-toggle не знайдено в HTML");
     return;
   }
 
@@ -1568,7 +1578,7 @@ export function createDetailsPaymentToggle(): void {
   const toggle = byId<HTMLInputElement>("poAktam-payment-filter-toggle");
 
   if (!toggle) {
-    console.error("❌ Елемент poAktam-payment-filter-toggle не знайдено");
+    // console.error("❌ Елемент poAktam-payment-filter-toggle не знайдено");
     return;
   }
 
@@ -1747,7 +1757,7 @@ export async function toggleDetailsPaymentWithConfirmation(
   index: number,
 ): Promise<void> {
   if (!detailsData[index]) {
-    console.error(`Запис з індексом ${index} не знайдено`);
+    // console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
     return;
   }
@@ -1776,7 +1786,7 @@ export async function toggleDetailsPaymentWithConfirmation(
 // Функція для зміни статусу оплати
 export function toggleDetailsPayment(index: number): void {
   if (index < 0 || index >= detailsData.length) {
-    console.error(`Запис з індексом ${index} не знайдено`);
+    // console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
     return;
   }
@@ -1790,7 +1800,7 @@ export function toggleDetailsPayment(index: number): void {
 
     const shop = shopsData.find((s) => s.Name === record.shop);
     if (!shop) {
-      console.error(`❌ Магазин ${record.shop} не знайдено`);
+      // console.error(`❌ Магазин ${record.shop} не знайдено`);
       showNotification(
         `⚠️ Помилка: магазин ${record.shop} не знайдено`,
         "error",
@@ -1799,9 +1809,9 @@ export function toggleDetailsPayment(index: number): void {
     }
 
     if (!shop.Історія[record.dateOpen]) {
-      console.error(
-        `❌ Дата ${record.dateOpen} не знайдена в історії магазину ${record.shop}`,
-      );
+      // console.error(
+      // `❌ Дата ${record.dateOpen} не знайдена в історії магазину ${record.shop}`,
+      // );
       showNotification(`⚠️ Помилка: дата не знайдена в історії`, "error");
       return;
     }
@@ -1810,7 +1820,7 @@ export function toggleDetailsPayment(index: number): void {
       (a) => a.Акт.toString() === record.act,
     );
     if (!actRecord) {
-      console.error(`❌ Акт ${record.act} не знайдений`);
+      // console.error(`❌ Акт ${record.act} не знайдений`);
       showNotification(`⚠️ Помилка: акт ${record.act} не знайдений`, "error");
       return;
     }
@@ -1842,8 +1852,8 @@ export function toggleDetailsPayment(index: number): void {
         "success",
       );
     })
-    .catch((error) => {
-      console.error(`❌ Помилка збереження:`, error);
+    .catch((_error) => {
+      // console.error(`❌ Помилка збереження:`, _error);
       showNotification("❌ Помилка збереження змін в базу даних", "error");
       record.isPaid = !record.isPaid;
       record.paymentDate = record.isPaid ? getCurrentDate() : "";
@@ -1931,7 +1941,7 @@ export async function runMassPaymentCalculationForDetails(): Promise<void> {
       "success",
     );
   } catch (error) {
-    console.error("❌ Помилка масового розрахунку:", error);
+    // console.error("❌ Помилка масового розрахунку:", error);
     showNotification("❌ Помилка при збереженні змін у базу", "error");
   }
 }

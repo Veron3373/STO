@@ -205,7 +205,7 @@ async function loadAnalyticsData(): Promise<boolean> {
 
     return true;
   } catch (err) {
-    console.error("❌ Помилка завантаження аналітики:", err);
+    // console.error("❌ Помилка завантаження аналітики:", err);
     showNotification("Помилка завантаження даних аналітики", "error");
     return false;
   }

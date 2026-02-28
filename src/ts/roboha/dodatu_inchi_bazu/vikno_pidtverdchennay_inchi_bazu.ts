@@ -79,7 +79,7 @@ async function getNextId(
     .order(idField, { ascending: false })
     .limit(1);
   if (error) {
-    console.error("Помилка при отриманні максимального ID:", error);
+    // console.error("Помилка при отриманні максимального ID:", error);
     return null;
   }
   const first = rows?.[0] as Record<string, any>;
@@ -100,7 +100,7 @@ async function checkDuplicateExists(
   try {
     const { data: rows, error } = await supabase.from(tableName).select("*");
     if (error) {
-      console.error(`Помилка перевірки дублів у ${tableName}:`, error);
+      // console.error(`Помилка перевірки дублів у ${tableName}:`, error);
       return false;
     }
 
@@ -137,7 +137,7 @@ async function checkDuplicateExists(
     }
     return false;
   } catch (error) {
-    console.error(`Помилка при перевірці дублів у ${tableName}:`, error);
+    // console.error(`Помилка при перевірці дублів у ${tableName}:`, error);
     return false;
   }
 }
@@ -152,17 +152,17 @@ async function detailExistsByName(name: string): Promise<boolean> {
 
 async function performCrudOperation(): Promise<boolean> {
   if (!CRUD) {
-    console.error("Відсутня змінна CRUD");
+    // console.error("Відсутня змінна CRUD");
     return false;
   }
   if (!all_bd) {
-    console.error("Відсутні дані all_bd");
+    // console.error("Відсутні дані all_bd");
     return false;
   }
 
   const inputValue = getInputValue();
   if ((CRUD === "Редагувати" || CRUD === "Додати") && !inputValue) {
-    console.error("Відсутнє значення в інпуті для операції:", CRUD);
+    // console.error("Відсутнє значення в інпуті для операції:", CRUD);
     return false;
   }
 
@@ -170,7 +170,7 @@ async function performCrudOperation(): Promise<boolean> {
     const data = JSON.parse(all_bd);
     const tableName = data.table;
     if (!tableName) {
-      console.error("Відсутня назва таблиці в all_bd");
+      // console.error("Відсутня назва таблиці в all_bd");
       return false;
     }
 
@@ -186,11 +186,11 @@ async function performCrudOperation(): Promise<boolean> {
       case "Додати":
         return await handleAdd(tableName, inputValue);
       default:
-        console.error("Невідомий CRUD режим:", CRUD);
+        // console.error("Невідомий CRUD режим:", CRUD);
         return false;
     }
   } catch (error) {
-    console.error("Помилка при обробці CRUD операції:", error);
+    // console.error("Помилка при обробці CRUD операції:", error);
     return false;
   }
 }
@@ -202,7 +202,7 @@ async function handleEdit(
 ): Promise<boolean> {
   try {
     if (!data.record) {
-      console.error("Немає знайденого запису для редагування");
+      // console.error("Немає знайденого запису для редагування");
       return false;
     }
 
@@ -210,7 +210,7 @@ async function handleEdit(
       (key) => key.includes("_id") || key === "id",
     );
     if (!idField) {
-      console.error("Не знайдено ID поле для редагування");
+      // console.error("Не знайдено ID поле для редагування");
       return false;
     }
 
@@ -228,7 +228,7 @@ async function handleEdit(
         .single();
 
       if (fetchError || !currentRecord) {
-        console.error("Помилка при отриманні запису:", fetchError);
+        // console.error("Помилка при отриманні запису:", fetchError);
         return false;
       }
 
@@ -275,7 +275,7 @@ async function handleEdit(
         .update(updateData)
         .eq(idField, idValue);
       if (error) {
-        console.error("Помилка при редагуванні:", error);
+        // console.error("Помилка при редагуванні:", error);
         return false;
       }
 
@@ -293,7 +293,7 @@ async function handleEdit(
       .single();
 
     if (fetchError || !currentRecord) {
-      console.error("Помилка при отриманні запису:", fetchError);
+      // console.error("Помилка при отриманні запису:", fetchError);
       return false;
     }
 
@@ -344,7 +344,7 @@ async function handleEdit(
     } else if (["works", "details"].includes(tableName)) {
       updateData.data = newValue;
     } else {
-      console.error("Невідома таблиця для редагування:", tableName);
+      // console.error("Невідома таблиця для редагування:", tableName);
       return false;
     }
 
@@ -353,13 +353,13 @@ async function handleEdit(
       .update(updateData)
       .eq(idField, idValue);
     if (error) {
-      console.error("Помилка при редагуванні:", error);
+      // console.error("Помилка при редагуванні:", error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Помилка при редагуванні:", error);
+    // console.error("Помилка при редагуванні:", error);
     return false;
   }
 }
@@ -367,7 +367,7 @@ async function handleEdit(
 async function handleDelete(tableName: string, data: any): Promise<boolean> {
   try {
     if (!data.record) {
-      console.error("Немає знайденого запису для видалення");
+      // console.error("Немає знайденого запису для видалення");
       return false;
     }
 
@@ -375,7 +375,7 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
       (key) => key.includes("_id") || key === "id",
     );
     if (!idField) {
-      console.error("Не знайдено ID поле для видалення");
+      // console.error("Не знайдено ID поле для видалення");
       return false;
     }
 
@@ -383,7 +383,7 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
 
     // ✅ ЗАХИСТ: Заборона видалення slyusar_id = 1
     if (tableName === "slyusars" && idValue === 1) {
-      console.error("Видалення адміністраторського акаунту заборонено!");
+      // console.error("Видалення адміністраторського акаунту заборонено!");
       showNotification(
         "Видалення адміністраторського акаунту заборонено!",
         "error",
@@ -396,13 +396,13 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
       .delete()
       .eq(idField, idValue);
     if (error) {
-      console.error("Помилка при видаленні:", error);
+      // console.error("Помилка при видаленні:", error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Помилка при видаленні:", error);
+    // console.error("Помилка при видаленні:", error);
     return false;
   }
 }
@@ -410,7 +410,7 @@ async function handleDelete(tableName: string, data: any): Promise<boolean> {
 async function slusarExistsByName(name: string): Promise<boolean> {
   const { data: rows, error } = await supabase.from("slyusars").select("data");
   if (error) {
-    console.error("Помилка перевірки існування слюсаря:", error);
+    // console.error("Помилка перевірки існування слюсаря:", error);
     return false;
   }
   const needle = normalizeName(name);
@@ -441,7 +441,7 @@ async function handleAdd(
     type TableName = keyof typeof idFieldMap;
     const idField = idFieldMap[tableName as TableName];
     if (!idField) {
-      console.error("Невідома таблиця для отримання ID:", tableName);
+      // console.error("Невідома таблиця для отримання ID:", tableName);
       return false;
     }
 
@@ -484,7 +484,7 @@ async function handleAdd(
     } else if (["works", "details"].includes(tableName)) {
       insertData.data = newValue;
     } else {
-      console.error("Невідома таблиця для додавання:", tableName);
+      // console.error("Невідома таблиця для додавання:", tableName);
       return false;
     }
 
@@ -493,13 +493,13 @@ async function handleAdd(
       .insert(insertData)
       .select();
     if (error) {
-      console.error("Помилка при додаванні:", error);
+      // console.error("Помилка при додаванні:", error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("❌ Помилка при додаванні:", error);
+    // console.error("❌ Помилка при додаванні:", error);
     return false;
   }
 }
@@ -556,7 +556,7 @@ export function showSavePromptModal(): Promise<boolean> {
             : null;
         }
       } catch (error) {
-        console.error("Помилка отримання даних користувача:", error);
+        // console.error("Помилка отримання даних користувача:", error);
       }
 
       // ✅ ПЕРЕВІРКА ПАРОЛЯ З LOCALSTORAGE
@@ -573,10 +573,10 @@ export function showSavePromptModal(): Promise<boolean> {
       // Перевіряємо пароль з localStorage
       if (currentUserPassword !== enteredPassword) {
         showNotification("Невірний пароль", "error");
-        console.error("❌ Пароль не співпадає:", {
-          entered: enteredPassword,
-          stored: currentUserPassword,
-        });
+        // console.error("❌ Пароль не співпадає:", {
+        // entered: enteredPassword,
+        // stored: currentUserPassword,
+        // });
         return;
       }
 
@@ -594,7 +594,7 @@ export function showSavePromptModal(): Promise<boolean> {
             tableFromDraft = parsed?.table ?? "";
           }
         } catch (err) {
-          console.error("Error parsing all_bd:", err);
+          // console.error("Error parsing all_bd:", err);
         }
 
         // ✅ ПЕРЕВІРКА НА ДУБЛІ СПІВРОБІТНИКІВ при додаванні
@@ -784,14 +784,11 @@ export function showSavePromptModal(): Promise<boolean> {
           success = results.every(Boolean);
 
           if (!success) {
-            const failedOps = results
-              .map((r, i) => (r ? null : i))
-              .filter((i) => i !== null);
-            console.warn("Failed operations at indices:", failedOps);
+            // silent: some operations failed
           }
         }
       } catch (err: any) {
-        console.error("CRUD operation error:", err);
+        // console.error("CRUD operation error:", err);
         errorMessage = err.message || String(err);
         success = false;
       }

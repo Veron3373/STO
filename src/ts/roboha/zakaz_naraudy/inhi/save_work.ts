@@ -27,7 +27,7 @@ async function fetchActDates(
     .eq("act_id", actId)
     .single();
   if (error) {
-    console.warn("Не вдалося прочитати дати акту:", error.message);
+    // console.warn("Не вдалося прочитати дати акту:", error.message);
     return { date_on: null, date_off: null };
   }
   return { date_on: data?.date_on ?? null, date_off: data?.date_off ?? null };
@@ -45,7 +45,7 @@ async function fetchActClientAndCarData(actId: number): Promise<{
       .single();
 
     if (actError || !act) {
-      console.warn("Не вдалося отримати дані акту:", actError?.message);
+      // console.warn("Не вдалося отримати дані акту:", actError?.message);
       return { clientInfo: "—", carInfo: "—" };
     }
 
@@ -82,7 +82,7 @@ async function fetchActClientAndCarData(actId: number): Promise<{
 
     return { clientInfo, carInfo };
   } catch (error) {
-    console.warn("Помилка при отриманні даних клієнта та авто:", error);
+    // console.warn("Помилка при отриманні даних клієнта та авто:", error);
     return { clientInfo: "—", carInfo: "—" };
   }
 }
@@ -95,7 +95,7 @@ async function fetchSlyusarByName(name: string): Promise<SlyusarRow | null> {
     .maybeSingle();
 
   if (error) {
-    console.warn(`fetchSlyusarByName(${name}):`, error.message);
+    // console.warn(`fetchSlyusarByName(${name}):`, error.message);
     return null;
   }
   if (!data) return null;
@@ -153,10 +153,10 @@ async function fetchPrevWorksFromSlyusars(actId: number): Promise<
       .select("data");
 
     if (error || !slyusars) {
-      console.warn(
-        "fetchPrevWorksFromSlyusars: помилка отримання слюсарів:",
-        error,
-      );
+      // console.warn(
+        // "fetchPrevWorksFromSlyusars: помилка отримання слюсарів:",
+        // error,
+      // );
       return out;
     }
 
@@ -196,7 +196,7 @@ async function fetchPrevWorksFromSlyusars(actId: number): Promise<
       }
     }
   } catch (err) {
-    console.error("fetchPrevWorksFromSlyusars: помилка:", err);
+    // console.error("fetchPrevWorksFromSlyusars: помилка:", err);
   }
 
   return out;
@@ -575,7 +575,7 @@ export async function syncSlyusarsOnActSave(
       prevRows: prevWorkRows,
     });
   } catch (error: any) {
-    console.error("Помилка синхронізації з slyusars:", error);
+    // console.error("Помилка синхронізації з slyusars:", error);
     showNotification(
       "Помилка синхронізації з ПІБ (слюсарями): " + (error?.message || error),
       "error",
@@ -639,7 +639,7 @@ export async function closeActAndMarkSlyusars(actId: number): Promise<void> {
       1800,
     );
   } catch (e: any) {
-    console.error(e);
+    // console.error(e);
     showNotification(
       "Помилка при закритті акту: " + (e?.message || e),
       "error",
@@ -695,7 +695,7 @@ export async function reopenActAndClearSlyusars(actId: number): Promise<void> {
       1800,
     );
   } catch (e: any) {
-    console.error(e);
+    // console.error(e);
     showNotification(
       "Помилка при відкритті акту: " + (e?.message || e),
       "error",

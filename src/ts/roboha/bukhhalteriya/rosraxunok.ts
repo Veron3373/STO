@@ -235,7 +235,7 @@ async function saveSlyusarsDataToDatabase(
       .select("*");
 
     if (fetchError) {
-      console.error("Помилка отримання даних:", fetchError);
+      // console.error("Помилка отримання даних:", fetchError);
       throw new Error(`Помилка отримання даних: ${fetchError.message}`);
     }
 
@@ -267,7 +267,7 @@ async function saveSlyusarsDataToDatabase(
       });
 
       if (!target) {
-        console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
+        // console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
         continue;
       }
 
@@ -280,7 +280,7 @@ async function saveSlyusarsDataToDatabase(
             .eq(primaryKey, target[primaryKey])
             .select();
           if (updErr) {
-            console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
+            // console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
             throw updErr;
           }
           return upd;
@@ -296,7 +296,7 @@ async function saveSlyusarsDataToDatabase(
             .contains("data", { Name: slyusar.Name })
             .select();
           if (updErr) {
-            console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
+            // console.error(`Помилка оновлення (fallback) ${slyusar.Name}:`, updErr);
             throw updErr;
           }
           return upd;
@@ -311,7 +311,7 @@ async function saveSlyusarsDataToDatabase(
 
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
-    console.error("❌ Помилка збереження в базу slyusars:", error);
+    // console.error("❌ Помилка збереження в базу slyusars:", error);
     let errorMessage = "Невідома помилка";
     if (error instanceof Error) errorMessage = error.message;
     else if (typeof error === "object" && error !== null)
@@ -422,7 +422,7 @@ export async function runMassPaymentCalculationForPodlegle(
       "success"
     );
   } catch (error) {
-    console.error("❌ Помилка масового розрахунку:", error);
+    // console.error("❌ Помилка масового розрахунку:", error);
     showNotification("❌ Помилка при збереженні змін у базу", "error");
   }
 }
@@ -437,7 +437,7 @@ export async function togglePaymentWithConfirmation(
   updateTableCallback: () => void
 ): Promise<void> {
   if (!данні[index]) {
-    console.error(`Запис з індексом ${index} не знайдено`);
+    // console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
     return;
   }
@@ -475,7 +475,7 @@ export async function togglePayment(
   updateTableCallback: () => void
 ): Promise<void> {
   if (!данні[index]) {
-    console.error(`Запис з індексом ${index} не знайдено`);
+    // console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
     return;
   }
@@ -491,7 +491,7 @@ export async function togglePayment(
     // Знаходимо відповідний запис в slyusarsData та оновлюємо його
     const slyusar = slyusarsData.find((s) => s.Name === record.name);
     if (!slyusar) {
-      console.error(`❌ Слюсаря ${record.name} не знайдено в slyusarsData`);
+      // console.error(`❌ Слюсаря ${record.name} не знайдено в slyusarsData`);
       showNotification(
         `⚠️ Помилка: слюсаря ${record.name} не знайдено в базі даних`,
         "error"
@@ -500,9 +500,9 @@ export async function togglePayment(
     }
 
     if (!slyusar.Історія[record.dateOpen]) {
-      console.error(
-        `❌ Дата ${record.dateOpen} не знайдена в історії слюсаря ${record.name}`
-      );
+      // console.error(
+        // `❌ Дата ${record.dateOpen} не знайдена в історії слюсаря ${record.name}`
+      // );
       showNotification(
         `⚠️ Помилка: дата ${record.dateOpen} не знайдена в історії`,
         "error"
@@ -514,9 +514,9 @@ export async function togglePayment(
       (a) => a.Акт === record.act
     );
     if (!actRecord) {
-      console.error(
-        `❌ Акт ${record.act} не знайдений для дати ${record.dateOpen}`
-      );
+      // console.error(
+        // `❌ Акт ${record.act} не знайдений для дати ${record.dateOpen}`
+      // );
       showNotification(`⚠️ Помилка: акт ${record.act} не знайдений`, "error");
       return;
     }
@@ -529,11 +529,11 @@ export async function togglePayment(
     );
 
     if (!workEntry) {
-      console.error(`❌ Запис роботи не знайдений:`, {
-        work: record.work,
-        price: record.price,
-        quantity: record.quantity,
-      });
+      // console.error(`❌ Запис роботи не знайдений:`, {
+        // work: record.work,
+        // price: record.price,
+        // quantity: record.quantity,
+      // });
       showNotification(
         `⚠️ Помилка: запис роботи "${record.work}" не знайдений`,
         "error"
@@ -578,7 +578,7 @@ export async function togglePayment(
       "success"
     );
   } catch (error) {
-    console.error(`❌ Помилка збереження:`, error);
+    // console.error(`❌ Помилка збереження:`, error);
     showNotification("❌ Помилка збереження змін в базу даних", "error");
     // Відкатуємо зміни в інтерфейсі
     record.isPaid = !record.isPaid;

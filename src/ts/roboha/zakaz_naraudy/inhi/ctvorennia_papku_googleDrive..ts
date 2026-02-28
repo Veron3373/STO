@@ -13,7 +13,7 @@ const CLIENT_ID = GOOGLE_CONFIG.clientId;
 const SCOPES = GOOGLE_CONFIG.driveScopes;
 
 if (!GOOGLE_CONFIG.isConfigured) {
-  console.error("❌ VITE_GOOGLE_CLIENT_ID не знайдено в .env");
+  // console.error("❌ VITE_GOOGLE_CLIENT_ID не знайдено в .env");
 }
 
 
@@ -119,7 +119,7 @@ export async function initGoogleApi(): Promise<void> {
           resolve();
         },
         onerror: () => {
-          console.error("❌ [iOS Debug] Помилка завантаження GAPI");
+          // console.error("❌ [iOS Debug] Помилка завантаження GAPI");
           reject(new Error("Помилка завантаження GAPI"));
         },
       });
@@ -132,7 +132,7 @@ export async function initGoogleApi(): Promise<void> {
         callback: async (response: any) => {
 
           if (response.error || !response.access_token) {
-            console.error("❌ [iOS Debug] Помилка OAuth:", response.error);
+            // console.error("❌ [iOS Debug] Помилка OAuth:", response.error);
             reject(new Error(response.error || "Не отримано токен доступу"));
             return;
           }
@@ -149,12 +149,12 @@ export async function initGoogleApi(): Promise<void> {
 
             resolve();
           } catch (err) {
-            console.error("❌ [iOS Debug] Помилка ініціалізації Drive:", err);
+            // console.error("❌ [iOS Debug] Помилка ініціалізації Drive:", err);
             reject(handleError(err));
           }
         },
         error_callback: (err: any) => {
-          console.error("❌ [iOS Debug] OAuth error callback:", err);
+          // console.error("❌ [iOS Debug] OAuth error callback:", err);
           reject(handleError(err));
         },
       });
@@ -162,7 +162,7 @@ export async function initGoogleApi(): Promise<void> {
       tokenClient.requestAccessToken();
     });
   } catch (error) {
-    console.error("❌ [iOS Debug] Критична помилка initGoogleApi:", error);
+    // console.error("❌ [iOS Debug] Критична помилка initGoogleApi:", error);
     throw handleError(error);
   }
 }
@@ -211,7 +211,7 @@ async function findFolderByActId(
     );
     return list.files?.[0]?.id || null;
   } catch (e) {
-    console.warn("Помилка пошуку за appProperties:", e);
+    // console.warn("Помилка пошуку за appProperties:", e);
     return null;
   }
 }
@@ -230,7 +230,7 @@ async function findFolder(
     );
     return list.files?.[0]?.id || null;
   } catch (e) {
-    console.error("Помилка пошуку папки:", e);
+    // console.error("Помилка пошуку папки:", e);
     return null;
   }
 }
@@ -334,7 +334,7 @@ export async function findAndRestoreFolderLink(
 
     return driveUrl;
   } catch (error) {
-    console.error("Помилка пошуку існуючої папки:", error);
+    // console.error("Помилка пошуку існуючої папки:", error);
     return null;
   }
 }
@@ -425,7 +425,7 @@ async function getActFullInfo(actId: number): Promise<{
       act_data: act,
     };
   } catch (error) {
-    console.error("Помилка отримання інформації про акт:", error);
+    // console.error("Помилка отримання інформації про акт:", error);
     throw error;
   }
 }
@@ -457,7 +457,7 @@ async function updateActPhotoLinkWithRetry(
         .single();
 
       if (updateError) {
-        console.error(`❌ Помилка update:`, updateError);
+        // console.error(`❌ Помилка update:`, updateError);
         throw new Error(`Не вдалося оновити акт: ${updateError.message}`);
       }
 
@@ -487,7 +487,7 @@ async function updateActPhotoLinkWithRetry(
       return; // ✅ Успіх!
     } catch (error) {
       lastError = handleError(error);
-      console.error(`❌ Спроба ${attempt} невдала:`, lastError.message);
+      // console.error(`❌ Спроба ${attempt} невдала:`, lastError.message);
     }
   }
 
@@ -574,7 +574,7 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       try {
         await initGoogleApi();
       } catch (authErr) {
-        console.error("❌ Auth cancelled/failed:", authErr);
+        // console.error("❌ Auth cancelled/failed:", authErr);
         isCreatingFolder = false;
         photoCell.style.pointerEvents = "";
         showNotification("Авторизацію скасовано або помилка входу", "warning");
@@ -650,7 +650,7 @@ export function addGoogleDriveHandler(isActClosed = false): void {
       try {
         folderUrl = await findAndRestoreFolderLink(actId, actInfo);
       } catch (searchErr) {
-        console.warn("⚠️ Помилка пошуку існуючої папки:", searchErr);
+        // console.warn("⚠️ Помилка пошуку існуючої папки:", searchErr);
         // Продовжуємо — спробуємо створити нову
       }
 
@@ -675,7 +675,7 @@ export function addGoogleDriveHandler(isActClosed = false): void {
         .single();
 
       if (!verifyAct?.photo_url) {
-        console.error("❌ Посилання не збереглось в БД після створення папки!");
+        // console.error("❌ Посилання не збереглось в БД після створення папки!");
         showNotification(
           "Папку створено, але посилання не збереглось. Спробуйте ще раз.",
           "warning"
@@ -684,7 +684,7 @@ export function addGoogleDriveHandler(isActClosed = false): void {
         showNotification("Готово. Посилання додано у форму.", "success");
       }
     } catch (err) {
-      console.error("❌ Google Drive помилка:", err);
+      // console.error("❌ Google Drive помилка:", err);
 
       let errorMessage = "Невідома помилка";
       if (err instanceof Error) {
@@ -735,7 +735,7 @@ export async function refreshPhotoData(actId: number): Promise<void> {
       .single();
 
     if (error || !act) {
-      console.error("❌ [Refresh] Помилка при оновленні даних фото:", error);
+      // console.error("❌ [Refresh] Помилка при оновленні даних фото:", error);
       return;
     }
 
@@ -746,7 +746,7 @@ export async function refreshPhotoData(actId: number): Promise<void> {
     updatePhotoSection(photoUrl, isActClosed);
 
   } catch (error) {
-    console.error("❌ [Refresh] Критична помилка при оновленні фото:", error);
+    // console.error("❌ [Refresh] Критична помилка при оновленні фото:", error);
   }
 }
 
@@ -818,7 +818,7 @@ export async function createDriveFolderStructure({
 
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : "Невідома помилка";
-    console.error("❌ Помилка створення структури папок:", e);
+    // console.error("❌ Помилка створення структури папок:", e);
     showNotification(`Не вдалося створити/знайти папку: ${errorMsg}`, "error");
     throw e; // Пробрасываем ошибку дальше
   }
@@ -838,7 +838,7 @@ export async function signOut(): Promise<void> {
     accessToken = null;
     if (gapi?.client) gapi.client.setToken(null);
   } catch (e) {
-    console.error("Помилка при виході:", e);
+    // console.error("Помилка при виході:", e);
   }
 }
 

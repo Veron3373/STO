@@ -33,14 +33,14 @@ function setupBukhhalteriyaGuard(): void {
 
                 if (!session) {
                     alert("⛔ Доступ заблоковано. Ви не авторизовані через Google.");
-                    console.warn("❌ Спроба доступу без авторизації");
+                    // console.warn("❌ Спроба доступу без авторизації");
                     return;
                 }
 
                 // Якщо авторизований - переходимо на сторінку
                 window.location.href = "bukhhalteriya.html";
             } catch (error) {
-                console.error("❌ Помилка перевірки авторизації:", error);
+                // console.error("❌ Помилка перевірки авторизації:", error);
                 alert("⛔ Помилка перевірки авторизації");
             }
         }, true); // true = capture phase
@@ -63,14 +63,14 @@ function setupHomeGuard(): void {
                     e.preventDefault();
                     e.stopPropagation();
                     alert("⛔ Доступ заблоковано. Ви не авторизовані через Google.");
-                    console.warn("❌ Спроба доступу без авторизації до Наряду");
+                    // console.warn("❌ Спроба доступу без авторизації до Наряду");
                     return;
                 }
 
             } catch (error) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.error("❌ Помилка перевірки авторізації:", error);
+                // console.error("❌ Помилка перевірки авторізації:", error);
                 alert("⛔ Помилка перевірки авторизації");
             }
         }, true);
@@ -95,14 +95,14 @@ function setupClientGuard(): void {
                     e.preventDefault();
                     e.stopImmediatePropagation(); // Зупиняємо ВСІ інші обробники
                     alert("⛔ Доступ заблоковано. Ви не авторизовані через Google.");
-                    console.warn("❌ Спроба доступу без авторизації до Додати");
+                    // console.warn("❌ Спроба доступу без авторизації до Додати");
                     return;
                 }
 
             } catch (error) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                console.error("❌ Помилка перевірки авторізації:", error);
+                // console.error("❌ Помилка перевірки авторізації:", error);
                 alert("⛔ Помилка перевірки авторизації");
             }
         }, true);

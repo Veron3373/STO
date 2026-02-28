@@ -114,14 +114,14 @@ async function loadCurrentActData(): Promise<any> {
       .single();
 
     if (error) {
-      console.error("Помилка завантаження даних акту:", error);
+      // console.error("Помилка завантаження даних акту:", error);
       currentActDataCache = null;
       return null;
     }
     currentActDataCache = data?.data || null;
     return currentActDataCache;
   } catch (err) {
-    console.error("Помилка завантаження даних акту:", err);
+    // console.error("Помилка завантаження даних акту:", err);
     currentActDataCache = null;
     return null;
   }

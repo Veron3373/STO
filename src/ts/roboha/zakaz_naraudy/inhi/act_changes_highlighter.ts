@@ -107,7 +107,7 @@ async function highlightAddedItems(
     const row = findRowByItemName(change.item_name);
 
     if (!row) {
-      console.warn(`⚠️ Не знайдено рядок для "${change.item_name}"`);
+      // console.warn(`⚠️ Не знайдено рядок для "${change.item_name}"`);
       continue;
     }
 
@@ -195,13 +195,13 @@ async function highlightDeletedItems(
 ): Promise<void> {
   const container = document.getElementById(ACT_ITEMS_TABLE_CONTAINER_ID);
   if (!container) {
-    console.error("❌ Контейнер таблиці не знайдено");
+    // console.error("❌ Контейнер таблиці не знайдено");
     return;
   }
 
   const tableBody = container.querySelector("tbody");
   if (!tableBody) {
-    console.error("❌ Тіло таблиці не знайдено");
+    // console.error("❌ Тіло таблиці не знайдено");
     return;
   }
 
@@ -226,7 +226,7 @@ async function highlightDeletedItems(
       ) as HTMLTableRowElement;
 
       if (!row) {
-        console.error("❌ Не вдалося знайти доданий рядок");
+        // console.error("❌ Не вдалося знайти доданий рядок");
         continue;
       }
 
@@ -234,7 +234,7 @@ async function highlightDeletedItems(
       row.classList.add("highlight-deleted");
       rowsToHighlight.push(row);
     } catch (error) {
-      console.error(`❌ Помилка при створенні рядка:`, error);
+      // console.error(`❌ Помилка при створенні рядка:`, error);
     }
   }
 
@@ -274,7 +274,7 @@ async function loadChangesForAct(actId: number): Promise<{
       .eq("act_id", actId);
 
     if (error) {
-      console.error("❌ Помилка завантаження змін:", error);
+      // console.error("❌ Помилка завантаження змін:", error);
       throw error;
     }
 
@@ -292,7 +292,7 @@ async function loadChangesForAct(actId: number): Promise<{
     const currentUserName = userData?.name || null;
 
     if (!currentUserName) {
-      console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+      // console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
       return { added: [], deleted: [] };
     }
 
@@ -303,7 +303,7 @@ async function loadChangesForAct(actId: number): Promise<{
       .eq("pruimalnyk", currentUserName); // ✅ Фільтр по приймальнику
 
     if (error) {
-      console.error("❌ Помилка завантаження змін:", error);
+      // console.error("❌ Помилка завантаження змін:", error);
       throw error;
     }
 
@@ -331,9 +331,9 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
     const currentUserName = userData?.name || null;
 
     if (!currentUserName) {
-      console.warn(
-        "⚠️ Не вдалося отримати ПІБ поточного користувача для видалення",
-      );
+      // console.warn(
+        // "⚠️ Не вдалося отримати ПІБ поточного користувача для видалення",
+      // );
       return;
     }
 
@@ -345,7 +345,7 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
       .eq("pruimalnyk", currentUserName); // ✅ Видаляємо тільки свої записи
 
     if (error) {
-      console.error("❌ Помилка видалення оброблених змін:", error);
+      // console.error("❌ Помилка видалення оброблених змін:", error);
       throw error;
     }
 
@@ -360,7 +360,7 @@ async function deleteProcessedChanges(actId: number): Promise<void> {
       .eq("act_id", actId); // ✅ Видаляємо ВСІ записи для акту (без фільтрації по pruimalnyk)
 
     if (error) {
-      console.error("❌ Помилка видалення оброблених змін:", error);
+      // console.error("❌ Помилка видалення оброблених змін:", error);
       throw error;
     }
 
@@ -418,7 +418,7 @@ export async function checkAndHighlightChanges(actId: number): Promise<void> {
     } else {
     }
   } catch (error) {
-    console.error("❌ Помилка при підсвічуванні змін:", error);
+    // console.error("❌ Помилка при підсвічуванні змін:", error);
     // Не блокуємо відкриття акту через помилку підсвічування
   }
 }

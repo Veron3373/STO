@@ -134,7 +134,7 @@ async function fetchOptionsFromDB(
       .limit(200);
 
     if (error || !data) {
-      console.error(`Помилка завантаження з ${table}:`, error);
+      // console.error(`Помилка завантаження з ${table}:`, error);
       return { options: [], fullData: [] };
     }
 
@@ -153,7 +153,7 @@ async function fetchOptionsFromDB(
       fullData: data,
     };
   } catch (err) {
-    console.error(`Помилка при запиті до ${table}:`, err);
+    // console.error(`Помилка при запиті до ${table}:`, err);
     return { options: [], fullData: [] };
   }
 }
@@ -273,7 +273,7 @@ const loadDatabaseData = async (buttonText: string) => {
 
     createCustomDropdown(searchInput);
   } catch (err) {
-    console.error(`Помилка завантаження з ${buttonText}`, err);
+    // console.error(`Помилка завантаження з ${buttonText}`, err);
   }
 };
 

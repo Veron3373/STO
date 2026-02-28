@@ -124,7 +124,7 @@ export async function saveAISettings(
 
     return true;
   } catch (err) {
-    console.error("❌ Помилка збереження AI налаштувань:", err);
+    // console.error("❌ Помилка збереження AI налаштувань:", err);
     return false;
   }
 }
@@ -178,7 +178,7 @@ export async function getAveragePriceFromHistory(
       .limit(50); // Останні 50 актів для швидкості
 
     if (error) {
-      console.error("Помилка отримання історії цін:", error);
+      // console.error("Помилка отримання історії цін:", error);
       showNotification(
         `Помилка отримання історії цін: ${error.message}`,
         "error",
@@ -309,7 +309,7 @@ export async function getAveragePriceFromHistory(
     // Якщо `acts` не існує, але помилки не було (малоймовірно, але можливо)
     return null;
   } catch (err) {
-    console.error("❌ Помилка отримання середньої ціни:", err);
+    // console.error("❌ Помилка отримання середньої ціни:", err);
     return null;
   }
 }
@@ -398,7 +398,7 @@ export async function findSalaryInHistory(
 
     return suggestion;
   } catch (err) {
-    console.error("❌ Помилка пошуку зарплати в історії:", err);
+    // console.error("❌ Помилка пошуку зарплати в історії:", err);
     return null;
   }
 }

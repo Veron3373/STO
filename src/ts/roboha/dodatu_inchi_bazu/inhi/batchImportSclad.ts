@@ -262,7 +262,7 @@ async function fetchNames(table: TableName): Promise<string[]> {
       .range(offset, offset + batchSize - 1);
 
     if (error2 || !Array.isArray(rows2)) {
-      console.error(`[${table}] load error:`, error2);
+      // console.error(`[${table}] load error:`, error2);
       break;
     }
 
@@ -319,7 +319,7 @@ async function loadActsList(): Promise<{
     .order("act_id", { ascending: false });
 
   if (error || !Array.isArray(data)) {
-    console.error("Error loading acts:", error);
+    // console.error("Error loading acts:", error);
     return { list: [], map: new Map() };
   }
 
@@ -341,7 +341,7 @@ async function loadWarehouseList(): Promise<string[]> {
       .order("setting_id", { ascending: true });
 
     if (error || !Array.isArray(data)) {
-      console.error("Error loading warehouses:", error);
+      // console.error("Error loading warehouses:", error);
       return [];
     }
 
@@ -354,7 +354,7 @@ async function loadWarehouseList(): Promise<string[]> {
     // Активні склади - повертаємо номери як рядки
     return data.map((row: { setting_id: number }) => String(row.setting_id));
   } catch (e) {
-    console.error("Error loading warehouse list:", e);
+    // console.error("Error loading warehouse list:", e);
     return [];
   }
 }
@@ -368,7 +368,7 @@ async function loadUsersList(): Promise<string[]> {
       .not("data", "is", null);
 
     if (error || !Array.isArray(data)) {
-      console.error("Error loading users:", error);
+      // console.error("Error loading users:", error);
       return [];
     }
 
@@ -407,7 +407,7 @@ async function loadUsersList(): Promise<string[]> {
 
     return uniqAndSort(names);
   } catch (e) {
-    console.error("Error loading users list:", e);
+    // console.error("Error loading users list:", e);
     return [];
   }
 }
@@ -436,7 +436,7 @@ async function loadPartNumbers(): Promise<string[]> {
         .range(offset, offset + batchSize - 1);
 
       if (error) {
-        console.error("Помилка завантаження каталог номерів:", error);
+        // console.error("Помилка завантаження каталог номерів:", error);
         break;
       }
 
@@ -460,7 +460,7 @@ async function loadPartNumbers(): Promise<string[]> {
 
     return Array.from(unique).sort();
   } catch (e) {
-    console.error("Помилка завантаження каталог номерів:", e);
+    // console.error("Помилка завантаження каталог номерів:", e);
     return [];
   }
 }
@@ -579,7 +579,7 @@ async function updateActWithDetails(
       .eq("act_id", parseInt(actNo, 10))
       .single();
     if (fetchError || !actData) {
-      console.warn(`Акт №${actNo} не знайдено`);
+      // console.warn(`Акт №${actNo} не знайдено`);
       return false;
     }
     let actJsonData: any;
@@ -651,9 +651,9 @@ async function updateActWithDetails(
         actJsonData["Загальна сума"] =
           (actJsonData["Загальна сума"] || 0) + sumDiff;
       }
-      console.log(
-        `🔄 Оновлено існуючу деталь в акті №${actNo}: ${detailData["Каталог"]} (індекс: ${existingIndex})`,
-      );
+      // console.log(
+        // `🔄 Оновлено існуючу деталь в акті №${actNo}: ${detailData["Каталог"]} (індекс: ${existingIndex})`,
+      // );
     } else {
       // Нова деталь — додаємо
       actJsonData["Деталі"].push(detailData);
@@ -662,9 +662,9 @@ async function updateActWithDetails(
         actJsonData["Загальна сума"] =
           (actJsonData["Загальна сума"] || 0) + detailSum;
       }
-      console.log(
-        `➕ Додано нову деталь в акт №${actNo}: ${detailData["Каталог"]}`,
-      );
+      // console.log(
+        // `➕ Додано нову деталь в акт №${actNo}: ${detailData["Каталог"]}`,
+      // );
     }
 
     const { error: updateError } = await supabase
@@ -672,12 +672,12 @@ async function updateActWithDetails(
       .update({ data: actJsonData })
       .eq("act_id", parseInt(actNo, 10));
     if (updateError) {
-      console.error(`Помилка оновлення акта №${actNo}:`, updateError);
+      // console.error(`Помилка оновлення акта №${actNo}:`, updateError);
       return false;
     }
     return true;
   } catch (err) {
-    console.error(`Помилка при роботі з актом №${actNo}:`, err);
+    // console.error(`Помилка при роботі з актом №${actNo}:`, err);
     return false;
   }
 }
@@ -946,7 +946,7 @@ function parseBatchData(text: string) {
 
     // No longer filter out empties - we want all 11 fields, even empty
     if (parts.length < 11) {
-      console.warn("⚠️ Пропущено рядок (недостатньо даних):", line);
+      // console.warn("⚠️ Пропущено рядок (недостатньо даних):", line);
       return;
     }
     const row = {
@@ -2422,7 +2422,7 @@ async function loadScladPendingRecords(): Promise<any[]> {
       .in("statys", ["Замовити", "Замовлено"])
       .order("sclad_id", { ascending: false });
     if (error) {
-      console.error("Помилка завантаження записів sclad:", error);
+      // console.error("Помилка завантаження записів sclad:", error);
       return [];
     }
     if (!data || data.length === 0) return [];
@@ -2515,7 +2515,7 @@ async function loadScladPendingRecords(): Promise<any[]> {
       };
     });
   } catch (e) {
-    console.error("Помилка завантаження записів sclad:", e);
+    // console.error("Помилка завантаження записів sclad:", e);
     return [];
   }
 }
@@ -2657,7 +2657,7 @@ async function uploadBatchData(data: any[]) {
         shopId = await getShopIdByName(shopName);
         if (shopId) {
         } else {
-          console.warn(`⚠️ Не вдалося отримати ID для магазину "${shopName}"`);
+          // console.warn(`⚠️ Не вдалося отримати ID для магазину "${shopName}"`);
         }
       } else {
       }
@@ -2688,7 +2688,7 @@ async function uploadBatchData(data: any[]) {
         detailId = await getDetailIdByName(detailName);
         if (detailId) {
         } else {
-          console.warn(`⚠️ Не вдалося отримати ID для деталі "${detailName}"`);
+          // console.warn(`⚠️ Не вдалося отримати ID для деталі "${detailName}"`);
         }
       } else {
       }
@@ -2725,10 +2725,10 @@ async function uploadBatchData(data: any[]) {
               .eq("sclad_id", row._scladId);
 
             if (deleteError) {
-              console.error(
-                `Помилка видалення sclad_id=${row._scladId}:`,
-                deleteError,
-              );
+              // console.error(
+                // `Помилка видалення sclad_id=${row._scladId}:`,
+                // deleteError,
+              // );
               errorCount++;
               updateRowStatus(i, false, "❌ Помилка видалення");
             } else {
@@ -2736,7 +2736,7 @@ async function uploadBatchData(data: any[]) {
               updateRowStatus(i, true, "🗑️ Видалено");
             }
           } catch (err) {
-            console.error(`Помилка видалення sclad_id=${row._scladId}:`, err);
+            // console.error(`Помилка видалення sclad_id=${row._scladId}:`, err);
             errorCount++;
             updateRowStatus(i, false, "❌ Помилка видалення");
           }
@@ -2783,16 +2783,16 @@ async function uploadBatchData(data: any[]) {
             .eq("sclad_id", row._scladId);
 
           if (updateError) {
-            console.error(
-              `Помилка оновлення sclad_id=${row._scladId}:`,
-              updateError,
-            );
+            // console.error(
+              // `Помилка оновлення sclad_id=${row._scladId}:`,
+              // updateError,
+            // );
             scladSuccess = false;
           } else {
             scladSuccess = true;
           }
         } catch (err) {
-          console.error(`Помилка оновлення sclad_id=${row._scladId}:`, err);
+          // console.error(`Помилка оновлення sclad_id=${row._scladId}:`, err);
           scladSuccess = false;
         }
       } else {
@@ -2892,7 +2892,7 @@ async function uploadBatchData(data: any[]) {
             scladIdsMap.set(key, scladIdWeb);
           }
         } catch (err) {
-          console.error("Помилка отримання sclad_id:", err);
+          // console.error("Помилка отримання sclad_id:", err);
         }
       }
 
@@ -2912,7 +2912,7 @@ async function uploadBatchData(data: any[]) {
         };
         actSuccess = await updateActWithDetails(actNo, detailForAct);
         if (!actSuccess) {
-          console.warn(`Не вдалося оновити акт №${actNo} для рядка ${i + 1}`);
+          // console.warn(`Не вдалося оновити акт №${actNo} для рядка ${i + 1}`);
         }
       }
 
@@ -3108,7 +3108,7 @@ export function initBatchImport() {
         usersListCache = users;
         partNumbersCache = partNumbers as string[];
       } catch (err) {
-        console.error("Помилка оновлення кешу імпорту:", err);
+        // console.error("Помилка оновлення кешу імпорту:", err);
       }
 
       // 4. Завантажуємо записи з sclad

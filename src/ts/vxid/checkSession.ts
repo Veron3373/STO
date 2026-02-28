@@ -10,7 +10,7 @@ export async function requireAuth() {
 
   if (!session || error) {
     if (!window.location.pathname.includes("index.html")) {
-      console.warn("⛔ Сесія відсутня або помилка:", error);
+      // console.warn("⛔ Сесія відсутня або помилка:", error);
       redirectToIndex();
     }
     return;

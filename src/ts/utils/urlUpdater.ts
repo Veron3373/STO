@@ -48,7 +48,7 @@ export async function updateDynamicLinks(): Promise<void> {
       }
     });
   } catch (error) {
-    console.error("❌ Помилка оновлення посилань:", error);
+    // console.error("❌ Помилка оновлення посилань:", error);
   }
 }
 

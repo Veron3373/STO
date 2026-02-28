@@ -56,7 +56,7 @@ export function showSmsConfirmModal(
         const cancelBtn = document.getElementById("vikno_sms_confirm-cancel");
 
         if (!confirmBtn || !cancelBtn) {
-            console.error("SMS Modal buttons not found");
+            // console.error("SMS Modal buttons not found");
             modal.style.display = "none";
             resolve(false);
             return;

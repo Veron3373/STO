@@ -131,19 +131,35 @@ function createPasswordConfirmationModal(
     const icon = document.createElement("span");
     icon.className = "login-modal-icon";
     switch (action) {
-      case "pay": icon.textContent = "🔐"; break;
-      case "unpay": icon.textContent = "🔐"; break;
-      case "return": icon.textContent = "⬅️"; break;
-      case "unreturn": icon.textContent = "🚚"; break;
+      case "pay":
+        icon.textContent = "🔐";
+        break;
+      case "unpay":
+        icon.textContent = "🔐";
+        break;
+      case "return":
+        icon.textContent = "⬅️";
+        break;
+      case "unreturn":
+        icon.textContent = "🚚";
+        break;
     }
 
     const h = document.createElement("h3");
     h.className = "login-modal-title";
     switch (action) {
-      case "pay": h.textContent = "Підтвердження розрахунку"; break;
-      case "unpay": h.textContent = "Підтвердження скасування"; break;
-      case "return": h.textContent = "Підтвердження повернення"; break;
-      case "unreturn": h.textContent = "Підтвердження скасування повернення"; break;
+      case "pay":
+        h.textContent = "Підтвердження розрахунку";
+        break;
+      case "unpay":
+        h.textContent = "Підтвердження скасування";
+        break;
+      case "return":
+        h.textContent = "Підтвердження повернення";
+        break;
+      case "unreturn":
+        h.textContent = "Підтвердження скасування повернення";
+        break;
     }
 
     const subtitle = document.createElement("p");
@@ -161,7 +177,8 @@ function createPasswordConfirmationModal(
     err.style.display = "none";
 
     const row = document.createElement("div");
-    row.style.cssText = "display:flex; gap:12px; justify-content:center; margin-top:16px;";
+    row.style.cssText =
+      "display:flex; gap:12px; justify-content:center; margin-top:16px;";
 
     // Скасувати — ЗЛІВА
     const cancel = document.createElement("button");
@@ -205,8 +222,12 @@ function createPasswordConfirmationModal(
         h.style.color = "#4ade80";
         inp.classList.add("input-success");
         ok.innerHTML = "✓ Успішно";
-        ok.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
-        setTimeout(() => { modal.remove(); resolve(true); }, 500);
+        ok.style.background =
+          "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+        setTimeout(() => {
+          modal.remove();
+          resolve(true);
+        }, 500);
       } else {
         showModalError("Невірний пароль");
         inp.focus();
@@ -326,7 +347,7 @@ async function fetchSlyusarsNames(): Promise<void> {
       .select("slyusar_id, data");
 
     if (error) {
-      console.error("Помилка завантаження слюсарів:", error);
+      // console.error("Помилка завантаження слюсарів:", error);
       return;
     }
 
@@ -346,7 +367,7 @@ async function fetchSlyusarsNames(): Promise<void> {
     }
     slyusarsNameCacheLoaded = true;
   } catch (error) {
-    console.error("Помилка завантаження імен слюсарів:", error);
+    // console.error("Помилка завантаження імен слюсарів:", error);
   }
 }
 
@@ -422,13 +443,13 @@ async function fetchShopData(): Promise<ShopData[]> {
     const { data, error } = await supabase.from("shops").select("*");
 
     if (error) {
-      console.error("Помилка Supabase:", error);
+      // console.error("Помилка Supabase:", error);
       throw new Error(`Помилка завантаження: ${error.message}`);
     }
 
     if (data && Array.isArray(data)) {
       return data
-        .map((item, index) => {
+        .map((item, _index) => {
           try {
             let parsedData;
             if (typeof item.data === "string") {
@@ -436,28 +457,28 @@ async function fetchShopData(): Promise<ShopData[]> {
             } else if (typeof item.data === "object" && item.data !== null) {
               parsedData = item.data;
             } else {
-              console.warn(
-                `Пропущений запис ${index}: невірний формат data`,
-                item,
-              );
+              // console.warn(
+              // `Пропущений запис ${index}: невірний формат data`,
+              // item,
+              // );
               return null;
             }
 
             if (!parsedData || !parsedData.Name) {
-              console.warn(
-                `Пропущений запис ${index}: немає поля Name`,
-                parsedData,
-              );
+              // console.warn(
+              // `Пропущений запис ${index}: немає поля Name`,
+              // parsedData,
+              // );
               return null;
             }
 
             return parsedData;
           } catch (parseError) {
-            console.error(
-              `Помилка парсингу запису ${index}:`,
-              parseError,
-              item,
-            );
+            // console.error(
+            // `Помилка парсингу запису ${index}:`,
+            // parseError,
+            // item,
+            // );
             return null;
           }
         })
@@ -466,7 +487,7 @@ async function fetchShopData(): Promise<ShopData[]> {
       throw new Error("Невірний формат даних з Supabase");
     }
   } catch (error) {
-    console.error("Помилка завантаження даних магазинів:", error);
+    // console.error("Помилка завантаження даних магазинів:", error);
     showNotification("Помилка завантаження даних магазинів", "error", 5000);
     return [];
   }
@@ -649,7 +670,7 @@ async function loadAvailableShops(): Promise<void> {
 
     shopsLoaded = true;
   } catch (error) {
-    console.error("Помилка завантаження магазинів:", error);
+    // console.error("Помилка завантаження магазинів:", error);
     showNotification("Помилка завантаження списку магазинів", "error", 3000);
   }
 }
@@ -806,8 +827,8 @@ class SmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -832,8 +853,9 @@ class SmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -1035,10 +1057,10 @@ function ensureSmartDropdowns(): void {
         try {
           return new SmartDropdown(config);
         } catch (error) {
-          console.warn(
-            `Failed to create dropdown for ${config.inputId}:`,
-            error,
-          );
+          // console.warn(
+          // `Failed to create dropdown for ${config.inputId}:`,
+          // error,
+          // );
           return null;
         }
       })
@@ -1438,9 +1460,10 @@ async function loadScladData(
 
     return mapped;
   } catch (err) {
-    console.error("Помилка завантаження sclad з Supabase:", err);
+    // console.error("Помилка завантаження sclad з Supabase:", err);
     showNotification(
-      `Помилка завантаження даних з бази sclad: ${err instanceof Error ? err.message : "Невідома помилка"
+      `Помилка завантаження даних з бази sclad: ${
+        err instanceof Error ? err.message : "Невідома помилка"
       }`,
       "error",
       5000,
@@ -1626,12 +1649,12 @@ export function updateMagazineTotalSum(): void {
   totalSumElement.innerHTML = `
   <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
     <span style="color: #ffffff;">Загальна сума: <strong style="color: #333;">💰 ${formatNumber(
-    totalSum,
-  )}</strong> грн</span>
+      totalSum,
+    )}</strong> грн</span>
     <span style="color: #666;">|</span>
     <span style="color: #ffffff;">На складі: <strong style="color: #8B0000;">💶 ${formatNumber(
-    remainingSum,
-  )}</strong> грн</span>
+      remainingSum,
+    )}</strong> грн</span>
   </div>
 `;
 }
@@ -1739,8 +1762,9 @@ export function updateMagazineTable(): void {
       return `
         <tr onclick="handleRowClick(${index})" class="${rowClass}">
           <td>
-            <button class="Bukhhalter-payment-btn ${item.isPaid ? "paid" : "unpaid"
-        }" ${paymentDisabled} ${paymentOnclick}
+            <button class="Bukhhalter-payment-btn ${
+              item.isPaid ? "paid" : "unpaid"
+            }" ${paymentDisabled} ${paymentOnclick}
               title="${item.isPaid ? "Розраховано" : "Не розраховано"}">
               ${paymentIcon} ${paymentText}
             </button>
@@ -1844,7 +1868,7 @@ export async function toggleMagazinePayment(index: number): Promise<void> {
   } catch (e) {
     item.isPaid = prevIsPaid;
     item.rosraxovano = prevDate;
-    console.error(e);
+    // console.error(e);
     showNotification("❌ Помилка оновлення статусу оплати", "error", 4000);
     updateMagazineTable();
     updateMagazineTotalSum();
@@ -1932,7 +1956,7 @@ export async function toggleReturn(index: number): Promise<void> {
     item.isReturned = prevIsReturned;
     item.povernennya = prevDate;
     item.kilkist_off = prevKilkistOff;
-    console.error(e);
+    // console.error(e);
     showNotification("❌ Помилка оновлення статусу повернення", "error", 4000);
     updateMagazineTable();
     updateMagazineTotalSum();
@@ -2138,7 +2162,7 @@ async function updatePaymentInDatabase(item: MagazineRecord): Promise<void> {
     .eq(item.pkName, item.pkValue);
 
   if (error) {
-    console.error("Помилка оновлення статусу оплати:", error);
+    // console.error("Помилка оновлення статусу оплати:", error);
     throw error;
   }
 }
@@ -2166,7 +2190,7 @@ async function updateReturnInDatabase(item: MagazineRecord): Promise<void> {
     .eq(item.pkName, item.pkValue);
 
   if (error) {
-    console.error("Помилка оновлення статусу повернення:", error);
+    // console.error("Помилка оновлення статусу повернення:", error);
     throw error;
   }
 }
@@ -2438,7 +2462,7 @@ export async function runMassPaymentCalculationForMagazine(): Promise<void> {
       const it = toUpdate[i];
       it.isPaid = false;
       it.rosraxovano = null;
-      console.error("Помилка оновлення оплати магазину:", res.reason);
+      // console.error("Помилка оновлення оплати магазину:", res.reason);
     }
   });
 

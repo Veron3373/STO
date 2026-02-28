@@ -107,7 +107,7 @@ export async function createActInDatabase(
       .single();
 
     if (error || !newAct) {
-      console.error("❌ Помилка: новий акт не створено", error?.message);
+      // console.error("❌ Помилка: новий акт не створено", error?.message);
       return null;
     }
 
@@ -122,9 +122,9 @@ export async function createActInDatabase(
           .eq("act_id", newAct.act_id);
 
         if (updateError) {
-          console.warn(
-            `⚠️ Помилка при записуванні приймальника: ${updateError.message}`,
-          );
+          // console.warn(
+            // `⚠️ Помилка при записуванні приймальника: ${updateError.message}`,
+          // );
         } else {
         }
       }
@@ -139,17 +139,17 @@ export async function createActInDatabase(
         .eq("post_arxiv_id", postArxivId);
 
       if (updateError) {
-        console.error(
-          "❌ Помилка: не вдалося оновити post_arxiv з act_id",
-          updateError.message,
-        );
+        // console.error(
+          // "❌ Помилка: не вдалося оновити post_arxiv з act_id",
+          // updateError.message,
+        // );
       } else {
       }
     }
 
     return newAct.act_id;
   } catch (error: any) {
-    console.error("❌ Помилка при створенні акту в Supabase:", error.message);
+    // console.error("❌ Помилка при створенні акту в Supabase:", error.message);
     return null;
   }
 }
@@ -218,7 +218,7 @@ export function showSaveModalCreate(
           resolve(null);
         }
       } catch (err: any) {
-        console.error("🚨 Внутрішня помилка у onConfirm:", err?.message || err);
+        // console.error("🚨 Внутрішня помилка у onConfirm:", err?.message || err);
         showMessage("❌ Помилка при створенні заказ наряду", "#f44336");
         confirmBtn.disabled = false;
         confirmBtn.textContent = "Так";

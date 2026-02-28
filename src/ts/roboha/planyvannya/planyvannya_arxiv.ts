@@ -925,7 +925,7 @@ export class PostArxiv {
               .eq("post_arxiv_id", parseInt(postArxivId));
 
             if (error) {
-              console.error("Помилка оновлення запису в БД:", error);
+              // console.error("Помилка оновлення запису в БД:", error);
               showNotification("Помилка збереження переміщення", "error");
             } else {
               // Оновлюємо dataset блоку з новим slyusar_id
@@ -954,11 +954,11 @@ export class PostArxiv {
             );
           }
         } catch (err) {
-          console.error("Помилка при оновленні БД:", err);
+          // console.error("Помилка при оновленні БД:", err);
           showNotification("Помилка збереження переміщення", "error");
         }
       } else {
-        console.warn("Немає postArxivId або newSlyusarId для збереження");
+        // console.warn("Немає postArxivId або newSlyusarId для збереження");
         showNotification("Запис переміщено", "success");
       }
     } else {
@@ -1248,7 +1248,7 @@ export class PostArxiv {
 
       // Перевірка: чи весь виділений діапазон зайнятий?
       if (validRanges.length === 0) {
-        console.warn("❌ Весь діапазон зайнятий!");
+        // console.warn("❌ Весь діапазон зайнятий!");
         showNotification("Цей час вже зайнятий", "error");
         return;
       }
@@ -1354,7 +1354,7 @@ export class PostArxiv {
   ): Promise<number | null> {
     const targetDate = data.date;
     if (!targetDate) {
-      console.error("No date provided for saving");
+      // console.error("No date provided for saving");
       return null;
     }
 
@@ -1398,7 +1398,7 @@ export class PostArxiv {
         .update(payload)
         .eq("post_arxiv_id", existingId);
       if (error) {
-        console.error("Update error:", error);
+        // console.error("Update error:", error);
         showNotification("Помилка збереження в БД", "error");
         return null;
       }
@@ -1425,7 +1425,7 @@ export class PostArxiv {
         .select("post_arxiv_id")
         .single();
       if (error) {
-        console.error("Insert error:", error);
+        // console.error("Insert error:", error);
         showNotification("Помилка збереження в БД", "error");
         return null;
       }
@@ -1475,7 +1475,7 @@ export class PostArxiv {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Validation check error:", error);
+      // console.error("Validation check error:", error);
       return { valid: false, message: "Помилка перевірки" };
     }
 
@@ -1982,7 +1982,7 @@ export class PostArxiv {
         .eq("post_arxiv_id", parseInt(postArxivId));
 
       if (error) {
-        console.error("Update time error:", error);
+        // console.error("Update time error:", error);
         showNotification("Помилка оновлення часу", "error");
         // Revert logic could go here but it's complex visually, for now keep UI as is or reload
       } else {
@@ -2002,7 +2002,7 @@ export class PostArxiv {
         }
       }
     } catch (err) {
-      console.error("Update time error:", err);
+      // console.error("Update time error:", err);
     }
   }
 
@@ -2035,7 +2035,7 @@ export class PostArxiv {
             .single();
 
           if (fetchError) {
-            console.error("Помилка отримання даних запису:", fetchError);
+            // console.error("Помилка отримання даних запису:", fetchError);
             showNotification("Помилка перевірки прав доступу", "error");
             this.closeContextMenu();
             return;
@@ -2065,13 +2065,13 @@ export class PostArxiv {
             .eq("post_arxiv_id", parseInt(postArxivId));
 
           if (error) {
-            console.error("Помилка видалення запису з БД:", error);
+            // console.error("Помилка видалення запису з БД:", error);
             showNotification("Помилка видалення запису", "error");
             this.closeContextMenu();
             return;
           }
         } catch (err) {
-          console.error("Помилка при видаленні:", err);
+          // console.error("Помилка при видаленні:", err);
           showNotification("Виникла помилка при видаленні", "error");
           this.closeContextMenu();
           return;

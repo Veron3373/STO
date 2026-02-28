@@ -327,7 +327,7 @@ export async function getSlyusarWorkPercent(
       .maybeSingle();
 
     if (error) {
-      console.error(`Помилка отримання даних слюсаря ${slyusarName}:`, error);
+      // console.error(`Помилка отримання даних слюсаря ${slyusarName}:`, error);
       return 0;
     }
 
@@ -351,7 +351,7 @@ export async function getSlyusarWorkPercent(
 
     return percent;
   } catch (err) {
-    console.error(`Помилка парсингу даних слюсаря ${slyusarName}:`, err);
+    // console.error(`Помилка парсингу даних слюсаря ${slyusarName}:`, err);
     return 0;
   }
 }
@@ -1176,7 +1176,7 @@ export async function toggleAddRowButtonVisibility(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("❌ Помилка при перевірці прав на додавання рядків:", error);
+    // console.error("❌ Помилка при перевірці прав на додавання рядків:", error);
     // У випадку помилки - показуємо кнопки (безпечніший варіант)
     if (addRowButton) {
       addRowButton.style.display = "";
@@ -1533,9 +1533,9 @@ export function closeZakazNaraydModal(): void {
     // 🧹 Очищуємо кеш розрахунку знижки
     resetDiscountCache();
     // 🔐 Відписуємося від Presence API
-    unsubscribeFromActPresence().catch((err: unknown) =>
-      console.error("Помилка при відписці від Presence:", err),
-    );
+    unsubscribeFromActPresence().catch(() => {
+      /* silent */
+    });
   }
 }
 

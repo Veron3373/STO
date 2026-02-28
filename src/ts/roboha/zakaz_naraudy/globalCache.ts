@@ -235,7 +235,7 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
       return true;
     }
   } catch (e) {
-    console.warn("⚠️ Помилка читання загальних налаштувань з localStorage:", e);
+    // console.warn("⚠️ Помилка читання загальних налаштувань з localStorage:", e);
   }
   return false;
 }
@@ -248,10 +248,10 @@ export function saveGeneralSettingsToLocalStorage(): void {
       JSON.stringify(globalCache.generalSettings),
     );
   } catch (e) {
-    console.warn(
-      "⚠️ Помилка збереження загальних налаштувань в localStorage:",
-      e,
-    );
+    // console.warn(
+      // "⚠️ Помилка збереження загальних налаштувань в localStorage:",
+      // e,
+    // );
   }
 }
 
@@ -322,7 +322,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
       applyWallpapers();
     }
   } catch (e) {
-    console.error("❌ Помилка завантаження загальних налаштувань з БД:", e);
+    // console.error("❌ Помилка завантаження загальних налаштувань з БД:", e);
   }
 }
 
@@ -423,7 +423,7 @@ async function fetchAllWithPagination<T>(
     const { data, error } = await query;
 
     if (error) {
-      console.error(`❌ Помилка завантаження ${tableName}:`, error.message);
+      // console.error(`❌ Помилка завантаження ${tableName}:`, error.message);
       break;
     }
 
@@ -612,7 +612,7 @@ export async function loadGlobalData(
     initWorksRealtimeSubscription();
     initDetailsRealtimeSubscription();
   } catch (error) {
-    console.error("❌ Помилка завантаження глобальних даних:", error);
+    // console.error("❌ Помилка завантаження глобальних даних:", error);
     showNotification("Помилка завантаження базових даних", "error");
   }
 }
@@ -629,7 +629,7 @@ export async function reloadSlyusarsOnly(): Promise<void> {
       .select("data");
 
     if (error) {
-      console.error("❌ Помилка завантаження слюсарів:", error);
+      // console.error("❌ Помилка завантаження слюсарів:", error);
       return;
     }
 
@@ -641,7 +641,7 @@ export async function reloadSlyusarsOnly(): Promise<void> {
         })
         .filter(Boolean) || [];
   } catch (err) {
-    console.error("❌ [reloadSlyusarsOnly] Помилка:", err);
+    // console.error("❌ [reloadSlyusarsOnly] Помилка:", err);
   }
 }
 
@@ -667,7 +667,7 @@ export async function loadSkladLite(): Promise<void> {
       };
     });
   } catch (e) {
-    console.error("💥 loadSkladLite(): критична помилка:", e);
+    // console.error("💥 loadSkladLite(): критична помилка:", e);
     globalCache.skladLite = [];
   }
 }
@@ -708,10 +708,10 @@ export async function ensureSkladLoaded(): Promise<void> {
     )
     .order("sclad_id", { ascending: false });
   if (error) {
-    console.warn(
-      "⚠️ ensureSkladLoaded(): не вдалося отримати sclad:",
-      error.message,
-    );
+    // console.warn(
+      // "⚠️ ensureSkladLoaded(): не вдалося отримати sclad:",
+      // error.message,
+    // );
     return;
   }
   const mapped =

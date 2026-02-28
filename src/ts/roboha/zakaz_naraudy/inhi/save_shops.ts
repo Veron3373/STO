@@ -26,7 +26,7 @@ async function fetchActDates(
     .eq("act_id", actId)
     .single();
   if (error) {
-    console.warn("Не вдалося прочитати дати акту:", error.message);
+    // console.warn("Не вдалося прочитати дати акту:", error.message);
     return { date_on: null, date_off: null };
   }
   return { date_on: data?.date_on ?? null, date_off: data?.date_off ?? null };
@@ -48,7 +48,7 @@ async function fetchActClientAndCarData(actId: number): Promise<{
       .single();
 
     if (actError || !act) {
-      console.warn("Не вдалося отримати дані акту:", actError?.message);
+      // console.warn("Не вдалося отримати дані акту:", actError?.message);
       return { clientInfo: "—", carInfo: "—" };
     }
 
@@ -87,7 +87,7 @@ async function fetchActClientAndCarData(actId: number): Promise<{
 
     return { clientInfo, carInfo };
   } catch (error) {
-    console.warn("Помилка при отриманні даних клієнта та авто:", error);
+    // console.warn("Помилка при отриманні даних клієнта та авто:", error);
     return { clientInfo: "—", carInfo: "—" };
   }
 }
@@ -103,7 +103,7 @@ async function fetchScladMeta(
     .select("sclad_id, rahunok, time_off") // ✅ тягнемо rahunok
     .in("sclad_id", Array.from(new Set(scladIds)));
   if (error) {
-    console.warn("fetchScladMeta():", error.message);
+    // console.warn("fetchScladMeta():", error.message);
     return new Map();
   }
   const m = new Map<
@@ -127,7 +127,7 @@ async function fetchShopByName(shopName: string): Promise<ShopRow | null> {
     .maybeSingle();
 
   if (error) {
-    console.warn(`fetchShopByName(${shopName}):`, error.message);
+    // console.warn(`fetchShopByName(${shopName}):`, error.message);
     return null;
   }
   if (!data) return null;
@@ -170,10 +170,10 @@ async function fetchPrevDetailsFromShops(actId: number): Promise<
     const { data: shops, error } = await supabase.from("shops").select("data");
 
     if (error || !shops) {
-      console.warn(
-        "fetchPrevDetailsFromShops: помилка отримання магазинів:",
-        error,
-      );
+      // console.warn(
+        // "fetchPrevDetailsFromShops: помилка отримання магазинів:",
+        // error,
+      // );
       return out;
     }
 
@@ -207,7 +207,7 @@ async function fetchPrevDetailsFromShops(actId: number): Promise<
       }
     }
   } catch (err) {
-    console.error("fetchPrevDetailsFromShops: помилка:", err);
+    // console.error("fetchPrevDetailsFromShops: помилка:", err);
   }
 
   return out;
@@ -420,7 +420,7 @@ export async function syncShopsOnActSave(
       prevRows: prevDetailRows,
     });
   } catch (error: any) {
-    console.error("Помилка синхронізації з shops:", error);
+    // console.error("Помилка синхронізації з shops:", error);
     showNotification(
       "Помилка синхронізації з магазинами: " + (error?.message || error),
       "error",

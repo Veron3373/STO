@@ -56,7 +56,7 @@ async function searchScladByPartNumber(
     .ilike("part_number", `%${partNumber}%`)
     .order("sclad_id", { ascending: false });
   if (error) {
-    console.error("Помилка пошуку за каталожним номером:", error);
+    // console.error("Помилка пошуку за каталожним номером:", error);
     return [];
   }
   return (data as any) || [];
@@ -103,7 +103,7 @@ function populateFormFields(record: ScladRecord) {
               pibInput.value = userData.Name;
             }
           } catch (e) {
-            console.error("Помилка заповнення ПІБ запчастиста:", e);
+            // console.error("Помилка заповнення ПІБ запчастиста:", e);
           }
         }
       });
@@ -290,7 +290,7 @@ function readScladFormValues() {
         }
       }
     } catch (e) {
-      console.error("Помилка отримання slyusar_id з localStorage:", e);
+      // console.error("Помилка отримання slyusar_id з localStorage:", e);
     }
   }
 
@@ -446,7 +446,7 @@ export async function getScladRecords(limit = 50) {
     .order("sclad_id", { ascending: false })
     .limit(limit);
   if (error) {
-    console.error("Помилка отримання записів складу:", error);
+    // console.error("Помилка отримання записів складу:", error);
     return [];
   }
   return (data as any) || [];
@@ -459,7 +459,7 @@ export async function findScladByPartNumber(partNumber: string) {
     .ilike("part_number", `%${partNumber}%`)
     .order("sclad_id", { ascending: false });
   if (error) {
-    console.error("Помилка пошуку за каталожним номером:", error);
+    // console.error("Помилка пошуку за каталожним номером:", error);
     return [];
   }
   return (data as any) || [];

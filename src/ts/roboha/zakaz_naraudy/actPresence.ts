@@ -100,7 +100,7 @@ function handlePageUnload(): void {
       supabase.removeChannel(presenceChannel);
       presenceChannel = null;
     } catch (err) {
-      console.error("🔐 [beforeunload] Помилка відписки:", err);
+      // console.error("🔐 [beforeunload] Помилка відписки:", err);
     }
   }
   if (globalPresenceChannel) {
@@ -109,7 +109,7 @@ function handlePageUnload(): void {
       supabase.removeChannel(globalPresenceChannel);
       globalPresenceChannel = null;
     } catch (err) {
-      console.error("🔐 [beforeunload] Помилка відписки global:", err);
+      // console.error("🔐 [beforeunload] Помилка відписки global:", err);
     }
   }
 }
@@ -336,7 +336,7 @@ export async function subscribeToActPresence(
           const { refreshActTableSilently } = await import("./modalMain");
           await refreshActTableSilently(receivedActId);
         } catch (err) {
-          console.error("❌ Помилка тихого оновлення:", err);
+          // console.error("❌ Помилка тихого оновлення:", err);
           // Fallback: використовуємо старий метод якщо щось пішло не так
           if (onUnlock) {
             await onUnlock();
@@ -487,7 +487,7 @@ async function untrackGlobalActPresence(): Promise<void> {
     try {
       await globalPresenceChannel.untrack();
     } catch (err) {
-      console.warn("⚠️ [untrackGlobalActPresence] Помилка при untrack:", err);
+      // console.warn("⚠️ [untrackGlobalActPresence] Помилка при untrack:", err);
     }
   }
 }
@@ -504,10 +504,10 @@ export async function unsubscribeFromActPresence(): Promise<void> {
       await presenceChannel.untrack();
       await supabase.removeChannel(presenceChannel);
     } catch (err) {
-      console.warn(
-        "⚠️ [unsubscribeFromActPresence] Помилка при видаленні каналу:",
-        err,
-      );
+      // console.warn(
+        // "⚠️ [unsubscribeFromActPresence] Помилка при видаленні каналу:",
+        // err,
+      // );
     } finally {
       presenceChannel = null;
     }

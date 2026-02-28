@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     } else {
-      console.warn("⚠️ Кнопка login не знайдена в DOM");
+      // console.warn("⚠️ Кнопка login не знайдена в DOM");
     }
   }
 });

@@ -45,7 +45,7 @@ async function getNextId(
     .limit(1);
 
   if (error) {
-    console.error("Помилка при отриманні максимального ID:", error);
+    // console.error("Помилка при отриманні максимального ID:", error);
     return null;
   }
   const first = rows?.[0] as Record<string, any>;
@@ -76,7 +76,7 @@ async function shopExistsByName(name: string): Promise<boolean> {
   // Fallback: тягнемо data і порівнюємо локально
   const { data: rows, error } = await supabase.from("shops").select("data");
   if (error) {
-    console.error("Помилка перевірки існування магазину:", error);
+    // console.error("Помилка перевірки існування магазину:", error);
     return false;
   }
   const needle = normalizeName(name);
@@ -109,7 +109,7 @@ async function updateShopNameById(
       .single();
 
     if (fe || !rec) {
-      console.error("Не вдалося отримати запис магазину:", fe);
+      // console.error("Не вдалося отримати запис магазину:", fe);
       return false;
     }
 
@@ -137,14 +137,14 @@ async function updateShopNameById(
       .eq("shop_id", shop_id);
 
     if (ue) {
-      console.error("Помилка при оновленні магазину:", ue);
+      // console.error("Помилка при оновленні магазину:", ue);
       return false;
     }
 
     showToast("✅ Магазин успішно відредаговано", "#4caf50");
     return true;
   } catch (error) {
-    console.error("Помилка в updateShopNameById:", error);
+    // console.error("Помилка в updateShopNameById:", error);
     return false;
   }
 }
@@ -158,14 +158,14 @@ async function deleteShopById(shop_id: number): Promise<boolean> {
       .eq("shop_id", shop_id);
 
     if (error) {
-      console.error("Помилка при видаленні магазину:", error);
+      // console.error("Помилка при видаленні магазину:", error);
       return false;
     }
 
     showToast("✅ Магазин успішно видалено", "#4caf50");
     return true;
   } catch (error) {
-    console.error("Помилка в deleteShopById:", error);
+    // console.error("Помилка в deleteShopById:", error);
     return false;
   }
 }
@@ -198,14 +198,14 @@ async function addShopWithName(newName: string): Promise<boolean> {
 
     const { error } = await supabase.from("shops").insert(payload).select();
     if (error) {
-      console.error("Помилка при додаванні магазину:", error);
+      // console.error("Помилка при додаванні магазину:", error);
       return false;
     }
 
     showToast("✅ Магазин успішно додано", "#4caf50");
     return true;
   } catch (error) {
-    console.error("Помилка в addShopWithName:", error);
+    // console.error("Помилка в addShopWithName:", error);
     return false;
   }
 }
@@ -226,11 +226,11 @@ export async function tryHandleShopsCrud(): Promise<boolean | null> {
 
   if (mode === "Редагувати") {
     if (!baseShopId) {
-      console.error("Відсутній baseShopId для редагування магазину");
+      // console.error("Відсутній baseShopId для редагування магазину");
       return false;
     }
     if (!currentName) {
-      console.error("Відсутнє нове ім'я магазину");
+      // console.error("Відсутнє нове ім'я магазину");
       return false;
     }
     if (originalName && originalName === currentName) {
@@ -242,7 +242,7 @@ export async function tryHandleShopsCrud(): Promise<boolean | null> {
 
   if (mode === "Видалити") {
     if (!baseShopId) {
-      console.error("Відсутній baseShopId для видалення магазину");
+      // console.error("Відсутній baseShopId для видалення магазину");
       return false;
     }
     return await deleteShopById(baseShopId);
@@ -250,13 +250,13 @@ export async function tryHandleShopsCrud(): Promise<boolean | null> {
 
   if (mode === "Додати") {
     if (!currentName) {
-      console.error("Відсутнє ім'я для нового магазину");
+      // console.error("Відсутнє ім'я для нового магазину");
       return false;
     }
     return await addShopWithName(currentName);
   }
 
-  console.error("Невідомий CRUD режим для магазинів:", mode);
+  // console.error("Невідомий CRUD режим для магазинів:", mode);
   return false;
 }
 
@@ -274,14 +274,14 @@ async function updateDetailById(
       .eq("detail_id", detail_id);
 
     if (error) {
-      console.error("Помилка при оновленні деталі:", error);
+      // console.error("Помилка при оновленні деталі:", error);
       return false;
     }
 
     showToast("✅ Деталь успішно відредаговано", "#4caf50");
     return true;
   } catch (error) {
-    console.error("Помилка в updateDetailById:", error);
+    // console.error("Помилка в updateDetailById:", error);
     return false;
   }
 }
@@ -295,14 +295,14 @@ async function deleteDetailById(detail_id: number): Promise<boolean> {
       .eq("detail_id", detail_id);
 
     if (error) {
-      console.error("Помилка при видаленні деталі:", error);
+      // console.error("Помилка при видаленні деталі:", error);
       return false;
     }
 
     showToast("✅ Деталь успішно видалено", "#4caf50");
     return true;
   } catch (error) {
-    console.error("Помилка в deleteDetailById:", error);
+    // console.error("Помилка в deleteDetailById:", error);
     return false;
   }
 }
@@ -323,7 +323,7 @@ async function detailExistsByName(name: string): Promise<boolean> {
       .range(offset, offset + batchSize - 1);
 
     if (error) {
-      console.error("Помилка перевірки існування деталі:", error);
+      // console.error("Помилка перевірки існування деталі:", error);
       return false;
     }
 
@@ -361,14 +361,14 @@ async function addDetailWithName(newName: string): Promise<boolean> {
     const { error } = await supabase.from("details").insert(payload).select();
 
     if (error) {
-      console.error("Помилка при додаванні деталі:", error);
+      // console.error("Помилка при додаванні деталі:", error);
       return false;
     }
 
     showToast("✅ Деталь успішно додано", "#4caf50");
     return true;
   } catch (error) {
-    console.error("Помилка в addDetailWithName:", error);
+    // console.error("Помилка в addDetailWithName:", error);
     return false;
   }
 }
@@ -389,11 +389,11 @@ export async function tryHandleDetailsCrud(): Promise<boolean | null> {
 
   if (mode === "Редагувати") {
     if (!baseDetailId) {
-      console.error("Відсутній baseDetailId для редагування деталі");
+      // console.error("Відсутній baseDetailId для редагування деталі");
       return false;
     }
     if (!currentName) {
-      console.error("Відсутнє нове ім'я деталі");
+      // console.error("Відсутнє нове ім'я деталі");
       return false;
     }
     if (originalName && originalName === currentName) {
@@ -405,7 +405,7 @@ export async function tryHandleDetailsCrud(): Promise<boolean | null> {
 
   if (mode === "Видалити") {
     if (!baseDetailId) {
-      console.error("Відсутній baseDetailId для видалення деталі");
+      // console.error("Відсутній baseDetailId для видалення деталі");
       return false;
     }
     return await deleteDetailById(baseDetailId);
@@ -413,12 +413,12 @@ export async function tryHandleDetailsCrud(): Promise<boolean | null> {
 
   if (mode === "Додати") {
     if (!currentName) {
-      console.error("Відсутнє ім'я для нової деталі");
+      // console.error("Відсутнє ім'я для нової деталі");
       return false;
     }
     return await addDetailWithName(currentName);
   }
 
-  console.error("Невідомий CRUD режим для деталей:", mode);
+  // console.error("Невідомий CRUD режим для деталей:", mode);
   return false;
 }

@@ -405,7 +405,7 @@ export async function printModalToPdf(): Promise<void> {
     pdf.save(`Акт №${actNumber}.pdf`);
     showNotification("PDF успішно створено!", "success", 2000);
   } catch (error) {
-    console.error("💥 Помилка при генерації PDF:", error);
+    // console.error("💥 Помилка при генерації PDF:", error);
     showNotification("Помилка генерації PDF", "error");
   } finally {
     // повернути скорочення назв

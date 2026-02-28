@@ -159,7 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
               return; // Не відкриваємо модальне вікно
             }
           } catch (e) {
-            console.error("Помилка при перевірці all_bd:", e);
+            // console.error("Помилка при перевірці all_bd:", e);
           }
         }
 
@@ -168,10 +168,10 @@ document.addEventListener("DOMContentLoaded", () => {
           // Логіка при підтвердженні
         }
       } catch (error) {
-        console.error(
-          "Помилка при показі модального вікна підтвердження:",
-          error
-        );
+        // console.error(
+          // "Помилка при показі модального вікна підтвердження:",
+          // error
+        // );
       }
     });
   }
@@ -187,7 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         const tableContainer = document.getElementById("table-container-modal-sakaz_narad");
         if (tableContainer && !tableContainer.querySelector("table")) {
-          console.error("❌ Таблиця актів зникла після закриття модалки!");
+          // console.error("❌ Таблиця актів зникла після закриття модалки!");
           // Можна додати логіку відновлення таблиці, якщо потрібно
         }
       }, 100);
@@ -213,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (tableContainer) {
               const table = tableContainer.querySelector("table");
               if (!table) {
-                console.warn("⚠️ Таблиця актів зникла після закриття модалки!");
+                // console.warn("⚠️ Таблиця актів зникла після закриття модалки!");
               } else {
                 // Переконуємося, що таблиця видима
                 tableContainer.style.display = '';
@@ -373,7 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } catch (error: any) {
-        console.error("Помилка експорту:", error);
+        // console.error("Помилка експорту:", error);
         alert("Помилка при експорті: " + error.message);
       }
     });
@@ -477,9 +477,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } = await supabase.auth.getSession();
 
         if (!session) {
-          console.warn(
-            "⛔ Користувач не авторизований. Модальне вікно 'Додати' не відкривається."
-          );
+          // console.warn(
+            // "⛔ Користувач не авторизований. Модальне вікно 'Додати' не відкривається."
+          // );
           return; // Зупиняємо виконання, модалка не відкриється
         }
 
@@ -488,7 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // ✅ ЗАХИСТ: Перевіряємо, що таблиця актів не зникла
         const tableContainer = document.getElementById("table-container-modal-sakaz_narad");
         if (tableContainer && !tableContainer.querySelector("table")) {
-          console.warn("⚠️ Таблиця актів зникла! Спробуємо відновити...");
+          // console.warn("⚠️ Таблиця актів зникла! Спробуємо відновити...");
           // Можна додати логіку відновлення таблиці, якщо потрібно
         }
         
@@ -528,7 +528,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const userData = JSON.parse(userDataString);
       isUserAdmin = userData.Доступ === "Адміністратор";
     } catch (e) {
-      console.error("Помилка парсингу userAuthData:", e);
+      // console.error("Помилка парсингу userAuthData:", e);
     }
   }
 

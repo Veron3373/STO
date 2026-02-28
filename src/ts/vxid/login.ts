@@ -18,18 +18,18 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
     if (error) {
       // Якщо помилка "не знайдено" - це нормально, email не в whitelist
       if (error.code === "PGRST116") {
-        console.warn("⛔ Email не знайдено в whitelist:", email);
+        // console.warn("⛔ Email не знайдено в whitelist:", email);
         return false;
       }
       // Інші помилки логуємо
-      console.error("❌ Помилка перевірки whitelist:", error);
+      // console.error("❌ Помилка перевірки whitelist:", error);
       return false;
     }
 
     // Якщо data існує - email в whitelist
     return !!data;
   } catch (err) {
-    console.error("❌ Виняток при перевірці whitelist:", err);
+    // console.error("❌ Виняток при перевірці whitelist:", err);
     return false;
   }
 }
@@ -56,7 +56,7 @@ export async function signInWithGoogle() {
   });
 
   if (error) {
-    console.error("❌ Помилка Google OAuth:", error);
+    // console.error("❌ Помилка Google OAuth:", error);
   }
 }
 
@@ -69,7 +69,7 @@ async function checkExistingSession() {
   } = await supabase.auth.getSession();
 
   if (error) {
-    console.error("❌ Помилка отримання сесії:", error);
+    // console.error("❌ Помилка отримання сесії:", error);
     return;
   }
 
@@ -84,7 +84,7 @@ async function handleAuthenticatedUser(user: any) {
 
   const allowed = await isEmailAllowed(email);
   if (!allowed) {
-    console.warn("⛔ Email НЕ в whitelist:", email);
+    // console.warn("⛔ Email НЕ в whitelist:", email);
     await supabase.auth.signOut();
     // � Використовуємо централізований конфіг
     window.location.href = getPageUrl('index.html');

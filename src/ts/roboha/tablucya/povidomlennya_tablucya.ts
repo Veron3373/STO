@@ -515,7 +515,7 @@ async function checkAndRemoveActHighlightIfNoNotifications(
     .limit(1);
 
   if (error) {
-    console.error("❌ Помилка перевірки повідомлень:", error);
+    // console.error("❌ Помилка перевірки повідомлень:", error);
     return;
   }
 

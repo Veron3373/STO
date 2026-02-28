@@ -168,7 +168,7 @@ export async function recordActChanges(
         .insert(recordsToInsert);
 
     if (error) {
-        console.error('❌ Помилка запису змін в act_changes_notifications:', error);
+        // console.error('❌ Помилка запису змін в act_changes_notifications:', error);
         throw new Error(`Не вдалося записати зміни: ${error.message}`);
     }
 

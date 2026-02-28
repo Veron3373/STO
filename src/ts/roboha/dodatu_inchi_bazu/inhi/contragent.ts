@@ -107,12 +107,12 @@ export async function loadContragentData(): Promise<ContragentRecord[]> {
       .order("faktura_id", { ascending: true });
 
     if (error) {
-      console.error("Помилка завантаження контрагентів:", error);
+      // console.error("Помилка завантаження контрагентів:", error);
       return [];
     }
     return (data as ContragentRecord[]) || [];
   } catch (err) {
-    console.error("Критична помилка завантаження:", err);
+    // console.error("Критична помилка завантаження:", err);
     return [];
   }
 }
@@ -183,21 +183,21 @@ async function showActNumberModal() {
       .maybeSingle();
 
     if (error) {
-      console.error("❌ Помилка завантаження номера акту з faktura:", error);
+      // console.error("❌ Помилка завантаження номера акту з faktura:", error);
       actNumberInput.placeholder = "Помилка завантаження";
     } else if (data) {
       targetFakturaId = data.faktura_id;
       actNumberInput.value = data.namber != null ? String(data.namber) : "";
       actNumberInput.placeholder = "Введіть номер акту...";
     } else {
-      console.warn("⚠️ Не знайдено запис faktura з 'Брацлавець' у name");
+      // console.warn("⚠️ Не знайдено запис faktura з 'Брацлавець' у name");
       actNumberInput.placeholder = "Запис не знайдено";
     }
     actNumberInput.disabled = false;
     actNumberInput.style.background = "white";
     setTimeout(() => passwordInput.focus(), 100);
   } catch (err) {
-    console.error("❌ Критична помилка завантаження:", err);
+    // console.error("❌ Критична помилка завантаження:", err);
     actNumberInput.placeholder = "Помилка завантаження";
     actNumberInput.disabled = false;
     actNumberInput.style.background = "white";
@@ -235,7 +235,7 @@ async function showActNumberModal() {
         storedPassword = JSON.parse(authData)?.["Пароль"] || "";
       }
     } catch (err) {
-      console.error("Помилка читання localStorage:", err);
+      // console.error("Помилка читання localStorage:", err);
     }
 
     if (password !== storedPassword) {
@@ -268,7 +268,7 @@ async function showActNumberModal() {
         .eq("faktura_id", targetFakturaId);
 
       if (error) {
-        console.error("❌ Помилка запису:", error);
+        // console.error("❌ Помилка запису:", error);
         errorDiv.textContent = `✖ Помилка запису: ${error.message}`;
         errorDiv.style.display = "block";
         return;
@@ -277,7 +277,7 @@ async function showActNumberModal() {
       toast(`✅ Номер акту ${actNumber} успішно записано`, "#4caf50");
       overlay.remove();
     } catch (err) {
-      console.error("❌ Критична помилка:", err);
+      // console.error("❌ Критична помилка:", err);
       errorDiv.textContent = "✖ Критична помилка запису";
       errorDiv.style.display = "block";
     }
@@ -490,7 +490,7 @@ export async function handleDhereloContragent() {
     ".modal-right-all_other_bases",
   ) as HTMLDivElement;
   if (!rightPanel) {
-    console.error("❌ Не знайдено правої панелі модального вікна");
+    // console.error("❌ Не знайдено правої панелі модального вікна");
     return;
   }
 
@@ -805,7 +805,7 @@ async function getNextFakturaId(): Promise<number | null> {
     .limit(1);
 
   if (error) {
-    console.error("Помилка отримання наступного faktura_id:", error);
+    // console.error("Помилка отримання наступного faktura_id:", error);
     return null;
   }
   const max = (data?.[0]?.faktura_id ?? 0) as number;
@@ -857,7 +857,7 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
       const { error } = await supabase.from("faktura").insert(ins).select();
 
       if (error) {
-        console.error("❌ Помилка додавання в faktura:", error);
+        // console.error("❌ Помилка додавання в faktura:", error);
         toast(`❌ Помилка додавання: ${error.message}`, "#f44336");
         return false;
       }
@@ -871,7 +871,7 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
     const faktura_id = getDraftFakturaId();
 
     if (!faktura_id) {
-      console.error("❌ faktura_id відсутній. all_bd:", all_bd);
+      // console.error("❌ faktura_id відсутній. all_bd:", all_bd);
       toast("⚠️ Не знайдено faktura_id для операції", "#ff9800");
       return false;
     }
@@ -884,7 +884,7 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
         .select();
 
       if (error) {
-        console.error("❌ Помилка редагування faktura:", error);
+        // console.error("❌ Помилка редагування faktura:", error);
         toast(`❌ Помилка редагування: ${error.message}`, "#f44336");
         return false;
       }
@@ -901,7 +901,7 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
         .eq("faktura_id", faktura_id);
 
       if (error) {
-        console.error("❌ Помилка видалення faktura:", error);
+        // console.error("❌ Помилка видалення faktura:", error);
         toast(`❌ Помилка видалення: ${error.message}`, "#f44336");
         return false;
       }
@@ -914,7 +914,7 @@ export async function tryHandleFakturaCrud(): Promise<boolean> {
     toast("❌ Невідомий режим CRUD", "#f44336");
     return false;
   } catch (e: any) {
-    console.error("❌ Faktura CRUD error:", e);
+    // console.error("❌ Faktura CRUD error:", e);
     toast(e?.message || "❌ Невідома помилка", "#f44336");
     return false;
   }

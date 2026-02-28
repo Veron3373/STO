@@ -16,12 +16,12 @@ async function isEmailAllowed(email: string | undefined): Promise<boolean> {
       .single();
     if (error?.code === "PGRST116") return false;
     if (error) {
-      console.error("❌ Помилка whitelist:", error);
+      // console.error("❌ Помилка whitelist:", error);
       return false;
     }
     return !!data;
   } catch (err) {
-    console.error("❌ Виняток whitelist:", err);
+    // console.error("❌ Виняток whitelist:", err);
     return false;
   }
 }
@@ -34,7 +34,7 @@ async function checkMainPageSession() {
     } = await supabase.auth.getSession();
 
     if (error || !session) {
-      console.warn("⛔ [Main] Немає Google сесії");
+      // console.warn("⛔ [Main] Немає Google сесії");
       alert("Сесія закінчилась. Увійдіть знову.");
       const indexUrl = await getGitUrl("index.html");
       window.location.replace(indexUrl);
@@ -45,7 +45,7 @@ async function checkMainPageSession() {
     const allowed = await isEmailAllowed(email);
 
     if (!allowed) {
-      console.warn("⛔ [Main] Email не в whitelist:", email);
+      // console.warn("⛔ [Main] Email не в whitelist:", email);
       await supabase.auth.signOut();
       const baseUrl = await getGitUrl();
       window.location.replace(baseUrl);
@@ -55,7 +55,7 @@ async function checkMainPageSession() {
     // Оновлюємо посилання на сторінці
     initUrlUpdater();
   } catch (err) {
-    console.error("❌ [Main] Помилка перевірки:", err);
+    // console.error("❌ [Main] Помилка перевірки:", err);
     // У разі помилки використовуємо fallback URL
     const fallbackUrl = await getFallbackUrl("index.html");
     window.location.replace(fallbackUrl);

@@ -838,7 +838,7 @@ export async function showModalCreateSakazNarad() {
             .from("incomes")
             .select("data");
           if (error) {
-            console.error("❌ Помилка при запиті до income:", error.message);
+            // console.error("❌ Помилка при запиті до income:", error.message);
             return;
           }
           const sources = [
@@ -869,7 +869,7 @@ export async function showModalCreateSakazNarad() {
           }
           incomeContainer.replaceChild(incomeSelect, incomeInput);
         } catch (e) {
-          console.error("💥 Виняток при завантаженні джерел:", e);
+          // console.error("💥 Виняток при завантаженні джерел:", e);
         }
       }
     } else {
@@ -1228,9 +1228,9 @@ document.addEventListener("DOMContentLoaded", () => {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        console.warn(
-          "⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається.",
-        );
+        // console.warn(
+          // "⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається.",
+        // );
         // Тут можна викликати вашу функцію показу помилки, якщо вона не викликається автоматично глобально
         // Але головне - ми не йдемо далі:
         return;

@@ -216,7 +216,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
             }
           }
         } catch (err) {
-          console.error("Error auto-updating catalog:", err);
+          // console.error("Error auto-updating catalog:", err);
         }
         document.removeEventListener("other-base-data-updated", onDataUpdated);
       };
@@ -243,7 +243,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
           .maybeSingle();
 
         if (searchError) {
-          console.error("Помилка пошуку роботи:", searchError);
+          // console.error("Помилка пошуку роботи:", searchError);
         }
 
         // Якщо робота вже існує - використовуємо її work_id
@@ -287,7 +287,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
 
         showNotification("Роботу успішно збережено в базу даних!", "success");
       } catch (err: any) {
-        console.error("Error saving work:", err);
+        // console.error("Error saving work:", err);
         showNotification(
           "Помилка при збереженні роботи: " + err.message,
           "error",
@@ -513,17 +513,17 @@ async function getRoleSettingBool(
       .maybeSingle();
 
     if (error) {
-      console.error(
-        `Помилка читання settings (setting_id=${settingId}, col=${columnName}):`,
-        error,
-      );
+      // console.error(
+      // `Помилка читання settings (setting_id=${settingId}, col=${columnName}):`,
+      // error,
+      // );
       return true;
     }
 
     if (!data) {
-      console.warn(
-        `settings: не знайдено рядок setting_id=${settingId} для колонки ${columnName}`,
-      );
+      // console.warn(
+      // `settings: не знайдено рядок setting_id=${settingId} для колонки ${columnName}`,
+      // );
       return true;
     }
 
@@ -543,10 +543,10 @@ async function getRoleSettingBool(
 
     return true;
   } catch (e) {
-    console.error(
-      `Виняток при читанні settings (setting_id=${settingId}, col=${columnName}):`,
-      e,
-    );
+    // console.error(
+    // `Виняток при читанні settings (setting_id=${settingId}, col=${columnName}):`,
+    // e,
+    // );
     return true;
   }
 }
@@ -619,7 +619,7 @@ async function loadAllModalPermissions(): Promise<ModalPermissions> {
       .in("setting_id", settingIds);
 
     if (error || !data) {
-      console.error("Помилка завантаження permissions:", error);
+      // console.error("Помилка завантаження permissions:", error);
       return getDefaultPermissions();
     }
 
@@ -634,7 +634,7 @@ async function loadAllModalPermissions(): Promise<ModalPermissions> {
 
     return buildPermissionsForRole(role, settingsMap);
   } catch (e) {
-    console.error("Виняток при завантаженні permissions:", e);
+    // console.error("Виняток при завантаженні permissions:", e);
     return getDefaultPermissions();
   }
 }
@@ -716,7 +716,7 @@ export async function showModal(
   const canOpen = await canUserOpenActs();
 
   if (!canOpen) {
-    console.warn(`⚠️ Користувач не має доступу до відкриття акту ${actId}`);
+    // console.warn(`⚠️ Користувач не має доступу до відкриття акту ${actId}`);
     showNoAccessNotification();
     return;
   }
@@ -725,7 +725,7 @@ export async function showModal(
   const modal = document.getElementById(ZAKAZ_NARAYD_MODAL_ID);
   const body = document.getElementById(ZAKAZ_NARAYD_BODY_ID);
   if (!modal || !body) {
-    console.error("❌ Модальне вікно або його тіло не знайдені.");
+    // console.error("❌ Модальне вікно або його тіло не знайдені.");
     return;
   }
 
@@ -828,9 +828,9 @@ export async function showModal(
 
     // ⚡ ОПТИМІЗАЦІЯ: Запускаємо handlers одразу, щоб модалька була інтерактивною
     // Handlers не залежать від slyusar sums
-    addModalHandlers(actId, actDetails, clientData?.phone).catch((err) =>
-      console.error("Помилка при додаванні handlers:", err),
-    );
+    addModalHandlers(actId, actDetails, clientData?.phone).catch(() => {
+      /* silent */
+    });
 
     // ⚡ ОПТИМІЗАЦІЯ: Виносимо важкі операції в фоновий режим
     // Вони виконуються ПІСЛЯ показу модалки, не блокуючи відкриття
@@ -848,7 +848,7 @@ export async function showModal(
 
         checkSlyusarSumWarningsOnLoad();
       } catch (err) {
-        console.error("Помилка у фонових операціях:", err);
+        // console.error("Помилка у фонових операціях:", err);
       }
     });
 
@@ -860,11 +860,10 @@ export async function showModal(
       userAccessLevel === "Приймальник"
     ) {
       // Запускаємо без await щоб не блокувати відкриття акту
-      checkAndHighlightChanges(actId)
-        .then(() => {
-          removeNotificationsForAct(actId);
-        })
-        .catch((err) => console.error("Помилка підсвічування:", err));
+      checkAndHighlightChanges(actId).then(() => {
+        removeNotificationsForAct(actId);
+      });
+      // .catch((err) => console.error("Помилка підсвічування:", err));
     }
 
     // 🔽 Перевірка прав на кнопку "Додати рядок" - тепер це робиться при рендері
@@ -893,7 +892,7 @@ export async function showModal(
 
     showNotification("Дані успішно завантажено", "success", 1500);
   } catch (error) {
-    console.error("💥 Критична помилка при завантаженні акту:", error);
+    // console.error("💥 Критична помилка при завантаженні акту:", error);
     showNotification(`Критична помилка завантаження акту`, "error");
     if (body) {
       body.innerHTML = `<p class="error-message">❌ Критична помилка завантаження акту. Перегляньте консоль.</p>`;
@@ -1122,7 +1121,7 @@ function restrictPhotoAccess(): void {
         "warning",
       );
     } catch (err) {
-      console.error("❌ Помилка при перевірці фото:", err);
+      // console.error("❌ Помилка при перевірці фото:", err);
       showNotification("Помилка при перевірці фото", "error");
     }
   };
@@ -1650,8 +1649,8 @@ function handleInputChange(event: Event): void {
       }
       const row = target.closest("tr") as HTMLTableRowElement;
       if (row) {
-        calculateRowSum(row).catch((err) => {
-          console.error("Помилка при розрахунку суми:", err);
+        calculateRowSum(row).catch((_err) => {
+          // console.error("Помилка при розрахунку суми:", _err);
         });
       }
       break;
@@ -1776,8 +1775,8 @@ function handleInputChange(event: Event): void {
           prevSlyusar !== newSlyusar &&
           (currentSalary === 0 || currentSalaryText === "")
         ) {
-          forceRecalculateSlyusarSalary(row).catch((err) => {
-            console.error("Помилка при примусовому перерахунку зарплати:", err);
+          forceRecalculateSlyusarSalary(row).catch((_err) => {
+            // console.error("Помилка при примусовому перерахунку зарплати:", _err);
           });
         } else if (
           prevSlyusar &&
@@ -1789,8 +1788,8 @@ function handleInputChange(event: Event): void {
           updateCalculatedSumsInFooter();
         } else {
           // Звичайний розрахунок (з історії якщо є)
-          calculateRowSum(row).catch((err) => {
-            console.error("Помилка при розрахунку суми:", err);
+          calculateRowSum(row).catch((_err) => {
+            // console.error("Помилка при розрахунку суми:", _err);
           });
         }
       }
@@ -1835,10 +1834,10 @@ export function getUserNameFromLocalStorage(): string | null {
     const userData = JSON.parse(storedData);
     return userData?.Name || null;
   } catch (error) {
-    console.warn(
-      "Помилка при отриманні імені користувача з localStorage:",
-      error,
-    );
+    // console.warn(
+    // "Помилка при отриманні імені користувача з localStorage:",
+    // error,
+    // );
     return null;
   }
 }
@@ -1853,7 +1852,7 @@ export function getUserAccessLevelFromLocalStorage(): string | null {
     const userData = JSON.parse(storedData);
     return userData?.["Доступ"] || null;
   } catch (error) {
-    console.warn("Помилка при отриманні рівня доступу з localStorage:", error);
+    // console.warn("Помилка при отриманні рівня доступу з localStorage:", error);
     return null;
   }
 }
@@ -2026,7 +2025,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       .single();
 
     if (actError || !act) {
-      console.error("❌ Помилка отримання даних акту:", actError);
+      // console.error("❌ Помилка отримання даних акту:", actError);
       return;
     }
 
@@ -2038,7 +2037,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       ACT_ITEMS_TABLE_CONTAINER_ID,
     );
     if (!tableContainer) {
-      console.error("❌ Контейнер таблиці не знайдено");
+      // console.error("❌ Контейнер таблиці не знайдено");
       return;
     }
 
@@ -2154,7 +2153,7 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
     // 9. Знаходимо tbody таблиці
     const tbody = tableContainer.querySelector("tbody");
     if (!tbody) {
-      console.error("❌ tbody не знайдено");
+      // console.error("❌ tbody не знайдено");
       return;
     }
 
@@ -2282,6 +2281,6 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
       discountAmountInput.dispatchEvent(new Event("input"));
     }
   } catch (error) {
-    console.error("❌ Помилка тихого оновлення таблиці:", error);
+    // console.error("❌ Помилка тихого оновлення таблиці:", error);
   }
 }

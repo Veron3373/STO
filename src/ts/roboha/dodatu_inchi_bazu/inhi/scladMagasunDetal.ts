@@ -98,7 +98,7 @@ async function loadDetailsFromDB(): Promise<string[]> {
       .range(offset, offset + batchSize - 1);
 
     if (error) {
-      console.error("Помилка завантаження деталей:", error);
+      // console.error("Помилка завантаження деталей:", error);
       break;
     }
 
@@ -171,7 +171,7 @@ async function loadZapchastystPibByDetailName(
     // Повертаємо ПІБ того хто записав деталь (незалежно від ролі)
     return userData?.Name || userData?.["Ім'я"] || null;
   } catch (e) {
-    console.error("Помилка завантаження ПІБ за деталлю:", e);
+    // console.error("Помилка завантаження ПІБ за деталлю:", e);
     return null;
   }
 }
@@ -187,7 +187,7 @@ async function loadZapchastystFromDB(): Promise<
       .select("slyusar_id, data");
 
     if (error) {
-      console.error("Помилка завантаження запчастистів:", error);
+      // console.error("Помилка завантаження запчастистів:", error);
       return [];
     }
 
@@ -208,7 +208,7 @@ async function loadZapchastystFromDB(): Promise<
           result.push({ name, id: slyusar.slyusar_id });
         }
       } catch (e) {
-        console.error("Помилка парсингу запчастиста:", e);
+        // console.error("Помилка парсингу запчастиста:", e);
       }
     });
 
@@ -217,7 +217,7 @@ async function loadZapchastystFromDB(): Promise<
     );
     return zapchastystCache;
   } catch (e) {
-    console.error("Критична помилка завантаження запчастистів:", e);
+    // console.error("Критична помилка завантаження запчастистів:", e);
     return [];
   }
 }
@@ -372,7 +372,7 @@ export async function renderScladForm() {
         }
       }
     } catch (e) {
-      console.error("Помилка автозаповнення ПІБ:", e);
+      // console.error("Помилка автозаповнення ПІБ:", e);
     }
   }
 
@@ -435,7 +435,7 @@ async function loadProcentOptions() {
       .order("setting_id", { ascending: true });
 
     if (error) {
-      console.error("Помилка завантаження налаштувань відсотків:", error);
+      // console.error("Помилка завантаження налаштувань відсотків:", error);
       select.innerHTML = '<option value="">Помилка завантаження</option>';
       return;
     }
@@ -453,7 +453,7 @@ async function loadProcentOptions() {
     select.innerHTML =
       optionsHtml || '<option value="">Немає активних складів</option>';
   } catch (e) {
-    console.error("Помилка завантаження відсотків:", e);
+    // console.error("Помилка завантаження відсотків:", e);
     select.innerHTML = '<option value="">Помилка</option>';
   }
 }
@@ -499,10 +499,10 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
   // Setup keyboard navigation
   setupDropdownKeyboard(input, dd);
 
-  const { data: rows, error } = await supabase
+  const { data: rows, error: _error } = await supabase
     .from("shops")
     .select("shop_id,data");
-  if (error) return console.error("Помилка shops:", error);
+  // if (_error) return console.error("Помилка shops:", _error);
 
   const names: string[] = [];
   const nameToId = new Map<string, number>();
@@ -515,7 +515,7 @@ async function wireShopAutocomplete(inputId: string, dropdownId: string) {
         nameToId.set(nm, Number(r.shop_id));
       }
     } catch (e) {
-      console.error("Парсинг shop.data:", e);
+      // console.error("Парсинг shop.data:", e);
     }
   });
   const uniqueSorted = Array.from(new Set(names)).sort();
@@ -833,7 +833,7 @@ async function fillFormFieldsFromSclad(record: any) {
             break;
           }
         } catch (e) {
-          console.error("Парсинг shop.data:", e);
+          // console.error("Парсинг shop.data:", e);
         }
       }
     }
@@ -898,7 +898,7 @@ async function fillFormFieldsFromSclad(record: any) {
         }
       }
     } catch (e) {
-      console.error("Помилка підтягування ПІБ запчастиста:", e);
+      // console.error("Помилка підтягування ПІБ запчастиста:", e);
     }
   }
 }
@@ -913,13 +913,13 @@ async function wireLinkedAutocomplete() {
   // Setup keyboard navigation
   setupDropdownKeyboard(input, dd);
 
-  const { data, error } = await supabase
+  const { data, error: _error2 } = await supabase
     .from("sclad")
     .select(
       "sclad_id, part_number, name, shops, kilkist_on, price, rahunok, unit_measurement, time_on, scladNomer, xto_zamovuv",
     )
     .order("sclad_id", { ascending: false });
-  if (error) return console.error("Помилка sclad:", error);
+  // if (error) return console.error("Помилка sclad:", error);
 
   const all = (data ?? []).filter((r) => r.part_number);
 

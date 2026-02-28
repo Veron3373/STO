@@ -87,9 +87,9 @@ async function verifyPassword(
   const currentUser = getSavedUserDataFromLocalStorage();
 
   if (!currentUser) {
-    console.error(
-      "❌ Не вдалося отримати дані поточного користувача з localStorage",
-    );
+    // console.error(
+      // "❌ Не вдалося отримати дані поточного користувача з localStorage",
+    // );
     showNotification("❌ Помилка: користувач не авторизований", "error", 3000);
     return { isValid: false, slyusar_id: null };
   }
@@ -97,7 +97,7 @@ async function verifyPassword(
   const userPassword = currentUser.password;
 
   if (!userPassword) {
-    console.error("❌ Пароль користувача не знайдено");
+    // console.error("❌ Пароль користувача не знайдено");
     showNotification(
       "❌ Помилка: пароль користувача не знайдено",
       "error",
@@ -160,7 +160,7 @@ export function showViknoVvodyParolu(actId: number): Promise<boolean> {
     const title = document.getElementById("password-title-ActsOn");
 
     if (!passwordInput || !confirmBtn || !cancelBtn) {
-      console.error("Елементи модалки пароля не знайдені");
+      // console.error("Елементи модалки пароля не знайдені");
       modal.style.display = "none";
       return resolve(false);
     }
@@ -204,7 +204,7 @@ export function showViknoVvodyParolu(actId: number): Promise<boolean> {
         cleanup();
         resolve(true);
       } catch (e: any) {
-        console.error(e);
+        // console.error(e);
         showNotification(
           "Помилка при відкритті акту: " + (e?.message || e),
           "error",
@@ -256,7 +256,7 @@ export function showViknoVvodyParolu(actId: number): Promise<boolean> {
           passwordInput.focus();
         }
       } catch (e) {
-        console.error("Помилка при перевірці пароля:", e);
+        // console.error("Помилка при перевірці пароля:", e);
         showPasswordError("Помилка перевірки пароля");
       } finally {
         confirmBtn.disabled = false;

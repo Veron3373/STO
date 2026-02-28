@@ -25,7 +25,7 @@ export async function markNotificationAsDeleted(
     const currentUserName = userData?.name;
 
     if (!currentUserName) {
-      console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+      // console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
       return false;
     }
 
@@ -38,7 +38,7 @@ export async function markNotificationAsDeleted(
       .single();
 
     if (fetchError) {
-      console.error("❌ Помилка отримання повідомлення:", fetchError);
+      // console.error("❌ Помилка отримання повідомлення:", fetchError);
       return false;
     }
 
@@ -54,16 +54,16 @@ export async function markNotificationAsDeleted(
       .eq("pruimalnyk", currentUserName); // ✅ Додатковий захист
 
     if (error) {
-      console.error(
-        "❌ Помилка при позначенні повідомлення як видаленого:",
-        error
-      );
+      // console.error(
+        // "❌ Помилка при позначенні повідомлення як видаленого:",
+        // error
+      // );
       return false;
     }
 
     return true;
   } catch (err) {
-    console.error("❌ Виняток при позначенні повідомлення:", err);
+    // console.error("❌ Виняток при позначенні повідомлення:", err);
     return false;
   }
 }
@@ -86,7 +86,7 @@ export async function loadUnseenNotifications(): Promise<
         .order("data", { ascending: true }); // ✅ у тебе колонка часу називається data
 
       if (error) {
-        console.error("❌ Помилка при завантаженні повідомлень:", error);
+        // console.error("❌ Помилка при завантаженні повідомлень:", error);
         return [];
       }
 
@@ -116,7 +116,7 @@ export async function loadUnseenNotifications(): Promise<
       const currentUserName = userData?.name || null;
 
       if (!currentUserName) {
-        console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
+        // console.warn("⚠️ Не вдалося отримати ПІБ поточного користувача");
         return [];
       }
 
@@ -129,7 +129,7 @@ export async function loadUnseenNotifications(): Promise<
         .order("data", { ascending: true });
 
       if (error) {
-        console.error("❌ Помилка при завантаженні повідомлень:", error);
+        // console.error("❌ Помилка при завантаженні повідомлень:", error);
         return [];
       }
 
@@ -155,7 +155,7 @@ export async function loadUnseenNotifications(): Promise<
     // ✅ Для інших ролей - немає повідомлень
     return [];
   } catch (err) {
-    console.error("❌ Виняток при завантаженні повідомлень:", err);
+    // console.error("❌ Виняток при завантаженні повідомлень:", err);
     return [];
   }
 }
@@ -179,20 +179,20 @@ export async function deleteActNotificationsOnClose(
       .eq("delit", false); // тільки ті, що ще не помічені як видалені
 
     if (error) {
-      console.error(
-        `❌ [deleteActNotificationsOnClose] Помилка видалення повідомлень для акту #${actId}:`,
-        error.message,
-        error
-      );
+      // console.error(
+        // `❌ [deleteActNotificationsOnClose] Помилка видалення повідомлень для акту #${actId}:`,
+        // error.message,
+        // error
+      // );
       return false;
     }
 
     return true;
   } catch (err: any) {
-    console.error(
-      `❌ [deleteActNotificationsOnClose] Виняток при видаленні повідомлень для акту #${actId}:`,
-      err?.message || err
-    );
+    // console.error(
+      // `❌ [deleteActNotificationsOnClose] Виняток при видаленні повідомлень для акту #${actId}:`,
+      // err?.message || err
+    // );
     return false;
   }
 }

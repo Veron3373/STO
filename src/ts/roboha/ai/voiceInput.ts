@@ -1574,7 +1574,7 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
           return;
         }
       } catch (err) {
-        console.warn("🎙️ Gemini natural parse failed, using fallback:", err);
+        // console.warn("🎙️ Gemini natural parse failed, using fallback:", err);
       }
 
       // Останній фолбек — спробувати як назву деталі/роботи

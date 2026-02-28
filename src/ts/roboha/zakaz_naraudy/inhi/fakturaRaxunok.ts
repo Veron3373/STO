@@ -209,7 +209,7 @@ async function getInvoiceNumber(
       .single();
 
     if (currentError) {
-      console.error("Помилка отримання поточного акту:", currentError);
+      // console.error("Помилка отримання поточного акту:", currentError);
     }
 
     if (currentAct?.contrAgent_raxunok) {
@@ -228,7 +228,7 @@ async function getInvoiceNumber(
       .maybeSingle();
 
     if (fakturaError) {
-      console.error("Помилка отримання namber з faktura:", fakturaError);
+      // console.error("Помилка отримання namber з faktura:", fakturaError);
       return { number: "0000001", isNew: true };
     }
 
@@ -240,7 +240,7 @@ async function getInvoiceNumber(
       isNew: true,
     };
   } catch (error) {
-    console.error("Помилка отримання номера рахунку:", error);
+    // console.error("Помилка отримання номера рахунку:", error);
     return { number: "0000001", isNew: true };
   }
 }
@@ -265,7 +265,7 @@ async function saveInvoiceNumber(
       .maybeSingle();
 
     if (readError) {
-      console.error("❌ Помилка зчитування faktura:", readError);
+      // console.error("❌ Помилка зчитування faktura:", readError);
     } else if (fakturaRow) {
       const currentNamber = parseInt(fakturaRow.namber || "0");
       const newNum = parseInt(invoiceNumber);
@@ -289,13 +289,13 @@ async function saveInvoiceNumber(
       .eq("act_id", currentActId);
 
     if (currentError) {
-      console.error("❌ Помилка оновлення поточного акту:", currentError);
+      // console.error("❌ Помилка оновлення поточного акту:", currentError);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("❌ Критична помилка збереження:", error);
+    // console.error("❌ Критична помилка збереження:", error);
     return false;
   }
 }
@@ -565,7 +565,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
 
     pdf.save(`Рахунок_СФ-${invoiceNumber}.pdf`);
   } catch (error) {
-    console.error("Помилка PDF:", error);
+    // console.error("Помилка PDF:", error);
     alert("Не вдалося створити PDF.");
   } finally {
     // Повертаємо оригінальні стилі
@@ -595,12 +595,12 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
       .single();
 
     if (error) {
-      console.error("Помилка завантаження даних постачальника:", error);
+      // console.error("Помилка завантаження даних постачальника:", error);
     } else if (fakturaData) {
       supplierName = fakturaData.oderjyvach || "";
     }
   } catch (err) {
-    console.error("Критична помилка:", err);
+    // console.error("Критична помилка:", err);
   }
 
   const recipientName = actData.client || "Одержувач не вказаний";
@@ -615,13 +615,13 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
         .maybeSingle();
 
       if (clientError) {
-        console.error("Помилка пошуку фактури клієнта:", clientError);
+        // console.error("Помилка пошуку фактури клієнта:", clientError);
       } else if (clientFaktura) {
         foundFakturaId = clientFaktura.faktura_id;
       } else {
       }
     } catch (err) {
-      console.error("Помилка при пошуку клієнта:", err);
+      // console.error("Помилка при пошуку клієнта:", err);
     }
   }
 

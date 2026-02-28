@@ -26,7 +26,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   let clientPrumitka = "";
 
   const invoiceDateText = formatInvoiceDate(
-    data?.foundContrAgentRaxunokData || data?.contrAgent_raxunok_data || null
+    data?.foundContrAgentRaxunokData || data?.contrAgent_raxunok_data || null,
   );
   const todayDateText = formatDateWithMonthName(new Date());
 
@@ -37,8 +37,9 @@ export async function renderActPreviewModal(data: any): Promise<void> {
       .eq("faktura_id", 1)
       .single();
 
-    if (myError) console.error(myError);
-    else if (myData) {
+    if (myError) {
+      /* silent */
+    } else if (myData) {
       leftSideText = myData.name || "";
       executorPrumitka = myData.prumitka || "";
       if (myData.name) {
@@ -105,7 +106,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
       rightSideText = "Клієнта не знайдено";
     }
   } catch (e) {
-    console.error(e);
+    // console.error(e);
   }
 
   if (!zamovnykSentencePart && rightSideText) {
@@ -122,7 +123,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
     if (executorData?.oderjyvach)
       executorSentencePart = shortenFOPName(executorData.oderjyvach);
   } catch (e) {
-    console.error("Помилка отримання oderjyvach:", e);
+    // console.error("Помилка отримання oderjyvach:", e);
   }
   if (!executorSentencePart)
     executorSentencePart = shortenFOPName(leftSideText);
@@ -130,7 +131,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   const items = data.items || [];
   const totalSum = items.reduce(
     (sum: number, item: any) => sum + (item.suma || 0),
-    0
+    0,
   );
   const totalSumWords = amountToWordsUA(totalSum);
 
@@ -145,7 +146,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
       <td class="col-price">${formatNumberWithSpaces(item.price || 0)}</td>
       <td class="col-sum">${formatNumberWithSpaces(item.suma || 0)}</td>
     </tr>
-  `
+  `,
     )
     .join("");
 
@@ -158,8 +159,9 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   </tr>
 `;
 
-  const introText = `Ми, представники Замовника ${zamovnykSentencePart} директора <u>${directorGenitive}</u>, з одного боку, та представник Виконавця ${executorSentencePart}, з іншого боку, склали цей акт про те, що Виконавцем були проведені такі роботи (надані такі послуги) по рахунку № ${invoiceNumber}${invoiceDateText ? ` від ${invoiceDateText}` : ""
-    }:`;
+  const introText = `Ми, представники Замовника ${zamovnykSentencePart} директора <u>${directorGenitive}</u>, з одного боку, та представник Виконавця ${executorSentencePart}, з іншого боку, склали цей акт про те, що Виконавцем були проведені такі роботи (надані такі послуги) по рахунку № ${invoiceNumber}${
+    invoiceDateText ? ` від ${invoiceDateText}` : ""
+  }:`;
 
   const modalHtml = `
   <div id="${ACT_PREVIEW_MODAL_ID}" class="fakturaAct-overlay">
@@ -185,8 +187,8 @@ export async function renderActPreviewModal(data: any): Promise<void> {
           </table>
           <div class="fakturaAct-total-section">
             <p>Загальна вартість робіт (послуг) без ПДВ ${formatNumberWithSpaces(
-    totalSum
-  )} грн <strong contenteditable="true">${totalSumWords}</strong></p>
+              totalSum,
+            )} грн <strong contenteditable="true">${totalSumWords}</strong></p>
             <p>Сторони претензій одна до одної не мають.</p>
           </div>
           <div class="fakturaAct-footer">
@@ -244,7 +246,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   });
 
   const btnPrint = document.getElementById(
-    "btn-print-act"
+    "btn-print-act",
   ) as HTMLButtonElement;
   btnPrint?.addEventListener("click", async () => {
     btnPrint.textContent = "⏳ Генерація...";
@@ -282,7 +284,7 @@ function formatInvoiceDate(raw: any): string {
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return "";
   return `${String(d.getDate()).padStart(2, "0")}.${String(
-    d.getMonth() + 1
+    d.getMonth() + 1,
   ).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
 }
 
@@ -301,8 +303,9 @@ function formatDateWithMonthName(date: Date): string {
     "Листопада",
     "Грудня",
   ];
-  return `${date.getDate()} ${months[date.getMonth()]
-    } ${date.getFullYear()} р.`;
+  return `${date.getDate()} ${
+    months[date.getMonth()]
+  } ${date.getFullYear()} р.`;
 }
 
 function normalizeSingleLine(text: string): string {
@@ -426,7 +429,7 @@ async function saveActData(actId: number, actNumber: number): Promise<boolean> {
   try {
     const now = new Date();
     const todayISO = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
+      now.getMonth() + 1,
     ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     let userName = "";
     try {
@@ -435,7 +438,7 @@ async function saveActData(actId: number, actNumber: number): Promise<boolean> {
         userName = JSON.parse(storedData)?.Name || "";
       }
     } catch (e) {
-      console.error(e);
+      // console.error(e);
     }
     const { error } = await supabase
       .from("acts")
@@ -446,12 +449,12 @@ async function saveActData(actId: number, actNumber: number): Promise<boolean> {
       })
       .eq("act_id", actId);
     if (error) {
-      console.error("❌ Помилка збереження акту:", error);
+      // console.error("❌ Помилка збереження акту:", error);
       return false;
     }
     return true;
   } catch (e) {
-    console.error("❌ Критична помилка:", e);
+    // console.error("❌ Критична помилка:", e);
     return false;
   }
 }
@@ -460,10 +463,10 @@ async function saveActData(actId: number, actNumber: number): Promise<boolean> {
  * Повертає межі всіх рядків tbody у DOM-пікселях відносно контейнера.
  */
 function getActRowBoundsPx(
-  container: HTMLElement
+  container: HTMLElement,
 ): Array<{ top: number; bottom: number }> {
   const tbody = container.querySelector(
-    ".fakturaAct-table tbody"
+    ".fakturaAct-table tbody",
   ) as HTMLElement | null;
   if (!tbody) return [];
 
@@ -493,12 +496,12 @@ function getActElementBoundsPx(container: HTMLElement, selector: string) {
 
 async function generateActPdf(actNumber: string): Promise<void> {
   const container = document.querySelector(
-    ".fakturaAct-container"
+    ".fakturaAct-container",
   ) as HTMLElement;
   if (!container) return;
 
   const controls = document.querySelector(
-    ".fakturaAct-controls"
+    ".fakturaAct-controls",
   ) as HTMLElement;
   if (controls) controls.style.display = "none";
 
@@ -551,7 +554,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
     // Отримуємо межі секції "Всього на суму"
     const totalBounds = getActElementBoundsPx(
       container,
-      ".fakturaAct-total-section"
+      ".fakturaAct-total-section",
     );
 
     // Якщо все влазить на одну сторінку
@@ -562,7 +565,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
         marginLeft,
         marginTop,
         contentWidthMm,
-        imgHeightMm
+        imgHeightMm,
       );
     } else {
       // Багатосторінкова логіка
@@ -622,7 +625,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
         // 4) Ріжемо canvas
         const sourceYCanvas = Math.round(currentDomY * canvasPxPerDomPx);
         const sourceHCanvas = Math.round(
-          (safeCutDomY - currentDomY) * canvasPxPerDomPx
+          (safeCutDomY - currentDomY) * canvasPxPerDomPx,
         );
 
         const tempCanvas = document.createElement("canvas");
@@ -639,7 +642,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
           0,
           0,
           canvas.width,
-          sourceHCanvas
+          sourceHCanvas,
         );
 
         const sliceImg = tempCanvas.toDataURL("image/jpeg", 0.95);
@@ -651,7 +654,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
           marginLeft,
           marginTop,
           contentWidthMm,
-          sliceHeightMm
+          sliceHeightMm,
         );
 
         currentDomY = safeCutDomY;

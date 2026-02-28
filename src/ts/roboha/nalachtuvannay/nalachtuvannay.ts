@@ -282,7 +282,7 @@ export async function loadAndApplyPhoneIndicatorSetting(): Promise<void> {
       .single();
 
     if (error && error.code !== "PGRST116") {
-      console.warn("Помилка завантаження налаштування телефону:", error);
+      // console.warn("Помилка завантаження налаштування телефону:", error);
       applyPhoneIndicatorVisibility(true);
       return;
     }
@@ -291,7 +291,7 @@ export async function loadAndApplyPhoneIndicatorSetting(): Promise<void> {
     const showIndicators = data ? !!data[column] : true;
     applyPhoneIndicatorVisibility(showIndicators);
   } catch (err) {
-    console.error("Помилка застосування налаштування телефону:", err);
+    // console.error("Помилка застосування налаштування телефону:", err);
     applyPhoneIndicatorVisibility(true);
   }
 }
@@ -393,7 +393,7 @@ export function subscribeToSettingsRealtime(): void {
     )
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
-        console.log("📡 Realtime: підписка на settings активна");
+        // console.log("📡 Realtime: підписка на settings активна");
       }
     });
 }
@@ -406,7 +406,7 @@ export function unsubscribeFromSettingsRealtime(): void {
   if (settingsRealtimeChannel) {
     supabase.removeChannel(settingsRealtimeChannel);
     settingsRealtimeChannel = null;
-    console.log("📡 Realtime: відписка від settings");
+    // console.log("📡 Realtime: відписка від settings");
   }
 }
 
@@ -435,10 +435,10 @@ function handleSettingsRealtimeChange(payload: any): void {
   const column = ROLE_TO_COLUMN[currentRole as keyof typeof ROLE_TO_COLUMN];
   if (!column) return;
 
-  console.log(
-    `📡 Realtime settings: ${eventType} setting_id=${settingId}`,
-    newRecord,
-  );
+  // console.log(
+    // `📡 Realtime settings: ${eventType} setting_id=${settingId}`,
+    // newRecord,
+  // );
 
   // === ОБРОБКА НАЛАШТУВАНЬ АДМІНІСТРАТОРА (колонка "data") ===
   if (currentRole === "Адміністратор") {
@@ -512,9 +512,9 @@ function handleRoleSettingsChange(
     const value = newRecord?.[column];
     if (value !== undefined) {
       applyPhoneIndicatorVisibility(!!value);
-      console.log(
-        `📞 Realtime: оновлено відображення телефону для ${currentRole}: ${!!value}`,
-      );
+      // console.log(
+        // `📞 Realtime: оновлено відображення телефону для ${currentRole}: ${!!value}`,
+      // );
     }
   }
 
@@ -742,7 +742,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     // Оновлюємо лічильник символів SMS після завантаження даних
     updateSmsCharCounter(modal);
   } catch (err) {
-    console.error(err);
+    // console.error(err);
     showNotification(
       "Помилка завантаження загальних налаштувань",
       "error",
@@ -808,10 +808,10 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
         .single();
       if (selectError && selectError.code !== "PGRST116") {
         // ігноруємо not found
-        console.error(
-          `Помилка перевірки існування setting_id ${id}:`,
-          selectError,
-        );
+        // console.error(
+          // `Помилка перевірки існування setting_id ${id}:`,
+          // selectError,
+        // );
         throw selectError;
       }
 
@@ -821,7 +821,7 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
           .update({ Загальні: value })
           .eq("setting_id", id);
         if (updateError) {
-          console.error(`Помилка оновлення setting_id ${id}:`, updateError);
+          // console.error(`Помилка оновлення setting_id ${id}:`, updateError);
           throw updateError;
         }
       } else {
@@ -829,7 +829,7 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
           .from("settings")
           .insert({ setting_id: id, Загальні: value, data: false });
         if (insertError) {
-          console.error(`Помилка створення setting_id ${id}:`, insertError);
+          // console.error(`Помилка створення setting_id ${id}:`, insertError);
           throw insertError;
         }
       }
@@ -1419,7 +1419,7 @@ async function loadSettings(modal: HTMLElement): Promise<void> {
         cb.closest(".toggle-switch")?.classList.toggle("active", cb.checked);
       });
   } catch (err) {
-    console.error(err);
+    // console.error(err);
     showNotification("Помилка завантаження налаштувань", "error", 2000);
   }
 }
@@ -1483,7 +1483,7 @@ async function loadRoleSettings(
         cb.closest(".toggle-switch")?.classList.toggle("active", cb.checked);
       });
   } catch (err) {
-    console.error(err);
+    // console.error(err);
     showNotification(
       `Помилка завантаження налаштувань для ролі ${role}`,
       "error",
@@ -1503,7 +1503,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
 
     // ✅ безпечний фолбек, якщо роль невідома/непідтримувана
     if (!(role in ROLE_TO_COLUMN)) {
-      console.warn("Невідома роль у кнопці, фолбек до Адміністратор:", role);
+      // console.warn("Невідома роль у кнопці, фолбек до Адміністратор:", role);
       role = "Адміністратор";
     }
 
@@ -1676,7 +1676,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
             .update({ procent: null })
             .eq("setting_id", deletedId);
           if (error) {
-            console.error(`Помилка видалення складу ${deletedId}:`, error);
+            // console.error(`Помилка видалення складу ${deletedId}:`, error);
           } else {
             changesCount++;
           }
@@ -1879,7 +1879,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
             .eq("setting_id", id)
             .single();
           if (selectError && selectError.code !== "PGRST116") {
-            console.error(`Помилка перевірки setting_id ${id}:`, selectError);
+            // console.error(`Помилка перевірки setting_id ${id}:`, selectError);
             throw selectError;
           }
 
@@ -1889,7 +1889,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
               .update({ [column]: newValue })
               .eq("setting_id", id);
             if (updateError) {
-              console.error(`Помилка оновлення setting_id ${id}:`, updateError);
+              // console.error(`Помилка оновлення setting_id ${id}:`, updateError);
               throw updateError;
             }
           } else {
@@ -1897,7 +1897,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
               .from("settings")
               .insert({ setting_id: id, [column]: newValue, data: false });
             if (insertError) {
-              console.error(`Помилка створення setting_id ${id}:`, insertError);
+              // console.error(`Помилка створення setting_id ${id}:`, insertError);
               throw insertError;
             }
           }
@@ -1922,7 +1922,7 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
     }
     return true;
   } catch (err) {
-    console.error("Save error details:", err);
+    // console.error("Save error details:", err);
     showNotification("Помилка збереження", "error", 1500);
     return false;
   }
@@ -2027,7 +2027,7 @@ async function loadAiProKeys(modal: HTMLElement): Promise<void> {
       }
     }
   } catch (err) {
-    console.error("Помилка завантаження API ключів:", err);
+    // console.error("Помилка завантаження API ключів:", err);
     showNotification("Помилка завантаження API ключів", "error", 2000);
   }
   // після завантаження — перевіряємо дублікати
@@ -2144,7 +2144,7 @@ async function saveAiProKeys(modal: HTMLElement): Promise<void> {
     showNotification(`✅ API ключі збережено (${rows.length})`, "success", 1500);
     resetGeminiKeysCache();
   } catch (err) {
-    console.error("Помилка збереження API ключів:", err);
+    // console.error("Помилка збереження API ключів:", err);
     showNotification("Помилка збереження API ключів", "error", 2000);
   }
 }

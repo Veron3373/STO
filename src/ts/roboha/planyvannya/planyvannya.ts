@@ -1504,7 +1504,7 @@ class SchedulerApp {
         .lte("data_on", endStr + "T23:59:59");
 
       if (error) {
-        console.error("Помилка завантаження статистики:", error);
+        // console.error("Помилка завантаження статистики:", error);
         return;
       }
 
@@ -1562,7 +1562,7 @@ class SchedulerApp {
         });
       }
     } catch (err) {
-      console.error("Помилка при завантаженні статистики зайнятості:", err);
+      // console.error("Помилка при завантаженні статистики зайнятості:", err);
     }
   }
 
@@ -1988,9 +1988,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Оновлюємо індикатори зайнятості
     await schedulerAppInstance.refreshOccupancyIndicators();
   } else {
-    console.error(
-      "❌ [refreshPlannerCalendar] schedulerAppInstance або postArxiv не знайдено!",
-    );
+    // console.error(
+      // "❌ [refreshPlannerCalendar] schedulerAppInstance або postArxiv не знайдено!",
+    // );
   }
 };
 

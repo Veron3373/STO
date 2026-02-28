@@ -857,7 +857,7 @@ export class PlanyvannyaModal {
         this.selectedCarId = null;
       }
     } catch (err) {
-      console.error("Error loading cars:", err);
+      // console.error("Error loading cars:", err);
     }
   }
 
@@ -1387,7 +1387,7 @@ export class PlanyvannyaModal {
         }, autoHideAfterMs);
       }
     } catch (err) {
-      console.error("Error loading client acts:", err);
+      // console.error("Error loading client acts:", err);
       dropdown.style.display = "none";
     }
   }
@@ -1421,7 +1421,7 @@ export class PlanyvannyaModal {
       if (typeof (window as any).openActModal === "function") {
         (window as any).openActModal(this.actId);
       } else {
-        console.warn("Global function openActModal not found");
+        // console.warn("Global function openActModal not found");
       }
       return;
     }

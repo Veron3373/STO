@@ -252,8 +252,8 @@ class WorkSmartDropdown {
     const q = query.toLowerCase().trim();
     this.filteredItems = q
       ? this.items
-        .filter((item) => item.toLowerCase().includes(q))
-        .slice(0, this.config.maxItems)
+          .filter((item) => item.toLowerCase().includes(q))
+          .slice(0, this.config.maxItems)
       : this.items.slice(0, this.config.maxItems);
 
     this.selectedIndex = -1;
@@ -278,8 +278,9 @@ class WorkSmartDropdown {
     this.dropdown.innerHTML = this.filteredItems
       .map(
         (item, index) => `
-        <div class="dropdown-item ${index === this.selectedIndex ? "selected" : ""
-          }" 
+        <div class="dropdown-item ${
+          index === this.selectedIndex ? "selected" : ""
+        }" 
              data-index="${index}">
           ${this.highlightMatch(item, this.input.value)}
         </div>
@@ -486,10 +487,10 @@ function ensureWorkSmartDropdown(): void {
       try {
         workSmartDropdown = new WorkSmartDropdown(workDropdownConfig);
       } catch (error) {
-        console.warn(
-          `Failed to create work dropdown for ${workDropdownConfig.inputId}:`,
-          error,
-        );
+        // console.warn(
+        // `Failed to create work dropdown for ${workDropdownConfig.inputId}:`,
+        // error,
+        // );
       }
     }
   }
@@ -714,8 +715,12 @@ function createPasswordConfirmationModal(
         title.style.color = "#4ade80";
         input.classList.add("input-success");
         confirmButton.innerHTML = "✓ Успішно";
-        confirmButton.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
-        setTimeout(() => { modal.remove(); resolve(true); }, 500);
+        confirmButton.style.background =
+          "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+        setTimeout(() => {
+          modal.remove();
+          resolve(true);
+        }, 500);
       } else {
         showModalError("Невірний пароль");
         input.focus();
@@ -787,13 +792,13 @@ export async function loadSlyusarsData(): Promise<void> {
     }
 
     if (error) {
-      console.error("Помилка Supabase:", error);
+      // console.error("Помилка Supabase:", error);
       throw new Error(`Помилка завантаження: ${error.message}`);
     }
 
     if (data && Array.isArray(data)) {
       slyusarsData = data
-        .map((item, index) => {
+        .map((item, _index) => {
           try {
             let parsedData;
             if (typeof item.data === "string") {
@@ -801,18 +806,18 @@ export async function loadSlyusarsData(): Promise<void> {
             } else if (typeof item.data === "object" && item.data !== null) {
               parsedData = item.data;
             } else {
-              console.warn(
-                `Пропущений запис ${index}: невірний формат data`,
-                item,
-              );
+              // console.warn(
+              // `Пропущений запис ${index}: невірний формат data`,
+              // item,
+              // );
               return null;
             }
 
             if (!parsedData || !parsedData.Name) {
-              console.warn(
-                `Пропущений запис ${index}: немає поля Name`,
-                parsedData,
-              );
+              // console.warn(
+              // `Пропущений запис ${index}: немає поля Name`,
+              // parsedData,
+              // );
               return null;
             }
 
@@ -829,11 +834,11 @@ export async function loadSlyusarsData(): Promise<void> {
 
             return parsedData;
           } catch (parseError) {
-            console.error(
-              `Помилка парсингу запису ${index}:`,
-              parseError,
-              item,
-            );
+            // console.error(
+            // `Помилка парсингу запису ${index}:`,
+            // parseError,
+            // item,
+            // );
             return null;
           }
         })
@@ -871,7 +876,7 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       .select("*");
 
     if (fetchError) {
-      console.error("Помилка отримання даних:", fetchError);
+      // console.error("Помилка отримання даних:", fetchError);
       throw new Error(`Помилка отримання даних: ${fetchError.message}`);
     }
 
@@ -907,7 +912,7 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
       });
 
       if (!target) {
-        console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
+        // console.warn(`Не знайдено запис для слюсаря: ${slyusar.Name}`);
         continue;
       }
 
@@ -919,7 +924,7 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
             .eq(primaryKey, target[primaryKey])
             .select();
           if (updErr) {
-            console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
+            // console.error(`Помилка оновлення ${slyusar.Name}:`, updErr);
             throw updErr;
           }
           return upd;
@@ -934,10 +939,10 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
             .contains("data", { Name: slyusar.Name })
             .select();
           if (updErr) {
-            console.error(
-              `Помилка оновлення (fallback) ${slyusar.Name}:`,
-              updErr,
-            );
+            // console.error(
+            // `Помилка оновлення (fallback) ${slyusar.Name}:`,
+            // updErr,
+            // );
             throw updErr;
           }
           return upd;
@@ -952,7 +957,7 @@ async function saveSlyusarsDataToDatabase(): Promise<void> {
 
     showNotification("✅ Дані успішно збережено в базу", "success");
   } catch (error) {
-    console.error("❌ Помилка збереження в базу slyusars:", error);
+    // console.error("❌ Помилка збереження в базу slyusars:", error);
     let errorMessage = "Невідома помилка";
     if (error instanceof Error) errorMessage = error.message;
     else if (typeof error === "object" && error !== null)
@@ -1014,7 +1019,7 @@ export function createNameSelect(): void {
       refreshWorkDropdownOptions();
       refreshActDropdownOptions();
     });
-  } catch (error) { }
+  } catch (error) {}
 }
 
 export function getFilteredpodlegleData(): PodlegleRecord[] {
@@ -1094,7 +1099,7 @@ export function updatePodlegleDisplayedSums(): void {
   const totalSumElement = byId<HTMLElement>("total-sum");
 
   if (!totalSumElement) {
-    console.warn("Елемент total-sum не знайдено");
+    // console.warn("Елемент total-sum не знайдено");
     return;
   }
 
@@ -1118,15 +1123,16 @@ export function updatePodlegleDisplayedSums(): void {
   totalSumElement.innerHTML = `
     <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 1.1em;">
       <span>Сума <strong style="color: #333;">💰 ${formatNumber(
-    totalRevenue,
-  )}</strong> грн</span>
+        totalRevenue,
+      )}</strong> грн</span>
       <span style="color: #666;">-</span>
       <span><strong style="color: #8B0000;">💶 ${formatNumber(
-    totalSalary,
-  )}</strong> грн</span>
+        totalSalary,
+      )}</strong> грн</span>
       <span style="color: #666;">=</span>
-      <span><strong style="color: ${totalMargin >= 0 ? "#006400 " : "#8B0000"
-    };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
+      <span><strong style="color: ${
+        totalMargin >= 0 ? "#006400 " : "#8B0000"
+      };">📈 ${marginSign}${formatNumber(totalMargin)}</strong> грн</span>
     </div>
   `;
 }
@@ -1206,19 +1212,20 @@ export function updatepodlegleTable(): void {
         <div class="salary-cell-wrapper">
           <div class="salary-cell-numbers">
             <div style="font-size: 0.95em; font-weight: 600; color: #000;">${formatNumber(
-          item.total,
-        )}</div>
+              item.total,
+            )}</div>
             <div style="font-size: 0.85em; color: #dc3545; margin-top: 2px;">-${formatNumber(
-          item.salary,
-        )}</div>
+              item.salary,
+            )}</div>
             <div style="font-size: 0.9em; color: ${marginColor}; font-weight: 500; margin-top: 2px;">${marginSign}${formatNumber(
-          item.margin,
-        )}</div>
+              item.margin,
+            )}</div>
           </div>
-          ${salaryArrowHtml
-          ? `<div class="salary-arrow-container">${salaryArrowHtml}</div>`
-          : ""
-        }
+          ${
+            salaryArrowHtml
+              ? `<div class="salary-arrow-container">${salaryArrowHtml}</div>`
+              : ""
+          }
         </div>
       `;
 
@@ -1227,10 +1234,11 @@ export function updatepodlegleTable(): void {
                     <td>
                              <button class="Bukhhalter-payment-btn ${buttonPaidClass}"
                                 onclick="event.stopPropagation(); togglepodleglePaymentWithConfirmation(${originalIndex})" 
-                                title="${item.isPaid
-          ? `Розраховано ${item.paymentDate || ""}`
-          : "Не розраховано"
-        }">
+                                title="${
+                                  item.isPaid
+                                    ? `Розраховано ${item.paymentDate || ""}`
+                                    : "Не розраховано"
+                                }">
                             ${paymentButtonText}
                         </button>
                     </td>
@@ -1240,8 +1248,9 @@ export function updatepodlegleTable(): void {
                     <td>${item.name || "-"}</td>
                     <td>
                      <button class="Bukhhalter-act-btn"
-                             onclick="event.stopPropagation(); openActModalWithClient(${Number(item.act) || 0
-        })"
+                             onclick="event.stopPropagation(); openActModalWithClient(${
+                               Number(item.act) || 0
+                             })"
                              title="Відкрити акт №${item.act}">
                        📋 ${item.act || "-"}
                      </button>
@@ -1474,26 +1483,30 @@ export function searchDataInDatabase(
 
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${salaryParts !== 0
-              ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
-              : sumParts < 0
-                ? `<div style="color: #6c757d;">⚙️ 0</div>`
-                : ""
-            }
-              ${sumPartsAfterSalary !== 0
-              ? `<div style="color: ${sumPartsAfterSalary > 0 ? "#28a745" : "#dc3545"};">⚙️ ${sumPartsAfterSalary > 0 ? "+" : ""}${formatNumber(sumPartsAfterSalary)}</div>`
-              : ""
-            }
-              ${salaryWork !== 0
-              ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
-              : sumWork < 0
-                ? `<div style="color: #6c757d;">🛠️ 0</div>`
-                : ""
-            }
-              ${sumWorkAfterSalary !== 0
-              ? `<div style="color: ${sumWorkAfterSalary > 0 ? "#28a745" : "#dc3545"};">🛠️ ${sumWorkAfterSalary > 0 ? "+" : ""}${formatNumber(sumWorkAfterSalary)}</div>`
-              : ""
-            }
+              ${
+                salaryParts !== 0
+                  ? `<div style="color: #dc3545;">⚙️ -${formatNumber(salaryParts)}</div>`
+                  : sumParts < 0
+                    ? `<div style="color: #6c757d;">⚙️ 0</div>`
+                    : ""
+              }
+              ${
+                sumPartsAfterSalary !== 0
+                  ? `<div style="color: ${sumPartsAfterSalary > 0 ? "#28a745" : "#dc3545"};">⚙️ ${sumPartsAfterSalary > 0 ? "+" : ""}${formatNumber(sumPartsAfterSalary)}</div>`
+                  : ""
+              }
+              ${
+                salaryWork !== 0
+                  ? `<div style="color: #dc3545;">🛠️ -${formatNumber(salaryWork)}</div>`
+                  : sumWork < 0
+                    ? `<div style="color: #6c757d;">🛠️ 0</div>`
+                    : ""
+              }
+              ${
+                sumWorkAfterSalary !== 0
+                  ? `<div style="color: ${sumWorkAfterSalary > 0 ? "#28a745" : "#dc3545"};">🛠️ ${sumWorkAfterSalary > 0 ? "+" : ""}${formatNumber(sumWorkAfterSalary)}</div>`
+                  : ""
+              }
             </div>`;
 
           podlegleData.push({
@@ -1547,14 +1560,16 @@ export function searchDataInDatabase(
           // Формуємо HTML: червона зарплата, зелений чистий прибуток
           const customHtml = `
             <div style="font-size: 0.85em; line-height: 1.2; text-align: right;">
-              ${salaryParts !== 0
-              ? `<div style="color: #dc3545;">💰 -${formatNumber(salaryParts)}</div>`
-              : ""
-            }
-              ${profitAfterSalary !== 0
-              ? `<div style="color: ${profitAfterSalary > 0 ? "#28a745" : "#dc3545"};">📊 ${profitAfterSalary > 0 ? "+" : ""}${formatNumber(profitAfterSalary)}</div>`
-              : ""
-            }
+              ${
+                salaryParts !== 0
+                  ? `<div style="color: #dc3545;">💰 -${formatNumber(salaryParts)}</div>`
+                  : ""
+              }
+              ${
+                profitAfterSalary !== 0
+                  ? `<div style="color: ${profitAfterSalary > 0 ? "#28a745" : "#dc3545"};">📊 ${profitAfterSalary > 0 ? "+" : ""}${formatNumber(profitAfterSalary)}</div>`
+                  : ""
+              }
             </div>`;
 
           podlegleData.push({
@@ -1805,7 +1820,7 @@ function initPodlegleDateFilterToggle(): void {
       if (hasPodlegleDataLoaded) {
         filterPodlegleData();
       } else {
-        console.warn("⚠️ Дані ще не завантажені, натисніть 🔍 Пошук");
+        // console.warn("⚠️ Дані ще не завантажені, натисніть 🔍 Пошук");
       }
     });
   });
@@ -1815,7 +1830,7 @@ export function createStatusToggle(): void {
   const toggle = byId<HTMLInputElement>("details-status-filter-toggle");
 
   if (!toggle) {
-    console.error("❌ Елемент status-filter-toggle не знайдено в HTML");
+    // console.error("❌ Елемент status-filter-toggle не знайдено в HTML");
     return;
   }
 
@@ -1874,7 +1889,7 @@ export function createPaymentToggle(): void {
   const toggle = byId<HTMLInputElement>("payment-filter-toggle");
 
   if (!toggle) {
-    console.error("❌ Елемент payment-filter-toggle не знайдено в HTML");
+    // console.error("❌ Елемент payment-filter-toggle не знайдено в HTML");
     return;
   }
 
@@ -1933,7 +1948,7 @@ export function createPercentageToggle(): void {
   const toggle = byId<HTMLInputElement>("percentage-filter-toggle");
 
   if (!toggle) {
-    console.error("❌ Елемент percentage-filter-toggle не знайдено в HTML");
+    // console.error("❌ Елемент percentage-filter-toggle не знайдено в HTML");
     return;
   }
 
@@ -2121,7 +2136,7 @@ export async function togglepodleglePaymentWithConfirmation(
   index: number,
 ): Promise<void> {
   if (!podlegleData[index]) {
-    console.error(`Запис з індексом ${index} не знайдено`);
+    // console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
     return;
   }
@@ -2148,7 +2163,7 @@ export async function togglepodleglePaymentWithConfirmation(
 
 export async function togglepodleglePayment(index: number): Promise<void> {
   if (!podlegleData[index]) {
-    console.error(`Запис з індексом ${index} не знайдено`);
+    // console.error(`Запис з індексом ${index} не знайдено`);
     showNotification("❌ Запис не знайдено", "error");
     return;
   }
@@ -2262,7 +2277,7 @@ export async function togglepodleglePayment(index: number): Promise<void> {
       statusMsg = "❌ Розрахунок скасовано";
     }
   } else {
-    console.warn("Невідомий тип запису (ні слюсар, ні приймальник)");
+    // console.warn("Невідомий тип запису (ні слюсар, ні приймальник)");
     return;
   }
 
@@ -2272,7 +2287,7 @@ export async function togglepodleglePayment(index: number): Promise<void> {
     updatepodlegleTable();
     showNotification(statusMsg, "success");
   } catch (error) {
-    console.error(`❌ Помилка збереження:`, error);
+    // console.error(`❌ Помилка збереження:`, error);
     showNotification("❌ Помилка збереження змін в базу даних", "error");
     // Відкат змін
     record.isPaid = prevIsPaid;
@@ -2307,10 +2322,10 @@ export async function runMassPaymentCalculation(): Promise<void> {
 
   // ✅ Перевірка: якщо вибрано конкретне ім'я, але filteredData містить інші імена - це баг!
   if (selectedName && uniqueNames.some((name) => name !== selectedName)) {
-    console.error(
-      `❌ УВАГА! Вибрано "${selectedName}", але filteredData містить інші імена:`,
-      uniqueNames,
-    );
+    // console.error(
+    // `❌ УВАГА! Вибрано "${selectedName}", але filteredData містить інші імена:`,
+    // uniqueNames,
+    // );
     showNotification(
       `⚠️ Помилка фільтрації! Дані містять записи для інших працівників. Перезавантажте сторінку.`,
       "error",
@@ -2420,10 +2435,10 @@ export async function runMassPaymentCalculation(): Promise<void> {
             } else {
               // Для слюсарів це ворнінг, але для приймальників ми вже обробили вище
               // Тому тут else блок безпечний
-              console.warn(
-                "❌ Не знайдено workEntry для масового розрахунку:",
-                record,
-              );
+              // console.warn(
+              // "❌ Не знайдено workEntry для масового розрахунку:",
+              // record,
+              // );
               errorCount++;
             }
           }
@@ -2457,7 +2472,7 @@ export async function runMassPaymentCalculation(): Promise<void> {
     }
     showNotification(notificationMessage, "success");
   } catch (error) {
-    console.error("❌ Помилка масового розрахунку:", error);
+    // console.error("❌ Помилка масового розрахунку:", error);
     showNotification("❌ Помилка при збереженні змін у базу", "error");
     showNotification(
       "Будь ласка, оновіть пошук, щоб побачити актуальний стан",

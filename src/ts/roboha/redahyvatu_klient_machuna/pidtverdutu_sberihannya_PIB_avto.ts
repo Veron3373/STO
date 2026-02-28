@@ -59,14 +59,17 @@ export function showSavePromptModal(): Promise<boolean> {
 
 // Видаляє авто з бази
 async function deleteCarFromDatabase(carsId: string): Promise<void> {
-  const { error } = await supabase.from("cars").delete().eq("cars_id", carsId);
-  if (error) console.error("❌ Помилка видалення автомобіля:", error.message);
+  const { error: _error } = await supabase
+    .from("cars")
+    .delete()
+    .eq("cars_id", carsId);
+  // if (_error) console.error("❌ Помилка видалення автомобіля:", _error.message);
 }
 
 // Додає авто до клієнта
 async function addCarToDatabase(
   clientId: string,
-  carData: any
+  carData: any,
 ): Promise<string | null> {
   const { data, error } = await supabase
     .from("cars")
@@ -86,7 +89,7 @@ async function addCarToDatabase(
     .single();
 
   if (error) {
-    console.error("❌ Помилка додавання автомобіля:", error.message);
+    // console.error("❌ Помилка додавання автомобіля:", error.message);
     return null;
   } else {
     return data?.cars_id || null;
@@ -100,7 +103,7 @@ export async function saveClientAndCarToDatabase(): Promise<{
 }> {
   const values = getModalFormValues();
   if (!values.fullName || !values.phone) {
-    console.error("❌ Обов'язкові поля (ПІБ, Телефон) не заповнені");
+    // console.error("❌ Обов'язкові поля (ПІБ, Телефон) не заповнені");
     return { client_id: null, cars_id: null };
   }
 
@@ -119,7 +122,7 @@ export async function saveClientAndCarToDatabase(): Promise<{
       .ilike("data->>ПІБ", `%${values.fullName.trim()}%`);
 
     if (fetchError) {
-      console.error("❌ Помилка при пошуку клієнта:", fetchError.message);
+      // console.error("❌ Помилка при пошуку клієнта:", fetchError.message);
       return { client_id: null, cars_id: null };
     }
 
@@ -149,10 +152,10 @@ export async function saveClientAndCarToDatabase(): Promise<{
         .single();
 
       if (insertClientError || !insertedClient?.client_id) {
-        console.error(
-          "❌ Не вдалося створити клієнта:",
-          insertClientError?.message
-        );
+        // console.error(
+        // "❌ Не вдалося створити клієнта:",
+        // insertClientError?.message
+        // );
         return { client_id: null, cars_id: null };
       }
 
@@ -178,7 +181,7 @@ export async function saveClientAndCarToDatabase(): Promise<{
       .eq("client_id", values.client_id);
 
     if (clientError) {
-      console.error("❌ Помилка оновлення клієнта:", clientError.message);
+      // console.error("❌ Помилка оновлення клієнта:", clientError.message);
     } else {
     }
 
@@ -199,13 +202,13 @@ export async function saveClientAndCarToDatabase(): Promise<{
         .eq("cars_id", values.cars_id);
 
       if (carError) {
-        console.error("❌ Помилка оновлення авто:", carError.message);
+        // console.error("❌ Помилка оновлення авто:", carError.message);
       } else {
       }
     }
     return { client_id: values.client_id, cars_id: values.cars_id || null };
   }
 
-  console.warn("⚠️ Незрозумілий стан або не вистачає ID. Дані не збережено.");
+  // console.warn("⚠️ Незрозумілий стан або не вистачає ID. Дані не збережено.");
   return { client_id: null, cars_id: null };
 }

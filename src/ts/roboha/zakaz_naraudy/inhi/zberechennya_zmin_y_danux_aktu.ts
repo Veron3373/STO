@@ -103,7 +103,7 @@ async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
       .single();
 
     if (actError || !act) {
-      console.warn("⚠️ Не вдалося отримати дані акту з БД:", actError?.message);
+      // console.warn("⚠️ Не вдалося отримати дані акту з БД:", actError?.message);
       // Fallback до DOM якщо БД недоступна
       return getClientAndCarInfo();
     }
@@ -145,7 +145,7 @@ async function fetchActClientAndCarDataFromDB(actId: number): Promise<{
 
     return { pib, auto };
   } catch (error) {
-    console.warn("⚠️ Помилка при отриманні даних клієнта з БД:", error);
+    // console.warn("⚠️ Помилка при отриманні даних клієнта з БД:", error);
     // Fallback до DOM
     return getClientAndCarInfo();
   }
@@ -161,7 +161,7 @@ async function loadPurchasePrices(): Promise<void> {
       .select("sclad_id, price");
 
     if (error) {
-      console.error("⚠️ Помилка завантаження цін зі складу:", error);
+      // console.error("⚠️ Помилка завантаження цін зі складу:", error);
       return;
     }
 
@@ -174,7 +174,7 @@ async function loadPurchasePrices(): Promise<void> {
       }
     });
   } catch (err) {
-    console.error("⚠️ Помилка при завантаженні цін:", err);
+    // console.error("⚠️ Помилка при завантаженні цін:", err);
   }
 }
 
@@ -509,7 +509,7 @@ async function updateScladAkt(
     .in("sclad_id", scladIds);
 
   if (selErr) {
-    console.error("Помилка при отриманні записів sclad:", selErr);
+    // console.error("Помилка при отриманні записів sclad:", selErr);
     throw new Error(`Не вдалося отримати записи складу: ${selErr.message}`);
   }
 
@@ -517,7 +517,7 @@ async function updateScladAkt(
   const missingIds = scladIds.filter((id) => !foundIds.has(id));
 
   if (missingIds.length > 0) {
-    console.warn(`Записи sclad_id не знайдено:`, missingIds);
+    // console.warn(`Записи sclad_id не знайдено:`, missingIds);
   }
 
   const existingIds = scladIds.filter((id) => foundIds.has(id));
@@ -528,7 +528,7 @@ async function updateScladAkt(
       .in("sclad_id", existingIds);
 
     if (updateErr) {
-      console.error("Помилка при оновленні akt:", updateErr);
+      // console.error("Помилка при оновленні akt:", updateErr);
       throw new Error(`Не вдалося оновити akt: ${updateErr.message}`);
     }
   }
@@ -553,7 +553,7 @@ async function applyScladDeltas(deltas: Map<number, number>): Promise<void> {
     .map((id) => {
       const row = rows?.find((r) => Number(r.sclad_id) === id);
       if (!row) {
-        console.warn(`Запис sclad_id=${id} не знайдено`);
+        // console.warn(`Запис sclad_id=${id} не знайдено`);
         return null;
       }
 
@@ -851,12 +851,12 @@ async function logActChanges(
       .single();
 
     if (actError) {
-      console.error("❌ Помилка отримання pruimalnyk з acts:", actError);
+      // console.error("❌ Помилка отримання pruimalnyk з acts:", actError);
     } else if (actData?.pruimalnyk) {
       pruimalnykFromDb = actData.pruimalnyk;
     }
   } catch (err) {
-    console.error("❌ Виняток при отриманні pruimalnyk:", err);
+    // console.error("❌ Виняток при отриманні pruimalnyk:", err);
   }
 
   // ✅ ФУНКЦІЯ ВИЗНАЧЕННЯ АВТОРА ЗМІН
@@ -934,7 +934,7 @@ async function logActChanges(
     .insert(records);
 
   if (error) {
-    console.error("❌ ПОМИЛКА ЗАПИСУ ЗМІН:", error);
+    // console.error("❌ ПОМИЛКА ЗАПИСУ ЗМІН:", error);
     throw error;
   }
 }
@@ -1016,10 +1016,10 @@ async function syncAllZapchastystyHistoryForAct(
     .select("slyusar_id, data");
 
   if (zapchastystyError) {
-    console.error(
-      "❌ Помилка отримання списку Запчастистів:",
-      zapchastystyError,
-    );
+    // console.error(
+      // "❌ Помилка отримання списку Запчастистів:",
+      // zapchastystyError,
+    // );
     return 0;
   }
 
@@ -1115,9 +1115,9 @@ async function syncAllZapchastystyHistoryForAct(
         const oldRecord = zHistory[zFoundDateKey][zFoundIndex];
         zHistory[zFoundDateKey][zFoundIndex] = { ...oldRecord, ...zActRecord };
         needsUpdate = true;
-        console.log(
-          `📝 Оновлено історію Запчастиста "${zData.Name}" для акту ${actId}: маржа=${marginForSalary.toFixed(2)}, ЗП=${zSalary}`,
-        );
+        // console.log(
+          // `📝 Оновлено історію Запчастиста "${zData.Name}" для акту ${actId}: маржа=${marginForSalary.toFixed(2)}, ЗП=${zSalary}`,
+        // );
       } else {
         // Створюємо новий запис
         if (!zHistory[actDate]) {
@@ -1125,9 +1125,9 @@ async function syncAllZapchastystyHistoryForAct(
         }
         zHistory[actDate].push(zActRecord);
         needsUpdate = true;
-        console.log(
-          `➕ Додано запис в історію Запчастиста "${zData.Name}" для акту ${actId}: маржа=${marginForSalary.toFixed(2)}, ЗП=${zSalary}`,
-        );
+        // console.log(
+          // `➕ Додано запис в історію Запчастиста "${zData.Name}" для акту ${actId}: маржа=${marginForSalary.toFixed(2)}, ЗП=${zSalary}`,
+        // );
       }
     } else {
       // ❌ Немає деталей в акті → видаляємо запис (якщо був)
@@ -1140,9 +1140,9 @@ async function syncAllZapchastystyHistoryForAct(
         }
 
         needsUpdate = true;
-        console.log(
-          `🗑️ Видалено акт ${actId} з історії Запчастиста "${zData.Name}" (деталей більше немає)`,
-        );
+        // console.log(
+          // `🗑️ Видалено акт ${actId} з історії Запчастиста "${zData.Name}" (деталей більше немає)`,
+        // );
       }
     }
 
@@ -1156,10 +1156,10 @@ async function syncAllZapchastystyHistoryForAct(
         .eq("slyusar_id", zSlyusarId);
 
       if (zUpdateError) {
-        console.error(
-          `❌ Помилка оновлення історії Запчастиста "${zData.Name}":`,
-          zUpdateError,
-        );
+        // console.error(
+          // `❌ Помилка оновлення історії Запчастиста "${zData.Name}":`,
+          // zUpdateError,
+        // );
       }
     }
   }
@@ -1192,9 +1192,9 @@ async function syncPruimalnikHistory(
     .single();
 
   if (actError || !actData || !actData.pruimalnyk) {
-    console.warn(
-      `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту №${actId}. Історія приймальника НЕ оновлюється, але історія Запчастистів буде оновлена.`,
-    );
+    // console.warn(
+      // `⚠️ syncPruimalnikHistory: Не вдалося отримати pruimalnyk для акту №${actId}. Історія приймальника НЕ оновлюється, але історія Запчастистів буде оновлена.`,
+    // );
     // ✅ НЕ виходимо! Продовжуємо для оновлення історії Запчастистів
     pruimalnykName = "";
   } else {
@@ -1216,9 +1216,9 @@ async function syncPruimalnikHistory(
       .eq("data->>Name", pruimalnykName);
 
     if (pruimalnykError || !userDataArray || userDataArray.length === 0) {
-      console.warn(
-        `⚠️ syncPruimalnikHistory: Приймальник "${pruimalnykName}" не знайдений в БД. Історія Запчастистів все одно буде оновлена.`,
-      );
+      // console.warn(
+        // `⚠️ syncPruimalnikHistory: Приймальник "${pruimalnykName}" не знайдений в БД. Історія Запчастистів все одно буде оновлена.`,
+      // );
       pruimalnykName = ""; // Скидаємо, щоб не оновлювати історію приймальника
     } else {
       userData = userDataArray[0];
@@ -1232,9 +1232,9 @@ async function syncPruimalnikHistory(
         slyusarData.Доступ !== "Приймальник" &&
         slyusarData.Доступ !== "Адміністратор"
       ) {
-        console.warn(
-          "⚠️ syncPruimalnikHistory: Користувач не є Приймальником/Адміністратором в базі. Історія Запчастистів все одно буде оновлена.",
-        );
+        // console.warn(
+          // "⚠️ syncPruimalnikHistory: Користувач не є Приймальником/Адміністратором в базі. Історія Запчастистів все одно буде оновлена.",
+        // );
         pruimalnykName = ""; // Скидаємо, щоб не оновлювати історію приймальника
       } else {
         // Склад приймальника для порівняння
@@ -1251,7 +1251,7 @@ async function syncPruimalnikHistory(
   );
 
   if (!tableBody) {
-    console.error("❌ syncPruimalnikHistory: Таблиця не знайдена");
+    // console.error("❌ syncPruimalnikHistory: Таблиця не знайдена");
     return;
   }
 
@@ -1332,10 +1332,10 @@ async function syncPruimalnikHistory(
       .in("sclad_id", scladIdsToFetch);
 
     if (scladError) {
-      console.error(
-        "❌ syncPruimalnikHistory: Помилка отримання цін sclad:",
-        scladError,
-      );
+      // console.error(
+        // "❌ syncPruimalnikHistory: Помилка отримання цін sclad:",
+        // scladError,
+      // );
     } else if (scladItems) {
       // Створюємо мапи: sclad_id -> ціна, номер складу, xto_zamovuv
       const priceMap = new Map<number, number>();
@@ -1385,9 +1385,9 @@ async function syncPruimalnikHistory(
           const shouldCount =
             detailSklad === undefined || detailSklad !== pruimalnykSklad;
 
-          console.log(
-            `🔍 Деталь sclad_id=${part.scladId}: scladNomer=${detailSklad}, pruimalnykSklad=${pruimalnykSklad}, xtoZamovuv=${part.xtoZamovuv}, shouldCount=${shouldCount}, sale=${part.sale}, buyPrice=${buyPrice}`,
-          );
+          // console.log(
+            // `🔍 Деталь sclad_id=${part.scladId}: scladNomer=${detailSklad}, pruimalnykSklad=${pruimalnykSklad}, xtoZamovuv=${part.xtoZamovuv}, shouldCount=${shouldCount}, sale=${part.sale}, buyPrice=${buyPrice}`,
+          // );
 
           if (shouldCount) {
             // Деталь враховується в зарплаті приймальника
@@ -1397,9 +1397,9 @@ async function syncPruimalnikHistory(
         } else {
           // Деталь без scladId або без ціни в sclad - враховуємо повністю в зарплаті приймальника
           // (невідомий запчастист = враховується)
-          console.log(
-            `🔍 Деталь без scladId або ціни: scladId=${part.scladId}, sale=${part.sale}`,
-          );
+          // console.log(
+            // `🔍 Деталь без scladId або ціни: scladId=${part.scladId}, sale=${part.sale}`,
+          // );
           partsSaleForPruimalnyk += part.sale;
           // partsBuyForPruimalnyk не додаємо, бо невідома ціна закупки
         }
@@ -1456,10 +1456,10 @@ async function syncPruimalnikHistory(
       .maybeSingle();
 
     if (prevError) {
-      console.error(
-        `❌ Помилка пошуку попереднього приймальника "${previousPruimalnyk}":`,
-        prevError,
-      );
+      // console.error(
+        // `❌ Помилка пошуку попереднього приймальника "${previousPruimalnyk}":`,
+        // prevError,
+      // );
     } else if (prevReceiverData) {
       const receiverData =
         typeof prevReceiverData.data === "string"
@@ -1504,10 +1504,10 @@ async function syncPruimalnikHistory(
             .eq("slyusar_id", prevReceiverData.slyusar_id);
 
           if (updateError) {
-            console.error(
-              `❌ Помилка оновлення історії для "${receiverData.Name}":`,
-              updateError,
-            );
+            // console.error(
+              // `❌ Помилка оновлення історії для "${receiverData.Name}":`,
+              // updateError,
+            // );
           }
         }
       }
@@ -1575,19 +1575,19 @@ async function syncPruimalnikHistory(
           .eq("slyusar_id", userData.slyusar_id);
 
         if (updateError) {
-          console.error(
-            "❌ syncPruimalnikHistory: Помилка видалення акту з історії:",
-            updateError,
-          );
+          // console.error(
+            // "❌ syncPruimalnikHistory: Помилка видалення акту з історії:",
+            // updateError,
+          // );
         } else {
-          console.log(
-            `🗑️ Видалено порожній акт ${actId} з історії Приймальника "${pruimalnykName}"`,
-          );
+          // console.log(
+            // `🗑️ Видалено порожній акт ${actId} з історії Приймальника "${pruimalnykName}"`,
+          // );
         }
       } else {
-        console.log(
-          `ℹ️ Акт ${actId} порожній і не був в історії Приймальника - нічого видаляти`,
-        );
+        // console.log(
+          // `ℹ️ Акт ${actId} порожній і не був в історії Приймальника - нічого видаляти`,
+        // );
       }
     } else {
       // ✅ Акт має дані → оновлюємо/створюємо запис
@@ -1634,19 +1634,19 @@ async function syncPruimalnikHistory(
         .eq("slyusar_id", userData.slyusar_id);
 
       if (updateError) {
-        console.error(
-          "❌ syncPruimalnikHistory: Помилка оновлення історії:",
-          updateError,
-        );
+        // console.error(
+          // "❌ syncPruimalnikHistory: Помилка оновлення історії:",
+          // updateError,
+        // );
       } else {
         // ✅ Оновлюємо localStorage з новим приймальником для наступного збереження
         localStorage.setItem("current_act_pruimalnyk", pruimalnykName);
       }
     }
   } else {
-    console.log(
-      "⚠️ syncPruimalnikHistory: Немає приймальника - історія приймальника НЕ оновлюється (але Запчастисти оновлені)",
-    );
+    // console.log(
+      // "⚠️ syncPruimalnikHistory: Немає приймальника - історія приймальника НЕ оновлюється (але Запчастисти оновлені)",
+    // );
   }
 }
 
@@ -1668,15 +1668,15 @@ async function savePruimalnykToActs(actId: number): Promise<void> {
       userAccessLevel !== "Приймальник" &&
       userAccessLevel !== "Адміністратор"
     ) {
-      console.log(
-        `📝 savePruimalnykToActs: Пропускаємо для ролі ${userAccessLevel} (тільки Приймальник/Адміністратор можуть стати pruimalnyk)`,
-      );
+      // console.log(
+        // `📝 savePruimalnykToActs: Пропускаємо для ролі ${userAccessLevel} (тільки Приймальник/Адміністратор можуть стати pruimalnyk)`,
+      // );
       return;
     }
 
     const userData = getSavedUserDataFromLocalStorage?.();
     if (!userData || !userData.name) {
-      console.warn("⚠️ Не вдалося отримати дані користувача з localStorage");
+      // console.warn("⚠️ Не вдалося отримати дані користувача з localStorage");
       return;
     }
 
@@ -1691,14 +1691,14 @@ async function savePruimalnykToActs(actId: number): Promise<void> {
       .eq("act_id", actId);
 
     if (error) {
-      console.error(
-        `❌ Помилка при записуванні приймальника: ${error.message}`,
-      );
+      // console.error(
+        // `❌ Помилка при записуванні приймальника: ${error.message}`,
+      // );
     } else {
-      console.log(`✅ acts.pruimalnyk оновлено на: ${userData.name}`);
+      // console.log(`✅ acts.pruimalnyk оновлено на: ${userData.name}`);
     }
   } catch (err: any) {
-    console.error("❌ Помилка savePruimalnykToActs:", err?.message || err);
+    // console.error("❌ Помилка savePruimalnykToActs:", err?.message || err);
   }
 }
 
@@ -1874,7 +1874,7 @@ async function saveActData(actId: number, originalActData: any): Promise<void> {
     );
     await logActChanges(actId, added, deleted);
   } catch (logError) {
-    console.error("⚠️ Помилка логування змін:", logError);
+    // console.error("⚠️ Помилка логування змін:", logError);
     // Не блокуємо збереження через помилку логування
   }
   // =====================================
@@ -1915,12 +1915,12 @@ export function addSaveHandler(actId: number, originalActData: any): void {
         const { notifyActSaved } = await import("../actPresence");
         await notifyActSaved(actId);
       } catch (notifyErr) {
-        console.warn("Помилка відправки сповіщення:", notifyErr);
+        // console.warn("Помилка відправки сповіщення:", notifyErr);
       }
 
       showNotification("Зміни успішно збережено", "success");
     } catch (err: any) {
-      console.error("Помилка збереження:", err);
+      // console.error("Помилка збереження:", err);
       showNotification(
         `Помилка збереження даних: ${err?.message || err}`,
         "error",
@@ -1935,9 +1935,9 @@ export function addSaveHandler(actId: number, originalActData: any): void {
  * @param actId - ID акту для видалення з історій
  */
 export async function removeActFromAllHistories(actId: number): Promise<void> {
-  console.log(
-    `🗑️ removeActFromAllHistories: Видаляємо акт ${actId} з усіх історій...`,
-  );
+  // console.log(
+    // `🗑️ removeActFromAllHistories: Видаляємо акт ${actId} з усіх історій...`,
+  // );
 
   try {
     // 1. Отримуємо приймальника для цього акту
@@ -1948,7 +1948,7 @@ export async function removeActFromAllHistories(actId: number): Promise<void> {
       .single();
 
     if (actError && actError.code !== "PGRST116") {
-      console.error("❌ Помилка отримання даних акту:", actError);
+      // console.error("❌ Помилка отримання даних акту:", actError);
     }
 
     // 2. Видаляємо з історії Приймальника (якщо є)
@@ -1960,7 +1960,7 @@ export async function removeActFromAllHistories(actId: number): Promise<void> {
         .maybeSingle();
 
       if (pruimalnykError) {
-        console.error("❌ Помилка пошуку Приймальника:", pruimalnykError);
+        // console.error("❌ Помилка пошуку Приймальника:", pruimalnykError);
       } else if (pruimalnykData) {
         const pData =
           typeof pruimalnykData.data === "string"
@@ -1999,14 +1999,14 @@ export async function removeActFromAllHistories(actId: number): Promise<void> {
               .eq("slyusar_id", pruimalnykData.slyusar_id);
 
             if (updateError) {
-              console.error(
-                `❌ Помилка видалення акту ${actId} з історії Приймальника:`,
-                updateError,
-              );
+              // console.error(
+                // `❌ Помилка видалення акту ${actId} з історії Приймальника:`,
+                // updateError,
+              // );
             } else {
-              console.log(
-                `✅ Акт ${actId} видалено з історії Приймальника "${actData.pruimalnyk}"`,
-              );
+              // console.log(
+                // `✅ Акт ${actId} видалено з історії Приймальника "${actData.pruimalnyk}"`,
+              // );
             }
           }
         }
@@ -2019,7 +2019,7 @@ export async function removeActFromAllHistories(actId: number): Promise<void> {
       .select("slyusar_id, data");
 
     if (zError) {
-      console.error("❌ Помилка отримання списку Запчастистів:", zError);
+      // console.error("❌ Помилка отримання списку Запчастистів:", zError);
     } else if (allZapchastysty) {
       for (const z of allZapchastysty) {
         const zData = typeof z.data === "string" ? JSON.parse(z.data) : z.data;
@@ -2054,21 +2054,21 @@ export async function removeActFromAllHistories(actId: number): Promise<void> {
             .eq("slyusar_id", z.slyusar_id);
 
           if (zUpdateError) {
-            console.error(
-              `❌ Помилка видалення акту ${actId} з історії Запчастиста "${zData.Name}":`,
-              zUpdateError,
-            );
+            // console.error(
+              // `❌ Помилка видалення акту ${actId} з історії Запчастиста "${zData.Name}":`,
+              // zUpdateError,
+            // );
           } else {
-            console.log(
-              `✅ Акт ${actId} видалено з історії Запчастиста "${zData.Name}"`,
-            );
+            // console.log(
+              // `✅ Акт ${actId} видалено з історії Запчастиста "${zData.Name}"`,
+            // );
           }
         }
       }
     }
 
-    console.log(`✅ removeActFromAllHistories: Завершено для акту ${actId}`);
+    // console.log(`✅ removeActFromAllHistories: Завершено для акту ${actId}`);
   } catch (err) {
-    console.error(`❌ removeActFromAllHistories: Помилка:`, err);
+    // console.error(`❌ removeActFromAllHistories: Помилка:`, err);
   }
 }

@@ -94,7 +94,7 @@ async function getSlyusarName(id: number | string): Promise<string> {
       return data.data.Name;
     }
   } catch (e) {
-    console.error("Error fetching slyusar name:", e);
+    // console.error("Error fetching slyusar name:", e);
   }
   return String(id);
 }

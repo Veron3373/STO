@@ -3121,9 +3121,20 @@ function parseClientDataFromAI(text: string): ParsedClientData {
 
   // ── Рік ──
   result.year = extractField(text, [
-    /(?:рік\s*(?:випуск|вироб)?|р\.?\s*в\.?)\s*[:：—–-]\s*(\d{4})/im,
+    /(?:рік\s*(?:випуск[у]?|вироб\w*)?|р\.?\s*в\.?)\s*[:：—–-]\s*(\d{4})/im,
     /рік\s*[:：—–-]\s*(\d{4})/im,
+    // "Рік 2018" / "рік випуску 2018" (без двокрапки)
+    /(?:рік\s*(?:випуск[у]?|вироб\w*)?\s+)(\d{4})/im,
+    // "2018 р." / "2018 рік" / "2018р"
+    /(\d{4})\s*(?:р\.|рік|року)/im,
   ]);
+  // Фолбек: шукаємо 4-значне число 1970–2030 поруч з авто-контекстом
+  if (!result.year) {
+    const yearMatch = text.match(/\b(19[7-9]\d|20[0-3]\d)\b/);
+    if (yearMatch) {
+      result.year = yearMatch[1];
+    }
+  }
 
   // ── Об'єм двигуна ──
   result.engine = extractField(text, [

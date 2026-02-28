@@ -3051,7 +3051,7 @@ export async function createAIChatModal(): Promise<void> {
             <option value="medium"${aiContextLevel === "medium" ? " selected" : ""}> ⚡ Помірний</option>
             <option value="heavy"${aiContextLevel === "heavy" ? " selected" : ""}>🛡️ Високий</option>
           </select>
-          <label class="ai-lock-key-toggle" title="Зафіксувати ключ — не перемикати при 429">
+          <label class="ai-lock-key-toggle" id="ai-lock-key-label" title="${lockKey ? "Вимкнути перебір ключів" : "Увімкнути перебір ключів"}">
             <input type="checkbox" id="ai-lock-key-cb" ${lockKey ? "checked" : ""}>
             <span class="ai-lock-key-btn">${lockKey ? "ВКЛ" : "ВИКЛ"}</span>
           </label>
@@ -3212,6 +3212,12 @@ function initAIChatHandlers(modal: HTMLElement): void {
       saveAILockKeyToDB(lockKey);
       const btnLabel = modal.querySelector(".ai-lock-key-btn");
       if (btnLabel) btnLabel.textContent = lockKey ? "ВКЛ" : "ВИКЛ";
+      const toggleLabel = modal.querySelector("#ai-lock-key-label");
+      if (toggleLabel)
+        toggleLabel.setAttribute(
+          "title",
+          lockKey ? "Вимкнути перебір ключів" : "Увімкнути перебір ключів",
+        );
     });
   }
 

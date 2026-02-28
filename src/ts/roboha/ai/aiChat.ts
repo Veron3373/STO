@@ -2962,6 +2962,8 @@ export async function createAIChatModal(): Promise<void> {
       "ai-lock-key-cb",
     ) as HTMLInputElement | null;
     if (existingLock) existingLock.checked = lockKey;
+    const existingBtn = document.querySelector(".ai-lock-key-btn");
+    if (existingBtn) existingBtn.textContent = lockKey ? "ВКЛ" : "ВИКЛ";
 
     document.getElementById(CHAT_MODAL_ID)!.classList.remove("hidden");
     // При кожному відкритті — підвантажуємо ключі та показуємо активний
@@ -3051,8 +3053,7 @@ export async function createAIChatModal(): Promise<void> {
           </select>
           <label class="ai-lock-key-toggle" title="Зафіксувати ключ — не перемикати при 429">
             <input type="checkbox" id="ai-lock-key-cb" ${lockKey ? "checked" : ""}>
-            <span class="ai-lock-key-slider"></span>
-            <span class="ai-lock-key-label">🔒</span>
+            <span class="ai-lock-key-btn">${lockKey ? "ВКЛ" : "ВИКЛ"}</span>
           </label>
         </div>
       </div>
@@ -3209,6 +3210,8 @@ function initAIChatHandlers(modal: HTMLElement): void {
       lockKey = lockKeyCb.checked;
       localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
       saveAILockKeyToDB(lockKey);
+      const btnLabel = modal.querySelector(".ai-lock-key-btn");
+      if (btnLabel) btnLabel.textContent = lockKey ? "ВКЛ" : "ВИКЛ";
     });
   }
 

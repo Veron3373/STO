@@ -19,6 +19,7 @@ import {
 import {
   showModalCreateSakazNarad,
   fillCarFields,
+  fillClientInfo,
   setSelectedIds,
 } from "../redahyvatu_klient_machuna/vikno_klient_machuna";
 
@@ -3154,66 +3155,163 @@ function parseClientDataFromAI(text: string): ParsedClientData {
   return result;
 }
 
-/** Відкриває картку клієнта та заповнює поля розпізнаними даними */
+/** Програмно розблокувати замок форми */
+function unlockFormButton(): void {
+  const btn = document.getElementById(
+    "btn-edit-create-sakaz_narad",
+  ) as HTMLButtonElement | null;
+  if (!btn) return;
+  // Якщо вже відкритий — нічого не робимо
+  if (btn.dataset.unlocked === "true") return;
+  // Клікаємо — це активує всю стандартну логіку (readonly, select тощо)
+  btn.click();
+}
+
+/** Відкриває картку клієнта та заповнює поля розпізнаними даними.
+ *  Розумна логіка:
+ *  1) Клієнт + авто знайдені в БД → підтягуємо дані, замок ЗАБЛОКОВАНИЙ
+ *  2) Клієнт знайдений, авто НІ → підтягуємо клієнта, розблокуємо для введення авто
+ *  3) Нічого не знайдено → розблокуємо, заповнюємо все з AI
+ */
 async function fillClientFormFromAI(aiText: string): Promise<void> {
   const parsed = parseClientDataFromAI(aiText);
 
-  // Скидаємо прив'язку до існуючого клієнта/авто (це новий)
+  // Скидаємо прив'язку до існуючого клієнта/авто
   setSelectedIds(null, null);
 
   // Відкриваємо модалку картки клієнта
   await showModalCreateSakazNarad();
 
   // Невелика затримка щоб DOM встиг зрендеритися
-  await new Promise((r) => setTimeout(r, 200));
+  await new Promise((r) => setTimeout(r, 300));
 
-  // ── Заповнюємо ПІБ ──
+  // ── 1. Шукаємо клієнта по ПІБ у БД ──
+  let foundClient: { client_id: string; data: any } | null = null;
   if (parsed.pib) {
-    const pibEl = document.getElementById(
-      "client-input-create-sakaz_narad",
-    ) as HTMLTextAreaElement | null;
-    if (pibEl) {
-      pibEl.value = parsed.pib;
-      pibEl.dispatchEvent(new Event("input", { bubbles: true }));
+    const searchPib = parsed.pib.trim();
+    const { data: clients } = await supabase
+      .from("clients")
+      .select("client_id, data")
+      .ilike("data->>ПІБ", `%${searchPib}%`)
+      .limit(5);
+    if (clients && clients.length > 0) {
+      // Точний збіг або перший результат
+      foundClient =
+        clients.find(
+          (c: any) =>
+            (c.data?.["ПІБ"] || "").trim().toLowerCase() ===
+            searchPib.toLowerCase(),
+        ) || clients[0];
     }
   }
 
-  // ── Заповнюємо Телефон ──
-  if (parsed.phone) {
-    const phoneEl = document.getElementById(
-      "phone-create-sakaz_narad",
-    ) as HTMLInputElement | null;
-    if (phoneEl) {
-      phoneEl.value = parsed.phone;
-      phoneEl.dispatchEvent(new Event("input", { bubbles: true }));
+  if (foundClient) {
+    // ── 2. Клієнт знайдений — підтягуємо дані клієнта ──
+    setSelectedIds(foundClient.client_id, null);
+    await fillClientInfo(foundClient.client_id);
+
+    // ── 3. Шукаємо авто цього клієнта ──
+    const { data: clientCars } = await supabase
+      .from("cars")
+      .select("cars_id, data")
+      .eq("client_id", foundClient.client_id);
+
+    let foundCar: { cars_id: string; data: any } | null = null;
+    if (clientCars && clientCars.length > 0) {
+      // Порівнюємо по номеру авто, VIN, або назві авто
+      const pNum = (parsed.carNumber || "").replace(/\s/g, "").toLowerCase();
+      const pVin = (parsed.vin || "").toLowerCase();
+      const pCar = (parsed.car || "").toLowerCase();
+
+      for (const car of clientCars) {
+        const d = car.data || {};
+        const dbNum = (d["Номер авто"] || "").replace(/\s/g, "").toLowerCase();
+        const dbVin = (d["Vincode"] || d["VIN"] || "").toLowerCase();
+        const dbCar = (d["Авто"] || "").toLowerCase();
+
+        // Збіг по номеру, VIN або марці
+        if (
+          (pNum && dbNum && dbNum === pNum) ||
+          (pVin && dbVin && dbVin === pVin) ||
+          (pCar && dbCar && dbCar.includes(pCar))
+        ) {
+          foundCar = car;
+          break;
+        }
+      }
     }
-  }
 
-  // ── Заповнюємо поля авто через fillCarFields ──
-  fillCarFields({
-    Авто: parsed.car || "",
-    "Номер авто": parsed.carNumber || "",
-    Vincode: parsed.vin || "",
-    Рік: parsed.year || "",
-    Обʼєм: parsed.engine || "",
-    Пальне: parsed.fuel || "",
-    КодДВЗ: parsed.engineCode || "",
-  });
+    if (foundCar) {
+      // ── Сценарій 1: Клієнт + авто знайдені → заповнюємо все, замок ЗАБЛОКОВАНИЙ ──
+      setSelectedIds(foundClient.client_id, foundCar.cars_id);
+      fillCarFields(foundCar.data || {});
+      // Замок лишається заблокованим — це існуючий клієнт+авто
+    } else {
+      // ── Сценарій 2: Клієнт є, авто НЕМАЄ → розблокуємо для введення авто ──
+      unlockFormButton();
+      // Заповнюємо поля авто з AI (нове авто для існуючого клієнта)
+      fillCarFields({
+        Авто: parsed.car || "",
+        "Номер авто": parsed.carNumber || "",
+        Vincode: parsed.vin || "",
+        Рік: parsed.year || "",
+        Обʼєм: parsed.engine || "",
+        Пальне: parsed.fuel || "",
+        КодДВЗ: parsed.engineCode || "",
+      });
+    }
+  } else {
+    // ── Сценарій 3: Клієнта НЕМАЄ → розблокуємо, вводимо все з AI ──
+    unlockFormButton();
 
-  // ── Заповнюємо Джерело ──
-  if (parsed.source) {
-    const sourceEl = document.getElementById(
-      "car-income-create-sakaz_narad",
-    ) as HTMLInputElement | null;
-    if (sourceEl) sourceEl.value = parsed.source;
-  }
+    // Заповнюємо ПІБ
+    if (parsed.pib) {
+      const pibEl = document.getElementById(
+        "client-input-create-sakaz_narad",
+      ) as HTMLTextAreaElement | null;
+      if (pibEl) {
+        pibEl.value = parsed.pib;
+        pibEl.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
 
-  // ── Заповнюємо Додатково ──
-  if (parsed.extra) {
-    const extraEl = document.getElementById(
-      "extra-create-sakaz_narad",
-    ) as HTMLInputElement | null;
-    if (extraEl) extraEl.value = parsed.extra;
+    // Заповнюємо Телефон
+    if (parsed.phone) {
+      const phoneEl = document.getElementById(
+        "phone-create-sakaz_narad",
+      ) as HTMLInputElement | null;
+      if (phoneEl) {
+        phoneEl.value = parsed.phone;
+        phoneEl.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+
+    // Заповнюємо поля авто
+    fillCarFields({
+      Авто: parsed.car || "",
+      "Номер авто": parsed.carNumber || "",
+      Vincode: parsed.vin || "",
+      Рік: parsed.year || "",
+      Обʼєм: parsed.engine || "",
+      Пальне: parsed.fuel || "",
+      КодДВЗ: parsed.engineCode || "",
+    });
+
+    // Заповнюємо Джерело
+    if (parsed.source) {
+      const sourceEl = document.getElementById(
+        "car-income-create-sakaz_narad",
+      ) as HTMLInputElement | null;
+      if (sourceEl) sourceEl.value = parsed.source;
+    }
+
+    // Заповнюємо Додатково
+    if (parsed.extra) {
+      const extraEl = document.getElementById(
+        "extra-create-sakaz_narad",
+      ) as HTMLInputElement | null;
+      if (extraEl) extraEl.value = parsed.extra;
+    }
   }
 
   // Закриваємо AI чат (щоб бачити картку)

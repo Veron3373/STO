@@ -2592,12 +2592,16 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
     const contents: any[] = [];
     for (const msg of recentHistory) {
       const msgParts: any[] = [{ text: msg.text }];
-      // Додаємо зображення з історії (якщо були)
+      // Додаємо зображення з історії (тільки data URLs, не Storage URLs)
       if (msg.images && msg.images.length > 0) {
         for (const dataUrl of msg.images) {
+          // Пропускаємо Storage URLs (https://...) — тільки data:... URLs
+          if (!dataUrl.startsWith("data:")) continue;
           const [header, b64] = dataUrl.split(",");
           const mime = header?.match(/data:(.*?);/)?.[1] || "image/jpeg";
-          msgParts.push({ inlineData: { mimeType: mime, data: b64 } });
+          if (b64) {
+            msgParts.push({ inlineData: { mimeType: mime, data: b64 } });
+          }
         }
       }
       contents.push({
@@ -4083,10 +4087,10 @@ function initAIChatHandlers(modal: HTMLElement): void {
     inputEl.style.height = "auto";
 
     // ── Зберігаємо user msg у БД (з upload фото в Storage) ──
+    let savedImageUrls: string[] = [];
     if (activeChatId) {
-      let imageUrls: string[] = [];
       if (attachedImages.length > 0) {
-        imageUrls = await uploadPhotos(
+        savedImageUrls = await uploadPhotos(
           activeChatId,
           attachedImages.map((img) => ({
             base64: img.base64,
@@ -4094,11 +4098,8 @@ function initAIChatHandlers(modal: HTMLElement): void {
           })),
         );
       }
-      await dbSaveMessage(activeChatId, "user", userMsg.text, imageUrls);
-      // Оновлюємо images на URL зі Storage (замість base64)
-      if (imageUrls.length > 0) {
-        userMsg.images = imageUrls;
-      }
+      await dbSaveMessage(activeChatId, "user", userMsg.text, savedImageUrls);
+      // ⚠️ НЕ замінюємо userMsg.images тут — callGemini потребує data URLs!
     }
 
     // Показуємо loader
@@ -4123,6 +4124,11 @@ function initAIChatHandlers(modal: HTMLElement): void {
       attachedImages.length > 0 ? attachedImages : undefined,
     );
     loaderDiv.remove();
+
+    // ── Після callGemini — замінюємо data URLs на Storage URLs для економії пам'яті ──
+    if (savedImageUrls.length > 0) {
+      userMsg.images = savedImageUrls;
+    }
 
     const assistantMsg: ChatMessage = {
       role: "assistant",

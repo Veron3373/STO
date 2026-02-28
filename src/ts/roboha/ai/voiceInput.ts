@@ -78,13 +78,12 @@ async function loadGeminiKeys(): Promise<string[]> {
     const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
     if (envKey) keys.push(envKey);
 
+    // Завантажуємо ВСІ ключі динамічно (setting_id >= 20, без ліміту в 10)
     const { data } = await supabase
       .from("settings")
       .select('setting_id, "Загальні", "API"')
-      .in(
-        "setting_id",
-        Array.from({ length: 10 }, (_, i) => 20 + i),
-      )
+      .gte("setting_id", 20)
+      .not("Загальні", "is", null)
       .order("setting_id");
 
     if (data) {
@@ -1383,7 +1382,7 @@ function fillFullRow(row: HTMLTableRowElement, parsed: ParsedFullRow): void {
   }
 
   if (parsed.price === null && finalName) {
-    handleItemSelection(row, finalName, parsed.type).catch(() => {});
+    handleItemSelection(row, finalName, parsed.type).catch(() => { });
   }
 
   updateCalculatedSumsInFooter();
@@ -1908,7 +1907,7 @@ export function startChatVoiceInput(): Promise<string> {
       "готово",
       "стоп",
       "кінець",
-      "кінець",      
+      "кінець",
     ];
 
     function finish() {

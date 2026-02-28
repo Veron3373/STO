@@ -1057,14 +1057,13 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${
-        isFrozen
-          ? `<div class="percentage-buttons-container">
+      ${isFrozen
+      ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-      }
+      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+    }
     </div>
   `;
 
@@ -1989,43 +1988,105 @@ function updateRoleTogglesVisibility(modal: HTMLElement, role: string): void {
 
 async function loadAiProKeys(modal: HTMLElement): Promise<void> {
   try {
-    const settingIds = Array.from({ length: 10 }, (_, i) => 20 + i); // 20-29
+    // Шукаємо всі можливі setting_id починаючи з 20 (без обмеження)
     const { data, error } = await supabase
       .from("settings")
       .select('setting_id, "Загальні"')
-      .in("setting_id", settingIds)
+      .gte("setting_id", 20)
+      .not("Загальні", "is", null)
       .order("setting_id");
 
     if (error) throw error;
 
-    data?.forEach((row: any) => {
-      const value = row["Загальні"] || "";
-      const inputNum = row.setting_id - 19; // 20 -> 1, 21 -> 2, ..., 29 -> 10
-      const input = modal.querySelector(
-        `#ai-pro-key-${inputNum}`,
-      ) as HTMLInputElement;
-      if (input) input.value = value;
-    });
+    const container = modal.querySelector(".ai-pro-keys-inputs") as HTMLElement;
+    if (!container) return;
+
+    // Зберігаємо кнопку +
+    const addBtn = container.querySelector(".ai-pro-add-btn");
+
+    // Очищаємо старі інпути
+    container.querySelectorAll(".ai-pro-key-row").forEach((el) => el.remove());
+
+    if (data && data.length > 0) {
+      data.forEach((row: any) => {
+        const keyNumber = row.setting_id - 19;
+        const rowEl = createAiProKeyRow(keyNumber, row.setting_id, row["Загальні"] || "");
+        if (addBtn) {
+          container.insertBefore(rowEl, addBtn);
+        } else {
+          container.appendChild(rowEl);
+        }
+      });
+    } else {
+      // Якщо ключів немає — показуємо один порожній
+      const rowEl = createAiProKeyRow(1, 20, "");
+      if (addBtn) {
+        container.insertBefore(rowEl, addBtn);
+      } else {
+        container.appendChild(rowEl);
+      }
+    }
   } catch (err) {
     console.error("Помилка завантаження API ключів:", err);
     showNotification("Помилка завантаження API ключів", "error", 2000);
   }
 }
 
+function createAiProKeyRow(num: number, settingId: number, value: string): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "ai-pro-key-row";
+  row.dataset.settingId = String(settingId);
+  row.innerHTML = `
+    <span class="ai-pro-key-num">${num}</span>
+    <input
+      type="text"
+      id="ai-pro-key-${num}"
+      class="ai-pro-key-input"
+      placeholder="AIza..."
+      value="${value.replace(/"/g, '&quot;')}"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button type="button" class="ai-pro-key-delete" title="Видалити ключ">✕</button>
+  `;
+  const deleteBtn = row.querySelector(".ai-pro-key-delete") as HTMLButtonElement;
+  deleteBtn.addEventListener("click", async () => {
+    // Очищаємо значення в БД
+    await supabase
+      .from("settings")
+      .update({ Загальні: null })
+      .eq("setting_id", settingId);
+    row.remove();
+    // Перенумеруємо
+    renumberAiProKeyRows(row.closest(".ai-pro-keys-inputs") as HTMLElement);
+    resetGeminiKeysCache();
+  });
+  return row;
+}
+
+function renumberAiProKeyRows(container: HTMLElement | null): void {
+  if (!container) return;
+  const rows = container.querySelectorAll(".ai-pro-key-row");
+  rows.forEach((row, i) => {
+    const numEl = row.querySelector(".ai-pro-key-num");
+    if (numEl) numEl.textContent = String(i + 1);
+  });
+}
+
 async function saveAiProKeys(modal: HTMLElement): Promise<void> {
   try {
-    const keys = Array.from({ length: 10 }, (_, i) => ({
-      id: 20 + i,
-      value:
-        (modal.querySelector(`#ai-pro-key-${i + 1}`) as HTMLInputElement)
-          ?.value || "",
-    }));
+    const rows = modal.querySelectorAll(".ai-pro-key-row");
 
-    for (const { id, value } of keys) {
+    for (const row of Array.from(rows)) {
+      const settingId = parseInt((row as HTMLElement).dataset.settingId || "0");
+      const input = row.querySelector(".ai-pro-key-input") as HTMLInputElement;
+      const value = input?.value?.trim() || "";
+      if (!settingId) continue;
+
       const { data: existingRow, error: selectError } = await supabase
         .from("settings")
         .select("setting_id")
-        .eq("setting_id", id)
+        .eq("setting_id", settingId)
         .single();
 
       if (selectError && selectError.code !== "PGRST116") throw selectError;
@@ -2033,19 +2094,18 @@ async function saveAiProKeys(modal: HTMLElement): Promise<void> {
       if (existingRow) {
         const { error } = await supabase
           .from("settings")
-          .update({ Загальні: value })
-          .eq("setting_id", id);
+          .update({ Загальні: value || null })
+          .eq("setting_id", settingId);
         if (error) throw error;
-      } else {
+      } else if (value) {
         const { error } = await supabase
           .from("settings")
-          .insert({ setting_id: id, Загальні: value, data: false });
+          .insert({ setting_id: settingId, Загальні: value, data: false });
         if (error) throw error;
       }
     }
 
     showNotification("API ключі збережено!", "success", 1500);
-    // Скидаємо кеш ключів Gemini щоб нові ключі працювали одразу
     resetGeminiKeysCache();
   } catch (err) {
     console.error("Помилка збереження API ключів:", err);
@@ -2068,21 +2128,26 @@ async function openAiProKeysModal(): Promise<void> {
 
   keysModal.innerHTML = `
     <div class="ai-pro-keys-window">
-      <h3 class="ai-pro-keys-title">🔑 API Ключі ШІ Атлас</h3>
-      <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noopener noreferrer" class="ai-pro-keys-link">🔗 Отримати API ключ на aistudio.google.com</a>
-      <div class="ai-pro-keys-inputs">
-        ${Array.from(
-          { length: 10 },
-          (_, i) => `
-        <div class="ai-pro-key-group">
-          <label for="ai-pro-key-${i + 1}">API Ключ ${i + 1}</label>
-          <input type="text" id="ai-pro-key-${i + 1}" placeholder="Введіть API ключ..." />
-        </div>`,
-        ).join("")}
+      <div class="ai-pro-keys-header">
+        <span class="ai-pro-keys-icon">🔑</span>
+        <h3 class="ai-pro-keys-title">API Ключі Gemini</h3>
       </div>
+
+      <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noopener noreferrer" class="ai-pro-keys-link">
+        <span class="ai-pro-keys-link-icon">🔗</span>
+        Отримати API ключ на aistudio.google.com
+      </a>
+
+      <div class="ai-pro-keys-inputs">
+        <button type="button" class="ai-pro-add-btn" id="ai-pro-add-key">
+          <span class="ai-pro-add-icon">＋</span>
+          Додати ключ
+        </button>
+      </div>
+
       <div class="ai-pro-keys-actions">
-        <button type="button" id="ai-pro-keys-cancel">Вийти</button>
-        <button type="button" id="ai-pro-keys-ok">ОК</button>
+        <button type="button" id="ai-pro-keys-cancel">✕ Скасувати</button>
+        <button type="button" id="ai-pro-keys-ok">💾 Зберегти</button>
       </div>
     </div>
   `;
@@ -2090,6 +2155,31 @@ async function openAiProKeysModal(): Promise<void> {
   document.body.appendChild(keysModal);
 
   await loadAiProKeys(keysModal);
+
+  // Кнопка + додати новий ключ
+  keysModal.querySelector("#ai-pro-add-key")?.addEventListener("click", async () => {
+    const container = keysModal!.querySelector(".ai-pro-keys-inputs") as HTMLElement;
+    const addBtn = container.querySelector(".ai-pro-add-btn");
+
+    // Знаходимо найбільший setting_id серед наявних рядків
+    const rows = container.querySelectorAll(".ai-pro-key-row");
+    let maxSettingId = 19;
+    rows.forEach((r) => {
+      const sid = parseInt((r as HTMLElement).dataset.settingId || "0");
+      if (sid > maxSettingId) maxSettingId = sid;
+    });
+    const nextSettingId = maxSettingId + 1;
+    const nextNum = rows.length + 1;
+
+    const newRow = createAiProKeyRow(nextNum, nextSettingId, "");
+    if (addBtn) {
+      container.insertBefore(newRow, addBtn);
+    } else {
+      container.appendChild(newRow);
+    }
+    // Фокусуємо новий інпут
+    (newRow.querySelector(".ai-pro-key-input") as HTMLInputElement)?.focus();
+  });
 
   keysModal
     .querySelector("#ai-pro-keys-ok")

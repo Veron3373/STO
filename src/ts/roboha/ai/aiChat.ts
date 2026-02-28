@@ -104,14 +104,12 @@ async function loadAllGeminiKeys(): Promise<string[]> {
       settingIds.push(-1); // env ключ не має setting_id
     }
 
-    // Завантажуємо всі 10 ключів з БД (setting_id 20-29) + колонки API, token, date
+    // Завантажуємо ВСІ ключі з БД (setting_id >= 20) — динамічно, без ліміту
     const { data } = await supabase
       .from("settings")
       .select('setting_id, "Загальні", "API", token, date')
-      .in(
-        "setting_id",
-        Array.from({ length: 10 }, (_, i) => 20 + i),
-      )
+      .gte("setting_id", 20)
+      .not("Загальні", "is", null)
       .order("setting_id");
 
     const tokens: number[] = [];
@@ -167,14 +165,11 @@ async function loadAllGeminiKeys(): Promise<string[]> {
 async function persistActiveKeyInDB(): Promise<void> {
   if (geminiKeySettingIds.length === 0) return;
   try {
-    // Скидаємо API=false для всіх ключів 20-29
+    // Скидаємо API=false для ВСІХ ключів (setting_id >= 20)
     await supabase
       .from("settings")
       .update({ API: false })
-      .in(
-        "setting_id",
-        Array.from({ length: 10 }, (_, i) => 20 + i),
-      );
+      .gte("setting_id", 20);
 
     // Ставимо API=true для активного ключа
     const activeSettingId = geminiKeySettingIds[currentKeyIndex];
@@ -232,7 +227,14 @@ const toDateStr = (d: Date) =>
  * Дата оновлюється один раз — тільки в setting_id=1.
  */
 async function resetAllTokens(): Promise<void> {
-  const keyIds = Array.from({ length: 10 }, (_, i) => 20 + i);
+  // Отримуємо всі setting_id ключів (>= 20) динамічно
+  const { data: keyRows } = await supabase
+    .from("settings")
+    .select("setting_id")
+    .gte("setting_id", 20)
+    .not("Загальні", "is", null);
+  const keyIds = (keyRows || []).map((r: any) => r.setting_id);
+  if (keyIds.length === 0) return;
   try {
     const todayIso = new Date().toISOString();
     // Скидаємо токени 20-29 + дату в setting_id=1
@@ -313,8 +315,8 @@ function subscribeToTokenReset(): void {
       },
       (payload) => {
         const settingId = (payload.new as any)?.setting_id;
-        // Обробляємо лише рядки ключів (setting_id 20–29)
-        if (settingId < 20 || settingId > 29) return;
+        // Обробляємо лише рядки ключів (setting_id >= 20)
+        if (settingId < 20) return;
 
         const newToken = (payload.new as any)?.token;
         const newDate = (payload.new as any)?.date;
@@ -669,7 +671,7 @@ async function gatherSTOContext(
     let d: any = {};
     try {
       d = typeof a.data === "string" ? JSON.parse(a.data) : a.data || {};
-    } catch {}
+    } catch { }
 
     const worksArr = Array.isArray(d["Роботи"]) ? d["Роботи"] : [];
     const detailsArr = Array.isArray(d["Деталі"]) ? d["Деталі"] : [];
@@ -883,7 +885,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || d["Ім'я"] || "—";
         const role = d["Доступ"] || "";
 
@@ -975,7 +977,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || d["Ім'я"] || "—";
 
         // Шукаємо акти де цей слюсар вказаний в полі "Слюсар"
@@ -1055,7 +1057,7 @@ async function gatherSTOContext(
                   typeof c.data === "string"
                     ? JSON.parse(c.data)
                     : c.data || {};
-              } catch {}
+              } catch { }
               const name = d["ПІБ"] || "—";
               const phone = d["Телефон"] || "";
               clientsMap.set(
@@ -1080,7 +1082,7 @@ async function gatherSTOContext(
                   typeof c.data === "string"
                     ? JSON.parse(c.data)
                     : c.data || {};
-              } catch {}
+              } catch { }
               const car = d["Авто"] || "—";
               const plate = d["Номер авто"] || "";
               carsMap.set(c.cars_id, plate ? `${car} (${plate})` : car);
@@ -1110,19 +1112,19 @@ async function gatherSTOContext(
                   ? JSON.parse(slyusarRow.data)
                   : slyusarRow.data || {};
               slName = sd.Name || "—";
-            } catch {}
+            } catch { }
 
             const timeOn = b.data_on
               ? new Date(b.data_on).toLocaleTimeString("uk-UA", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "—";
             const timeOff = b.data_off
               ? new Date(b.data_off).toLocaleTimeString("uk-UA", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "—";
 
             // Клієнт: підтягуємо ПІБ з БД
@@ -1217,7 +1219,7 @@ async function gatherSTOContext(
           let d: any = {};
           try {
             d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-          } catch {}
+          } catch { }
           return {
             id: c.client_id,
             name: d["ПІБ"] || d["Клієнт"] || "—",
@@ -1232,7 +1234,7 @@ async function gatherSTOContext(
           let d: any = {};
           try {
             d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-          } catch {}
+          } catch { }
           return {
             id: c.cars_id,
             clientId: c.client_id,
@@ -1518,7 +1520,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || "—";
         const percentage = d["ПроцентРоботи"] || 0;
 
@@ -1988,7 +1990,7 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
     const groqEnrichedPrompt =
       enrichedPrompt.length > GROQ_CONTEXT_LIMIT
         ? enrichedPrompt.slice(0, GROQ_CONTEXT_LIMIT) +
-          "\n...(контекст обрізано)"
+        "\n...(контекст обрізано)"
         : enrichedPrompt;
 
     const groqHistorySize =
@@ -2004,7 +2006,7 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
     const geminiEnrichedPrompt =
       enrichedPrompt.length > GEMINI_CONTEXT_LIMIT
         ? enrichedPrompt.slice(0, GEMINI_CONTEXT_LIMIT) +
-          "\n...(контекст обрізано)"
+        "\n...(контекст обрізано)"
         : enrichedPrompt;
 
     // === Формат Gemini ===
@@ -2298,9 +2300,9 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
     const [clientsRes, carsRes] = await Promise.all([
       clientIds.length > 0
         ? supabase
-            .from("clients")
-            .select("client_id, data")
-            .in("client_id", clientIds)
+          .from("clients")
+          .select("client_id, data")
+          .in("client_id", clientIds)
         : Promise.resolve({ data: [] as any[], error: null }),
       carsIds.length > 0
         ? supabase.from("cars").select("cars_id, data").in("cars_id", carsIds)
@@ -2312,7 +2314,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       let cd: any = {};
       try {
         cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-      } catch {}
+      } catch { }
       clientsMap.set(c.client_id, cd);
     });
 
@@ -2321,7 +2323,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       let cd: any = {};
       try {
         cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-      } catch {}
+      } catch { }
       carsMap.set(c.cars_id, cd);
     });
 
@@ -2330,7 +2332,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       try {
         const raw = a.info || a.data || a.details;
         d = typeof raw === "string" ? JSON.parse(raw) : raw || {};
-      } catch {}
+      } catch { }
 
       // ПІБ клієнта: спочатку з JSON акту, потім з таблиці clients
       let client = d["ПІБ"] || d["Клієнт"] || "";
@@ -2486,15 +2488,14 @@ function renderDashboard(
         </div>
       </div>
 
-      ${
-        stats.closedActs.length > 0
-          ? `
+      ${stats.closedActs.length > 0
+      ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">${closedSectionTitle}</div>
         <div class="ai-dashboard-acts-list">
           ${stats.closedActs
-            .map(
-              (a) => `
+        .map(
+          (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -2503,8 +2504,8 @@ function renderDashboard(
               <span class="ai-act-sum">${a.total.toLocaleString("uk-UA")} грн</span>
             </div>
           `,
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
         <div class="ai-dashboard-totals">
           <span>Роботи: <strong>${stats.totalWorksSum.toLocaleString("uk-UA")} грн</strong></span>
@@ -2512,18 +2513,17 @@ function renderDashboard(
           <span>Разом: <strong>${stats.totalSum.toLocaleString("uk-UA")} грн</strong></span>
         </div>
       </div>`
-          : ""
-      }
+      : ""
+    }
 
-      ${
-        stats.openActs.length > 0
-          ? `
+      ${stats.openActs.length > 0
+      ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">🔧 Відкриті акти</div>
         <div class="ai-dashboard-acts-list">
           ${stats.openActs
-            .map(
-              (a) => `
+        .map(
+          (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -2532,12 +2532,12 @@ function renderDashboard(
               <span class="ai-act-sum open">відкрито</span>
             </div>
           `,
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
       </div>`
-          : ""
-      }
+      : ""
+    }
     </div>
   `;
 }
@@ -2613,12 +2613,12 @@ export async function createAIChatModal(): Promise<void> {
         <!-- Quick prompts -->
         <div class="ai-chat-quick-prompts" id="ai-quick-prompts">
           ${QUICK_PROMPTS.map(
-            (p) => `
+    (p) => `
             <button class="ai-quick-prompt-btn" data-prompt="${p.text}">
               ${p.icon} ${p.text}
             </button>
           `,
-          ).join("")}
+  ).join("")}
         </div>
 
         <!-- Input -->

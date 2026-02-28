@@ -16,7 +16,8 @@
   }
 
   .modal-window {
-    background: #fff; /* Фон завжди білий */
+    background: #fff;
+    /* Фон завжди білий */
     padding: 2rem;
     border-radius: 10px;
     max-width: 700px;
@@ -64,6 +65,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     flex: 1;
+
     &::-webkit-scrollbar {
       width: 8px;
     }
@@ -163,11 +165,11 @@
       line-height: 1.3;
     }
 
-    input:checked + .slider {
+    input:checked+.slider {
       background-color: #4caf50;
     }
 
-    input:checked + .slider::before {
+    input:checked+.slider::before {
       transform: translateX(20px);
     }
 
@@ -181,7 +183,7 @@
         background-color: #2196f3; // Синій коли OFF (false)
       }
 
-      input:checked + .slider {
+      input:checked+.slider {
         background-color: #4caf50; // Зелений коли ON (true)
       }
 
@@ -392,11 +394,9 @@
     }
 
     .percentage-slider {
-      background: linear-gradient(
-        to right,
-        #bdc3c7 0%,
-        #95a5a6 100%
-      ) !important;
+      background: linear-gradient(to right,
+          #bdc3c7 0%,
+          #95a5a6 100%) !important;
       cursor: not-allowed;
     }
 
@@ -600,6 +600,7 @@
     }
 
     #percentage-slider {
+
       &::-webkit-slider-thumb,
       &::-moz-range-thumb {
         width: 20px;
@@ -620,13 +621,11 @@
 
   .settings-divider {
     height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      #d0d0d0 30%,
-      #d0d0d0 70%,
-      transparent
-    );
+    background: linear-gradient(to right,
+        transparent,
+        #d0d0d0 30%,
+        #d0d0d0 70%,
+        transparent);
     margin: 12px 0;
     flex-shrink: 0;
   }
@@ -719,11 +718,13 @@
   }
 
   @keyframes pulse-warning {
+
     0%,
     100% {
       transform: scale(1);
       box-shadow: 0 0 0 0 rgba(230, 81, 0, 0.3);
     }
+
     50% {
       transform: scale(1.05);
       box-shadow: 0 0 8px 2px rgba(230, 81, 0, 0.2);
@@ -743,8 +744,10 @@
     justify-content: center;
     flex-wrap: wrap;
     gap: 4px;
-    flex-direction: column; /* Текст буде йти один під одним */
-    align-items: flex-start; /* Вирівнювання по лівому краю */
+    flex-direction: column;
+    /* Текст буде йти один під одним */
+    align-items: flex-start;
+    /* Вирівнювання по лівому краю */
 
     .sms-text-before-preview,
     .sms-text-after-preview {
@@ -950,7 +953,7 @@
       width: 0;
       height: 0;
 
-      &:checked + .ai-toggle-slider {
+      &:checked+.ai-toggle-slider {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
         &::before {
@@ -1027,110 +1030,296 @@
 }
 
 // ============================================================
-// AI PRO KEYS MODAL
+// AI PRO KEYS MODAL  (redesigned)
 // ============================================================
 
 .ai-pro-keys-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgba(15, 15, 30, 0.65);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1100;
+  animation: fadeInOverlay 0.2s ease;
 
   &.hidden {
     display: none;
   }
 
+  @keyframes fadeInOverlay {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  // ─── Window ────────────────────────────────────────────────
   .ai-pro-keys-window {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 12px;
-    max-width: 450px;
-    width: 90%;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-    border: 2px solid #4caf50;
+    background: linear-gradient(145deg, #ffffff 0%, #f0f4ff 100%);
+    padding: 1.6rem 1.8rem 1.4rem;
+    border-radius: 18px;
+    max-width: 480px;
+    width: 92%;
+    box-shadow:
+      0 8px 32px rgba(102, 126, 234, 0.18),
+      0 2px 8px rgba(0, 0, 0, 0.12);
+    border: 1.5px solid rgba(102, 126, 234, 0.3);
+    animation: slideUpModal 0.25s ease;
+  }
+
+  @keyframes slideUpModal {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  // ─── Header ────────────────────────────────────────────────
+  .ai-pro-keys-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.9rem;
+  }
+
+  .ai-pro-keys-icon {
+    font-size: 26px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(102, 126, 234, 0.4));
   }
 
   .ai-pro-keys-title {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    font-size: 18px;
-    font-weight: 600;
-    color: #2c3e50;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.2px;
   }
 
+  // ─── Link ──────────────────────────────────────────────────
+  .ai-pro-keys-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1.2rem;
+    padding: 6px 12px 6px 8px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #5c6bc0;
+    text-decoration: none;
+    transition: all 0.25s ease;
+
+    .ai-pro-keys-link-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.18), rgba(118, 75, 162, 0.18));
+      border-color: rgba(102, 126, 234, 0.5);
+      color: #3949ab;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2);
+    }
+  }
+
+  // ─── Inputs list ───────────────────────────────────────────
   .ai-pro-keys-inputs {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    max-height: 50vh;
+    gap: 7px;
+    max-height: 52vh;
     overflow-y: auto;
-    padding-right: 6px;
+    padding-right: 4px;
+    margin-bottom: 1rem;
+
+    // Custom scrollbar
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(102, 126, 234, 0.3);
+      border-radius: 4px;
+    }
   }
 
-  .ai-pro-key-group {
+  // ─── Single key row (compact) ──────────────────────────────
+  .ai-pro-key-row {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 5px 8px;
+    background: #fff;
+    border: 1.5px solid #e8eaf6;
+    border-radius: 10px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
-    label {
-      font-size: 14px;
-      font-weight: 600;
-      color: #2c3e50;
+    &:hover {
+      border-color: rgba(102, 126, 234, 0.4);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
     }
 
-    input {
-      width: 100%;
-      padding: 10px 14px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 14px;
-      box-sizing: border-box;
-      transition: all 0.3s ease;
-
-      &:focus {
-        outline: none;
-        border-color: #4caf50;
-        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
-      }
+    &:focus-within {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
     }
   }
 
+  .ai-pro-key-num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    user-select: none;
+  }
+
+  .ai-pro-key-input {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 10px;
+    border: none;
+    outline: none;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    color: #2c3e50;
+    background: transparent;
+    letter-spacing: 0.3px;
+
+    &::placeholder {
+      color: #bbb;
+      font-family: inherit;
+    }
+  }
+
+  .ai-pro-key-delete {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 50%;
+    font-size: 13px;
+    color: #b0b0b0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+
+    &:hover {
+      background: #ffe8e8;
+      color: #e53935;
+      transform: scale(1.1);
+    }
+  }
+
+  // ─── Add button ────────────────────────────────────────────
+  .ai-pro-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 14px;
+    border: 1.5px dashed rgba(102, 126, 234, 0.45);
+    border-radius: 10px;
+    background: transparent;
+    color: #667eea;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 2px;
+
+    .ai-pro-add-icon {
+      font-size: 17px;
+      line-height: 1;
+      font-weight: 400;
+    }
+
+    &:hover {
+      background: rgba(102, 126, 234, 0.08);
+      border-color: #667eea;
+      color: #5060d0;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(102, 126, 234, 0.15);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  // ─── Actions ───────────────────────────────────────────────
   .ai-pro-keys-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
+    gap: 10px;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(102, 126, 234, 0.12);
 
     button {
-      padding: 0.5rem 1.2rem;
+      padding: 7px 18px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: 500;
-      transition: background-color 0.3s ease;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
     }
 
     #ai-pro-keys-ok {
-      background-color: #4caf50;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #fff;
+      box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
 
       &:hover {
-        background-color: #3da744;
+        box-shadow: 0 5px 16px rgba(102, 126, 234, 0.45);
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
       }
     }
 
     #ai-pro-keys-cancel {
-      background-color: #ddd;
-      color: #333;
+      background: #f0f0f0;
+      color: #555;
 
       &:hover {
-        background-color: #ccc;
+        background: #ffe8e8;
+        color: #c62828;
       }
     }
   }

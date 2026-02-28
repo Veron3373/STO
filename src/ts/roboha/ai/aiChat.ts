@@ -3761,27 +3761,87 @@ async function refreshSidebarChats(
     });
   });
 
-  // Видалення
+  // Видалення з відліком 5 секунд
   listEl.querySelectorAll(".ai-sidebar-delete").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
+    btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const chatId = parseInt((btn as HTMLElement).dataset.chatId || "0");
-      if (!confirm("Видалити цей чат і всі повідомлення?")) return;
-      await deleteChat(chatId);
-      if (activeChatId === chatId) {
-        activeChatId = null;
-        chatHistory = [];
-        messagesEl.innerHTML = `
-          <div class="ai-chat-welcome">
-            <div class="ai-chat-welcome-icon">🤖</div>
-            <div class="ai-chat-welcome-text">
-              <strong>Чат видалено.</strong><br>
-              Створіть новий або оберіть з історії.
-            </div>
-          </div>`;
-        quickPromptsEl.style.display = "";
-      }
-      await refreshSidebarChats(listEl, messagesEl, quickPromptsEl);
+      const deleteBtn = btn as HTMLElement;
+      const chatId = parseInt(deleteBtn.dataset.chatId || "0");
+      if (!chatId) return;
+
+      const chatItem = deleteBtn.closest(
+        ".ai-sidebar-chat-item",
+      ) as HTMLElement;
+      if (!chatItem) return;
+
+      // Якщо вже йде відлік — ігноруємо
+      if (deleteBtn.dataset.counting === "true") return;
+      deleteBtn.dataset.counting = "true";
+
+      // Ховаємо ✏️ олівець
+      const renameBtn = chatItem.querySelector(
+        ".ai-sidebar-rename",
+      ) as HTMLElement;
+      if (renameBtn) renameBtn.style.display = "none";
+
+      // Замінюємо 🗑️ на червоний кружок з відліком
+      deleteBtn.innerHTML = "";
+      deleteBtn.classList.add("ai-sidebar-delete--counting");
+
+      const countdown = document.createElement("span");
+      countdown.className = "ai-delete-countdown";
+      countdown.textContent = "5";
+      deleteBtn.appendChild(countdown);
+
+      // Кнопка скасування (зелений кружок з ✚)
+      const cancelBtn = document.createElement("span");
+      cancelBtn.className = "ai-delete-cancel";
+      cancelBtn.textContent = "✚";
+      cancelBtn.title = "Скасувати видалення";
+      deleteBtn.appendChild(cancelBtn);
+
+      let timeLeft = 5;
+      let cancelled = false;
+
+      const interval = setInterval(() => {
+        timeLeft--;
+        countdown.textContent = String(timeLeft);
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          if (!cancelled) {
+            // Анімація зникнення + видалення
+            chatItem.classList.add("ai-sidebar-chat-item--removing");
+            setTimeout(async () => {
+              await deleteChat(chatId);
+              if (activeChatId === chatId) {
+                activeChatId = null;
+                chatHistory = [];
+                messagesEl.innerHTML = `
+                  <div class="ai-chat-welcome">
+                    <div class="ai-chat-welcome-icon">🤖</div>
+                    <div class="ai-chat-welcome-text">
+                      <strong>Чат видалено.</strong><br>
+                      Створіть новий або оберіть з історії.
+                    </div>
+                  </div>`;
+                quickPromptsEl.style.display = "";
+              }
+              await refreshSidebarChats(listEl, messagesEl, quickPromptsEl);
+            }, 400);
+          }
+        }
+      }, 1000);
+
+      // Скасування при кліку на зелений кружок
+      cancelBtn.addEventListener("click", (ce) => {
+        ce.stopPropagation();
+        cancelled = true;
+        clearInterval(interval);
+        deleteBtn.dataset.counting = "";
+        deleteBtn.classList.remove("ai-sidebar-delete--counting");
+        deleteBtn.innerHTML = "🗑️";
+        if (renameBtn) renameBtn.style.display = "";
+      });
     });
   });
 }

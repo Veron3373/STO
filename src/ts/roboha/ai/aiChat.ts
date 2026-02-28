@@ -78,7 +78,7 @@ let keysLoaded = false;
 let isLoading = false;
 let realtimeTokenChannel: ReturnType<typeof supabase.channel> | null = null;
 
-/** Рівень використання токенів: light=мінімальний, medium=середній, heavy=повний */
+/** Рівень використання токенів: light=мінімальний, medium=Помірний, heavy=повний */
 type AIContextLevel = "light" | "medium" | "heavy";
 let aiContextLevel: AIContextLevel =
   (localStorage.getItem("aiContextLevel") as AIContextLevel) || "light";
@@ -689,7 +689,7 @@ async function gatherSTOContext(
 
   // 💡 У heavy/medium режимі — всі секції завжди підвантажуються
   if (isHeavy) {
-    // 🏋️ Сильний — ВСЕ підвантажується БЕЗ ВИКЛЮЧЕНЬ
+    // 🏋️ Високий — ВСЕ підвантажується БЕЗ ВИКЛЮЧЕНЬ
     analysis.needsActs = true;
     analysis.needsClients = true;
     analysis.needsCars = true;
@@ -897,7 +897,7 @@ async function gatherSTOContext(
 
     if (analysis.needsActs) {
       // 💡 ОПТИМІЗАЦІЯ: обмежуємо кількість актів для зменшення токенів
-      // 💡 Ліміти залежать від рівня (Сильний — без обмежень, максимальний доступ)
+      // 💡 Ліміти залежать від рівня (Високий — без обмежень, максимальний доступ)
       // 💡 needsAllTime=true → завантажуємо ВСІ закриті акти за весь час (не лише місяць)
       const OPEN_ACTS_LIMIT = isHeavy ? 10000 : isMedium ? 100 : 50;
       const CLOSED_TODAY_LIMIT = isHeavy ? 10000 : isMedium ? 50 : 20;
@@ -905,7 +905,7 @@ async function gatherSTOContext(
       const isAllTime = analysis.needsAllTime && isHeavy;
 
       try {
-        // 🔗 Якщо "за весь період" + Сильний — не фільтруємо за датою
+        // 🔗 Якщо "за весь період" + Високий — не фільтруємо за датою
         const closedQuery = supabase
           .from("acts")
           .select("*")
@@ -1029,7 +1029,7 @@ async function gatherSTOContext(
         const role = d["Доступ"] || "";
 
         if (isHeavy) {
-          // 🏋️ Сильний: повна інформація по кожному слюсарю
+          // 🏋️ Високий: повна інформація по кожному слюсарю
           context += `  ${s.slyusar_id} | ${name}`;
           if (role) context += ` | Роль: ${role}`;
           if (d["ПроцентРоботи"])
@@ -1126,7 +1126,7 @@ async function gatherSTOContext(
     }
 
     // ============================================================
-    // 2.1 Сильний: Зв'язок Слюсар ↔ Акти (повна картина)
+    // 2.1 Високий: Зв'язок Слюсар ↔ Акти (повна картина)
     // ============================================================
     if (
       isHeavy &&
@@ -1343,7 +1343,7 @@ async function gatherSTOContext(
       analysis.searchBrand ||
       analysis.searchName
     ) {
-      // 💡 Обмежуємо: ліміти залежать від рівня (Сильний — максимальний доступ)
+      // 💡 Обмежуємо: ліміти залежать від рівня (Високий — максимальний доступ)
       const clientLimit = isHeavy
         ? 50000
         : isMedium
@@ -1531,7 +1531,7 @@ async function gatherSTOContext(
             context += `  ...ще ${parsedClients.length - showCount} клієнтів (запитай конкретного)\n`;
           }
 
-          // 🏋️ Сильний: повний список АВТО з деталями
+          // 🏋️ Високий: повний список АВТО з деталями
           if (isHeavy) {
             context += `\n=== ВСІ АВТО В БАЗІ (${parsedCars.length}) ===\n`;
             parsedCars.forEach((c) => {
@@ -1681,7 +1681,7 @@ async function gatherSTOContext(
           });
         }
 
-        // 💡 Середній та повний — залежить від рівня або запиту про склад
+        // 💡 Помірний та повний — залежить від рівня або запиту про склад
         if (analysis.needsSklad || isHeavy || isMedium) {
           if (mediumStock.length > 0) {
             context += `🟡 НИЗЬКО:\n`;
@@ -1788,7 +1788,7 @@ async function gatherSTOContext(
 
           context += `  ${name}: ${actsCount} актів, виконано робіт на ${worksTotal.toLocaleString("uk-UA")} грн, зарплата: ${salary.toLocaleString("uk-UA")} грн (${percentage}%)\n`;
 
-          // 🏋️ Сильний — розбивка по актах
+          // 🏋️ Високий — розбивка по актах
           if (isHeavy && actEntries.length > 0) {
             actEntries.forEach((entry) => {
               context += entry + "\n";
@@ -1931,7 +1931,7 @@ async function gatherSTOContext(
   }
 
   // ============================================================
-  // 13. АНАЛІТИЧНІ ПІДКАЗКИ (Сильний режим)
+  // 13. АНАЛІТИЧНІ ПІДКАЗКИ (Високий режим)
   // ============================================================
   if (isHeavy && parsedClosed.length > 0) {
     context += `\n=== 📊 АНАЛІТИЧНІ ДАНІ ===\n`;
@@ -2010,12 +2010,12 @@ async function gatherSTOContext(
       });
     }
 
-    // Середній чек
+    // Помірний чек
     const avgCheck =
       parsedClosed.length > 0
         ? Math.round(monthTotal / parsedClosed.length)
         : 0;
-    context += `\n📈 Середній чек: ${avgCheck.toLocaleString("uk-UA")} грн\n`;
+    context += `\n📈 Помірний чек: ${avgCheck.toLocaleString("uk-UA")} грн\n`;
 
     // Довго відкриті акти (> 7 днів)
     const now = Date.now();
@@ -2066,13 +2066,13 @@ async function callGemini(userMessage: string): Promise<string> {
     if (trivial) {
       enrichedPrompt = `СЬОГОДНІ: ${new Date().toLocaleDateString("uk-UA")}\n\n${userMessage}`;
     } else if (aiContextLevel === "light") {
-      // Легкий — оптимізований контекст (умовні секції, компакт)
+      // Низький — оптимізований контекст (умовні секції, компакт)
       enrichedPrompt = await gatherSTOContext(userMessage);
     } else if (aiContextLevel === "medium") {
-      // Середній — більше даних (акти завжди, більше лімітів)
+      // Помірний — більше даних (акти завжди, більше лімітів)
       enrichedPrompt = await gatherSTOContext(userMessage, "medium");
     } else {
-      // Сильний — повний контекст без обрізань
+      // Високий — повний контекст без обрізань
       enrichedPrompt = await gatherSTOContext(userMessage, "heavy");
     }
 
@@ -3045,9 +3045,9 @@ export async function createAIChatModal(): Promise<void> {
             <!--Опції додаються динамічно-->
           </select>
           <select id="ai-context-level" class="ai-context-level" title="Рівень контексту">
-            <option value="light" ${aiContextLevel === "light" ? " selected" : ""}>⚡ Легкий</option>
-            <option value="medium"${aiContextLevel === "medium" ? " selected" : ""}>⚖️ Середній</option>
-            <option value="heavy"${aiContextLevel === "heavy" ? " selected" : ""}>💪 Сильний</option>
+            <option value="light" ${aiContextLevel === "light" ? " selected" : ""}>🪶 Низький</option>
+            <option value="medium"${aiContextLevel === "medium" ? " selected" : ""}> ⚡ Помірний</option>
+            <option value="heavy"${aiContextLevel === "heavy" ? " selected" : ""}>🛡️ Високий</option>
           </select>
           <label class="ai-lock-key-toggle" title="Зафіксувати ключ — не перемикати при 429">
             <input type="checkbox" id="ai-lock-key-cb" ${lockKey ? "checked" : ""}>

@@ -380,7 +380,7 @@ export async function findSalaryInHistory(
 
     if (salaryEntries.length === 0) return null;
 
-    // Обчислюємо середній відсоток
+    // Обчислюємо Помірний відсоток
     const percentages = salaryEntries.map((e) => (e.salary / e.price) * 100);
     const avgPercent =
       percentages.reduce((a, b) => a + b, 0) / percentages.length;

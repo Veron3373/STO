@@ -707,7 +707,7 @@ function renderSummaryCards(
   const openActs = acts.filter((a) => !a.date_off).length;
   const closedActs = acts.filter((a) => !!a.date_off);
 
-  // Середній чек (по закритих актах)
+  // Помірний чек (по закритих актах)
   const avgCheck =
     closedActs.length > 0
       ? Math.round(
@@ -731,7 +731,7 @@ function renderSummaryCards(
   // Клієнтів обслуговано (унікальні client_id в актах)
   const uniqueClients = new Set(acts.map((a) => a.client_id).filter(Boolean));
 
-  // Середній час закриття акту (днів)
+  // Помірний час закриття акту (днів)
   let avgDays = 0;
   const closedWithDates = closedActs.filter((a) => a.date_on && a.date_off);
   if (closedWithDates.length > 0) {

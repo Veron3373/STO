@@ -3798,13 +3798,6 @@ async function refreshSidebarChats(
       countdown.textContent = "5";
       deleteBtn.appendChild(countdown);
 
-      // Кнопка скасування (зелений кружок з ✚)
-      const cancelBtn = document.createElement("span");
-      cancelBtn.className = "ai-delete-cancel";
-      cancelBtn.textContent = "♻️";
-      cancelBtn.title = "Скасувати видалення";
-      deleteBtn.appendChild(cancelBtn);
-
       let timeLeft = 5;
       let cancelled = false;
 
@@ -3837,8 +3830,8 @@ async function refreshSidebarChats(
         }
       }, 1000);
 
-      // Скасування при кліку на зелений кружок
-      cancelBtn.addEventListener("click", (ce) => {
+      // Скасування при кліку на кружок з відліком
+      countdown.addEventListener("click", (ce) => {
         ce.stopPropagation();
         cancelled = true;
         clearInterval(interval);

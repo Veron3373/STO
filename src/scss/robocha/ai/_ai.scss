@@ -1013,12 +1013,11 @@
     background: none !important;
   }
 
-  // Ховаємо відлік, показуємо скасування при ховері
+  // При ховері — кружок стає світло-зеленим (скасувати)
   &:hover .ai-delete-countdown {
-    display: none;
-  }
-  &:hover .ai-delete-cancel {
-    display: flex;
+    background: #66d9a0;
+    box-shadow: 0 0 8px rgba(102, 217, 160, 0.6);
+    cursor: pointer;
   }
 }
 
@@ -1035,29 +1034,9 @@
   justify-content: center;
   animation: countdown-pulse 1s ease-in-out infinite;
   box-shadow: 0 0 6px rgba(231, 76, 60, 0.5);
-}
-
-.ai-delete-cancel {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #5bc0de;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(91, 192, 222, 0.5);
   transition:
-    transform 0.15s,
-    box-shadow 0.15s;
-
-  &:hover {
-    transform: scale(1.15);
-    box-shadow: 0 0 10px rgba(91, 192, 222, 0.7);
-  }
+    background 0.2s,
+    box-shadow 0.2s;
 }
 
 @keyframes countdown-pulse {

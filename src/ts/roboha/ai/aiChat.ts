@@ -116,15 +116,10 @@ const MAX_IMAGE_DIMENSION = 1536; // px — ресайз для економії
 // УТИЛІТИ ДЛЯ ЗОБРАЖЕНЬ
 // ============================================================
 
-/** Конвертує File → base64 dataURL, з ресайзом якщо потрібно */
+/** Конвертує File → base64 dataURL, з ресайзом і компресією якщо потрібно */
 async function fileToBase64(file: File): Promise<PendingImage | null> {
   return new Promise((resolve) => {
     if (!file.type.startsWith("image/")) {
-      resolve(null);
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-      alert(`⚠️ Зображення занадто велике (макс ${MAX_IMAGE_SIZE_MB} МБ)`);
       resolve(null);
       return;
     }
@@ -132,14 +127,15 @@ async function fileToBase64(file: File): Promise<PendingImage | null> {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
+        // Визначаємо максимальний розмір — якщо файл великий, зменшуємо ще більше
+        const isLarge = file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024;
+        const maxDim = isLarge ? 1200 : MAX_IMAGE_DIMENSION;
+
         // Ресайз якщо потрібно
         let w = img.width,
           h = img.height;
-        if (w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION) {
-          const ratio = Math.min(
-            MAX_IMAGE_DIMENSION / w,
-            MAX_IMAGE_DIMENSION / h,
-          );
+        if (w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim / w, maxDim / h);
           w = Math.round(w * ratio);
           h = Math.round(h * ratio);
         }
@@ -148,10 +144,26 @@ async function fileToBase64(file: File): Promise<PendingImage | null> {
         canvas.height = h;
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0, w, h);
-        // Визначаємо output формат
-        const outMime = file.type === "image/png" ? "image/png" : "image/jpeg";
-        const quality = outMime === "image/jpeg" ? 0.85 : undefined;
-        const dataUrl = canvas.toDataURL(outMime, quality);
+
+        // Завжди конвертуємо у JPEG для компресії (менший розмір)
+        const outMime = "image/jpeg";
+
+        // Якщо файл великий — знижуємо якість поступово до вмісту в 4 МБ
+        const targetBytes = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+        let quality = isLarge ? 0.7 : 0.85;
+        let dataUrl = canvas.toDataURL(outMime, quality);
+
+        // Якщо все ще завелике — знижуємо якість далі
+        if (isLarge) {
+          for (const q of [0.6, 0.5, 0.4, 0.3]) {
+            // Приблизний розмір base64 ≈ довжина * 0.75
+            const approxBytes = dataUrl.length * 0.75;
+            if (approxBytes <= targetBytes) break;
+            quality = q;
+            dataUrl = canvas.toDataURL(outMime, quality);
+          }
+        }
+
         const base64 = dataUrl.split(",")[1];
         resolve({ dataUrl, base64, mimeType: outMime });
       };

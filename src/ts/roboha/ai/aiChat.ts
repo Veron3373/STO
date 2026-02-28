@@ -215,12 +215,12 @@ let aiSearchEnabled: boolean =
 /** Завантажує налаштування AI з БД (settings.API):
  *  setting_id=1 → API: null=light, false=medium, true=heavy
  *  setting_id=2 → API: true=зафіксовано, false=ні
- *  setting_id=3 → date: стан Google Search (будь-яке значення=увімкнено, null=вимкнено) */
+ *  setting_id=3 → API: true=Google Search увімкнено, false/null=вимкнено */
 async function loadAISettingsFromDB(): Promise<void> {
   try {
     const { data, error } = await supabase
       .from("settings")
-      .select("setting_id, API, date")
+      .select("setting_id, API")
       .in("setting_id", [1, 2, 3]);
     if (error || !data) return;
     for (const row of data) {
@@ -240,7 +240,7 @@ async function loadAISettingsFromDB(): Promise<void> {
         localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
       }
       if (row.setting_id === 3) {
-        aiSearchEnabled = row.date === "true" || row.date === true;
+        aiSearchEnabled = row.API === true;
         localStorage.setItem(
           "aiSearchEnabled",
           aiSearchEnabled ? "true" : "false",
@@ -275,12 +275,12 @@ async function saveAILockKeyToDB(locked: boolean): Promise<void> {
   }
 }
 
-/** Зберігає стан Google Search в settings.date (setting_id=3, true/false) */
+/** Зберігає стан Google Search в settings.API (setting_id=3, bool) */
 async function saveAISearchToDB(enabled: boolean): Promise<void> {
   try {
     await supabase
       .from("settings")
-      .update({ date: enabled ? "true" : "false" })
+      .update({ API: enabled })
       .eq("setting_id", 3);
   } catch {
     /* silent */
@@ -3226,7 +3226,7 @@ export async function createAIChatModal(): Promise<void> {
           <textarea
             id="ai-chat-input"
             class="ai-chat-input"
-            placeholder="Запитай про акти, слюсарів... (Ctrl+V — вставити скріншот)"
+            placeholder="Запитай... (Ctrl+V — скріншот, 📎 — фото)"
             rows="1"
           ></textarea>
           <button id="ai-chat-send-btn" class="ai-chat-send-btn" title="Відправити">

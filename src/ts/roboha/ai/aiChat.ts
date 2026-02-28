@@ -3150,7 +3150,7 @@ export async function createAIChatModal(): Promise<void> {
     if (existingBtn) existingBtn.textContent = lockKey ? "ВКЛ" : "ВИКЛ";
     const existingSearch = document.getElementById("ai-search-toggle");
     if (existingSearch) {
-      existingSearch.textContent = aiSearchEnabled ? "🌐" : "❌";
+      existingSearch.innerHTML = `<span class="ai-search-icon">🌐</span>${aiSearchEnabled ? "" : '<span class="ai-search-cross">❌</span>'}`;
       existingSearch.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
     }
 
@@ -3248,7 +3248,7 @@ export async function createAIChatModal(): Promise<void> {
             <option value="heavy"${aiContextLevel === "heavy" ? " selected" : ""}>🛡️ Високий</option>
           </select>
           <button id="ai-search-toggle" class="ai-search-toggle ${aiSearchEnabled ? "ai-search-toggle--on" : ""}" title="${aiSearchEnabled ? "🌐 Пошук Google увімкнено" : "❌ Пошук Google вимкнено"}" type="button">
-            ${aiSearchEnabled ? "🌐" : "❌"}
+            <span class="ai-search-icon">🌐</span>${aiSearchEnabled ? "" : '<span class="ai-search-cross">❌</span>'}
           </button>
           <label class="ai-lock-key-toggle" id="ai-lock-key-label" title="${lockKey ? "Вимкнути перебір ключів" : "Увімкнути перебір ключів"}">
             <input type="checkbox" id="ai-lock-key-cb" ${lockKey ? "checked" : ""}>
@@ -3444,7 +3444,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
         aiSearchEnabled ? "true" : "false",
       );
       saveAISearchToDB(aiSearchEnabled);
-      searchToggle.textContent = aiSearchEnabled ? "🌐" : "❌";
+      searchToggle.innerHTML = `<span class="ai-search-icon">🌐</span>${aiSearchEnabled ? "" : '<span class="ai-search-cross">❌</span>'}`;
       searchToggle.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
       searchToggle.title = aiSearchEnabled
         ? "🌐 Пошук Google увімкнено"

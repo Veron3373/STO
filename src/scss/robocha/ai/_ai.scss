@@ -654,12 +654,29 @@
   transition: transform 0.2s ease;
   padding: 0;
   line-height: 1;
+  position: relative;
+  width: 24px;
+  height: 24px;
 
   &:hover {
     transform: scale(1.15);
   }
+}
 
+.ai-search-icon {
+  font-size: 17px;
+  line-height: 1;
+}
 
+.ai-search-cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 // ── Кнопка фіксації ключа (pill з анімованою підсвіткою) ──

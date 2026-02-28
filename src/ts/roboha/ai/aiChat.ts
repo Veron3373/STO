@@ -5,6 +5,22 @@ import { supabase } from "../../vxid/supabaseClient";
 import { globalCache } from "../zakaz_naraudy/globalCache";
 
 import { startChatVoiceInput } from "./voiceInput";
+import {
+  loadChats,
+  createChat,
+  renameChat,
+  deleteChat,
+  loadMessages,
+  saveMessage as dbSaveMessage,
+  uploadPhotos,
+  deleteOldChats,
+  type AiChat,
+} from "./aiChatStorage";
+import {
+  showModalCreateSakazNarad,
+  fillCarFields,
+  setSelectedIds,
+} from "../redahyvatu_klient_machuna/vikno_klient_machuna";
 
 // ============================================================
 // УТИЛІТИ
@@ -84,6 +100,11 @@ let currentKeyIndex = 0; // Поточний активний ключ
 let keysLoaded = false;
 let isLoading = false;
 let realtimeTokenChannel: ReturnType<typeof supabase.channel> | null = null;
+
+// ── Multi-chat стан ──
+let activeChatId: number | null = null;
+let chatList: AiChat[] = [];
+let sidebarOpen = false;
 
 /** Черга зображень, що очікують надсилання */
 let pendingImages: PendingImage[] = [];
@@ -2963,6 +2984,228 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
 }
 
 // ============================================================
+// ПАРСИНГ ДАНИХ КЛІЄНТА/АВТО З ВІДПОВІДІ AI
+// ============================================================
+
+interface ParsedClientData {
+  pib?: string; // ПІБ
+  phone?: string; // Телефон
+  car?: string; // Марка авто
+  carNumber?: string; // Номер авто
+  vin?: string; // VIN код
+  year?: string; // Рік випуску
+  engine?: string; // Об'єм двигуна
+  fuel?: string; // Тип пального
+  engineCode?: string; // Код ДВЗ
+  source?: string; // Джерело
+  extra?: string; // Додатково
+}
+
+/** Перевірити, чи містить текст дані клієнта/авто */
+function hasClientData(text: string): boolean {
+  const t = text.toLowerCase();
+  // Шукаємо хоча б 2 ключових поля
+  const markers = [
+    /п[іi][бb]|прізвище|ім['ʼ]?я|власник|клієнт/i,
+    /телефон|тел\.|моб\./i,
+    /авто|марка|модель|транспорт/i,
+    /номер\s*(авто|держ|реєстр)|держ\.?\s*номер|реєстр/i,
+    /vin|він[\s-]?код/i,
+    /рік\s*(випуск|вироб)|р\.в\./i,
+  ];
+  let count = 0;
+  for (const rx of markers) {
+    if (rx.test(t)) count++;
+  }
+  return count >= 2;
+}
+
+/** Витягує значення за різними варіантами назви поля */
+function extractField(text: string, patterns: RegExp[]): string | undefined {
+  for (const rx of patterns) {
+    const match = text.match(rx);
+    if (match && match[1]?.trim()) {
+      // Видаляємо зайві символи розмітки
+      return match[1]
+        .trim()
+        .replace(/^\*+|\*+$/g, "")
+        .trim();
+    }
+  }
+  return undefined;
+}
+
+/** Парсить текст відповіді AI та витягує дані клієнта/авто */
+function parseClientDataFromAI(text: string): ParsedClientData {
+  const result: ParsedClientData = {};
+
+  // ── ПІБ ──
+  result.pib = extractField(text, [
+    /п[іi][бb]\s*[:：—–-]\s*(.+)/im,
+    /прізвище\s*[:：—–-]\s*(.+)/im,
+    /власник\s*[:：—–-]\s*(.+)/im,
+    /клієнт\s*[:：—–-]\s*(.+)/im,
+    /ім['ʼ]?я\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Телефон ──
+  result.phone = extractField(text, [
+    /телефон\s*[:：—–-]\s*(.+)/im,
+    /тел\.\s*[:：—–-]?\s*(.+)/im,
+    /моб\.\s*[:：—–-]?\s*(.+)/im,
+    /контакт\s*[:：—–-]\s*(.+)/im,
+  ]);
+  // Або просто номер телефону у тексті
+  if (!result.phone) {
+    const phoneRx = /(\+?\d[\d\s\-()]{8,14}\d)/;
+    const phoneMatch = text.match(phoneRx);
+    if (phoneMatch) result.phone = phoneMatch[1].trim();
+  }
+
+  // ── Авто (марка + модель) ──
+  result.car = extractField(text, [
+    /(?:авто(?:мобіль)?|марка|модель|транспорт(?:ний\s*засіб)?)\s*[:：—–-]\s*(.+)/im,
+    /марка\s*(?:та|і|\/)\s*модель\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Номер авто ──
+  result.carNumber = extractField(text, [
+    /(?:номер\s*авто|держ\.?\s*номер|реєстр\.?\s*номер|номерний\s*знак|д\.?\s*н\.?\s*з\.?)\s*[:：—–-]\s*(.+)/im,
+    /номер\s*[:：—–-]\s*([A-ZА-ЯІЇЄҐ]{2}\d{4}[A-ZА-ЯІЇЄҐ]{2})/im,
+  ]);
+  // Резервний пошук номера авто (UA формат)
+  if (!result.carNumber) {
+    const plateRx = /\b([A-ZА-ЯІЇЄҐ]{2}\s?\d{4}\s?[A-ZА-ЯІЇЄҐ]{2})\b/;
+    const plateMatch = text.match(plateRx);
+    if (plateMatch) result.carNumber = plateMatch[1].replace(/\s/g, "");
+  }
+
+  // ── VIN ──
+  result.vin = extractField(text, [
+    /vin\s*[-:]?\s*код\s*[:：—–-]\s*(.+)/im,
+    /vin\s*[:：—–-]\s*(.+)/im,
+    /він[\s-]?код\s*[:：—–-]\s*(.+)/im,
+  ]);
+  // Резервний пошук VIN (17 символів)
+  if (!result.vin) {
+    const vinRx = /\b([A-HJ-NPR-Z0-9]{17})\b/;
+    const vinMatch = text.match(vinRx);
+    if (vinMatch) result.vin = vinMatch[1];
+  }
+
+  // ── Рік ──
+  result.year = extractField(text, [
+    /(?:рік\s*(?:випуск|вироб)?|р\.?\s*в\.?)\s*[:：—–-]\s*(\d{4})/im,
+    /рік\s*[:：—–-]\s*(\d{4})/im,
+  ]);
+
+  // ── Об'єм двигуна ──
+  result.engine = extractField(text, [
+    /об['ʼ]?єм\s*(?:двигуна?)?\s*[:：—–-]\s*(.+)/im,
+    /двигун\s*[:：—–-]\s*(.+)/im,
+    /об['ʼ]?єм\s*[:：—–-]\s*(\d[\d.,]+\s*л?)/im,
+  ]);
+
+  // ── Пальне ──
+  result.fuel = extractField(text, [
+    /(?:пальне|паливо|тип\s*(?:пального|палива))\s*[:：—–-]\s*(.+)/im,
+  ]);
+  // Авто-визначення з контексту
+  if (!result.fuel) {
+    const t = text.toLowerCase();
+    if (/\bдизел/i.test(t)) result.fuel = "Дизель";
+    else if (/\bбензин/i.test(t)) result.fuel = "Бензин";
+    else if (/\bгаз/i.test(t)) result.fuel = "Газ";
+    else if (/\bелектр/i.test(t)) result.fuel = "Електро";
+    else if (/\bгібрид/i.test(t)) result.fuel = "Гібрид";
+  }
+
+  // ── Код ДВЗ ──
+  result.engineCode = extractField(text, [
+    /(?:код\s*(?:двз|двигуна)|двз)\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Джерело ──
+  result.source = extractField(text, [
+    /(?:джерело|звідки|рекомендація)\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Додатково ──
+  result.extra = extractField(text, [
+    /(?:додаткова?\s*(?:інформація|дані)?|примітка|коментар)\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  return result;
+}
+
+/** Відкриває картку клієнта та заповнює поля розпізнаними даними */
+async function fillClientFormFromAI(aiText: string): Promise<void> {
+  const parsed = parseClientDataFromAI(aiText);
+
+  // Скидаємо прив'язку до існуючого клієнта/авто (це новий)
+  setSelectedIds(null, null);
+
+  // Відкриваємо модалку картки клієнта
+  await showModalCreateSakazNarad();
+
+  // Невелика затримка щоб DOM встиг зрендеритися
+  await new Promise((r) => setTimeout(r, 200));
+
+  // ── Заповнюємо ПІБ ──
+  if (parsed.pib) {
+    const pibEl = document.getElementById(
+      "client-input-create-sakaz_narad",
+    ) as HTMLTextAreaElement | null;
+    if (pibEl) {
+      pibEl.value = parsed.pib;
+      pibEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  // ── Заповнюємо Телефон ──
+  if (parsed.phone) {
+    const phoneEl = document.getElementById(
+      "phone-create-sakaz_narad",
+    ) as HTMLInputElement | null;
+    if (phoneEl) {
+      phoneEl.value = parsed.phone;
+      phoneEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  // ── Заповнюємо поля авто через fillCarFields ──
+  fillCarFields({
+    Авто: parsed.car || "",
+    "Номер авто": parsed.carNumber || "",
+    Vincode: parsed.vin || "",
+    Рік: parsed.year || "",
+    Обʼєм: parsed.engine || "",
+    Пальне: parsed.fuel || "",
+    КодДВЗ: parsed.engineCode || "",
+  });
+
+  // ── Заповнюємо Джерело ──
+  if (parsed.source) {
+    const sourceEl = document.getElementById(
+      "car-income-create-sakaz_narad",
+    ) as HTMLInputElement | null;
+    if (sourceEl) sourceEl.value = parsed.source;
+  }
+
+  // ── Заповнюємо Додатково ──
+  if (parsed.extra) {
+    const extraEl = document.getElementById(
+      "extra-create-sakaz_narad",
+    ) as HTMLInputElement | null;
+    if (extraEl) extraEl.value = parsed.extra;
+  }
+
+  // Закриваємо AI чат (щоб бачити картку)
+  const aiModal = document.getElementById("ai-chat-modal");
+  if (aiModal) aiModal.classList.add("hidden");
+}
+
+// ============================================================
 // РЕНДЕР ПОВІДОМЛЕНЬ
 // ============================================================
 
@@ -2994,13 +3237,28 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
       .join("")}</div>`;
   }
 
+  // 📋 Кнопка "Внести в картку" для відповідей асистента з даними клієнта
+  let fillBtnHtml = "";
+  if (msg.role === "assistant" && hasClientData(msg.text)) {
+    fillBtnHtml = `<button class="ai-fill-form-btn" title="Внести дані в картку клієнта">📋 Внести в картку</button>`;
+  }
+
   div.innerHTML = `
     <div class="ai-chat-bubble">
       ${imagesHtml}
       <div class="ai-chat-bubble-text">${html}</div>
+      ${fillBtnHtml}
       <div class="ai-chat-bubble-time">${time}</div>
     </div>
   `;
+
+  // Обробник кнопки "Внести в картку"
+  const fillBtn = div.querySelector(".ai-fill-form-btn");
+  if (fillBtn) {
+    fillBtn.addEventListener("click", () => {
+      fillClientFormFromAI(msg.text);
+    });
+  }
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
@@ -3129,6 +3387,177 @@ const QUICK_PROMPTS = [
 ];
 
 // ============================================================
+// SIDEBAR — РЕНДЕРИНГ СПИСКУ ЧАТІВ
+// ============================================================
+
+/** Отримує user_id із Supabase auth session */
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Оновлює sidebar із БД */
+async function refreshSidebarChats(
+  listEl: HTMLElement,
+  messagesEl: HTMLElement,
+  quickPromptsEl: HTMLElement,
+): Promise<void> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    listEl.innerHTML = `<div class="ai-sidebar-empty">⚠️ Не авторизовано</div>`;
+    return;
+  }
+  chatList = await loadChats(userId);
+
+  // Авто-видалення старих чатів (>90 днів) — в фоні
+  deleteOldChats(userId).catch(() => {});
+
+  if (chatList.length === 0) {
+    listEl.innerHTML = `<div class="ai-sidebar-empty">Поки немає чатів.<br>Надішли перше повідомлення!</div>`;
+    return;
+  }
+
+  listEl.innerHTML = chatList
+    .map((c) => {
+      const isActive = c.chat_id === activeChatId;
+      const date = new Date(c.updated_at).toLocaleDateString("uk-UA", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      return `
+      <div class="ai-sidebar-chat-item ${isActive ? "ai-sidebar-chat-item--active" : ""}" data-chat-id="${c.chat_id}">
+        <div class="ai-sidebar-chat-info">
+          <div class="ai-sidebar-chat-title">${escapeHtml(c.title)}</div>
+          <div class="ai-sidebar-chat-date">${date}</div>
+        </div>
+        <div class="ai-sidebar-chat-actions">
+          <button class="ai-sidebar-rename" data-chat-id="${c.chat_id}" title="Перейменувати">✏️</button>
+          <button class="ai-sidebar-delete" data-chat-id="${c.chat_id}" title="Видалити">🗑️</button>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  // Обробники кліків
+  listEl.querySelectorAll(".ai-sidebar-chat-item").forEach((el) => {
+    el.addEventListener("click", async (e) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest(".ai-sidebar-rename") ||
+        target.closest(".ai-sidebar-delete")
+      )
+        return;
+      const chatId = parseInt((el as HTMLElement).dataset.chatId || "0");
+      if (chatId) await openChat(chatId, messagesEl, quickPromptsEl, listEl);
+    });
+  });
+
+  // Перейменування
+  listEl.querySelectorAll(".ai-sidebar-rename").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const chatId = parseInt((btn as HTMLElement).dataset.chatId || "0");
+      const chat = chatList.find((c) => c.chat_id === chatId);
+      if (!chat) return;
+      const newTitle = prompt("Нова назва чату:", chat.title);
+      if (newTitle && newTitle.trim()) {
+        await renameChat(chatId, newTitle.trim());
+        await refreshSidebarChats(listEl, messagesEl, quickPromptsEl);
+      }
+    });
+  });
+
+  // Видалення
+  listEl.querySelectorAll(".ai-sidebar-delete").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const chatId = parseInt((btn as HTMLElement).dataset.chatId || "0");
+      if (!confirm("Видалити цей чат і всі повідомлення?")) return;
+      await deleteChat(chatId);
+      if (activeChatId === chatId) {
+        activeChatId = null;
+        chatHistory = [];
+        messagesEl.innerHTML = `
+          <div class="ai-chat-welcome">
+            <div class="ai-chat-welcome-icon">🤖</div>
+            <div class="ai-chat-welcome-text">
+              <strong>Чат видалено.</strong><br>
+              Створіть новий або оберіть з історії.
+            </div>
+          </div>`;
+        quickPromptsEl.style.display = "";
+      }
+      await refreshSidebarChats(listEl, messagesEl, quickPromptsEl);
+    });
+  });
+}
+
+/** Escape HTML для назви чату */
+function escapeHtml(str: string): string {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/** Відкрити існуючий чат — завантажити повідомлення з БД */
+async function openChat(
+  chatId: number,
+  messagesEl: HTMLElement,
+  quickPromptsEl: HTMLElement,
+  sidebarListEl: HTMLElement,
+): Promise<void> {
+  activeChatId = chatId;
+  chatHistory = [];
+  messagesEl.innerHTML = `<div class="ai-chat-loading"><div class="ai-spinner"></div><span>Завантаження...</span></div>`;
+  quickPromptsEl.style.display = "none";
+
+  const messages = await loadMessages(chatId);
+  messagesEl.innerHTML = "";
+
+  for (const msg of messages) {
+    const chatMsg: ChatMessage = {
+      role: msg.role,
+      text: msg.text,
+      timestamp: new Date(msg.created_at),
+      images: msg.images.length > 0 ? msg.images : undefined,
+    };
+    chatHistory.push(chatMsg);
+    renderMessage(chatMsg, messagesEl);
+  }
+
+  if (messages.length === 0) {
+    messagesEl.innerHTML = `
+      <div class="ai-chat-welcome">
+        <div class="ai-chat-welcome-icon">🤖</div>
+        <div class="ai-chat-welcome-text">
+          <strong>Чат порожній.</strong><br>
+          Напишіть перше повідомлення!
+        </div>
+      </div>`;
+    quickPromptsEl.style.display = "";
+  }
+
+  // Оновлюємо active стан в sidebar
+  sidebarListEl.querySelectorAll(".ai-sidebar-chat-item").forEach((el) => {
+    const id = parseInt((el as HTMLElement).dataset.chatId || "0");
+    el.classList.toggle("ai-sidebar-chat-item--active", id === chatId);
+  });
+}
+
+/** Авто-генерація назви чату з першого повідомлення */
+function generateChatTitle(text: string): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= 40) return clean;
+  return clean.slice(0, 37) + "...";
+}
+
+// ============================================================
 // СТВОРЕННЯ МОДАЛКИ
 // ============================================================
 
@@ -3176,8 +3605,21 @@ export async function createAIChatModal(): Promise<void> {
           </div>
         </div>
         <div class="ai-chat-header-actions">
+          <button id="ai-chat-sidebar-btn" class="ai-chat-action-btn" title="Історія чатів">📋</button>
+          <button id="ai-chat-new-btn" class="ai-chat-action-btn" title="Новий чат">➕</button>
           <button id="ai-chat-clear-btn" class="ai-chat-action-btn" title="Очистити чат">🗑️</button>
           <button id="ai-chat-close-btn" class="ai-chat-action-btn ai-chat-close" title="Закрити">✕</button>
+        </div>
+      </div>
+
+      <!-- Sidebar чатів -->
+      <div class="ai-chat-sidebar hidden" id="ai-chat-sidebar">
+        <div class="ai-chat-sidebar-header">
+          <span>💬 Історія чатів</span>
+          <button id="ai-sidebar-close" class="ai-sidebar-close" title="Закрити">✕</button>
+        </div>
+        <div class="ai-chat-sidebar-list" id="ai-chat-sidebar-list">
+          <!-- Список чатів рендериться динамічно -->
         </div>
       </div>
 
@@ -3236,7 +3678,6 @@ export async function createAIChatModal(): Promise<void> {
             </svg>
           </button>
         </div>
-
         <!-- Статус-бар: ключ + рівень + токени -->
         <div class="ai-chat-statusbar">
           <select id="ai-key-select" class="ai-key-select" title="Оберіть API ключ">
@@ -3324,9 +3765,10 @@ function initAIChatHandlers(modal: HTMLElement): void {
     if (e.target === modal) modal.classList.add("hidden");
   });
 
-  // ── Очистити чат ──
-  clearBtn?.addEventListener("click", () => {
+  // ── Очистити чат (створюємо новий) ──
+  clearBtn?.addEventListener("click", async () => {
     chatHistory = [];
+    activeChatId = null;
     messagesEl.innerHTML = `
       <div class="ai-chat-welcome">
         <div class="ai-chat-welcome-icon">🤖</div>
@@ -3337,6 +3779,56 @@ function initAIChatHandlers(modal: HTMLElement): void {
       </div>
     `;
     quickPromptsEl.style.display = "";
+  });
+
+  // ── Новий чат ──
+  const newChatBtn = modal.querySelector(
+    "#ai-chat-new-btn",
+  ) as HTMLButtonElement;
+  newChatBtn?.addEventListener("click", () => {
+    chatHistory = [];
+    activeChatId = null;
+    messagesEl.innerHTML = `
+      <div class="ai-chat-welcome">
+        <div class="ai-chat-welcome-icon">🤖</div>
+        <div class="ai-chat-welcome-text">
+          <strong>Привіт! Я Атлас AI.</strong><br>
+          Запитай про акти, клієнтів, авто, слюсарів, завантаженість, фінанси, склад — я маю повний доступ до бази даних.
+        </div>
+      </div>
+    `;
+    quickPromptsEl.style.display = "";
+    // Оновлюємо active елемент в sidebar
+    modal
+      .querySelectorAll(".ai-sidebar-chat-item")
+      .forEach((el) => el.classList.remove("ai-sidebar-chat-item--active"));
+  });
+
+  // ── Sidebar toggle ──
+  const sidebarBtn = modal.querySelector(
+    "#ai-chat-sidebar-btn",
+  ) as HTMLButtonElement;
+  const sidebarEl = modal.querySelector("#ai-chat-sidebar") as HTMLElement;
+  const sidebarCloseBtn = modal.querySelector(
+    "#ai-sidebar-close",
+  ) as HTMLButtonElement;
+  const sidebarListEl = modal.querySelector(
+    "#ai-chat-sidebar-list",
+  ) as HTMLElement;
+
+  sidebarBtn?.addEventListener("click", async () => {
+    sidebarOpen = !sidebarOpen;
+    if (sidebarOpen) {
+      sidebarEl.classList.remove("hidden");
+      await refreshSidebarChats(sidebarListEl, messagesEl, quickPromptsEl);
+    } else {
+      sidebarEl.classList.add("hidden");
+    }
+  });
+
+  sidebarCloseBtn?.addEventListener("click", () => {
+    sidebarOpen = false;
+    sidebarEl.classList.add("hidden");
   });
 
   // ── Зміна ключа ──
@@ -3509,6 +4001,18 @@ function initAIChatHandlers(modal: HTMLElement): void {
     // Ховаємо підказки
     quickPromptsEl.style.display = "none";
 
+    // ── Автоматично створюємо чат при першому повідомленні ──
+    if (!activeChatId) {
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const title = generateChatTitle(text.trim() || "📷 Фото");
+        const newChat = await createChat(userId, title);
+        if (newChat) {
+          activeChatId = newChat.chat_id;
+        }
+      }
+    }
+
     // Додаємо повідомлення користувача
     const userMsg: ChatMessage = {
       role: "user",
@@ -3524,6 +4028,25 @@ function initAIChatHandlers(modal: HTMLElement): void {
 
     inputEl.value = "";
     inputEl.style.height = "auto";
+
+    // ── Зберігаємо user msg у БД (з upload фото в Storage) ──
+    if (activeChatId) {
+      let imageUrls: string[] = [];
+      if (attachedImages.length > 0) {
+        imageUrls = await uploadPhotos(
+          activeChatId,
+          attachedImages.map((img) => ({
+            base64: img.base64,
+            mimeType: img.mimeType,
+          })),
+        );
+      }
+      await dbSaveMessage(activeChatId, "user", userMsg.text, imageUrls);
+      // Оновлюємо images на URL зі Storage (замість base64)
+      if (imageUrls.length > 0) {
+        userMsg.images = imageUrls;
+      }
+    }
 
     // Показуємо loader
     isLoading = true;
@@ -3555,6 +4078,11 @@ function initAIChatHandlers(modal: HTMLElement): void {
     };
     chatHistory.push(assistantMsg);
     renderMessage(assistantMsg, messagesEl);
+
+    // ── Зберігаємо assistant msg у БД ──
+    if (activeChatId) {
+      await dbSaveMessage(activeChatId, "assistant", reply);
+    }
 
     isLoading = false;
     sendBtn.disabled = false;

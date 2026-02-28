@@ -22,7 +22,10 @@ function getOrCreateContainer(): HTMLElement {
 
 function formatTimeOnly(dateStr?: string): string {
   const date = dateStr ? new Date(dateStr) : new Date();
-  return date.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString("uk-UA", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /**
@@ -34,10 +37,12 @@ function reindexBadges() {
   if (!container) return;
 
   // Знаходимо всі картки, які ще не закриваються
-  const toasts = container.querySelectorAll('.act-notification-toast:not(.closing)');
+  const toasts = container.querySelectorAll(
+    ".act-notification-toast:not(.closing)",
+  );
 
   toasts.forEach((toast, index) => {
-    const badge = toast.querySelector('.notification-count-badge');
+    const badge = toast.querySelector(".notification-count-badge");
     if (badge) {
       // Перша картка = 1, друга = 2 і т.д.
       badge.textContent = (index + 1).toString();
@@ -45,7 +50,9 @@ function reindexBadges() {
   });
 }
 
-export function showRealtimeActNotification(payload: ActNotificationPayload): void {
+export function showRealtimeActNotification(
+  payload: ActNotificationPayload,
+): void {
   const container = getOrCreateContainer();
 
   const isAdded = payload.dodav_vudaluv;
@@ -62,7 +69,7 @@ export function showRealtimeActNotification(payload: ActNotificationPayload): vo
        <div class="header-left">
          <span class="act-id">Акт №${payload.act_id}</span>
          <span class="status-text">${actionText}</span>
-         ${payload.pruimalnyk ? `<span class="receiver-name">→ ${payload.pruimalnyk}</span>` : ''}
+         ${payload.pruimalnyk ? `<span class="receiver-name">→ ${payload.pruimalnyk}</span>` : ""}
        </div>
        <div class="notification-count-badge">...</div>
     </div>
@@ -113,13 +120,13 @@ export function showRealtimeActNotification(payload: ActNotificationPayload): vo
   };
 
   // Обробник кліку на номер акту для його відкриття
-  const actIdElement = toast.querySelector('.act-id');
+  const actIdElement = toast.querySelector(".act-id");
   if (actIdElement) {
-    actIdElement.addEventListener('click', async (e) => {
+    actIdElement.addEventListener("click", async (e) => {
       e.stopPropagation(); // Запобігаємо закриттю toast
 
       // Динамічний імпорт функції showModal
-      const { showModal } = await import('../zakaz_naraudy/modalMain');
+      const { showModal } = await import("../zakaz_naraudy/modalMain");
 
       // Відкриваємо акт
       await showModal(payload.act_id);
@@ -132,16 +139,29 @@ export function showRealtimeActNotification(payload: ActNotificationPayload): vo
 
 function playNotificationSound(isAdded: boolean) {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioCtx = new (
+      window.AudioContext || (window as any).webkitAudioContext
+    )();
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {
+        /* silent */
+      });
+    }
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(isAdded ? 880 : 440, audioCtx.currentTime);
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(
+      isAdded ? 880 : 440,
+      audioCtx.currentTime,
+    );
     gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioCtx.currentTime + 0.1,
+    );
     oscillator.start();
     oscillator.stop(audioCtx.currentTime + 0.1);
-  } catch (e) { }
+  } catch (e) {}
 }

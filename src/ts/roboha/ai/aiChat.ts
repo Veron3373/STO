@@ -86,25 +86,30 @@ let aiContextLevel: AIContextLevel =
 /** Якщо true — ключ зафіксовано, ротація при 429 вимкнена */
 let lockKey: boolean = localStorage.getItem("aiLockKey") === "true";
 
-/** Завантажує налаштування AI (контекст + фіксація ключа) з БД (settings.date) */
+/** Завантажує налаштування AI з БД (settings.API):
+ *  setting_id=1 → API: null=light, false=medium, true=heavy
+ *  setting_id=2 → API: true=зафіксовано, false=ні */
 async function loadAISettingsFromDB(): Promise<void> {
   try {
     const { data, error } = await supabase
       .from("settings")
-      .select("setting_id, date")
-      .in("setting_id", [2, 3]);
+      .select("setting_id, API")
+      .in("setting_id", [1, 2]);
     if (error || !data) return;
     for (const row of data) {
-      if (row.setting_id === 2 && row.date) {
-        const val = row.date as string;
-        if (val === "light" || val === "medium" || val === "heavy") {
-          aiContextLevel = val;
-          localStorage.setItem("aiContextLevel", val);
+      if (row.setting_id === 1) {
+        // null=light, false=medium, true=heavy
+        if (row.API === true) {
+          aiContextLevel = "heavy";
+        } else if (row.API === false) {
+          aiContextLevel = "medium";
+        } else {
+          aiContextLevel = "light";
         }
+        localStorage.setItem("aiContextLevel", aiContextLevel);
       }
-      if (row.setting_id === 3 && row.date !== null && row.date !== undefined) {
-        const val = String(row.date);
-        lockKey = val === "true";
+      if (row.setting_id === 2) {
+        lockKey = row.API === true;
         localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
       }
     }
@@ -113,16 +118,24 @@ async function loadAISettingsFromDB(): Promise<void> {
   }
 }
 
-/** Зберігає одне AI-налаштування в settings.date */
-async function saveAISettingToDB(
-  settingId: number,
-  value: string,
-): Promise<void> {
+/** Зберігає AI-налаштування в settings.API (bool) */
+async function saveAIContextLevelToDB(level: AIContextLevel): Promise<void> {
   try {
+    // light=null, medium=false, heavy=true
+    const apiValue =
+      level === "heavy" ? true : level === "medium" ? false : null;
     await supabase
       .from("settings")
-      .update({ date: value })
-      .eq("setting_id", settingId);
+      .update({ API: apiValue })
+      .eq("setting_id", 1);
+  } catch {
+    /* silent */
+  }
+}
+
+async function saveAILockKeyToDB(locked: boolean): Promise<void> {
+  try {
+    await supabase.from("settings").update({ API: locked }).eq("setting_id", 2);
   } catch {
     /* silent */
   }
@@ -1698,12 +1711,12 @@ async function gatherSTOContext(
         const { data: expenses } = await supabase
           .from("vutratu")
           .select("*")
-          .gte("date", monthStart)
-          .order("date", { ascending: false });
+          .gte("dataOnn", monthStart)
+          .order("dataOnn", { ascending: false });
 
         if (expenses && expenses.length > 0) {
           const totalExpenses = expenses.reduce(
-            (s: number, e: any) => s + Number(e.amount || 0),
+            (s: number, e: any) => s + Number(e.suma || 0),
             0,
           );
           context += `\n=== ВИТРАТИ ЗА МІСЯЦЬ (${expenses.length} записів, ${totalExpenses.toLocaleString("uk-UA")} грн) ===\n`;
@@ -1711,8 +1724,8 @@ async function gatherSTOContext(
           // Групуємо за категоріями
           const byCategory: Record<string, number> = {};
           expenses.forEach((e: any) => {
-            const cat = e.category || "Без категорії";
-            byCategory[cat] = (byCategory[cat] || 0) + Number(e.amount || 0);
+            const cat = e.kategoria || "Без категорії";
+            byCategory[cat] = (byCategory[cat] || 0) + Number(e.suma || 0);
           });
           for (const [cat, sum] of Object.entries(byCategory)) {
             context += `  ${cat}: ${sum.toLocaleString("uk-UA")} грн\n`;
@@ -1876,20 +1889,24 @@ async function gatherSTOContext(
     // 11-12. СПОВІЩЕННЯ — 💡 тільки якщо є непереглянуті (компактно)
     // ============================================================
     try {
-      const [notifRes, completeRes] = await Promise.all([
-        supabase
-          .from("act_changes_notifications")
-          .select("act_id, item_name, dodav_vudaluv, changed_by_surname")
-          .eq("delit", false)
-          .order("data", { ascending: false })
-          .limit(10),
-        supabase
+      const notifRes = await supabase
+        .from("act_changes_notifications")
+        .select("act_id, item_name, dodav_vudaluv, changed_by_surname")
+        .eq("delit", false)
+        .order("data", { ascending: false })
+        .limit(10);
+
+      let completeRes: { data: any[] | null } = { data: [] };
+      try {
+        completeRes = await supabase
           .from("slusar_complete_notifications")
           .select("act_id, pruimalnyk")
           .eq("delit", false)
           .eq("viewed", false)
-          .limit(10),
-      ]);
+          .limit(10);
+      } catch {
+        /* таблиця може бути не опублікована */
+      }
 
       const notifs = notifRes.data || [];
       const completes = completeRes.data || [];
@@ -3191,7 +3208,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
     lockKeyCb.addEventListener("change", () => {
       lockKey = lockKeyCb.checked;
       localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
-      saveAISettingToDB(3, lockKey ? "true" : "false");
+      saveAILockKeyToDB(lockKey);
     });
   }
 
@@ -3203,7 +3220,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
     levelSelect.addEventListener("change", () => {
       aiContextLevel = levelSelect.value as AIContextLevel;
       localStorage.setItem("aiContextLevel", aiContextLevel);
-      saveAISettingToDB(2, aiContextLevel);
+      saveAIContextLevelToDB(aiContextLevel);
     });
   }
 

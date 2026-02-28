@@ -6,7 +6,10 @@ import {
 } from "./mark_notification_deleted";
 import { supabase } from "../../vxid/supabaseClient";
 import { getSavedUserDataFromLocalStorage } from "./users";
-import { clearNotificationVisualOnly, decrementNotificationCount } from "./tablucya";
+import {
+  clearNotificationVisualOnly,
+  decrementNotificationCount,
+} from "./tablucya";
 
 export interface ActNotificationPayload {
   act_id: number; // номер акту (обов'язковий)
@@ -36,6 +39,11 @@ function getAudioContext(): AudioContext | null {
       if (!AudioContextClass) return null;
       globalAudioContext = new AudioContextClass();
     }
+    if (globalAudioContext && globalAudioContext.state === "suspended") {
+      globalAudioContext.resume().catch(() => {
+        /* silent */
+      });
+    }
     return globalAudioContext;
   } catch (_e) {
     return null;
@@ -56,13 +64,13 @@ function playNotificationSound(isAdded: boolean) {
     oscillator.type = "sine";
     oscillator.frequency.setValueAtTime(
       isAdded ? 880 : 440,
-      audioCtx.currentTime
+      audioCtx.currentTime,
     );
 
     gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(
       0.001,
-      audioCtx.currentTime + 0.1
+      audioCtx.currentTime + 0.1,
     );
 
     oscillator.start();
@@ -157,13 +165,13 @@ function reindexBadges() {
   if (!container) return;
 
   const toasts = Array.from(
-    container.querySelectorAll(".act-notification-toast:not(.closing)")
+    container.querySelectorAll(".act-notification-toast:not(.closing)"),
   );
 
   // 1 - найстаріше, більше число - найновіше (через column-reverse візуально зверху вниз)
   toasts.reverse().forEach((toast, index) => {
     const badge = toast.querySelector(
-      ".notification-count-badge"
+      ".notification-count-badge",
     ) as HTMLElement | null;
     if (badge) badge.textContent = (index + 1).toString();
   });
@@ -202,7 +210,7 @@ function expandStack(container: HTMLElement) {
   clearHoverTimeouts();
 
   const toasts = Array.from(
-    container.querySelectorAll(".act-notification-toast")
+    container.querySelectorAll(".act-notification-toast"),
   ) as HTMLElement[];
 
   if (!toasts.length) return;
@@ -218,9 +226,12 @@ function expandStack(container: HTMLElement) {
   const startOthersId = window.setTimeout(() => {
     for (let i = 1; i < toasts.length; i++) {
       const toast = toasts[i];
-      const id = window.setTimeout(() => {
-        toast.classList.add("stack-visible");
-      }, STEP_DELAY * (i - 1));
+      const id = window.setTimeout(
+        () => {
+          toast.classList.add("stack-visible");
+        },
+        STEP_DELAY * (i - 1),
+      );
       hoverTimeouts.push(id);
     }
   }, FIRST_DURATION);
@@ -235,7 +246,7 @@ function collapseStack(container: HTMLElement) {
   clearHoverTimeouts();
 
   const toasts = Array.from(
-    container.querySelectorAll(".act-notification-toast")
+    container.querySelectorAll(".act-notification-toast"),
   ) as HTMLElement[];
 
   if (!toasts.length) return;
@@ -298,7 +309,7 @@ function getOrCreateContainer(): HTMLElement {
 // ==========================
 
 export function showRealtimeActNotification(
-  payload: ActNotificationPayload
+  payload: ActNotificationPayload,
 ): void {
   const container = getOrCreateContainer();
 
@@ -336,7 +347,7 @@ export function showRealtimeActNotification(
       <div class="header-left">
         <span class="act-id">Акт №${payload.act_id}</span>
         <span class="status-text">${actionText}</span>
-        ${payload.pruimalnyk ? `<span class="receiver-name">→ ${payload.pruimalnyk}</span>` : ''}
+        ${payload.pruimalnyk ? `<span class="receiver-name">→ ${payload.pruimalnyk}</span>` : ""}
       </div>
       <div class="notification-count-badge">...</div>
     </div>
@@ -344,8 +355,9 @@ export function showRealtimeActNotification(
     ${autoLine}
     <div class="toast-meta-row">
       <span class="meta-time-oval">${timeString}</span>
-      <span class="user-surname">${payload.changed_by_surname || "Користувач"
-    }</span>
+      <span class="user-surname">${
+        payload.changed_by_surname || "Користувач"
+      }</span>
     </div>
     <div class="toast-body-row">
       <span class="item-icon">${icon}</span>
@@ -376,16 +388,16 @@ export function showRealtimeActNotification(
   });
 
   // Обробник кліку на номер акту для його відкриття
-  const actIdElement = toast.querySelector('.act-id');
+  const actIdElement = toast.querySelector(".act-id");
   if (actIdElement) {
-    actIdElement.addEventListener('click', async (e) => {
+    actIdElement.addEventListener("click", async (e) => {
       e.stopPropagation(); // Запобігаємо закриттю toast
 
       // Динамічний імпорт функції showModal
-      const { showModal } = await import('../zakaz_naraudy/modalMain');
+      const { showModal } = await import("../zakaz_naraudy/modalMain");
 
       // Відкриваємо акт в режимі 'client' (всі стовпці)
-      await showModal(payload.act_id, 'client');
+      await showModal(payload.act_id, "client");
     });
   }
 
@@ -423,7 +435,7 @@ export function removeNotificationsForAct(actId: number): void {
   if (!container) return;
 
   const toasts = container.querySelectorAll<HTMLElement>(
-    `.act-notification-toast[data-act-id="${actId}"]`
+    `.act-notification-toast[data-act-id="${actId}"]`,
   );
 
   if (toasts.length > 0) {
@@ -443,7 +455,7 @@ export function removeRealtimeNotification(dbId: number): void {
   if (!container) return;
 
   const toast = container.querySelector<HTMLElement>(
-    `.act-notification-toast[data-id="${dbId}"]`
+    `.act-notification-toast[data-id="${dbId}"]`,
   );
   // Перевіряємо чи тост існує і чи він ще не в процесі закриття
   if (toast && !toast.classList.contains("closing")) {
@@ -495,7 +507,7 @@ export async function loadAndShowExistingNotifications(): Promise<void> {
  * Якщо більше немає - знімає синю обводку з акту в таблиці
  */
 async function checkAndRemoveActHighlightIfNoNotifications(
-  actId: number
+  actId: number,
 ): Promise<void> {
   // Отримуємо ПІБ поточного користувача
   const userData = getSavedUserDataFromLocalStorage?.();

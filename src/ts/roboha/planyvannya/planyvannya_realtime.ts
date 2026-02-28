@@ -293,6 +293,11 @@ function playRealtimeSound(type: "insert" | "update" | "delete"): void {
     if (!AudioCtxClass) return;
 
     const ctx = new AudioCtxClass();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {
+        /* silent */
+      });
+    }
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 

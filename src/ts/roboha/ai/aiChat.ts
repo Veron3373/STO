@@ -80,10 +80,53 @@ let realtimeTokenChannel: ReturnType<typeof supabase.channel> | null = null;
 
 /** Рівень використання токенів: light=мінімальний, medium=середній, heavy=повний */
 type AIContextLevel = "light" | "medium" | "heavy";
-let aiContextLevel: AIContextLevel = "light";
+let aiContextLevel: AIContextLevel =
+  (localStorage.getItem("aiContextLevel") as AIContextLevel) || "light";
 
 /** Якщо true — ключ зафіксовано, ротація при 429 вимкнена */
 let lockKey: boolean = localStorage.getItem("aiLockKey") === "true";
+
+/** Завантажує налаштування AI (контекст + фіксація ключа) з БД (settings.date) */
+async function loadAISettingsFromDB(): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("setting_id, date")
+      .in("setting_id", [2, 3]);
+    if (error || !data) return;
+    for (const row of data) {
+      if (row.setting_id === 2 && row.date) {
+        const val = row.date as string;
+        if (val === "light" || val === "medium" || val === "heavy") {
+          aiContextLevel = val;
+          localStorage.setItem("aiContextLevel", val);
+        }
+      }
+      if (row.setting_id === 3 && row.date !== null && row.date !== undefined) {
+        const val = String(row.date);
+        lockKey = val === "true";
+        localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
+      }
+    }
+  } catch {
+    /* silent — використовуємо localStorage як fallback */
+  }
+}
+
+/** Зберігає одне AI-налаштування в settings.date */
+async function saveAISettingToDB(
+  settingId: number,
+  value: string,
+): Promise<void> {
+  try {
+    await supabase
+      .from("settings")
+      .update({ date: value })
+      .eq("setting_id", settingId);
+  } catch {
+    /* silent */
+  }
+}
 
 // ============================================================
 // ЗАВАНТАЖЕННЯ КЛЮЧІВ GEMINI (3 ключі з фолбеком)
@@ -2889,7 +2932,20 @@ const QUICK_PROMPTS = [
 // ============================================================
 
 export async function createAIChatModal(): Promise<void> {
+  // Завантажуємо налаштування AI з БД (контекст + фіксація ключа)
+  await loadAISettingsFromDB();
+
   if (document.getElementById(CHAT_MODAL_ID)) {
+    // Оновлюємо UI контролів при повторному відкритті
+    const existingLevel = document.getElementById(
+      "ai-context-level",
+    ) as HTMLSelectElement | null;
+    if (existingLevel) existingLevel.value = aiContextLevel;
+    const existingLock = document.getElementById(
+      "ai-lock-key-cb",
+    ) as HTMLInputElement | null;
+    if (existingLock) existingLock.checked = lockKey;
+
     document.getElementById(CHAT_MODAL_ID)!.classList.remove("hidden");
     // При кожному відкритті — підвантажуємо ключі та показуємо активний
     loadAllGeminiKeys().then(() => updateKeySelect());
@@ -3135,6 +3191,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
     lockKeyCb.addEventListener("change", () => {
       lockKey = lockKeyCb.checked;
       localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
+      saveAISettingToDB(3, lockKey ? "true" : "false");
     });
   }
 
@@ -3146,6 +3203,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
     levelSelect.addEventListener("change", () => {
       aiContextLevel = levelSelect.value as AIContextLevel;
       localStorage.setItem("aiContextLevel", aiContextLevel);
+      saveAISettingToDB(2, aiContextLevel);
     });
   }
 

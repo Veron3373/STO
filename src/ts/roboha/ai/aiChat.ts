@@ -3621,6 +3621,18 @@ const QUICK_PROMPTS = [
 // SIDEBAR — РЕНДЕРИНГ СПИСКУ ЧАТІВ
 // ============================================================
 
+/** Оновлює бейдж кількості чатів на кнопці 📋 */
+function updateChatCountBadge(count: number): void {
+  const badge = document.getElementById("ai-chat-count-badge");
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = String(count);
+    badge.style.display = "";
+  } else {
+    badge.style.display = "none";
+  }
+}
+
 /** Отримує user_id із Supabase auth session */
 async function getCurrentUserId(): Promise<string | null> {
   try {
@@ -3640,9 +3652,13 @@ async function refreshSidebarChats(
   const userId = await getCurrentUserId();
   if (!userId) {
     listEl.innerHTML = `<div class="ai-sidebar-empty">⚠️ Не авторизовано</div>`;
+    updateChatCountBadge(0);
     return;
   }
   chatList = await loadChats(userId);
+
+  // Оновлюємо бейдж кількості чатів
+  updateChatCountBadge(chatList.length);
 
   // Авто-видалення старих чатів (>90 днів) — в фоні
   deleteOldChats(userId).catch(() => {});
@@ -3877,9 +3893,8 @@ export async function createAIChatModal(): Promise<void> {
           </div>
         </div>
         <div class="ai-chat-header-actions">
-          <button id="ai-chat-sidebar-btn" class="ai-chat-action-btn" title="Історія чатів">📋</button>
+          <button id="ai-chat-sidebar-btn" class="ai-chat-action-btn" title="Історія чатів" style="position:relative">📋<span id="ai-chat-count-badge" class="ai-chat-count-badge" style="display:none"></span></button>
           <button id="ai-chat-new-btn" class="ai-chat-action-btn" title="Новий чат">➕</button>
-          <button id="ai-chat-clear-btn" class="ai-chat-action-btn" title="Очистити чат">🗑️</button>
           <button id="ai-chat-close-btn" class="ai-chat-action-btn ai-chat-close" title="Закрити">✕</button>
         </div>
       </div>
@@ -3984,6 +3999,14 @@ export async function createAIChatModal(): Promise<void> {
   document.body.appendChild(modal);
   initAIChatHandlers(modal);
 
+  // Підвантажуємо кількість чатів для бейджа
+  getCurrentUserId().then(async (uid) => {
+    if (uid) {
+      const chats = await loadChats(uid);
+      updateChatCountBadge(chats.length);
+    }
+  });
+
   // Підвантажуємо ключі при відкритті + перевіряємо скидання токенів
   // + підписуємося на Realtime (всі вкладки отримають оновлення одночасно)
   loadAllGeminiKeys().then(async () => {
@@ -4003,9 +4026,6 @@ function initAIChatHandlers(modal: HTMLElement): void {
   const sendBtn = modal.querySelector("#ai-chat-send-btn") as HTMLButtonElement;
   const closeBtn = modal.querySelector(
     "#ai-chat-close-btn",
-  ) as HTMLButtonElement;
-  const clearBtn = modal.querySelector(
-    "#ai-chat-clear-btn",
   ) as HTMLButtonElement;
   const dashboardBtn = modal.querySelector(
     "#ai-chat-dashboard-btn",
@@ -4035,22 +4055,6 @@ function initAIChatHandlers(modal: HTMLElement): void {
 
   modal.addEventListener("click", (e) => {
     if (e.target === modal) modal.classList.add("hidden");
-  });
-
-  // ── Очистити чат (створюємо новий) ──
-  clearBtn?.addEventListener("click", async () => {
-    chatHistory = [];
-    activeChatId = null;
-    messagesEl.innerHTML = `
-      <div class="ai-chat-welcome">
-        <div class="ai-chat-welcome-icon">🤖</div>
-        <div class="ai-chat-welcome-text">
-          <strong>Чат очищено!</strong><br>
-          Запитай про акти, клієнтів, авто, фінанси або завантаженість.
-        </div>
-      </div>
-    `;
-    quickPromptsEl.style.display = "";
   });
 
   // ── Новий чат ──

@@ -820,6 +820,25 @@
   }
 }
 
+// ── Бейдж кількості чатів ──
+.ai-chat-count-badge {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  background: #2ecc71;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 50%;
+  text-align: center;
+  padding: 0 3px;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
 // ── Sidebar чатів ──
 .ai-chat-sidebar {
   position: absolute;

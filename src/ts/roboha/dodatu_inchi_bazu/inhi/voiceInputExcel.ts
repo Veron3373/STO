@@ -169,6 +169,19 @@ export function initVoiceInputExcel(callbacks: {
   ) as HTMLButtonElement | null;
   if (!btn) return;
 
+  // 🎙️ Перевіряємо налаштування видимості мікрофона
+  try {
+    const storedSettings = localStorage.getItem("stoGeneralSettings");
+    if (storedSettings) {
+      const parsed = JSON.parse(storedSettings);
+      if (parsed.voiceInputEnabled === false) {
+        btn.style.display = "none";
+      }
+    }
+  } catch {
+    /* silent */
+  }
+
   btn.onclick = () => {
     if (voiceState === "listening") {
       stopVoiceExcel();

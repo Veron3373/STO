@@ -358,9 +358,15 @@ export async function loadAndApplyVoiceInputSetting(): Promise<void> {
  * Застосовує видимість кнопки голосового введення
  */
 function applyVoiceInputVisibility(show: boolean): void {
+  // Кнопка мікрофона в актах
   const voiceBtn = document.getElementById("voice-input-button");
   if (voiceBtn) {
     voiceBtn.style.display = show ? "" : "none";
+  }
+  // Кнопка мікрофона в запчастинах (Excel імпорт)
+  const voiceBtnExcel = document.getElementById("voice-input-btn-Excel");
+  if (voiceBtnExcel) {
+    voiceBtnExcel.style.display = show ? "" : "none";
   }
 }
 
@@ -436,8 +442,8 @@ function handleSettingsRealtimeChange(payload: any): void {
   if (!column) return;
 
   // console.log(
-    // `📡 Realtime settings: ${eventType} setting_id=${settingId}`,
-    // newRecord,
+  // `📡 Realtime settings: ${eventType} setting_id=${settingId}`,
+  // newRecord,
   // );
 
   // === ОБРОБКА НАЛАШТУВАНЬ АДМІНІСТРАТОРА (колонка "data") ===
@@ -513,7 +519,7 @@ function handleRoleSettingsChange(
     if (value !== undefined) {
       applyPhoneIndicatorVisibility(!!value);
       // console.log(
-        // `📞 Realtime: оновлено відображення телефону для ${currentRole}: ${!!value}`,
+      // `📞 Realtime: оновлено відображення телефону для ${currentRole}: ${!!value}`,
       // );
     }
   }
@@ -809,8 +815,8 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
       if (selectError && selectError.code !== "PGRST116") {
         // ігноруємо not found
         // console.error(
-          // `Помилка перевірки існування setting_id ${id}:`,
-          // selectError,
+        // `Помилка перевірки існування setting_id ${id}:`,
+        // selectError,
         // );
         throw selectError;
       }
@@ -1057,13 +1063,14 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${isFrozen
-      ? `<div class="percentage-buttons-container">
+      ${
+        isFrozen
+          ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-    }
+          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+      }
     </div>
   `;
 
@@ -2010,7 +2017,11 @@ async function loadAiProKeys(modal: HTMLElement): Promise<void> {
     if (data && data.length > 0) {
       data.forEach((row: any) => {
         const keyNumber = row.setting_id - 19;
-        const rowEl = createAiProKeyRow(keyNumber, row.setting_id, row["Загальні"] || "");
+        const rowEl = createAiProKeyRow(
+          keyNumber,
+          row.setting_id,
+          row["Загальні"] || "",
+        );
         if (addBtn) {
           container.insertBefore(rowEl, addBtn);
         } else {
@@ -2034,7 +2045,11 @@ async function loadAiProKeys(modal: HTMLElement): Promise<void> {
   checkDuplicateAiKeys(modal);
 }
 
-function createAiProKeyRow(num: number, settingId: number, value: string): HTMLElement {
+function createAiProKeyRow(
+  num: number,
+  settingId: number,
+  value: string,
+): HTMLElement {
   const row = document.createElement("div");
   row.className = "ai-pro-key-row";
   row.dataset.settingId = String(settingId);
@@ -2045,13 +2060,15 @@ function createAiProKeyRow(num: number, settingId: number, value: string): HTMLE
       id="ai-pro-key-${num}"
       class="ai-pro-key-input"
       placeholder="AIza..."
-      value="${value.replace(/"/g, '&quot;')}"
+      value="${value.replace(/"/g, "&quot;")}"
       autocomplete="off"
       spellcheck="false"
     />
     <button type="button" class="ai-pro-key-delete" title="Видалити ключ">✕</button>
   `;
-  const deleteBtn = row.querySelector(".ai-pro-key-delete") as HTMLButtonElement;
+  const deleteBtn = row.querySelector(
+    ".ai-pro-key-delete",
+  ) as HTMLButtonElement;
   deleteBtn.addEventListener("click", async () => {
     await supabase
       .from("settings")
@@ -2108,7 +2125,11 @@ async function saveAiProKeys(modal: HTMLElement): Promise<void> {
     checkDuplicateAiKeys(modal);
     const hasDuplicates = modal.querySelector(".ai-pro-key-duplicate") !== null;
     if (hasDuplicates) {
-      showNotification("Знайдено однакові ключі (підсвічено червоним). Видаліть дублікати!", "error", 3000);
+      showNotification(
+        "Знайдено однакові ключі (підсвічено червоним). Видаліть дублікати!",
+        "error",
+        3000,
+      );
       return;
     }
 
@@ -2141,7 +2162,11 @@ async function saveAiProKeys(modal: HTMLElement): Promise<void> {
     }
 
     // Одне повідомлення після всіх збережень
-    showNotification(`✅ API ключі збережено (${rows.length})`, "success", 1500);
+    showNotification(
+      `✅ API ключі збережено (${rows.length})`,
+      "success",
+      1500,
+    );
     resetGeminiKeysCache();
   } catch (err) {
     // console.error("Помилка збереження API ключів:", err);
@@ -2193,29 +2218,33 @@ async function openAiProKeysModal(): Promise<void> {
   await loadAiProKeys(keysModal);
 
   // Кнопка + додати новий ключ
-  keysModal.querySelector("#ai-pro-add-key")?.addEventListener("click", async () => {
-    const container = keysModal!.querySelector(".ai-pro-keys-inputs") as HTMLElement;
-    const addBtn = container.querySelector(".ai-pro-add-btn");
+  keysModal
+    .querySelector("#ai-pro-add-key")
+    ?.addEventListener("click", async () => {
+      const container = keysModal!.querySelector(
+        ".ai-pro-keys-inputs",
+      ) as HTMLElement;
+      const addBtn = container.querySelector(".ai-pro-add-btn");
 
-    // Знаходимо найбільший setting_id серед наявних рядків
-    const rows = container.querySelectorAll(".ai-pro-key-row");
-    let maxSettingId = 19;
-    rows.forEach((r) => {
-      const sid = parseInt((r as HTMLElement).dataset.settingId || "0");
-      if (sid > maxSettingId) maxSettingId = sid;
+      // Знаходимо найбільший setting_id серед наявних рядків
+      const rows = container.querySelectorAll(".ai-pro-key-row");
+      let maxSettingId = 19;
+      rows.forEach((r) => {
+        const sid = parseInt((r as HTMLElement).dataset.settingId || "0");
+        if (sid > maxSettingId) maxSettingId = sid;
+      });
+      const nextSettingId = maxSettingId + 1;
+      const nextNum = rows.length + 1;
+
+      const newRow = createAiProKeyRow(nextNum, nextSettingId, "");
+      if (addBtn) {
+        container.insertBefore(newRow, addBtn);
+      } else {
+        container.appendChild(newRow);
+      }
+      // Фокусуємо новий інпут
+      (newRow.querySelector(".ai-pro-key-input") as HTMLInputElement)?.focus();
     });
-    const nextSettingId = maxSettingId + 1;
-    const nextNum = rows.length + 1;
-
-    const newRow = createAiProKeyRow(nextNum, nextSettingId, "");
-    if (addBtn) {
-      container.insertBefore(newRow, addBtn);
-    } else {
-      container.appendChild(newRow);
-    }
-    // Фокусуємо новий інпут
-    (newRow.querySelector(".ai-pro-key-input") as HTMLInputElement)?.focus();
-  });
 
   keysModal
     .querySelector("#ai-pro-keys-ok")

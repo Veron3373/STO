@@ -240,7 +240,7 @@ async function loadAISettingsFromDB(): Promise<void> {
         localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
       }
       if (row.setting_id === 3) {
-        aiSearchEnabled = !!row.date;
+        aiSearchEnabled = row.date === "true" || row.date === true;
         localStorage.setItem(
           "aiSearchEnabled",
           aiSearchEnabled ? "true" : "false",
@@ -275,13 +275,12 @@ async function saveAILockKeyToDB(locked: boolean): Promise<void> {
   }
 }
 
-/** Зберігає стан Google Search в settings.date (setting_id=3) */
+/** Зберігає стан Google Search в settings.date (setting_id=3, true/false) */
 async function saveAISearchToDB(enabled: boolean): Promise<void> {
   try {
-    const dateValue = enabled ? new Date().toISOString() : null;
     await supabase
       .from("settings")
-      .update({ date: dateValue })
+      .update({ date: enabled ? "true" : "false" })
       .eq("setting_id", 3);
   } catch {
     /* silent */
@@ -3151,7 +3150,7 @@ export async function createAIChatModal(): Promise<void> {
     if (existingBtn) existingBtn.textContent = lockKey ? "ВКЛ" : "ВИКЛ";
     const existingSearch = document.getElementById("ai-search-toggle");
     if (existingSearch) {
-      existingSearch.textContent = aiSearchEnabled ? "🌐" : "🚫";
+      existingSearch.textContent = aiSearchEnabled ? "🌐" : "❌";
       existingSearch.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
     }
 
@@ -3248,6 +3247,9 @@ export async function createAIChatModal(): Promise<void> {
             <option value="medium"${aiContextLevel === "medium" ? " selected" : ""}> ⚡ Помірний</option>
             <option value="heavy"${aiContextLevel === "heavy" ? " selected" : ""}>🛡️ Високий</option>
           </select>
+          <button id="ai-search-toggle" class="ai-search-toggle ${aiSearchEnabled ? "ai-search-toggle--on" : ""}" title="${aiSearchEnabled ? "🌐 Пошук Google увімкнено" : "❌ Пошук Google вимкнено"}" type="button">
+            ${aiSearchEnabled ? "🌐" : "❌"}
+          </button>
           <label class="ai-lock-key-toggle" id="ai-lock-key-label" title="${lockKey ? "Вимкнути перебір ключів" : "Увімкнути перебір ключів"}">
             <input type="checkbox" id="ai-lock-key-cb" ${lockKey ? "checked" : ""}>
             <span class="ai-lock-key-btn">${lockKey ? "ВКЛ" : "ВИКЛ"}</span>
@@ -3442,11 +3444,11 @@ function initAIChatHandlers(modal: HTMLElement): void {
         aiSearchEnabled ? "true" : "false",
       );
       saveAISearchToDB(aiSearchEnabled);
-      searchToggle.textContent = aiSearchEnabled ? "🌐" : "🚫";
+      searchToggle.textContent = aiSearchEnabled ? "🌐" : "❌";
       searchToggle.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
       searchToggle.title = aiSearchEnabled
         ? "🌐 Пошук Google увімкнено"
-        : "🚫 Пошук Google вимкнено";
+        : "❌ Пошук Google вимкнено";
     });
   }
 

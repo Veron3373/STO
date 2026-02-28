@@ -319,23 +319,34 @@ function subscribeToTokenReset(): void {
         if (settingId < 20) return;
 
         const newToken = (payload.new as any)?.token;
-        const newDate = (payload.new as any)?.date;
+        if (typeof newToken !== "number") return;
 
-        // Якщо токени скинуто (token=0) — оновлюємо кеш та UI
-        if (newToken === 0) {
-          geminiKeyTokens = geminiKeyTokens.map(() => 0);
-          updateKeySelect();
-          console.log(
-            `🔄 Realtime: токени скинуто (setting_id=${settingId}, date=${newDate ? toDateStr(new Date(newDate)) : "?"})`,
-          );
-        } else if (typeof newToken === "number") {
-          // Оновлюємо токени одразу як змінились
-          const keyIndex = geminiKeySettingIds.indexOf(settingId);
-          if (keyIndex >= 0) {
-            geminiKeyTokens[keyIndex] = newToken;
-            updateKeySelect();
-          }
+        // Знаходимо індекс ключа в кеші
+        const keyIndex = geminiKeySettingIds.indexOf(settingId);
+        if (keyIndex < 0) return; // цей ключ не завантажений — ігноруємо
+
+        // Оновлюємо токен ЛИШЕ для цього ключа (ніяких інших оновлень)
+        const oldToken = geminiKeyTokens[keyIndex] ?? 0;
+        if (oldToken === newToken) return; // нічого не змінилось
+
+        geminiKeyTokens[keyIndex] = newToken;
+
+        // Оновлюємо лише текст потрібної опції в select
+        const selectEl = document.getElementById("ai-key-select") as HTMLSelectElement | null;
+        if (selectEl && selectEl.options[keyIndex]) {
+          const key = geminiApiKeys[keyIndex];
+          const provider = getKeyProvider(key);
+          const icon = provider === "groq" ? "⚡" : "💎";
+          const label = provider === "groq" ? "Groq" : "Gemini";
+          selectEl.options[keyIndex].textContent = `${icon} ${label} №${keyIndex + 1} 🎫${fmtTokens(newToken)}`;
         }
+
+        // Поточний ключ — оновлюємо лічильник
+        if (keyIndex === currentKeyIndex) {
+          updateTokenCounter(0, newToken);
+        }
+
+        console.log(`🔄 Realtime: токен ключ №${keyIndex + 1} (setting_id=${settingId}): ${oldToken} → ${newToken}`);
       },
     )
     .subscribe();
@@ -411,6 +422,39 @@ function updateKeySelect(): void {
       html += `<option value="${i}"${selected}>${icon} ${label} №${i + 1} 🎫${fmtTokens(tokens)}</option>`;
     }
     selectEl.innerHTML = html;
+  }
+
+  // Додаємо логіку скролу: при фокусі size=10, при Blur / Change size=1 (якщо більше 10 ключів)
+  if (geminiApiKeys.length > 10) {
+    // Встановлюємо подію лише раз
+    if (!selectEl.hasAttribute("data-scroll-init")) {
+      selectEl.setAttribute("data-scroll-init", "true");
+
+      const shrinkSelect = () => {
+        selectEl.size = 1;
+        selectEl.style.position = "";
+        selectEl.style.zIndex = "";
+      };
+
+      const expandSelect = () => {
+        selectEl.size = Math.min(10, geminiApiKeys.length);
+        // Фіксуємо поверх інших елементів щоб не розсувало верстку
+        selectEl.style.position = "absolute";
+        selectEl.style.zIndex = "1000";
+      };
+
+      selectEl.addEventListener("focus", expandSelect);
+      selectEl.addEventListener("blur", shrinkSelect);
+      selectEl.addEventListener("change", () => {
+        shrinkSelect();
+        selectEl.blur();
+      });
+    }
+  } else {
+    selectEl.size = 1;
+    selectEl.style.position = "";
+    selectEl.style.zIndex = "";
+    selectEl.removeAttribute("data-scroll-init");
   }
 
   // Завжди оновлюємо лічильник з реальним значенням (включно з 0)
@@ -2755,9 +2799,43 @@ function initAIChatHandlers(modal: HTMLElement): void {
       )
         return;
       currentKeyIndex = idx;
-      // Оновлюємо лише лічильник — select вже показує правильний вибір
-      const cachedTokens = geminiKeyTokens[currentKeyIndex] ?? 0;
-      updateTokenCounter(0, cachedTokens);
+
+      // Провіряємо кеш — якщо є значення, відображаємо відразу
+      const cachedTokens = geminiKeyTokens[idx];
+      if (typeof cachedTokens === "number" && cachedTokens > 0) {
+        updateTokenCounter(0, cachedTokens);
+      } else {
+        // Кеш порожній — завантажуємо безпосередньо з БД
+        updateTokenCounter(0, 0); // поки завантажується
+        const settingId = geminiKeySettingIds[idx];
+        if (settingId && settingId > 0) {
+          (async () => {
+            try {
+              const { data } = await supabase
+                .from("settings")
+                .select("token")
+                .eq("setting_id", settingId)
+                .single();
+              if (data) {
+                const dbTokens = (data as any).token ?? 0;
+                geminiKeyTokens[idx] = dbTokens;
+                if (currentKeyIndex === idx) {
+                  updateTokenCounter(0, dbTokens);
+                  const sel = document.getElementById("ai-key-select") as HTMLSelectElement | null;
+                  if (sel && sel.options[idx]) {
+                    const key = geminiApiKeys[idx];
+                    const provider = getKeyProvider(key);
+                    const icon = provider === "groq" ? "⚡" : "💎";
+                    const label = provider === "groq" ? "Groq" : "Gemini";
+                    sel.options[idx].textContent = `${icon} ${label} №${idx + 1} 🎫${fmtTokens(dbTokens)}`;
+                  }
+                }
+              }
+            } catch { /* silent */ }
+          })();
+        }
+      }
+
       await persistActiveKeyInDB();
       const chosenProvider = getKeyProvider(geminiApiKeys[idx]);
       console.log(`🔑 ${chosenProvider}: вручну обрано ключ №${idx + 1}`);

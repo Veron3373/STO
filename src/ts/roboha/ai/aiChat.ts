@@ -3007,7 +3007,9 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
 interface ParsedClientData {
   pib?: string; // ПІБ
   phone?: string; // Телефон
-  car?: string; // Марка авто
+  car?: string; // Марка+Модель авто (повна назва)
+  model?: string; // Тільки Модель (CIVIC, Camry, ...)
+  brand?: string; // Тільки Марка (Honda, Toyota, ...)
   carNumber?: string; // Номер авто
   vin?: string; // VIN код
   year?: string; // Рік випуску
@@ -3079,9 +3081,16 @@ function parseClientDataFromAI(text: string): ParsedClientData {
     if (phoneMatch) result.phone = phoneMatch[1].trim();
   }
 
-  // ── Авто (марка + модель) ──
+  // ── Модель (пріоритет — шукаємо модель окремо) ──
+  result.model = extractField(text, [/модель\s*[:：—–-]\s*(.+)/im]);
+
+  // ── Марка (окремо) ──
+  result.brand = extractField(text, [/марка\s*[:：—–-]\s*(.+)/im]);
+
+  // ── Авто (марка + модель разом) ──
   result.car = extractField(text, [
-    /(?:авто(?:мобіль)?|марка|модель|транспорт(?:ний\s*засіб)?)\s*[:：—–-]\s*(.+)/im,
+    /авто(?:мобіль)?\s*[:：—–-]\s*(.+)/im,
+    /транспорт(?:ний\s*засіб)?\s*[:：—–-]\s*(.+)/im,
     /марка\s*(?:та|і|\/)\s*модель\s*[:：—–-]\s*(.+)/im,
   ]);
 
@@ -3167,11 +3176,52 @@ function unlockFormButton(): void {
   btn.click();
 }
 
+/** Заповнює окремі поля авто (крім Автомобіль) з розпізнаних даних AI */
+function fillCarFieldsFromParsed(parsed: ParsedClientData): void {
+  const setVal = (id: string, val: string | undefined) => {
+    if (!val) return;
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    if (el) el.value = val;
+  };
+  setVal("car-number-input-create-sakaz_narad", parsed.carNumber);
+  setVal("car-vin-create-sakaz_narad", parsed.vin);
+  setVal("car-year-create-sakaz_narad", parsed.year);
+  setVal("car-engine-create-sakaz_narad", parsed.engine);
+  setVal("car-code-create-sakaz_narad", parsed.engineCode);
+  // Пальне — може бути select або input
+  if (parsed.fuel) {
+    const fuelEl = document.getElementById("car-fuel-create-sakaz_narad") as
+      | HTMLSelectElement
+      | HTMLInputElement
+      | null;
+    if (fuelEl) fuelEl.value = parsed.fuel;
+  }
+}
+
+/** Визначає що вводити в поле Автомобіль: Модель → Марка → Авто */
+function getCarSearchText(parsed: ParsedClientData): string {
+  return parsed.model || parsed.brand || parsed.car || "";
+}
+
+/** Вводить текст у поле Автомобіль, triggers input event + фокус для автокомплітера */
+function fillCarModelFieldAndFocus(text: string): void {
+  const carModelEl = document.getElementById(
+    "car-model-create-sakaz_narad",
+  ) as HTMLInputElement | null;
+  if (!carModelEl || !text) return;
+  carModelEl.value = text;
+  carModelEl.dispatchEvent(new Event("input", { bubbles: true }));
+  carModelEl.focus();
+}
+
 /** Відкриває картку клієнта та заповнює поля розпізнаними даними.
  *  Розумна логіка:
  *  1) Клієнт + авто знайдені в БД → підтягуємо дані, замок ЗАБЛОКОВАНИЙ
  *  2) Клієнт знайдений, авто НІ → підтягуємо клієнта, розблокуємо для введення авто
  *  3) Нічого не знайдено → розблокуємо, заповнюємо все з AI
+ *
+ *  ⚠️ Телефон НЕ заповнюємо з AI.
+ *  ⚠️ Поле Автомобіль заповнюємо ОСТАННІМ + фокус → щоб з'явився випадаючий список.
  */
 async function fillClientFormFromAI(aiText: string): Promise<void> {
   const parsed = parseClientDataFromAI(aiText);
@@ -3195,7 +3245,6 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
       .ilike("data->>ПІБ", `%${searchPib}%`)
       .limit(5);
     if (clients && clients.length > 0) {
-      // Точний збіг або перший результат
       foundClient =
         clients.find(
           (c: any) =>
@@ -3218,10 +3267,14 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
 
     let foundCar: { cars_id: string; data: any } | null = null;
     if (clientCars && clientCars.length > 0) {
-      // Порівнюємо по номеру авто, VIN, або назві авто
       const pNum = (parsed.carNumber || "").replace(/\s/g, "").toLowerCase();
       const pVin = (parsed.vin || "").toLowerCase();
-      const pCar = (parsed.car || "").toLowerCase();
+      const pCar = (
+        parsed.car ||
+        parsed.model ||
+        parsed.brand ||
+        ""
+      ).toLowerCase();
 
       for (const car of clientCars) {
         const d = car.data || {};
@@ -3229,7 +3282,6 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
         const dbVin = (d["Vincode"] || d["VIN"] || "").toLowerCase();
         const dbCar = (d["Авто"] || "").toLowerCase();
 
-        // Збіг по номеру, VIN або марці
         if (
           (pNum && dbNum && dbNum === pNum) ||
           (pVin && dbVin && dbVin === pVin) ||
@@ -3245,20 +3297,12 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
       // ── Сценарій 1: Клієнт + авто знайдені → заповнюємо все, замок ЗАБЛОКОВАНИЙ ──
       setSelectedIds(foundClient.client_id, foundCar.cars_id);
       fillCarFields(foundCar.data || {});
-      // Замок лишається заблокованим — це існуючий клієнт+авто
     } else {
-      // ── Сценарій 2: Клієнт є, авто НЕМАЄ → розблокуємо для введення авто ──
+      // ── Сценарій 2: Клієнт є, авто НЕМАЄ → розблокуємо, вводимо авто з AI ──
       unlockFormButton();
-      // Заповнюємо поля авто з AI (нове авто для існуючого клієнта)
-      fillCarFields({
-        Авто: parsed.car || "",
-        "Номер авто": parsed.carNumber || "",
-        Vincode: parsed.vin || "",
-        Рік: parsed.year || "",
-        Обʼєм: parsed.engine || "",
-        Пальне: parsed.fuel || "",
-        КодДВЗ: parsed.engineCode || "",
-      });
+      fillCarFieldsFromParsed(parsed);
+      // ОСТАННІМ — Автомобіль з фокусом для автокомплітера
+      fillCarModelFieldAndFocus(getCarSearchText(parsed));
     }
   } else {
     // ── Сценарій 3: Клієнта НЕМАЄ → розблокуємо, вводимо все з AI ──
@@ -3275,27 +3319,10 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
       }
     }
 
-    // Заповнюємо Телефон
-    if (parsed.phone) {
-      const phoneEl = document.getElementById(
-        "phone-create-sakaz_narad",
-      ) as HTMLInputElement | null;
-      if (phoneEl) {
-        phoneEl.value = parsed.phone;
-        phoneEl.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-    }
+    // ⚠️ Телефон НЕ заповнюємо з AI
 
-    // Заповнюємо поля авто
-    fillCarFields({
-      Авто: parsed.car || "",
-      "Номер авто": parsed.carNumber || "",
-      Vincode: parsed.vin || "",
-      Рік: parsed.year || "",
-      Обʼєм: parsed.engine || "",
-      Пальне: parsed.fuel || "",
-      КодДВЗ: parsed.engineCode || "",
-    });
+    // Заповнюємо поля авто (крім Автомобіль)
+    fillCarFieldsFromParsed(parsed);
 
     // Заповнюємо Джерело
     if (parsed.source) {
@@ -3312,6 +3339,9 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
       ) as HTMLInputElement | null;
       if (extraEl) extraEl.value = parsed.extra;
     }
+
+    // ОСТАННІМ — Автомобіль з фокусом для автокомплітера
+    fillCarModelFieldAndFocus(getCarSearchText(parsed));
   }
 
   // Закриваємо AI чат (щоб бачити картку)

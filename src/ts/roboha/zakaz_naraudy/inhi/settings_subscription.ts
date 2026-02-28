@@ -14,10 +14,19 @@ import {
   clearSettingsCache,
 } from "../../tablucya/users";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { enforcePageAccess } from "./page_access_guard";
 import { refreshActsTable } from "../../tablucya/tablucya";
 
 let settingsChannel: RealtimeChannel | null = null;
+
+// Дебаунс для повідомлення — щоб не спамило при множинніх змінах
+let _notifDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+function showSettingsNotification(): void {
+  if (_notifDebounceTimer) clearTimeout(_notifDebounceTimer);
+  _notifDebounceTimer = setTimeout(() => {
+    _notifDebounceTimer = null;
+    showNotification("Налаштування оновлено — перезавантажте сторінку", "info", 3500);
+  }, 800);
+}
 
 /**
  * Перевіряє чи потрібно оновлювати UI для поточного користувача
@@ -342,6 +351,9 @@ async function handleSettingsChange(payload: any): Promise<void> {
   const settingId = newRecord?.setting_id;
   if (!settingId) return;
 
+  // AI-специфічні колонки — не впливають на UI налаштувань, ігноруємо повністю
+  const AI_ONLY_COLUMNS = new Set(["API", "token", "date", "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0456"]);
+
   let changedColumn: string | undefined;
   if (eventType === "UPDATE" && oldRecord) {
     for (const key of Object.keys(newRecord)) {
@@ -352,6 +364,9 @@ async function handleSettingsChange(payload: any): Promise<void> {
     }
   }
 
+  // Якщо змінилась лише AI-колонка — пропускаємо, UI і нотифікація не потрібні
+  if (changedColumn && AI_ONLY_COLUMNS.has(changedColumn)) return;
+
   if (!shouldUpdateForCurrentUser(settingId, changedColumn)) {
     return;
   }
@@ -359,10 +374,8 @@ async function handleSettingsChange(payload: any): Promise<void> {
   await refreshSettingsCache();
   await updateUIBasedOnSettings();
 
-  // 🔐 КРИТИЧНО: Перевіряємо чи користувач ще має доступ до поточної сторінки
-  await enforcePageAccess();
-
-  showNotification("Налаштування оновлено адміністратором", "info", 3000);
+  // Одне повідомлення з дебаунсом (не спамить)
+  showSettingsNotification();
 }
 
 let settingsErrorLogged = false;

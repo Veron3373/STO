@@ -2030,6 +2030,8 @@ async function loadAiProKeys(modal: HTMLElement): Promise<void> {
     console.error("Помилка завантаження API ключів:", err);
     showNotification("Помилка завантаження API ключів", "error", 2000);
   }
+  // після завантаження — перевіряємо дублікати
+  checkDuplicateAiKeys(modal);
 }
 
 function createAiProKeyRow(num: number, settingId: number, value: string): HTMLElement {
@@ -2051,17 +2053,43 @@ function createAiProKeyRow(num: number, settingId: number, value: string): HTMLE
   `;
   const deleteBtn = row.querySelector(".ai-pro-key-delete") as HTMLButtonElement;
   deleteBtn.addEventListener("click", async () => {
-    // Очищаємо значення в БД
     await supabase
       .from("settings")
       .update({ Загальні: null })
       .eq("setting_id", settingId);
     row.remove();
-    // Перенумеруємо
     renumberAiProKeyRows(row.closest(".ai-pro-keys-inputs") as HTMLElement);
+    checkDuplicateAiKeys(row.closest(".ai-pro-keys-modal") as HTMLElement);
     resetGeminiKeysCache();
   });
+  // Перевірка дублікатів при вводі
+  const input = row.querySelector(".ai-pro-key-input") as HTMLInputElement;
+  input.addEventListener("input", () => {
+    checkDuplicateAiKeys(row.closest(".ai-pro-keys-modal") as HTMLElement);
+  });
   return row;
+}
+
+/** Підсвічує інпути дублікатних ключів світло-червоним фоном */
+function checkDuplicateAiKeys(modal: HTMLElement | null): void {
+  if (!modal) return;
+  const inputs = modal.querySelectorAll<HTMLInputElement>(".ai-pro-key-input");
+  const seen = new Map<string, HTMLInputElement[]>();
+  // Групуємо по значенню
+  inputs.forEach((inp) => {
+    const val = inp.value.trim();
+    if (!val) return;
+    if (!seen.has(val)) seen.set(val, []);
+    seen.get(val)!.push(inp);
+  });
+  // Знімаємо старе підсвічування
+  inputs.forEach((inp) => inp.classList.remove("ai-pro-key-duplicate"));
+  // Ставимо нове — тільки там де є дублі
+  seen.forEach((group) => {
+    if (group.length > 1) {
+      group.forEach((inp) => inp.classList.add("ai-pro-key-duplicate"));
+    }
+  });
 }
 
 function renumberAiProKeyRows(container: HTMLElement | null): void {
@@ -2076,6 +2104,13 @@ function renumberAiProKeyRows(container: HTMLElement | null): void {
 async function saveAiProKeys(modal: HTMLElement): Promise<void> {
   try {
     const rows = modal.querySelectorAll(".ai-pro-key-row");
+    // Перевіряємо дублікати перед збереженням
+    checkDuplicateAiKeys(modal);
+    const hasDuplicates = modal.querySelector(".ai-pro-key-duplicate") !== null;
+    if (hasDuplicates) {
+      showNotification("Знайдено однакові ключі (підсвічено червоним). Видаліть дублікати!", "error", 3000);
+      return;
+    }
 
     for (const row of Array.from(rows)) {
       const settingId = parseInt((row as HTMLElement).dataset.settingId || "0");
@@ -2105,7 +2140,8 @@ async function saveAiProKeys(modal: HTMLElement): Promise<void> {
       }
     }
 
-    showNotification("API ключі збережено!", "success", 1500);
+    // Одне повідомлення після всіх збережень
+    showNotification(`✅ API ключі збережено (${rows.length})`, "success", 1500);
     resetGeminiKeysCache();
   } catch (err) {
     console.error("Помилка збереження API ключів:", err);

@@ -1242,6 +1242,40 @@
     }
   }
 
+  // ─── Дублікат ключа (підсвічення) ──────────────────────────
+  .ai-pro-key-duplicate {
+    background: rgba(229, 57, 53, 0.08) !important;
+    border-color: #ef9a9a !important;
+    color: #c62828;
+    animation: duplicateShake 0.3s ease;
+
+    &::placeholder {
+      color: #ef9a9a;
+    }
+  }
+
+  @keyframes duplicateShake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    25% {
+      transform: translateX(-4px);
+    }
+
+    75% {
+      transform: translateX(4px);
+    }
+  }
+
+  // Рядок з дублікатом — підсвічуємо також рамку рядка
+  .ai-pro-key-row:has(.ai-pro-key-duplicate) {
+    border-color: rgba(229, 57, 53, 0.35) !important;
+    background: rgba(229, 57, 53, 0.03);
+  }
+
   // ─── Add button ────────────────────────────────────────────
   .ai-pro-add-btn {
     display: flex;

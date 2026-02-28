@@ -208,15 +208,20 @@ let aiContextLevel: AIContextLevel =
 /** Якщо true — ключ зафіксовано, ротація при 429 вимкнена */
 let lockKey: boolean = localStorage.getItem("aiLockKey") === "true";
 
+/** Якщо true — Gemini використовує Google Search Grounding (доступ до інтернету) */
+let aiSearchEnabled: boolean =
+  localStorage.getItem("aiSearchEnabled") === "true";
+
 /** Завантажує налаштування AI з БД (settings.API):
  *  setting_id=1 → API: null=light, false=medium, true=heavy
- *  setting_id=2 → API: true=зафіксовано, false=ні */
+ *  setting_id=2 → API: true=зафіксовано, false=ні
+ *  setting_id=3 → date: стан Google Search (будь-яке значення=увімкнено, null=вимкнено) */
 async function loadAISettingsFromDB(): Promise<void> {
   try {
     const { data, error } = await supabase
       .from("settings")
-      .select("setting_id, API")
-      .in("setting_id", [1, 2]);
+      .select("setting_id, API, date")
+      .in("setting_id", [1, 2, 3]);
     if (error || !data) return;
     for (const row of data) {
       if (row.setting_id === 1) {
@@ -233,6 +238,13 @@ async function loadAISettingsFromDB(): Promise<void> {
       if (row.setting_id === 2) {
         lockKey = row.API === true;
         localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
+      }
+      if (row.setting_id === 3) {
+        aiSearchEnabled = !!row.date;
+        localStorage.setItem(
+          "aiSearchEnabled",
+          aiSearchEnabled ? "true" : "false",
+        );
       }
     }
   } catch {
@@ -258,6 +270,19 @@ async function saveAIContextLevelToDB(level: AIContextLevel): Promise<void> {
 async function saveAILockKeyToDB(locked: boolean): Promise<void> {
   try {
     await supabase.from("settings").update({ API: locked }).eq("setting_id", 2);
+  } catch {
+    /* silent */
+  }
+}
+
+/** Зберігає стан Google Search в settings.date (setting_id=3) */
+async function saveAISearchToDB(enabled: boolean): Promise<void> {
+  try {
+    const dateValue = enabled ? new Date().toISOString() : null;
+    await supabase
+      .from("settings")
+      .update({ date: dateValue })
+      .eq("setting_id", 3);
   } catch {
     /* silent */
   }
@@ -2565,7 +2590,7 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
         : aiContextLevel === "medium"
           ? 6144
           : 4096;
-    const geminiRequestBody = JSON.stringify({
+    const geminiRequest: any = {
       contents,
       generationConfig: {
         temperature: 0.5,
@@ -2573,7 +2598,12 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
         topP: 0.9,
       },
       systemInstruction: { parts: [{ text: systemPromptText }] },
-    });
+    };
+    // 🌐 Google Search Grounding — додаємо доступ до інтернету якщо увімкнено
+    if (aiSearchEnabled) {
+      geminiRequest.tools = [{ googleSearch: {} }];
+    }
+    const geminiRequestBody = JSON.stringify(geminiRequest);
 
     // === Формат Groq (OpenAI-сумісний, компактний) ===
     const groqMessages: any[] = [{ role: "system", content: groqSystemPrompt }];
@@ -3119,6 +3149,11 @@ export async function createAIChatModal(): Promise<void> {
     if (existingLock) existingLock.checked = lockKey;
     const existingBtn = document.querySelector(".ai-lock-key-btn");
     if (existingBtn) existingBtn.textContent = lockKey ? "ВКЛ" : "ВИКЛ";
+    const existingSearch = document.getElementById("ai-search-toggle");
+    if (existingSearch) {
+      existingSearch.textContent = aiSearchEnabled ? "🌐" : "🚫";
+      existingSearch.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
+    }
 
     document.getElementById(CHAT_MODAL_ID)!.classList.remove("hidden");
     // При кожному відкритті — підвантажуємо ключі та показуємо активний
@@ -3192,7 +3227,7 @@ export async function createAIChatModal(): Promise<void> {
           <textarea
             id="ai-chat-input"
             class="ai-chat-input"
-            placeholder="Запитай про акти, виручку, слюсарів... (Ctrl+V — вставити скріншот)"
+            placeholder="Запитай про акти, слюсарів... (Ctrl+V — вставити скріншот)"
             rows="1"
           ></textarea>
           <button id="ai-chat-send-btn" class="ai-chat-send-btn" title="Відправити">
@@ -3392,6 +3427,26 @@ function initAIChatHandlers(modal: HTMLElement): void {
       aiContextLevel = levelSelect.value as AIContextLevel;
       localStorage.setItem("aiContextLevel", aiContextLevel);
       saveAIContextLevelToDB(aiContextLevel);
+    });
+  }
+
+  // ── 🌐 Перемикач Google Search ──
+  const searchToggle = modal.querySelector(
+    "#ai-search-toggle",
+  ) as HTMLButtonElement | null;
+  if (searchToggle) {
+    searchToggle.addEventListener("click", () => {
+      aiSearchEnabled = !aiSearchEnabled;
+      localStorage.setItem(
+        "aiSearchEnabled",
+        aiSearchEnabled ? "true" : "false",
+      );
+      saveAISearchToDB(aiSearchEnabled);
+      searchToggle.textContent = aiSearchEnabled ? "🌐" : "🚫";
+      searchToggle.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
+      searchToggle.title = aiSearchEnabled
+        ? "🌐 Пошук Google увімкнено"
+        : "🚫 Пошук Google вимкнено";
     });
   }
 

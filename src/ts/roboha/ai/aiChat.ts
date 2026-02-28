@@ -3787,6 +3787,11 @@ async function refreshSidebarChats(
       // Замінюємо 🗑️ на червоний кружок з відліком
       deleteBtn.innerHTML = "";
       deleteBtn.classList.add("ai-sidebar-delete--counting");
+      // Завжди показувати actions під час відліку
+      const actionsEl = deleteBtn.closest(
+        ".ai-sidebar-chat-actions",
+      ) as HTMLElement;
+      if (actionsEl) actionsEl.classList.add("ai-sidebar-actions--counting");
 
       const countdown = document.createElement("span");
       countdown.className = "ai-delete-countdown";
@@ -3796,7 +3801,7 @@ async function refreshSidebarChats(
       // Кнопка скасування (зелений кружок з ✚)
       const cancelBtn = document.createElement("span");
       cancelBtn.className = "ai-delete-cancel";
-      cancelBtn.textContent = "✚";
+      cancelBtn.textContent = "♻️";
       cancelBtn.title = "Скасувати видалення";
       deleteBtn.appendChild(cancelBtn);
 
@@ -3839,6 +3844,11 @@ async function refreshSidebarChats(
         clearInterval(interval);
         deleteBtn.dataset.counting = "";
         deleteBtn.classList.remove("ai-sidebar-delete--counting");
+        const actionsEl2 = deleteBtn.closest(
+          ".ai-sidebar-chat-actions",
+        ) as HTMLElement;
+        if (actionsEl2)
+          actionsEl2.classList.remove("ai-sidebar-actions--counting");
         deleteBtn.innerHTML = "🗑️";
         if (renameBtn) renameBtn.style.display = "";
       });

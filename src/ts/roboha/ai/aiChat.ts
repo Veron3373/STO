@@ -3444,7 +3444,7 @@ async function refreshSidebarChats(
     })
     .join("");
 
-  // Обробники кліків
+  // Обробники кліків — одинарний клік відкриває чат + закриває sidebar
   listEl.querySelectorAll(".ai-sidebar-chat-item").forEach((el) => {
     el.addEventListener("click", async (e) => {
       const target = e.target as HTMLElement;
@@ -3454,22 +3454,63 @@ async function refreshSidebarChats(
       )
         return;
       const chatId = parseInt((el as HTMLElement).dataset.chatId || "0");
-      if (chatId) await openChat(chatId, messagesEl, quickPromptsEl, listEl);
+      if (chatId) {
+        await openChat(chatId, messagesEl, quickPromptsEl, listEl);
+        // Автоматично закриваємо sidebar після відкриття чату
+        const sidebarPanel = document.getElementById("ai-chat-sidebar");
+        if (sidebarPanel) sidebarPanel.classList.add("hidden");
+        sidebarOpen = false;
+      }
     });
   });
 
-  // Перейменування
+  // Перейменування — inline редагування прямо в sidebar
   listEl.querySelectorAll(".ai-sidebar-rename").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const chatId = parseInt((btn as HTMLElement).dataset.chatId || "0");
       const chat = chatList.find((c) => c.chat_id === chatId);
       if (!chat) return;
-      const newTitle = prompt("Нова назва чату:", chat.title);
-      if (newTitle && newTitle.trim()) {
-        await renameChat(chatId, newTitle.trim());
+
+      // Знаходимо елемент з назвою
+      const chatItem = (btn as HTMLElement).closest(".ai-sidebar-chat-item");
+      const titleEl = chatItem?.querySelector(
+        ".ai-sidebar-chat-title",
+      ) as HTMLElement | null;
+      if (!titleEl) return;
+
+      // Створюємо input для inline-редагування
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "ai-sidebar-rename-input";
+      input.value = chat.title;
+      input.maxLength = 80;
+
+      // Замінюємо title на input
+      titleEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      // Збереження
+      const saveRename = async () => {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== chat.title) {
+          await renameChat(chatId, newTitle);
+        }
         await refreshSidebarChats(listEl, messagesEl, quickPromptsEl);
-      }
+      };
+
+      input.addEventListener("blur", saveRename, { once: true });
+      input.addEventListener("keydown", (ke) => {
+        if (ke.key === "Enter") {
+          ke.preventDefault();
+          input.blur();
+        }
+        if (ke.key === "Escape") {
+          input.value = chat.title;
+          input.blur();
+        }
+      });
     });
   });
 

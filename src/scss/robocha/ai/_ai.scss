@@ -973,6 +973,25 @@
   }
 }
 
+// ── Inline input перейменування ──
+.ai-sidebar-rename-input {
+  width: 100%;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  padding: 3px 8px;
+  border: 1.5px solid #667eea;
+  border-radius: 6px;
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: #764ba2;
+  }
+}
+
 .ai-chat-tabs {
   display: flex;
   background: #f8f9fb;

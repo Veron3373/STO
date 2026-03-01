@@ -4170,7 +4170,7 @@ async function loadDbIndicator(): Promise<void> {
     const { sizeMb } = await getDatabaseStats();
     if (sizeMb < 0) {
       // RPC-функція не створена
-      el.innerHTML = `<span class="ai-storage-text">🗄️ БД: н/д</span>`;
+      el.innerHTML = `<span class="ai-storage-text">🗄️н/д</span>`;
       el.title = "Створіть RPC-функцію get_db_size() у Supabase";
       return;
     }

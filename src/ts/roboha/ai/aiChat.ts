@@ -14,6 +14,7 @@ import {
   saveMessage as dbSaveMessage,
   uploadPhotos,
   deleteOldChats,
+  getStorageStats,
   type AiChat,
 } from "./aiChatStorage";
 import {
@@ -696,6 +697,14 @@ function isTrivialQuery(query: string): boolean {
     return true;
   }
   return false;
+}
+
+/** 🌐 Визначає чи потрібен інтернет-пошук для цього запиту */
+function needsWebSearch(query: string): boolean {
+  const q = query.toLowerCase();
+  return /інтернет|пошукай|знайди|знайти|де купити|скільки коштує|ціна на|посилання|купити|замовити|магазин|артикул|каталожний|номер деталі|дай номер|пильовик|амортизатор|фільтр|колодк|ремінь|підшипник|запчастин|форсунк|свічк|гальмівн|радіатор|помпа|генератор|стартер|термостат|диск|глушник|каталізатор|турбін|рульов|тяг|наконечник|кульов|шарнір|масло |exist\.ua|avto\.pro|autodoc|dok\.ua|ecat/.test(
+    q,
+  );
 }
 
 function analyzeQuery(query: string): {
@@ -2076,24 +2085,8 @@ async function gatherSTOContext(
         .order("data", { ascending: false })
         .limit(10);
 
-      let completeRes: { data: any[] | null; error: any } = {
-        data: [],
-        error: null,
-      };
-      try {
-        completeRes = await supabase
-          .from("slusar_complete_notifications")
-          .select("act_id, pruimalnyk")
-          .eq("delit", false)
-          .eq("viewed", false)
-          .limit(10);
-      } catch {
-        /* таблиця може бути не опублікована */
-      }
-
       const notifs = notifRes.data || [];
-      const completes =
-        !completeRes.error && completeRes.data ? completeRes.data : [];
+      const completes: any[] = []; // slusar_complete_notifications — опціональна таблиця, не запитуємо щоб уникнути 404
 
       if (notifs.length > 0) {
         context += `\n=== СПОВІЩЕННЯ ЗМІН (${notifs.length}) ===\n`;
@@ -2249,6 +2242,8 @@ async function callGemini(
   try {
     // 💡 Тривіальні запити — без контексту БД (економія ~95% токенів)
     const trivial = isTrivialQuery(userMessage);
+    // 🌐 Визначаємо чи потрібен інтернет-пошук для цього конкретного запиту
+    const wantsSearch = aiSearchEnabled && needsWebSearch(userMessage);
     let enrichedPrompt: string;
     if (trivial) {
       enrichedPrompt = `СЬОГОДНІ: ${new Date().toLocaleDateString("uk-UA")}\n\n${userMessage}`;
@@ -2691,11 +2686,15 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
       },
       systemInstruction: { parts: [{ text: systemPromptText }] },
     };
-    // 🌐 Google Search Grounding — додаємо доступ до інтернету якщо увімкнено
-    if (aiSearchEnabled) {
+    // 🌐 Google Search Grounding — додаємо тільки коли запит реально потребує пошуку
+    if (wantsSearch) {
       geminiRequest.tools = [{ googleSearch: {} }];
     }
     const geminiRequestBody = JSON.stringify(geminiRequest);
+    // 🔄 Запасний варіант без пошуку (якщо Gemini поверне порожню відповідь з пошуком)
+    const geminiRequestNoSearch = wantsSearch
+      ? JSON.stringify({ ...JSON.parse(geminiRequestBody), tools: undefined })
+      : null;
 
     // === Формат Groq (OpenAI-сумісний, компактний) ===
     const groqMessages: any[] = [{ role: "system", content: groqSystemPrompt }];
@@ -2808,12 +2807,39 @@ post_arxiv(бронювання,slyusar_id,status), faktura, shops(постач�
             usageTokens = data.usageMetadata.totalTokenCount;
           // Логування для дебагу якщо відповідь порожня
           if (!text) {
-            // Виводимо повну структуру відповіді для діагностики
-            const debugInfo = JSON.stringify(data, null, 2).slice(0, 3000);
             console.warn(
-              "[AI] Gemini response without text. Full response:",
-              debugInfo,
+              "[AI] Gemini response without text.",
+              JSON.stringify(data, null, 2).slice(0, 1500),
             );
+            // 🔄 Якщо був увімкнений пошук — повторюємо без нього
+            if (wantsSearch && geminiRequestNoSearch && provider === "gemini") {
+              console.info("[AI] Повтор без Google Search...");
+              try {
+                const retryResp = await fetch(
+                  `${GEMINI_API_URL}?key=${apiKey}`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: geminiRequestNoSearch,
+                  },
+                );
+                if (retryResp.ok) {
+                  const retryData = await retryResp.json();
+                  const retryCandidate = retryData?.candidates?.[0];
+                  const retryParts = retryCandidate?.content?.parts;
+                  if (Array.isArray(retryParts) && retryParts.length > 0) {
+                    const retryTexts = retryParts
+                      .map((p: any) => p.text)
+                      .filter(Boolean);
+                    if (retryTexts.length > 0) text = retryTexts.join("\n");
+                  }
+                  if (retryData?.usageMetadata?.totalTokenCount)
+                    usageTokens = retryData.usageMetadata.totalTokenCount;
+                }
+              } catch {
+                /* retry failed silently */
+              }
+            }
           }
         }
 
@@ -4084,6 +4110,57 @@ function generateChatTitle(text: string): string {
 }
 
 // ============================================================
+// 📂 ІНДИКАТОР СХОВИЩА ФОТО
+// ============================================================
+
+/** Supabase Free = 1 GB Storage (окремо від БД) */
+const STORAGE_LIMIT_MB = 1024;
+
+async function loadStorageIndicator(): Promise<void> {
+  const el = document.getElementById("ai-chat-storage-info");
+  if (!el) return;
+  try {
+    const { totalFiles, totalSizeMb } = await getStorageStats();
+    const pct = Math.min(
+      100,
+      Math.round((totalSizeMb / STORAGE_LIMIT_MB) * 100),
+    );
+    const sizeStr =
+      totalSizeMb >= 1024
+        ? `${(totalSizeMb / 1024).toFixed(2)} GB`
+        : `${totalSizeMb.toFixed(1)} MB`;
+    const limitStr =
+      STORAGE_LIMIT_MB >= 1024
+        ? `${(STORAGE_LIMIT_MB / 1024).toFixed(0)} GB`
+        : `${STORAGE_LIMIT_MB} MB`;
+
+    // Колір залежить від заповненості
+    let color = "#4caf50"; // зелений
+    let emoji = "🟢";
+    if (pct >= 90) {
+      color = "#f44336";
+      emoji = "🔴";
+    } else if (pct >= 70) {
+      color = "#ff9800";
+      emoji = "🟠";
+    } else if (pct >= 50) {
+      color = "#ffeb3b";
+      emoji = "🟡";
+    }
+
+    el.innerHTML = `
+      <span class="ai-storage-text" style="color:${color}">${emoji} ${sizeStr} / ${limitStr} (${pct}%) · ${totalFiles} фото</span>
+      <div class="ai-storage-bar">
+        <div class="ai-storage-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+    `;
+    el.title = `Сховище фото: ${sizeStr} з ${limitStr} (${pct}%)\n${totalFiles} файлів`;
+  } catch {
+    el.innerHTML = `<span class="ai-storage-text">📂 —</span>`;
+  }
+}
+
+// ============================================================
 // СТВОРЕННЯ МОДАЛКИ
 // ============================================================
 
@@ -4127,7 +4204,9 @@ export async function createAIChatModal(): Promise<void> {
           <div class="ai-chat-avatar">🤖</div>
           <div class="ai-chat-header-text">
             <div class="ai-chat-title">Атлас AI</div>
-
+            <div class="ai-chat-storage-info" id="ai-chat-storage-info" title="Використання сховища фото">
+              <span class="ai-storage-text">📂 ...</span>
+            </div>
           </div>
         </div>
         <div class="ai-chat-header-actions">
@@ -4244,6 +4323,9 @@ export async function createAIChatModal(): Promise<void> {
       updateChatCountBadge(chats.length);
     }
   });
+
+  // 📂 Завантажуємо статистику сховища фото
+  loadStorageIndicator();
 
   // Підвантажуємо ключі при відкритті + перевіряємо скидання токенів
   // + підписуємося на Realtime (всі вкладки отримають оновлення одночасно)

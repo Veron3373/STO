@@ -4151,20 +4151,20 @@ async function loadStorageIndicator(): Promise<void> {
 
     // Колір залежить від заповненості
     let color = "#4caf50"; // зелений
-    let emoji = "🟢";
+/*     let emoji = "🟢"; */
     if (pct >= 90) {
       color = "#f44336";
-      emoji = "🔴";
+  /*     emoji = "🔴"; */
     } else if (pct >= 70) {
       color = "#ff9800";
-      emoji = "🟠";
+  /*     emoji = "🟠"; */
     } else if (pct >= 50) {
       color = "#ffeb3b";
-      emoji = "🟡";
+  /*     emoji = "🟡"; */
     }
 
     el.innerHTML = `
-      <span class="ai-storage-text" style="color:${color}">${emoji} ${sizeStr} / ${limitStr} (${pct}%) · ${totalFiles} фото</span>
+      <span class="ai-storage-text" style="color:${color}">🗂️ ${sizeStr} / ${limitStr} (${pct}%) · ${totalFiles} фото</span>
       <div class="ai-storage-bar">
         <div class="ai-storage-bar-fill" style="width:${pct}%;background:${color}"></div>
       </div>
@@ -4197,20 +4197,20 @@ async function loadDbIndicator(): Promise<void> {
         : `${DB_LIMIT_MB} MB`;
 
     let color = "#4caf50";
-    let emoji = "🟢";
+    /* let emoji = "🟢"; */
     if (pct >= 90) {
       color = "#f44336";
-      emoji = "🔴";
+      /* emoji = "🔴"; */
     } else if (pct >= 70) {
       color = "#ff9800";
-      emoji = "🟠";
+      /* emoji = "🟠"; */
     } else if (pct >= 50) {
       color = "#ffeb3b";
-      emoji = "🟡";
+      /* emoji = "🟡"; */
     }
 
     el.innerHTML = `
-      <span class="ai-storage-text" style="color:${color}">${emoji} ${sizeStr} / ${limitStr} (${pct}%)</span>
+      <span class="ai-storage-text" style="color:${color}">🛢️ ${sizeStr} / ${limitStr} (${pct}%)</span>
       <div class="ai-storage-bar">
         <div class="ai-storage-bar-fill" style="width:${pct}%;background:${color}"></div>
       </div>

@@ -286,18 +286,39 @@ function removeToast(toast: HTMLElement, toastId: string): void {
 /**
  * Простий звук нотифікації
  */
-function playRealtimeSound(type: "insert" | "update" | "delete"): void {
+let _realtimeAudioCtx: AudioContext | null = null;
+function _getRealtimeAudioCtx(): AudioContext | null {
   try {
-    const AudioCtxClass =
-      (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtxClass) return;
-
-    const ctx = new AudioCtxClass();
-    if (ctx.state === "suspended") {
-      ctx.resume().catch(() => {
+    if (!_realtimeAudioCtx) {
+      const Ctx =
+        (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return null;
+      _realtimeAudioCtx = new Ctx();
+    }
+    if (_realtimeAudioCtx && _realtimeAudioCtx.state === "suspended") {
+      _realtimeAudioCtx.resume().catch(() => {
         /* silent */
       });
     }
+    return _realtimeAudioCtx;
+  } catch {
+    return null;
+  }
+}
+// Активуємо AudioContext при першому кліку
+document.addEventListener(
+  "click",
+  () => {
+    _getRealtimeAudioCtx();
+  },
+  { once: true },
+);
+
+function playRealtimeSound(type: "insert" | "update" | "delete"): void {
+  try {
+    const ctx = _getRealtimeAudioCtx();
+    if (!ctx || ctx.state === "suspended") return;
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 

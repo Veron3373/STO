@@ -137,16 +137,37 @@ export function showRealtimeActNotification(
   playNotificationSound(isAdded);
 }
 
-function playNotificationSound(isAdded: boolean) {
+let _notifAudioCtx: AudioContext | null = null;
+function _getNotifAudioCtx(): AudioContext | null {
   try {
-    const audioCtx = new (
-      window.AudioContext || (window as any).webkitAudioContext
-    )();
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume().catch(() => {
+    if (!_notifAudioCtx) {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return null;
+      _notifAudioCtx = new Ctx();
+    }
+    if (_notifAudioCtx.state === "suspended") {
+      _notifAudioCtx.resume().catch(() => {
         /* silent */
       });
     }
+    return _notifAudioCtx;
+  } catch {
+    return null;
+  }
+}
+// Активуємо AudioContext при першому кліку користувача
+document.addEventListener(
+  "click",
+  () => {
+    _getNotifAudioCtx();
+  },
+  { once: true },
+);
+
+function playNotificationSound(isAdded: boolean) {
+  try {
+    const audioCtx = _getNotifAudioCtx();
+    if (!audioCtx || audioCtx.state === "suspended") return;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);

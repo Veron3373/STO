@@ -220,6 +220,10 @@ const SURNAME_SUFFIXES = [
   "ович",
   "евич",
   "ейчук",
+  "авець",
+  "евець",
+  "івець",
+  "ець",
   "ов",
   "ев",
   "єв",
@@ -899,18 +903,22 @@ function looksLikeSurname(word: string): boolean {
   if (word.length < 3) return false;
   const lower = word.toLowerCase();
 
-  // Перша буква велика → ймовірно прізвище
+  // Перша буква велика → ймовірно прізвище (пошук по ПІБ клієнта)
+  // Якщо з малої → НЕ прізвище → буде "text" пошук по всіх полях
   const isCapitalized =
     word[0] === word[0].toUpperCase() && word[0] !== word[0].toLowerCase();
+  if (!isCapitalized) return false;
 
+  // Перевіряємо суфікси прізвищ
   for (const suffix of SURNAME_SUFFIXES) {
     if (lower.endsWith(suffix) && lower.length > suffix.length + 1) {
-      return true;
+      const isBrand = CAR_BRANDS.some((b) => b.toLowerCase() === lower);
+      if (!isBrand) return true;
     }
   }
 
   // Якщо з великої букви і довжина >= 4 і це не марка авто
-  if (isCapitalized && word.length >= 4) {
+  if (word.length >= 4) {
     const isBrand = CAR_BRANDS.some((b) => b.toLowerCase() === lower);
     if (!isBrand) return true;
   }

@@ -283,6 +283,40 @@ export async function deleteOldChats(userId: string, days = 90): Promise<void> {
 }
 
 // ============================================================
+// МОНІТОРИНГ DATABASE
+// ============================================================
+
+/**
+ * Отримати розмір бази даних через RPC-функцію get_db_size.
+ * ⚠️ Потрібно створити функцію в Supabase SQL Editor:
+ *
+ * CREATE OR REPLACE FUNCTION get_db_size()
+ * RETURNS bigint
+ * LANGUAGE sql
+ * SECURITY DEFINER
+ * AS $$
+ *   SELECT pg_database_size(current_database());
+ * $$;
+ * GRANT EXECUTE ON FUNCTION get_db_size() TO anon, authenticated;
+ *
+ * Повертає розмір у МБ.
+ */
+export async function getDatabaseStats(): Promise<{ sizeMb: number }> {
+  try {
+    const { data, error } = await supabase.rpc("get_db_size");
+    if (error || data === null || data === undefined) {
+      console.warn("getDatabaseStats: RPC error or no data", error);
+      return { sizeMb: -1 }; // -1 = функція не створена
+    }
+    // data — bigint (байти)
+    const bytes = typeof data === "number" ? data : Number(data);
+    return { sizeMb: Math.round((bytes / 1024 / 1024) * 100) / 100 };
+  } catch {
+    return { sizeMb: -1 };
+  }
+}
+
+// ============================================================
 // МОНІТОРИНГ STORAGE
 // ============================================================
 

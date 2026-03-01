@@ -15,6 +15,7 @@ import {
   uploadPhotos,
   deleteOldChats,
   getStorageStats,
+  getDatabaseStats,
   type AiChat,
 } from "./aiChatStorage";
 import {
@@ -4115,6 +4116,8 @@ function generateChatTitle(text: string): string {
 
 /** Supabase Free = 1 GB Storage (окремо від БД) */
 const STORAGE_LIMIT_MB = 1024;
+/** Supabase Free = 500 MB Database */
+const DB_LIMIT_MB = 500;
 
 async function loadStorageIndicator(): Promise<void> {
   const el = document.getElementById("ai-chat-storage-info");
@@ -4157,6 +4160,52 @@ async function loadStorageIndicator(): Promise<void> {
     el.title = `Сховище фото: ${sizeStr} з ${limitStr} (${pct}%)\n${totalFiles} файлів`;
   } catch {
     el.innerHTML = `<span class="ai-storage-text">📂 —</span>`;
+  }
+}
+
+async function loadDbIndicator(): Promise<void> {
+  const el = document.getElementById("ai-chat-db-info");
+  if (!el) return;
+  try {
+    const { sizeMb } = await getDatabaseStats();
+    if (sizeMb < 0) {
+      // RPC-функція не створена
+      el.innerHTML = `<span class="ai-storage-text">🗄️ БД: н/д</span>`;
+      el.title = "Створіть RPC-функцію get_db_size() у Supabase";
+      return;
+    }
+    const pct = Math.min(100, Math.round((sizeMb / DB_LIMIT_MB) * 100));
+    const sizeStr =
+      sizeMb >= 1024
+        ? `${(sizeMb / 1024).toFixed(2)} GB`
+        : `${sizeMb.toFixed(1)} MB`;
+    const limitStr =
+      DB_LIMIT_MB >= 1024
+        ? `${(DB_LIMIT_MB / 1024).toFixed(0)} GB`
+        : `${DB_LIMIT_MB} MB`;
+
+    let color = "#4caf50";
+    let emoji = "🟢";
+    if (pct >= 90) {
+      color = "#f44336";
+      emoji = "🔴";
+    } else if (pct >= 70) {
+      color = "#ff9800";
+      emoji = "🟠";
+    } else if (pct >= 50) {
+      color = "#ffeb3b";
+      emoji = "🟡";
+    }
+
+    el.innerHTML = `
+      <span class="ai-storage-text" style="color:${color}">${emoji} БД: ${sizeStr} / ${limitStr} (${pct}%)</span>
+      <div class="ai-storage-bar">
+        <div class="ai-storage-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+    `;
+    el.title = `База даних: ${sizeStr} з ${limitStr} (${pct}%)`;
+  } catch {
+    el.innerHTML = `<span class="ai-storage-text">🗄️ —</span>`;
   }
 }
 
@@ -4206,6 +4255,9 @@ export async function createAIChatModal(): Promise<void> {
             <div class="ai-chat-title">Атлас AI</div>
             <div class="ai-chat-storage-info" id="ai-chat-storage-info" title="Використання сховища фото">
               <span class="ai-storage-text">📂 ...</span>
+            </div>
+            <div class="ai-chat-storage-info" id="ai-chat-db-info" title="Використання бази даних">
+              <span class="ai-storage-text">🗄️ ...</span>
             </div>
           </div>
         </div>
@@ -4324,8 +4376,9 @@ export async function createAIChatModal(): Promise<void> {
     }
   });
 
-  // 📂 Завантажуємо статистику сховища фото
+  // 📂 Завантажуємо статистику сховища фото + БД
   loadStorageIndicator();
+  loadDbIndicator();
 
   // Підвантажуємо ключі при відкритті + перевіряємо скидання токенів
   // + підписуємося на Realtime (всі вкладки отримають оновлення одночасно)

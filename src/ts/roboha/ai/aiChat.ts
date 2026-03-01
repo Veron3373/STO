@@ -2292,20 +2292,33 @@ async function callGemini(
 
 🏪 ПРІОРИТЕТНІ САЙТИ для пошуку запчастин (шукай САМЕ на цих сайтах):
 1. exist.ua — https://exist.ua/uk/
-2. avtopro.ua — https://avtopro.ua/
-3. ecat.ua — https://www.ecat.ua/
-4. autotechnics.ua — https://autotechnics.ua/
-5. intercars.com.ua — https://intercars.com.ua/
+2. avto.pro — https://avto.pro/
+3. avtopro.ua — https://avtopro.ua/
+4. ecat.ua — https://www.ecat.ua/
+5. autotechnics.ua — https://autotechnics.ua/
+6. intercars.com.ua — https://intercars.com.ua/
+7. zapchastizaz.com.ua — https://zapchastizaz.com.ua/
+8. elmir.ua — https://elmir.ua/
+9. automaslo.com — https://automaslo.com/
+10. autodoc.co.uk — https://autodoc.co.uk/
+11. trodo.com — https://trodo.com/
+12. autoklad.ua — https://autoklad.ua/
+13. dok.ua — https://dok.ua/
+14. spareto.com — https://spareto.com/
+15. avtostok.pro — https://avtostok.pro/
+
+⛔ ЗАБОРОНА: НЕ шукай і НЕ давай посилання на сайти з доменом .ru та інші НЕукраїнські домени.
+Шукай ТІЛЬКИ на українських сайтах (.ua, .com.ua, .pro, .com, .co.uk з вказаного списку).
 
 📌 ОБОВ'ЯЗКОВО:
-1. При пошуку деталей/запчастин — шукай САМЕ на вказаних 5 сайтах
+1. При пошуку деталей/запчастин — шукай САМЕ на вказаних сайтах
 2. Надавай ПРЯМІ ПОСИЛАННЯ на сторінки товарів на цих сайтах
 3. Порівнюй ціни з різних магазинів (мінімум 2-3 сайти)
 4. Формат відповіді для запчастин:
    🔩 Назва деталі — Артикул
    💰 exist.ua: XXX грн — [посилання]
-   💰 avtopro.ua: XXX грн — [посилання]
-   💰 ecat.ua: XXX грн — [посилання]
+   💰 avto.pro: XXX грн — [посилання]
+   💰 dok.ua: XXX грн — [посилання]
 5. Якщо запитують "знайди", "пошукай", "скільки коштує", "де купити" — ЗАВЖДИ шукай в інтернеті
 6. Вказуй актуальність знайденої інформації
 `
@@ -3118,7 +3131,7 @@ function hasClientData(text: string): boolean {
   const t = text.toLowerCase();
   // ⛔ Якщо це відповідь про запчастини/деталі з інтернету — НЕ показуємо кнопку
   const partsMarkers =
-    /exist\.ua|avtopro\.ua|ecat\.ua|autotechnics\.ua|intercars\.com|запчастин|артикул|каталожн|втулка|фільтр|колодк|підшипник|амортизатор|ремінь|de\s*купити|ressormarket/i;
+    /exist\.ua|avto\.pro|avtopro\.ua|ecat\.ua|autotechnics\.ua|intercars\.com|zapchastizaz|elmir\.ua|automaslo\.com|autodoc\.co|trodo\.com|autoklad\.ua|dok\.ua|spareto\.com|avtostok\.pro|ressormarket|запчастин|артикул|каталожн|втулка|фільтр|колодк|підшипник|амортизатор|ремінь|де\s*купити/i;
   if (partsMarkers.test(t)) return false;
   // Шукаємо хоча б 2 ключових поля реєстраційного талону
   const markers = [

@@ -3875,7 +3875,13 @@ async function refreshSidebarChats(
   updateChatCountBadge(chatList.length);
 
   // Авто-видалення старих чатів (>90 днів) — в фоні
-  deleteOldChats(userId).catch(() => {});
+  deleteOldChats(userId)
+    .then(() => {
+      // Оновлюємо індикатори після можливого видалення старих чатів
+      loadStorageIndicator();
+      loadDbIndicator();
+    })
+    .catch(() => {});
 
   if (chatList.length === 0) {
     listEl.innerHTML = `<div class="ai-sidebar-empty">Поки немає чатів.<br>Надішли перше повідомлення!</div>`;
@@ -4025,6 +4031,9 @@ async function refreshSidebarChats(
             chatItem.classList.add("ai-sidebar-chat-item--removing");
             setTimeout(async () => {
               await deleteChat(chatId);
+              // 📂 Оновлюємо індикатори сховища + БД після видалення
+              loadStorageIndicator();
+              loadDbIndicator();
               if (activeChatId === chatId) {
                 activeChatId = null;
                 chatHistory = [];
@@ -4151,16 +4160,16 @@ async function loadStorageIndicator(): Promise<void> {
 
     // Колір залежить від заповненості
     let color = "#4caf50"; // зелений
-/*     let emoji = "🟢"; */
+    /*     let emoji = "🟢"; */
     if (pct >= 90) {
       color = "#f44336";
-  /*     emoji = "🔴"; */
+      /*     emoji = "🔴"; */
     } else if (pct >= 70) {
       color = "#ff9800";
-  /*     emoji = "🟠"; */
+      /*     emoji = "🟠"; */
     } else if (pct >= 50) {
       color = "#ffeb3b";
-  /*     emoji = "🟡"; */
+      /*     emoji = "🟡"; */
     }
 
     el.innerHTML = `
@@ -4716,6 +4725,9 @@ function initAIChatHandlers(modal: HTMLElement): void {
       }
       await dbSaveMessage(activeChatId, "user", userMsg.text, savedImageUrls);
       // ⚠️ НЕ замінюємо userMsg.images тут — callGemini потребує data URLs!
+      // 📂 Оновлюємо індикатори сховища + БД (в фоні)
+      loadStorageIndicator();
+      loadDbIndicator();
     }
 
     // Показуємо loader
@@ -4757,6 +4769,8 @@ function initAIChatHandlers(modal: HTMLElement): void {
     // ── Зберігаємо assistant msg у БД ──
     if (activeChatId) {
       await dbSaveMessage(activeChatId, "assistant", reply);
+      // 🛢️ Оновлюємо індикатор БД (в фоні)
+      loadDbIndicator();
     }
 
     isLoading = false;

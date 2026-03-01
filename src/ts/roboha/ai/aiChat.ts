@@ -59,6 +59,7 @@ interface PendingImage {
   dataUrl: string; // data:image/...;base64,...
   base64: string; // чистий base64 без префікса
   mimeType: string; // image/jpeg | image/png | image/webp
+  storageUrl?: string; // URL фото в Storage (при retry — не дублювати upload)
 }
 
 interface DailyStats {
@@ -3670,7 +3671,8 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
               });
             }
           } else if (imgUrl.startsWith("http")) {
-            // Storage URL — завантажуємо і конвертуємо в data URL
+            // Storage URL — завантажуємо для preview + Gemini,
+            // але зберігаємо storageUrl щоб НЕ дублювати upload
             try {
               const resp = await fetch(imgUrl);
               if (!resp.ok) continue;
@@ -3686,7 +3688,12 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
               });
               if (b64) {
                 const dataUrl = `data:${mime};base64,${b64}`;
-                pendingImages.push({ dataUrl, base64: b64, mimeType: mime });
+                pendingImages.push({
+                  dataUrl,
+                  base64: b64,
+                  mimeType: mime,
+                  storageUrl: imgUrl, // оригінальний URL — не перезаливати
+                });
               }
             } catch {
               /* skip broken image */
@@ -4687,13 +4694,25 @@ function initAIChatHandlers(modal: HTMLElement): void {
     let savedImageUrls: string[] = [];
     if (activeChatId) {
       if (attachedImages.length > 0) {
-        savedImageUrls = await uploadPhotos(
-          activeChatId,
-          attachedImages.map((img) => ({
-            base64: img.base64,
-            mimeType: img.mimeType,
-          })),
-        );
+        // Розділяємо: нові фото (upload) vs вже збережені в Storage (reuse)
+        const newImages = attachedImages.filter((img) => !img.storageUrl);
+        const existingUrls = attachedImages
+          .filter((img) => img.storageUrl)
+          .map((img) => img.storageUrl!);
+
+        if (newImages.length > 0) {
+          const uploaded = await uploadPhotos(
+            activeChatId,
+            newImages.map((img) => ({
+              base64: img.base64,
+              mimeType: img.mimeType,
+            })),
+          );
+          savedImageUrls = [...existingUrls, ...uploaded];
+        } else {
+          // Всі фото вже є в Storage — нічого не завантажуємо
+          savedImageUrls = existingUrls;
+        }
       }
       await dbSaveMessage(activeChatId, "user", userMsg.text, savedImageUrls);
       // ⚠️ НЕ замінюємо userMsg.images тут — callGemini потребує data URLs!

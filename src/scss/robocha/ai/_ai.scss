@@ -1860,6 +1860,17 @@
   line-height: 1.1;
 }
 
+// Червоний/зелений лічильник відкритих актів
+.ai-dash-open-red {
+  color: #ef4444;
+  font-weight: 800;
+}
+
+.ai-dash-open-green {
+  color: #16a34a;
+  font-weight: 800;
+}
+
 .ai-dashboard-card-label {
   font-size: 11px;
   color: #888;

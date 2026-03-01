@@ -73,6 +73,10 @@ interface DailyStats {
   }>;
   openCount: number;
   openActs: Array<{ id: number; client: string; car: string; dateOn: string }>;
+  /** Акти відкриті в обраний день і ще не закриті */
+  openedTodayOpen: number;
+  /** Акти відкриті в обраний день і закриті в той самий день */
+  openedTodayClosed: number;
   totalWorksSum: number;
   totalDetailsSum: number;
   totalSum: number;
@@ -2898,6 +2902,8 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
     closedActs: [],
     openCount: 0,
     openActs: [],
+    openedTodayOpen: 0,
+    openedTodayClosed: 0,
     totalWorksSum: 0,
     totalDetailsSum: 0,
     totalSum: 0,
@@ -3098,8 +3104,10 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
 
       // Закритий акт рахуємо тільки якщо date_off потрапляє в обраний день
       const dateOffDay = a.date_off ? (a.date_off as string).slice(0, 10) : "";
+      const dateOnDay = a.date_on ? (a.date_on as string).slice(0, 10) : "";
       const isClosed = !!a.date_off;
       const isClosedOnSelectedDay = isClosed && dateOffDay === todayStr;
+      const isOpenedOnSelectedDay = dateOnDay === todayStr;
 
       if (isClosedOnSelectedDay) {
         stats.closedCount++;
@@ -3123,6 +3131,15 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
           car,
           dateOn: fmtDate(a.date_on),
         });
+      }
+
+      // Лічильник відкритих в обраний день: ще відкриті (червоний) vs закриті того ж дня (зелений)
+      if (isOpenedOnSelectedDay) {
+        if (isClosedOnSelectedDay) {
+          stats.openedTodayClosed++;
+        } else if (!isClosed) {
+          stats.openedTodayOpen++;
+        }
       }
     });
   } catch {
@@ -3733,8 +3750,8 @@ function renderDashboard(
         </div>
         <div class="ai-dashboard-card ai-dashboard-card--open">
           <div class="ai-dashboard-card-icon">🔧</div>
-          <div class="ai-dashboard-card-value">${stats.openCount}</div>
-          <div class="ai-dashboard-card-label">Відкрито</div>
+          <div class="ai-dashboard-card-value">${stats.openedTodayClosed > 0 ? `<span class="ai-dash-open-red">${stats.openedTodayOpen}</span>/<span class="ai-dash-open-green">${stats.openedTodayClosed}</span>` : `<span class="ai-dash-open-red">${stats.openedTodayOpen}</span>`}</div>
+          <div class="ai-dashboard-card-label">${isToday ? "Відкрито сьогодні" : `Відкрито ${displayDate}`}</div>
         </div>
         <div class="ai-dashboard-card ai-dashboard-card--money">
           <div class="ai-dashboard-card-icon">💰</div>
@@ -4170,7 +4187,7 @@ async function loadDbIndicator(): Promise<void> {
     const { sizeMb } = await getDatabaseStats();
     if (sizeMb < 0) {
       // RPC-функція не створена
-      el.innerHTML = `<span class="ai-storage-text">🗄️н/д</span>`;
+      el.innerHTML = `<span class="ai-storage-text">🗄️ БД: н/д</span>`;
       el.title = "Створіть RPC-функцію get_db_size() у Supabase";
       return;
     }
@@ -4198,7 +4215,7 @@ async function loadDbIndicator(): Promise<void> {
     }
 
     el.innerHTML = `
-      <span class="ai-storage-text" style="color:${color}">${emoji} БД: ${sizeStr} / ${limitStr} (${pct}%)</span>
+      <span class="ai-storage-text" style="color:${color}">${emoji} ${sizeStr} / ${limitStr} (${pct}%)</span>
       <div class="ai-storage-bar">
         <div class="ai-storage-bar-fill" style="width:${pct}%;background:${color}"></div>
       </div>

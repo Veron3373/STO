@@ -138,36 +138,39 @@ export function showRealtimeActNotification(
 }
 
 let _notifAudioCtx: AudioContext | null = null;
-function _getNotifAudioCtx(): AudioContext | null {
-  try {
-    if (!_notifAudioCtx) {
-      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!Ctx) return null;
-      _notifAudioCtx = new Ctx();
-    }
-    if (_notifAudioCtx.state === "suspended") {
-      _notifAudioCtx.resume().catch(() => {
-        /* silent */
-      });
-    }
-    return _notifAudioCtx;
-  } catch {
-    return null;
-  }
-}
-// Активуємо AudioContext при першому кліку користувача
+let _notifUserGesture = false;
+// Активуємо AudioContext ТІЛЬКИ після першого кліку користувача
 document.addEventListener(
   "click",
   () => {
-    _getNotifAudioCtx();
+    _notifUserGesture = true;
+    try {
+      if (!_notifAudioCtx) {
+        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+        if (Ctx) _notifAudioCtx = new Ctx();
+      }
+      if (_notifAudioCtx && _notifAudioCtx.state === "suspended") {
+        _notifAudioCtx.resume().catch(() => {
+          /* silent */
+        });
+      }
+    } catch {
+      /* silent */
+    }
   },
   { once: true },
 );
 
 function playNotificationSound(isAdded: boolean) {
   try {
-    const audioCtx = _getNotifAudioCtx();
-    if (!audioCtx || audioCtx.state === "suspended") return;
+    if (!_notifUserGesture || !_notifAudioCtx) return;
+    if (_notifAudioCtx.state === "suspended") {
+      _notifAudioCtx.resume().catch(() => {
+        /* silent */
+      });
+      return;
+    }
+    const audioCtx = _notifAudioCtx;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);

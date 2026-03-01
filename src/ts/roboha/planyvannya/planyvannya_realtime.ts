@@ -287,37 +287,40 @@ function removeToast(toast: HTMLElement, toastId: string): void {
  * Простий звук нотифікації
  */
 let _realtimeAudioCtx: AudioContext | null = null;
-function _getRealtimeAudioCtx(): AudioContext | null {
-  try {
-    if (!_realtimeAudioCtx) {
-      const Ctx =
-        (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!Ctx) return null;
-      _realtimeAudioCtx = new Ctx();
-    }
-    if (_realtimeAudioCtx && _realtimeAudioCtx.state === "suspended") {
-      _realtimeAudioCtx.resume().catch(() => {
-        /* silent */
-      });
-    }
-    return _realtimeAudioCtx;
-  } catch {
-    return null;
-  }
-}
-// Активуємо AudioContext при першому кліку
+let _realtimeUserGesture = false;
+// Створюємо AudioContext ТІЛЬКИ після першого кліку
 document.addEventListener(
   "click",
   () => {
-    _getRealtimeAudioCtx();
+    _realtimeUserGesture = true;
+    try {
+      if (!_realtimeAudioCtx) {
+        const Ctx =
+          (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (Ctx) _realtimeAudioCtx = new Ctx();
+      }
+      if (_realtimeAudioCtx && _realtimeAudioCtx.state === "suspended") {
+        _realtimeAudioCtx.resume().catch(() => {
+          /* silent */
+        });
+      }
+    } catch {
+      /* silent */
+    }
   },
   { once: true },
 );
 
 function playRealtimeSound(type: "insert" | "update" | "delete"): void {
   try {
-    const ctx = _getRealtimeAudioCtx();
-    if (!ctx || ctx.state === "suspended") return;
+    if (!_realtimeUserGesture || !_realtimeAudioCtx) return;
+    if (_realtimeAudioCtx.state === "suspended") {
+      _realtimeAudioCtx.resume().catch(() => {
+        /* silent */
+      });
+      return;
+    }
+    const ctx = _realtimeAudioCtx;
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();

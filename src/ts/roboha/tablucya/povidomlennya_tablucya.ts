@@ -30,16 +30,34 @@ export interface ActNotificationPayload {
 // ==========================
 
 let globalAudioContext: AudioContext | null = null;
+let _povidUserGesture = false;
+// Створюємо AudioContext тільки після першого кліку
+document.addEventListener(
+  "click",
+  () => {
+    _povidUserGesture = true;
+    try {
+      if (!globalAudioContext) {
+        const Ctx =
+          (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (Ctx) globalAudioContext = new Ctx();
+      }
+      if (globalAudioContext && globalAudioContext.state === "suspended") {
+        globalAudioContext.resume().catch(() => {
+          /* silent */
+        });
+      }
+    } catch {
+      /* silent */
+    }
+  },
+  { once: true },
+);
 
 function getAudioContext(): AudioContext | null {
+  if (!_povidUserGesture || !globalAudioContext) return null;
   try {
-    if (!globalAudioContext) {
-      const AudioContextClass =
-        (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return null;
-      globalAudioContext = new AudioContextClass();
-    }
-    if (globalAudioContext && globalAudioContext.state === "suspended") {
+    if (globalAudioContext.state === "suspended") {
       globalAudioContext.resume().catch(() => {
         /* silent */
       });

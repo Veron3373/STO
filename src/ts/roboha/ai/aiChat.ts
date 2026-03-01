@@ -3583,7 +3583,7 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
   // Обробник кнопки "Повторити"
   const retryBtn = div.querySelector(".ai-chat-retry-btn");
   if (retryBtn) {
-    retryBtn.addEventListener("click", () => {
+    retryBtn.addEventListener("click", async () => {
       const inputEl = document.getElementById(
         "ai-chat-input",
       ) as HTMLTextAreaElement;
@@ -3596,12 +3596,41 @@ function renderMessage(msg: ChatMessage, container: HTMLElement): void {
       // Переносимо зображення якщо були
       if (msg.images && msg.images.length > 0) {
         pendingImages = [];
-        for (const dataUrl of msg.images) {
-          if (!dataUrl.startsWith("data:")) continue;
-          const [header, b64] = dataUrl.split(",");
-          const mime = header?.match(/data:(.*?);/)?.[1] || "image/jpeg";
-          if (b64 && pendingImages.length < MAX_IMAGES) {
-            pendingImages.push({ dataUrl, base64: b64, mimeType: mime });
+        for (const imgUrl of msg.images) {
+          if (pendingImages.length >= MAX_IMAGES) break;
+          if (imgUrl.startsWith("data:")) {
+            // data URL — парсимо напряму
+            const [header, b64] = imgUrl.split(",");
+            const mime = header?.match(/data:(.*?);/)?.[1] || "image/jpeg";
+            if (b64) {
+              pendingImages.push({
+                dataUrl: imgUrl,
+                base64: b64,
+                mimeType: mime,
+              });
+            }
+          } else if (imgUrl.startsWith("http")) {
+            // Storage URL — завантажуємо і конвертуємо в data URL
+            try {
+              const resp = await fetch(imgUrl);
+              if (!resp.ok) continue;
+              const blob = await resp.blob();
+              const mime = blob.type || "image/jpeg";
+              const b64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const result = reader.result as string;
+                  resolve(result.split(",")[1] || "");
+                };
+                reader.readAsDataURL(blob);
+              });
+              if (b64) {
+                const dataUrl = `data:${mime};base64,${b64}`;
+                pendingImages.push({ dataUrl, base64: b64, mimeType: mime });
+              }
+            } catch {
+              /* skip broken image */
+            }
           }
         }
         renderImagePreview();

@@ -1,0 +1,491 @@
+// src/ts/roboha/ai/aiDatabaseQuery.ts
+// 🗄️ Модуль динамічних SELECT-запитів до БД для AI Атлас
+// Дозволяє AI виконувати запити до Supabase через function calling
+
+import { supabase } from "../../vxid/supabaseClient";
+
+// ============================================================
+// ТИПИ
+// ============================================================
+
+/** Дозволені таблиці для запитів AI */
+export const AI_ALLOWED_TABLES = [
+  "acts",
+  "clients",
+  "cars",
+  "slyusars",
+  "sclad",
+  "post_category",
+  "post_name",
+  "post_arxiv",
+  "works",
+  "details",
+  "shops",
+  "vutratu",
+  "faktura",
+  "incomes",
+  "settings",
+  "act_changes_notifications",
+  "slusar_complete_notifications",
+  "recommendations",
+  "feedback",
+  "purchase_requests",
+] as const;
+
+/** Дозволені RPC-функції для виклику через AI */
+export const AI_ALLOWED_RPC = [
+  "check_low_stock",
+  "check_long_open_acts",
+  "get_pending_reminders",
+  "get_client_stats",
+  "get_db_size",
+] as const;
+
+export type AllowedRPC = (typeof AI_ALLOWED_RPC)[number];
+
+export type AllowedTable = (typeof AI_ALLOWED_TABLES)[number];
+
+/** Фільтр для запиту */
+export interface QueryFilter {
+  column: string;
+  operator:
+    | "eq"
+    | "neq"
+    | "gt"
+    | "gte"
+    | "lt"
+    | "lte"
+    | "like"
+    | "ilike"
+    | "is"
+    | "in"
+    | "not";
+  value: string | number | boolean | null | string[] | number[];
+}
+
+/** Параметри запиту від AI */
+export interface AIQueryParams {
+  table: string;
+  select?: string; // Колонки (default "*")
+  filters?: QueryFilter[];
+  order_by?: string;
+  order_direction?: "asc" | "desc";
+  limit?: number; // Max 500
+  offset?: number;
+}
+
+/** Результат запиту */
+export interface AIQueryResult {
+  success: boolean;
+  data?: any[];
+  count?: number;
+  error?: string;
+  table?: string;
+  query_description?: string;
+}
+
+// ============================================================
+// ЗАХИЩЕНІ КОЛОНКИ (не повертати паролі та чутливі дані)
+// ============================================================
+
+const FORBIDDEN_COLUMNS: Record<string, string[]> = {
+  slyusars: ["Пароль", "password", "pass", "pwd"],
+  settings: ["Пароль", "password"],
+};
+
+/** Видаляє заборонені поля з результатів */
+function sanitizeResults(table: string, data: any[]): any[] {
+  const forbidden = FORBIDDEN_COLUMNS[table];
+  if (!forbidden || forbidden.length === 0) return data;
+
+  return data.map((row) => {
+    const clean = { ...row };
+
+    // Перевіряємо вкладені обʼєкти (data, JSONB поля)
+    if (clean.data && typeof clean.data === "object") {
+      const d = { ...clean.data };
+      for (const key of forbidden) {
+        delete d[key];
+      }
+      clean.data = d;
+    }
+
+    // Перевіряємо top-level поля
+    for (const key of forbidden) {
+      delete clean[key];
+    }
+
+    return clean;
+  });
+}
+
+// ============================================================
+// ВИКОНАННЯ ЗАПИТУ
+// ============================================================
+
+/**
+ * Виконує безпечний SELECT-запит до Supabase.
+ * Тільки читання — INSERT/UPDATE/DELETE заборонені.
+ */
+export async function executeAIQuery(
+  params: AIQueryParams,
+): Promise<AIQueryResult> {
+  // 1. Валідація таблиці
+  const table = params.table?.toLowerCase().trim();
+  if (!table || !AI_ALLOWED_TABLES.includes(table as AllowedTable)) {
+    return {
+      success: false,
+      error: `🚫 Таблиця "${params.table}" не дозволена. Доступні: ${AI_ALLOWED_TABLES.join(", ")}`,
+    };
+  }
+
+  // 2. Валідація ліміту
+  const limit = Math.min(Math.max(params.limit || 100, 1), 500);
+  const offset = Math.max(params.offset || 0, 0);
+
+  // 3. Валідація select (захист від SQL injection через select)
+  const selectColumns = params.select?.trim() || "*";
+  // Базова перевірка: тільки букви, цифри, крапки, коми, зірочки, пробіли, підкреслення, дефіси, лапки
+  if (!/^[\w\s,.*"'()[\]>:-]+$/i.test(selectColumns)) {
+    return {
+      success: false,
+      error: `🚫 Некоректний формат select: "${selectColumns}"`,
+    };
+  }
+
+  try {
+    // 4. Будуємо запит
+    let query = supabase.from(table).select(selectColumns, { count: "exact" });
+
+    // 5. Додаємо фільтри
+    if (params.filters && Array.isArray(params.filters)) {
+      for (const filter of params.filters) {
+        if (!filter.column || !filter.operator) continue;
+
+        // Валідація оператора
+        const op = filter.operator;
+        const col = filter.column;
+        const val = filter.value;
+
+        switch (op) {
+          case "eq":
+            query = query.eq(col, val);
+            break;
+          case "neq":
+            query = query.neq(col, val);
+            break;
+          case "gt":
+            query = query.gt(col, val as string | number);
+            break;
+          case "gte":
+            query = query.gte(col, val as string | number);
+            break;
+          case "lt":
+            query = query.lt(col, val as string | number);
+            break;
+          case "lte":
+            query = query.lte(col, val as string | number);
+            break;
+          case "like":
+            query = query.like(col, val as string);
+            break;
+          case "ilike":
+            query = query.ilike(col, val as string);
+            break;
+          case "is":
+            query = query.is(col, val as null | boolean);
+            break;
+          case "in":
+            if (Array.isArray(val)) {
+              query = query.in(col, val);
+            }
+            break;
+          case "not":
+            query = query.not(col, "is", val as null);
+            break;
+          default:
+            // Непідтриманий оператор — ігноруємо
+            break;
+        }
+      }
+    }
+
+    // 6. Сортування
+    if (params.order_by) {
+      query = query.order(params.order_by, {
+        ascending: params.order_direction !== "desc",
+      });
+    }
+
+    // 7. Пагінація
+    query = query.range(offset, offset + limit - 1);
+
+    // 8. Виконуємо
+    const { data, error, count } = await query;
+
+    if (error) {
+      return {
+        success: false,
+        error: `❌ Помилка запиту до "${table}": ${error.message}`,
+        table,
+      };
+    }
+
+    // 9. Санітизація (видаляємо паролі)
+    const sanitized = sanitizeResults(table, data || []);
+
+    return {
+      success: true,
+      data: sanitized,
+      count: count ?? sanitized.length,
+      table,
+      query_description: `SELECT ${selectColumns} FROM ${table}${params.filters?.length ? ` WHERE (${params.filters.length} filters)` : ""} LIMIT ${limit}`,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `❌ Помилка: ${err.message || "Невідома помилка"}`,
+      table,
+    };
+  }
+}
+
+/**
+ * Виконує кілька запитів паралельно (для оптимізації).
+ * Максимум 5 запитів одночасно.
+ */
+export async function executeMultipleAIQueries(
+  queries: AIQueryParams[],
+): Promise<AIQueryResult[]> {
+  const limited = queries.slice(0, 5);
+  return Promise.all(limited.map(executeAIQuery));
+}
+
+// ============================================================
+// RPC ВИКЛИКИ (серверні функції PostgreSQL)
+// ============================================================
+
+/** Параметри виклику RPC */
+export interface AIRpcParams {
+  function_name: string;
+  args?: Record<string, any>;
+}
+
+/**
+ * Викликає PostgreSQL RPC-функцію через Supabase.
+ * Тільки дозволені функції (білий список).
+ */
+export async function executeAIRpc(
+  params: AIRpcParams,
+): Promise<AIQueryResult> {
+  const fnName = params.function_name?.toLowerCase().trim();
+
+  if (!fnName || !AI_ALLOWED_RPC.includes(fnName as AllowedRPC)) {
+    return {
+      success: false,
+      error: `🚫 RPC-функція "${params.function_name}" не дозволена. Доступні: ${AI_ALLOWED_RPC.join(", ")}`,
+    };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc(fnName, params.args || {});
+
+    if (error) {
+      return {
+        success: false,
+        error: `❌ Помилка RPC "${fnName}": ${error.message}`,
+        table: fnName,
+      };
+    }
+
+    const resultData = Array.isArray(data) ? data : [data];
+
+    return {
+      success: true,
+      data: resultData,
+      count: resultData.length,
+      table: fnName,
+      query_description: `RPC ${fnName}(${JSON.stringify(params.args || {})})`,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `❌ Помилка RPC: ${err.message || "Невідома помилка"}`,
+      table: fnName,
+    };
+  }
+}
+
+// ============================================================
+// GEMINI FUNCTION DECLARATION ДЛЯ query_database
+// ============================================================
+
+/**
+ * Повертає Gemini function declaration для інструменту query_database
+ */
+export function getQueryDatabaseToolDeclaration(): any {
+  return {
+    name: "query_database",
+    description: `Виконує SELECT-запит до бази даних СТО (PostgreSQL/Supabase). 
+Використовуй для отримання даних з таблиць: acts (акти/заказ-наряди), clients (клієнти), cars (авто), slyusars (працівники — data.Спеціалізація, data.Рейтинг), sclad (склад/запчастини — min_quantity для мінімального залишку, return_reason для причин повернень), post_arxiv (бронювання), vutratu (витрати), faktura (фактури), shops (постачальники), works (довідник робіт), details (довідник деталей), settings, post_category, post_name, incomes, recommendations (рекомендації/нагадування клієнтам), feedback (зворотний зв'язок/оцінки), purchase_requests (заявки на закупівлю).
+JSONB поля (data) доступні через синтаксис: data->>'ПІБ', data->'Роботи'.
+⚠️ ТІЛЬКИ читання (SELECT). Тільки дозволені таблиці.`,
+    parameters: {
+      type: "object",
+      properties: {
+        table: {
+          type: "string",
+          description:
+            "Назва таблиці. Дозволені: acts, clients, cars, slyusars, sclad, post_category, post_name, post_arxiv, works, details, shops, vutratu, faktura, incomes, settings, act_changes_notifications, slusar_complete_notifications",
+          enum: [...AI_ALLOWED_TABLES],
+        },
+        select: {
+          type: "string",
+          description: `Колонки для вибірки. За замовчуванням "*". Приклади: "*", "act_id, date_on, date_off, data", "client_id, data->>'ПІБ' as pib"`,
+        },
+        filters: {
+          type: "array",
+          description: "Масив фільтрів WHERE",
+          items: {
+            type: "object",
+            properties: {
+              column: {
+                type: "string",
+                description:
+                  "Назва колонки. Для JSONB: data->>'ПІБ', data->>'Телефон'",
+              },
+              operator: {
+                type: "string",
+                description:
+                  "Оператор порівняння: eq (=), neq (!=), gt (>), gte (>=), lt (<), lte (<=), like (LIKE), ilike (ILIKE без урахування регістру), is (IS NULL/TRUE/FALSE), in (IN), not (NOT IS)",
+                enum: [
+                  "eq",
+                  "neq",
+                  "gt",
+                  "gte",
+                  "lt",
+                  "lte",
+                  "like",
+                  "ilike",
+                  "is",
+                  "in",
+                  "not",
+                ],
+              },
+              value: {
+                description:
+                  'Значення для порівняння. Для ilike використовуй %шаблон%. Для is: null. Для in: масив значень. Для дат: "2026-03-01"',
+              },
+            },
+            required: ["column", "operator", "value"],
+          },
+        },
+        order_by: {
+          type: "string",
+          description:
+            "Колонка для сортування. Наприклад: act_id, date_on, sclad_id, client_id",
+        },
+        order_direction: {
+          type: "string",
+          description: "Напрямок сортування",
+          enum: ["asc", "desc"],
+        },
+        limit: {
+          type: "integer",
+          description:
+            "Максимальна кількість рядків (1-500). За замовчуванням 100",
+        },
+      },
+      required: ["table"],
+    },
+  };
+}
+
+/**
+ * Повертає Gemini function declaration для multi_query (кілька запитів одразу)
+ */
+export function getMultiQueryToolDeclaration(): any {
+  return {
+    name: "multi_query_database",
+    description:
+      "Виконує кілька SELECT-запитів паралельно (до 5 одночасно). Для зв'язування даних з різних таблиць. Наприклад: запит клієнтів + запит їхніх авто.",
+    parameters: {
+      type: "object",
+      properties: {
+        queries: {
+          type: "array",
+          description: "Масив запитів (макс 5)",
+          items: {
+            type: "object",
+            properties: {
+              table: { type: "string", enum: [...AI_ALLOWED_TABLES] },
+              select: { type: "string" },
+              filters: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    column: { type: "string" },
+                    operator: {
+                      type: "string",
+                      enum: [
+                        "eq",
+                        "neq",
+                        "gt",
+                        "gte",
+                        "lt",
+                        "lte",
+                        "like",
+                        "ilike",
+                        "is",
+                        "in",
+                        "not",
+                      ],
+                    },
+                    value: {},
+                  },
+                  required: ["column", "operator", "value"],
+                },
+              },
+              order_by: { type: "string" },
+              order_direction: { type: "string", enum: ["asc", "desc"] },
+              limit: { type: "integer" },
+            },
+            required: ["table"],
+          },
+        },
+      },
+      required: ["queries"],
+    },
+  };
+}
+
+/**
+ * Повертає Gemini function declaration для виклику RPC-функцій
+ */
+export function getRpcToolDeclaration(): any {
+  return {
+    name: "call_rpc",
+    description: `Викликає серверну RPC-функцію PostgreSQL. Доступні функції:
+- check_low_stock() — позиції складу з залишком нижче мінімуму (sclad_id, article, name, quantity, min_quantity, deficit)
+- check_long_open_acts(threshold_days) — акти відкриті довше N днів (act_id, date_on, days_open, client_name, car, slusar). За замовчуванням 14 днів.
+- get_pending_reminders() — рекомендації/нагадування готові до відправки (recommendation_id, client_name, client_phone, text, date_to_remind)
+- get_client_stats(p_client_id) — статистика клієнта: кількість актів, виручка, перший/останній візит, середній чек, VIP-рівень
+- get_db_size() — розмір бази даних у байтах`,
+    parameters: {
+      type: "object",
+      properties: {
+        function_name: {
+          type: "string",
+          description: "Назва RPC-функції",
+          enum: [...AI_ALLOWED_RPC],
+        },
+        args: {
+          type: "object",
+          description: `Аргументи функції (JSON). Приклади:\n- check_long_open_acts: {"threshold_days": 14}\n- get_client_stats: {"p_client_id": 123}\n- check_low_stock, get_pending_reminders, get_db_size: {} (без аргументів)`,
+        },
+      },
+      required: ["function_name"],
+    },
+  };
+}

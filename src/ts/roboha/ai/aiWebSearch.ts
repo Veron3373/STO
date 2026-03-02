@@ -293,16 +293,34 @@ export async function searchWeb(
       }
 
       const errText = result.error || "";
-      const isBlocked = /429|403|quota|limit|blocked|forbidden/i.test(errText);
 
-      if (isBlocked) {
+      // 403 = API не увімкнений → ВСІ ключі цього проєкту теж не спрацюють → одразу на Grounding
+      if (/403|forbidden|not been used|not enabled/i.test(errText)) {
         console.warn(
-          `[Search] ⚠️ Ключ №${keyIdx + 1} заблоковано: ${errText.slice(0, 100)}`,
+          `[Search] ❌ CSE API не увімкнений (403) — пропускаю всі ключі: ${errText.slice(0, 100)}`,
+        );
+        break;
+      }
+
+      // 429 = ліміт вичерпано → спробувати наступний ключ
+      if (/429|quota|limit|rate/i.test(errText)) {
+        console.warn(
+          `[Search] ⚠️ Ключ №${keyIdx + 1} ліміт: ${errText.slice(0, 100)}`,
         );
         keysConfig.currentCseKeyIndex = (keyIdx + 1) % totalKeys;
         continue;
       }
 
+      // 401 = невалідний ключ → спробувати наступний
+      if (/401|unauthorized|invalid/i.test(errText)) {
+        console.warn(
+          `[Search] ⚠️ Ключ №${keyIdx + 1} невалідний: ${errText.slice(0, 100)}`,
+        );
+        keysConfig.currentCseKeyIndex = (keyIdx + 1) % totalKeys;
+        continue;
+      }
+
+      // Інша помилка → зупинитись
       console.warn(
         `[Search] ⚠️ CSE помилка (ключ ${keyIdx + 1}): ${errText.slice(0, 100)}`,
       );

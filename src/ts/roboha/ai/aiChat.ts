@@ -3907,11 +3907,14 @@ function hasClientData(text: string): boolean {
   if (partsMarkers.test(t)) return false;
   // Шукаємо хоча б 2 ключових поля реєстраційного талону
   const markers = [
-    /п[іi][бb]|прізвище|ім['ʼ]?я|власник/i,
-    /телефон|тел\.|моб\./i,
-    /номер\s*(авто|держ|реєстр)|держ\.?\s*номер|реєстр/i,
-    /vin|він[\s-]?код/i,
-    /рік\s*(випуск|вироб)|р\.в\./i,
+    /п[іi][бb]|прізвище|ім['ʼ]?я|власник|surname|owner|holder|c\.?\s*1\.?\s*1/i,
+    /телефон|тел\.|моб\.|phone|mobile|контакт/i,
+    /номер\s*(авто|держ|реєстр)|держ\.?\s*номер|реєстр|license\s*plate|plate\s*no/i,
+    /vin|він[\s-]?код|ідентифікаційн|номер\s*кузов|chassis/i,
+    /рік\s*(випуск|вироб)|р\.в\.|year|b\.?\s*1/i,
+    /марка|модель|make|brand|model|d\.?\s*1|d\.?\s*3/i,
+    /об['ʼ]?єм|engine|двигун|displacement|p\.?\s*1/i,
+    /колір|colo[u]?r/i,
   ];
   let count = 0;
   for (const rx of markers) {
@@ -3935,96 +3938,142 @@ function extractField(text: string, patterns: RegExp[]): string | undefined {
   return undefined;
 }
 
-/** Парсить текст відповіді AI та витягує дані клієнта/авто */
+/** Парсить текст відповіді AI та витягує дані клієнта/авто.
+ *  Розумний парсер — розпізнає різні формати реєстраційних талонів:
+ *  - Стандартні назви (ПІБ, Марка, Модель...)
+ *  - Альтернативні (Власник, Прізвище, Name, Surname...)
+ *  - Коди з техпаспорта (C.1.1, C.1.2, C.1.3, B.1, B.2, D.1, D.2...)
+ *  - Англійські, скорочені, суржик тощо
+ */
 function parseClientDataFromAI(text: string): ParsedClientData {
   const result: ParsedClientData = {};
 
-  // ── ПІБ ──
+  // Універсальний роздільник між полем і значенням
+  const SEP = `\\s*[:：—–\\-=]\\s*`;
+
+  // ── ПІБ / Власник / Прізвище / Name / Surname / C.1.1+C.1.2+C.1.3 ──
   result.pib = extractField(text, [
-    /п[іi][бb]\s*[:：—–-]\s*(.+)/im,
-    /прізвище\s*[:：—–-]\s*(.+)/im,
-    /власник\s*[:：—–-]\s*(.+)/im,
-    /клієнт\s*[:：—–-]\s*(.+)/im,
-    /ім['ʼ]?я\s*[:：—–-]\s*(.+)/im,
+    new RegExp(`п[іi][бb]${SEP}(.+)`, "im"),
+    new RegExp(
+      `(?:прізвище|surname)(?:\\s*(?:та|і|,)\\s*(?:ім['ʼ]?я|name))?${SEP}(.+)`,
+      "im",
+    ),
+    new RegExp(`власник${SEP}(.+)`, "im"),
+    new RegExp(`клієнт${SEP}(.+)`, "im"),
+    new RegExp(`(?:ім['ʼ]?я|given\\s*name|name)${SEP}(.+)`, "im"),
+    new RegExp(`(?:по\\s*батькові|отчество|patronymic)${SEP}(.+)`, "im"),
+    new RegExp(`(?:c\\.?\\s*1\\.?\\s*1)${SEP}(.+)`, "im"), // C.1.1 — прізвище у техпаспорті
+    new RegExp(`(?:c\\.?\\s*1\\.?\\s*3)${SEP}(.+)`, "im"), // C.1.3 — ім'я та по батькові
+    new RegExp(`(?:holder|owner|registered\\s*owner)${SEP}(.+)`, "im"),
   ]);
 
   // ── Телефон ──
   result.phone = extractField(text, [
-    /телефон\s*[:：—–-]\s*(.+)/im,
-    /тел\.\s*[:：—–-]?\s*(.+)/im,
-    /моб\.\s*[:：—–-]?\s*(.+)/im,
-    /контакт\s*[:：—–-]\s*(.+)/im,
+    new RegExp(`(?:телефон|тел\\.?|phone|mobile|моб\\.?)${SEP}(.+)`, "im"),
+    new RegExp(`(?:контакт|contact)${SEP}(.+)`, "im"),
+    new RegExp(`(?:номер\\s*телефон[уа]?)${SEP}(.+)`, "im"),
   ]);
-  // Або просто номер телефону у тексті
   if (!result.phone) {
     const phoneRx = /(\+?\d[\d\s\-()]{8,14}\d)/;
     const phoneMatch = text.match(phoneRx);
     if (phoneMatch) result.phone = phoneMatch[1].trim();
   }
 
-  // ── Модель (пріоритет — шукаємо модель окремо) ──
-  result.model = extractField(text, [/модель\s*[:：—–-]\s*(.+)/im]);
+  // ── Модель ──
+  result.model = extractField(text, [
+    new RegExp(`модель${SEP}(.+)`, "im"),
+    new RegExp(`model${SEP}(.+)`, "im"),
+    new RegExp(`(?:d\\.?\\s*3|d3)${SEP}(.+)`, "im"), // D.3 — модель у техпаспорті
+  ]);
+  // Витягуємо тип авто з моделі якщо є в дужках: "E 200 K (ЛЕГКОВИЙ СЕДАН-В)"
+  if (result.model) {
+    const typeInParens = result.model.match(/\(([^)]+)\)/);
+    if (typeInParens) {
+      if (!result.carType) {
+        result.carType = toCamelCasePIB(typeInParens[1].trim());
+      }
+      result.model = result.model.replace(/\s*\([^)]+\)/, "").trim();
+    }
+  }
 
-  // ── Марка (окремо) ──
-  result.brand = extractField(text, [/марка\s*[:：—–-]\s*(.+)/im]);
+  // ── Марка ──
+  result.brand = extractField(text, [
+    new RegExp(`марка${SEP}(.+)`, "im"),
+    new RegExp(`(?:make|brand|manufacturer|виробник)${SEP}(.+)`, "im"),
+    new RegExp(`(?:d\\.?\\s*1|d1)${SEP}(.+)`, "im"), // D.1 — марка у техпаспорті
+  ]);
 
   // ── Авто (марка + модель разом) ──
   result.car = extractField(text, [
-    /авто(?:мобіль)?\s*[:：—–-]\s*(.+)/im,
-    /транспорт(?:ний\s*засіб)?\s*[:：—–-]\s*(.+)/im,
-    /марка\s*(?:та|і|\/)\s*модель\s*[:：—–-]\s*(.+)/im,
+    new RegExp(`авто(?:мобіль)?${SEP}(.+)`, "im"),
+    new RegExp(
+      `(?:транспорт(?:ний)?\\s*засіб|т\\.?\\s*з\\.?|vehicle)${SEP}(.+)`,
+      "im",
+    ),
+    new RegExp(`(?:марка\\s*(?:та|і|\\/)\\s*модель)${SEP}(.+)`, "im"),
+    new RegExp(`(?:make\\s*(?:and|\\/|&)\\s*model)${SEP}(.+)`, "im"),
+    new RegExp(`(?:d\\.?\\s*2|d2)${SEP}(.+)`, "im"), // D.2 — марка+тип у техпаспорті
   ]);
 
-  // ── Номер авто ──
+  // ── Номер авто / Держ. номер / Реєстраційний номер ──
   result.carNumber = extractField(text, [
-    /(?:номер\s*авто|держ\.?\s*номер|реєстр\.?\s*номер|номерний\s*знак|д\.?\s*н\.?\s*з\.?)\s*[:：—–-]\s*(.+)/im,
-    /номер\s*[:：—–-]\s*([A-ZА-ЯІЇЄҐ]{2}\d{4}[A-ZА-ЯІЇЄҐ]{2})/im,
+    new RegExp(
+      `(?:номер\\s*авто|держ\\.?\\s*номер|реєстр(?:аційний)?\\.?\\s*номер|номерний\\s*знак|д\\.?\\s*н\\.?\\s*з\\.?|license\\s*plate|plate\\s*(?:number|no\\.?)|registration\\s*(?:number|no\\.?))${SEP}(.+)`,
+      "im",
+    ),
+    new RegExp(`(?:номер)${SEP}([A-ZА-ЯІЇЄҐ]{2}\\d{4}[A-ZА-ЯІЇЄҐ]{2})`, "im"),
+    new RegExp(`(?:a\\b)${SEP}([A-ZА-ЯІЇЄҐ]{2}\\d{4}[A-ZА-ЯІЇЄҐ]{2}.*)`, "im"), // поле "A" у техпаспорті
   ]);
-  // Резервний пошук номера авто (UA формат)
+  // Резервний пошук номера авто (UA формат: AB1234CD)
   if (!result.carNumber) {
     const plateRx = /\b([A-ZА-ЯІЇЄҐ]{2}\s?\d{4}\s?[A-ZА-ЯІЇЄҐ]{2})\b/;
     const plateMatch = text.match(plateRx);
     if (plateMatch) result.carNumber = plateMatch[1].replace(/\s/g, "");
   }
 
-  // ── VIN ──
+  // ── VIN / Ідентифікаційний номер / Номер кузова / E ──
   result.vin = extractField(text, [
-    /vin\s*[-:]?\s*код\s*[:：—–-]\s*(.+)/im,
-    /vin\s*[:：—–-]\s*(.+)/im,
-    /він[\s-]?код\s*[:：—–-]\s*(.+)/im,
+    new RegExp(`vin\\s*[-:]?\\s*код${SEP}(.+)`, "im"),
+    new RegExp(`vin${SEP}(.+)`, "im"),
+    new RegExp(`він[\\s-]?код${SEP}(.+)`, "im"),
+    new RegExp(
+      `(?:ідентифікаційн(?:ий|а)?\\s*(?:номер|код)|номер\\s*(?:кузова|шасі|рами)|chassis(?:\\s*no\\.?)?|body\\s*no\\.?|frame\\s*no\\.?)${SEP}(.+)`,
+      "im",
+    ),
+    new RegExp(`(?:e\\b)${SEP}([A-HJ-NPR-Z0-9]{17})`, "im"), // поле "E" у техпаспорті
   ]);
-  // Резервний пошук VIN (17 символів)
   if (!result.vin) {
     const vinRx = /\b([A-HJ-NPR-Z0-9]{17})\b/;
     const vinMatch = text.match(vinRx);
     if (vinMatch) result.vin = vinMatch[1];
   }
 
-  // ── Рік ──
+  // ── Рік випуску / Рік виробництва / B.1 ──
   result.year = extractField(text, [
-    /(?:рік\s*(?:випуск[у]?|вироб\w*)?|р\.?\s*в\.?)\s*[:：—–-]\s*(\d{4})/im,
-    /рік\s*[:：—–-]\s*(\d{4})/im,
-    // "Рік 2018" / "рік випуску 2018" (без двокрапки)
+    new RegExp(
+      `(?:рік\\s*(?:випуск[у]?|вироб\\w*)?|р\\.?\\s*в\\.?|year(?:\\s*of)?(?:\\s*(?:manufacture|production|make))?)${SEP}(\\d{4})`,
+      "im",
+    ),
+    new RegExp(`рік${SEP}(\\d{4})`, "im"),
+    new RegExp(`(?:b\\.?\\s*1|b1)${SEP}(\\d{4})`, "im"), // B.1 — дата першої реєстрації (містить рік)
     /(?:рік\s*(?:випуск[у]?|вироб\w*)?\s+)(\d{4})/im,
-    // "2018 р." / "2018 рік" / "2018р"
     /(\d{4})\s*(?:р\.|рік|року)/im,
   ]);
-  // Фолбек: шукаємо 4-значне число 1970–2030 поруч з авто-контекстом
   if (!result.year) {
     const yearMatch = text.match(/\b(19[7-9]\d|20[0-3]\d)\b/);
-    if (yearMatch) {
-      result.year = yearMatch[1];
-    }
+    if (yearMatch) result.year = yearMatch[1];
   }
 
-  // ── Об'єм двигуна (очищуємо від "см³", "куб.см", "cc", "л" тощо) ──
+  // ── Об'єм двигуна / Робочий об'єм / P.1 ──
   result.engine = extractField(text, [
-    /об['ʼ]?єм\s*(?:двигуна?)?\s*[:：—–-]\s*(.+)/im,
-    /двигун\s*[:：—–-]\s*(.+)/im,
-    /об['ʼ]?єм\s*[:：—–-]\s*(\d[\d.,]+\s*л?)/im,
+    new RegExp(
+      `(?:об['ʼ]?єм\\s*(?:двигуна?)?|робочий\\s*об['ʼ]?єм|engine\\s*(?:capacity|volume|displacement|size)|displacement|p\\.?\\s*1|p1)${SEP}(.+)`,
+      "im",
+    ),
+    new RegExp(`двигун${SEP}(.+)`, "im"),
+    new RegExp(`об['ʼ]?єм${SEP}(\\d[\\d.,]+\\s*л?)`, "im"),
   ]);
   if (result.engine) {
-    // Прибираємо "см³", "куб.см", "cc", "cm³", "л" та пробіли навколо
     result.engine = result.engine
       .replace(
         /\s*(?:см[³3]?|куб\.?\s*см|cm[³3]?|cc|л(?:ітр(?:ів)?)?)\s*/gi,
@@ -4033,67 +4082,91 @@ function parseClientDataFromAI(text: string): ParsedClientData {
       .trim();
   }
 
-  // ── Пальне ──
+  // ── Пальне / Паливо / Тип пального / P.3 ──
   result.fuel = extractField(text, [
-    /(?:пальне|паливо|тип\s*(?:пального|палива))\s*[:：—–-]\s*(.+)/im,
+    new RegExp(
+      `(?:пальне|паливо|тип\\s*(?:пального|палива)|вид\\s*палив[а]?|fuel(?:\\s*type)?|p\\.?\\s*3|p3)${SEP}(.+)`,
+      "im",
+    ),
   ]);
-  // Нормалізуємо пальне через normalizeFuel — якщо не впізнано, буде ""
   if (result.fuel) {
     result.fuel = normalizeFuel(result.fuel) || undefined;
   }
-  // Авто-визначення з контексту (весь текст) — тільки якщо парсер не знайшов
   if (!result.fuel) {
     const detected = normalizeFuel(text);
     if (detected) result.fuel = detected;
   }
 
-  // ── Код ДВЗ ──
+  // ── Код ДВЗ / Код двигуна / P.2 ──
   result.engineCode = extractField(text, [
-    /(?:код\s*(?:двз|двигуна)|двз)\s*[:：—–-]\s*(.+)/im,
+    new RegExp(
+      `(?:код\\s*(?:двз|двигуна)|двз|engine\\s*code|p\\.?\\s*2|p2)${SEP}(.+)`,
+      "im",
+    ),
   ]);
 
-  // ── Джерело ──
+  // ── Джерело / Звідки ──
   result.source = extractField(text, [
-    /(?:джерело|звідки|рекомендація)\s*[:：—–-]\s*(.+)/im,
+    new RegExp(
+      `(?:джерело|звідки|рекомендація|source|referral)${SEP}(.+)`,
+      "im",
+    ),
   ]);
 
-  // ── Адреса ──
+  // ── Адреса / Місце реєстрації / Місце проживання / C.1.3 (адресне) ──
   result.address = extractField(text, [
-    /(?:адреса|місце\s*проживання|місце\s*реєстрації)\s*[:：—–-]\s*(.+)/im,
+    new RegExp(
+      `(?:адреса|місце\\s*(?:проживання|реєстрації)|address|residence)${SEP}(.+)`,
+      "im",
+    ),
+    new RegExp(`(?:c\\.?\\s*4|c4)${SEP}(.+)`, "im"), // C.4 — адреса у техпаспорті
   ]);
 
-  // ── Додатково ──
+  // ── Додатково / Примітка ──
   result.extra = extractField(text, [
-    /(?:додаткова?\s*(?:інформація|дані)?|примітка|коментар)\s*[:：—–-]\s*(.+)/im,
+    new RegExp(
+      `(?:додаткова?\\s*(?:інформація|дані)?|примітка|коментар|notes?|remarks?|additional)${SEP}(.+)`,
+      "im",
+    ),
   ]);
 
-  // ── Тип авто ──
-  result.carType = extractField(text, [
-    /тип\s*(?:авто|транспорт\w*)?\s*[:：—–-]\s*(.+)/im,
-  ]);
+  // ── Тип авто / Тип ТЗ / Тип кузова / J ──
+  if (!result.carType) {
+    result.carType = extractField(text, [
+      new RegExp(
+        `(?:тип\\s*(?:авто(?:мобіля)?|транспорт\\w*|кузов[а]?|т\\.?\\s*з\\.?)?|body\\s*(?:type|style)|type|category|j\\b)${SEP}(.+)`,
+        "im",
+      ),
+    ]);
+  }
 
-  // ── Колір ──
+  // ── Колір / Color / R ──
   result.color = extractField(text, [
-    /колір\s*[:：—–-]\s*(.+)/im,
-    /колор\s*[:：—–-]\s*(.+)/im,
+    new RegExp(`(?:колір|колор|цвет|colo[u]?r|r\\b)${SEP}(.+)`, "im"),
   ]);
 
-  // ── Кількість місць ──
+  // ── Кількість місць / Місця для сидіння / S.1 ──
   result.seats = extractField(text, [
-    /(?:кількість\s*)?місць\s*(?:для\s*сидіння)?\s*[:：—–-]\s*(\d+)/im,
-    /місць\s*[:：—–-]\s*(\d+)/im,
+    new RegExp(
+      `(?:(?:кількість\\s*)?(?:сидячих\\s*)?місць(?:\\s*(?:для\\s*сидіння|сидячих))?|seats?|s\\.?\\s*1|s1|к[\\-]?ть\\s*місць)${SEP}(\\d+)`,
+      "im",
+    ),
   ]);
 
-  // ── Дата першої реєстрації ──
+  // ── Дата першої реєстрації / B ──
   result.firstRegDate = extractField(text, [
-    /дата\s*першої\s*реєстрації\s*[:：—–-]\s*(.+)/im,
-    /перша\s*реєстрація\s*[:：—–-]\s*(.+)/im,
+    new RegExp(
+      `(?:дата\\s*першої\\s*реєстрації|перша\\s*реєстрація|first\\s*registr|date\\s*of\\s*first\\s*registr|b\\b)${SEP}(.+)`,
+      "im",
+    ),
   ]);
 
-  // ── Дата реєстрації ──
+  // ── Дата реєстрації / I ──
   result.regDate = extractField(text, [
-    /дата\s*реєстрації\s*[:：—–-]\s*(.+)/im,
-    /реєстрація\s*[:：—–-]\s*(.+)/im,
+    new RegExp(
+      `(?:дата\\s*реєстрації|реєстрація|date\\s*of\\s*registr|registration\\s*date|i\\b)${SEP}(.+)`,
+      "im",
+    ),
   ]);
 
   return result;
@@ -4176,9 +4249,19 @@ function fillCarFieldsFromParsed(parsed: ParsedClientData): void {
   setVal("car-vin-create-sakaz_narad", parsed.vin);
 }
 
-/** Визначає що вводити в поле Автомобіль: Модель → Марка → Авто */
+/** Визначає що вводити в поле Автомобіль.
+ *  Якщо модель містить цифри (наприклад "E 200 K") — об'єднуємо Марку + Модель:
+ *  "MERCEDES-BENZ" + "E 200 K" → "Mercedes-Benz E 200 K"
+ *  Інакше — повертаємо Модель → Марка → Авто (для автокомплітера)
+ */
 function getCarSearchText(parsed: ParsedClientData): string {
-  return parsed.model || parsed.brand || parsed.car || "";
+  const model = parsed.model || "";
+  const brand = parsed.brand || "";
+  // Якщо модель містить цифри — це специфічна модель, потрібно Марка + Модель
+  if (model && /\d/.test(model) && brand) {
+    return `${toCamelCasePIB(brand)} ${model}`;
+  }
+  return model || brand || parsed.car || "";
 }
 
 /** Вводить текст у поле Автомобіль, triggers input event + фокус для автокомплітера */

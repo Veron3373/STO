@@ -15,11 +15,7 @@ import {
   getRpcToolDeclaration,
   type AIQueryParams,
 } from "./aiDatabaseQuery";
-import {
-  searchWeb,
-  getSearchInternetToolDeclaration,
-  setSearchStatusCallback,
-} from "./aiWebSearch.ts";
+import { getSearchInternetToolDeclaration } from "./aiWebSearch";
 import { buildAIContext, buildCompactContext } from "./aiContextProvider";
 import { executeAnalytics, getAnalyticsToolDeclaration } from "./aiAnalytics";
 
@@ -2279,15 +2275,101 @@ async function gatherSTOContext(
 }
 
 // ============================================================
-// 🌐 GEMINI GOOGLE SEARCH GROUNDING — FALLBACK
+// 🌐 GEMINI GOOGLE SEARCH GROUNDING — ПОШУК В ІНТЕРНЕТІ
 // ============================================================
 
+// 🇺🇦 СПИСОК УКРАЇНСЬКИХ МАГАЗИНІВ АВТОЗАПЧАСТИН
+const UA_AUTO_PARTS_SITES = [
+  "elit.ua", // Еліт-Україна (основний дистриб'ютор)
+  "exist.ua", // Екзіст (найбільший онлайн-каталог)
+  "avtopro.ua", // Автопро (маркетплейс запчастин)
+  "avto.pro", // Автопро (коротка версія)
+  "omega.page", // Омега (оптовий постачальник)
+  "dok.ua", // Док (підбір по VIN)
+  "ukrparts.com.ua", // Укрпартс
+  "intercars.com.ua", // Інтер Карс Юкрейн
+  "busmarket.group", // Бусмаркет (буси і легкові)
+  "oiler.ua", // Ойлер (мастила та сервіс)
+  "vladislav.ua", // Владислав (дистриб'ютор)
+  "autotechnics.ua", // Автотехнікс
+  "all-parts.com.ua", // Олл Партс
+  "svedex.com.ua", // Сведекс
+  "evocar.ua", // Евокар
+  "atp-shop.com.ua", // АТП (підвіска)
+  "fords.com.ua", // Фордс (Ford)
+  "massive.ua", // Массів
+  "automoto.ua", // Автомото (агрегатор)
+  "autosklad.kiev.ua", // Автосклад
+  "pitline.ua", // Пітлайн
+  "atl.ua", // АТЛ (мережа магазинів та СТО)
+  "starter.ms", // Генстар/Мастер Сервіс
+  "ecat.ua", // Екат
+  "autoklad.ua", // Автоклад
+  "zakupka.com", // Закупка (розділ автозапчастин)
+  "partsnaprime.com.ua", // Партс на Прайм
+  "top-avto.com.ua", // Топ Авто
+  "avto-mechanic.com.ua", // Авто-Механік
+  "bolti-gaiki.com.ua", // Болти-Гайки
+];
+
+/** Будує оптимальний пошуковий запит для Grounding */
+function buildSearchQuery(args: {
+  query: string;
+  auto_parts_mode?: boolean;
+  vin_code?: string;
+  sites?: string[];
+}): string {
+  let q = args.query;
+
+  // Додаємо VIN до запиту якщо є
+  if (args.vin_code) {
+    q += ` VIN ${args.vin_code}`;
+  }
+
+  // Якщо вказані конкретні сайти — додаємо site: оператори
+  if (args.sites && args.sites.length > 0) {
+    const siteOps = args.sites
+      .slice(0, 5)
+      .map((s) => `site:${s}`)
+      .join(" OR ");
+    q += ` (${siteOps})`;
+  } else if (args.auto_parts_mode) {
+    // Режим автозапчастин — пріоритетні сайти (топ-10 для оптимальності)
+    const topSites = [
+      "elit.ua",
+      "exist.ua",
+      "avtopro.ua",
+      "avto.pro",
+      "omega.page",
+      "dok.ua",
+      "intercars.com.ua",
+      "busmarket.group",
+      "oiler.ua",
+      "atl.ua",
+    ];
+    const siteOps = topSites.map((s) => `site:${s}`).join(" OR ");
+    q += ` (${siteOps})`;
+  }
+
+  // Додаємо контекст "Україна ціна" якщо це запчастини і такого слова ще немає
+  if (args.auto_parts_mode && !/україн|ціна|купити/i.test(q)) {
+    q += " ціна Україна купити";
+  }
+
+  return q;
+}
+
 /**
- * Fallback-пошук через вбудований Google Search Grounding в Gemini.
- * Використовується коли всі CSE API ключі заблоковано (403/429).
+ * Пошук в інтернеті через Google Search Grounding в Gemini.
+ * Підтримує: auto_parts_mode, VIN-код, конкретні сайти.
  * НЕ потребує окремого API ключа — використовує Gemini API ключ.
  */
-async function geminiSearchGrounding(query: string): Promise<{
+async function geminiSearchGrounding(args: {
+  query: string;
+  auto_parts_mode?: boolean;
+  vin_code?: string;
+  sites?: string[];
+}): Promise<{
   success: boolean;
   text: string;
   sources: Array<{ title: string; url: string; snippet: string }>;
@@ -2298,6 +2380,41 @@ async function geminiSearchGrounding(query: string): Promise<{
   }
 
   const apiKey = keys[currentKeyIndex];
+  const optimizedQuery = buildSearchQuery(args);
+
+  // Системна інструкція залежно від режиму
+  const systemText = args.auto_parts_mode
+    ? `Ти — експерт з пошуку автозапчастин для СТО в Україні. Відповідай ТІЛЬКИ українською.
+
+🎯 ТВОЄ ЗАВДАННЯ:
+• Знайди деталь, вкажи артикул виробника (OEM) і артикули аналогів
+• Вкажи ціну в гривнях (УАГ) з кожного магазину
+• Вкажи наявність (в наявності / під замовлення / строк доставки)
+• Вкажи виробника (бренд)
+• Порівняй ціни між магазинами
+
+🇺🇦 ПРІОРИТЕТНІ УКРАЇНСЬКІ МАГАЗИНИ (шукай саме на них):
+${UA_AUTO_PARTS_SITES.join(", ")}
+
+📝 ФОРМАТ ВІДПОВІДІ (БЕЗ URL!):
+
+🔩 [Назва деталі] — Артикул: [OEM номер]
+🏢 Виробник: [бренд]
+💰 Ціни:
+  • [магазин] — [XXX] грн (в наявності / під замовлення)
+  • [магазин] — [XXX] грн
+🔄 Аналоги: [артикули аналогів]
+
+⛔ КРИТИЧНО:
+▸ НІКОЛИ не вставляй URL/посилання у текст!
+▸ НЕ шукай на .ru сайтах. Тільки українські!
+▸ Виводь МАКСИМУМ інформації: артикул, бренд, ціна, наявність, аналоги`
+    : `Ти — помічник з пошуку інформації в інтернеті для СТО в Україні. Відповідай ТІЛЬКИ українською.
+
+⛔ КРИТИЧНО ВАЖЛИВО — ЗАБОРОНА ВИГАДУВАТИ URL:
+▸ НІКОЛИ не вставляй URL/посилання у свою відповідь!
+▸ Реальні посилання додаються автоматично з метаданих пошуку.
+▸ Виводь максимум корисної інформації без URL.`;
 
   const requestBody = {
     contents: [
@@ -2305,40 +2422,29 @@ async function geminiSearchGrounding(query: string): Promise<{
         role: "user",
         parts: [
           {
-            text: query,
+            text: optimizedQuery,
           },
         ],
       },
     ],
     tools: [{ googleSearch: {} }],
     generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: 2048,
+      temperature: 0.1,
+      maxOutputTokens: 4096,
     },
     systemInstruction: {
       parts: [
         {
-          text: `Ти — помічник з пошуку цін на автозапчастини для СТО в Україні. Відповідай ТІЛЬКИ українською.
-
-⛔ КРИТИЧНО ВАЖЛИВО — ЗАБОРОНА ВИГАДУВАТИ URL:
-▸ НІКОЛИ не вставляй URL/посилання у свою відповідь!
-▸ НЕ пиши "https://...", НЕ вигадуй адреси сайтів!
-▸ Реальні посилання будуть додані автоматично з метаданих пошуку.
-▸ Пиши ТІЛЬКИ: назву деталі, артикул, ціну, назву магазину (без URL).
-
-Формат відповіді (БЕЗ URL):
-🔩 Назва деталі — Артикул
-💰 Ціна — Назва магазину
-
-ПРІОРИТЕТНІ МАГАЗИНИ: exist.ua, avto.pro, avtopro.ua, ecat.ua, dok.ua, autodoc, autoklad.ua, intercars.com.ua, spareto.com, trodo.com.
-⛔ НЕ шукай на .ru сайтах. Тільки українські магазини.`,
+          text: systemText,
         },
       ],
     },
   };
 
   try {
-    console.log("[Search] 🌐 Fallback: Gemini Google Search Grounding...");
+    console.log(
+      `[Search] 🌐 Gemini Search Grounding: "${optimizedQuery.slice(0, 100)}..."`,
+    );
 
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: "POST",
@@ -2494,33 +2600,15 @@ async function handleFunctionCall(
       }
 
       case "search_internet": {
-        // searchWeb спробує Метод ① (Google CSE)
-        // callback для UI встановлюється в geminiWithFunctionCalling
-        const response = await searchWeb(args.query, {
-          autoPartsMode: args.auto_parts_mode || false,
-          vinCode: args.vin_code,
+        // 🌐 Gemini Google Search Grounding — єдиний метод пошуку
+        const grounding = await geminiSearchGrounding({
+          query: args.query,
+          auto_parts_mode: args.auto_parts_mode || false,
+          vin_code: args.vin_code,
           sites: args.sites,
         });
 
-        if (response.success) {
-          return JSON.stringify({
-            success: true,
-            query: response.query,
-            source: response.source,
-            method: response.method,
-            results: response.results,
-          });
-        }
-
-        // 🌐 Fallback Метод ②: Gemini Google Search Grounding
-        updateTypingStatus("🔍 Метод ②: Gemini Grounding...");
-        console.log(
-          "[Search] Метод ① не спрацював, пробую Метод ②: Gemini Grounding...",
-        );
-        const grounding = await geminiSearchGrounding(args.query);
-
         if (grounding.success) {
-          // Формуємо результат з реальними URL з metadata
           const sourcesText =
             grounding.sources.length > 0
               ? "\n\n📎 ПЕРЕВІРЕНІ ДЖЕРЕЛА (реальні посилання):\n" +
@@ -2536,21 +2624,17 @@ async function handleFunctionCall(
             success: true,
             query: args.query,
             source: "google_search_grounding",
-            method: 2,
-            fallback: true,
             text: grounding.text + sourcesText,
             sources: grounding.sources,
             _instruction:
-              "⚠️ УВАГА: Використовуй ТІЛЬКИ URL з масиву 'sources' або з секції 'ПЕРЕВІРЕНІ ДЖЕРЕЛА'. НІКОЛИ не вигадуй і не реконструюй URL самостійно! Якщо URL немає в sources — НЕ давай посилання, просто вкажи назву магазину.",
+              "⚠️ УВАГА: Використовуй ТІЛЬКИ URL з масиву 'sources'. НІКОЛИ не вигадуй URL самостійно! Якщо URL немає в sources — НЕ давай посилання, просто вкажи назву магазину.",
           });
         }
 
-        // Всі 3 методи не спрацювали
-        updateTypingStatus("❌ Пошук недоступний");
         return JSON.stringify({
           success: false,
-          query: response.query,
-          error: `Всі 3 методи пошуку не спрацювали. ${response.error || ""}`,
+          query: args.query,
+          error: "Пошук в інтернеті тимчасово недоступний.",
         });
       }
 
@@ -2687,19 +2771,7 @@ async function geminiWithFunctionCalling(
         // 🔍 Оновлюємо typing indicator з назвою інструменту
         updateTypingStatus(getToolDisplayName(fc.name));
 
-        // Для search_internet — підключаємо callback для відображення методу
-        if (fc.name === "search_internet") {
-          setSearchStatusCallback((status: string) =>
-            updateTypingStatus(status),
-          );
-        }
-
         const result = await handleFunctionCall(fc.name, fc.args || {});
-
-        // Скидаємо callback після пошуку
-        if (fc.name === "search_internet") {
-          setSearchStatusCallback(null);
-        }
 
         functionResponseParts.push({
           functionResponse: {

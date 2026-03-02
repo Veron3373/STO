@@ -44,6 +44,21 @@ import {
 // УТИЛІТИ
 // ============================================================
 
+/**
+ * Перетворює ПІБ у CamelCase: "КОЛЕСНІК ЛЮДМИЛА ІВАНІВНА" → "Колеснік Людмила Іванівна"
+ * Кожне слово — перша буква велика, решта маленькі.
+ */
+function toCamelCasePIB(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .map((word) => {
+      if (!word) return "";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
 /** Форматує дату з ISO/timestamp → ДД.ММ.РР */
 function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -3876,6 +3891,11 @@ interface ParsedClientData {
   source?: string; // Джерело
   address?: string; // Адреса
   extra?: string; // Додатково
+  carType?: string; // Тип авто (седан, хетчбек тощо)
+  color?: string; // Колір
+  seats?: string; // Кількість місць
+  firstRegDate?: string; // Дата першої реєстрації
+  regDate?: string; // Дата реєстрації
 }
 
 /** Перевірити, чи містить текст дані клієнта/авто */
@@ -3997,12 +4017,21 @@ function parseClientDataFromAI(text: string): ParsedClientData {
     }
   }
 
-  // ── Об'єм двигуна ──
+  // ── Об'єм двигуна (очищуємо від "см³", "куб.см", "cc", "л" тощо) ──
   result.engine = extractField(text, [
     /об['ʼ]?єм\s*(?:двигуна?)?\s*[:：—–-]\s*(.+)/im,
     /двигун\s*[:：—–-]\s*(.+)/im,
     /об['ʼ]?єм\s*[:：—–-]\s*(\d[\d.,]+\s*л?)/im,
   ]);
+  if (result.engine) {
+    // Прибираємо "см³", "куб.см", "cc", "cm³", "л" та пробіли навколо
+    result.engine = result.engine
+      .replace(
+        /\s*(?:см[³3]?|куб\.?\s*см|cm[³3]?|cc|л(?:ітр(?:ів)?)?)\s*/gi,
+        "",
+      )
+      .trim();
+  }
 
   // ── Пальне ──
   result.fuel = extractField(text, [
@@ -4036,6 +4065,35 @@ function parseClientDataFromAI(text: string): ParsedClientData {
   // ── Додатково ──
   result.extra = extractField(text, [
     /(?:додаткова?\s*(?:інформація|дані)?|примітка|коментар)\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Тип авто ──
+  result.carType = extractField(text, [
+    /тип\s*(?:авто|транспорт\w*)?\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Колір ──
+  result.color = extractField(text, [
+    /колір\s*[:：—–-]\s*(.+)/im,
+    /колор\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Кількість місць ──
+  result.seats = extractField(text, [
+    /(?:кількість\s*)?місць\s*(?:для\s*сидіння)?\s*[:：—–-]\s*(\d+)/im,
+    /місць\s*[:：—–-]\s*(\d+)/im,
+  ]);
+
+  // ── Дата першої реєстрації ──
+  result.firstRegDate = extractField(text, [
+    /дата\s*першої\s*реєстрації\s*[:：—–-]\s*(.+)/im,
+    /перша\s*реєстрація\s*[:：—–-]\s*(.+)/im,
+  ]);
+
+  // ── Дата реєстрації ──
+  result.regDate = extractField(text, [
+    /дата\s*реєстрації\s*[:：—–-]\s*(.+)/im,
+    /реєстрація\s*[:：—–-]\s*(.+)/im,
   ]);
 
   return result;
@@ -4247,13 +4305,13 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
     setConfirmToggle("new");
     unlockFormButton();
 
-    // Заповнюємо ПІБ
+    // Заповнюємо ПІБ (у CamelCase: Перша Буква Велика)
     if (parsed.pib) {
       const pibEl = document.getElementById(
         "client-input-create-sakaz_narad",
       ) as HTMLTextAreaElement | null;
       if (pibEl) {
-        pibEl.value = parsed.pib;
+        pibEl.value = toCamelCasePIB(parsed.pib);
         pibEl.dispatchEvent(new Event("input", { bubbles: true }));
       }
     }
@@ -4271,10 +4329,16 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
       if (sourceEl) sourceEl.value = parsed.source;
     }
 
-    // Заповнюємо Додатково (адреса + додатково)
+    // Заповнюємо Додатково (адреса + колір + тип + місця + дати реєстрації + додатково)
     {
       const parts: string[] = [];
-      if (parsed.address) parts.push(parsed.address);
+      if (parsed.address) parts.push(`Адреса: ${parsed.address}`);
+      if (parsed.color) parts.push(`Колір: ${toCamelCasePIB(parsed.color)}`);
+      if (parsed.carType) parts.push(`Тип: ${parsed.carType}`);
+      if (parsed.seats) parts.push(`Місць: ${parsed.seats}`);
+      if (parsed.firstRegDate)
+        parts.push(`Перша реєстр: ${parsed.firstRegDate}`);
+      if (parsed.regDate) parts.push(`Реєстрація: ${parsed.regDate}`);
       if (parsed.extra) parts.push(parsed.extra);
       if (parts.length > 0) {
         const extraEl = document.getElementById(

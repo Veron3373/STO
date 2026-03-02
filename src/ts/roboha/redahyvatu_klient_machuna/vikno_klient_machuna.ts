@@ -694,8 +694,8 @@ export async function showModalCreateSakazNarad() {
   userConfirmation = null;
   if (confirmToggle) {
     const states = [
-      { value: null, icon: "🔁", class: "", title: "Очікування підтвердження" },
       { value: "yes", icon: "➕", class: "yes", title: "Підтвердити" },
+      { value: null, icon: "🔁", class: "", title: "Очікування підтвердження" },
       { value: "no", icon: "❌", class: "no", title: "Відхилити" },
     ];
     let currentStateIndex = 0;
@@ -1229,7 +1229,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!session) {
         // console.warn(
-          // "⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається.",
+        // "⛔ Користувач не авторизований. Модальне вікно 'Наряд' не відкривається.",
         // );
         // Тут можна викликати вашу функцію показу помилки, якщо вона не викликається автоматично глобально
         // Але головне - ми не йдемо далі:

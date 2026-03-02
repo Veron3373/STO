@@ -2244,6 +2244,115 @@ async function gatherSTOContext(
 }
 
 // ============================================================
+// 🌐 GEMINI GOOGLE SEARCH GROUNDING — FALLBACK
+// ============================================================
+
+/**
+ * Fallback-пошук через вбудований Google Search Grounding в Gemini.
+ * Використовується коли всі CSE API ключі заблоковано (403/429).
+ * НЕ потребує окремого API ключа — використовує Gemini API ключ.
+ */
+async function geminiSearchGrounding(query: string): Promise<{
+  success: boolean;
+  text: string;
+  sources: Array<{ title: string; url: string; snippet: string }>;
+}> {
+  const keys = await loadAllGeminiKeys();
+  if (keys.length === 0) {
+    return { success: false, text: "", sources: [] };
+  }
+
+  const apiKey = keys[currentKeyIndex];
+
+  const requestBody = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: query,
+          },
+        ],
+      },
+    ],
+    tools: [{ googleSearch: {} }],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 2048,
+    },
+    systemInstruction: {
+      parts: [
+        {
+          text: `Ти — помічник з пошуку інформації для автосервісу (СТО) в Україні. Відповідай ТІЛЬКИ українською.
+Шукай актуальні ціни на автозапчастини, артикули, посилання на товари.
+ПРІОРИТЕТНІ САЙТИ: exist.ua, avto.pro, avtopro.ua, ecat.ua, dok.ua, autodoc.co.uk, autoklad.ua, intercars.com.ua, spareto.com, trodo.com.
+⛔ НЕ шукай на .ru сайтах. Тільки українські магазини.
+Формат: 🔩 Назва деталі — Артикул | 💰 Ціна — Магазин — [посилання]`,
+        },
+      ],
+    },
+  };
+
+  try {
+    console.log("[Search] 🌐 Fallback: Gemini Google Search Grounding...");
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn(
+        `[Search] Grounding failed: ${response.status} — ${errText.slice(0, 200)}`,
+      );
+      return { success: false, text: "", sources: [] };
+    }
+
+    const data = await response.json();
+    const candidate = data?.candidates?.[0];
+    const text =
+      candidate?.content?.parts
+        ?.map((p: any) => p.text)
+        .filter(Boolean)
+        .join("\n") || "";
+
+    // Витягуємо джерела з grounding metadata
+    const groundingMeta = candidate?.groundingMetadata;
+    const sources: Array<{ title: string; url: string; snippet: string }> = [];
+
+    if (groundingMeta?.groundingChunks) {
+      for (const chunk of groundingMeta.groundingChunks) {
+        if (chunk.web) {
+          sources.push({
+            title: chunk.web.title || "",
+            url: chunk.web.uri || "",
+            snippet: "",
+          });
+        }
+      }
+    }
+
+    // Рахуємо токени
+    if (data?.usageMetadata?.totalTokenCount) {
+      const settingId = geminiKeySettingIds[currentKeyIndex];
+      if (settingId) {
+        saveTokensToDB(settingId, data.usageMetadata.totalTokenCount);
+      }
+    }
+
+    console.log(
+      `[Search] ✅ Grounding OK: ${text.length} chars, ${sources.length} sources`,
+    );
+    return { success: true, text, sources };
+  } catch (err: any) {
+    console.warn(`[Search] Grounding error: ${err.message}`);
+    return { success: false, text: "", sources: [] };
+  }
+}
+
+// ============================================================
 // 🔧 FUNCTION CALLING — ОБРОБНИК ІНСТРУМЕНТІВ AI
 // ============================================================
 
@@ -2327,19 +2436,37 @@ async function handleFunctionCall(
           sites: args.sites,
         });
 
-        if (!response.success) {
+        if (response.success) {
           return JSON.stringify({
-            success: false,
+            success: true,
             query: response.query,
-            error: response.error,
+            source: response.source,
+            results: response.results,
           });
         }
 
+        // 🌐 Fallback: Gemini Google Search Grounding (коли CSE заблоковано)
+        console.log(
+          "[Search] CSE failed, trying Gemini Google Search Grounding fallback...",
+        );
+        const grounding = await geminiSearchGrounding(args.query);
+
+        if (grounding.success) {
+          return JSON.stringify({
+            success: true,
+            query: args.query,
+            source: "google_search_grounding",
+            fallback: true,
+            text: grounding.text,
+            sources: grounding.sources,
+          });
+        }
+
+        // Обидва методи не спрацювали
         return JSON.stringify({
-          success: true,
+          success: false,
           query: response.query,
-          source: response.source,
-          results: response.results,
+          error: response.error,
         });
       }
 

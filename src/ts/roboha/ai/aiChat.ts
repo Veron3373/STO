@@ -15,7 +15,11 @@ import {
   getRpcToolDeclaration,
   type AIQueryParams,
 } from "./aiDatabaseQuery";
-import { searchWeb, getSearchInternetToolDeclaration } from "./aiWebSearch";
+import {
+  searchWeb,
+  getSearchInternetToolDeclaration,
+  setSearchStatusCallback,
+} from "./aiWebSearch.ts";
 import { buildAIContext, buildCompactContext } from "./aiContextProvider";
 import { executeAnalytics, getAnalyticsToolDeclaration } from "./aiAnalytics";
 
@@ -56,6 +60,37 @@ function fmtDate(dateStr: string | null | undefined): string {
     return `${dd}.${mm}.${yy}`;
   } catch {
     return dateStr;
+  }
+}
+
+/**
+ * Оновлює текст статусу в typing indicator (під час function calling).
+ * Показує яку дію зараз виконує AI (назву tool або метод пошуку).
+ */
+function updateTypingStatus(text: string): void {
+  const statusEl = document.querySelector(".ai-typing-status");
+  if (statusEl) {
+    statusEl.textContent = text;
+  }
+}
+
+/**
+ * Повертає зрозумілу назву інструменту для відображення в UI.
+ */
+function getToolDisplayName(toolName: string): string {
+  switch (toolName) {
+    case "query_database":
+      return "📊 Запит до БД...";
+    case "multi_query_database":
+      return "📊 Запити до БД...";
+    case "search_internet":
+      return "🔍 Пошук в інтернеті...";
+    case "call_rpc":
+      return "⚙️ RPC функція...";
+    case "get_analytics":
+      return "📈 Аналітика...";
+    default:
+      return `⚙️ ${toolName}...`;
   }
 }
 
@@ -2277,17 +2312,26 @@ async function geminiSearchGrounding(query: string): Promise<{
     ],
     tools: [{ googleSearch: {} }],
     generationConfig: {
-      temperature: 0.3,
+      temperature: 0.2,
       maxOutputTokens: 2048,
     },
     systemInstruction: {
       parts: [
         {
-          text: `Ти — помічник з пошуку інформації для автосервісу (СТО) в Україні. Відповідай ТІЛЬКИ українською.
-Шукай актуальні ціни на автозапчастини, артикули, посилання на товари.
-ПРІОРИТЕТНІ САЙТИ: exist.ua, avto.pro, avtopro.ua, ecat.ua, dok.ua, autodoc.co.uk, autoklad.ua, intercars.com.ua, spareto.com, trodo.com.
-⛔ НЕ шукай на .ru сайтах. Тільки українські магазини.
-Формат: 🔩 Назва деталі — Артикул | 💰 Ціна — Магазин — [посилання]`,
+          text: `Ти — помічник з пошуку цін на автозапчастини для СТО в Україні. Відповідай ТІЛЬКИ українською.
+
+⛔ КРИТИЧНО ВАЖЛИВО — ЗАБОРОНА ВИГАДУВАТИ URL:
+▸ НІКОЛИ не вставляй URL/посилання у свою відповідь!
+▸ НЕ пиши "https://...", НЕ вигадуй адреси сайтів!
+▸ Реальні посилання будуть додані автоматично з метаданих пошуку.
+▸ Пиши ТІЛЬКИ: назву деталі, артикул, ціну, назву магазину (без URL).
+
+Формат відповіді (БЕЗ URL):
+🔩 Назва деталі — Артикул
+💰 Ціна — Назва магазину
+
+ПРІОРИТЕТНІ МАГАЗИНИ: exist.ua, avto.pro, avtopro.ua, ecat.ua, dok.ua, autodoc, autoklad.ua, intercars.com.ua, spareto.com, trodo.com.
+⛔ НЕ шукай на .ru сайтах. Тільки українські магазини.`,
         },
       ],
     },
@@ -2312,24 +2356,44 @@ async function geminiSearchGrounding(query: string): Promise<{
 
     const data = await response.json();
     const candidate = data?.candidates?.[0];
-    const text =
+    let text =
       candidate?.content?.parts
         ?.map((p: any) => p.text)
         .filter(Boolean)
         .join("\n") || "";
 
-    // Витягуємо джерела з grounding metadata
+    // 🧹 Видаляємо всі URL з тексту Gemini (вони часто вигадані/галюциновані → 404)
+    text = text
+      .replace(/https?:\/\/[^\s)\]>"']+/gi, "")
+      .replace(/\(\s*\)/g, "")
+      .replace(/\[\s*\]/g, "")
+      .trim();
+
+    // Витягуємо РЕАЛЬНІ джерела з grounding metadata (тільки ці URL перевірені Google)
     const groundingMeta = candidate?.groundingMetadata;
     const sources: Array<{ title: string; url: string; snippet: string }> = [];
 
     if (groundingMeta?.groundingChunks) {
       for (const chunk of groundingMeta.groundingChunks) {
-        if (chunk.web) {
+        if (chunk.web && chunk.web.uri) {
           sources.push({
             title: chunk.web.title || "",
-            url: chunk.web.uri || "",
+            url: chunk.web.uri,
             snippet: "",
           });
+        }
+      }
+    }
+
+    // Додаємо сніпети з groundingSupports (якщо є)
+    if (groundingMeta?.groundingSupports) {
+      for (const support of groundingMeta.groundingSupports) {
+        const segment = support?.segment?.text || "";
+        const chunkIndices = support?.groundingChunkIndices || [];
+        for (const idx of chunkIndices) {
+          if (sources[idx] && !sources[idx].snippet && segment) {
+            sources[idx].snippet = segment.slice(0, 200);
+          }
         }
       }
     }
@@ -2343,7 +2407,7 @@ async function geminiSearchGrounding(query: string): Promise<{
     }
 
     console.log(
-      `[Search] ✅ Grounding OK: ${text.length} chars, ${sources.length} sources`,
+      `[Search] ✅ Grounding OK: ${text.length} chars, ${sources.length} verified sources`,
     );
     return { success: true, text, sources };
   } catch (err: any) {
@@ -2430,6 +2494,8 @@ async function handleFunctionCall(
       }
 
       case "search_internet": {
+        // searchWeb спробує Метод 1 (Serper) і Метод 2 (CSE)
+        // callback для UI встановлюється в geminiWithFunctionCalling
         const response = await searchWeb(args.query, {
           autoPartsMode: args.auto_parts_mode || false,
           vinCode: args.vin_code,
@@ -2441,32 +2507,50 @@ async function handleFunctionCall(
             success: true,
             query: response.query,
             source: response.source,
+            method: response.method,
             results: response.results,
           });
         }
 
-        // 🌐 Fallback: Gemini Google Search Grounding (коли CSE заблоковано)
+        // 🌐 Fallback Метод ③: Gemini Google Search Grounding
+        updateTypingStatus("🔍 Метод ③: Gemini Grounding...");
         console.log(
-          "[Search] CSE failed, trying Gemini Google Search Grounding fallback...",
+          "[Search] Методи 1-2 не спрацювали, пробую Метод ③: Gemini Grounding...",
         );
         const grounding = await geminiSearchGrounding(args.query);
 
         if (grounding.success) {
+          // Формуємо результат з реальними URL з metadata
+          const sourcesText =
+            grounding.sources.length > 0
+              ? "\n\n📎 ПЕРЕВІРЕНІ ДЖЕРЕЛА (реальні посилання):\n" +
+                grounding.sources
+                  .map(
+                    (s, i) =>
+                      `${i + 1}. ${s.title || "Джерело"}: ${s.url}${s.snippet ? " — " + s.snippet : ""}`,
+                  )
+                  .join("\n")
+              : "";
+
           return JSON.stringify({
             success: true,
             query: args.query,
             source: "google_search_grounding",
+            method: 3,
             fallback: true,
-            text: grounding.text,
+            text: grounding.text + sourcesText,
             sources: grounding.sources,
+            _instruction:
+              "⚠️ УВАГА: Використовуй ТІЛЬКИ URL з масиву 'sources' або з секції 'ПЕРЕВІРЕНІ ДЖЕРЕЛА'. НІКОЛИ не вигадуй і не реконструюй URL самостійно! Якщо URL немає в sources — НЕ давай посилання, просто вкажи назву магазину.",
           });
         }
 
-        // Обидва методи не спрацювали
+        // Всі 3 методи не спрацювали
+        updateTypingStatus("❌ Пошук недоступний");
         return JSON.stringify({
           success: false,
           query: response.query,
-          error: response.error,
+          error: `Всі 3 методи пошуку не спрацювали. ${response.error || ""}`,
         });
       }
 
@@ -2599,7 +2683,23 @@ async function geminiWithFunctionCalling(
       const functionResponseParts: any[] = [];
       for (const fcPart of functionCallParts) {
         const fc = fcPart.functionCall;
+
+        // 🔍 Оновлюємо typing indicator з назвою інструменту
+        updateTypingStatus(getToolDisplayName(fc.name));
+
+        // Для search_internet — підключаємо callback для відображення методу
+        if (fc.name === "search_internet") {
+          setSearchStatusCallback((status: string) =>
+            updateTypingStatus(status),
+          );
+        }
+
         const result = await handleFunctionCall(fc.name, fc.args || {});
+
+        // Скидаємо callback після пошуку
+        if (fc.name === "search_internet") {
+          setSearchStatusCallback(null);
+        }
 
         functionResponseParts.push({
           functionResponse: {
@@ -2859,15 +2959,20 @@ async function callGemini(
 
 📌 ОБОВ'ЯЗКОВО:
 1. При пошуку деталей/запчастин — шукай САМЕ на вказаних сайтах
-2. Надавай ПРЯМІ ПОСИЛАННЯ на сторінки товарів на цих сайтах
-3. Порівнюй ціни з різних магазинів (мінімум 2-3 сайти)
-4. Формат відповіді для запчастин:
+2. Порівнюй ціни з різних магазинів (мінімум 2-3 сайти)
+3. Формат відповіді для запчастин:
    🔩 Назва деталі — Артикул
-   💰 exist.ua: XXX грн — [посилання]
-   💰 avto.pro: XXX грн — [посилання]
-   💰 dok.ua: XXX грн — [посилання]
-5. Якщо запитують "знайди", "пошукай", "скільки коштує", "де купити" — ЗАВЖДИ шукай в інтернеті
-6. Вказуй актуальність знайденої інформації
+   💰 exist.ua: XXX грн
+   💰 avto.pro: XXX грн
+   💰 dok.ua: XXX грн
+4. Якщо запитують "знайди", "пошукай", "скільки коштує", "де купити" — ЗАВЖДИ шукай в інтернеті
+5. Вказуй актуальність знайденої інформації
+
+⛔⛔⛔ КРИТИЧНА ЗАБОРОНА — URL/ПОСИЛАННЯ:
+▸ НІКОЛИ не вигадуй, не фабрикуй, не конструюй URL самостійно!
+▸ Використовуй ТІЛЬКИ ті URL/посилання, що прийшли з результатів пошуку (з масиву "sources" або "results")
+▸ Якщо в результатах пошуку немає URL для конкретного магазину — НЕ давай посилання, просто вкажи назву магазину та ціну
+▸ Фейкові/вигадані URL дають 404 помилку — це неприпустимо!
 `
       : "";
 
@@ -5282,6 +5387,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
       <div class="ai-chat-bubble">
         <div class="ai-typing-indicator">
           <span></span><span></span><span></span>
+          <span class="ai-typing-status"></span>
         </div>
       </div>
     `;

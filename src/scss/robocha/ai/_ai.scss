@@ -1353,6 +1353,20 @@
       animation-delay: 0.4s;
     }
   }
+
+  .ai-typing-status {
+    width: auto;
+    height: auto;
+    background: none;
+    border-radius: 0;
+    animation: none;
+    font-size: 11px;
+    color: #667eea;
+    margin-left: 6px;
+    white-space: nowrap;
+    font-weight: 500;
+    opacity: 0.9;
+  }
 }
 
 @keyframes typingBounce {

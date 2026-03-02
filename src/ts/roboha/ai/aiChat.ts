@@ -2438,13 +2438,12 @@ async function geminiWithFunctionCalling(
       systemInstruction,
     };
 
-    // Додаємо tools (function declarations + опціонально Google Search)
+    // Додаємо tools (function declarations АБО Google Search — НЕ одночасно!)
+    // Gemini API повертає 400 при комбінації functionDeclarations + googleSearch
     if (tools.length > 0) {
+      // Якщо є function declarations — використовуємо їх (включає search_internet)
       requestBody.tools = [{ functionDeclarations: tools }];
-      // Google Search Grounding — додаємо як окремий tool
-      if (wantsSearch) {
-        requestBody.tools.push({ googleSearch: {} });
-      }
+      // НЕ додаємо googleSearch — search_internet покриває потребу в пошуку
     } else if (wantsSearch) {
       requestBody.tools = [{ googleSearch: {} }];
     }
@@ -3318,7 +3317,16 @@ ${functionCallingBlock}`;
         }
 
         if (status === 400) {
-          return `❌ Помилка запиту до ${provider}. Перевірте API ключ.`;
+          const errBody = apiErr?.responseText || "";
+          // Якщо в тексті помилки є "API_KEY" — дійсно проблема з ключем
+          if (/API.?KEY|invalid.*key|key.*invalid/i.test(errBody)) {
+            return `❌ Помилка запиту до ${provider}. Перевірте API ключ.`;
+          }
+          // Інакше показуємо деталі (невалідний формат, schema тощо)
+          const detail =
+            errBody.length > 300 ? errBody.slice(0, 300) + "…" : errBody;
+          console.error(`[AI] ${provider} 400 error:`, errBody);
+          return `❌ Помилка формату запиту до ${provider} (400): ${detail || "Невідомі деталі"}`;
         }
 
         const errText = apiErr?.responseText || apiErr?.message || "";

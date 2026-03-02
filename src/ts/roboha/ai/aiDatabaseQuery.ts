@@ -373,8 +373,9 @@ JSONB поля (data) доступні через синтаксис: data->>'П
                 ],
               },
               value: {
+                type: "string",
                 description:
-                  'Значення для порівняння. Для ilike використовуй %шаблон%. Для is: null. Для in: масив значень. Для дат: "2026-03-01"',
+                  'Значення для порівняння (завжди рядок). Для ilike: %шаблон%. Для is: "null". Для in: "val1,val2,val3". Для чисел: "123". Для дат: "2026-03-01"',
               },
             },
             required: ["column", "operator", "value"],
@@ -442,7 +443,10 @@ export function getMultiQueryToolDeclaration(): any {
                         "not",
                       ],
                     },
-                    value: {},
+                    value: {
+                      type: "string",
+                      description: "Значення для порівняння (рядок)",
+                    },
                   },
                   required: ["column", "operator", "value"],
                 },
@@ -483,6 +487,17 @@ export function getRpcToolDeclaration(): any {
         args: {
           type: "object",
           description: `Аргументи функції (JSON). Приклади:\n- check_long_open_acts: {"threshold_days": 14}\n- get_client_stats: {"p_client_id": 123}\n- check_low_stock, get_pending_reminders, get_db_size: {} (без аргументів)`,
+          properties: {
+            threshold_days: {
+              type: "integer",
+              description:
+                "Поріг днів для check_long_open_acts (за замовчуванням 14)",
+            },
+            p_client_id: {
+              type: "integer",
+              description: "Ідентифікатор клієнта для get_client_stats",
+            },
+          },
         },
       },
       required: ["function_name"],

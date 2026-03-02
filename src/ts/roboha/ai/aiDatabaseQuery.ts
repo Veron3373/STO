@@ -27,19 +27,10 @@ export const AI_ALLOWED_TABLES = [
   "settings",
   "act_changes_notifications",
   "slusar_complete_notifications",
-  "recommendations",
-  "feedback",
-  "purchase_requests",
 ] as const;
 
 /** Дозволені RPC-функції для виклику через AI */
-export const AI_ALLOWED_RPC = [
-  "check_low_stock",
-  "check_long_open_acts",
-  "get_pending_reminders",
-  "get_client_stats",
-  "get_db_size",
-] as const;
+export const AI_ALLOWED_RPC = ["get_db_size"] as const;
 
 export type AllowedRPC = (typeof AI_ALLOWED_RPC)[number];
 
@@ -327,7 +318,7 @@ export function getQueryDatabaseToolDeclaration(): any {
   return {
     name: "query_database",
     description: `Виконує SELECT-запит до бази даних СТО (PostgreSQL/Supabase). 
-Використовуй для отримання даних з таблиць: acts (акти/заказ-наряди), clients (клієнти), cars (авто), slyusars (працівники — data.Спеціалізація, data.Рейтинг), sclad (склад/запчастини — min_quantity для мінімального залишку, return_reason для причин повернень), post_arxiv (бронювання), vutratu (витрати), faktura (фактури), shops (постачальники), works (довідник робіт), details (довідник деталей), settings, post_category, post_name, incomes, recommendations (рекомендації/нагадування клієнтам), feedback (зворотний зв'язок/оцінки), purchase_requests (заявки на закупівлю).
+Використовуй для отримання даних з таблиць: acts (акти/заказ-наряди), clients (клієнти), cars (авто), slyusars (працівники), sclad (склад/запчастини), post_arxiv (бронювання), vutratu (витрати), faktura (фактури), shops (постачальники), works (довідник робіт), details (довідник деталей), settings, post_category, post_name, incomes.
 JSONB поля (data) доступні через синтаксис: data->>'ПІБ', data->'Роботи'.
 ⚠️ ТІЛЬКИ читання (SELECT). Тільки дозволені таблиці.`,
     parameters: {
@@ -471,10 +462,6 @@ export function getRpcToolDeclaration(): any {
   return {
     name: "call_rpc",
     description: `Викликає серверну RPC-функцію PostgreSQL. Доступні функції:
-- check_low_stock() — позиції складу з залишком нижче мінімуму (sclad_id, article, name, quantity, min_quantity, deficit)
-- check_long_open_acts(threshold_days) — акти відкриті довше N днів (act_id, date_on, days_open, client_name, car, slusar). За замовчуванням 14 днів.
-- get_pending_reminders() — рекомендації/нагадування готові до відправки (recommendation_id, client_name, client_phone, text, date_to_remind)
-- get_client_stats(p_client_id) — статистика клієнта: кількість актів, виручка, перший/останній візит, середній чек, VIP-рівень
 - get_db_size() — розмір бази даних у байтах`,
     parameters: {
       type: "object",
@@ -486,18 +473,8 @@ export function getRpcToolDeclaration(): any {
         },
         args: {
           type: "object",
-          description: `Аргументи функції (JSON). Приклади:\n- check_long_open_acts: {"threshold_days": 14}\n- get_client_stats: {"p_client_id": 123}\n- check_low_stock, get_pending_reminders, get_db_size: {} (без аргументів)`,
-          properties: {
-            threshold_days: {
-              type: "integer",
-              description:
-                "Поріг днів для check_long_open_acts (за замовчуванням 14)",
-            },
-            p_client_id: {
-              type: "integer",
-              description: "Ідентифікатор клієнта для get_client_stats",
-            },
-          },
+          description: `Аргументи функції (JSON). Для get_db_size: {} (без аргументів)`,
+          properties: {},
         },
       },
       required: ["function_name"],

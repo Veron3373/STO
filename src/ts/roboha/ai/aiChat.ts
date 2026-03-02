@@ -1,6 +1,6 @@
 // src/ts/roboha/ai/aiChat.ts
 // 🤖 AI-Чат Асистент "Атлас" — Google Gemini + Groq + аналіз даних СТО
-// 🔧 Підтримка: Function Calling (query_database, search_internet, call_rpc, run_scheduled_checks, get_analytics), Google Search Grounding
+// 🔧 Підтримка: Function Calling (query_database, search_internet, call_rpc, get_analytics), Google Search Grounding
 
 import { supabase } from "../../vxid/supabaseClient";
 import { globalCache } from "../zakaz_naraudy/globalCache";
@@ -17,7 +17,6 @@ import {
 } from "./aiDatabaseQuery";
 import { searchWeb, getSearchInternetToolDeclaration } from "./aiWebSearch";
 import { buildAIContext, buildCompactContext } from "./aiContextProvider";
-import { runSelectedChecks, getSchedulerToolDeclaration } from "./aiScheduler";
 import { executeAnalytics, getAnalyticsToolDeclaration } from "./aiAnalytics";
 
 import { startChatVoiceInput } from "./voiceInput";
@@ -2366,20 +2365,6 @@ async function handleFunctionCall(
         });
       }
 
-      case "run_scheduled_checks": {
-        const results = await runSelectedChecks(args.check_types);
-
-        return JSON.stringify({
-          success: true,
-          results: results.map((r) => ({
-            task: r.taskId,
-            message: r.message,
-            items_found: r.itemsFound,
-            items: r.items?.slice(0, 10), // обмежуємо кількість
-          })),
-        });
-      }
-
       case "get_analytics": {
         const result = await executeAnalytics(
           args.analytics_type,
@@ -2768,7 +2753,7 @@ async function callGemini(
 
 1️⃣ query_database — SELECT-запит до БД СТО
    ▸ Використовуй для отримання КОНКРЕТНИХ даних з таблиць
-   ▸ Дозволені: acts, clients, cars, slyusars, sclad, post_arxiv, vutratu, faktura, shops, works, details, settings, post_category, post_name, incomes, recommendations, feedback, purchase_requests
+   ▸ Дозволені: acts, clients, cars, slyusars, sclad, post_arxiv, vutratu, faktura, shops, works, details, settings, post_category, post_name, incomes
    ▸ JSONB поля: data->>'ПІБ', data->>'Телефон'
    ▸ Приклади: {column: "date_off", operator: "is", value: null} = відкриті акти
    ▸ ilike: {column: "data->>'ПІБ'", operator: "ilike", value: "%Петренко%"}
@@ -2782,16 +2767,9 @@ async function callGemini(
    ▸ vin_code → пошук запчастин за VIN-кодом авто
 
 4️⃣ call_rpc — Серверні RPC-функції PostgreSQL
-   ▸ check_low_stock() — позиції з залишком < мінімуму
-   ▸ check_long_open_acts(threshold_days) — акти відкриті > N днів
-   ▸ get_pending_reminders() — нагадування до відправки
-   ▸ get_client_stats(p_client_id) — статистика клієнта (акти, виручка, VIP-рівень)
+   ▸ get_db_size() — розмір бази даних
 
-5️⃣ run_scheduled_checks — Планові перевірки СТО
-   ▸ Запускає всі або вибіркові: long_acts, low_stock, reminders, feedback
-   ▸ Для "що потребує уваги?", "перевірки", "статус СТО"
-
-6️⃣ get_analytics — Аналітичні звіти
+5️⃣ get_analytics — Аналітичні звіти
    ▸ vip_clients — топ VIP-клієнтів за виручкою
    ▸ slyusar_ranking — рейтинг слюсарів (спеціалізація, завантаженість)
    ▸ financial_report — фінзвіт з трендами (порівняння з минулим періодом)
@@ -2801,8 +2779,6 @@ async function callGemini(
 ▸ Є в контексті → НЕ викликай query_database, використай контекст
 ▸ Потрібні конкретні дані → query_database
 ▸ Потрібен інтернет → search_internet
-▸ Залишки/довгі акти → call_rpc (check_low_stock, check_long_open_acts)
-▸ "Що потребує уваги?" → run_scheduled_checks
 ▸ "Звіт", "VIP", "рейтинг" → get_analytics
 ▸ Можеш робити послідовні запити (спочатку client_id, потім акти)
 `;
@@ -2886,36 +2862,11 @@ async function callGemini(
 18. "slusar_complete_notifications" — Слюсар завершив:
     notification_id (PK), act_id (FK→acts), delit (bool), viewed (bool), pruimalnyk
 
-19. "recommendations" — Рекомендації/нагадування клієнтам:
-    recommendation_id (PK), act_id (FK→acts), client_id (FK→clients), date_recommended, date_to_remind,
-    text (TEXT), status ("pending"/"sent"/"done"/"cancelled"), created_by, data (JSONB)
-
-20. "feedback" — Зворотний зв'язок/оцінки від клієнтів:
-    feedback_id (PK), client_id (FK→clients), act_id (FK→acts), rating (1-5), comment, date, data (JSONB)
-
-21. "purchase_requests" — Заявки на закупівлю запчастин:
-    request_id (PK), date_created, supplier_id (FK→shops), details (JSONB: [{sclad_id, name, article, quantity, price}]),
-    status ("new"/"ordered"/"received"/"cancelled"), total_amount, notes, created_by, date_ordered, date_received
-
 🔗 ЗВ'ЯЗКИ:
 clients→cars (1:N), clients→acts (1:N), cars→acts (1:N), acts→sclad.akt (1:N),
 acts→act_changes_notifications (1:N), acts→slusar_complete_notifications (1:N),
 acts→faktura (1:N), acts→post_arxiv (1:1), post_category→post_name (1:N),
-post_name→slyusars.post_sluysar (1:N), post_name→post_arxiv (1:N), slyusars→post_arxiv (1:N),
-clients→recommendations (1:N), clients→feedback (1:N), acts→recommendations (1:N),
-acts→feedback (1:N), shops→purchase_requests (1:N)
-
-📊 НОВІ ПОЛЯ:
-sclad.min_quantity — мінімальний залишок (для автозамовлення)
-sclad.return_reason — причина повернення деталі
-slyusars.data.Спеціалізація — "Двигуни", "Ходова", "Електрика" тощо
-slyusars.data.Рейтинг — оцінка 1-5
-
-🔧 RPC ФУНКЦІЇ (виклик через call_rpc):
-check_low_stock() — позиції складу з залишком < мінімуму
-check_long_open_acts(threshold_days) — акти відкриті довше N днів
-get_pending_reminders() — нагадування готові до відправки
-get_client_stats(p_client_id) — статистика клієнта (акти, виручка, VIP-рівень)
+post_name→slyusars.post_sluysar (1:N), post_name→post_arxiv (1:N), slyusars→post_arxiv (1:N)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧠 РОЗУМІННЯ ЗАПИТІВ
@@ -2992,9 +2943,8 @@ VIN → cars.data.Vincode + acts.data.VIN | Тел → clients/acts.Телефо
 "клієнт X" → картка | "авто X" → авто+власник | "вільні пости" → вільні зараз
 "зарплата X" → ЗП | "замовлення" → що замовити | "нові клієнти" → нові за місяць
 "топ роботи" → популярні | "должники" → аванс без закриття | "не приїхали" → Не приїхав за тиждень
-"VIP" → топ VIP-клієнти | "перевірки" → всі планові перевірки | "нагадування" → рекомендації клієнтам
-"аналітика" → фінзвіт з трендами | "хто вільний?" → рекомендація слюсаря | "замовити деталі" → заявки на закупівлю
-"відгуки" → зворотний зв'язок клієнтів | "запчастини X VIN" → пошук запчастин за VIN-кодом
+"аналітика" → фінзвіт з трендами | "хто вільний?" → рекомендація слюсаря
+"запчастини X VIN" → пошук запчастин за VIN-кодом
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 � РЕЛЯЦІЙНИЙ ПОШУК (ОБОВ'ЯЗКОВО)
@@ -3211,7 +3161,6 @@ ${functionCallingBlock}`;
           getMultiQueryToolDeclaration(),
           getSearchInternetToolDeclaration(),
           getRpcToolDeclaration(),
-          getSchedulerToolDeclaration(),
           getAnalyticsToolDeclaration(),
         ];
 

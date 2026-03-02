@@ -42,11 +42,11 @@ const AUTO_PARTS_SITES = [
   "trodo.com",
 ];
 
-/** Кеш ключа пошуку (setting_id=4 в settings.API або settings.Загальні) */
-let searchApiKeyCache: {
-  key: string;
-  engine: string; // google_cse_id або serper
-  provider: "google_cse" | "serper";
+/** Кеш ключів пошуку (setting_id=20+: API Keys, setting_id=11: CSE ID) */
+let searchKeysCache: {
+  keys: string[]; // масив API ключів (з setting_id 20, 21, 22...)
+  cseId: string; // CSE ID (з setting_id 11)
+  currentKeyIndex: number; // індекс поточного ключа
   loadedAt: number;
 } | null = null;
 
@@ -57,60 +57,57 @@ const CACHE_TTL = 5 * 60_000; // 5 хвилин
 // ============================================================
 
 /**
- * Завантажує ключ API пошуку з таблиці settings:
- * - setting_id=4: Загальні = API ключ (Google CSE або Serper)
- * - setting_id=5: Загальні = ID пошукової системи (Google CSE ID)
+ * Завантажує ключі API пошуку з таблиці settings:
+ * - setting_id=20, 21, 22...: Загальні = API ключі Google CSE (ротація при блокуванні)
+ * - setting_id=11: Загальні = ID пошукової системи (Google CSE ID)
  *
- * Підтримує:
- * 1. Google Custom Search Engine (CSE) — потребує API key + CSE ID
- * 2. Serper.dev — потребує тільки API key
- * 3. Supabase Edge Function (fallback) — якщо є `ai-web-search` функція
+ * Якщо ключ заблоковано (429/403) — автоматично переходить на наступний.
  */
-async function loadSearchApiKey(): Promise<typeof searchApiKeyCache> {
-  if (
-    searchApiKeyCache &&
-    Date.now() - searchApiKeyCache.loadedAt < CACHE_TTL
-  ) {
-    return searchApiKeyCache;
+async function loadSearchKeys(): Promise<typeof searchKeysCache> {
+  if (searchKeysCache && Date.now() - searchKeysCache.loadedAt < CACHE_TTL) {
+    return searchKeysCache;
   }
 
   try {
+    // Завантажуємо CSE ID (setting_id=11) та ключі (setting_id=20..39)
+    const settingIds = [11, ...Array.from({ length: 20 }, (_, i) => 20 + i)];
+
     const { data, error } = await supabase
       .from("settings")
-      .select('setting_id, "Загальні", API')
-      .in("setting_id", [4, 5]);
+      .select('setting_id, "Загальні"')
+      .in("setting_id", settingIds);
 
     if (error || !data) return null;
 
-    let apiKey = "";
-    let engineId = "";
+    let cseId = "";
+    const keys: { id: number; key: string }[] = [];
 
     for (const row of data) {
       const val = (row as any)["Загальні"];
-      if (row.setting_id === 4 && val && typeof val === "string") {
-        apiKey = val.trim();
-      }
-      if (row.setting_id === 5 && val && typeof val === "string") {
-        engineId = val.trim();
+      if (!val || typeof val !== "string") continue;
+      const trimmed = val.trim();
+      if (!trimmed) continue;
+
+      if (row.setting_id === 11) {
+        cseId = trimmed;
+      } else if (row.setting_id >= 20) {
+        keys.push({ id: row.setting_id, key: trimmed });
       }
     }
 
-    if (!apiKey) return null;
+    if (keys.length === 0) return null;
 
-    // Визначаємо провайдера за форматом ключа
-    const isSerper = apiKey.length < 50 && !apiKey.startsWith("AIza");
-    const provider: "google_cse" | "serper" = isSerper
-      ? "serper"
-      : "google_cse";
+    // Сортуємо за setting_id (20, 21, 22...)
+    keys.sort((a, b) => a.id - b.id);
 
-    searchApiKeyCache = {
-      key: apiKey,
-      engine: engineId,
-      provider,
+    searchKeysCache = {
+      keys: keys.map((k) => k.key),
+      cseId,
+      currentKeyIndex: 0,
       loadedAt: Date.now(),
     };
 
-    return searchApiKeyCache;
+    return searchKeysCache;
   } catch {
     return null;
   }
@@ -142,7 +139,7 @@ async function searchGoogleCSE(
         success: false,
         results: [],
         query,
-        error: `Google CSE: ${response.status} — ${errText.slice(0, 200)}`,
+        error: `Google CSE: ${response.status} — ${errText.slice(0, 300)}`,
         source: "google_cse",
       };
     }
@@ -170,67 +167,6 @@ async function searchGoogleCSE(
       query,
       error: `Google CSE помилка: ${err.message}`,
       source: "google_cse",
-    };
-  }
-}
-
-// ============================================================
-// ПОШУК ЧЕРЕЗ SERPER.DEV (Google Search API)
-// ============================================================
-
-async function searchSerper(
-  query: string,
-  apiKey: string,
-): Promise<WebSearchResponse> {
-  try {
-    const response = await fetch("https://google.serper.dev/search", {
-      method: "POST",
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        q: query,
-        gl: "ua",
-        hl: "uk",
-        num: 8,
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      return {
-        success: false,
-        results: [],
-        query,
-        error: `Serper: ${response.status} — ${errText.slice(0, 200)}`,
-        source: "serper",
-      };
-    }
-
-    const data = await response.json();
-    const organic = data.organic || [];
-
-    const results: WebSearchResult[] = organic.map((item: any) => ({
-      title: item.title || "",
-      url: item.link || "",
-      snippet: item.snippet || "",
-      source: extractDomain(item.link),
-    }));
-
-    return {
-      success: true,
-      results,
-      query,
-      source: "serper",
-    };
-  } catch (err: any) {
-    return {
-      success: false,
-      results: [],
-      query,
-      error: `Serper помилка: ${err.message}`,
-      source: "serper",
     };
   }
 }
@@ -318,23 +254,54 @@ export async function searchWeb(
     searchQuery = `${searchQuery} (${siteFilter})`;
   }
 
-  // 1. Спробувати через ключ з БД
-  const keyConfig = await loadSearchApiKey();
+  // 1. Спробувати через ключі з БД (ротація при блокуванні)
+  const keysConfig = await loadSearchKeys();
 
-  if (keyConfig) {
-    if (keyConfig.provider === "google_cse" && keyConfig.engine) {
+  if (keysConfig && keysConfig.keys.length > 0 && keysConfig.cseId) {
+    const totalKeys = keysConfig.keys.length;
+    let startIdx = keysConfig.currentKeyIndex;
+
+    // Пробуємо всі ключі по черзі
+    for (let i = 0; i < totalKeys; i++) {
+      const keyIdx = (startIdx + i) % totalKeys;
+      const apiKey = keysConfig.keys[keyIdx];
+
       const result = await searchGoogleCSE(
         searchQuery,
-        keyConfig.key,
-        keyConfig.engine,
+        apiKey,
+        keysConfig.cseId,
       );
-      if (result.success) return result;
+
+      if (result.success) {
+        // Запам'ятовуємо робочий ключ
+        keysConfig.currentKeyIndex = keyIdx;
+        return result;
+      }
+
+      // Перевіряємо чи ключ заблоковано (429/403)
+      const errText = result.error || "";
+      const isBlocked = /429|403|quota|limit|blocked|forbidden/i.test(errText);
+
+      if (isBlocked) {
+        console.warn(
+          `[Search] Ключ №${keyIdx + 1} (setting_id=${20 + keyIdx}) заблоковано, пробую наступний...`,
+        );
+        keysConfig.currentKeyIndex = (keyIdx + 1) % totalKeys;
+        continue;
+      }
+
+      // Інша помилка — не ротуємо, повертаємо
+      return result;
     }
 
-    if (keyConfig.provider === "serper") {
-      const result = await searchSerper(searchQuery, keyConfig.key);
-      if (result.success) return result;
-    }
+    // Всі ключі заблоковані
+    return {
+      success: false,
+      results: [],
+      query,
+      error: `Всі ${totalKeys} API ключів пошуку заблоковано (setting_id: 20–${19 + totalKeys}). Спробуйте пізніше або додайте нові ключі.`,
+      source: "google_cse",
+    };
   }
 
   // 2. Спробувати Edge Function
@@ -347,7 +314,7 @@ export async function searchWeb(
     results: [],
     query,
     error:
-      "Інтернет-пошук не налаштований. Додайте ключ API пошуку в settings (setting_id=4: ключ, setting_id=5: Google CSE ID). Підтримується: Google Custom Search Engine або Serper.dev",
+      "Інтернет-пошук не налаштований. Додайте API ключі Google CSE в settings (setting_id=20, 21, 22...) та CSE ID в setting_id=11.",
     source: "fallback",
   };
 }
@@ -441,5 +408,5 @@ function extractDomain(url: string): string {
  * Скидає кеш ключа пошуку
  */
 export function resetSearchKeyCache(): void {
-  searchApiKeyCache = null;
+  searchKeysCache = null;
 }

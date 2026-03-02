@@ -100,13 +100,22 @@ async function loadSearchKeys(): Promise<typeof searchKeysCache> {
   }
 
   try {
-    // Завантажуємо setting_id: 11 (CSE ID) + 20..39 (API ключі)
-    const settingIds = [11, ...Array.from({ length: 20 }, (_, i) => 20 + i)];
+    // Завантажуємо setting_id=11 (CSE ID) окремо + ВСІ ключі setting_id >= 20 динамічно
+    const [cseRes, keysRes] = await Promise.all([
+      supabase
+        .from("settings")
+        .select('setting_id, "Загальні"')
+        .eq("setting_id", 11),
+      supabase
+        .from("settings")
+        .select('setting_id, "Загальні"')
+        .gte("setting_id", 20)
+        .not("Загальні", "is", null)
+        .order("setting_id"),
+    ]);
 
-    const { data, error } = await supabase
-      .from("settings")
-      .select('setting_id, "Загальні"')
-      .in("setting_id", settingIds);
+    const data = [...(cseRes.data || []), ...(keysRes.data || [])];
+    const error = cseRes.error || keysRes.error;
 
     if (error || !data) return null;
 

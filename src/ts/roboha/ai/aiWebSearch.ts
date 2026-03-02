@@ -1,6 +1,6 @@
 // src/ts/roboha/ai/aiWebSearch.ts
 // 🌐 Модуль інтернет-пошуку для AI Атлас
-// 3 методи: 1) Serper.dev  2) Google CSE  3) Gemini Grounding (fallback в aiChat.ts)
+// 2 методи: 1) Google CSE  2) Gemini Grounding (fallback в aiChat.ts)
 
 import { supabase } from "../../vxid/supabaseClient";
 
@@ -20,8 +20,8 @@ export interface WebSearchResponse {
   results: WebSearchResult[];
   query: string;
   error?: string;
-  source: "serper" | "google_cse" | "grounding" | "edge_function" | "fallback";
-  method?: 1 | 2 | 3; // 1=Serper, 2=CSE, 3=Grounding
+  source: "google_cse" | "grounding" | "fallback";
+  method?: 1 | 2; // 1=Google CSE, 2=Gemini Grounding
 }
 
 // ============================================================
@@ -48,11 +48,9 @@ const AUTO_PARTS_SITES = [
 // ============================================================
 
 /**
- * Кеш: setting_id=11 → CSE ID, setting_id=20+ → API Keys (автовизначення Serper/Google за форматом)
- * Google API ключі починаються з "AIza", Serper.dev — ні.
+ * Кеш: setting_id=11 → CSE ID, setting_id=20+ → Google API Keys (AIza...)
  */
 let searchKeysCache: {
-  serperKeys: string[]; // Serper.dev API ключі (НЕ починаються з "AIza")
   cseId: string; // Google CSE ID (setting_id=11)
   cseKeys: string[]; // Google API ключі для CSE (починаються з "AIza")
   currentCseKeyIndex: number; // індекс поточного CSE ключа
@@ -88,11 +86,9 @@ function emitStatus(status: string): void {
 // ============================================================
 
 /**
- * Завантажує всі ключі пошуку з таблиці settings:
+ * Завантажує ключі пошуку з таблиці settings:
  * - setting_id=11: Загальні = ID Google Custom Search Engine (CSE ID)
- * - setting_id=20, 21, 22...: Загальні = API ключі (автовизначення типу за форматом)
- *   → починається з "AIza" = Google API Key (для CSE)
- *   → інший формат = Serper.dev API Key
+ * - setting_id=20+: Загальні = Google API ключі (AIza...)
  */
 async function loadSearchKeys(): Promise<typeof searchKeysCache> {
   if (searchKeysCache && Date.now() - searchKeysCache.loadedAt < CACHE_TTL) {
@@ -100,7 +96,7 @@ async function loadSearchKeys(): Promise<typeof searchKeysCache> {
   }
 
   try {
-    // Завантажуємо setting_id=11 (CSE ID) окремо + ВСІ ключі setting_id >= 20 динамічно
+    // Завантажуємо setting_id=11 (CSE ID) + ВСІ ключі setting_id >= 20
     const [cseRes, keysRes] = await Promise.all([
       supabase
         .from("settings")
@@ -120,7 +116,6 @@ async function loadSearchKeys(): Promise<typeof searchKeysCache> {
     if (error || !data) return null;
 
     let cseId = "";
-    const serperKeys: { id: number; key: string }[] = [];
     const cseKeys: { id: number; key: string }[] = [];
 
     for (const row of data) {
@@ -131,22 +126,15 @@ async function loadSearchKeys(): Promise<typeof searchKeysCache> {
 
       if (row.setting_id === 11) {
         cseId = trimmed;
-      } else if (row.setting_id >= 20) {
-        // Автовизначення: Google API Key починається з "AIza", решта — Serper.dev
-        if (trimmed.startsWith("AIza")) {
-          cseKeys.push({ id: row.setting_id, key: trimmed });
-        } else {
-          serperKeys.push({ id: row.setting_id, key: trimmed });
-        }
+      } else if (row.setting_id >= 20 && trimmed.startsWith("AIza")) {
+        cseKeys.push({ id: row.setting_id, key: trimmed });
       }
     }
 
     // Сортуємо за setting_id
-    serperKeys.sort((a, b) => a.id - b.id);
     cseKeys.sort((a, b) => a.id - b.id);
 
     searchKeysCache = {
-      serperKeys: serperKeys.map((k) => k.key),
       cseId,
       cseKeys: cseKeys.map((k) => k.key),
       currentCseKeyIndex: 0,
@@ -155,15 +143,11 @@ async function loadSearchKeys(): Promise<typeof searchKeysCache> {
 
     // Логування конфігурації
     const methods: string[] = [];
-    if (serperKeys.length > 0)
-      methods.push(
-        `①Serper.dev (${serperKeys.length} ключ${serperKeys.length > 1 ? "ів" : ""}: setting_id=${serperKeys.map((k) => k.id).join(",")})`,
-      );
     if (cseId && cseKeys.length > 0)
       methods.push(
-        `②Google CSE (${cseKeys.length} ключів AIza..., CSE ID в setting_id=11)`,
+        `①Google CSE (${cseKeys.length} ключів, CSE ID в setting_id=11)`,
       );
-    methods.push("③Gemini Grounding (завжди)");
+    methods.push("②Gemini Grounding (завжди)");
     console.log(`[Search] Доступні методи: ${methods.join(", ")}`);
 
     return searchKeysCache;
@@ -173,76 +157,7 @@ async function loadSearchKeys(): Promise<typeof searchKeysCache> {
 }
 
 // ============================================================
-// МЕТОД 1: Serper.dev
-// ============================================================
-
-/**
- * Пошук через Serper.dev
- * 2500 безкоштовних запитів, потім платно.
- * setting_id=12 → API ключ
- */
-async function searchSerper(
-  query: string,
-  apiKey: string,
-): Promise<WebSearchResponse> {
-  try {
-    const response = await fetch("https://google.serper.dev/search", {
-      method: "POST",
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        q: query,
-        gl: "ua",
-        hl: "uk",
-        num: 8,
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      return {
-        success: false,
-        results: [],
-        query,
-        error: `Serper: ${response.status} — ${errText.slice(0, 300)}`,
-        source: "serper",
-        method: 1,
-      };
-    }
-
-    const data = await response.json();
-    const organic = data.organic || [];
-
-    const results: WebSearchResult[] = organic.map((item: any) => ({
-      title: item.title || "",
-      url: item.link || "",
-      snippet: item.snippet || "",
-      source: extractDomain(item.link),
-    }));
-
-    return {
-      success: true,
-      results,
-      query,
-      source: "serper",
-      method: 1,
-    };
-  } catch (err: any) {
-    return {
-      success: false,
-      results: [],
-      query,
-      error: `Serper помилка: ${err.message}`,
-      source: "serper",
-      method: 1,
-    };
-  }
-}
-
-// ============================================================
-// МЕТОД 2: Google Custom Search Engine
+// МЕТОД 1: Google Custom Search Engine
 // ============================================================
 
 async function searchGoogleCSE(
@@ -269,7 +184,7 @@ async function searchGoogleCSE(
         query,
         error: `Google CSE: ${response.status} — ${errText.slice(0, 300)}`,
         source: "google_cse",
-        method: 2,
+        method: 1,
       };
     }
 
@@ -288,7 +203,7 @@ async function searchGoogleCSE(
       results,
       query,
       source: "google_cse",
-      method: 2,
+      method: 1,
     };
   } catch (err: any) {
     return {
@@ -297,7 +212,7 @@ async function searchGoogleCSE(
       query,
       error: `Google CSE помилка: ${err.message}`,
       source: "google_cse",
-      method: 2,
+      method: 1,
     };
   }
 }
@@ -307,11 +222,10 @@ async function searchGoogleCSE(
 // ============================================================
 
 /**
- * Виконує інтернет-пошук з автовибором провайдера.
+ * Виконує інтернет-пошук.
  * Пріоритет:
- * 1. Serper.dev (setting_id=12) — найпростіший, 2500 безкоштовних
- * 2. Google CSE (setting_id=11 CSE ID + setting_id=20+ API ключі)
- * 3. ❌ Повертає failure → aiChat.ts переключається на Gemini Grounding
+ * 1. Google CSE (setting_id=11 CSE ID + setting_id=20+ API ключі AIza...)
+ * 2. ❌ Повертає failure → aiChat.ts переключається на Gemini Grounding
  */
 export async function searchWeb(
   query: string,
@@ -347,65 +261,13 @@ export async function searchWeb(
   const keysConfig = await loadSearchKeys();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // МЕТОД 1: Serper.dev (ключі що НЕ починаються з "AIza")
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (keysConfig && keysConfig.serperKeys.length > 0) {
-    const totalSerper = keysConfig.serperKeys.length;
-    emitStatus(
-      totalSerper > 1
-        ? `🔍 Метод ①: Serper.dev (${totalSerper} ключів)...`
-        : "🔍 Метод ①: Serper.dev...",
-    );
-    console.log(`[Search] ▶ Метод ①: Serper.dev (${totalSerper} ключів)`);
-
-    // Пробуємо всі Serper ключі
-    for (let i = 0; i < totalSerper; i++) {
-      const apiKey = keysConfig.serperKeys[i];
-
-      if (totalSerper > 1) {
-        emitStatus(`🔍 Метод ①: Serper.dev (ключ ${i + 1}/${totalSerper})`);
-      }
-
-      const result = await searchSerper(searchQuery, apiKey);
-
-      if (result.success) {
-        console.log(
-          `[Search] ✅ Serper.dev (ключ ${i + 1}): ${result.results.length} результатів`,
-        );
-        return result;
-      }
-
-      const errText = result.error || "";
-      const isBlocked = /429|403|401|quota|limit|blocked|forbidden/i.test(
-        errText,
-      );
-
-      if (isBlocked) {
-        console.warn(
-          `[Search] ⚠️ Serper ключ №${i + 1} заблоковано: ${errText.slice(0, 100)}`,
-        );
-        continue;
-      }
-
-      console.warn(
-        `[Search] ⚠️ Serper помилка (ключ ${i + 1}): ${errText.slice(0, 100)}`,
-      );
-      break;
-    }
-
-    console.warn("[Search] ⚠️ Serper.dev: всі ключі не спрацювали");
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // МЕТОД 2: Google CSE (ключі "AIza..." + CSE ID)
+  // МЕТОД 1: Google CSE (ключі "AIza..." + CSE ID)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (keysConfig && keysConfig.cseKeys.length > 0 && keysConfig.cseId) {
-    emitStatus("🔍 Метод ②: Google CSE...");
-    console.log(
-      `[Search] ▶ Метод ②: Google CSE (${keysConfig.cseKeys.length} ключів)`,
-    );
-
     const totalKeys = keysConfig.cseKeys.length;
+    emitStatus("🔍 Метод ①: Google CSE...");
+    console.log(`[Search] ▶ Метод ①: Google CSE (${totalKeys} ключів)`);
+
     const startIdx = keysConfig.currentCseKeyIndex;
 
     for (let i = 0; i < totalKeys; i++) {
@@ -413,7 +275,7 @@ export async function searchWeb(
       const apiKey = keysConfig.cseKeys[keyIdx];
 
       if (totalKeys > 1) {
-        emitStatus(`🔍 Метод ②: Google CSE (ключ ${keyIdx + 1}/${totalKeys})`);
+        emitStatus(`🔍 Метод ①: Google CSE (ключ ${keyIdx + 1}/${totalKeys})`);
       }
 
       const result = await searchGoogleCSE(
@@ -435,14 +297,14 @@ export async function searchWeb(
 
       if (isBlocked) {
         console.warn(
-          `[Search] Ключ №${keyIdx + 1} (setting_id=${20 + keyIdx}) заблоковано`,
+          `[Search] ⚠️ Ключ №${keyIdx + 1} заблоковано: ${errText.slice(0, 100)}`,
         );
         keysConfig.currentCseKeyIndex = (keyIdx + 1) % totalKeys;
         continue;
       }
 
       console.warn(
-        `[Search] CSE помилка (ключ ${keyIdx + 1}): ${errText.slice(0, 100)}`,
+        `[Search] ⚠️ CSE помилка (ключ ${keyIdx + 1}): ${errText.slice(0, 100)}`,
       );
       break;
     }
@@ -451,31 +313,21 @@ export async function searchWeb(
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // МЕТОД 3 → Повертаємо failure, aiChat.ts спробує Gemini Grounding
+  // МЕТОД 2 → Повертаємо failure, aiChat.ts спробує Gemini Grounding
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  emitStatus("🔍 Метод ③: Gemini Grounding...");
-  console.log("[Search] ▶ Метод ③ — Gemini Grounding (fallback)");
-
-  const configuredMethods: string[] = [];
-  if (!keysConfig?.serperKeys.length)
-    configuredMethods.push(
-      "Serper.dev: не налаштований (додайте Serper ключ в setting_id=20+)",
-    );
-  if (!keysConfig?.cseId || !keysConfig?.cseKeys.length)
-    configuredMethods.push(
-      "Google CSE: не налаштований (AIza... ключі в setting_id=20+ та CSE ID в setting_id=11)",
-    );
+  emitStatus("🔍 Метод ②: Gemini Grounding...");
+  console.log("[Search] ▶ Метод ② — Gemini Grounding (fallback)");
 
   return {
     success: false,
     results: [],
     query: searchQuery,
     error:
-      configuredMethods.length > 0
-        ? `Методи 1-2 не спрацювали. ${configuredMethods.join("; ")}. Переходжу на Gemini Grounding.`
-        : "Методи 1-2 заблоковані. Переходжу на Gemini Grounding.",
+      !keysConfig?.cseId || !keysConfig?.cseKeys.length
+        ? "Google CSE не налаштований (AIza... ключі в setting_id=20+ та CSE ID в setting_id=11). Переходжу на Gemini Grounding."
+        : "Метод ① заблокований. Переходжу на Gemini Grounding.",
     source: "fallback",
-    method: 3,
+    method: 2,
   };
 }
 
@@ -489,12 +341,7 @@ export function formatSearchResults(response: WebSearchResponse): string {
       : `🔍 Нічого не знайдено за запитом "${response.query}"`;
   }
 
-  const methodName =
-    response.method === 1
-      ? "Serper.dev"
-      : response.method === 2
-        ? "Google CSE"
-        : "Gemini Search";
+  const methodName = response.method === 1 ? "Google CSE" : "Gemini Search";
 
   let text = `🔍 Результати пошуку "${response.query}" (Метод ${response.method}: ${methodName}):\n\n`;
 

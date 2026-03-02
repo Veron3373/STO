@@ -2494,7 +2494,7 @@ async function handleFunctionCall(
       }
 
       case "search_internet": {
-        // searchWeb спробує Метод 1 (Serper) і Метод 2 (CSE)
+        // searchWeb спробує Метод ① (Google CSE)
         // callback для UI встановлюється в geminiWithFunctionCalling
         const response = await searchWeb(args.query, {
           autoPartsMode: args.auto_parts_mode || false,
@@ -2512,10 +2512,10 @@ async function handleFunctionCall(
           });
         }
 
-        // 🌐 Fallback Метод ③: Gemini Google Search Grounding
-        updateTypingStatus("🔍 Метод ③: Gemini Grounding...");
+        // 🌐 Fallback Метод ②: Gemini Google Search Grounding
+        updateTypingStatus("🔍 Метод ②: Gemini Grounding...");
         console.log(
-          "[Search] Методи 1-2 не спрацювали, пробую Метод ③: Gemini Grounding...",
+          "[Search] Метод ① не спрацював, пробую Метод ②: Gemini Grounding...",
         );
         const grounding = await geminiSearchGrounding(args.query);
 
@@ -2536,7 +2536,7 @@ async function handleFunctionCall(
             success: true,
             query: args.query,
             source: "google_search_grounding",
-            method: 3,
+            method: 2,
             fallback: true,
             text: grounding.text + sourcesText,
             sources: grounding.sources,

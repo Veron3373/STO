@@ -1473,6 +1473,7 @@ $sidebar-width: 30%;
     text-overflow: ellipsis;
     opacity: 0.95;
     line-height: 1.2;
+    flex-shrink: 0;
   }
 
   .post-week-block-line {
@@ -1483,6 +1484,7 @@ $sidebar-width: 30%;
     text-overflow: ellipsis;
     opacity: 0.9;
     line-height: 1.2;
+    flex-shrink: 0;
   }
 
   // Кружечок з номером акту

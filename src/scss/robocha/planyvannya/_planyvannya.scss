@@ -1181,6 +1181,10 @@ $sidebar-width: 30%;
   }
 }
 
+// ==========================================
+// ТИЖНЕВИЙ ВИД — ГОРИЗОНТАЛЬНИЙ ТАЙМЛАЙН
+// ==========================================
+
 .post-week-container {
   display: flex;
   flex-direction: column;
@@ -1188,90 +1192,72 @@ $sidebar-width: 30%;
   min-height: 0;
 }
 
-// Заголовок днів тижня
-.post-week-header {
-  display: grid;
-  grid-template-columns: 220px repeat(7, 1fr);
+// === Шапка з годинами (sticky) ===
+.post-week-hours-header {
+  display: flex;
   position: sticky;
   top: 0;
   z-index: 102;
   background: $white;
   border-bottom: 2px solid $border-dark;
-  min-height: 48px;
+  min-height: 28px;
+  flex-shrink: 0;
 }
 
-.post-week-corner {
+.post-week-corner-worker {
+  width: 150px;
+  min-width: 150px;
   background: #f8f9fa;
   border-right: 1px solid $border-gray;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #888;
-  font-size: 11px;
 }
 
-.post-week-day-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 4px;
+.post-week-corner-day {
+  width: 55px;
+  min-width: 55px;
+  background: #f8f9fa;
   border-right: 1px solid $border-gray;
-  cursor: pointer;
-  transition: background 0.15s;
-  user-select: none;
-
-  &:last-child {
-    border-right: none;
-  }
-
-  &:hover {
-    background: #f0fdf4;
-  }
-
-  &.post-week-today {
-    background: #e8f5e9;
-
-    .post-week-day-name {
-      color: $primary-blue;
-      font-weight: 800;
-    }
-
-    .post-week-day-date {
-      color: $primary-blue;
-      font-weight: 700;
-    }
-  }
-
-  &.post-week-weekend {
-    background: #fff8e1;
-  }
-
-  .post-week-day-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .post-week-day-date {
-    font-size: 12px;
-    font-weight: 500;
-    color: #888;
-    margin-top: 2px;
-  }
 }
 
-// Тіло тижневого виду
+.post-week-hours-row {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+.post-week-hour-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  border-left: 1px solid $border-gray;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.post-week-min-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 400;
+  color: #bbb;
+  border-left: 1px dashed #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+// === Тіло тижневого виду ===
 .post-week-body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-// Хедер секції в тижневому виді
+// === Секція (заголовок) ===
 .post-week-section-header {
   background: #dbe6e3;
   color: #0d8212;
@@ -1303,24 +1289,19 @@ $sidebar-width: 30%;
   }
 }
 
-// Рядок поста в тижневому виді
-.post-week-row {
-  display: grid;
-  grid-template-columns: 220px repeat(7, 1fr);
-  min-height: 90px;
-  border-bottom: 1px solid $border-gray;
+// === Група слюсаря (лейбл + 7 днів) ===
+.post-week-worker-group {
+  display: flex;
+  border-bottom: 2px solid $border-dark;
   background: $white;
-  transition: background 0.1s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.01);
-  }
 }
 
-// Лейбл поста (зліва)
-.post-week-row-label {
+// Лейбл слюсаря (зліва, на всю висоту 7 рядків)
+.post-week-worker-label {
+  width: 150px;
+  min-width: 150px;
   border-right: 3px solid $primary-blue;
-  padding: 6px 12px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1346,61 +1327,138 @@ $sidebar-width: 30%;
   }
 }
 
-// Комірка дня в тижневому виді
-.post-week-day-cell {
-  position: relative;
-  border-right: 1px solid $border-gray;
-  min-height: 90px;
-  overflow: visible;
-  cursor: default;
+// Контейнер 7 днів
+.post-week-days {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+// Один рядок-день
+.post-week-day-row {
+  display: flex;
+  border-bottom: 1px solid $border-gray;
+  min-height: 32px;
 
   &:last-child {
-    border-right: none;
+    border-bottom: none;
+  }
+}
+
+// Лейбл дня (ПН 3, ВТ 4, ...)
+.post-week-day-label {
+  width: 55px;
+  min-width: 55px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #666;
+  background: #fafbfc;
+  border-right: 1px solid $border-gray;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+  padding: 2px 4px;
+  text-align: center;
+
+  &:hover {
+    background: #f0fdf4;
   }
 
   &.post-week-today {
-    background: rgba(0, 77, 38, 0.03);
+    background: #e8f5e9;
+    color: $primary-blue;
+    font-weight: 800;
   }
 
   &.post-week-weekend {
-    background: #fffdf0;
+    background: #fff8e1;
+    color: #b77000;
+  }
+}
+
+// Горизонтальний таймлайн-трек
+.post-week-day-track {
+  flex: 1;
+  position: relative;
+  min-height: 32px;
+  overflow: visible;
+  cursor: default;
+  background: $white;
+
+  &.post-week-today {
+    background: rgba(0, 77, 38, 0.02);
   }
 
-  // Підсвічування при drop target
+  &.post-week-weekend {
+    background: #fffdf5;
+  }
+
+  // Drop target підсвічування
   &.week-drop-target {
     background: rgba(64, 192, 87, 0.1) !important;
     box-shadow: inset 0 0 0 2px rgba(64, 192, 87, 0.4);
   }
+}
 
-  // Часові мітки (горизонтальні лінії)
-  .post-week-time-mark {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 1px;
-    border-top: 1px dashed #eee;
-    pointer-events: none;
-    z-index: 0;
+// Вертикальні часові мітки (пунктирні лінії)
+.post-week-time-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed #e0e0e0;
+  pointer-events: none;
+  z-index: 0;
 
-    &::before {
-      content: attr(data-hour) ":00";
-      position: absolute;
-      top: -1px;
-      left: 2px;
-      font-size: 8px;
-      color: #ccc;
-      line-height: 1;
-    }
+  &.half {
+    border-left-color: #f0f0f0;
   }
 }
 
-// Блок бронювання в тижневому виді
+// Накладка «минулий час»
+.post-week-past-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.04);
+  pointer-events: none;
+  z-index: 1;
+}
+
+// Червона лінія поточного часу
+.post-week-time-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e53935;
+  z-index: 12;
+  pointer-events: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e53935;
+  }
+}
+
+// === Блок бронювання (горизонтальний) ===
 .post-week-block {
   position: absolute;
-  left: 2px;
-  right: 2px;
+  top: 1px;
+  bottom: 1px;
   border-radius: 4px;
-  padding: 2px 4px;
+  padding: 1px 4px;
   color: $white;
   font-size: 10px;
   overflow: hidden;
@@ -1408,23 +1466,24 @@ $sidebar-width: 30%;
   z-index: 5;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: box-shadow 0.15s;
-  min-height: 16px;
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     z-index: 100;
   }
 
-  // Resize handles (верхній і нижній)
+  // Resize handles (лівий і правий)
   .week-resize-handle {
     position: absolute;
-    left: 0;
-    right: 0;
-    height: 6px;
-    cursor: ns-resize;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
     z-index: 55;
     background-color: transparent;
     transition: background-color 0.2s;
@@ -1432,13 +1491,15 @@ $sidebar-width: 30%;
     &:hover {
       background-color: rgba(255, 255, 255, 0.45);
     }
-    &.top {
-      top: 0;
-      border-radius: 4px 4px 0 0;
+
+    &.left {
+      left: 0;
+      border-radius: 4px 0 0 4px;
     }
-    &.bottom {
-      bottom: 0;
-      border-radius: 0 0 4px 4px;
+
+    &.right {
+      right: 0;
+      border-radius: 0 4px 4px 0;
     }
   }
 
@@ -1475,7 +1536,7 @@ $sidebar-width: 30%;
     flex-shrink: 0;
   }
 
-  .post-week-block-line {
+  .post-week-block-info {
     font-size: 9px;
     font-weight: 500;
     white-space: nowrap;
@@ -1483,7 +1544,8 @@ $sidebar-width: 30%;
     text-overflow: ellipsis;
     opacity: 0.9;
     line-height: 1.2;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   // Кружечок з номером акту
@@ -1491,12 +1553,12 @@ $sidebar-width: 30%;
     position: absolute;
     top: 1px;
     right: 1px;
-    min-width: 18px;
-    height: 18px;
+    min-width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: $white;
     color: #1e293b;
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -1504,7 +1566,7 @@ $sidebar-width: 30%;
     cursor: pointer;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
     z-index: 10;
-    padding: 0 3px;
+    padding: 0 2px;
     line-height: 1;
     transition:
       transform 0.15s,
@@ -1516,7 +1578,7 @@ $sidebar-width: 30%;
     }
   }
 
-  // Красива підказка при наведенні
+  // Тултіп при наведенні
   .post-week-tooltip {
     display: none;
     position: absolute;
@@ -1538,7 +1600,6 @@ $sidebar-width: 30%;
     border: 1px solid rgba(255, 255, 255, 0.1);
     min-width: 180px;
 
-    // Стрілка знизу (за замовчуванням — тултіп зверху)
     &::after {
       content: "";
       position: absolute;
@@ -1549,7 +1610,6 @@ $sidebar-width: 30%;
       border-top-color: #334155;
     }
 
-    // Якщо мало місця зверху — показуємо знизу
     &.tooltip-below {
       bottom: auto;
       top: calc(100% + 8px);
@@ -1603,11 +1663,11 @@ $sidebar-width: 30%;
   }
 }
 
-// Виділення при drag-to-create в тижневому виді
+// Виділення при drag-to-create (горизонтальне)
 .post-week-selection {
   position: absolute;
-  left: 2px;
-  right: 2px;
+  top: 0;
+  bottom: 0;
   background: rgba(0, 77, 38, 0.2);
   border: 2px solid $primary-blue;
   border-radius: 4px;

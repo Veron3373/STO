@@ -93,28 +93,28 @@ class SchedulerApp {
   // Тижневий вид — модалка та drag-створення
   private weekModal: PlanyvannyaModal;
   private weekDragActive: boolean = false;
-  private weekDragStartY: number = 0;
-  private weekDragCurrentY: number = 0;
+  private weekDragStartX: number = 0;
+  private weekDragCurrentX: number = 0;
   private weekDragCell: HTMLElement | null = null;
   private weekSelectionEl: HTMLElement | null = null;
 
   // Тижневий вид — drag переміщення блоків
   private weekMovingBlock: HTMLElement | null = null;
   private weekMovingOriginalCell: HTMLElement | null = null;
-  private weekMovingOriginalTop: string = "";
-  private weekMovingOriginalHeight: string = "";
+  private weekMovingOriginalLeft: string = "";
+  private weekMovingOriginalWidth: string = "";
   private weekBlockDragStartX: number = 0;
   private weekBlockDragStartY: number = 0;
-  private weekBlockDragOffsetY: number = 0;
+  private weekBlockDragOffsetX: number = 0;
   private weekIsBlockDragging: boolean = false;
 
   // Тижневий вид — resize блоків
   private weekIsResizing: boolean = false;
-  private weekResizeHandleSide: "top" | "bottom" | null = null;
+  private weekResizeHandleSide: "left" | "right" | null = null;
   private weekResizingBlock: HTMLElement | null = null;
   private weekResizeOrigStartMins: number = 0;
   private weekResizeOrigEndMins: number = 0;
-  private weekResizeStartY: number = 0;
+  private weekResizeStartX: number = 0;
 
   constructor() {
     this.today = new Date();
@@ -828,7 +828,7 @@ class SchedulerApp {
   }
 
   /**
-   * Рендерить тижневий вид планувальника
+   * Рендерить тижневий вид планувальника (горизонтальний — години зліва направо)
    */
   private renderWeekView(): void {
     const calendarGrid = this.calendarGrid;
@@ -836,94 +836,66 @@ class SchedulerApp {
     calendarGrid.innerHTML = "";
 
     const weekDays = this.getWeekDays(this.selectedDate);
-    const shortDayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
-    const months = [
-      "січ",
-      "лют",
-      "бер",
-      "кві",
-      "тра",
-      "чер",
-      "лип",
-      "сер",
-      "вер",
-      "жов",
-      "лис",
-      "гру",
-    ];
+    const shortDayNames = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"];
 
-    // Оновлюємо заголовок в header
+    // Оновлюємо заголовок
     if (this.headerDateDisplay) {
       this.headerDateDisplay.textContent = this.formatWeekRange(
         this.selectedDate,
       );
     }
 
-    // Ховаємо sticky-header з часовою шкалою (8, 9, 10 і т.д.)
+    // Ховаємо sticky-header денного виду
     const stickyHeader = document.querySelector(
       ".post-sticky-header",
     ) as HTMLElement;
-    if (stickyHeader) {
-      stickyHeader.style.display = "none";
-    }
+    if (stickyHeader) stickyHeader.style.display = "none";
 
     // Додаємо клас тижневого виду
     if (this.schedulerWrapper) {
       this.schedulerWrapper.classList.add("week-view-mode");
     }
 
-    // Створюємо головну таблицю тижневого виду
     const weekContainer = document.createElement("div");
     weekContainer.className = "post-week-container";
 
-    // === Хедер днів тижня ===
-    const weekHeader = document.createElement("div");
-    weekHeader.className = "post-week-header";
+    // === Заголовок з годинами (sticky) ===
+    const hoursHeader = document.createElement("div");
+    hoursHeader.className = "post-week-hours-header";
 
-    // Пустий кут (row label)
-    const cornerCell = document.createElement("div");
-    cornerCell.className = "post-week-corner";
-    weekHeader.appendChild(cornerCell);
+    // Порожній кут для лейбла слюсаря
+    const cornerWorker = document.createElement("div");
+    cornerWorker.className = "post-week-corner-worker";
+    hoursHeader.appendChild(cornerWorker);
 
-    weekDays.forEach((day, idx) => {
-      const dayCol = document.createElement("div");
-      dayCol.className = "post-week-day-header";
-      const isToday = day.toDateString() === this.today.toDateString();
-      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-      if (isToday) dayCol.classList.add("post-week-today");
-      if (isWeekend) dayCol.classList.add("post-week-weekend");
+    // Порожній кут для дня тижня
+    const cornerDay = document.createElement("div");
+    cornerDay.className = "post-week-corner-day";
+    hoursHeader.appendChild(cornerDay);
 
-      dayCol.innerHTML = `
-        <span class="post-week-day-name">${shortDayNames[idx]}</span>
-        <span class="post-week-day-date">${day.getDate()} ${months[day.getMonth()]}</span>
-      `;
+    // Годинна шкала
+    const hoursRow = document.createElement("div");
+    hoursRow.className = "post-week-hours-row";
+    for (let h = 8; h <= 19; h++) {
+      const hourCell = document.createElement("div");
+      hourCell.className = "post-week-hour-cell";
+      hourCell.textContent = h.toString();
+      hoursRow.appendChild(hourCell);
 
-      // Клік — перехід до денного виду на цю дату
-      dayCol.addEventListener("click", () => {
-        this.selectedDate = new Date(day);
-        this.viewMonth = day.getMonth();
-        this.viewYear = day.getFullYear();
-        this.isWeekView = false;
-        const weekBtn = document.getElementById("postWeekBtn");
-        if (weekBtn) {
-          weekBtn.classList.remove("active");
-          weekBtn.textContent = "Тиждень";
-        }
-        this.render();
-        this.reloadArxivData();
-      });
+      const minCell = document.createElement("div");
+      minCell.className = "post-week-min-cell";
+      minCell.textContent = "30";
+      hoursRow.appendChild(minCell);
+    }
+    hoursHeader.appendChild(hoursRow);
+    weekContainer.appendChild(hoursHeader);
 
-      weekHeader.appendChild(dayCol);
-    });
-
-    weekContainer.appendChild(weekHeader);
-
-    // === Тіло з секціями/постами ===
+    // === Тіло ===
     const weekBody = document.createElement("div");
     weekBody.className = "post-week-body";
 
     this.sections.forEach((section) => {
-      // === Хедер секції ===
+      // Хедер секції
       const sectionRow = document.createElement("div");
       sectionRow.className = "post-week-section-header";
       sectionRow.innerHTML = `<span>${section.name}</span>`;
@@ -932,63 +904,123 @@ class SchedulerApp {
       toggleBtn.className = "post-toggle-btn";
       if (section.collapsed) toggleBtn.classList.add("collapsed");
       toggleBtn.textContent = "▼";
-
       sectionRow.appendChild(toggleBtn);
 
       sectionRow.addEventListener("click", () => {
         this.toggleSection(section.id);
-        // Після toggle перерендерюємо
         this.renderWeekView();
         this.loadWeekArxivData();
       });
-
       weekBody.appendChild(sectionRow);
 
-      // === Контент секції ===
       if (!section.collapsed) {
         section.posts.forEach((post) => {
-          const postRow = document.createElement("div");
-          postRow.className = "post-week-row";
+          const workerGroup = document.createElement("div");
+          workerGroup.className = "post-week-worker-group";
 
-          // Лейбл поста (зліва)
-          const rowLabel = document.createElement("div");
-          rowLabel.className = "post-week-row-label";
-          rowLabel.innerHTML = `
+          // Лейбл слюсаря (зліва, охоплює 7 рядків)
+          const workerLabel = document.createElement("div");
+          workerLabel.className = "post-week-worker-label";
+          workerLabel.innerHTML = `
             <div class="post-post-title">${post.title}</div>
             <div class="post-post-subtitle">${post.subtitle}</div>
           `;
-          postRow.appendChild(rowLabel);
+          workerGroup.appendChild(workerLabel);
 
-          // 7 комірок — по одній на день
-          weekDays.forEach((day) => {
-            const dayCell = document.createElement("div");
-            dayCell.className = "post-week-day-cell";
-            const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
-            dayCell.dataset.date = dateStr;
-            dayCell.dataset.slyusarId = post.id.toString();
-            dayCell.dataset.postId = post.postId.toString();
+          // Контейнер днів
+          const daysContainer = document.createElement("div");
+          daysContainer.className = "post-week-days";
+
+          weekDays.forEach((day, idx) => {
+            const dayRow = document.createElement("div");
+            dayRow.className = "post-week-day-row";
 
             const isToday = day.toDateString() === this.today.toDateString();
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-            if (isToday) dayCell.classList.add("post-week-today");
-            if (isWeekend) dayCell.classList.add("post-week-weekend");
+            const isPast = day < this.today && !isToday;
 
-            // Часові мітки (вертикально, кожні 2 години)
-            for (let h = 8; h <= 18; h += 2) {
+            // Лейбл дня (ПН 2)
+            const dayLabel = document.createElement("div");
+            dayLabel.className = "post-week-day-label";
+            if (isToday) dayLabel.classList.add("post-week-today");
+            if (isWeekend) dayLabel.classList.add("post-week-weekend");
+            dayLabel.textContent = `${shortDayNames[idx]} ${day.getDate()}`;
+
+            // Клік на день — перехід у денний вид
+            dayLabel.addEventListener("click", () => {
+              this.selectedDate = new Date(day);
+              this.viewMonth = day.getMonth();
+              this.viewYear = day.getFullYear();
+              this.isWeekView = false;
+              const weekBtn = document.getElementById("postWeekBtn");
+              if (weekBtn) {
+                weekBtn.classList.remove("active");
+                weekBtn.textContent = "Тиждень";
+              }
+              this.render();
+              this.reloadArxivData();
+            });
+            dayRow.appendChild(dayLabel);
+
+            // Трек часу (горизонтальний)
+            const dayTrack = document.createElement("div");
+            dayTrack.className = "post-week-day-track";
+            const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+            dayTrack.dataset.date = dateStr;
+            dayTrack.dataset.slyusarId = post.id.toString();
+            dayTrack.dataset.postId = post.postId.toString();
+
+            if (isToday) dayTrack.classList.add("post-week-today");
+            if (isWeekend) dayTrack.classList.add("post-week-weekend");
+
+            // Вертикальні лінії годин (пунктирні)
+            for (let h = 8; h <= 20; h++) {
               const timeMark = document.createElement("div");
               timeMark.className = "post-week-time-mark";
-              timeMark.style.top = `${((h - 8) / 12) * 100}%`;
-              timeMark.dataset.hour = h.toString();
-              dayCell.appendChild(timeMark);
+              timeMark.style.left = `${((h - 8) / 12) * 100}%`;
+              dayTrack.appendChild(timeMark);
+            }
+            // Половинні мітки (30 хв)
+            for (let h = 8; h < 20; h++) {
+              const halfMark = document.createElement("div");
+              halfMark.className = "post-week-time-mark half";
+              halfMark.style.left = `${((h - 8 + 0.5) / 12) * 100}%`;
+              dayTrack.appendChild(halfMark);
             }
 
-            // Drag-to-create — виділення мишкою для створення запису
-            this.attachWeekCellDragHandlers(dayCell);
+            // Фон минулого часу + червона лінія
+            if (isToday) {
+              const now = new Date();
+              const currentMins = (now.getHours() - 8) * 60 + now.getMinutes();
+              const totalMins = 12 * 60;
+              if (currentMins > 0) {
+                const pastPercent = Math.min(currentMins / totalMins, 1) * 100;
+                const pastOverlay = document.createElement("div");
+                pastOverlay.className = "post-week-past-overlay";
+                pastOverlay.style.width = `${pastPercent}%`;
+                dayTrack.appendChild(pastOverlay);
 
-            postRow.appendChild(dayCell);
+                const timeLine = document.createElement("div");
+                timeLine.className = "post-week-time-line";
+                timeLine.style.left = `${pastPercent}%`;
+                dayTrack.appendChild(timeLine);
+              }
+            } else if (isPast) {
+              const pastOverlay = document.createElement("div");
+              pastOverlay.className = "post-week-past-overlay";
+              pastOverlay.style.width = "100%";
+              dayTrack.appendChild(pastOverlay);
+            }
+
+            // Drag-to-create (горизонтальне виділення)
+            this.attachWeekCellDragHandlers(dayTrack);
+
+            dayRow.appendChild(dayTrack);
+            daysContainer.appendChild(dayRow);
           });
 
-          weekBody.appendChild(postRow);
+          workerGroup.appendChild(daysContainer);
+          weekBody.appendChild(workerGroup);
         });
       }
     });
@@ -1080,7 +1112,7 @@ class SchedulerApp {
   }
 
   /**
-   * Рендерить один запис бронювання у тижневому виді
+   * Рендерить один запис бронювання у тижневому виді (горизонтально)
    */
   private renderWeekArxivRecord(
     record: any,
@@ -1090,17 +1122,17 @@ class SchedulerApp {
     const dataOn = new Date(record.data_on);
     const dateStr = `${dataOn.getUTCFullYear()}-${String(dataOn.getUTCMonth() + 1).padStart(2, "0")}-${String(dataOn.getUTCDate()).padStart(2, "0")}`;
 
-    // Шукаємо комірку за датою та slyusar_id
-    const dayCell = this.calendarGrid?.querySelector(
-      `.post-week-day-cell[data-date="${dateStr}"][data-slyusar-id="${record.slyusar_id}"]`,
+    // Шукаємо трек за датою та slyusar_id
+    const dayTrack = this.calendarGrid?.querySelector(
+      `.post-week-day-track[data-date="${dateStr}"][data-slyusar-id="${record.slyusar_id}"]`,
     ) as HTMLElement;
 
-    if (!dayCell) return;
+    if (!dayTrack) return;
 
     const dataOff = new Date(record.data_off);
     const startMins = (dataOn.getUTCHours() - 8) * 60 + dataOn.getUTCMinutes();
     const endMins = (dataOff.getUTCHours() - 8) * 60 + dataOff.getUTCMinutes();
-    const totalMinutes = 12 * 60; // 8:00-20:00
+    const totalMinutes = 12 * 60;
 
     if (startMins < 0 || endMins > totalMinutes) return;
 
@@ -1139,18 +1171,19 @@ class SchedulerApp {
       "Не приїхав": "#e53935",
     };
 
-    const topPercent = (startMins / totalMinutes) * 100;
-    const heightPercent = ((endMins - startMins) / totalMinutes) * 100;
+    // Горизонтальне позиціонування (left / width)
+    const leftPercent = (startMins / totalMinutes) * 100;
+    const widthPercent = ((endMins - startMins) / totalMinutes) * 100;
     const status = record.status || "Запланований";
 
     const block = document.createElement("div");
     block.className = "post-week-block";
-    block.style.top = `${topPercent}%`;
-    block.style.height = `${heightPercent}%`;
+    block.style.left = `${leftPercent}%`;
+    block.style.width = `${widthPercent}%`;
     block.style.backgroundColor =
       statusColors[status] || statusColors["Запланований"];
 
-    // Зберігаємо дані як data-атрибути
+    // Data-атрибути
     block.dataset.postArxivId = record.post_arxiv_id?.toString() || "";
     block.dataset.slyusarId = record.slyusar_id?.toString() || "";
     block.dataset.status = status;
@@ -1166,50 +1199,49 @@ class SchedulerApp {
     block.dataset.actId = record.act_id?.toString() || "";
     block.dataset.namePost = record.name_post?.toString() || "";
 
-    // Формуємо час
+    // Час
     const startH = String(dataOn.getUTCHours()).padStart(2, "0");
     const startM = String(dataOn.getUTCMinutes()).padStart(2, "0");
     const endH = String(dataOff.getUTCHours()).padStart(2, "0");
     const endM = String(dataOff.getUTCMinutes()).padStart(2, "0");
 
-    // Текст блоку — компактні рядки з емодзі
+    // Текст блоку — горизонтально в один рядок
     const commentText = record.komentar || "";
-    let blockHTML = `<div class="post-week-block-time">🕐 ${startH}:${startM}-${endH}:${endM}</div>`;
+    let blockHTML = `<span class="post-week-block-time">${startH}:${startM}-${endH}:${endM}</span>`;
     if (clientName) {
-      blockHTML += `<div class="post-week-block-line">👤 ${clientName}</div>`;
+      blockHTML += `<span class="post-week-block-info">${clientName}</span>`;
     }
     if (carModel || carNumber) {
-      blockHTML += `<div class="post-week-block-line">🚗 ${carModel}${carNumber ? " " + carNumber : ""}</div>`;
+      blockHTML += `<span class="post-week-block-info">${carModel}${carNumber ? " " + carNumber : ""}</span>`;
     }
     if (commentText) {
-      blockHTML += `<div class="post-week-block-line">💬 ${commentText}</div>`;
+      blockHTML += `<span class="post-week-block-info">${commentText}</span>`;
     }
     block.innerHTML = blockHTML;
 
-    // Resize handles (верхній і нижній)
-    const topHandle = document.createElement("div");
-    topHandle.className = "week-resize-handle top";
-    block.appendChild(topHandle);
+    // Resize handles (лівий і правий)
+    const leftHandle = document.createElement("div");
+    leftHandle.className = "week-resize-handle left";
+    block.appendChild(leftHandle);
 
-    const bottomHandle = document.createElement("div");
-    bottomHandle.className = "week-resize-handle bottom";
-    block.appendChild(bottomHandle);
+    const rightHandle = document.createElement("div");
+    rightHandle.className = "week-resize-handle right";
+    block.appendChild(rightHandle);
 
-    topHandle.addEventListener("mousedown", (e) => {
+    leftHandle.addEventListener("mousedown", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.handleWeekResizeMouseDown(e, block, "top");
+      this.handleWeekResizeMouseDown(e, block, "left");
     });
-    bottomHandle.addEventListener("mousedown", (e) => {
+    rightHandle.addEventListener("mousedown", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.handleWeekResizeMouseDown(e, block, "bottom");
+      this.handleWeekResizeMouseDown(e, block, "right");
     });
 
-    // Drag-move при mousedown на блоці (ЛКМ)
+    // Drag-move при mousedown на блоці
     block.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
-      // Ігноруємо якщо це resize handle
       const target = e.target as HTMLElement;
       if (target.closest(".week-resize-handle")) return;
       e.preventDefault();
@@ -1217,7 +1249,7 @@ class SchedulerApp {
       this.handleWeekBlockMouseDown(e, block);
     });
 
-    // Красива підказка при наведенні
+    // Тултіп
     const comment = record.komentar || "";
     const actId = record.act_id || "";
     const xtoZapusav = record.xto_zapusav || "";
@@ -1247,17 +1279,7 @@ class SchedulerApp {
     tooltip.innerHTML = tooltipHTML;
     block.appendChild(tooltip);
 
-    // Розумна позиція тултіпа — зверху або знизу
-    block.addEventListener("mouseenter", () => {
-      const blockRect = block.getBoundingClientRect();
-      const spaceAbove = blockRect.top;
-      tooltip.classList.remove("tooltip-below");
-      if (spaceAbove < 200) {
-        tooltip.classList.add("tooltip-below");
-      }
-    });
-
-    // Кружечок з номером акту в правому верхньому куті
+    // Кружечок з номером акту
     if (actId) {
       const actBadge = document.createElement("div");
       actBadge.className = "post-week-act-badge";
@@ -1276,12 +1298,11 @@ class SchedulerApp {
       block.appendChild(actBadge);
     }
 
-    // Подвійний клік — відкриття модалки редагування
+    // Подвійний клік — редагування
     block.addEventListener("dblclick", (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // Перевірка прав на редагування
       const currentUser = this.getCurrentUserName();
       const currentAccess = this.getCurrentUserAccess();
       const creator = block.dataset.xtoZapusav || "";
@@ -1338,7 +1359,7 @@ class SchedulerApp {
       );
     });
 
-    dayCell.appendChild(block);
+    dayTrack.appendChild(block);
   }
 
   // ============== ТИЖНЕВИЙ ВИД — СТВОРЕННЯ ЗАПИСУ ЧЕРЕЗ DRAG ==============
@@ -1377,31 +1398,29 @@ class SchedulerApp {
   }
 
   /**
-   * Прив'язує обробники drag-to-create до комірки дня тижневого виду
+   * Прив'язує обробники drag-to-create до трека дня тижневого виду
    */
-  private attachWeekCellDragHandlers(dayCell: HTMLElement): void {
-    dayCell.addEventListener("mousedown", (e) => {
-      // Ігноруємо якщо клікнули на блок
+  private attachWeekCellDragHandlers(dayTrack: HTMLElement): void {
+    dayTrack.addEventListener("mousedown", (e) => {
       const target = e.target as HTMLElement;
       if (target.closest(".post-week-block")) return;
       if (e.button !== 0) return;
       e.preventDefault();
 
       this.weekDragActive = true;
-      this.weekDragCell = dayCell;
-      const rect = dayCell.getBoundingClientRect();
-      this.weekDragStartY = e.clientY - rect.top;
-      this.weekDragCurrentY = this.weekDragStartY;
+      this.weekDragCell = dayTrack;
+      const rect = dayTrack.getBoundingClientRect();
+      this.weekDragStartX = e.clientX - rect.left;
+      this.weekDragCurrentX = this.weekDragStartX;
 
-      // Створюємо елемент виділення
       if (!this.weekSelectionEl) {
         this.weekSelectionEl = document.createElement("div");
         this.weekSelectionEl.className = "post-week-selection";
       }
-      this.weekSelectionEl.style.top = `${this.weekDragStartY}px`;
-      this.weekSelectionEl.style.height = "0px";
+      this.weekSelectionEl.style.left = `${this.weekDragStartX}px`;
+      this.weekSelectionEl.style.width = "0px";
       this.weekSelectionEl.style.display = "block";
-      dayCell.appendChild(this.weekSelectionEl);
+      dayTrack.appendChild(this.weekSelectionEl);
 
       document.addEventListener("mousemove", this.onWeekDragMove);
       document.addEventListener("mouseup", this.onWeekDragUp);
@@ -1413,15 +1432,15 @@ class SchedulerApp {
       return;
 
     const rect = this.weekDragCell.getBoundingClientRect();
-    let y = e.clientY - rect.top;
-    if (y < 0) y = 0;
-    if (y > rect.height) y = rect.height;
-    this.weekDragCurrentY = y;
+    let x = e.clientX - rect.left;
+    if (x < 0) x = 0;
+    if (x > rect.width) x = rect.width;
+    this.weekDragCurrentX = x;
 
-    const top = Math.min(this.weekDragStartY, this.weekDragCurrentY);
-    const height = Math.abs(this.weekDragCurrentY - this.weekDragStartY);
-    this.weekSelectionEl.style.top = `${top}px`;
-    this.weekSelectionEl.style.height = `${height}px`;
+    const left = Math.min(this.weekDragStartX, this.weekDragCurrentX);
+    const width = Math.abs(this.weekDragCurrentX - this.weekDragStartX);
+    this.weekSelectionEl.style.left = `${left}px`;
+    this.weekSelectionEl.style.width = `${width}px`;
   };
 
   private onWeekDragUp = (_e: MouseEvent): void => {
@@ -1436,21 +1455,19 @@ class SchedulerApp {
     this.weekDragActive = false;
     const cell = this.weekDragCell;
     const rect = cell.getBoundingClientRect();
-    const cellHeight = rect.height;
-    const totalMinutes = 12 * 60; // 8:00-20:00
+    const cellWidth = rect.width;
+    const totalMinutes = 12 * 60;
 
-    // Мінімальний поріг щоб не спрацьовувало при простому кліку
-    if (Math.abs(this.weekDragCurrentY - this.weekDragStartY) < 5) {
+    if (Math.abs(this.weekDragCurrentX - this.weekDragStartX) < 5) {
       this.resetWeekSelection();
       return;
     }
 
-    const p1 = Math.min(this.weekDragStartY, this.weekDragCurrentY);
-    const p2 = Math.max(this.weekDragStartY, this.weekDragCurrentY);
+    const p1 = Math.min(this.weekDragStartX, this.weekDragCurrentX);
+    const p2 = Math.max(this.weekDragStartX, this.weekDragCurrentX);
 
-    // Прив'язка до 30-хвилинних слотів
-    let startMins = Math.round(((p1 / cellHeight) * totalMinutes) / 30) * 30;
-    let endMins = Math.round(((p2 / cellHeight) * totalMinutes) / 30) * 30;
+    let startMins = Math.round(((p1 / cellWidth) * totalMinutes) / 30) * 30;
+    let endMins = Math.round(((p2 / cellWidth) * totalMinutes) / 30) * 30;
     if (startMins < 0) startMins = 0;
     if (endMins > totalMinutes) endMins = totalMinutes;
     if (endMins <= startMins) endMins = startMins + 30;
@@ -1461,7 +1478,6 @@ class SchedulerApp {
     const slyusarId = parseInt(cell.dataset.slyusarId || "0") || null;
     const namePost = parseInt(cell.dataset.postId || "0") || null;
 
-    // Відкриваємо модалку
     this.openWeekModal(dateStr, startTime, endTime, slyusarId, namePost);
     this.resetWeekSelection();
   };
@@ -1507,14 +1523,14 @@ class SchedulerApp {
     if (!this.weekMovingBlock) return;
 
     const cell = this.weekMovingBlock.closest(
-      ".post-week-day-cell",
+      ".post-week-day-track",
     ) as HTMLElement;
     this.weekMovingOriginalCell = cell;
-    this.weekMovingOriginalTop = this.weekMovingBlock.style.top;
-    this.weekMovingOriginalHeight = this.weekMovingBlock.style.height;
+    this.weekMovingOriginalLeft = this.weekMovingBlock.style.left;
+    this.weekMovingOriginalWidth = this.weekMovingBlock.style.width;
 
     const rect = this.weekMovingBlock.getBoundingClientRect();
-    this.weekBlockDragOffsetY = e.clientY - rect.top;
+    this.weekBlockDragOffsetX = e.clientX - rect.left;
 
     // Фіксуємо розміри і переносимо в body
     this.weekMovingBlock.style.width = `${rect.width}px`;
@@ -1528,7 +1544,6 @@ class SchedulerApp {
   private onWeekBlockMouseMove = (e: MouseEvent): void => {
     if (!this.weekMovingBlock) return;
 
-    // Поріг 5px
     if (!this.weekIsBlockDragging) {
       const dx = Math.abs(e.clientX - this.weekBlockDragStartX);
       const dy = Math.abs(e.clientY - this.weekBlockDragStartY);
@@ -1538,32 +1553,33 @@ class SchedulerApp {
     }
 
     // Рухаємо блок за курсором
-    this.weekMovingBlock.style.left = `${e.clientX - this.weekMovingBlock.offsetWidth / 2}px`;
-    this.weekMovingBlock.style.top = `${e.clientY - this.weekBlockDragOffsetY}px`;
+    this.weekMovingBlock.style.left = `${e.clientX - this.weekBlockDragOffsetX}px`;
+    this.weekMovingBlock.style.top = `${e.clientY - this.weekMovingBlock.offsetHeight / 2}px`;
 
-    // Визначаємо target cell
+    // Визначаємо target track
     this.weekMovingBlock.style.pointerEvents = "none";
     const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
     this.weekMovingBlock.style.pointerEvents = "";
 
-    // Прибираємо попередні drop-підсвічування
     this.calendarGrid
       ?.querySelectorAll(".week-drop-target")
       .forEach((el) => el.classList.remove("week-drop-target"));
 
-    const targetCell = elemBelow?.closest(".post-week-day-cell") as HTMLElement;
+    const targetTrack = elemBelow?.closest(
+      ".post-week-day-track",
+    ) as HTMLElement;
     this.weekMovingBlock.classList.remove(
       "week-drag-valid",
       "week-drag-invalid",
     );
 
-    if (targetCell) {
-      targetCell.classList.add("week-drop-target");
-      const cellRect = targetCell.getBoundingClientRect();
-      const relativeY = e.clientY - this.weekBlockDragOffsetY - cellRect.top;
+    if (targetTrack) {
+      targetTrack.classList.add("week-drop-target");
+      const trackRect = targetTrack.getBoundingClientRect();
+      const relativeX = e.clientX - this.weekBlockDragOffsetX - trackRect.left;
       const totalMinutes = 12 * 60;
       let startMins =
-        Math.round(((relativeY / cellRect.height) * totalMinutes) / 30) * 30;
+        Math.round(((relativeX / trackRect.width) * totalMinutes) / 30) * 30;
       const duration =
         parseInt(this.weekMovingBlock.dataset.end || "0") -
         parseInt(this.weekMovingBlock.dataset.start || "0");
@@ -1573,7 +1589,7 @@ class SchedulerApp {
         const hasOverlap = this.checkWeekBlockOverlap(
           startMins,
           endMins,
-          targetCell,
+          targetTrack,
           this.weekMovingBlock,
         );
         this.weekMovingBlock.classList.add(
@@ -1608,9 +1624,9 @@ class SchedulerApp {
     const isValid = this.weekMovingBlock.classList.contains("week-drag-valid");
 
     this.weekMovingBlock.style.pointerEvents = "none";
-    const targetCell = document
+    const targetTrack = document
       .elementFromPoint(e.clientX, e.clientY)
-      ?.closest(".post-week-day-cell") as HTMLElement;
+      ?.closest(".post-week-day-track") as HTMLElement;
     this.weekMovingBlock.style.pointerEvents = "";
 
     // Скидаємо drag-стилі
@@ -1620,34 +1636,34 @@ class SchedulerApp {
       "week-drag-invalid",
     );
     this.weekMovingBlock.style.position = "absolute";
-    this.weekMovingBlock.style.width = "";
-    this.weekMovingBlock.style.left = "2px";
-    this.weekMovingBlock.style.right = "2px";
+    this.weekMovingBlock.style.height = "";
+    this.weekMovingBlock.style.top = "1px";
+    this.weekMovingBlock.style.bottom = "1px";
 
-    if (isValid && targetCell) {
+    if (isValid && targetTrack) {
       // Commit — обчислюємо нову позицію
-      const cellRect = targetCell.getBoundingClientRect();
-      const relativeY = e.clientY - this.weekBlockDragOffsetY - cellRect.top;
+      const trackRect = targetTrack.getBoundingClientRect();
+      const relativeX = e.clientX - this.weekBlockDragOffsetX - trackRect.left;
       const totalMinutes = 12 * 60;
       let startMins =
-        Math.round(((relativeY / cellRect.height) * totalMinutes) / 30) * 30;
+        Math.round(((relativeX / trackRect.width) * totalMinutes) / 30) * 30;
       const duration =
         parseInt(this.weekMovingBlock.dataset.end || "0") -
         parseInt(this.weekMovingBlock.dataset.start || "0");
       const endMins = startMins + duration;
 
       if (startMins < 0) startMins = 0;
-      const topPercent = (startMins / totalMinutes) * 100;
-      const heightPercent = (duration / totalMinutes) * 100;
+      const leftPercent = (startMins / totalMinutes) * 100;
+      const widthPercent = (duration / totalMinutes) * 100;
 
       this.weekMovingBlock.dataset.start = startMins.toString();
       this.weekMovingBlock.dataset.end = endMins.toString();
-      this.weekMovingBlock.style.top = `${topPercent}%`;
-      this.weekMovingBlock.style.height = `${heightPercent}%`;
+      this.weekMovingBlock.style.left = `${leftPercent}%`;
+      this.weekMovingBlock.style.width = `${widthPercent}%`;
 
-      // Оновлюємо дату та slyusar_id з нової комірки
-      const newDate = targetCell.dataset.date || "";
-      const newSlyusarId = targetCell.dataset.slyusarId || "";
+      // Оновлюємо дату та slyusar_id з нового треку
+      const newDate = targetTrack.dataset.date || "";
+      const newSlyusarId = targetTrack.dataset.slyusarId || "";
       this.weekMovingBlock.dataset.date = newDate;
       this.weekMovingBlock.dataset.slyusarId = newSlyusarId;
 
@@ -1659,7 +1675,7 @@ class SchedulerApp {
       );
       if (timeEl) timeEl.textContent = `${sH}-${eH}`;
 
-      targetCell.appendChild(this.weekMovingBlock);
+      targetTrack.appendChild(this.weekMovingBlock);
 
       // === ЗБЕРІГАЄМО В БД ===
       const postArxivId = this.weekMovingBlock.dataset.postArxivId;
@@ -1689,7 +1705,6 @@ class SchedulerApp {
         }
       }
     } else {
-      // Revert — повертаємо на місце
       this.revertWeekBlockDrag();
     }
 
@@ -1700,11 +1715,11 @@ class SchedulerApp {
 
   private revertWeekBlockDrag(): void {
     if (!this.weekMovingBlock || !this.weekMovingOriginalCell) return;
-    this.weekMovingBlock.style.top = this.weekMovingOriginalTop;
-    this.weekMovingBlock.style.height = this.weekMovingOriginalHeight;
-    this.weekMovingBlock.style.width = "";
-    this.weekMovingBlock.style.left = "2px";
-    this.weekMovingBlock.style.right = "2px";
+    this.weekMovingBlock.style.left = this.weekMovingOriginalLeft;
+    this.weekMovingBlock.style.width = this.weekMovingOriginalWidth;
+    this.weekMovingBlock.style.height = "";
+    this.weekMovingBlock.style.top = "1px";
+    this.weekMovingBlock.style.bottom = "1px";
     this.weekMovingBlock.style.position = "absolute";
     this.weekMovingOriginalCell.appendChild(this.weekMovingBlock);
   }
@@ -1733,7 +1748,7 @@ class SchedulerApp {
   private handleWeekResizeMouseDown(
     e: MouseEvent,
     block: HTMLElement,
-    side: "top" | "bottom",
+    side: "left" | "right",
   ): void {
     const currentUser = this.getCurrentUserName();
     const currentAccess = this.getCurrentUserAccess();
@@ -1753,7 +1768,7 @@ class SchedulerApp {
     this.weekIsResizing = true;
     this.weekResizingBlock = block;
     this.weekResizeHandleSide = side;
-    this.weekResizeStartY = e.clientY;
+    this.weekResizeStartX = e.clientX;
     this.weekResizeOrigStartMins = parseInt(block.dataset.start || "0");
     this.weekResizeOrigEndMins = parseInt(block.dataset.end || "0");
     block.style.transition = "none";
@@ -1770,20 +1785,20 @@ class SchedulerApp {
     )
       return;
 
-    const cell = this.weekResizingBlock.closest(
-      ".post-week-day-cell",
+    const track = this.weekResizingBlock.closest(
+      ".post-week-day-track",
     ) as HTMLElement;
-    if (!cell) return;
+    if (!track) return;
 
-    const cellHeight = cell.getBoundingClientRect().height;
-    const deltaY = e.clientY - this.weekResizeStartY;
+    const trackWidth = track.getBoundingClientRect().width;
+    const deltaX = e.clientX - this.weekResizeStartX;
     const totalMinutes = 12 * 60;
-    const deltaMins = (deltaY / cellHeight) * totalMinutes;
+    const deltaMins = (deltaX / trackWidth) * totalMinutes;
 
     let newStart = this.weekResizeOrigStartMins;
     let newEnd = this.weekResizeOrigEndMins;
 
-    if (this.weekResizeHandleSide === "top") {
+    if (this.weekResizeHandleSide === "left") {
       newStart =
         Math.round((this.weekResizeOrigStartMins + deltaMins) / 30) * 30;
       if (newStart < 0) newStart = 0;
@@ -1794,15 +1809,15 @@ class SchedulerApp {
       if (newEnd <= newStart + 30) newEnd = newStart + 30;
     }
 
-    const topPercent = (newStart / totalMinutes) * 100;
-    const heightPercent = ((newEnd - newStart) / totalMinutes) * 100;
-    this.weekResizingBlock.style.top = `${topPercent}%`;
-    this.weekResizingBlock.style.height = `${heightPercent}%`;
+    const leftPercent = (newStart / totalMinutes) * 100;
+    const widthPercent = ((newEnd - newStart) / totalMinutes) * 100;
+    this.weekResizingBlock.style.left = `${leftPercent}%`;
+    this.weekResizingBlock.style.width = `${widthPercent}%`;
 
     this.weekResizingBlock.dataset.tempStart = newStart.toString();
     this.weekResizingBlock.dataset.tempEnd = newEnd.toString();
 
-    // Оновлюємо текст часу в реальному часі
+    // Оновлюємо текст часу
     const sH = this.weekMinsToTime(newStart);
     const eH = this.weekMinsToTime(newEnd);
     const timeEl = this.weekResizingBlock.querySelector(
@@ -1814,7 +1829,7 @@ class SchedulerApp {
     const hasOverlap = this.checkWeekBlockOverlap(
       newStart,
       newEnd,
-      cell,
+      track,
       this.weekResizingBlock,
     );
     if (hasOverlap) {
@@ -1844,7 +1859,6 @@ class SchedulerApp {
     delete this.weekResizingBlock.dataset.tempStart;
     delete this.weekResizingBlock.dataset.tempEnd;
 
-    // Нічого не змінилось
     if (
       newStart === this.weekResizeOrigStartMins &&
       newEnd === this.weekResizeOrigEndMins
@@ -1854,14 +1868,14 @@ class SchedulerApp {
     }
 
     // Перевірка overlap
-    const cell = this.weekResizingBlock.closest(
-      ".post-week-day-cell",
+    const track = this.weekResizingBlock.closest(
+      ".post-week-day-track",
     ) as HTMLElement;
-    const hasOverlap = cell
+    const hasOverlap = track
       ? this.checkWeekBlockOverlap(
           newStart,
           newEnd,
-          cell,
+          track,
           this.weekResizingBlock,
         )
       : false;
@@ -1869,13 +1883,13 @@ class SchedulerApp {
     if (hasOverlap) {
       // Revert
       const totalMinutes = 12 * 60;
-      const origTop = (this.weekResizeOrigStartMins / totalMinutes) * 100;
-      const origHeight =
+      const origLeft = (this.weekResizeOrigStartMins / totalMinutes) * 100;
+      const origWidth =
         ((this.weekResizeOrigEndMins - this.weekResizeOrigStartMins) /
           totalMinutes) *
         100;
-      this.weekResizingBlock.style.top = `${origTop}%`;
-      this.weekResizingBlock.style.height = `${origHeight}%`;
+      this.weekResizingBlock.style.left = `${origLeft}%`;
+      this.weekResizingBlock.style.width = `${origWidth}%`;
 
       const sH = this.weekMinsToTime(this.weekResizeOrigStartMins);
       const eH = this.weekMinsToTime(this.weekResizeOrigEndMins);

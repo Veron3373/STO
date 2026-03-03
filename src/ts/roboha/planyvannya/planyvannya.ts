@@ -1533,21 +1533,12 @@ class SchedulerApp {
     this.weekSelectionEl.style.width = `${width}px`;
 
     // ── Підсвічуємо комірки-години в заголовку ────────────────
-    const totalMinutes = 12 * 60; // 8:00–20:00
-    const p1 = Math.min(this.weekDragStartX, this.weekDragCurrentX);
-    const p2 = Math.max(this.weekDragStartX, this.weekDragCurrentX);
-    const cellWidth = rect.width;
-
-    // Знімаємо попередні підсвічування
     this.clearDragHourHighlight();
+    if (width < 5) return;
 
-    if (p2 - p1 < 5) return;
-
-    // Час початку і кінця у хвилинах від 8:00
-    const startMins = Math.round(((p1 / cellWidth) * totalMinutes) / 30) * 30;
-    const endMins = Math.round(((p2 / cellWidth) * totalMinutes) / 30) * 30;
-    const startHour = Math.floor(startMins / 60); // 0-based від 8
-    const endHour = Math.ceil(endMins / 60);    // 0-based від 8, включно
+    // Діапазон clientX перетягування
+    const dragClientLeft = rect.left + left;
+    const dragClientRight = dragClientLeft + width;
 
     // Знаходимо заголовок дня за датою треку
     const dateStr = this.weekDragCell.dataset.date || "";
@@ -1568,29 +1559,47 @@ class SchedulerApp {
       dayColHeader.querySelectorAll('.post-week-hour-cell')
     ) as HTMLElement[];
 
+    // Знаходимо cellIdx початку і кінця через порівняння BoundingRect
+    let firstActive = -1;
+    let lastActive = -1;
+
     hourCells.forEach((cell, i) => {
-      if (i >= startHour && i < endHour) {
+      const cr = cell.getBoundingClientRect();
+      // Комірка активна якщо перетинається з drag-діапазоном (хоча б частково)
+      if (cr.right > dragClientLeft && cr.left < dragClientRight) {
+        if (firstActive < 0) firstActive = i;
+        lastActive = i;
         cell.classList.add('hour-drag-active');
-        // Показуємо час: перша комірка — «від», остання — «до»
-        const absHour = 8 + i;
-        if (i === startHour) {
-          const sH = 8 + Math.floor(startMins / 60);
-          const sM = startMins % 60;
-          cell.textContent = sM > 0
-            ? `${sH}:${String(sM).padStart(2, '0')}`
-            : `${sH}`;
-        } else if (i === endHour - 1) {
-          const eH = 8 + Math.floor(endMins / 60);
-          const eM = endMins % 60;
-          cell.textContent = eM > 0
-            ? `${eH}:${String(eM).padStart(2, '0')}`
-            : `${eH}`;
-        } else {
-          cell.textContent = String(absHour);
-        }
       }
     });
+
+    // Час початку і кінця (кроки по 30 хв)
+    const totalMinutes = 12 * 60;
+    const cellWidth = rect.width;
+    const p1 = Math.min(this.weekDragStartX, this.weekDragCurrentX);
+    const p2 = Math.max(this.weekDragStartX, this.weekDragCurrentX);
+    const startMins = Math.round(((p1 / cellWidth) * totalMinutes) / 30) * 30;
+    const endMins = Math.round(((p2 / cellWidth) * totalMinutes) / 30) * 30;
+
+    if (firstActive >= 0 && lastActive >= 0) {
+      // Перша комірка — час початку
+      const sH = 8 + Math.floor(startMins / 60);
+      const sM = startMins % 60;
+      hourCells[firstActive].textContent = sM > 0
+        ? `${sH}:${String(sM).padStart(2, '0')}`
+        : `${sH}`;
+
+      // Остання комірка — час кінця
+      if (lastActive !== firstActive) {
+        const eH = 8 + Math.floor(endMins / 60);
+        const eM = endMins % 60;
+        hourCells[lastActive].textContent = eM > 0
+          ? `${eH}:${String(eM).padStart(2, '0')}`
+          : `${eH}`;
+      }
+    }
   };
+
 
   private onWeekDragUp = (_e: MouseEvent): void => {
     document.removeEventListener("mousemove", this.onWeekDragMove);

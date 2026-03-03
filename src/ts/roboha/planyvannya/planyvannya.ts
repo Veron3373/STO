@@ -907,6 +907,9 @@ class SchedulerApp {
       for (let h = 8; h <= 19; h++) {
         const hourCell = document.createElement("div");
         hourCell.className = "post-week-hour-cell";
+        if (h === 13) {
+          hourCell.classList.add("hour-lunch"); // Обідня перерва
+        }
         if (isToday) {
           if (h < currentHour) {
             hourCell.classList.add("hour-past");
@@ -1033,6 +1036,14 @@ class SchedulerApp {
               pastOverlay.style.width = "100%";
               dayTrack.appendChild(pastOverlay);
             }
+
+            // Обідня смуга 13:00–14:00 (аналог суботи)
+            const lunchOverlay = document.createElement("div");
+            lunchOverlay.className = "post-week-lunch-overlay";
+            // 13:00 = 5 год від 8:00 = 5/12 * 100%, шириною 1/12 * 100%
+            lunchOverlay.style.left = `${(5 / 12) * 100}%`;
+            lunchOverlay.style.width = `${(1 / 12) * 100}%`;
+            dayTrack.appendChild(lunchOverlay);
 
             // Drag-to-create
             this.attachWeekCellDragHandlers(dayTrack);
@@ -1318,12 +1329,18 @@ class SchedulerApp {
 
     const tooltip = document.createElement("div");
     tooltip.className = "post-week-tooltip";
+    // Порядок: ПІБ → Авто → Телефон → час/тривалість → статус → решта
     let tooltipHTML = `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">👤</span> <strong>${clientName || "—"}</strong></div>`;
+    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🚗</span> ${carModel || "—"} <span class="pw-tip-number">${carNumber || ""}</span></div>`;
     if (clientPhone) {
       tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📞</span> <span class="pw-tip-phone">${clientPhone}</span></div>`;
     }
-    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🚗</span> ${carModel || "—"} <span class="pw-tip-number">${carNumber || ""}</span></div>`;
-    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🕐</span> ${startH}:${startM} — ${endH}:${endM}</div>`;
+    // Тривалість
+    const durationMins = endMins - startMins;
+    const durH = Math.floor(durationMins / 60);
+    const durM = durationMins % 60;
+    const durStr = durM > 0 ? `${durH}:${String(durM).padStart(2, '0')}` : `${durH}:00`;
+    tooltipHTML += `<div class="post-week-tooltip-row pw-tip-duration"><span class="pw-tip-emoji">🕐</span> <span class="pw-tip-time-range">${startH}:${startM} — ${endH}:${endM} / ${durStr}</span></div>`;
     tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">${emoji}</span> ${status}</div>`;
     if (comment) {
       tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">💬</span> ${comment}</div>`;
@@ -1429,6 +1446,9 @@ class SchedulerApp {
     });
 
     dayTrack.appendChild(block);
+
+    // Оновлюємо кольори годин у заголовку для цієї дати
+    this.updateHeaderHoursForDate(dateStr);
   }
 
   // ============== ТИЖНЕВИЙ ВИД — СТВОРЕННЯ ЗАПИСУ ЧЕРЕЗ DRAG ==============
@@ -1767,6 +1787,10 @@ class SchedulerApp {
             this.revertWeekBlockDrag();
           } else {
             showNotification("Запис переміщено!", "success");
+            // Оновлюємо заголовки годин для старої та нової дати
+            const oldDate = this.weekMovingOriginalCell?.dataset.date || "";
+            if (oldDate && oldDate !== newDate) this.updateHeaderHoursForDate(oldDate);
+            this.updateHeaderHoursForDate(newDate);
           }
         } catch {
           showNotification("Помилка при переміщенні", "error");
@@ -1994,6 +2018,7 @@ class SchedulerApp {
           showNotification("Помилка оновлення часу", "error");
         } else {
           showNotification("Час оновлено!", "success");
+          this.updateHeaderHoursForDate(dateStr);
         }
       }
     }
@@ -2005,6 +2030,116 @@ class SchedulerApp {
     this.weekIsResizing = false;
     this.weekResizingBlock = null;
     this.weekResizeHandleSide = null;
+  }
+
+  /**
+   * Оновлює кольорування годин у заголовку для конкретної дати.
+   * Проходить усі блоки-записи для цієї дати (незалежно від слюсаря)
+   * і підсвічує лише ті години, що перетинаються із записами.
+   * Також виводить дрібним текстом початок/кінець часу запису в першому/останньому зафарбованому осередку.
+   */
+  private updateHeaderHoursForDate(dateStr: string): void {
+    if (!this.calendarGrid) return;
+
+    // Знаходимо колонку заголовку для цієї дати
+    // Колонки у шапці є .post-week-day-col-header, їх порядок відповідає порядку weekDays
+    const weekDays = this.getWeekDays(this.selectedDate);
+    const dayIndex = weekDays.findIndex((d) => {
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return ds === dateStr;
+    });
+    if (dayIndex < 0) return;
+
+    const dayColHeaders = this.calendarGrid.querySelectorAll('.post-week-day-col-header');
+    const dayColHeader = dayColHeaders[dayIndex] as HTMLElement;
+    if (!dayColHeader) return;
+
+    const hoursRow = dayColHeader.querySelector('.post-week-hours-row');
+    if (!hoursRow) return;
+
+    // Збираємо всі блоки для цієї дати
+    const allTracks = this.calendarGrid.querySelectorAll(`.post-week-day-track[data-date="${dateStr}"]`);
+    // Масив зайнятих хвилинних інтервалів [startMins, endMins]
+    const occupiedRanges: Array<{ start: number; end: number }> = [];
+    allTracks.forEach((track) => {
+      const blocks = track.querySelectorAll('.post-week-block');
+      blocks.forEach((blk) => {
+        const bEl = blk as HTMLElement;
+        const s = parseInt(bEl.dataset.start || '0');
+        const e = parseInt(bEl.dataset.end || '0');
+        occupiedRanges.push({ start: s, end: e });
+      });
+    });
+
+    // Годинні комірки: 8..19 (12 штук)
+    const hourCells = Array.from(hoursRow.querySelectorAll('.post-week-hour-cell')) as HTMLElement[];
+
+    hourCells.forEach((cell, i) => {
+      const h = 8 + i; // година
+      const cellStartMins = (h - 8) * 60;     // хвилини від 08:00 до початку комірки
+      const cellEndMins = cellStartMins + 60; // до кінця комірки
+
+      // Чи перетинається будь-який запис з цією годиною?
+      const overlapping = occupiedRanges.filter(
+        (r) => r.start < cellEndMins && r.end > cellStartMins
+      );
+      const isOccupied = overlapping.length > 0;
+
+      // Прибираємо попередні окупаційні мітки
+      cell.classList.remove('hour-occupied');
+      const existing = cell.querySelector('.hour-time-label');
+      if (existing) existing.remove();
+
+      if (isOccupied) {
+        cell.classList.add('hour-occupied');
+
+        // Визначаємо діапазон часу для мітки
+        // Починаємо з першого запису що стартує саме в цьому стовпці
+        // (або найраніший якщо кілька)
+        const firstStartingHere = overlapping
+          .filter((r) => r.start >= cellStartMins && r.start < cellEndMins)
+          .sort((a, b) => a.start - b.start);
+
+        const lastEndingHere = overlapping
+          .filter((r) => r.end > cellStartMins && r.end <= cellEndMins)
+          .sort((a, b) => b.end - a.end);
+
+        if (firstStartingHere.length > 0) {
+          // Показуємо час початку (напр. 9³⁰ або просто 9:30)
+          const mins = firstStartingHere[0].start % 60;
+          const label = document.createElement('span');
+          label.className = 'hour-time-label hour-time-start';
+          if (mins > 0) {
+            label.innerHTML = `${h}<sup>${String(mins).padStart(2, '0')}</sup>`;
+          } else {
+            label.textContent = String(h);
+          }
+          // Видаляємо стандартний текст і ставимо мітку
+          cell.textContent = '';
+          cell.appendChild(label);
+        } else if (lastEndingHere.length > 0) {
+          // Показуємо час кінця
+          const endM = lastEndingHere[0].end;
+          const endHour = 8 + Math.floor(endM / 60);
+          const endMin = endM % 60;
+          const label = document.createElement('span');
+          label.className = 'hour-time-label hour-time-end';
+          if (endMin > 0) {
+            label.innerHTML = `${endHour}<sup>${String(endMin).padStart(2, '0')}</sup>`;
+          } else {
+            label.textContent = String(endHour);
+          }
+          cell.textContent = '';
+          cell.appendChild(label);
+        } else {
+          // Середина — прибираємо звичайний номер
+          cell.textContent = '';
+        }
+      } else {
+        // Повертаємо стандартний текст
+        cell.textContent = String(h);
+      }
+    });
   }
 
   /**

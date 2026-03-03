@@ -1302,6 +1302,41 @@ $sidebar-width: 30%;
   &.hour-future {
     background: rgba(200, 240, 210, 0.35);
   }
+
+  // Обідня година 13:00 — колір як у вихідних
+  &.hour-lunch {
+    background: #fff3cd;
+    color: #b77000;
+    font-weight: 700;
+  }
+
+  // Зайнята година (є запланований запис) — підсвічуємо
+  &.hour-occupied {
+    background: rgba(255, 200, 50, 0.22);
+    border-left-color: rgba(200, 140, 0, 0.35);
+    color: #7a5800;
+    font-weight: 700;
+    position: relative;
+  }
+
+  // Мітка з часом в осередку (початок/кінець запису)
+  .hour-time-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: #6b4f00;
+    line-height: 1;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
+
+    sup {
+      font-size: 6px;
+      font-weight: 600;
+      vertical-align: super;
+      line-height: 1;
+      color: #8a6500;
+    }
+  }
 }
 
 // === Тіло тижневого виду ===
@@ -1420,6 +1455,18 @@ $sidebar-width: 30%;
     background: rgba(64, 192, 87, 0.1) !important;
     box-shadow: inset 0 0 0 2px rgba(64, 192, 87, 0.4);
   }
+}
+
+// Обідня смуга в треку (13:00–14:00) — той самий колір що вихідні
+.post-week-lunch-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 243, 205, 0.7);
+  pointer-events: none;
+  z-index: 1;
+  border-left: 1px dashed #e0bc5a;
+  border-right: 1px dashed #e0bc5a;
 }
 
 // Вертикальні часові мітки (пунктирні лінії)
@@ -1685,6 +1732,16 @@ $sidebar-width: 30%;
 
     .pw-tip-phone {
       color: #6ee7b7;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    // Часовий діапазон + тривалість (підкреслено)
+    .pw-tip-time-range {
+      text-decoration: underline;
+      text-decoration-color: rgba(255, 255, 255, 0.4);
+      text-underline-offset: 2px;
+      color: #fde68a;
       font-weight: 600;
       letter-spacing: 0.3px;
     }

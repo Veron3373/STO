@@ -177,7 +177,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
                 <div class="fakturaAct-approval-content" contenteditable="true" title="Натисніть, щоб змінити">${rightSideText}</div>
             </div>
           </div>
-          <div class="fakturaAct-main-title">АКТ № ОУ-${actNumber} здачі-прийняття робіт (надання послуг)</div>
+          <div class="fakturaAct-main-title">АКТ № ОУ-<strong contenteditable="true" id="editable-act-number" title="Натисніть, щоб змінити номер">${actNumber}</strong> здачі-прийняття робіт (надання послуг)</div>
           <div class="fakturaAct-intro-text" contenteditable="true">${introText}</div>
           <table class="fakturaAct-table">
             <thead>
@@ -228,11 +228,19 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   btnSave?.addEventListener("click", async () => {
     btnSave.disabled = true;
     btnSave.textContent = "⏳ Збереження...";
-    const success = await saveActData(data.act_id, rawNum);
+    const editedActNumber =
+      document.getElementById("editable-act-number")?.textContent?.trim() ||
+      actNumber;
+    const editedRawNum = parseInt(editedActNumber) || rawNum;
+    const success = await saveActData(data.act_id, editedRawNum);
     if (success) {
       btnSave.textContent = "✅ Збережено";
       btnSave.style.backgroundColor = "#4caf50";
-      showNotification(`Акт № ОУ-${actNumber} збережено`, "success", 4000);
+      showNotification(
+        `Акт № ОУ-${editedActNumber} збережено`,
+        "success",
+        4000,
+      );
       setTimeout(() => {
         btnSave.textContent = "💾 Зберегти";
         btnSave.disabled = false;
@@ -252,7 +260,10 @@ export async function renderActPreviewModal(data: any): Promise<void> {
     btnPrint.textContent = "⏳ Генерація...";
     btnPrint.disabled = true;
     setTimeout(async () => {
-      await generateActPdf(actNumber);
+      const editedActNum =
+        document.getElementById("editable-act-number")?.textContent?.trim() ||
+        actNumber;
+      await generateActPdf(editedActNum);
       btnPrint.textContent = "📥 Завантажити";
       btnPrint.disabled = false;
     }, 50);

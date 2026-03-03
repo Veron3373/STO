@@ -168,7 +168,7 @@ function amountToWordsUA(amount: number): string {
         kopecks,
         "копійка",
         "копійки",
-        "копійок"
+        "копійок",
       )}`;
     } else if (kopecks <= 19) {
       kopecksWords =
@@ -198,7 +198,7 @@ function amountToWordsUA(amount: number): string {
  * (запис, де name містить "Брацлавець").
  */
 async function getInvoiceNumber(
-  currentActId: number
+  currentActId: number,
 ): Promise<{ number: string; isNew: boolean }> {
   try {
     // 1) Якщо у поточного акту вже є contrAgent_raxunok — повертаємо його
@@ -253,7 +253,7 @@ async function saveInvoiceNumber(
   currentActId: number,
   invoiceNumber: string,
   isoDateString: string,
-  fakturaId: number | null
+  fakturaId: number | null,
 ): Promise<boolean> {
   try {
     // 1) Оновлюємо лічильник у faktura.namber (де name містить "Брацлавець")
@@ -307,7 +307,7 @@ export function getCurrentActDataFromDOM(): any {
 
   const actId = Number(actIdStr);
   const clientCell = document.querySelector(
-    ".zakaz_narayd-table.left tr:nth-child(2) td:nth-child(2)"
+    ".zakaz_narayd-table.left tr:nth-child(2) td:nth-child(2)",
   );
   const client = clientCell?.textContent?.trim() || "Клієнт не вказаний";
   const tableBody = document.querySelector("#act-items-table-container tbody");
@@ -323,15 +323,15 @@ export function getCurrentActDataFromDOM(): any {
     const name = nameCell?.textContent?.trim() || "";
     const quantity =
       parseFloat(
-        qtyCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0"
+        qtyCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0",
       ) || 0;
     const price =
       parseFloat(
-        priceCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0"
+        priceCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0",
       ) || 0;
     const suma =
       parseFloat(
-        sumCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0"
+        sumCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0",
       ) || 0;
 
     if (name) {
@@ -343,10 +343,10 @@ export function getCurrentActDataFromDOM(): any {
 }
 
 function getInvoiceRowBoundsPx(
-  container: HTMLElement
+  container: HTMLElement,
 ): Array<{ top: number; bottom: number }> {
   const tbody = container.querySelector(
-    ".invoice-table tbody"
+    ".invoice-table tbody",
   ) as HTMLElement | null;
   if (!tbody) return [];
 
@@ -376,7 +376,7 @@ function getInvoiceElementBoundsPx(container: HTMLElement, selector: string) {
 
 async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
   const modalBody = document.querySelector(
-    ".invoice-a4-container"
+    ".invoice-a4-container",
   ) as HTMLElement;
   if (!modalBody) {
     alert("Помилка: контейнер рахунку не знайдено.");
@@ -385,7 +385,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
 
   const controls = document.querySelector(".invoice-controls") as HTMLElement;
   const btnPrint = document.getElementById(
-    "btn-print-invoice"
+    "btn-print-invoice",
   ) as HTMLButtonElement;
 
   if (controls) controls.style.display = "none";
@@ -442,7 +442,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
     // Отримуємо межі секції з підписом
     const signatureBounds = getInvoiceElementBoundsPx(
       modalBody,
-      ".signature-section"
+      ".signature-section",
     );
 
     // Якщо все влазить на одну сторінку
@@ -453,7 +453,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
         marginLeft,
         marginTop,
         contentWidthMm,
-        imgHeightMm
+        imgHeightMm,
       );
     } else {
       // Багатосторінкова логіка
@@ -526,7 +526,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
         // 5) Ріжемо canvas
         const sourceYCanvas = Math.round(currentDomY * canvasPxPerDomPx);
         const sourceHCanvas = Math.round(
-          (safeCutDomY - currentDomY) * canvasPxPerDomPx
+          (safeCutDomY - currentDomY) * canvasPxPerDomPx,
         );
 
         const tempCanvas = document.createElement("canvas");
@@ -543,7 +543,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
           0,
           0,
           canvas.width,
-          sourceHCanvas
+          sourceHCanvas,
         );
 
         const sliceImg = tempCanvas.toDataURL("image/jpeg", 0.95);
@@ -555,7 +555,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
           marginLeft,
           marginTop,
           contentWidthMm,
-          sliceHeightMm
+          sliceHeightMm,
         );
 
         currentDomY = safeCutDomY;
@@ -629,14 +629,14 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
 
   const now = new Date();
   const dateString = `${now.getDate()} ${getMonthNameGenitive(
-    now.getMonth()
+    now.getMonth(),
   )} ${now.getFullYear()} р.`;
 
   const dateForDisplay = getCurrentDateDDMMYYYY();
 
   const totalSum = actData.items.reduce(
     (sum: number, item: any) => sum + item.suma,
-    0
+    0,
   );
   const totalSumWords = amountToWordsUA(totalSum);
 
@@ -651,7 +651,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
           <td class="col-price">${formatNumberWithSpaces(item.price)}</td>
           <td class="col-sum">${formatNumberWithSpaces(item.suma)}</td>
       </tr>
-  `
+  `,
     )
     .join("");
 
@@ -688,7 +688,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
               </table>
 
               <div class="invoice-title">
-                  Рахунок-фактура № СФ-${invoiceNumber}<br>
+                  Рахунок-фактура № СФ-<strong contenteditable="true" id="editable-invoice-number" title="Натисніть, щоб змінити номер">${invoiceNumber}</strong><br>
                   від ${dateString}
               </div>
 
@@ -749,12 +749,16 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
     }
 
     setTimeout(() => {
-      generateInvoicePdf(invoiceNumber);
+      const editedNumber =
+        document
+          .getElementById("editable-invoice-number")
+          ?.textContent?.trim() || invoiceNumber;
+      generateInvoicePdf(editedNumber);
     }, 50);
   });
 
   const btnAdd = document.getElementById(
-    "btn-add-invoice"
+    "btn-add-invoice",
   ) as HTMLButtonElement;
 
   btnAdd?.addEventListener("click", async () => {
@@ -762,12 +766,15 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
     btnAdd.textContent = "⏳ Збереження...";
 
     const dateForDB = getCurrentDateISO();
+    const editedInvoiceNumber =
+      document.getElementById("editable-invoice-number")?.textContent?.trim() ||
+      invoiceNumber;
 
     const success = await saveInvoiceNumber(
       actData.act_id,
-      invoiceNumber,
+      editedInvoiceNumber,
       dateForDB,
-      foundFakturaId
+      foundFakturaId,
     );
 
     if (success) {
@@ -775,9 +782,9 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
       btnAdd.style.backgroundColor = "#4caf50";
 
       showNotification(
-        `Рахунок № СФ-${invoiceNumber} від ${dateForDisplay} збережено`,
+        `Рахунок № СФ-${editedInvoiceNumber} від ${dateForDisplay} збережено`,
         "success",
-        4000
+        4000,
       );
 
       setTimeout(() => {

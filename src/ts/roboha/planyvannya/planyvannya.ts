@@ -52,6 +52,7 @@ interface DayOccupancyStats {
 class SchedulerApp {
   private sections: Section[] = [];
   private editMode: boolean = false;
+  private isWeekView: boolean = false;
 
   private today: Date;
   private selectedDate: Date;
@@ -130,11 +131,25 @@ class SchedulerApp {
     const headerPrev = document.getElementById("headerNavPrev");
     const headerNext = document.getElementById("headerNavNext");
     const todayBtn = document.getElementById("postTodayBtn");
+    const weekBtn = document.getElementById("postWeekBtn");
     if (headerPrev)
-      headerPrev.addEventListener("click", () => this.changeDate(-1));
+      headerPrev.addEventListener("click", () => {
+        if (this.isWeekView) {
+          this.changeDate(-7);
+        } else {
+          this.changeDate(-1);
+        }
+      });
     if (headerNext)
-      headerNext.addEventListener("click", () => this.changeDate(1));
+      headerNext.addEventListener("click", () => {
+        if (this.isWeekView) {
+          this.changeDate(7);
+        } else {
+          this.changeDate(1);
+        }
+      });
     if (todayBtn) todayBtn.addEventListener("click", () => this.goToToday());
+    if (weekBtn) weekBtn.addEventListener("click", () => this.toggleWeekView());
 
     // Навігація місяцями
     const monthPrev = document.getElementById("postYearPrev");
@@ -682,6 +697,12 @@ class SchedulerApp {
     this.viewMonth = this.today.getMonth();
     this.viewYear = this.today.getFullYear();
 
+    if (this.isWeekView) {
+      this.render();
+      this.loadWeekArxivData();
+      return;
+    }
+
     // Якщо поточний місяць відображається - просто оновлюємо підсвічування
     if (this.isMonthVisible(this.viewMonth, this.viewYear)) {
       this.updateDateSelection();
@@ -693,6 +714,460 @@ class SchedulerApp {
     }
   }
 
+  // ============== ТИЖНЕВИЙ ВИД ==============
+  private toggleWeekView(): void {
+    this.isWeekView = !this.isWeekView;
+    const weekBtn = document.getElementById("postWeekBtn");
+    if (weekBtn) {
+      weekBtn.classList.toggle("active", this.isWeekView);
+      weekBtn.textContent = this.isWeekView ? "День" : "Тиждень";
+    }
+    this.render();
+    if (this.isWeekView) {
+      this.loadWeekArxivData();
+    } else {
+      this.reloadArxivData();
+    }
+  }
+
+  /**
+   * Повертає початок тижня (понеділок) для заданої дати
+   */
+  private getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Понеділок = 1
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  /**
+   * Повертає масив з 7 дат тижня (Пн-Нд)
+   */
+  private getWeekDays(date: Date): Date[] {
+    const start = this.getWeekStart(date);
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  /**
+   * Форматує дату для тижневого заголовка
+   */
+  private formatWeekRange(date: Date): string {
+    const weekDays = this.getWeekDays(date);
+    const first = weekDays[0];
+    const last = weekDays[6];
+    const months = [
+      "січня",
+      "лютого",
+      "березня",
+      "квітня",
+      "травня",
+      "червня",
+      "липня",
+      "серпня",
+      "вересня",
+      "жовтня",
+      "листопада",
+      "грудня",
+    ];
+    if (first.getMonth() === last.getMonth()) {
+      return `${first.getDate()} – ${last.getDate()} ${months[first.getMonth()]} ${first.getFullYear()}`;
+    } else {
+      return `${first.getDate()} ${months[first.getMonth()]} – ${last.getDate()} ${months[last.getMonth()]} ${last.getFullYear()}`;
+    }
+  }
+
+  /**
+   * Рендерить тижневий вид планувальника
+   */
+  private renderWeekView(): void {
+    const calendarGrid = this.calendarGrid;
+    if (!calendarGrid) return;
+    calendarGrid.innerHTML = "";
+
+    const weekDays = this.getWeekDays(this.selectedDate);
+    const shortDayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+    const months = [
+      "січ",
+      "лют",
+      "бер",
+      "кві",
+      "тра",
+      "чер",
+      "лип",
+      "сер",
+      "вер",
+      "жов",
+      "лис",
+      "гру",
+    ];
+
+    // Оновлюємо заголовок в header
+    if (this.headerDateDisplay) {
+      this.headerDateDisplay.textContent = this.formatWeekRange(
+        this.selectedDate,
+      );
+    }
+
+    // Ховаємо sticky-header з часовою шкалою (8, 9, 10 і т.д.)
+    const stickyHeader = document.querySelector(
+      ".post-sticky-header",
+    ) as HTMLElement;
+    if (stickyHeader) {
+      stickyHeader.style.display = "none";
+    }
+
+    // Додаємо клас тижневого виду
+    if (this.schedulerWrapper) {
+      this.schedulerWrapper.classList.add("week-view-mode");
+    }
+
+    // Створюємо головну таблицю тижневого виду
+    const weekContainer = document.createElement("div");
+    weekContainer.className = "post-week-container";
+
+    // === Хедер днів тижня ===
+    const weekHeader = document.createElement("div");
+    weekHeader.className = "post-week-header";
+
+    // Пустий кут (row label)
+    const cornerCell = document.createElement("div");
+    cornerCell.className = "post-week-corner";
+    weekHeader.appendChild(cornerCell);
+
+    weekDays.forEach((day, idx) => {
+      const dayCol = document.createElement("div");
+      dayCol.className = "post-week-day-header";
+      const isToday = day.toDateString() === this.today.toDateString();
+      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+      if (isToday) dayCol.classList.add("post-week-today");
+      if (isWeekend) dayCol.classList.add("post-week-weekend");
+
+      dayCol.innerHTML = `
+        <span class="post-week-day-name">${shortDayNames[idx]}</span>
+        <span class="post-week-day-date">${day.getDate()} ${months[day.getMonth()]}</span>
+      `;
+
+      // Клік — перехід до денного виду на цю дату
+      dayCol.addEventListener("click", () => {
+        this.selectedDate = new Date(day);
+        this.viewMonth = day.getMonth();
+        this.viewYear = day.getFullYear();
+        this.isWeekView = false;
+        const weekBtn = document.getElementById("postWeekBtn");
+        if (weekBtn) {
+          weekBtn.classList.remove("active");
+          weekBtn.textContent = "Тиждень";
+        }
+        this.render();
+        this.reloadArxivData();
+      });
+
+      weekHeader.appendChild(dayCol);
+    });
+
+    weekContainer.appendChild(weekHeader);
+
+    // === Тіло з секціями/постами ===
+    const weekBody = document.createElement("div");
+    weekBody.className = "post-week-body";
+
+    this.sections.forEach((section) => {
+      // === Хедер секції ===
+      const sectionRow = document.createElement("div");
+      sectionRow.className = "post-week-section-header";
+      sectionRow.innerHTML = `<span>${section.name}</span>`;
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "post-toggle-btn";
+      if (section.collapsed) toggleBtn.classList.add("collapsed");
+      toggleBtn.textContent = "▼";
+
+      sectionRow.appendChild(toggleBtn);
+
+      sectionRow.addEventListener("click", () => {
+        this.toggleSection(section.id);
+        // Після toggle перерендерюємо
+        this.renderWeekView();
+        this.loadWeekArxivData();
+      });
+
+      weekBody.appendChild(sectionRow);
+
+      // === Контент секції ===
+      if (!section.collapsed) {
+        section.posts.forEach((post) => {
+          const postRow = document.createElement("div");
+          postRow.className = "post-week-row";
+
+          // Лейбл поста (зліва)
+          const rowLabel = document.createElement("div");
+          rowLabel.className = "post-week-row-label";
+          rowLabel.innerHTML = `
+            <div class="post-post-title">${post.title}</div>
+            <div class="post-post-subtitle">${post.subtitle}</div>
+          `;
+          postRow.appendChild(rowLabel);
+
+          // 7 комірок — по одній на день
+          weekDays.forEach((day) => {
+            const dayCell = document.createElement("div");
+            dayCell.className = "post-week-day-cell";
+            const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+            dayCell.dataset.date = dateStr;
+            dayCell.dataset.slyusarId = post.id.toString();
+            dayCell.dataset.postId = post.postId.toString();
+
+            const isToday = day.toDateString() === this.today.toDateString();
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            if (isToday) dayCell.classList.add("post-week-today");
+            if (isWeekend) dayCell.classList.add("post-week-weekend");
+
+            // Часові мітки (вертикально, кожні 2 години)
+            for (let h = 8; h <= 18; h += 2) {
+              const timeMark = document.createElement("div");
+              timeMark.className = "post-week-time-mark";
+              timeMark.style.top = `${((h - 8) / 12) * 100}%`;
+              timeMark.dataset.hour = h.toString();
+              dayCell.appendChild(timeMark);
+            }
+
+            // Клік по порожній клітинці — перехід в денний вид на цю дату
+            dayCell.addEventListener("dblclick", (e) => {
+              const target = e.target as HTMLElement;
+              if (target.closest(".post-week-block")) return; // Не перехоплюємо клік по блоку
+              e.preventDefault();
+              this.selectedDate = new Date(day);
+              this.viewMonth = day.getMonth();
+              this.viewYear = day.getFullYear();
+              this.isWeekView = false;
+              const weekBtn = document.getElementById("postWeekBtn");
+              if (weekBtn) {
+                weekBtn.classList.remove("active");
+                weekBtn.textContent = "Тиждень";
+              }
+              this.render();
+              this.reloadArxivData();
+            });
+
+            postRow.appendChild(dayCell);
+          });
+
+          weekBody.appendChild(postRow);
+        });
+      }
+    });
+
+    weekContainer.appendChild(weekBody);
+    calendarGrid.appendChild(weekContainer);
+  }
+
+  /**
+   * Завантажує дані бронювань за весь тиждень
+   */
+  private async loadWeekArxivData(): Promise<void> {
+    const weekDays = this.getWeekDays(this.selectedDate);
+    const startDate = `${weekDays[0].getFullYear()}-${String(weekDays[0].getMonth() + 1).padStart(2, "0")}-${String(weekDays[0].getDate()).padStart(2, "0")}`;
+    const lastDay = weekDays[6];
+    const endDate = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, "0")}-${String(lastDay.getDate()).padStart(2, "0")}`;
+
+    try {
+      const { data: arxivRecords, error } = await supabase
+        .from("post_arxiv")
+        .select(
+          `
+          post_arxiv_id,
+          slyusar_id,
+          name_post,
+          client_id,
+          cars_id,
+          status,
+          data_on,
+          data_off,
+          komentar,
+          act_id,
+          xto_zapusav
+        `,
+        )
+        .gte("data_on", `${startDate}T00:00:00`)
+        .lte("data_on", `${endDate}T23:59:59`);
+
+      if (error || !arxivRecords || arxivRecords.length === 0) return;
+
+      // Збираємо ID клієнтів та машин
+      const clientIds = [
+        ...new Set(
+          arxivRecords
+            .map((r) => r.client_id)
+            .filter(
+              (id) =>
+                id != null && !isNaN(Number(id)) && !String(id).includes("|||"),
+            ),
+        ),
+      ];
+      const carIds = [
+        ...new Set(
+          arxivRecords
+            .map((r) => r.cars_id)
+            .filter(
+              (id) =>
+                id != null && !isNaN(Number(id)) && !String(id).includes("|||"),
+            ),
+        ),
+      ];
+
+      let clientsMap = new Map<number, any>();
+      if (clientIds.length > 0) {
+        const { data: clientsData } = await supabase
+          .from("clients")
+          .select("client_id, data")
+          .in("client_id", clientIds);
+        if (clientsData)
+          clientsData.forEach((c) => clientsMap.set(c.client_id, c.data));
+      }
+
+      let carsMap = new Map<number, any>();
+      if (carIds.length > 0) {
+        const { data: carsData } = await supabase
+          .from("cars")
+          .select("cars_id, data")
+          .in("cars_id", carIds);
+        if (carsData) carsData.forEach((c) => carsMap.set(c.cars_id, c.data));
+      }
+
+      // Рендеримо блоки
+      for (const record of arxivRecords) {
+        this.renderWeekArxivRecord(record, clientsMap, carsMap);
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  /**
+   * Рендерить один запис бронювання у тижневому виді
+   */
+  private renderWeekArxivRecord(
+    record: any,
+    clientsMap: Map<number, any>,
+    carsMap: Map<number, any>,
+  ): void {
+    const dataOn = new Date(record.data_on);
+    const dateStr = `${dataOn.getUTCFullYear()}-${String(dataOn.getUTCMonth() + 1).padStart(2, "0")}-${String(dataOn.getUTCDate()).padStart(2, "0")}`;
+
+    // Шукаємо комірку за датою та slyusar_id
+    const dayCell = this.calendarGrid?.querySelector(
+      `.post-week-day-cell[data-date="${dateStr}"][data-slyusar-id="${record.slyusar_id}"]`,
+    ) as HTMLElement;
+
+    if (!dayCell) return;
+
+    const dataOff = new Date(record.data_off);
+    const startMins = (dataOn.getUTCHours() - 8) * 60 + dataOn.getUTCMinutes();
+    const endMins = (dataOff.getUTCHours() - 8) * 60 + dataOff.getUTCMinutes();
+    const totalMinutes = 12 * 60; // 8:00-20:00
+
+    if (startMins < 0 || endMins > totalMinutes) return;
+
+    // Парсимо клієнта/авто
+    let clientName = "";
+    let carModel = "";
+    let carNumber = "";
+    const clientIdStr = String(record.client_id || "");
+    if (clientIdStr.includes("|||")) {
+      clientName = clientIdStr.split("|||")[0];
+    } else if (!isNaN(Number(clientIdStr))) {
+      const cd = clientsMap.get(Number(clientIdStr));
+      if (cd) clientName = cd["ПІБ"] || "";
+    }
+    const carsIdStr = String(record.cars_id || "");
+    if (carsIdStr.includes("|||")) {
+      const parts = carsIdStr.split("|||");
+      carModel = parts[0] || "";
+      carNumber = parts[1] || "";
+    } else if (!isNaN(Number(carsIdStr))) {
+      const cd = carsMap.get(Number(carsIdStr));
+      if (cd) {
+        carModel = cd["Авто"] || "";
+        carNumber = cd["Номер авто"] || "";
+      }
+    }
+
+    // Кольори статусів
+    const statusColors: Record<string, string> = {
+      Запланований: "#e6a700",
+      "В роботі": "#2e7d32",
+      Відремонтований: "#757575",
+      "Не приїхав": "#e53935",
+    };
+
+    const topPercent = (startMins / totalMinutes) * 100;
+    const heightPercent = ((endMins - startMins) / totalMinutes) * 100;
+    const status = record.status || "Запланований";
+
+    const block = document.createElement("div");
+    block.className = "post-week-block";
+    block.style.top = `${topPercent}%`;
+    block.style.height = `${heightPercent}%`;
+    block.style.backgroundColor =
+      statusColors[status] || statusColors["Запланований"];
+
+    // Зберігаємо дані як data-атрибути
+    block.dataset.postArxivId = record.post_arxiv_id?.toString() || "";
+    block.dataset.slyusarId = record.slyusar_id?.toString() || "";
+    block.dataset.status = status;
+    block.dataset.clientName = clientName;
+    block.dataset.carModel = carModel;
+    block.dataset.carNumber = carNumber;
+    block.dataset.start = startMins.toString();
+    block.dataset.end = endMins.toString();
+    block.dataset.date = dateStr;
+    block.dataset.xtoZapusav = record.xto_zapusav || "";
+
+    // Формуємо час
+    const startH = String(dataOn.getUTCHours()).padStart(2, "0");
+    const startM = String(dataOn.getUTCMinutes()).padStart(2, "0");
+    const endH = String(dataOff.getUTCHours()).padStart(2, "0");
+    const endM = String(dataOff.getUTCMinutes()).padStart(2, "0");
+
+    // Текст блоку (компактний)
+    const shortName =
+      clientName.length > 12 ? clientName.substring(0, 12) + "…" : clientName;
+    block.innerHTML = `
+      <div class="post-week-block-time">${startH}:${startM}-${endH}:${endM}</div>
+      <div class="post-week-block-name">${shortName}</div>
+    `;
+    block.title = `${clientName}\n${carModel} ${carNumber}\n${startH}:${startM} - ${endH}:${endM}\n${status}`;
+
+    // Подвійний клік — відкриття модалки редагування в денному виді
+    block.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Переходимо на цей день і відкриваємо для редагування
+      const blockDate = new Date(dateStr + "T00:00:00");
+      this.selectedDate = new Date(blockDate);
+      this.viewMonth = blockDate.getMonth();
+      this.viewYear = blockDate.getFullYear();
+      this.isWeekView = false;
+      const weekBtn = document.getElementById("postWeekBtn");
+      if (weekBtn) {
+        weekBtn.classList.remove("active");
+        weekBtn.textContent = "Тиждень";
+      }
+      this.render();
+      this.reloadArxivData();
+    });
+
+    dayCell.appendChild(block);
+  }
+
   private changeDate(delta: number): void {
     const oldMonth = this.selectedDate.getMonth();
     const oldYear = this.selectedDate.getFullYear();
@@ -700,6 +1175,12 @@ class SchedulerApp {
     this.selectedDate.setDate(this.selectedDate.getDate() + delta);
     this.viewMonth = this.selectedDate.getMonth();
     this.viewYear = this.selectedDate.getFullYear();
+
+    if (this.isWeekView) {
+      this.render();
+      this.loadWeekArxivData();
+      return;
+    }
 
     // Якщо місяць змінився - потрібен повний рендеринг
     if (
@@ -1936,15 +2417,51 @@ class SchedulerApp {
   }
 
   private async render(): Promise<void> {
+    const yearDisplay = document.getElementById("postYearDisplay");
+    if (yearDisplay) {
+      yearDisplay.textContent = this.viewYear.toString();
+    }
+
+    if (this.isWeekView) {
+      // Тижневий вид
+      this.renderWeekView();
+      // Оновлюємо міні-календар
+      if (this.calendarContainer) {
+        this.calendarContainer.innerHTML = "";
+        const currentMonth = await this.renderMonth(
+          this.viewYear,
+          this.viewMonth,
+        );
+        this.calendarContainer.appendChild(currentMonth);
+        let nextMonth = this.viewMonth + 1;
+        let nextYear = this.viewYear;
+        if (nextMonth > 11) {
+          nextMonth = 0;
+          nextYear++;
+        }
+        const nextMonthElement = await this.renderMonth(nextYear, nextMonth);
+        this.calendarContainer.appendChild(nextMonthElement);
+      }
+      return;
+    }
+
+    // Денний вид
+    // Показуємо sticky-header
+    const stickyHeader = document.querySelector(
+      ".post-sticky-header",
+    ) as HTMLElement;
+    if (stickyHeader) {
+      stickyHeader.style.display = "";
+    }
+    // Прибираємо клас тижневого виду
+    if (this.schedulerWrapper) {
+      this.schedulerWrapper.classList.remove("week-view-mode");
+    }
+
     if (this.headerDateDisplay) {
       this.headerDateDisplay.textContent = this.formatFullDate(
         this.selectedDate,
       );
-    }
-
-    const yearDisplay = document.getElementById("postYearDisplay");
-    if (yearDisplay) {
-      yearDisplay.textContent = this.viewYear.toString();
     }
 
     this.updateTimeMarker();
@@ -1981,16 +2498,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Глобальна функція для оновлення календаря після створення акту
 (window as any).refreshPlannerCalendar = async () => {
-  if (schedulerAppInstance && schedulerAppInstance["postArxiv"]) {
-    // ⚠️ Спочатку очищаємо старі блоки, потім завантажуємо нові
-    schedulerAppInstance["postArxiv"].clearAllBlocks();
-    await schedulerAppInstance["postArxiv"].loadArxivDataForCurrentDate();
+  if (schedulerAppInstance) {
+    if ((schedulerAppInstance as any).isWeekView) {
+      // Тижневий вид — перезавантажуємо дані тижня
+      await (schedulerAppInstance as any).render();
+      await (schedulerAppInstance as any).loadWeekArxivData();
+    } else if (schedulerAppInstance["postArxiv"]) {
+      // Денний вид
+      schedulerAppInstance["postArxiv"].clearAllBlocks();
+      await schedulerAppInstance["postArxiv"].loadArxivDataForCurrentDate();
+    }
     // Оновлюємо індикатори зайнятості
     await schedulerAppInstance.refreshOccupancyIndicators();
-  } else {
-    // console.error(
-      // "❌ [refreshPlannerCalendar] schedulerAppInstance або postArxiv не знайдено!",
-    // );
   }
 };
 

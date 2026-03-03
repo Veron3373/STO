@@ -525,6 +525,7 @@ $sidebar-width: 30%;
 
 // EDIT MODE
 .post-scheduler-wrapper.edit-mode {
+
   .post-delete-btn,
   .post-post-delete-btn,
   .post-add-post-btn,
@@ -567,11 +568,9 @@ $sidebar-width: 30%;
 
 // DRAG PLACEHOLDERS
 .post-drag-placeholder {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 77, 38, 0.1),
-    rgba(0, 77, 38, 0.05)
-  );
+  background: linear-gradient(135deg,
+      rgba(0, 77, 38, 0.1),
+      rgba(0, 77, 38, 0.05));
   border: 2px dashed $primary-blue;
   border-radius: 6px;
   transition: height 0.2s ease;
@@ -742,7 +741,7 @@ $sidebar-width: 30%;
       }
 
       // Старий span для днів без даних (пусті клітинки)
-      > span:not(.day-container span) {
+      >span:not(.day-container span) {
         aspect-ratio: 1;
         display: flex;
         align-items: center;
@@ -1151,20 +1150,16 @@ $sidebar-width: 30%;
 
   &:hover,
   &.active {
-    background: linear-gradient(
-      135deg,
-      rgba(0, 77, 38, 0.08),
-      rgba(0, 77, 38, 0.04)
-    );
+    background: linear-gradient(135deg,
+        rgba(0, 77, 38, 0.08),
+        rgba(0, 77, 38, 0.04));
     color: $primary-blue;
   }
 
   &.active {
-    background: linear-gradient(
-      135deg,
-      rgba(0, 77, 38, 0.12),
-      rgba(0, 77, 38, 0.06)
-    );
+    background: linear-gradient(135deg,
+        rgba(0, 77, 38, 0.12),
+        rgba(0, 77, 38, 0.06));
     font-weight: 500;
   }
 }
@@ -1503,18 +1498,28 @@ $sidebar-width: 30%;
   &.week-block-past {
     opacity: 0.5;
     filter: saturate(0.4);
+
+    // При наведенні — повертаємо нормальний вигляд (як майбутній)
+    &:hover {
+      opacity: 1;
+      filter: none;
+    }
   }
 
   // Затемнення минулої частини блоку (лавандовий, як в денному виді)
+  // Відображається для блоків що ПЕРЕТИНАЮТЬ поточний час
+  // Ліва частина = минула (лавандова), права = майбутня (чиста, без накладки)
   .week-block-past-overlay {
     position: absolute;
     top: 0;
     left: 0;
     bottom: 0;
-    background: rgba(230, 230, 250, 0.5);
-    border-radius: 6px 0 0 6px;
+    background: rgba(200, 200, 240, 0.55);
+    border-radius: 4px 0 0 4px;
     pointer-events: none;
     z-index: 2;
+    // Права частина блоку залишається без накладки — чистий колір
+    // (ширина задається в JS як pastFraction%)
   }
 
   // Resize handles (лівий і правий)
@@ -1560,6 +1565,7 @@ $sidebar-width: 30%;
     background-color: #40c057 !important;
     border-color: #2b8a3e !important;
   }
+
   &.week-drag-invalid {
     background-color: #fa5252 !important;
     border-color: #c92a2a !important;
@@ -1685,6 +1691,7 @@ $sidebar-width: 30%;
     opacity: 0;
     transform: translateX(-50%) translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);

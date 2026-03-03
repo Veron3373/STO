@@ -314,6 +314,15 @@ export function getCurrentActDataFromDOM(): any {
   const rows = tableBody ? Array.from(tableBody.querySelectorAll("tr")) : [];
   const items: any[] = [];
 
+  // Зчитуємо відсоток знижки з поля #editable-discount
+  const discountInput = document.getElementById(
+    "editable-discount",
+  ) as HTMLInputElement | null;
+  const discountPercent =
+    parseFloat(discountInput?.value?.replace(",", ".") || "0") || 0;
+  const discountMultiplier =
+    discountPercent > 0 ? 1 - discountPercent / 100 : 1;
+
   rows.forEach((row) => {
     const nameCell = row.querySelector('[data-name="name"]') as HTMLElement;
     const qtyCell = row.querySelector('[data-name="id_count"]') as HTMLElement;
@@ -325,21 +334,25 @@ export function getCurrentActDataFromDOM(): any {
       parseFloat(
         qtyCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0",
       ) || 0;
-    const price =
+    const rawPrice =
       parseFloat(
         priceCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0",
       ) || 0;
-    const suma =
+    const rawSuma =
       parseFloat(
         sumCell?.textContent?.replace(/\s/g, "").replace(",", ".") || "0",
       ) || 0;
+
+    // Застосовуємо знижку до ціни та суми
+    const price = Math.round(rawPrice * discountMultiplier * 100) / 100;
+    const suma = Math.round(rawSuma * discountMultiplier * 100) / 100;
 
     if (name) {
       items.push({ name, quantity, price, suma });
     }
   });
 
-  return { act_id: actId, client, items };
+  return { act_id: actId, client, items, discountPercent };
 }
 
 function getInvoiceRowBoundsPx(

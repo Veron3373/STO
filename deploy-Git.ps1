@@ -118,6 +118,8 @@ git commit --allow-empty -m "deploy: $timestamp"
 # Check if commit failed but continue (should not fail with --allow-empty)
 if ($LASTEXITCODE -ne 0) { Write-Host "Commit failed (unexpected), proceeding..." }
 
+# Збільшуємо HTTP буфер щоб уникнути HTTP 408 timeout при великих пакетах
+git config http.postBuffer 524288000
 git push origin main
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Push failed!" -ForegroundColor Red

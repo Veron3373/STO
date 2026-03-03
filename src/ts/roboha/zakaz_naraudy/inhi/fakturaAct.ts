@@ -177,7 +177,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
                 <div class="fakturaAct-approval-content" contenteditable="true" title="Натисніть, щоб змінити">${rightSideText}</div>
             </div>
           </div>
-          <div class="fakturaAct-main-title">АКТ № ОУ-<strong contenteditable="true" id="editable-act-number" title="Натисніть, щоб змінити номер">${actNumber}</strong> здачі-прийняття робіт (надання послуг)</div>
+          <div class="fakturaAct-main-title">АКТ № ОУ-<span contenteditable="true" id="editable-act-number" title="Натисніть, щоб змінити номер">${actNumber}</span> здачі-прийняття робіт (надання послуг)</div>
           <div class="fakturaAct-intro-text" contenteditable="true">${introText}</div>
           <table class="fakturaAct-table">
             <thead>
@@ -188,7 +188,7 @@ export async function renderActPreviewModal(data: any): Promise<void> {
           <div class="fakturaAct-total-section">
             <p>Загальна вартість робіт (послуг) без ПДВ ${formatNumberWithSpaces(
               totalSum,
-            )} грн <strong contenteditable="true">${totalSumWords}</strong></p>
+            )} грн <span contenteditable="true">${totalSumWords}</span></p>
             <p>Сторони претензій одна до одної не мають.</p>
           </div>
           <div class="fakturaAct-footer">

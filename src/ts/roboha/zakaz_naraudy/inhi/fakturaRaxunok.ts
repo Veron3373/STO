@@ -688,7 +688,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
               </table>
 
               <div class="invoice-title">
-                  Рахунок-фактура № СФ-<strong contenteditable="true" id="editable-invoice-number" title="Натисніть, щоб змінити номер">${invoiceNumber}</strong><br>
+                  Рахунок-фактура № СФ-<span contenteditable="true" id="editable-invoice-number" title="Натисніть, щоб змінити номер">${invoiceNumber}</span><br>
                   від ${dateString}
               </div>
 
@@ -709,7 +709,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
               </table>
             <div class="sum-in-words">
                Всього на суму:<br>
-               <strong contenteditable="true" title="Натисніть, щоб змінити">${totalSumWords}</strong>
+               <span contenteditable="true" title="Натисніть, щоб змінити">${totalSumWords}</span>
             </div>
               <div class="vat-note">
                   Без ПДВ

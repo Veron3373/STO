@@ -707,9 +707,16 @@ class SchedulerApp {
     this.viewMonth = this.today.getMonth();
     this.viewYear = this.today.getFullYear();
 
+    // Якщо тижневий вид — перемикаємось на денний вид сьогодні
     if (this.isWeekView) {
+      this.isWeekView = false;
+      const weekBtn = document.getElementById("postWeekBtn");
+      if (weekBtn) {
+        weekBtn.classList.remove("active");
+        weekBtn.textContent = "Тиждень";
+      }
       this.render();
-      this.loadWeekArxivData();
+      this.reloadArxivData();
       return;
     }
 
@@ -1139,7 +1146,32 @@ class SchedulerApp {
       <div class="post-week-block-time">${startH}:${startM}-${endH}:${endM}</div>
       <div class="post-week-block-name">${shortName}</div>
     `;
-    block.title = `${clientName}\n${carModel} ${carNumber}\n${startH}:${startM} - ${endH}:${endM}\n${status}`;
+
+    // Красива підказка при наведенні
+    const comment = record.komentar || "";
+    const actId = record.act_id || "";
+    const statusEmoji: Record<string, string> = {
+      Запланований: "📋",
+      "В роботі": "🔧",
+      Відремонтований: "✅",
+      "Не приїхав": "❌",
+    };
+    const emoji = statusEmoji[status] || "📋";
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "post-week-tooltip";
+    let tooltipHTML = `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">👤</span> <strong>${clientName || "—"}</strong></div>`;
+    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🚗</span> ${carModel || "—"} <span class="pw-tip-number">${carNumber || ""}</span></div>`;
+    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🕐</span> ${startH}:${startM} — ${endH}:${endM}</div>`;
+    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">${emoji}</span> ${status}</div>`;
+    if (comment) {
+      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">💬</span> ${comment}</div>`;
+    }
+    if (actId) {
+      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📄</span> Акт №${actId}</div>`;
+    }
+    tooltip.innerHTML = tooltipHTML;
+    block.appendChild(tooltip);
 
     // Подвійний клік — відкриття модалки редагування в денному виді
     block.addEventListener("dblclick", (e) => {

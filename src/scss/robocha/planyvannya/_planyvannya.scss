@@ -1431,6 +1431,79 @@ $sidebar-width: 30%;
     text-overflow: ellipsis;
     opacity: 0.9;
   }
+
+  // Красива підказка при наведенні
+  .post-week-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #f1f5f9;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 180px;
+
+    // Стрілка знизу
+    &::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #334155;
+    }
+  }
+
+  &:hover .post-week-tooltip {
+    display: block;
+    animation: weekTooltipFadeIn 0.2s ease;
+  }
+
+  .post-week-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+
+    strong {
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .pw-tip-emoji {
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+
+    .pw-tip-number {
+      color: #93c5fd;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+@keyframes weekTooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 // Виділення при drag-to-create в тижневому виді

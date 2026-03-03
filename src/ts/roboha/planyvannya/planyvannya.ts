@@ -1206,6 +1206,7 @@ class SchedulerApp {
     // Красива підказка при наведенні
     const comment = record.komentar || "";
     const actId = record.act_id || "";
+    const xtoZapusav = record.xto_zapusav || "";
     const statusEmoji: Record<string, string> = {
       Запланований: "📋",
       "В роботі": "🔧",
@@ -1226,8 +1227,40 @@ class SchedulerApp {
     if (actId) {
       tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📄</span> Акт №${actId}</div>`;
     }
+    if (xtoZapusav) {
+      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">✍️</span> ${xtoZapusav}</div>`;
+    }
     tooltip.innerHTML = tooltipHTML;
     block.appendChild(tooltip);
+
+    // Розумна позиція тултіпа — зверху або знизу
+    block.addEventListener("mouseenter", () => {
+      const blockRect = block.getBoundingClientRect();
+      const spaceAbove = blockRect.top;
+      tooltip.classList.remove("tooltip-below");
+      if (spaceAbove < 200) {
+        tooltip.classList.add("tooltip-below");
+      }
+    });
+
+    // Кружечок з номером акту в правому верхньому куті
+    if (actId) {
+      const actBadge = document.createElement("div");
+      actBadge.className = "post-week-act-badge";
+      actBadge.textContent = String(actId);
+      actBadge.title = `Відкрити акт №${actId}`;
+      actBadge.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof (window as any).openActModal === "function") {
+          (window as any).openActModal(actId);
+        }
+      });
+      actBadge.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+      });
+      block.appendChild(actBadge);
+    }
 
     // Подвійний клік — відкриття модалки редагування
     block.addEventListener("dblclick", (e) => {

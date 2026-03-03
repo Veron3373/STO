@@ -1446,9 +1446,6 @@ class SchedulerApp {
     });
 
     dayTrack.appendChild(block);
-
-    // Оновлюємо кольори годин у заголовку для цієї дати
-    this.updateHeaderHoursForDate(dateStr);
   }
 
   // ============== ТИЖНЕВИЙ ВИД — СТВОРЕННЯ ЗАПИСУ ЧЕРЕЗ DRAG ==============
@@ -1787,10 +1784,6 @@ class SchedulerApp {
             this.revertWeekBlockDrag();
           } else {
             showNotification("Запис переміщено!", "success");
-            // Оновлюємо заголовки годин для старої та нової дати
-            const oldDate = this.weekMovingOriginalCell?.dataset.date || "";
-            if (oldDate && oldDate !== newDate) this.updateHeaderHoursForDate(oldDate);
-            this.updateHeaderHoursForDate(newDate);
           }
         } catch {
           showNotification("Помилка при переміщенні", "error");
@@ -2018,7 +2011,6 @@ class SchedulerApp {
           showNotification("Помилка оновлення часу", "error");
         } else {
           showNotification("Час оновлено!", "success");
-          this.updateHeaderHoursForDate(dateStr);
         }
       }
     }
@@ -2032,96 +2024,6 @@ class SchedulerApp {
     this.weekResizeHandleSide = null;
   }
 
-  /**
-   * Оновлює кольорування годин у заголовку для конкретної дати.
-   * Підсвічує лише ті комірки-години, що перетинаються із записами.
-   * Числа годин завжди залишаються! Лише додається маленький <sup> з хвилинами
-   * для першої (початок запису) та останньої (кінець запису) зайнятої комірки.
-   */
-  private updateHeaderHoursForDate(dateStr: string): void {
-    if (!this.calendarGrid) return;
-
-    const weekDays = this.getWeekDays(this.selectedDate);
-    const dayIndex = weekDays.findIndex((d) => {
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      return ds === dateStr;
-    });
-    if (dayIndex < 0) return;
-
-    const dayColHeaders = this.calendarGrid.querySelectorAll('.post-week-day-col-header');
-    const dayColHeader = dayColHeaders[dayIndex] as HTMLElement;
-    if (!dayColHeader) return;
-
-    const hoursRow = dayColHeader.querySelector('.post-week-hours-row');
-    if (!hoursRow) return;
-
-    // Збираємо зайняті інтервали
-    const allTracks = this.calendarGrid.querySelectorAll(`.post-week-day-track[data-date="${dateStr}"]`);
-    const occupiedRanges: Array<{ start: number; end: number }> = [];
-    allTracks.forEach((track) => {
-      track.querySelectorAll('.post-week-block').forEach((blk) => {
-        const bEl = blk as HTMLElement;
-        const s = parseInt(bEl.dataset.start || '0');
-        const e = parseInt(bEl.dataset.end || '0');
-        occupiedRanges.push({ start: s, end: e });
-      });
-    });
-
-    const hourCells = Array.from(hoursRow.querySelectorAll('.post-week-hour-cell')) as HTMLElement[];
-
-    hourCells.forEach((cell, i) => {
-      const h = 8 + i;
-      const cellStartMins = (h - 8) * 60;
-      const cellEndMins = cellStartMins + 60;
-
-      // Скидаємо попередній стан: прибираємо клас і sup-мітку,
-      // але ЧИСЛО ЗАВЖДИ ЗАЛИШАЄМО
-      cell.classList.remove('hour-occupied');
-      cell.querySelector('.hour-min-sup')?.remove();
-      // Повертаємо текст якщо він чомусь порожній
-      if (!cell.textContent?.trim()) cell.textContent = String(h);
-
-      const overlapping = occupiedRanges.filter(
-        (r) => r.start < cellEndMins && r.end > cellStartMins
-      );
-      if (overlapping.length === 0) return;
-
-      cell.classList.add('hour-occupied');
-
-      // Запис, що ПОЧИНАЄТЬСЯ в цій годині
-      const starting = overlapping
-        .filter((r) => r.start >= cellStartMins && r.start < cellEndMins)
-        .sort((a, b) => a.start - b.start);
-
-      // Запис, що ЗАКІНЧУЄТЬСЯ в цій годині
-      const ending = overlapping
-        .filter((r) => r.end > cellStartMins && r.end <= cellEndMins)
-        .sort((a, b) => b.end - a.end);
-
-      if (starting.length > 0) {
-        const mins = starting[0].start % 60;
-        cell.textContent = String(h);
-        if (mins > 0) {
-          const sup = document.createElement('sup');
-          sup.className = 'hour-min-sup';
-          sup.textContent = String(mins).padStart(2, '0');
-          cell.appendChild(sup);
-        }
-      } else if (ending.length > 0) {
-        const endTotalMins = ending[0].end;
-        const endHour = 8 + Math.floor(endTotalMins / 60);
-        const endMin = endTotalMins % 60;
-        cell.textContent = String(endHour);
-        if (endMin > 0) {
-          const sup = document.createElement('sup');
-          sup.className = 'hour-min-sup';
-          sup.textContent = String(endMin).padStart(2, '0');
-          cell.appendChild(sup);
-        }
-      }
-      // Середні комірки — просто число, клас hour-occupied вже є
-    });
-  }
 
   /**
    * Відкриває модалку для створення запису у тижневому виді

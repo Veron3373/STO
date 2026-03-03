@@ -212,7 +212,7 @@ class SchedulerApp {
     // 📡 Підключаємо Realtime підписку для автоматичного оновлення
     try {
       initPostArxivRealtimeSubscription();
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private async loadDataFromDatabase(): Promise<void> {
@@ -1204,24 +1204,34 @@ class SchedulerApp {
     block.style.backgroundColor =
       statusColors[status] || statusColors["Запланований"];
 
-    // Якщо запис у минулому — зробити напівпрозорим
+    // Обробляємо «минулий час» через overlay-підхід (єдина система)
     const now = new Date();
-    if (dataOff < now) {
-      block.classList.add("week-block-past");
-    }
+    const nowMins = (now.getHours() - 8) * 60 + now.getMinutes(); // від 8:00
 
-    // Затемнення минулої частини блоку, що перетинає поточний час
-    if (dataOn < now && dataOff > now) {
-      const nowMins = (now.getHours() - 8) * 60 + now.getMinutes();
+    if (dataOff < now) {
+      // ПОВНІСТЮ минулий блок — лавандовий overlay на весь блок + клас для hover
+      block.classList.add("week-block-past");
+      const pastOverlay = document.createElement("div");
+      pastOverlay.className = "week-block-past-overlay";
+      pastOverlay.style.width = "100%";
+      pastOverlay.style.borderRadius = "4px"; // всі кути округлені
+      block.appendChild(pastOverlay);
+    } else if (dataOn < now && dataOff > now) {
+      // ЧАСТКОВО минулий — overlay лише на ліву частину (до поточної хвилини)
       const pastFraction =
-        ((nowMins - startMins) / (endMins - startMins)) * 100;
-      if (pastFraction > 0 && pastFraction < 100) {
+        Math.min(
+          Math.max(((nowMins - startMins) / (endMins - startMins)) * 100, 0),
+          100,
+        );
+      if (pastFraction > 0) {
         const pastOverlay = document.createElement("div");
         pastOverlay.className = "week-block-past-overlay";
         pastOverlay.style.width = `${pastFraction}%`;
+        pastOverlay.style.borderRadius = "4px 0 0 4px"; // лише ліві кути
         block.appendChild(pastOverlay);
       }
     }
+
 
     // Data-атрибути
     block.dataset.postArxivId = record.post_arxiv_id?.toString() || "";
@@ -1423,7 +1433,7 @@ class SchedulerApp {
         const userData = JSON.parse(stored);
         return userData.Name || "";
       }
-    } catch {}
+    } catch { }
     return "";
   }
 
@@ -1435,7 +1445,7 @@ class SchedulerApp {
         const userData = JSON.parse(stored);
         return userData.access || "";
       }
-    } catch {}
+    } catch { }
     return "";
   }
 
@@ -1901,11 +1911,11 @@ class SchedulerApp {
 
     const newStart = parseInt(
       this.weekResizingBlock.dataset.tempStart ||
-        this.weekResizeOrigStartMins.toString(),
+      this.weekResizeOrigStartMins.toString(),
     );
     const newEnd = parseInt(
       this.weekResizingBlock.dataset.tempEnd ||
-        this.weekResizeOrigEndMins.toString(),
+      this.weekResizeOrigEndMins.toString(),
     );
     delete this.weekResizingBlock.dataset.tempStart;
     delete this.weekResizingBlock.dataset.tempEnd;
@@ -1924,11 +1934,11 @@ class SchedulerApp {
     ) as HTMLElement;
     const hasOverlap = track
       ? this.checkWeekBlockOverlap(
-          newStart,
-          newEnd,
-          track,
-          this.weekResizingBlock,
-        )
+        newStart,
+        newEnd,
+        track,
+        this.weekResizingBlock,
+      )
       : false;
 
     if (hasOverlap) {
@@ -2081,7 +2091,7 @@ class SchedulerApp {
           const userData = JSON.parse(stored);
           xtoZapusav = userData.Name || "";
         }
-      } catch {}
+      } catch { }
 
       const payload: any = {
         status: data.status || "Запланований",
@@ -2915,9 +2925,8 @@ class SchedulerApp {
       "листопада",
       "грудня",
     ];
-    return `${days[date.getDay()]}, ${date.getDate()} ${
-      months[date.getMonth()]
-    } ${date.getFullYear()}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]
+      } ${date.getFullYear()}`;
   }
 
   private getMonthName(monthIndex: number): string {

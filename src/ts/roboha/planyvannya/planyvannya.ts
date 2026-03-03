@@ -1766,11 +1766,60 @@ class SchedulerApp {
         this.weekMovingBlock.classList.add(
           hasOverlap ? "week-drag-invalid" : "week-drag-valid",
         );
+
+        // ── Оновлюємо час у блоці ───────────────────────────────
+        const sH = String(8 + Math.floor(startMins / 60)).padStart(2, "0");
+        const sM = String(startMins % 60).padStart(2, "0");
+        const eH = String(8 + Math.floor(endMins / 60)).padStart(2, "0");
+        const eM = String(endMins % 60).padStart(2, "0");
+        const timeLine = this.weekMovingBlock.querySelector(".post-week-block-line");
+        if (timeLine) {
+          timeLine.textContent = `🕐 ${sH}:${sM}-${eH}:${eM}`;
+        }
+
+        // ── Підсвічуємо комірки заголовку для цього дня ─────────
+        this.clearDragHourHighlight();
+        const dateStr = targetTrack.dataset.date || "";
+        if (dateStr && this.calendarGrid) {
+          const weekDays = this.getWeekDays(this.selectedDate);
+          const dayIndex = weekDays.findIndex((d) => {
+            const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return ds === dateStr;
+          });
+          if (dayIndex >= 0) {
+            const dayColHeader = this.calendarGrid
+              .querySelectorAll('.post-week-day-col-header')[dayIndex] as HTMLElement;
+            if (dayColHeader) {
+              // Межі блоку в clientX координатах
+              const blockLeft = trackRect.left + Math.max(0, relativeX);
+              const blockRight = blockLeft + (endMins - startMins) / totalMinutes * trackRect.width;
+              (Array.from(dayColHeader.querySelectorAll('.post-week-hour-cell')) as HTMLElement[])
+                .forEach((cell) => {
+                  const cr = cell.getBoundingClientRect();
+                  if (cr.right > blockLeft && cr.left < blockRight) {
+                    cell.classList.add('hour-drag-active');
+                  }
+                });
+              // Час в першій та останній активній комірці
+              const activeCells = Array.from(
+                dayColHeader.querySelectorAll('.post-week-hour-cell.hour-drag-active')
+              ) as HTMLElement[];
+              if (activeCells.length > 0) {
+                activeCells[0].textContent = `${sH}:${sM}`;
+                if (activeCells.length > 1) {
+                  activeCells[activeCells.length - 1].textContent = `${eH}:${eM}`;
+                }
+              }
+            }
+          }
+        }
       } else {
         this.weekMovingBlock.classList.add("week-drag-invalid");
+        this.clearDragHourHighlight();
       }
     } else {
       this.weekMovingBlock.classList.add("week-drag-invalid");
+      this.clearDragHourHighlight();
     }
   };
 
@@ -1784,6 +1833,7 @@ class SchedulerApp {
     this.calendarGrid
       ?.querySelectorAll(".week-drop-target")
       .forEach((el) => el.classList.remove("week-drop-target"));
+    this.clearDragHourHighlight();
 
     if (!this.weekIsBlockDragging) {
       // Не було drag, просто клік — нічого не робимо

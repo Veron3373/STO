@@ -1289,6 +1289,24 @@ $sidebar-width: 30%;
   justify-content: center;
   user-select: none;
   padding: 1px 0;
+
+  // Минула година (лавандовий фон)
+  &.hour-past {
+    background: rgba(230, 230, 250, 0.6);
+    color: #999;
+  }
+
+  // Поточна година (червона полоска)
+  &.hour-current {
+    background: #ff0000;
+    color: $white;
+    font-weight: 700;
+  }
+
+  // Майбутня година (легкий зелений)
+  &.hour-future {
+    background: rgba(200, 240, 210, 0.35);
+  }
 }
 
 // === Тіло тижневого виду ===
@@ -1478,6 +1496,13 @@ $sidebar-width: 30%;
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     z-index: 100;
+    overflow: visible;
+  }
+
+  // Минулий запис — напівпрозорий і знебарвлений
+  &.week-block-past {
+    opacity: 0.5;
+    filter: saturate(0.4);
   }
 
   // Resize handles (лівий і правий)

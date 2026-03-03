@@ -873,6 +873,7 @@ class SchedulerApp {
     weekDays.forEach((day, idx) => {
       const isToday = day.toDateString() === this.today.toDateString();
       const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+      const isPastDay = day < this.today && !isToday;
 
       const dayCol = document.createElement("div");
       dayCol.className = "post-week-day-col-header";
@@ -898,12 +899,26 @@ class SchedulerApp {
       });
       dayCol.appendChild(dayTitle);
 
-      // Годинна шкала всередині дня (по 2 години: 8, 10, 12, 14, 16, 18, 20)
+      // Годинна шкала всередині дня (8–19, кожна година)
       const hoursRow = document.createElement("div");
       hoursRow.className = "post-week-hours-row";
-      for (let h = 8; h <= 20; h += 2) {
+      const nowForHeader = new Date();
+      const currentHour = nowForHeader.getHours();
+      for (let h = 8; h <= 19; h++) {
         const hourCell = document.createElement("div");
         hourCell.className = "post-week-hour-cell";
+        if (isToday) {
+          if (h < currentHour) {
+            hourCell.classList.add("hour-past");
+          } else if (h === currentHour) {
+            hourCell.classList.add("hour-current");
+          } else {
+            hourCell.classList.add("hour-future");
+          }
+        }
+        if (isPastDay) {
+          hourCell.classList.add("hour-past");
+        }
         hourCell.textContent = h.toString();
         hoursRow.appendChild(hourCell);
       }
@@ -1188,6 +1203,12 @@ class SchedulerApp {
     block.style.width = `${widthPercent}%`;
     block.style.backgroundColor =
       statusColors[status] || statusColors["Запланований"];
+
+    // Якщо запис у минулому — зробити напівпрозорим
+    const now = new Date();
+    if (dataOff < now) {
+      block.classList.add("week-block-past");
+    }
 
     // Data-атрибути
     block.dataset.postArxivId = record.post_arxiv_id?.toString() || "";

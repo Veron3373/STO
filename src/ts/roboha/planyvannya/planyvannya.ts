@@ -898,19 +898,14 @@ class SchedulerApp {
       });
       dayCol.appendChild(dayTitle);
 
-      // Годинна шкала всередині дня
+      // Годинна шкала всередині дня (по 2 години: 8, 10, 12, 14, 16, 18, 20)
       const hoursRow = document.createElement("div");
       hoursRow.className = "post-week-hours-row";
-      for (let h = 8; h <= 19; h++) {
+      for (let h = 8; h <= 20; h += 2) {
         const hourCell = document.createElement("div");
         hourCell.className = "post-week-hour-cell";
         hourCell.textContent = h.toString();
         hoursRow.appendChild(hourCell);
-
-        const minCell = document.createElement("div");
-        minCell.className = "post-week-min-cell";
-        minCell.textContent = "30";
-        hoursRow.appendChild(minCell);
       }
       dayCol.appendChild(hoursRow);
       daysHeader.appendChild(dayCol);
@@ -1007,6 +1002,16 @@ class SchedulerApp {
                 timeLine.style.left = `${pastPercent}%`;
                 dayTrack.appendChild(timeLine);
               }
+              // Фон майбутнього часу
+              const futureOverlay = document.createElement("div");
+              futureOverlay.className = "post-week-future-overlay";
+              const futureLeft = Math.min(
+                (now.getHours() - 8) * 60 + now.getMinutes(),
+                12 * 60,
+              );
+              futureOverlay.style.left = `${Math.max(0, (futureLeft / (12 * 60)) * 100)}%`;
+              futureOverlay.style.right = "0";
+              dayTrack.appendChild(futureOverlay);
             } else if (isPast) {
               const pastOverlay = document.createElement("div");
               pastOverlay.className = "post-week-past-overlay";
@@ -1206,17 +1211,17 @@ class SchedulerApp {
     const endH = String(dataOff.getUTCHours()).padStart(2, "0");
     const endM = String(dataOff.getUTCMinutes()).padStart(2, "0");
 
-    // Текст блоку — горизонтально в один рядок
+    // Текст блоку — вертикально з емодзі
     const commentText = record.komentar || "";
-    let blockHTML = `<span class="post-week-block-time">${startH}:${startM}-${endH}:${endM}</span>`;
+    let blockHTML = `<div class="post-week-block-line">🕐 ${startH}:${startM}-${endH}:${endM}</div>`;
     if (clientName) {
-      blockHTML += `<span class="post-week-block-info">${clientName}</span>`;
+      blockHTML += `<div class="post-week-block-line">👤 ${clientName}</div>`;
     }
     if (carModel || carNumber) {
-      blockHTML += `<span class="post-week-block-info">${carModel}${carNumber ? " " + carNumber : ""}</span>`;
+      blockHTML += `<div class="post-week-block-line">🚗 ${carModel}${carNumber ? " " + carNumber : ""}</div>`;
     }
     if (commentText) {
-      blockHTML += `<span class="post-week-block-info">${commentText}</span>`;
+      blockHTML += `<div class="post-week-block-line">💬 ${commentText}</div>`;
     }
     block.innerHTML = blockHTML;
 
@@ -1672,9 +1677,9 @@ class SchedulerApp {
       const sH = this.weekMinsToTime(startMins);
       const eH = this.weekMinsToTime(endMins);
       const timeEl = this.weekMovingBlock.querySelector(
-        ".post-week-block-time",
+        ".post-week-block-line",
       );
-      if (timeEl) timeEl.textContent = `${sH}-${eH}`;
+      if (timeEl) timeEl.textContent = `🕐 ${sH}-${eH}`;
 
       targetTrack.appendChild(this.weekMovingBlock);
 
@@ -1822,9 +1827,9 @@ class SchedulerApp {
     const sH = this.weekMinsToTime(newStart);
     const eH = this.weekMinsToTime(newEnd);
     const timeEl = this.weekResizingBlock.querySelector(
-      ".post-week-block-time",
+      ".post-week-block-line",
     );
-    if (timeEl) timeEl.textContent = `${sH}-${eH}`;
+    if (timeEl) timeEl.textContent = `🕐 ${sH}-${eH}`;
 
     // Перевірка перетину
     const hasOverlap = this.checkWeekBlockOverlap(
@@ -1895,9 +1900,9 @@ class SchedulerApp {
       const sH = this.weekMinsToTime(this.weekResizeOrigStartMins);
       const eH = this.weekMinsToTime(this.weekResizeOrigEndMins);
       const timeEl = this.weekResizingBlock.querySelector(
-        ".post-week-block-time",
+        ".post-week-block-line",
       );
-      if (timeEl) timeEl.textContent = `${sH}-${eH}`;
+      if (timeEl) timeEl.textContent = `🕐 ${sH}-${eH}`;
 
       showNotification(
         "Неможливо змінити час: перетин з іншим записом",

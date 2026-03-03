@@ -1357,14 +1357,12 @@ class SchedulerApp {
     // Позиціонування тултіпа: вниз, якщо не вміщується вверх
     block.addEventListener("mouseenter", () => {
       const blockRect = block.getBoundingClientRect();
-      // Показуємо тимчасово щоб виміряти реальну висоту
-      tooltip.style.visibility = 'hidden';
-      tooltip.style.display = 'block';
-      const tooltipHeight = tooltip.offsetHeight || 200;
-      tooltip.style.display = '';
-      tooltip.style.visibility = '';
+      // Тултіп прихований (display:none), тому offsetHeight=0 — беремо запас 240px
+      // (це більше за будь-який реальний тултіп з усіма рядками)
+      const spaceAbove = blockRect.top;
+      const neededSpace = 240;
 
-      if (blockRect.top < tooltipHeight + 16) {
+      if (spaceAbove < neededSpace) {
         tooltip.classList.add("tooltip-below");
       } else {
         tooltip.classList.remove("tooltip-below");
@@ -1376,7 +1374,7 @@ class SchedulerApp {
       const actBadge = document.createElement("div");
       actBadge.className = "post-week-act-badge";
       actBadge.textContent = String(actId);
-      actBadge.title = `Відкрити акт №${actId}`;
+      actBadge.dataset.actLabel = `Акт №${actId}`;
       actBadge.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();

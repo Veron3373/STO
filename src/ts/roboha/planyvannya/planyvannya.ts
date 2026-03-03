@@ -1080,11 +1080,14 @@ class SchedulerApp {
 
     // Парсимо клієнта/авто
     let clientName = "";
+    let clientPhone = "";
     let carModel = "";
     let carNumber = "";
     const clientIdStr = String(record.client_id || "");
     if (clientIdStr.includes("|||")) {
-      clientName = clientIdStr.split("|||")[0];
+      const parts = clientIdStr.split("|||");
+      clientName = parts[0] || "";
+      clientPhone = parts[1] || "";
     } else if (!isNaN(Number(clientIdStr))) {
       const cd = clientsMap.get(Number(clientIdStr));
       if (cd) clientName = cd["ПІБ"] || "";
@@ -1126,12 +1129,16 @@ class SchedulerApp {
     block.dataset.slyusarId = record.slyusar_id?.toString() || "";
     block.dataset.status = status;
     block.dataset.clientName = clientName;
+    block.dataset.clientPhone = clientPhone;
     block.dataset.carModel = carModel;
     block.dataset.carNumber = carNumber;
     block.dataset.start = startMins.toString();
     block.dataset.end = endMins.toString();
     block.dataset.date = dateStr;
     block.dataset.xtoZapusav = record.xto_zapusav || "";
+    block.dataset.comment = record.komentar || "";
+    block.dataset.actId = record.act_id?.toString() || "";
+    block.dataset.namePost = record.name_post?.toString() || "";
 
     // Формуємо час
     const startH = String(dataOn.getUTCHours()).padStart(2, "0");
@@ -1173,29 +1180,96 @@ class SchedulerApp {
     tooltip.innerHTML = tooltipHTML;
     block.appendChild(tooltip);
 
-    // Подвійний клік — відкриття модалки редагування в денному виді
+    // Подвійний клік — відкриття модалки редагування
     block.addEventListener("dblclick", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Переходимо на цей день і відкриваємо для редагування
-      const blockDate = new Date(dateStr + "T00:00:00");
-      this.selectedDate = new Date(blockDate);
-      this.viewMonth = blockDate.getMonth();
-      this.viewYear = blockDate.getFullYear();
-      this.isWeekView = false;
-      const weekBtn = document.getElementById("postWeekBtn");
-      if (weekBtn) {
-        weekBtn.classList.remove("active");
-        weekBtn.textContent = "Тиждень";
+
+      // Перевірка прав на редагування
+      const currentUser = this.getCurrentUserName();
+      const currentAccess = this.getCurrentUserAccess();
+      const creator = block.dataset.xtoZapusav || "";
+      if (
+        currentAccess !== "Адміністратор" &&
+        creator &&
+        creator !== currentUser
+      ) {
+        showNotification(
+          `Ви не можете редагувати цей запис. Створив: ${creator}`,
+          "error",
+        );
+        return;
       }
-      this.render();
-      this.reloadArxivData();
+
+      const blockStartMins = parseInt(block.dataset.start || "0");
+      const blockEndMins = parseInt(block.dataset.end || "0");
+      const startTimeStr = this.weekMinsToTime(blockStartMins);
+      const endTimeStr = this.weekMinsToTime(blockEndMins);
+
+      const detailData: Partial<ReservationData> = {
+        clientName: block.dataset.clientName || "",
+        clientPhone: block.dataset.clientPhone || "",
+        carModel: block.dataset.carModel || "",
+        carNumber: block.dataset.carNumber || "",
+        status: block.dataset.status || "Запланований",
+        comment: block.dataset.comment || "",
+        postArxivId: parseInt(block.dataset.postArxivId || "0") || null,
+        slyusarId: parseInt(block.dataset.slyusarId || "0") || null,
+        namePost: parseInt(block.dataset.namePost || "0") || null,
+        actId: parseInt(block.dataset.actId || "0") || null,
+      };
+
+      const slyusarIdNum = detailData.slyusarId || null;
+      const excludeId = detailData.postArxivId || undefined;
+
+      this.weekModal.open(
+        block.dataset.date || dateStr,
+        startTimeStr,
+        endTimeStr,
+        detailData.comment || "",
+        detailData,
+        (resultData: ReservationData) => this.handleWeekModalSubmit(resultData),
+        async (date, start, end, _exId) => {
+          return this.checkWeekAvailability(
+            date,
+            start,
+            end,
+            slyusarIdNum,
+            excludeId,
+          );
+        },
+        [],
+      );
     });
 
     dayCell.appendChild(block);
   }
 
   // ============== ТИЖНЕВИЙ ВИД — СТВОРЕННЯ ЗАПИСУ ЧЕРЕЗ DRAG ==============
+
+  /** Отримує ім'я поточного користувача з localStorage */
+  private getCurrentUserName(): string {
+    try {
+      const stored = localStorage.getItem("userAuthData");
+      if (stored) {
+        const userData = JSON.parse(stored);
+        return userData.Name || "";
+      }
+    } catch {}
+    return "";
+  }
+
+  /** Отримує рівень доступу поточного користувача */
+  private getCurrentUserAccess(): string {
+    try {
+      const stored = localStorage.getItem("userAuthData");
+      if (stored) {
+        const userData = JSON.parse(stored);
+        return userData.access || "";
+      }
+    } catch {}
+    return "";
+  }
 
   /**
    * Конвертує хвилини від початку робочого дня в рядок "HH:MM"
@@ -1343,6 +1417,7 @@ class SchedulerApp {
     startTime: string,
     endTime: string,
     slyusarId: number | null,
+    excludeId?: number,
   ): Promise<{ valid: boolean; message?: string }> {
     if (!slyusarId)
       return { valid: false, message: "Не обрано пост (слюсаря)" };
@@ -1350,12 +1425,18 @@ class SchedulerApp {
     const startIso = `${date}T${startTime}:00`;
     const endIso = `${date}T${endTime}:00`;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("post_arxiv")
       .select("post_arxiv_id")
       .eq("slyusar_id", slyusarId)
       .lt("data_on", endIso)
       .gt("data_off", startIso);
+
+    if (excludeId) {
+      query = query.neq("post_arxiv_id", excludeId);
+    }
+
+    const { data, error } = await query;
 
     if (error) return { valid: false, message: "Помилка перевірки" };
     if (data && data.length > 0)
@@ -1405,14 +1486,25 @@ class SchedulerApp {
         xto_zapusav: xtoZapusav,
       };
 
-      const { error } = await supabase.from("post_arxiv").insert(payload);
-
-      if (error) {
-        showNotification("Помилка збереження в БД", "error");
-        return;
+      // Якщо є postArxivId — оновлюємо, інакше створюємо
+      if (data.postArxivId) {
+        const { error } = await supabase
+          .from("post_arxiv")
+          .update(payload)
+          .eq("post_arxiv_id", data.postArxivId);
+        if (error) {
+          showNotification("Помилка оновлення в БД", "error");
+          return;
+        }
+        showNotification("Запис оновлено!", "success");
+      } else {
+        const { error } = await supabase.from("post_arxiv").insert(payload);
+        if (error) {
+          showNotification("Помилка збереження в БД", "error");
+          return;
+        }
+        showNotification("Запис створено!", "success");
       }
-
-      showNotification("Запис створено!", "success");
       this.weekModal.close();
 
       // Перезавантажуємо тижневий вид

@@ -1411,7 +1411,8 @@ $sidebar-width: 30%;
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     transform: scale(1.02);
-    z-index: 10;
+    z-index: 100;
+    overflow: visible;
   }
 
   .post-week-block-time {

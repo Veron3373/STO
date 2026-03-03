@@ -658,7 +658,7 @@ $sidebar-width: 30%;
   #postCalendarContainer {
     width: 100%;
     min-height: 250px;
-    flex-grow: 1;
+    flex-shrink: 0;
   }
 
   .post-month-calendar {
@@ -752,12 +752,13 @@ $sidebar-width: 30%;
   }
 
   .post-legend {
-    margin-top: auto;
+    margin-top: 15px;
     padding-top: 20px;
     border-top: 1px solid $border-gray;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex-shrink: 0;
 
     .post-legend-item {
       display: flex;
@@ -1471,15 +1472,17 @@ $sidebar-width: 30%;
     overflow: hidden;
     text-overflow: ellipsis;
     opacity: 0.95;
+    line-height: 1.2;
   }
 
-  .post-week-block-name {
-    font-size: 10px;
+  .post-week-block-line {
+    font-size: 9px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     opacity: 0.9;
+    line-height: 1.2;
   }
 
   // Кружечок з номером акту

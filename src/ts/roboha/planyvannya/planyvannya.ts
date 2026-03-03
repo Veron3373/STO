@@ -1164,13 +1164,19 @@ class SchedulerApp {
     const endH = String(dataOff.getUTCHours()).padStart(2, "0");
     const endM = String(dataOff.getUTCMinutes()).padStart(2, "0");
 
-    // Текст блоку (компактний)
-    const shortName =
-      clientName.length > 12 ? clientName.substring(0, 12) + "…" : clientName;
-    block.innerHTML = `
-      <div class="post-week-block-time">${startH}:${startM}-${endH}:${endM}</div>
-      <div class="post-week-block-name">${shortName}</div>
-    `;
+    // Текст блоку — компактні рядки з емодзі
+    const commentText = record.komentar || "";
+    let blockHTML = `<div class="post-week-block-time">🕐 ${startH}:${startM}-${endH}:${endM}</div>`;
+    if (clientName) {
+      blockHTML += `<div class="post-week-block-line">👤 ${clientName}</div>`;
+    }
+    if (carModel || carNumber) {
+      blockHTML += `<div class="post-week-block-line">🚗 ${carModel}${carNumber ? " " + carNumber : ""}</div>`;
+    }
+    if (commentText) {
+      blockHTML += `<div class="post-week-block-line">💬 ${commentText}</div>`;
+    }
+    block.innerHTML = blockHTML;
 
     // Resize handles (верхній і нижній)
     const topHandle = document.createElement("div");

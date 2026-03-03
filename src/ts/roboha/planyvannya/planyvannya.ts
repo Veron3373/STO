@@ -53,7 +53,7 @@ interface DayOccupancyStats {
 class SchedulerApp {
   private sections: Section[] = [];
   private editMode: boolean = false;
-  private isWeekView: boolean = false;
+  private isWeekView: boolean = true;
 
   private today: Date;
   private selectedDate: Date;
@@ -192,12 +192,20 @@ class SchedulerApp {
       this.editModeBtn.addEventListener("click", () => this.toggleEditMode());
     }
 
+    // Активуємо кнопку тижневого виду
+    if (weekBtn) {
+      weekBtn.classList.add("active");
+      weekBtn.textContent = "День";
+    }
+
     this.render();
     this.updateTimeMarker();
     setInterval(() => this.updateTimeMarker(), 60000);
 
-    // Завантажуємо дані з post_arxiv після рендерингу секцій
-    if (this.postArxiv) {
+    // Завантажуємо дані: тижневий вид по дефолту
+    if (this.isWeekView) {
+      this.loadWeekArxivData();
+    } else if (this.postArxiv) {
       this.postArxiv.loadArxivDataForCurrentDate();
     }
 

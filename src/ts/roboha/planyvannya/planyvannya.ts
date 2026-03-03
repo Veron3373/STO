@@ -1210,6 +1210,19 @@ class SchedulerApp {
       block.classList.add("week-block-past");
     }
 
+    // Затемнення минулої частини блоку, що перетинає поточний час
+    if (dataOn < now && dataOff > now) {
+      const nowMins = (now.getHours() - 8) * 60 + now.getMinutes();
+      const pastFraction =
+        ((nowMins - startMins) / (endMins - startMins)) * 100;
+      if (pastFraction > 0 && pastFraction < 100) {
+        const pastOverlay = document.createElement("div");
+        pastOverlay.className = "week-block-past-overlay";
+        pastOverlay.style.width = `${pastFraction}%`;
+        block.appendChild(pastOverlay);
+      }
+    }
+
     // Data-атрибути
     block.dataset.postArxivId = record.post_arxiv_id?.toString() || "";
     block.dataset.slyusarId = record.slyusar_id?.toString() || "";
@@ -1305,6 +1318,17 @@ class SchedulerApp {
     }
     tooltip.innerHTML = tooltipHTML;
     block.appendChild(tooltip);
+
+    // Позиціонування тултіпа: вниз, якщо не вміщується вверх
+    block.addEventListener("mouseenter", () => {
+      const blockRect = block.getBoundingClientRect();
+      const tooltipHeight = 160; // приблизна висота тултіпа
+      if (blockRect.top < tooltipHeight) {
+        tooltip.classList.add("tooltip-below");
+      } else {
+        tooltip.classList.remove("tooltip-below");
+      }
+    });
 
     // Кружечок з номером акту
     if (actId) {

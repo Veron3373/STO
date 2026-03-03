@@ -1747,28 +1747,14 @@ $sidebar-width: 30%;
     }
   }
 
-  // ── Дата запису ─────────────────────────────────────────
-  .pw-tip-date-row {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 4px !important;
-    margin-bottom: 2px;
-  }
-
-  .pw-tip-date {
-    color: #5b9bd5; // темно-синій
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 0.5px;
-  }
-
-  // ── ПІБ + Авто — однаковий cyan ──────────────────────────
+  // ── ПІБ + Авто — білий ──────────────────────────────────
   .pw-tip-client {
-    color: #67e8f9 !important; // cyan-300
+    color: #ffffff !important;
     font-size: 13px;
   }
 
   .pw-tip-car {
-    color: #67e8f9; // cyan-300 (той самий)
+    color: #ffffff;
     font-weight: 500;
   }
 

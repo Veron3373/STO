@@ -1329,14 +1329,8 @@ class SchedulerApp {
 
     const tooltip = document.createElement("div");
     tooltip.className = "post-week-tooltip";
-    // Порядок: Дата → ПІБ → Авто → Телефон → час/тривалість → статус → решта
-
-    // Форматуємо дату запису (з dateStr: "2025-03-04")
-    const [dy, dm, dd] = dateStr.split('-');
-    const dateFormatted = `${dd}.${dm}.${dy}`;
-
-    let tooltipHTML = `<div class="post-week-tooltip-row pw-tip-date-row"><span class="pw-tip-emoji">📅</span> <span class="pw-tip-date">${dateFormatted}</span></div>`;
-    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">👤</span> <strong class="pw-tip-client">${clientName || "—"}</strong></div>`;
+    // Порядок: ПІБ → Авто → Телефон → час/тривалість → статус → решта
+    let tooltipHTML = `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">👤</span> <strong class="pw-tip-client">${clientName || "—"}</strong></div>`;
     tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🚗</span> <span class="pw-tip-car">${carModel || "—"} <span class="pw-tip-number">${carNumber || ""}</span></span></div>`;
     if (clientPhone) {
       tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📞</span> <span class="pw-tip-phone">${clientPhone}</span></div>`;
@@ -1363,8 +1357,14 @@ class SchedulerApp {
     // Позиціонування тултіпа: вниз, якщо не вміщується вверх
     block.addEventListener("mouseenter", () => {
       const blockRect = block.getBoundingClientRect();
-      const tooltipHeight = 160; // приблизна висота тултіпа
-      if (blockRect.top < tooltipHeight) {
+      // Показуємо тимчасово щоб виміряти реальну висоту
+      tooltip.style.visibility = 'hidden';
+      tooltip.style.display = 'block';
+      const tooltipHeight = tooltip.offsetHeight || 200;
+      tooltip.style.display = '';
+      tooltip.style.visibility = '';
+
+      if (blockRect.top < tooltipHeight + 16) {
         tooltip.classList.add("tooltip-below");
       } else {
         tooltip.classList.remove("tooltip-below");

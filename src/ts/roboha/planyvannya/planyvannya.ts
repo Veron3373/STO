@@ -1531,6 +1531,65 @@ class SchedulerApp {
     const width = Math.abs(this.weekDragCurrentX - this.weekDragStartX);
     this.weekSelectionEl.style.left = `${left}px`;
     this.weekSelectionEl.style.width = `${width}px`;
+
+    // ── Підсвічуємо комірки-години в заголовку ────────────────
+    const totalMinutes = 12 * 60; // 8:00–20:00
+    const p1 = Math.min(this.weekDragStartX, this.weekDragCurrentX);
+    const p2 = Math.max(this.weekDragStartX, this.weekDragCurrentX);
+    const cellWidth = rect.width;
+
+    // Знімаємо попередні підсвічування
+    this.clearDragHourHighlight();
+
+    if (p2 - p1 < 5) return;
+
+    // Час початку і кінця у хвилинах від 8:00
+    const startMins = Math.round(((p1 / cellWidth) * totalMinutes) / 30) * 30;
+    const endMins = Math.round(((p2 / cellWidth) * totalMinutes) / 30) * 30;
+    const startHour = Math.floor(startMins / 60); // 0-based від 8
+    const endHour = Math.ceil(endMins / 60);    // 0-based від 8, включно
+
+    // Знаходимо заголовок дня за датою треку
+    const dateStr = this.weekDragCell.dataset.date || "";
+    if (!dateStr || !this.calendarGrid) return;
+
+    const weekDays = this.getWeekDays(this.selectedDate);
+    const dayIndex = weekDays.findIndex((d) => {
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return ds === dateStr;
+    });
+    if (dayIndex < 0) return;
+
+    const dayColHeaders = this.calendarGrid.querySelectorAll('.post-week-day-col-header');
+    const dayColHeader = dayColHeaders[dayIndex] as HTMLElement;
+    if (!dayColHeader) return;
+
+    const hourCells = Array.from(
+      dayColHeader.querySelectorAll('.post-week-hour-cell')
+    ) as HTMLElement[];
+
+    hourCells.forEach((cell, i) => {
+      if (i >= startHour && i < endHour) {
+        cell.classList.add('hour-drag-active');
+        // Показуємо час: перша комірка — «від», остання — «до»
+        const absHour = 8 + i;
+        if (i === startHour) {
+          const sH = 8 + Math.floor(startMins / 60);
+          const sM = startMins % 60;
+          cell.textContent = sM > 0
+            ? `${sH}:${String(sM).padStart(2, '0')}`
+            : `${sH}`;
+        } else if (i === endHour - 1) {
+          const eH = 8 + Math.floor(endMins / 60);
+          const eM = endMins % 60;
+          cell.textContent = eM > 0
+            ? `${eH}:${String(eM).padStart(2, '0')}`
+            : `${eH}`;
+        } else {
+          cell.textContent = String(absHour);
+        }
+      }
+    });
   };
 
   private onWeekDragUp = (_e: MouseEvent): void => {
@@ -1572,9 +1631,22 @@ class SchedulerApp {
     this.resetWeekSelection();
   };
 
+  /** Знімає підсвічування drag-годин і відновлює числа у заголовку */
+  private clearDragHourHighlight(): void {
+    if (!this.calendarGrid) return;
+    const cells = this.calendarGrid.querySelectorAll('.post-week-hour-cell.hour-drag-active') as NodeListOf<HTMLElement>;
+    cells.forEach((cell) => {
+      cell.classList.remove('hour-drag-active');
+      // Відновлюємо оригінальне число години
+      const absH = 8 + Array.from(cell.parentElement!.children).indexOf(cell);
+      cell.textContent = String(absH);
+    });
+  }
+
   private resetWeekSelection(): void {
     this.weekDragActive = false;
     this.weekDragCell = null;
+    this.clearDragHourHighlight();
     if (this.weekSelectionEl) {
       this.weekSelectionEl.style.display = "none";
       this.weekSelectionEl.remove();

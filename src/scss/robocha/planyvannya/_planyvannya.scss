@@ -1505,13 +1505,13 @@ $sidebar-width: 30%;
     filter: saturate(0.4);
   }
 
-  // Затемнення минулої частини блоку (перекриває зліва до поточного часу)
+  // Затемнення минулої частини блоку (лавандовий, як в денному виді)
   .week-block-past-overlay {
     position: absolute;
     top: 0;
     left: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(230, 230, 250, 0.5);
     border-radius: 6px 0 0 6px;
     pointer-events: none;
     z-index: 2;

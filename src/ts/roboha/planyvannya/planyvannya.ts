@@ -98,6 +98,24 @@ class SchedulerApp {
   private weekDragCell: HTMLElement | null = null;
   private weekSelectionEl: HTMLElement | null = null;
 
+  // Тижневий вид — drag переміщення блоків
+  private weekMovingBlock: HTMLElement | null = null;
+  private weekMovingOriginalCell: HTMLElement | null = null;
+  private weekMovingOriginalTop: string = "";
+  private weekMovingOriginalHeight: string = "";
+  private weekBlockDragStartX: number = 0;
+  private weekBlockDragStartY: number = 0;
+  private weekBlockDragOffsetY: number = 0;
+  private weekIsBlockDragging: boolean = false;
+
+  // Тижневий вид — resize блоків
+  private weekIsResizing: boolean = false;
+  private weekResizeHandleSide: "top" | "bottom" | null = null;
+  private weekResizingBlock: HTMLElement | null = null;
+  private weekResizeOrigStartMins: number = 0;
+  private weekResizeOrigEndMins: number = 0;
+  private weekResizeStartY: number = 0;
+
   constructor() {
     this.today = new Date();
     this.today.setHours(0, 0, 0, 0);
@@ -1154,6 +1172,37 @@ class SchedulerApp {
       <div class="post-week-block-name">${shortName}</div>
     `;
 
+    // Resize handles (верхній і нижній)
+    const topHandle = document.createElement("div");
+    topHandle.className = "week-resize-handle top";
+    block.appendChild(topHandle);
+
+    const bottomHandle = document.createElement("div");
+    bottomHandle.className = "week-resize-handle bottom";
+    block.appendChild(bottomHandle);
+
+    topHandle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleWeekResizeMouseDown(e, block, "top");
+    });
+    bottomHandle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleWeekResizeMouseDown(e, block, "bottom");
+    });
+
+    // Drag-move при mousedown на блоці (ЛКМ)
+    block.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      // Ігноруємо якщо це resize handle
+      const target = e.target as HTMLElement;
+      if (target.closest(".week-resize-handle")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleWeekBlockMouseDown(e, block);
+    });
+
     // Красива підказка при наведенні
     const comment = record.komentar || "";
     const actId = record.act_id || "";
@@ -1377,6 +1426,455 @@ class SchedulerApp {
       this.weekSelectionEl.style.display = "none";
       this.weekSelectionEl.remove();
     }
+  }
+
+  // ============== ТИЖНЕВИЙ ВИД — ПЕРЕМІЩЕННЯ БЛОКІВ (DRAG) ==============
+
+  private handleWeekBlockMouseDown(e: MouseEvent, block: HTMLElement): void {
+    // Перевірка прав
+    const currentUser = this.getCurrentUserName();
+    const currentAccess = this.getCurrentUserAccess();
+    const creator = block.dataset.xtoZapusav || "";
+    if (
+      currentAccess !== "Адміністратор" &&
+      creator &&
+      creator !== currentUser
+    ) {
+      showNotification(
+        `Ви не можете переміщати цей запис. Створив: ${creator}`,
+        "error",
+      );
+      return;
+    }
+
+    this.weekMovingBlock = block;
+    this.weekBlockDragStartX = e.clientX;
+    this.weekBlockDragStartY = e.clientY;
+    this.weekIsBlockDragging = false;
+
+    document.addEventListener("mousemove", this.onWeekBlockMouseMove);
+    document.addEventListener("mouseup", this.onWeekBlockMouseUp);
+  }
+
+  private startWeekBlockDrag(e: MouseEvent): void {
+    if (!this.weekMovingBlock) return;
+
+    const cell = this.weekMovingBlock.closest(
+      ".post-week-day-cell",
+    ) as HTMLElement;
+    this.weekMovingOriginalCell = cell;
+    this.weekMovingOriginalTop = this.weekMovingBlock.style.top;
+    this.weekMovingOriginalHeight = this.weekMovingBlock.style.height;
+
+    const rect = this.weekMovingBlock.getBoundingClientRect();
+    this.weekBlockDragOffsetY = e.clientY - rect.top;
+
+    // Фіксуємо розміри і переносимо в body
+    this.weekMovingBlock.style.width = `${rect.width}px`;
+    this.weekMovingBlock.style.height = `${rect.height}px`;
+    this.weekMovingBlock.style.left = `${rect.left}px`;
+    this.weekMovingBlock.style.top = `${rect.top}px`;
+    this.weekMovingBlock.classList.add("week-dragging-active");
+    document.body.appendChild(this.weekMovingBlock);
+  }
+
+  private onWeekBlockMouseMove = (e: MouseEvent): void => {
+    if (!this.weekMovingBlock) return;
+
+    // Поріг 5px
+    if (!this.weekIsBlockDragging) {
+      const dx = Math.abs(e.clientX - this.weekBlockDragStartX);
+      const dy = Math.abs(e.clientY - this.weekBlockDragStartY);
+      if (dx < 5 && dy < 5) return;
+      this.weekIsBlockDragging = true;
+      this.startWeekBlockDrag(e);
+    }
+
+    // Рухаємо блок за курсором
+    this.weekMovingBlock.style.left = `${e.clientX - this.weekMovingBlock.offsetWidth / 2}px`;
+    this.weekMovingBlock.style.top = `${e.clientY - this.weekBlockDragOffsetY}px`;
+
+    // Визначаємо target cell
+    this.weekMovingBlock.style.pointerEvents = "none";
+    const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+    this.weekMovingBlock.style.pointerEvents = "";
+
+    // Прибираємо попередні drop-підсвічування
+    this.calendarGrid
+      ?.querySelectorAll(".week-drop-target")
+      .forEach((el) => el.classList.remove("week-drop-target"));
+
+    const targetCell = elemBelow?.closest(".post-week-day-cell") as HTMLElement;
+    this.weekMovingBlock.classList.remove(
+      "week-drag-valid",
+      "week-drag-invalid",
+    );
+
+    if (targetCell) {
+      targetCell.classList.add("week-drop-target");
+      const cellRect = targetCell.getBoundingClientRect();
+      const relativeY = e.clientY - this.weekBlockDragOffsetY - cellRect.top;
+      const totalMinutes = 12 * 60;
+      let startMins =
+        Math.round(((relativeY / cellRect.height) * totalMinutes) / 30) * 30;
+      const duration =
+        parseInt(this.weekMovingBlock.dataset.end || "0") -
+        parseInt(this.weekMovingBlock.dataset.start || "0");
+      const endMins = startMins + duration;
+
+      if (startMins >= 0 && endMins <= totalMinutes) {
+        const hasOverlap = this.checkWeekBlockOverlap(
+          startMins,
+          endMins,
+          targetCell,
+          this.weekMovingBlock,
+        );
+        this.weekMovingBlock.classList.add(
+          hasOverlap ? "week-drag-invalid" : "week-drag-valid",
+        );
+      } else {
+        this.weekMovingBlock.classList.add("week-drag-invalid");
+      }
+    } else {
+      this.weekMovingBlock.classList.add("week-drag-invalid");
+    }
+  };
+
+  private onWeekBlockMouseUp = async (e: MouseEvent): Promise<void> => {
+    if (!this.weekMovingBlock) return;
+
+    document.removeEventListener("mousemove", this.onWeekBlockMouseMove);
+    document.removeEventListener("mouseup", this.onWeekBlockMouseUp);
+
+    // Прибираємо підсвічування
+    this.calendarGrid
+      ?.querySelectorAll(".week-drop-target")
+      .forEach((el) => el.classList.remove("week-drop-target"));
+
+    if (!this.weekIsBlockDragging) {
+      // Не було drag, просто клік — нічого не робимо
+      this.weekMovingBlock = null;
+      this.weekIsBlockDragging = false;
+      return;
+    }
+
+    const isValid = this.weekMovingBlock.classList.contains("week-drag-valid");
+
+    this.weekMovingBlock.style.pointerEvents = "none";
+    const targetCell = document
+      .elementFromPoint(e.clientX, e.clientY)
+      ?.closest(".post-week-day-cell") as HTMLElement;
+    this.weekMovingBlock.style.pointerEvents = "";
+
+    // Скидаємо drag-стилі
+    this.weekMovingBlock.classList.remove(
+      "week-dragging-active",
+      "week-drag-valid",
+      "week-drag-invalid",
+    );
+    this.weekMovingBlock.style.position = "absolute";
+    this.weekMovingBlock.style.width = "";
+    this.weekMovingBlock.style.left = "2px";
+    this.weekMovingBlock.style.right = "2px";
+
+    if (isValid && targetCell) {
+      // Commit — обчислюємо нову позицію
+      const cellRect = targetCell.getBoundingClientRect();
+      const relativeY = e.clientY - this.weekBlockDragOffsetY - cellRect.top;
+      const totalMinutes = 12 * 60;
+      let startMins =
+        Math.round(((relativeY / cellRect.height) * totalMinutes) / 30) * 30;
+      const duration =
+        parseInt(this.weekMovingBlock.dataset.end || "0") -
+        parseInt(this.weekMovingBlock.dataset.start || "0");
+      const endMins = startMins + duration;
+
+      if (startMins < 0) startMins = 0;
+      const topPercent = (startMins / totalMinutes) * 100;
+      const heightPercent = (duration / totalMinutes) * 100;
+
+      this.weekMovingBlock.dataset.start = startMins.toString();
+      this.weekMovingBlock.dataset.end = endMins.toString();
+      this.weekMovingBlock.style.top = `${topPercent}%`;
+      this.weekMovingBlock.style.height = `${heightPercent}%`;
+
+      // Оновлюємо дату та slyusar_id з нової комірки
+      const newDate = targetCell.dataset.date || "";
+      const newSlyusarId = targetCell.dataset.slyusarId || "";
+      this.weekMovingBlock.dataset.date = newDate;
+      this.weekMovingBlock.dataset.slyusarId = newSlyusarId;
+
+      // Оновлюємо текст часу
+      const sH = this.weekMinsToTime(startMins);
+      const eH = this.weekMinsToTime(endMins);
+      const timeEl = this.weekMovingBlock.querySelector(
+        ".post-week-block-time",
+      );
+      if (timeEl) timeEl.textContent = `${sH}-${eH}`;
+
+      targetCell.appendChild(this.weekMovingBlock);
+
+      // === ЗБЕРІГАЄМО В БД ===
+      const postArxivId = this.weekMovingBlock.dataset.postArxivId;
+      if (postArxivId) {
+        try {
+          const dataOn = `${newDate}T${sH}:00`;
+          const dataOff = `${newDate}T${eH}:00`;
+
+          const { error } = await supabase
+            .from("post_arxiv")
+            .update({
+              slyusar_id: parseInt(newSlyusarId),
+              data_on: dataOn,
+              data_off: dataOff,
+            })
+            .eq("post_arxiv_id", parseInt(postArxivId));
+
+          if (error) {
+            showNotification("Помилка оновлення в БД", "error");
+            this.revertWeekBlockDrag();
+          } else {
+            showNotification("Запис переміщено!", "success");
+          }
+        } catch {
+          showNotification("Помилка при переміщенні", "error");
+          this.revertWeekBlockDrag();
+        }
+      }
+    } else {
+      // Revert — повертаємо на місце
+      this.revertWeekBlockDrag();
+    }
+
+    this.weekMovingBlock = null;
+    this.weekMovingOriginalCell = null;
+    this.weekIsBlockDragging = false;
+  };
+
+  private revertWeekBlockDrag(): void {
+    if (!this.weekMovingBlock || !this.weekMovingOriginalCell) return;
+    this.weekMovingBlock.style.top = this.weekMovingOriginalTop;
+    this.weekMovingBlock.style.height = this.weekMovingOriginalHeight;
+    this.weekMovingBlock.style.width = "";
+    this.weekMovingBlock.style.left = "2px";
+    this.weekMovingBlock.style.right = "2px";
+    this.weekMovingBlock.style.position = "absolute";
+    this.weekMovingOriginalCell.appendChild(this.weekMovingBlock);
+  }
+
+  /** Перевірка перетинів блоків в тижневій комірці */
+  private checkWeekBlockOverlap(
+    startMins: number,
+    endMins: number,
+    cell: HTMLElement,
+    excludeBlock: HTMLElement,
+  ): boolean {
+    const blocks = Array.from(
+      cell.querySelectorAll(".post-week-block"),
+    ) as HTMLElement[];
+    for (const block of blocks) {
+      if (block === excludeBlock) continue;
+      const bStart = parseInt(block.dataset.start || "0");
+      const bEnd = parseInt(block.dataset.end || "0");
+      if (startMins < bEnd && endMins > bStart) return true;
+    }
+    return false;
+  }
+
+  // ============== ТИЖНЕВИЙ ВИД — RESIZE БЛОКІВ ==============
+
+  private handleWeekResizeMouseDown(
+    e: MouseEvent,
+    block: HTMLElement,
+    side: "top" | "bottom",
+  ): void {
+    const currentUser = this.getCurrentUserName();
+    const currentAccess = this.getCurrentUserAccess();
+    const creator = block.dataset.xtoZapusav || "";
+    if (
+      currentAccess !== "Адміністратор" &&
+      creator &&
+      creator !== currentUser
+    ) {
+      showNotification(
+        `Ви не можете змінювати розмір запису. Створив: ${creator}`,
+        "error",
+      );
+      return;
+    }
+
+    this.weekIsResizing = true;
+    this.weekResizingBlock = block;
+    this.weekResizeHandleSide = side;
+    this.weekResizeStartY = e.clientY;
+    this.weekResizeOrigStartMins = parseInt(block.dataset.start || "0");
+    this.weekResizeOrigEndMins = parseInt(block.dataset.end || "0");
+    block.style.transition = "none";
+
+    document.addEventListener("mousemove", this.onWeekResizeMouseMove);
+    document.addEventListener("mouseup", this.onWeekResizeMouseUp);
+  }
+
+  private onWeekResizeMouseMove = (e: MouseEvent): void => {
+    if (
+      !this.weekIsResizing ||
+      !this.weekResizingBlock ||
+      !this.weekResizeHandleSide
+    )
+      return;
+
+    const cell = this.weekResizingBlock.closest(
+      ".post-week-day-cell",
+    ) as HTMLElement;
+    if (!cell) return;
+
+    const cellHeight = cell.getBoundingClientRect().height;
+    const deltaY = e.clientY - this.weekResizeStartY;
+    const totalMinutes = 12 * 60;
+    const deltaMins = (deltaY / cellHeight) * totalMinutes;
+
+    let newStart = this.weekResizeOrigStartMins;
+    let newEnd = this.weekResizeOrigEndMins;
+
+    if (this.weekResizeHandleSide === "top") {
+      newStart =
+        Math.round((this.weekResizeOrigStartMins + deltaMins) / 30) * 30;
+      if (newStart < 0) newStart = 0;
+      if (newStart >= newEnd - 30) newStart = newEnd - 30;
+    } else {
+      newEnd = Math.round((this.weekResizeOrigEndMins + deltaMins) / 30) * 30;
+      if (newEnd > totalMinutes) newEnd = totalMinutes;
+      if (newEnd <= newStart + 30) newEnd = newStart + 30;
+    }
+
+    const topPercent = (newStart / totalMinutes) * 100;
+    const heightPercent = ((newEnd - newStart) / totalMinutes) * 100;
+    this.weekResizingBlock.style.top = `${topPercent}%`;
+    this.weekResizingBlock.style.height = `${heightPercent}%`;
+
+    this.weekResizingBlock.dataset.tempStart = newStart.toString();
+    this.weekResizingBlock.dataset.tempEnd = newEnd.toString();
+
+    // Оновлюємо текст часу в реальному часі
+    const sH = this.weekMinsToTime(newStart);
+    const eH = this.weekMinsToTime(newEnd);
+    const timeEl = this.weekResizingBlock.querySelector(
+      ".post-week-block-time",
+    );
+    if (timeEl) timeEl.textContent = `${sH}-${eH}`;
+
+    // Перевірка перетину
+    const hasOverlap = this.checkWeekBlockOverlap(
+      newStart,
+      newEnd,
+      cell,
+      this.weekResizingBlock,
+    );
+    if (hasOverlap) {
+      this.weekResizingBlock.classList.add("week-drag-invalid");
+    } else {
+      this.weekResizingBlock.classList.remove("week-drag-invalid");
+    }
+  };
+
+  private onWeekResizeMouseUp = async (_e: MouseEvent): Promise<void> => {
+    if (!this.weekIsResizing || !this.weekResizingBlock) return;
+
+    document.removeEventListener("mousemove", this.onWeekResizeMouseMove);
+    document.removeEventListener("mouseup", this.onWeekResizeMouseUp);
+
+    this.weekResizingBlock.style.transition = "";
+    this.weekResizingBlock.classList.remove("week-drag-invalid");
+
+    const newStart = parseInt(
+      this.weekResizingBlock.dataset.tempStart ||
+        this.weekResizeOrigStartMins.toString(),
+    );
+    const newEnd = parseInt(
+      this.weekResizingBlock.dataset.tempEnd ||
+        this.weekResizeOrigEndMins.toString(),
+    );
+    delete this.weekResizingBlock.dataset.tempStart;
+    delete this.weekResizingBlock.dataset.tempEnd;
+
+    // Нічого не змінилось
+    if (
+      newStart === this.weekResizeOrigStartMins &&
+      newEnd === this.weekResizeOrigEndMins
+    ) {
+      this.resetWeekResizeState();
+      return;
+    }
+
+    // Перевірка overlap
+    const cell = this.weekResizingBlock.closest(
+      ".post-week-day-cell",
+    ) as HTMLElement;
+    const hasOverlap = cell
+      ? this.checkWeekBlockOverlap(
+          newStart,
+          newEnd,
+          cell,
+          this.weekResizingBlock,
+        )
+      : false;
+
+    if (hasOverlap) {
+      // Revert
+      const totalMinutes = 12 * 60;
+      const origTop = (this.weekResizeOrigStartMins / totalMinutes) * 100;
+      const origHeight =
+        ((this.weekResizeOrigEndMins - this.weekResizeOrigStartMins) /
+          totalMinutes) *
+        100;
+      this.weekResizingBlock.style.top = `${origTop}%`;
+      this.weekResizingBlock.style.height = `${origHeight}%`;
+
+      const sH = this.weekMinsToTime(this.weekResizeOrigStartMins);
+      const eH = this.weekMinsToTime(this.weekResizeOrigEndMins);
+      const timeEl = this.weekResizingBlock.querySelector(
+        ".post-week-block-time",
+      );
+      if (timeEl) timeEl.textContent = `${sH}-${eH}`;
+
+      showNotification(
+        "Неможливо змінити час: перетин з іншим записом",
+        "error",
+      );
+    } else {
+      // Commit — зберігаємо
+      this.weekResizingBlock.dataset.start = newStart.toString();
+      this.weekResizingBlock.dataset.end = newEnd.toString();
+
+      const postArxivId = this.weekResizingBlock.dataset.postArxivId;
+      const dateStr = this.weekResizingBlock.dataset.date || "";
+
+      if (postArxivId) {
+        const sH = this.weekMinsToTime(newStart);
+        const eH = this.weekMinsToTime(newEnd);
+        const dataOn = `${dateStr}T${sH}:00`;
+        const dataOff = `${dateStr}T${eH}:00`;
+
+        const { error } = await supabase
+          .from("post_arxiv")
+          .update({ data_on: dataOn, data_off: dataOff })
+          .eq("post_arxiv_id", parseInt(postArxivId));
+
+        if (error) {
+          showNotification("Помилка оновлення часу", "error");
+        } else {
+          showNotification("Час оновлено!", "success");
+        }
+      }
+    }
+
+    this.resetWeekResizeState();
+  };
+
+  private resetWeekResizeState(): void {
+    this.weekIsResizing = false;
+    this.weekResizingBlock = null;
+    this.weekResizeHandleSide = null;
   }
 
   /**

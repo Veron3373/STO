@@ -1182,7 +1182,7 @@ $sidebar-width: 30%;
 }
 
 // ==========================================
-// ТИЖНЕВИЙ ВИД — ГОРИЗОНТАЛЬНИЙ ТАЙМЛАЙН
+// ТИЖНЕВИЙ ВИД — ДНІ ЗВЕРХУ, ГОДИНИ ГОРИЗОНТАЛЬНО
 // ==========================================
 
 .post-week-container {
@@ -1192,62 +1192,117 @@ $sidebar-width: 30%;
   min-height: 0;
 }
 
-// === Шапка з годинами (sticky) ===
-.post-week-hours-header {
+// === Шапка: кут + 7 колонок днів (кожна з годинами) ===
+.post-week-header {
   display: flex;
   position: sticky;
   top: 0;
   z-index: 102;
   background: $white;
   border-bottom: 2px solid $border-dark;
-  min-height: 28px;
   flex-shrink: 0;
 }
 
-.post-week-corner-worker {
+.post-week-corner {
   width: 150px;
   min-width: 150px;
   background: #f8f9fa;
   border-right: 1px solid $border-gray;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #888;
+  font-size: 11px;
 }
 
-.post-week-corner-day {
-  width: 55px;
-  min-width: 55px;
-  background: #f8f9fa;
-  border-right: 1px solid $border-gray;
-}
-
-.post-week-hours-row {
+// Контейнер 7 колонок днів у шапці
+.post-week-days-header {
   flex: 1;
   display: flex;
   min-width: 0;
 }
 
-.post-week-hour-cell {
+// Одна колонка дня в шапці
+.post-week-day-col-header {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid $border-dark;
+  min-width: 0;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &.post-week-today {
+    background: #e8f5e9;
+  }
+
+  &.post-week-weekend {
+    background: #fff8e1;
+  }
+}
+
+// Назва дня (ПН 2, ВТ 3, ...) — клікабельна
+.post-week-day-title {
   text-align: center;
   font-size: 11px;
   font-weight: 700;
   color: #555;
+  padding: 4px 2px 2px;
+  cursor: pointer;
+  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  &:hover {
+    background: #f0fdf4;
+  }
+
+  .post-week-today & {
+    color: $primary-blue;
+    font-weight: 800;
+  }
+
+  .post-week-weekend & {
+    color: #b77000;
+  }
+}
+
+// Годинна шкала всередині кожного дня
+.post-week-hours-row {
+  display: flex;
+  min-width: 0;
+  border-top: 1px solid $border-gray;
+}
+
+.post-week-hour-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: #777;
   border-left: 1px solid $border-gray;
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
+  padding: 1px 0;
 }
 
 .post-week-min-cell {
   flex: 1;
   text-align: center;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 400;
-  color: #bbb;
+  color: #ccc;
   border-left: 1px dashed #e0e0e0;
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
+  padding: 1px 0;
 }
 
 // === Тіло тижневого виду ===
@@ -1289,19 +1344,24 @@ $sidebar-width: 30%;
   }
 }
 
-// === Група слюсаря (лейбл + 7 днів) ===
-.post-week-worker-group {
+// === Рядок слюсаря (лейбл + 7 треків) ===
+.post-week-row {
   display: flex;
-  border-bottom: 2px solid $border-dark;
+  border-bottom: 1px solid $border-gray;
   background: $white;
+  min-height: 36px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.01);
+  }
 }
 
-// Лейбл слюсаря (зліва, на всю висоту 7 рядків)
-.post-week-worker-label {
+// Лейбл слюсаря (зліва)
+.post-week-row-label {
   width: 150px;
   min-width: 150px;
   border-right: 3px solid $primary-blue;
-  padding: 6px 10px;
+  padding: 4px 8px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1310,8 +1370,8 @@ $sidebar-width: 30%;
 
   .post-post-title {
     font-weight: 500;
-    font-size: 13px;
-    margin-bottom: 2px;
+    font-size: 12px;
+    margin-bottom: 1px;
     color: $text-dark;
     white-space: nowrap;
     overflow: hidden;
@@ -1319,7 +1379,7 @@ $sidebar-width: 30%;
   }
 
   .post-post-subtitle {
-    font-size: 11px;
+    font-size: 10px;
     color: #005fff;
     white-space: nowrap;
     overflow: hidden;
@@ -1327,64 +1387,18 @@ $sidebar-width: 30%;
   }
 }
 
-// Контейнер 7 днів
-.post-week-days {
+// Контейнер 7 треків поруч
+.post-week-row-tracks {
   flex: 1;
   display: flex;
-  flex-direction: column;
   min-width: 0;
 }
 
-// Один рядок-день
-.post-week-day-row {
-  display: flex;
-  border-bottom: 1px solid $border-gray;
-  min-height: 32px;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-// Лейбл дня (ПН 3, ВТ 4, ...)
-.post-week-day-label {
-  width: 55px;
-  min-width: 55px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 600;
-  color: #666;
-  background: #fafbfc;
-  border-right: 1px solid $border-gray;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s;
-  padding: 2px 4px;
-  text-align: center;
-
-  &:hover {
-    background: #f0fdf4;
-  }
-
-  &.post-week-today {
-    background: #e8f5e9;
-    color: $primary-blue;
-    font-weight: 800;
-  }
-
-  &.post-week-weekend {
-    background: #fff8e1;
-    color: #b77000;
-  }
-}
-
-// Горизонтальний таймлайн-трек
+// Горизонтальний таймлайн-трек (один день для одного слюсаря)
 .post-week-day-track {
   flex: 1;
   position: relative;
-  min-height: 32px;
+  min-height: 36px;
   overflow: visible;
   cursor: default;
   background: $white;
@@ -1395,6 +1409,11 @@ $sidebar-width: 30%;
 
   &.post-week-weekend {
     background: #fffdf5;
+  }
+
+  // Розділювач між днями
+  &.post-week-day-border {
+    border-right: 2px solid $border-dark;
   }
 
   // Drop target підсвічування

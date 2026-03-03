@@ -828,7 +828,7 @@ class SchedulerApp {
   }
 
   /**
-   * Рендерить тижневий вид планувальника (горизонтальний — години зліва направо)
+   * Рендерить тижневий вид планувальника (горизонтальний — дні зверху, години всередині кожного дня)
    */
   private renderWeekView(): void {
     const calendarGrid = this.calendarGrid;
@@ -859,36 +859,65 @@ class SchedulerApp {
     const weekContainer = document.createElement("div");
     weekContainer.className = "post-week-container";
 
-    // === Заголовок з годинами (sticky) ===
-    const hoursHeader = document.createElement("div");
-    hoursHeader.className = "post-week-hours-header";
+    // === Заголовок: кут + 7 колонок днів (кожна з годинами) ===
+    const header = document.createElement("div");
+    header.className = "post-week-header";
 
-    // Порожній кут для лейбла слюсаря
-    const cornerWorker = document.createElement("div");
-    cornerWorker.className = "post-week-corner-worker";
-    hoursHeader.appendChild(cornerWorker);
+    const corner = document.createElement("div");
+    corner.className = "post-week-corner";
+    header.appendChild(corner);
 
-    // Порожній кут для дня тижня
-    const cornerDay = document.createElement("div");
-    cornerDay.className = "post-week-corner-day";
-    hoursHeader.appendChild(cornerDay);
+    const daysHeader = document.createElement("div");
+    daysHeader.className = "post-week-days-header";
 
-    // Годинна шкала
-    const hoursRow = document.createElement("div");
-    hoursRow.className = "post-week-hours-row";
-    for (let h = 8; h <= 19; h++) {
-      const hourCell = document.createElement("div");
-      hourCell.className = "post-week-hour-cell";
-      hourCell.textContent = h.toString();
-      hoursRow.appendChild(hourCell);
+    weekDays.forEach((day, idx) => {
+      const isToday = day.toDateString() === this.today.toDateString();
+      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
-      const minCell = document.createElement("div");
-      minCell.className = "post-week-min-cell";
-      minCell.textContent = "30";
-      hoursRow.appendChild(minCell);
-    }
-    hoursHeader.appendChild(hoursRow);
-    weekContainer.appendChild(hoursHeader);
+      const dayCol = document.createElement("div");
+      dayCol.className = "post-week-day-col-header";
+      if (isToday) dayCol.classList.add("post-week-today");
+      if (isWeekend) dayCol.classList.add("post-week-weekend");
+
+      // Назва дня + дата (клікабельна — перехід у денний вид)
+      const dayTitle = document.createElement("div");
+      dayTitle.className = "post-week-day-title";
+      dayTitle.textContent = `${shortDayNames[idx]} ${day.getDate()}`;
+      dayTitle.addEventListener("click", () => {
+        this.selectedDate = new Date(day);
+        this.viewMonth = day.getMonth();
+        this.viewYear = day.getFullYear();
+        this.isWeekView = false;
+        const weekBtn = document.getElementById("postWeekBtn");
+        if (weekBtn) {
+          weekBtn.classList.remove("active");
+          weekBtn.textContent = "Тиждень";
+        }
+        this.render();
+        this.reloadArxivData();
+      });
+      dayCol.appendChild(dayTitle);
+
+      // Годинна шкала всередині дня
+      const hoursRow = document.createElement("div");
+      hoursRow.className = "post-week-hours-row";
+      for (let h = 8; h <= 19; h++) {
+        const hourCell = document.createElement("div");
+        hourCell.className = "post-week-hour-cell";
+        hourCell.textContent = h.toString();
+        hoursRow.appendChild(hourCell);
+
+        const minCell = document.createElement("div");
+        minCell.className = "post-week-min-cell";
+        minCell.textContent = "30";
+        hoursRow.appendChild(minCell);
+      }
+      dayCol.appendChild(hoursRow);
+      daysHeader.appendChild(dayCol);
+    });
+
+    header.appendChild(daysHeader);
+    weekContainer.appendChild(header);
 
     // === Тіло ===
     const weekBody = document.createElement("div");
@@ -915,54 +944,27 @@ class SchedulerApp {
 
       if (!section.collapsed) {
         section.posts.forEach((post) => {
-          const workerGroup = document.createElement("div");
-          workerGroup.className = "post-week-worker-group";
+          const row = document.createElement("div");
+          row.className = "post-week-row";
 
-          // Лейбл слюсаря (зліва, охоплює 7 рядків)
-          const workerLabel = document.createElement("div");
-          workerLabel.className = "post-week-worker-label";
-          workerLabel.innerHTML = `
+          // Лейбл слюсаря (зліва)
+          const label = document.createElement("div");
+          label.className = "post-week-row-label";
+          label.innerHTML = `
             <div class="post-post-title">${post.title}</div>
             <div class="post-post-subtitle">${post.subtitle}</div>
           `;
-          workerGroup.appendChild(workerLabel);
+          row.appendChild(label);
 
-          // Контейнер днів
-          const daysContainer = document.createElement("div");
-          daysContainer.className = "post-week-days";
+          // 7 треків днів поруч
+          const tracksContainer = document.createElement("div");
+          tracksContainer.className = "post-week-row-tracks";
 
           weekDays.forEach((day, idx) => {
-            const dayRow = document.createElement("div");
-            dayRow.className = "post-week-day-row";
-
             const isToday = day.toDateString() === this.today.toDateString();
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
             const isPast = day < this.today && !isToday;
 
-            // Лейбл дня (ПН 2)
-            const dayLabel = document.createElement("div");
-            dayLabel.className = "post-week-day-label";
-            if (isToday) dayLabel.classList.add("post-week-today");
-            if (isWeekend) dayLabel.classList.add("post-week-weekend");
-            dayLabel.textContent = `${shortDayNames[idx]} ${day.getDate()}`;
-
-            // Клік на день — перехід у денний вид
-            dayLabel.addEventListener("click", () => {
-              this.selectedDate = new Date(day);
-              this.viewMonth = day.getMonth();
-              this.viewYear = day.getFullYear();
-              this.isWeekView = false;
-              const weekBtn = document.getElementById("postWeekBtn");
-              if (weekBtn) {
-                weekBtn.classList.remove("active");
-                weekBtn.textContent = "Тиждень";
-              }
-              this.render();
-              this.reloadArxivData();
-            });
-            dayRow.appendChild(dayLabel);
-
-            // Трек часу (горизонтальний)
             const dayTrack = document.createElement("div");
             dayTrack.className = "post-week-day-track";
             const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
@@ -972,15 +974,15 @@ class SchedulerApp {
 
             if (isToday) dayTrack.classList.add("post-week-today");
             if (isWeekend) dayTrack.classList.add("post-week-weekend");
+            if (idx < 6) dayTrack.classList.add("post-week-day-border");
 
-            // Вертикальні лінії годин (пунктирні)
+            // Вертикальні лінії годин
             for (let h = 8; h <= 20; h++) {
               const timeMark = document.createElement("div");
               timeMark.className = "post-week-time-mark";
               timeMark.style.left = `${((h - 8) / 12) * 100}%`;
               dayTrack.appendChild(timeMark);
             }
-            // Половинні мітки (30 хв)
             for (let h = 8; h < 20; h++) {
               const halfMark = document.createElement("div");
               halfMark.className = "post-week-time-mark half";
@@ -988,7 +990,7 @@ class SchedulerApp {
               dayTrack.appendChild(halfMark);
             }
 
-            // Фон минулого часу + червона лінія
+            // Минулий час + червона лінія
             if (isToday) {
               const now = new Date();
               const currentMins = (now.getHours() - 8) * 60 + now.getMinutes();
@@ -1012,15 +1014,14 @@ class SchedulerApp {
               dayTrack.appendChild(pastOverlay);
             }
 
-            // Drag-to-create (горизонтальне виділення)
+            // Drag-to-create
             this.attachWeekCellDragHandlers(dayTrack);
 
-            dayRow.appendChild(dayTrack);
-            daysContainer.appendChild(dayRow);
+            tracksContainer.appendChild(dayTrack);
           });
 
-          workerGroup.appendChild(daysContainer);
-          weekBody.appendChild(workerGroup);
+          row.appendChild(tracksContainer);
+          weekBody.appendChild(row);
         });
       }
     });

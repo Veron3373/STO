@@ -1319,6 +1319,9 @@ class SchedulerApp {
     const tooltip = document.createElement("div");
     tooltip.className = "post-week-tooltip";
     let tooltipHTML = `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">👤</span> <strong>${clientName || "—"}</strong></div>`;
+    if (clientPhone) {
+      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📞</span> <span class="pw-tip-phone">${clientPhone}</span></div>`;
+    }
     tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🚗</span> ${carModel || "—"} <span class="pw-tip-number">${carNumber || ""}</span></div>`;
     tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🕐</span> ${startH}:${startM} — ${endH}:${endM}</div>`;
     tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">${emoji}</span> ${status}</div>`;

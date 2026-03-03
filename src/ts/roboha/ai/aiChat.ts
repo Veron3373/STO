@@ -997,7 +997,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-        } catch {}
+        } catch { }
         clientLookup.set(c.client_id, {
           name: d["ПІБ"] || d["Клієнт"] || "",
           phone: d["Телефон"] || "",
@@ -1009,7 +1009,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-        } catch {}
+        } catch { }
         carLookup.set(c.cars_id, {
           car: d["Авто"] || "",
           plate: d["Номер авто"] || "",
@@ -1026,7 +1026,7 @@ async function gatherSTOContext(
     let d: any = {};
     try {
       d = typeof a.data === "string" ? JSON.parse(a.data) : a.data || {};
-    } catch {}
+    } catch { }
 
     const worksArr = Array.isArray(d["Роботи"]) ? d["Роботи"] : [];
     const detailsArr = Array.isArray(d["Деталі"]) ? d["Деталі"] : [];
@@ -1280,7 +1280,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || d["Ім'я"] || "—";
         const role = d["Доступ"] || "";
 
@@ -1395,7 +1395,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || d["Ім'я"] || "—";
 
         // Шукаємо акти де цей слюсар вказаний в полі "Слюсар"
@@ -1475,7 +1475,7 @@ async function gatherSTOContext(
                   typeof c.data === "string"
                     ? JSON.parse(c.data)
                     : c.data || {};
-              } catch {}
+              } catch { }
               const name = d["ПІБ"] || "—";
               const phone = d["Телефон"] || "";
               clientsMap.set(
@@ -1500,7 +1500,7 @@ async function gatherSTOContext(
                   typeof c.data === "string"
                     ? JSON.parse(c.data)
                     : c.data || {};
-              } catch {}
+              } catch { }
               const car = d["Авто"] || "—";
               const plate = d["Номер авто"] || "";
               carsMap.set(c.cars_id, plate ? `${car} (${plate})` : car);
@@ -1530,19 +1530,19 @@ async function gatherSTOContext(
                   ? JSON.parse(slyusarRow.data)
                   : slyusarRow.data || {};
               slName = sd.Name || "—";
-            } catch {}
+            } catch { }
 
             const timeOn = b.data_on
               ? new Date(b.data_on).toLocaleTimeString("uk-UA", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "—";
             const timeOff = b.data_off
               ? new Date(b.data_off).toLocaleTimeString("uk-UA", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "—";
 
             // Клієнт: підтягуємо ПІБ з БД
@@ -1637,7 +1637,7 @@ async function gatherSTOContext(
           let d: any = {};
           try {
             d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-          } catch {}
+          } catch { }
           return {
             id: c.client_id,
             name: d["ПІБ"] || d["Клієнт"] || "—",
@@ -1653,7 +1653,7 @@ async function gatherSTOContext(
           let d: any = {};
           try {
             d = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-          } catch {}
+          } catch { }
           return {
             id: c.cars_id,
             clientId: c.client_id,
@@ -2011,7 +2011,7 @@ async function gatherSTOContext(
         let d: any = {};
         try {
           d = typeof s.data === "string" ? JSON.parse(s.data) : s.data || {};
-        } catch {}
+        } catch { }
         const name = d.Name || "—";
         const percentage = d["ПроцентРоботи"] || 0;
 
@@ -2627,12 +2627,12 @@ async function handleFunctionCall(
           const sourcesText =
             grounding.sources.length > 0
               ? "\n\n📎 ПЕРЕВІРЕНІ ДЖЕРЕЛА (реальні посилання):\n" +
-                grounding.sources
-                  .map(
-                    (s, i) =>
-                      `${i + 1}. ${s.title || "Джерело"}: ${s.url}${s.snippet ? " — " + s.snippet : ""}`,
-                  )
-                  .join("\n")
+              grounding.sources
+                .map(
+                  (s, i) =>
+                    `${i + 1}. ${s.title || "Джерело"}: ${s.url}${s.snippet ? " — " + s.snippet : ""}`,
+                )
+                .join("\n")
               : "";
 
           return JSON.stringify({
@@ -3397,7 +3397,7 @@ ${functionCallingBlock}`;
     const groqEnrichedPrompt =
       enrichedPrompt.length > GROQ_CONTEXT_LIMIT
         ? enrichedPrompt.slice(0, GROQ_CONTEXT_LIMIT) +
-          "\n...(контекст обрізано)"
+        "\n...(контекст обрізано)"
         : enrichedPrompt;
 
     const groqHistorySize =
@@ -3413,7 +3413,7 @@ ${functionCallingBlock}`;
     const geminiEnrichedPrompt =
       enrichedPrompt.length > GEMINI_CONTEXT_LIMIT
         ? enrichedPrompt.slice(0, GEMINI_CONTEXT_LIMIT) +
-          "\n...(контекст обрізано)"
+        "\n...(контекст обрізано)"
         : enrichedPrompt;
 
     // === Формат Gemini ===
@@ -3476,12 +3476,12 @@ ${functionCallingBlock}`;
     const fcTools = trivial
       ? [] // Тривіальні запити — без інструментів
       : [
-          getQueryDatabaseToolDeclaration(),
-          getMultiQueryToolDeclaration(),
-          getSearchInternetToolDeclaration(),
-          getRpcToolDeclaration(),
-          getAnalyticsToolDeclaration(),
-        ];
+        getQueryDatabaseToolDeclaration(),
+        getMultiQueryToolDeclaration(),
+        getSearchInternetToolDeclaration(),
+        getRpcToolDeclaration(),
+        getAnalyticsToolDeclaration(),
+      ];
 
     // Спробувати всі ключі по черзі при 429
     const triedIndices = new Set<number>();
@@ -3756,9 +3756,9 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
     const [clientsRes, carsRes] = await Promise.all([
       clientIds.length > 0
         ? supabase
-            .from("clients")
-            .select("client_id, data")
-            .in("client_id", clientIds)
+          .from("clients")
+          .select("client_id, data")
+          .in("client_id", clientIds)
         : Promise.resolve({ data: [] as any[], error: null }),
       carsIds.length > 0
         ? supabase.from("cars").select("cars_id, data").in("cars_id", carsIds)
@@ -3770,7 +3770,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       let cd: any = {};
       try {
         cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-      } catch {}
+      } catch { }
       clientsMap.set(c.client_id, cd);
     });
 
@@ -3779,7 +3779,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       let cd: any = {};
       try {
         cd = typeof c.data === "string" ? JSON.parse(c.data) : c.data || {};
-      } catch {}
+      } catch { }
       carsMap.set(c.cars_id, cd);
     });
 
@@ -3788,7 +3788,7 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
       try {
         const raw = a.info || a.data || a.details;
         d = typeof raw === "string" ? JSON.parse(raw) : raw || {};
-      } catch {}
+      } catch { }
 
       // ПІБ клієнта: спочатку з JSON акту, потім з таблиці clients
       let client = d["ПІБ"] || d["Клієнт"] || "";
@@ -3846,7 +3846,10 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
         stats.totalDetailsSum += detailsSum;
         stats.totalSum += total;
         stats.worksCount += worksArr.length;
-      } else if (!isClosed) {
+      }
+
+      // Відкриті акти для списку дашборду — лише ті, що були відкриті В ЦЕЙ день
+      if (!isClosed && isOpenedOnSelectedDay) {
         stats.openCount++;
         stats.openActs.push({
           id: a.act_id,
@@ -4626,15 +4629,14 @@ function renderDashboard(
         </div>
       </div>
 
-      ${
-        stats.closedActs.length > 0
-          ? `
+      ${stats.closedActs.length > 0
+      ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">${closedSectionTitle}</div>
         <div class="ai-dashboard-acts-list">
           ${stats.closedActs
-            .map(
-              (a) => `
+        .map(
+          (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -4643,8 +4645,8 @@ function renderDashboard(
               <span class="ai-act-sum">${a.total.toLocaleString("uk-UA")} грн</span>
             </div>
           `,
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
         <div class="ai-dashboard-totals">
           <span>Роботи: <strong>${stats.totalWorksSum.toLocaleString("uk-UA")} грн</strong></span>
@@ -4652,18 +4654,17 @@ function renderDashboard(
           <span>Разом: <strong>${stats.totalSum.toLocaleString("uk-UA")} грн</strong></span>
         </div>
       </div>`
-          : ""
-      }
+      : ""
+    }
 
-      ${
-        stats.openActs.length > 0
-          ? `
+      ${stats.openActs.length > 0
+      ? `
       <div class="ai-dashboard-section">
         <div class="ai-dashboard-section-title">🔧 Відкриті акти</div>
         <div class="ai-dashboard-acts-list">
           ${stats.openActs
-            .map(
-              (a) => `
+        .map(
+          (a) => `
             <div class="ai-dashboard-act-row">
               <span class="ai-act-id">№${a.id}</span>
               <span class="ai-act-client">${a.client}</span>
@@ -4672,12 +4673,12 @@ function renderDashboard(
               <span class="ai-act-sum open">відкрито</span>
             </div>
           `,
-            )
-            .join("")}
+        )
+        .join("")}
         </div>
       </div>`
-          : ""
-      }
+      : ""
+    }
     </div>
   `;
 }
@@ -4747,7 +4748,7 @@ async function refreshSidebarChats(
       loadStorageIndicator();
       loadDbIndicator();
     })
-    .catch(() => {});
+    .catch(() => { });
 
   if (chatList.length === 0) {
     listEl.innerHTML = `<div class="ai-sidebar-empty">Поки немає чатів.<br>Надішли перше повідомлення!</div>`;
@@ -5188,12 +5189,12 @@ export async function createAIChatModal(): Promise<void> {
         <!-- Quick prompts -->
         <div class="ai-chat-quick-prompts" id="ai-quick-prompts">
           ${QUICK_PROMPTS.map(
-            (p) => `
+    (p) => `
             <button class="ai-quick-prompt-btn" data-prompt="${p.text}">
               ${p.icon} ${p.text}
             </button>
           `,
-          ).join("")}
+  ).join("")}
         </div>
 
         <!-- Image preview -->

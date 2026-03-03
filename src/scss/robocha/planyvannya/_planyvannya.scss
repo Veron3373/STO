@@ -1432,3 +1432,16 @@ $sidebar-width: 30%;
     opacity: 0.9;
   }
 }
+
+// Виділення при drag-to-create в тижневому виді
+.post-week-selection {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  background: rgba(0, 77, 38, 0.2);
+  border: 2px solid $primary-blue;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 15;
+  display: none;
+}

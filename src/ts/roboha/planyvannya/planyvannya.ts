@@ -3,6 +3,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { PostModal, type PostData } from "./planyvannya_post";
 import { PostArxiv } from "./planyvannya_arxiv"; // Import new class
+import { PlanyvannyaModal, type ReservationData } from "./planyvannya_modal";
 import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 import { redirectToIndex } from "../../utils/gitUtils";
@@ -89,6 +90,14 @@ class SchedulerApp {
   // Статистика зайнятості днів
   private monthOccupancyStats: Map<string, DayOccupancyStats> = new Map();
 
+  // Тижневий вид — модалка та drag-створення
+  private weekModal: PlanyvannyaModal;
+  private weekDragActive: boolean = false;
+  private weekDragStartY: number = 0;
+  private weekDragCurrentY: number = 0;
+  private weekDragCell: HTMLElement | null = null;
+  private weekSelectionEl: HTMLElement | null = null;
+
   constructor() {
     this.today = new Date();
     this.today.setHours(0, 0, 0, 0);
@@ -106,6 +115,7 @@ class SchedulerApp {
 
     // Ініціалізація модалок
     this.postModal = new PostModal();
+    this.weekModal = new PlanyvannyaModal();
 
     // Initialize PostArxiv
     // We expect the container to exist because this runs on DOMContentLoaded
@@ -939,23 +949,8 @@ class SchedulerApp {
               dayCell.appendChild(timeMark);
             }
 
-            // Клік по порожній клітинці — перехід в денний вид на цю дату
-            dayCell.addEventListener("dblclick", (e) => {
-              const target = e.target as HTMLElement;
-              if (target.closest(".post-week-block")) return; // Не перехоплюємо клік по блоку
-              e.preventDefault();
-              this.selectedDate = new Date(day);
-              this.viewMonth = day.getMonth();
-              this.viewYear = day.getFullYear();
-              this.isWeekView = false;
-              const weekBtn = document.getElementById("postWeekBtn");
-              if (weekBtn) {
-                weekBtn.classList.remove("active");
-                weekBtn.textContent = "Тиждень";
-              }
-              this.render();
-              this.reloadArxivData();
-            });
+            // Drag-to-create — виділення мишкою для створення запису
+            this.attachWeekCellDragHandlers(dayCell);
 
             postRow.appendChild(dayCell);
           });
@@ -1166,6 +1161,248 @@ class SchedulerApp {
     });
 
     dayCell.appendChild(block);
+  }
+
+  // ============== ТИЖНЕВИЙ ВИД — СТВОРЕННЯ ЗАПИСУ ЧЕРЕЗ DRAG ==============
+
+  /**
+   * Конвертує хвилини від початку робочого дня в рядок "HH:MM"
+   */
+  private weekMinsToTime(mins: number): string {
+    const h = 8 + Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  }
+
+  /**
+   * Прив'язує обробники drag-to-create до комірки дня тижневого виду
+   */
+  private attachWeekCellDragHandlers(dayCell: HTMLElement): void {
+    dayCell.addEventListener("mousedown", (e) => {
+      // Ігноруємо якщо клікнули на блок
+      const target = e.target as HTMLElement;
+      if (target.closest(".post-week-block")) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
+
+      this.weekDragActive = true;
+      this.weekDragCell = dayCell;
+      const rect = dayCell.getBoundingClientRect();
+      this.weekDragStartY = e.clientY - rect.top;
+      this.weekDragCurrentY = this.weekDragStartY;
+
+      // Створюємо елемент виділення
+      if (!this.weekSelectionEl) {
+        this.weekSelectionEl = document.createElement("div");
+        this.weekSelectionEl.className = "post-week-selection";
+      }
+      this.weekSelectionEl.style.top = `${this.weekDragStartY}px`;
+      this.weekSelectionEl.style.height = "0px";
+      this.weekSelectionEl.style.display = "block";
+      dayCell.appendChild(this.weekSelectionEl);
+
+      document.addEventListener("mousemove", this.onWeekDragMove);
+      document.addEventListener("mouseup", this.onWeekDragUp);
+    });
+  }
+
+  private onWeekDragMove = (e: MouseEvent): void => {
+    if (!this.weekDragActive || !this.weekDragCell || !this.weekSelectionEl)
+      return;
+
+    const rect = this.weekDragCell.getBoundingClientRect();
+    let y = e.clientY - rect.top;
+    if (y < 0) y = 0;
+    if (y > rect.height) y = rect.height;
+    this.weekDragCurrentY = y;
+
+    const top = Math.min(this.weekDragStartY, this.weekDragCurrentY);
+    const height = Math.abs(this.weekDragCurrentY - this.weekDragStartY);
+    this.weekSelectionEl.style.top = `${top}px`;
+    this.weekSelectionEl.style.height = `${height}px`;
+  };
+
+  private onWeekDragUp = (_e: MouseEvent): void => {
+    document.removeEventListener("mousemove", this.onWeekDragMove);
+    document.removeEventListener("mouseup", this.onWeekDragUp);
+
+    if (!this.weekDragActive || !this.weekDragCell) {
+      this.resetWeekSelection();
+      return;
+    }
+
+    this.weekDragActive = false;
+    const cell = this.weekDragCell;
+    const rect = cell.getBoundingClientRect();
+    const cellHeight = rect.height;
+    const totalMinutes = 12 * 60; // 8:00-20:00
+
+    // Мінімальний поріг щоб не спрацьовувало при простому кліку
+    if (Math.abs(this.weekDragCurrentY - this.weekDragStartY) < 5) {
+      this.resetWeekSelection();
+      return;
+    }
+
+    const p1 = Math.min(this.weekDragStartY, this.weekDragCurrentY);
+    const p2 = Math.max(this.weekDragStartY, this.weekDragCurrentY);
+
+    // Прив'язка до 30-хвилинних слотів
+    let startMins = Math.round(((p1 / cellHeight) * totalMinutes) / 30) * 30;
+    let endMins = Math.round(((p2 / cellHeight) * totalMinutes) / 30) * 30;
+    if (startMins < 0) startMins = 0;
+    if (endMins > totalMinutes) endMins = totalMinutes;
+    if (endMins <= startMins) endMins = startMins + 30;
+
+    const startTime = this.weekMinsToTime(startMins);
+    const endTime = this.weekMinsToTime(endMins);
+    const dateStr = cell.dataset.date || "";
+    const slyusarId = parseInt(cell.dataset.slyusarId || "0") || null;
+    const namePost = parseInt(cell.dataset.postId || "0") || null;
+
+    // Відкриваємо модалку
+    this.openWeekModal(dateStr, startTime, endTime, slyusarId, namePost);
+    this.resetWeekSelection();
+  };
+
+  private resetWeekSelection(): void {
+    this.weekDragActive = false;
+    this.weekDragCell = null;
+    if (this.weekSelectionEl) {
+      this.weekSelectionEl.style.display = "none";
+      this.weekSelectionEl.remove();
+    }
+  }
+
+  /**
+   * Відкриває модалку для створення запису у тижневому виді
+   */
+  private openWeekModal(
+    dateStr: string,
+    startTime: string,
+    endTime: string,
+    slyusarId: number | null,
+    namePost: number | null,
+  ): void {
+    const data: Partial<ReservationData> = {
+      slyusarId,
+      namePost,
+    };
+
+    this.weekModal.open(
+      dateStr,
+      startTime,
+      endTime,
+      "",
+      data,
+      (resultData: ReservationData) => this.handleWeekModalSubmit(resultData),
+      async (date, start, end, _excludeId) => {
+        // Перевірка доступності через БД
+        return this.checkWeekAvailability(date, start, end, slyusarId);
+      },
+      [], // busyIntervals — не обчислюємо тут, модалка сама перевірить
+    );
+  }
+
+  /**
+   * Перевірка доступності часу в БД для тижневого виду
+   */
+  private async checkWeekAvailability(
+    date: string,
+    startTime: string,
+    endTime: string,
+    slyusarId: number | null,
+  ): Promise<{ valid: boolean; message?: string }> {
+    if (!slyusarId)
+      return { valid: false, message: "Не обрано пост (слюсаря)" };
+
+    const startIso = `${date}T${startTime}:00`;
+    const endIso = `${date}T${endTime}:00`;
+
+    const { data, error } = await supabase
+      .from("post_arxiv")
+      .select("post_arxiv_id")
+      .eq("slyusar_id", slyusarId)
+      .lt("data_on", endIso)
+      .gt("data_off", startIso);
+
+    if (error) return { valid: false, message: "Помилка перевірки" };
+    if (data && data.length > 0)
+      return { valid: false, message: "Цей час вже зайнятий" };
+    return { valid: true };
+  }
+
+  /**
+   * Обробка submit модалки тижневого виду — зберігаємо в БД та оновлюємо вид
+   */
+  private async handleWeekModalSubmit(data: ReservationData): Promise<void> {
+    try {
+      const startParts = data.startTime.split(":").map(Number);
+      const endParts = data.endTime.split(":").map(Number);
+      const startHour = startParts[0];
+      const startMin = startParts[1];
+      const endHour = endParts[0];
+      const endMin = endParts[1];
+
+      const dataOn = `${data.date}T${startHour.toString().padStart(2, "0")}:${startMin.toString().padStart(2, "0")}:00`;
+      const dataOff = `${data.date}T${endHour.toString().padStart(2, "0")}:${endMin.toString().padStart(2, "0")}:00`;
+
+      // Текстовий формат клієнта/авто
+      const clientText = `${data.clientName || ""}|||${data.clientPhone || ""}`;
+      const carText = `${data.carModel || ""}|||${data.carNumber || ""}`;
+
+      // Отримуємо поточного користувача
+      let xtoZapusav = "";
+      try {
+        const stored = localStorage.getItem("userAuthData");
+        if (stored) {
+          const userData = JSON.parse(stored);
+          xtoZapusav = userData.Name || "";
+        }
+      } catch {}
+
+      const payload: any = {
+        status: data.status || "Запланований",
+        client_id: clientText,
+        cars_id: carText,
+        komentar: data.comment || "",
+        data_on: dataOn,
+        data_off: dataOff,
+        slyusar_id: data.slyusarId,
+        name_post: data.namePost,
+        act_id: data.actId || null,
+        xto_zapusav: xtoZapusav,
+      };
+
+      const { error } = await supabase.from("post_arxiv").insert(payload);
+
+      if (error) {
+        showNotification("Помилка збереження в БД", "error");
+        return;
+      }
+
+      showNotification("Запис створено!", "success");
+      this.weekModal.close();
+
+      // Перезавантажуємо тижневий вид
+      this.renderWeekView();
+      await this.loadWeekArxivData();
+
+      // Оновлюємо індикатори
+      const dateFromPayload = data.date;
+      if (
+        typeof (window as any).refreshOccupancyIndicatorsForDates === "function"
+      ) {
+        setTimeout(
+          () =>
+            (window as any).refreshOccupancyIndicatorsForDates([
+              dateFromPayload,
+            ]),
+          100,
+        );
+      }
+    } catch (err) {
+      showNotification("Помилка при створенні запису", "error");
+    }
   }
 
   private changeDate(delta: number): void {

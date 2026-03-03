@@ -1204,34 +1204,13 @@ class SchedulerApp {
     block.style.backgroundColor =
       statusColors[status] || statusColors["Запланований"];
 
-    // Обробляємо «минулий час» через overlay-підхід (єдина система)
+    // Обробляємо «минулий час» — клас для повністю минулих
+    // Overlay додаємо ПІСЛЯ block.innerHTML (щоб не стерлося)
     const now = new Date();
-    const nowMins = (now.getHours() - 8) * 60 + now.getMinutes(); // від 8:00
 
     if (dataOff < now) {
-      // ПОВНІСТЮ минулий блок — лавандовий overlay на весь блок + клас для hover
       block.classList.add("week-block-past");
-      const pastOverlay = document.createElement("div");
-      pastOverlay.className = "week-block-past-overlay";
-      pastOverlay.style.width = "100%";
-      pastOverlay.style.borderRadius = "4px"; // всі кути округлені
-      block.appendChild(pastOverlay);
-    } else if (dataOn < now && dataOff > now) {
-      // ЧАСТКОВО минулий — overlay лише на ліву частину (до поточної хвилини)
-      const pastFraction =
-        Math.min(
-          Math.max(((nowMins - startMins) / (endMins - startMins)) * 100, 0),
-          100,
-        );
-      if (pastFraction > 0) {
-        const pastOverlay = document.createElement("div");
-        pastOverlay.className = "week-block-past-overlay";
-        pastOverlay.style.width = `${pastFraction}%`;
-        pastOverlay.style.borderRadius = "4px 0 0 4px"; // лише ліві кути
-        block.appendChild(pastOverlay);
-      }
     }
-
 
     // Data-атрибути
     block.dataset.postArxivId = record.post_arxiv_id?.toString() || "";
@@ -1268,6 +1247,32 @@ class SchedulerApp {
       blockHTML += `<div class="post-week-block-line">💬 ${commentText}</div>`;
     }
     block.innerHTML = blockHTML;
+
+    // ✅ Overlay додається ПІСЛЯ innerHTML (щоб не було стерто)
+    // nowMins у UTC щоб відповідати startMins/endMins які теж UTC
+    const nowUTCMins = (now.getUTCHours() - 8) * 60 + now.getUTCMinutes();
+
+    if (dataOff < now) {
+      // ПОВНІСТЮ минулий — лавандовий overlay на 100%
+      const pastOverlay = document.createElement("div");
+      pastOverlay.className = "week-block-past-overlay";
+      pastOverlay.style.width = "100%";
+      pastOverlay.style.borderRadius = "4px";
+      block.appendChild(pastOverlay);
+    } else if (dataOn < now && dataOff > now) {
+      // ЧАСТКОВО минулий — overlay до поточної хвилини (UTC-координати)
+      const pastFraction = Math.min(
+        Math.max(((nowUTCMins - startMins) / (endMins - startMins)) * 100, 0),
+        100,
+      );
+      if (pastFraction > 0) {
+        const pastOverlay = document.createElement("div");
+        pastOverlay.className = "week-block-past-overlay";
+        pastOverlay.style.width = `${pastFraction}%`;
+        pastOverlay.style.borderRadius = "4px 0 0 4px";
+        block.appendChild(pastOverlay);
+      }
+    }
 
     // Resize handles (лівий і правий)
     const leftHandle = document.createElement("div");

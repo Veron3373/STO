@@ -1329,9 +1329,15 @@ class SchedulerApp {
 
     const tooltip = document.createElement("div");
     tooltip.className = "post-week-tooltip";
-    // Порядок: ПІБ → Авто → Телефон → час/тривалість → статус → решта
-    let tooltipHTML = `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">👤</span> <strong>${clientName || "—"}</strong></div>`;
-    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🚗</span> ${carModel || "—"} <span class="pw-tip-number">${carNumber || ""}</span></div>`;
+    // Порядок: Дата → ПІБ → Авто → Телефон → час/тривалість → статус → решта
+
+    // Форматуємо дату запису (з dateStr: "2025-03-04")
+    const [dy, dm, dd] = dateStr.split('-');
+    const dateFormatted = `${dd}.${dm}.${dy}`;
+
+    let tooltipHTML = `<div class="post-week-tooltip-row pw-tip-date-row"><span class="pw-tip-emoji">📅</span> <span class="pw-tip-date">${dateFormatted}</span></div>`;
+    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">👤</span> <strong class="pw-tip-client">${clientName || "—"}</strong></div>`;
+    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">🚗</span> <span class="pw-tip-car">${carModel || "—"} <span class="pw-tip-number">${carNumber || ""}</span></span></div>`;
     if (clientPhone) {
       tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📞</span> <span class="pw-tip-phone">${clientPhone}</span></div>`;
     }
@@ -1341,15 +1347,15 @@ class SchedulerApp {
     const durM = durationMins % 60;
     const durStr = durM > 0 ? `${durH}:${String(durM).padStart(2, '0')}` : `${durH}:00`;
     tooltipHTML += `<div class="post-week-tooltip-row pw-tip-duration"><span class="pw-tip-emoji">🕐</span> <span class="pw-tip-time-range">${startH}:${startM} — ${endH}:${endM} / ${durStr}</span></div>`;
-    tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">${emoji}</span> ${status}</div>`;
+    tooltipHTML += `<div class="post-week-tooltip-row pw-tip-status-row" data-status="${status}"><span class="pw-tip-emoji">${emoji}</span> <span class="pw-tip-status">${status}</span></div>`;
     if (comment) {
-      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">💬</span> ${comment}</div>`;
+      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">💬</span> <span class="pw-tip-comment">${comment}</span></div>`;
     }
     if (actId) {
-      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📄</span> Акт №${actId}</div>`;
+      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">📄</span> <span class="pw-tip-act">Акт №${actId}</span></div>`;
     }
     if (xtoZapusav) {
-      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">✍️</span> ${xtoZapusav}</div>`;
+      tooltipHTML += `<div class="post-week-tooltip-row"><span class="pw-tip-emoji">✍️</span> <span class="pw-tip-author">${xtoZapusav}</span></div>`;
     }
     tooltip.innerHTML = tooltipHTML;
     block.appendChild(tooltip);

@@ -1746,6 +1746,80 @@ $sidebar-width: 30%;
       letter-spacing: 0.3px;
     }
   }
+
+  // ── Дата запису ─────────────────────────────────────────
+  .pw-tip-date-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 4px !important;
+    margin-bottom: 2px;
+  }
+
+  .pw-tip-date {
+    color: #5b9bd5; // темно-синій
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  // ── ПІБ + Авто — однаковий cyan ──────────────────────────
+  .pw-tip-client {
+    color: #67e8f9 !important; // cyan-300
+    font-size: 13px;
+  }
+
+  .pw-tip-car {
+    color: #67e8f9; // cyan-300 (той самий)
+    font-weight: 500;
+  }
+
+  // ── Статус — кольори як у блоках планування ──────────────
+  .pw-tip-status-row {
+    &[data-status="Запланований"] .pw-tip-status {
+      color: #fef08a; // світло-жовтий (як #e6a700 в блоці)
+      font-weight: 600;
+    }
+
+    &[data-status="В роботі"] .pw-tip-status {
+      color: #86efac; // світло-зелений (як #2e7d32)
+      font-weight: 600;
+    }
+
+    &[data-status="Відремонтований"] .pw-tip-status {
+      color: #d1d5db; // світло-сірий (як #757575)
+      font-weight: 600;
+    }
+
+    &[data-status="Не приїхав"] .pw-tip-status {
+      color: #fca5a5; // світло-червоний (як #e53935)
+      font-weight: 600;
+    }
+
+    &[data-status="Оплачено"] .pw-tip-status {
+      color: #6ee7b7; // смарагдовий
+      font-weight: 600;
+    }
+  }
+
+  // ── Коментар — білий ─────────────────────────────────────
+  .pw-tip-comment {
+    color: #ffffff;
+    font-style: italic;
+    opacity: 0.9;
+  }
+
+  // ── Акт — тьмяний сірий з підкресленням ──────────────────
+  .pw-tip-act {
+    color: #94a3b8;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+  }
+
+  // ── Хто записав — персиковий / amber ─────────────────────
+  .pw-tip-author {
+    color: #fdba74; // orange-300 — тепло, але ненав'язливо
+    font-weight: 500;
+    font-size: 11.5px;
+  }
 }
 
 @keyframes weekTooltipFadeIn {

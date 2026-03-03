@@ -2034,15 +2034,13 @@ class SchedulerApp {
 
   /**
    * Оновлює кольорування годин у заголовку для конкретної дати.
-   * Проходить усі блоки-записи для цієї дати (незалежно від слюсаря)
-   * і підсвічує лише ті години, що перетинаються із записами.
-   * Також виводить дрібним текстом початок/кінець часу запису в першому/останньому зафарбованому осередку.
+   * Підсвічує лише ті комірки-години, що перетинаються із записами.
+   * Числа годин завжди залишаються! Лише додається маленький <sup> з хвилинами
+   * для першої (початок запису) та останньої (кінець запису) зайнятої комірки.
    */
   private updateHeaderHoursForDate(dateStr: string): void {
     if (!this.calendarGrid) return;
 
-    // Знаходимо колонку заголовку для цієї дати
-    // Колонки у шапці є .post-week-day-col-header, їх порядок відповідає порядку weekDays
     const weekDays = this.getWeekDays(this.selectedDate);
     const dayIndex = weekDays.findIndex((d) => {
       const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -2057,13 +2055,11 @@ class SchedulerApp {
     const hoursRow = dayColHeader.querySelector('.post-week-hours-row');
     if (!hoursRow) return;
 
-    // Збираємо всі блоки для цієї дати
+    // Збираємо зайняті інтервали
     const allTracks = this.calendarGrid.querySelectorAll(`.post-week-day-track[data-date="${dateStr}"]`);
-    // Масив зайнятих хвилинних інтервалів [startMins, endMins]
     const occupiedRanges: Array<{ start: number; end: number }> = [];
     allTracks.forEach((track) => {
-      const blocks = track.querySelectorAll('.post-week-block');
-      blocks.forEach((blk) => {
+      track.querySelectorAll('.post-week-block').forEach((blk) => {
         const bEl = blk as HTMLElement;
         const s = parseInt(bEl.dataset.start || '0');
         const e = parseInt(bEl.dataset.end || '0');
@@ -2071,74 +2067,59 @@ class SchedulerApp {
       });
     });
 
-    // Годинні комірки: 8..19 (12 штук)
     const hourCells = Array.from(hoursRow.querySelectorAll('.post-week-hour-cell')) as HTMLElement[];
 
     hourCells.forEach((cell, i) => {
-      const h = 8 + i; // година
-      const cellStartMins = (h - 8) * 60;     // хвилини від 08:00 до початку комірки
-      const cellEndMins = cellStartMins + 60; // до кінця комірки
+      const h = 8 + i;
+      const cellStartMins = (h - 8) * 60;
+      const cellEndMins = cellStartMins + 60;
 
-      // Чи перетинається будь-який запис з цією годиною?
+      // Скидаємо попередній стан: прибираємо клас і sup-мітку,
+      // але ЧИСЛО ЗАВЖДИ ЗАЛИШАЄМО
+      cell.classList.remove('hour-occupied');
+      cell.querySelector('.hour-min-sup')?.remove();
+      // Повертаємо текст якщо він чомусь порожній
+      if (!cell.textContent?.trim()) cell.textContent = String(h);
+
       const overlapping = occupiedRanges.filter(
         (r) => r.start < cellEndMins && r.end > cellStartMins
       );
-      const isOccupied = overlapping.length > 0;
+      if (overlapping.length === 0) return;
 
-      // Прибираємо попередні окупаційні мітки
-      cell.classList.remove('hour-occupied');
-      const existing = cell.querySelector('.hour-time-label');
-      if (existing) existing.remove();
+      cell.classList.add('hour-occupied');
 
-      if (isOccupied) {
-        cell.classList.add('hour-occupied');
+      // Запис, що ПОЧИНАЄТЬСЯ в цій годині
+      const starting = overlapping
+        .filter((r) => r.start >= cellStartMins && r.start < cellEndMins)
+        .sort((a, b) => a.start - b.start);
 
-        // Визначаємо діапазон часу для мітки
-        // Починаємо з першого запису що стартує саме в цьому стовпці
-        // (або найраніший якщо кілька)
-        const firstStartingHere = overlapping
-          .filter((r) => r.start >= cellStartMins && r.start < cellEndMins)
-          .sort((a, b) => a.start - b.start);
+      // Запис, що ЗАКІНЧУЄТЬСЯ в цій годині
+      const ending = overlapping
+        .filter((r) => r.end > cellStartMins && r.end <= cellEndMins)
+        .sort((a, b) => b.end - a.end);
 
-        const lastEndingHere = overlapping
-          .filter((r) => r.end > cellStartMins && r.end <= cellEndMins)
-          .sort((a, b) => b.end - a.end);
-
-        if (firstStartingHere.length > 0) {
-          // Показуємо час початку (напр. 9³⁰ або просто 9:30)
-          const mins = firstStartingHere[0].start % 60;
-          const label = document.createElement('span');
-          label.className = 'hour-time-label hour-time-start';
-          if (mins > 0) {
-            label.innerHTML = `${h}<sup>${String(mins).padStart(2, '0')}</sup>`;
-          } else {
-            label.textContent = String(h);
-          }
-          // Видаляємо стандартний текст і ставимо мітку
-          cell.textContent = '';
-          cell.appendChild(label);
-        } else if (lastEndingHere.length > 0) {
-          // Показуємо час кінця
-          const endM = lastEndingHere[0].end;
-          const endHour = 8 + Math.floor(endM / 60);
-          const endMin = endM % 60;
-          const label = document.createElement('span');
-          label.className = 'hour-time-label hour-time-end';
-          if (endMin > 0) {
-            label.innerHTML = `${endHour}<sup>${String(endMin).padStart(2, '0')}</sup>`;
-          } else {
-            label.textContent = String(endHour);
-          }
-          cell.textContent = '';
-          cell.appendChild(label);
-        } else {
-          // Середина — прибираємо звичайний номер
-          cell.textContent = '';
-        }
-      } else {
-        // Повертаємо стандартний текст
+      if (starting.length > 0) {
+        const mins = starting[0].start % 60;
         cell.textContent = String(h);
+        if (mins > 0) {
+          const sup = document.createElement('sup');
+          sup.className = 'hour-min-sup';
+          sup.textContent = String(mins).padStart(2, '0');
+          cell.appendChild(sup);
+        }
+      } else if (ending.length > 0) {
+        const endTotalMins = ending[0].end;
+        const endHour = 8 + Math.floor(endTotalMins / 60);
+        const endMin = endTotalMins % 60;
+        cell.textContent = String(endHour);
+        if (endMin > 0) {
+          const sup = document.createElement('sup');
+          sup.className = 'hour-min-sup';
+          sup.textContent = String(endMin).padStart(2, '0');
+          cell.appendChild(sup);
+        }
       }
+      // Середні комірки — просто число, клас hour-occupied вже є
     });
   }
 

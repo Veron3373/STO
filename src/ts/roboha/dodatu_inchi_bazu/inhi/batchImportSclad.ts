@@ -612,15 +612,24 @@ async function updateActWithDetails(
       );
     }
 
-    // Крок 2: Якщо не знайдено за sclad_id — шукаємо за каталожним номером
+    // Крок 2: Якщо не знайдено за sclad_id — шукаємо за каталожним номером + назвою деталі
+    // Порівнюємо ОБИДВА поля, щоб різні деталі з однаковим каталогом (напр. "1") не перезаписували одна одну
     if (existingIndex === -1 && detailData["Каталог"]) {
       const newCatNo = String(detailData["Каталог"]).trim().toLowerCase();
+      const newDetailName = String(detailData["Деталь"] || "")
+        .trim()
+        .toLowerCase();
       if (newCatNo && newCatNo !== "?") {
         existingIndex = actJsonData["Деталі"].findIndex((d: any) => {
           const existingCatNo = String(d["Каталог"] || "")
             .trim()
             .toLowerCase();
-          return existingCatNo === newCatNo;
+          const existingDetailName = String(d["Деталь"] || "")
+            .trim()
+            .toLowerCase();
+          return (
+            existingCatNo === newCatNo && existingDetailName === newDetailName
+          );
         });
       }
     }

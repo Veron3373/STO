@@ -13,6 +13,7 @@ export interface AiChat {
   title: string;
   created_at: string;
   updated_at: string;
+  favorites: boolean | null;
 }
 
 export interface AiMessage {
@@ -71,6 +72,22 @@ export async function renameChat(
     .eq("chat_id", chatId);
   if (error) {
     console.error("renameChat error:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Перемкнути favorites для чату */
+export async function toggleFavorite(
+  chatId: number,
+  value: boolean,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("ai_chats")
+    .update({ favorites: value })
+    .eq("chat_id", chatId);
+  if (error) {
+    console.error("toggleFavorite error:", error.message);
     return false;
   }
   return true;

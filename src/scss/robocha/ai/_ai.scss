@@ -961,6 +961,7 @@
   transition: all 0.2s;
   margin-bottom: 4px;
   border: 1px solid transparent;
+  position: relative;
 
   &:hover {
     background: rgba(102, 126, 234, 0.08);
@@ -970,6 +971,66 @@
   &--active {
     background: rgba(102, 126, 234, 0.12);
     border-color: rgba(102, 126, 234, 0.3);
+  }
+
+  // ── Обрані чати — легкий золотистий акцент ──
+  &--fav {
+    border-color: rgba(255, 193, 7, 0.25);
+    background: rgba(255, 193, 7, 0.04);
+
+    &:hover {
+      background: rgba(255, 193, 7, 0.1);
+      border-color: rgba(255, 193, 7, 0.35);
+    }
+  }
+}
+
+// ── Кнопка "Обране" (bookmark) ──
+.ai-sidebar-fav {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  color: #aab;
+  border-radius: 4px;
+
+  &:hover {
+    transform: scale(1.2);
+    color: #f4b400;
+  }
+
+  // Видимий при ховері на елемент
+  .ai-sidebar-chat-item:hover & {
+    opacity: 1;
+  }
+
+  // Завжди видимий коли обраний
+  .ai-sidebar-chat-item--fav & {
+    opacity: 1;
+    color: #f4b400;
+  }
+}
+
+// ── SVG іконка bookmark ──
+.ai-fav-icon {
+  width: 16px;
+  height: 16px;
+  transition: all 0.2s;
+  filter: drop-shadow(0 0 0 transparent);
+
+  &--filled {
+    filter: drop-shadow(0 0 3px rgba(244, 180, 0, 0.4));
   }
 }
 

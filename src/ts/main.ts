@@ -1,4 +1,3 @@
-
 import "./roboha/tablucya/tablucya";
 import "./roboha/tablucya/perevirka_avtoruzacii";
 import "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
@@ -30,10 +29,18 @@ import { initAIChatButton } from "./roboha/ai/aiChat";
 
 // Запускаємо після того як система авторизується і меню стає видимим
 document.addEventListener("aiChatReady", () => {
-    initAIChatButton();
+  initAIChatButton();
 });
 
 // Fallback: якщо подія не спрацювала — спробуємо через 2 секунди
 setTimeout(() => {
-    initAIChatButton();
+  initAIChatButton();
 }, 2000);
+
+// 🔔 Перевірка нагадувань Атласа (polling кожні 60 сек)
+import { initReminderChecker } from "./roboha/ai/aiReminderChecker";
+
+// Запускаємо після повної ініціалізації всіх модулів
+setTimeout(() => {
+  initReminderChecker();
+}, 4000);

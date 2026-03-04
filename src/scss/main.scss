@@ -21,4 +21,6 @@
 @use "./robocha/planyvannya/planyvannya";
 @use "./robocha/planyvannya/planyvannya_post";
 @use "./robocha/ai/ai";
+@use "./robocha/ai/planner";
+@use "./robocha/ai/reminder_toast";
 @use "./robocha/ai/voice_input";

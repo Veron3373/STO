@@ -27,10 +27,20 @@ export const AI_ALLOWED_TABLES = [
   "settings",
   "act_changes_notifications",
   "slusar_complete_notifications",
+  "atlas_reminders",
+  "atlas_reminder_logs",
+  "atlas_telegram_users",
 ] as const;
 
 /** Дозволені RPC-функції для виклику через AI */
-export const AI_ALLOWED_RPC = ["get_db_size"] as const;
+export const AI_ALLOWED_RPC = [
+  "get_db_size",
+  "get_due_reminders",
+  "get_my_reminders",
+  "trigger_reminder",
+  "execute_condition_query",
+  "get_telegram_link_status",
+] as const;
 
 export type AllowedRPC = (typeof AI_ALLOWED_RPC)[number];
 

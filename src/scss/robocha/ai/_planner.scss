@@ -1,0 +1,621 @@
+// ═══════════════════════════════════════
+// 📋 Планувальник Атласа — стилі
+// ═══════════════════════════════════════
+
+// ── Основний контейнер ──
+.ai-planner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  gap: 12px;
+  background: #f8f9fb;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d0d0e0;
+    border-radius: 2px;
+  }
+}
+
+// ── Заголовок панелі ──
+.ai-planner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ai-planner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+}
+
+.ai-planner-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// ── Фільтри ──
+.ai-planner-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-planner-filter {
+  padding: 5px 12px;
+  border: 1px solid #e0e0e8;
+  border-radius: 20px;
+  background: white;
+  font-size: 11px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: #667eea;
+    color: #667eea;
+  }
+
+  &--active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: transparent;
+    font-weight: 600;
+  }
+}
+
+// ── Список нагадувань ──
+.ai-planner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// ── Порожній стан ──
+.ai-planner-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+
+  &-icon {
+    font-size: 40px;
+    opacity: 0.5;
+  }
+
+  &-text {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &-hint {
+    font-size: 11px;
+    color: #bbb;
+  }
+}
+
+// ── Картка нагадування ──
+.ai-planner-card {
+  background: white;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #667eea;
+  transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  // Пріоритети
+  &--low {
+    border-left-color: #94a3b8;
+  }
+
+  &--normal {
+    border-left-color: #667eea;
+  }
+
+  &--high {
+    border-left-color: #f59e0b;
+  }
+
+  &--urgent {
+    border-left-color: #ef4444;
+    animation: urgentPulse 2s infinite;
+  }
+
+  // Статуси
+  &--paused {
+    opacity: 0.6;
+    border-left-style: dashed;
+  }
+
+  &--completed {
+    opacity: 0.5;
+    border-left-color: #4ade80;
+
+    .ai-planner-card-title {
+      text-decoration: line-through;
+    }
+  }
+}
+
+@keyframes urgentPulse {
+  0%,
+  100% {
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(239, 68, 68, 0.25);
+  }
+}
+
+.ai-planner-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ai-planner-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.ai-planner-card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+
+  .ai-planner-card:hover & {
+    opacity: 1;
+  }
+}
+
+.ai-planner-card-action {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f0f0f8;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #e0e0f0;
+    transform: scale(1.1);
+  }
+
+  &--delete:hover {
+    background: #fee2e2;
+  }
+
+  &--pause:hover {
+    background: #fef3c7;
+  }
+}
+
+// Мета-інфо під заголовком
+.ai-planner-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.ai-planner-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+  background: #f0f0f8;
+  color: #666;
+
+  &--type-once {
+    background: #eff6ff;
+    color: #3b82f6;
+  }
+
+  &--type-recurring {
+    background: #f0fdf4;
+    color: #16a34a;
+  }
+
+  &--type-conditional {
+    background: #fefce8;
+    color: #ca8a04;
+  }
+
+  &--channel-app {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
+
+  &--channel-telegram {
+    background: #ecfeff;
+    color: #0891b2;
+  }
+
+  &--channel-both {
+    background: #fdf2f8;
+    color: #db2777;
+  }
+
+  &--priority-urgent {
+    background: #fef2f2;
+    color: #ef4444;
+    font-weight: 700;
+  }
+
+  &--priority-high {
+    background: #fffbeb;
+    color: #f59e0b;
+  }
+}
+
+.ai-planner-card-time {
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-planner-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f0f0f8;
+}
+
+.ai-planner-card-recipients {
+  font-size: 10px;
+  color: #999;
+}
+
+.ai-planner-card-trigger-count {
+  font-size: 10px;
+  color: #bbb;
+}
+
+// ═══════════════════════════════════════
+// Модалка створення/редагування
+// ═══════════════════════════════════════
+
+.ai-planner-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.ai-planner-modal {
+  background: white;
+  border-radius: 16px;
+  width: 92%;
+  max-height: 90%;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  animation: plannerModalIn 0.25s ease-out;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d0d0e0;
+    border-radius: 2px;
+  }
+}
+
+@keyframes plannerModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ai-planner-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f8;
+}
+
+.ai-planner-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.ai-planner-modal-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f0f0f8;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #e0e0f0;
+  }
+}
+
+.ai-planner-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// ── Поля форми ──
+.ai-planner-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ai-planner-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ai-planner-input,
+.ai-planner-textarea,
+.ai-planner-select {
+  padding: 9px 12px;
+  border: 1px solid #e0e0e8;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #333;
+  background: #fafbfc;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  &::placeholder {
+    color: #bbb;
+  }
+}
+
+.ai-planner-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.ai-planner-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23999'%3E%3Cpath d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+// ── Група кнопок вибору (тип, пріоритет, канал) ──
+.ai-planner-btn-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-planner-btn-option {
+  padding: 6px 12px;
+  border: 1px solid #e0e0e8;
+  border-radius: 10px;
+  background: white;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: #667eea;
+    color: #667eea;
+  }
+
+  &--active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: transparent;
+    font-weight: 600;
+  }
+}
+
+// ── Рядок з двома полями ──
+.ai-planner-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+// ── Кнопки дій модалки ──
+.ai-planner-modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f8;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ai-planner-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &--save {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      transform: translateY(-1px);
+    }
+  }
+
+  &--cancel {
+    background: #f0f0f8;
+    color: #666;
+
+    &:hover {
+      background: #e0e0f0;
+    }
+  }
+
+  &--delete {
+    background: #fef2f2;
+    color: #ef4444;
+    margin-right: auto;
+
+    &:hover {
+      background: #fee2e2;
+    }
+  }
+}
+
+// ── Спіннер завантаження ──
+.ai-planner-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex: 1;
+  color: #888;
+  font-size: 14px;
+  padding: 30px;
+}
+
+// ── Сповіщення (toast) ──
+.ai-planner-toast {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  z-index: 10001;
+  animation:
+    toastIn 0.3s ease-out,
+    toastOut 0.3s ease-in 2.7s forwards;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+
+  &--success {
+    background: linear-gradient(135deg, #4ade80, #16a34a);
+  }
+
+  &--error {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+  }
+
+  &--info {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}

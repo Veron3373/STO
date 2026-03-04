@@ -21,6 +21,11 @@ import { executeAnalytics, getAnalyticsToolDeclaration } from "./aiAnalytics";
 
 import { startChatVoiceInput } from "./voiceInput";
 import {
+  initPlannerTab,
+  getReminderToolDeclaration,
+  executeCreateReminder,
+} from "./aiPlanner";
+import {
   loadChats,
   createChat,
   renameChat,
@@ -101,6 +106,8 @@ function getToolDisplayName(toolName: string): string {
       return "⚙️ RPC функція...";
     case "get_analytics":
       return "📈 Аналітика...";
+    case "create_reminder":
+      return "📋 Створення нагадування...";
     default:
       return `⚙️ ${toolName}...`;
   }
@@ -2699,6 +2706,11 @@ async function handleFunctionCall(
         });
       }
 
+      case "create_reminder": {
+        const result = await executeCreateReminder(args);
+        return result;
+      }
+
       default:
         return JSON.stringify({
           error: `Невідомий інструмент: ${functionName}`,
@@ -3095,11 +3107,22 @@ async function callGemini(
    ▸ financial_report — фінзвіт з трендами (порівняння з минулим періодом)
    ▸ recommend_slyusar — рекомендація слюсаря для типу робіт
 
+6️⃣ create_reminder — Створити нагадування/заплановану задачу
+   ▸ Використовуй коли: "нагадай", "нагадуй", "запланувати", "не забудь"
+   ▸ once — одноразове (trigger_at = дата/час)
+   ▸ recurring — повторюване (schedule: daily/weekly/monthly/interval)
+   ▸ conditional — умовне (condition_query = SQL, спрацьовує якщо є рядки)
+   ▸ recipients: self(мені), all(всім), mechanics(слюсарям)
+   ▸ Якщо "в середу" → обчисли найближчу середу як ISO дату
+   ▸ Якщо "щодня о 9" → recurring, schedule_type=daily, schedule_time=09:00
+   ▸ Якщо "нагадуй слюсарям про акти > 3 тижнів" → conditional + recipients=mechanics + condition_query=SELECT...
+
 📌 КОЛИ ВИКОРИСТОВУВАТИ:
 ▸ Є в контексті → НЕ викликай query_database, використай контекст
 ▸ Потрібні конкретні дані → query_database
 ▸ Потрібен інтернет → search_internet
 ▸ "Звіт", "VIP", "рейтинг" → get_analytics
+▸ "Нагадай", "нагадуй", "запланувати" → create_reminder
 ▸ Можеш робити послідовні запити (спочатку client_id, потім акти)
 `;
 
@@ -3482,6 +3505,7 @@ ${functionCallingBlock}`;
           getSearchInternetToolDeclaration(),
           getRpcToolDeclaration(),
           getAnalyticsToolDeclaration(),
+          getReminderToolDeclaration(),
         ];
 
     // Спробувати всі ключі по черзі при 429
@@ -5209,6 +5233,7 @@ export async function createAIChatModal(): Promise<void> {
       <!-- Tabs -->
       <div class="ai-chat-tabs">
         <button class="ai-chat-tab ai-chat-tab--active" id="tab-chat" data-tab="chat">💬 Чат</button>
+        <button class="ai-chat-tab" id="tab-planner" data-tab="planner">📋 Планувальник</button>
         <button class="ai-chat-tab" id="tab-dashboard" data-tab="dashboard">📊 Дашборд</button>
       </div>
 
@@ -5281,6 +5306,9 @@ export async function createAIChatModal(): Promise<void> {
         </div>
       </div>
 
+      <!-- Planner panel -->
+      <div class="ai-chat-panel hidden" id="ai-panel-planner"></div>
+
       <!-- Dashboard panel -->
       <div class="ai-chat-panel hidden" id="ai-panel-dashboard">
         <div class="ai-dashboard-loading" id="ai-dashboard-loading">
@@ -5334,10 +5362,12 @@ function initAIChatHandlers(modal: HTMLElement): void {
     "#ai-quick-prompts",
   ) as HTMLElement;
   const tabChat = modal.querySelector("#tab-chat") as HTMLButtonElement;
+  const tabPlanner = modal.querySelector("#tab-planner") as HTMLButtonElement;
   const tabDashboard = modal.querySelector(
     "#tab-dashboard",
   ) as HTMLButtonElement;
   const panelChat = modal.querySelector("#ai-panel-chat") as HTMLElement;
+  const panelPlanner = modal.querySelector("#ai-panel-planner") as HTMLElement;
   const panelDashboard = modal.querySelector(
     "#ai-panel-dashboard",
   ) as HTMLElement;
@@ -5347,6 +5377,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
   const dashboardContent = modal.querySelector(
     "#ai-dashboard-content",
   ) as HTMLElement;
+  let plannerLoaded = false;
 
   // ── Закрити ──
   closeBtn?.addEventListener("click", () => {
@@ -5521,22 +5552,35 @@ function initAIChatHandlers(modal: HTMLElement): void {
   }
 
   // ── Таби ──
-  function switchTab(activeTab: "chat" | "dashboard") {
+  function switchTab(activeTab: "chat" | "planner" | "dashboard") {
+    // Знімаємо active з усіх
+    tabChat.classList.remove("ai-chat-tab--active");
+    tabPlanner?.classList.remove("ai-chat-tab--active");
+    tabDashboard.classList.remove("ai-chat-tab--active");
+    // Ховаємо всі панелі
+    panelChat.classList.add("hidden");
+    panelPlanner?.classList.add("hidden");
+    panelDashboard.classList.add("hidden");
+
     if (activeTab === "chat") {
       tabChat.classList.add("ai-chat-tab--active");
-      tabDashboard.classList.remove("ai-chat-tab--active");
       panelChat.classList.remove("hidden");
-      panelDashboard.classList.add("hidden");
+    } else if (activeTab === "planner") {
+      tabPlanner?.classList.add("ai-chat-tab--active");
+      panelPlanner?.classList.remove("hidden");
+      if (!plannerLoaded && panelPlanner) {
+        plannerLoaded = true;
+        initPlannerTab(panelPlanner);
+      }
     } else {
       tabDashboard.classList.add("ai-chat-tab--active");
-      tabChat.classList.remove("ai-chat-tab--active");
       panelDashboard.classList.remove("hidden");
-      panelChat.classList.add("hidden");
       loadDashboardData();
     }
   }
 
   tabChat?.addEventListener("click", () => switchTab("chat"));
+  tabPlanner?.addEventListener("click", () => switchTab("planner"));
   tabDashboard?.addEventListener("click", () => switchTab("dashboard"));
   dashboardBtn?.addEventListener("click", () => switchTab("dashboard"));
 

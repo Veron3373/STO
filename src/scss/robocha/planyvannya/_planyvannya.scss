@@ -383,6 +383,17 @@ $sidebar-width: 30%;
   display: none;
 }
 
+// Тижневий вид: група секції та контент
+.post-week-section-group {
+  // Wrapper для секції в тижневому виді
+}
+
+.post-week-section-content {
+  &.hidden {
+    display: none;
+  }
+}
+
 // РЯДОК
 .post-unified-row {
   display: flex;
@@ -536,7 +547,7 @@ $sidebar-width: 30%;
     display: grid;
   }
 
-  // Draggable елементи в режимі редагування
+  // Draggable елементи в режимі редагування (денний вид)
   .post-section-header {
     cursor: grab;
     user-select: none;
@@ -551,6 +562,34 @@ $sidebar-width: 30%;
   }
 
   .post-row-label {
+    cursor: grab;
+    user-select: none;
+
+    &:hover {
+      background: #f0fdf4 !important;
+      border-right-color: $primary-blue !important;
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  // Draggable елементи в режимі редагування (тижневий вид)
+  .post-week-section-header {
+    cursor: grab;
+    user-select: none;
+
+    &:hover {
+      background: #c9ddd7;
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  .post-week-row-label {
     cursor: grab;
     user-select: none;
 
@@ -590,7 +629,9 @@ $sidebar-width: 30%;
 
 // DRAGGING STATE
 .post-section-group.dragging,
-.post-unified-row.dragging {
+.post-unified-row.dragging,
+.post-week-section-group.dragging,
+.post-week-row.dragging {
   opacity: 0.95;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   background: #ffebee; // Світло-червоний фон
@@ -611,12 +652,37 @@ $sidebar-width: 30%;
   }
 }
 
+.post-week-section-group.dragging {
+  .post-week-section-header {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+  }
+}
+
 .post-unified-row.dragging {
   transform: scaleX(0.98); // Зменшення по ширині, висота незмінна
   background: #ffcdd2; // Яскравіший червоний для рядка
 
   .post-row-label {
     background: #ef5350 !important; // Червоний фон для лейбла
+    color: $white !important;
+    border-right-color: #c62828 !important;
+
+    .post-post-title,
+    .post-post-subtitle {
+      color: $white !important;
+    }
+  }
+}
+
+.post-week-row.dragging {
+  transform: scaleX(0.98);
+  background: #ffcdd2;
+
+  .post-week-row-label {
+    background: #ef5350 !important;
     color: $white !important;
     border-right-color: #c62828 !important;
 
@@ -1379,6 +1445,45 @@ $sidebar-width: 30%;
   top: 0;
   z-index: 50;
 
+  .post-week-section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .post-week-section-header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .post-delete-btn {
+    background: $red;
+    border: none;
+    color: $white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: $red-hover;
+      transform: scale(1.1);
+    }
+  }
+
   .post-toggle-btn {
     background: none;
     border: none;
@@ -1417,6 +1522,18 @@ $sidebar-width: 30%;
   background: #f8f9fa;
   z-index: 10;
 
+  .post-week-label-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .post-week-label-text {
+    flex: 1;
+    min-width: 0;
+  }
+
   .post-post-title {
     font-weight: 500;
     font-size: 12px;
@@ -1433,6 +1550,31 @@ $sidebar-width: 30%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .post-post-delete-btn {
+    background: $red;
+    border: none;
+    color: $white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: $red-hover;
+      transform: scale(1.1);
+    }
   }
 }
 

@@ -638,8 +638,20 @@ class SchedulerApp {
   private async restoreInitialState(): Promise<void> {
     // Перезавантажуємо дані з БД для відновлення початкового стану
     await this.loadDataFromDatabase();
-    this.renderSections();
+    this.renderCurrentView();
     this.closeEditMode();
+  }
+
+  /**
+   * Перемальовує поточний вид (денний або тижневий)
+   */
+  private renderCurrentView(): void {
+    if (this.isWeekView) {
+      this.renderWeekView();
+      this.loadWeekArxivData();
+    } else {
+      this.renderSections();
+    }
   }
 
   private closeEditMode(): void {
@@ -905,6 +917,12 @@ class SchedulerApp {
 
   // ============== ТИЖНЕВИЙ ВИД ==============
   private toggleWeekView(): void {
+    // Якщо є активний режим редагування — закриваємо його перед перемиканням виду
+    if (this.editMode) {
+      this.handleEditModeClose();
+      return;
+    }
+
     this.isWeekView = !this.isWeekView;
     const weekBtn = document.getElementById("postWeekBtn");
     if (weekBtn) {
@@ -1084,37 +1102,124 @@ class SchedulerApp {
     const weekBody = document.createElement("div");
     weekBody.className = "post-week-body";
 
-    this.sections.forEach((section) => {
+    this.sections.forEach((section, sectionIndex) => {
+      // Wrapper для секції (аналог post-section-group в денному виді)
+      const sectionGroup = document.createElement("div");
+      sectionGroup.className = "post-week-section-group";
+      sectionGroup.dataset.sectionId = section.id.toString();
+      sectionGroup.dataset.sectionIndex = sectionIndex.toString();
+
       // Хедер секції
       const sectionRow = document.createElement("div");
       sectionRow.className = "post-week-section-header";
-      sectionRow.innerHTML = `<span>${section.name}</span>`;
+
+      const headerLeft = document.createElement("div");
+      headerLeft.className = "post-week-section-header-left";
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = section.name;
+      headerLeft.appendChild(nameSpan);
+      sectionRow.appendChild(headerLeft);
+
+      const headerRight = document.createElement("div");
+      headerRight.className = "post-week-section-header-right";
+
+      // Кнопка видалення секції (видима тільки в edit mode через CSS)
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "post-delete-btn";
+      deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>`;
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.deleteSection(section.id);
+      };
+      headerRight.appendChild(deleteBtn);
 
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "post-toggle-btn";
       if (section.collapsed) toggleBtn.classList.add("collapsed");
       toggleBtn.textContent = "▼";
-      sectionRow.appendChild(toggleBtn);
+      headerRight.appendChild(toggleBtn);
 
-      sectionRow.addEventListener("click", () => {
+      sectionRow.appendChild(headerRight);
+
+      // Drag and drop для хедера секції - тільки в режимі редагування
+      sectionRow.addEventListener("mousedown", (e) => {
+        if (!this.editMode) return;
+        const target = e.target as HTMLElement;
+        if (
+          target.closest(".post-delete-btn") ||
+          target.closest(".post-toggle-btn")
+        )
+          return;
+        e.preventDefault();
+        this.startSectionDrag(e, sectionGroup, section.id);
+      });
+
+      // Click для toggle
+      sectionRow.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest(".post-delete-btn")) return;
+        if (this.editMode && !target.closest(".post-toggle-btn")) return;
         this.toggleSection(section.id);
         this.renderWeekView();
         this.loadWeekArxivData();
       });
-      weekBody.appendChild(sectionRow);
+
+      sectionGroup.appendChild(sectionRow);
+
+      // Контент секції
+      const sectionContent = document.createElement("div");
+      sectionContent.className = "post-week-section-content";
+      sectionContent.dataset.sectionId = section.id.toString();
+      if (section.collapsed) sectionContent.classList.add("hidden");
 
       if (!section.collapsed) {
         section.posts.forEach((post) => {
           const row = document.createElement("div");
           row.className = "post-week-row";
+          row.dataset.postId = post.id.toString();
+          row.dataset.sectionId = section.id.toString();
 
           // Лейбл слюсаря (зліва)
           const label = document.createElement("div");
           label.className = "post-week-row-label";
-          label.innerHTML = `
+
+          const deleteContainer = document.createElement("div");
+          deleteContainer.className = "post-week-label-content";
+
+          const labelContent = document.createElement("div");
+          labelContent.className = "post-week-label-text";
+          labelContent.innerHTML = `
             <div class="post-post-title">${post.title}</div>
             <div class="post-post-subtitle">${post.subtitle}</div>
           `;
+
+          const postDeleteBtn = document.createElement("button");
+          postDeleteBtn.className = "post-post-delete-btn";
+          postDeleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>`;
+          postDeleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.deletePost(section.id, post.id);
+          };
+
+          deleteContainer.appendChild(labelContent);
+          deleteContainer.appendChild(postDeleteBtn);
+          label.appendChild(deleteContainer);
+
+          // Drag and drop для лейбла - тільки в режимі редагування
+          label.addEventListener("mousedown", (e) => {
+            if (!this.editMode) return;
+            const target = e.target as HTMLElement;
+            if (target.closest(".post-post-delete-btn")) return;
+            e.preventDefault();
+            this.startPostDrag(e, row, section.id, post.id);
+          });
+
           row.appendChild(label);
 
           // 7 треків днів поруч
@@ -1200,9 +1305,25 @@ class SchedulerApp {
           });
 
           row.appendChild(tracksContainer);
-          weekBody.appendChild(row);
+          sectionContent.appendChild(row);
         });
+
+        // Кнопка "Додати пост" (видима тільки в edit mode через CSS)
+        const addPostBtn = document.createElement("button");
+        addPostBtn.className = "post-add-post-btn";
+        addPostBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Додати пост
+        `;
+        addPostBtn.onclick = () => this.openAddPostModal(section.name);
+        sectionContent.appendChild(addPostBtn);
       }
+
+      sectionGroup.appendChild(sectionContent);
+      weekBody.appendChild(sectionGroup);
     });
 
     weekContainer.appendChild(weekBody);
@@ -2714,7 +2835,7 @@ class SchedulerApp {
       });
 
       this.sections = this.sections.filter((s) => s.id !== sectionId);
-      this.renderSections();
+      this.renderCurrentView();
 
       // Показуємо повідомлення
       showNotification(`Видалено цех: ${sectionName}`, "warning");
@@ -2736,7 +2857,7 @@ class SchedulerApp {
         }
 
         section.posts = section.posts.filter((p) => p.id !== postId);
-        this.renderSections();
+        this.renderCurrentView();
 
         // Показуємо повідомлення
         showNotification(
@@ -2777,7 +2898,7 @@ class SchedulerApp {
         namber: 0,
       });
 
-      this.renderSections();
+      this.renderCurrentView();
     }, sectionName);
   }
 
@@ -2996,8 +3117,12 @@ class SchedulerApp {
   private updateSectionPlaceholder(mouseY: number): void {
     if (!this.dragPlaceholder || !this.calendarGrid) return;
 
+    const sectionSelector = this.isWeekView
+      ? ".post-week-section-group:not(.dragging)"
+      : ".post-section-group:not(.dragging)";
+
     const sectionGroups = Array.from(
-      this.calendarGrid.querySelectorAll(".post-section-group:not(.dragging)"),
+      this.calendarGrid.querySelectorAll(sectionSelector),
     );
 
     for (const group of sectionGroups) {
@@ -3010,12 +3135,21 @@ class SchedulerApp {
       }
     }
 
-    // Якщо курсор нижче всіх секцій - ставимо в кінець (перед кнопкою додавання)
-    const addBtn = this.calendarGrid.querySelector(".post-add-section-btn");
-    if (addBtn) {
-      addBtn.parentNode?.insertBefore(this.dragPlaceholder, addBtn);
+    // Якщо курсор нижче всіх секцій - ставимо в кінець
+    if (this.isWeekView) {
+      const weekBody = this.calendarGrid.querySelector(".post-week-body");
+      if (weekBody) {
+        weekBody.appendChild(this.dragPlaceholder);
+      } else {
+        this.calendarGrid.appendChild(this.dragPlaceholder);
+      }
     } else {
-      this.calendarGrid.appendChild(this.dragPlaceholder);
+      const addBtn = this.calendarGrid.querySelector(".post-add-section-btn");
+      if (addBtn) {
+        addBtn.parentNode?.insertBefore(this.dragPlaceholder, addBtn);
+      } else {
+        this.calendarGrid.appendChild(this.dragPlaceholder);
+      }
     }
   }
 
@@ -3023,11 +3157,13 @@ class SchedulerApp {
     if (!this.draggedElement || !this.dragPlaceholder || !this.calendarGrid)
       return;
 
+    const sectionSelector = this.isWeekView
+      ? ".post-week-section-group:not(.dragging), .post-drag-placeholder"
+      : ".post-section-group:not(.dragging), .post-drag-placeholder";
+
     // Визначаємо нову позицію
     const sectionGroups = Array.from(
-      this.calendarGrid.querySelectorAll(
-        ".post-section-group:not(.dragging), .post-drag-placeholder",
-      ),
+      this.calendarGrid.querySelectorAll(sectionSelector),
     );
 
     // Знаходимо реальний індекс
@@ -3068,7 +3204,7 @@ class SchedulerApp {
     this.draggedSectionId = null;
 
     // Перемальовуємо
-    this.renderSections();
+    this.renderCurrentView();
   }
 
   // ============== DRAG AND DROP ДЛЯ ПОСТІВ ==============
@@ -3126,9 +3262,19 @@ class SchedulerApp {
   private updatePostPlaceholder(mouseY: number): void {
     if (!this.dragPlaceholder || !this.calendarGrid) return;
 
+    const groupSelector = this.isWeekView
+      ? ".post-week-section-group"
+      : ".post-section-group";
+    const contentSelector = this.isWeekView
+      ? ".post-week-section-content"
+      : ".post-section-content";
+    const rowSelector = this.isWeekView
+      ? ".post-week-row:not(.dragging)"
+      : ".post-unified-row:not(.dragging)";
+
     // Знаходимо секцію над якою курсор
     const sectionGroups = Array.from(
-      this.calendarGrid.querySelectorAll(".post-section-group"),
+      this.calendarGrid.querySelectorAll(groupSelector),
     );
     let targetSectionContent: Element | null = null;
     let fallbackAddBtn: Element | null = null;
@@ -3139,7 +3285,7 @@ class SchedulerApp {
       if (mouseY >= rect.top - 20 && mouseY <= rect.bottom + 20) {
         // Якщо знайшли групу, дивимось чи вона не згорнута
         if (!group.querySelector(".post-toggle-btn.collapsed")) {
-          targetSectionContent = group.querySelector(".post-section-content");
+          targetSectionContent = group.querySelector(contentSelector);
           fallbackAddBtn = group.querySelector(".post-add-post-btn");
           break;
         }
@@ -3149,7 +3295,7 @@ class SchedulerApp {
     if (!targetSectionContent) return;
 
     const postRows = Array.from(
-      targetSectionContent.querySelectorAll(".post-unified-row:not(.dragging)"),
+      targetSectionContent.querySelectorAll(rowSelector),
     );
 
     for (const row of postRows) {
@@ -3190,8 +3336,15 @@ class SchedulerApp {
     const oldSection = this.sections[oldSectionIndex];
 
     // Знаходимо нову секцію по плейсхолдеру
+    const contentSelector = this.isWeekView
+      ? ".post-week-section-content"
+      : ".post-section-content";
+    const rowSelector = this.isWeekView
+      ? ".post-week-row, .post-drag-placeholder"
+      : ".post-unified-row, .post-drag-placeholder";
+
     const newSectionContent = this.dragPlaceholder.closest(
-      ".post-section-content",
+      contentSelector,
     ) as HTMLElement;
     if (!newSectionContent) return;
 
@@ -3204,9 +3357,7 @@ class SchedulerApp {
 
     // Визначаємо нову позицію всередині нової секції
     const allElements = Array.from(
-      newSectionContent.querySelectorAll(
-        ".post-unified-row, .post-drag-placeholder",
-      ),
+      newSectionContent.querySelectorAll(rowSelector),
     );
 
     let newIndex = 0;
@@ -3247,7 +3398,7 @@ class SchedulerApp {
     this.draggedPostId = null;
 
     // Перемальовуємо
-    this.renderSections();
+    this.renderCurrentView();
   }
 
   private formatFullDate(date: Date): string {

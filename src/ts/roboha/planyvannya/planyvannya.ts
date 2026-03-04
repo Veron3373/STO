@@ -103,6 +103,7 @@ class SchedulerApp {
   private weekMovingOriginalCell: HTMLElement | null = null;
   private weekMovingOriginalLeft: string = "";
   private weekMovingOriginalWidth: string = "";
+  private weekMovingOriginalTimeText: string = "";
   private weekBlockDragStartX: number = 0;
   private weekBlockDragStartY: number = 0;
   private weekBlockDragOffsetX: number = 0;
@@ -1699,6 +1700,9 @@ class SchedulerApp {
     this.weekMovingOriginalCell = cell;
     this.weekMovingOriginalLeft = this.weekMovingBlock.style.left;
     this.weekMovingOriginalWidth = this.weekMovingBlock.style.width;
+    // Зберігаємо оригінальний текст часу
+    const origTimeEl = this.weekMovingBlock.querySelector(".post-week-block-line");
+    this.weekMovingOriginalTimeText = origTimeEl ? origTimeEl.textContent || "" : "";
 
     const rect = this.weekMovingBlock.getBoundingClientRect();
     this.weekBlockDragOffsetX = e.clientX - rect.left;
@@ -1942,6 +1946,11 @@ class SchedulerApp {
     this.weekMovingBlock.style.top = "1px";
     this.weekMovingBlock.style.bottom = "1px";
     this.weekMovingBlock.style.position = "absolute";
+    // Відновлюємо оригінальний текст часу
+    if (this.weekMovingOriginalTimeText) {
+      const timeEl = this.weekMovingBlock.querySelector(".post-week-block-line");
+      if (timeEl) timeEl.textContent = this.weekMovingOriginalTimeText;
+    }
     this.weekMovingOriginalCell.appendChild(this.weekMovingBlock);
   }
 

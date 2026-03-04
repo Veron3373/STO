@@ -525,7 +525,6 @@ $sidebar-width: 30%;
 
 // EDIT MODE
 .post-scheduler-wrapper.edit-mode {
-
   .post-delete-btn,
   .post-post-delete-btn,
   .post-add-post-btn,
@@ -568,9 +567,11 @@ $sidebar-width: 30%;
 
 // DRAG PLACEHOLDERS
 .post-drag-placeholder {
-  background: linear-gradient(135deg,
-      rgba(0, 77, 38, 0.1),
-      rgba(0, 77, 38, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(0, 77, 38, 0.1),
+    rgba(0, 77, 38, 0.05)
+  );
   border: 2px dashed $primary-blue;
   border-radius: 6px;
   transition: height 0.2s ease;
@@ -741,7 +742,7 @@ $sidebar-width: 30%;
       }
 
       // Старий span для днів без даних (пусті клітинки)
-      >span:not(.day-container span) {
+      > span:not(.day-container span) {
         aspect-ratio: 1;
         display: flex;
         align-items: center;
@@ -1150,16 +1151,20 @@ $sidebar-width: 30%;
 
   &:hover,
   &.active {
-    background: linear-gradient(135deg,
-        rgba(0, 77, 38, 0.08),
-        rgba(0, 77, 38, 0.04));
+    background: linear-gradient(
+      135deg,
+      rgba(0, 77, 38, 0.08),
+      rgba(0, 77, 38, 0.04)
+    );
     color: $primary-blue;
   }
 
   &.active {
-    background: linear-gradient(135deg,
-        rgba(0, 77, 38, 0.12),
-        rgba(0, 77, 38, 0.06));
+    background: linear-gradient(
+      135deg,
+      rgba(0, 77, 38, 0.12),
+      rgba(0, 77, 38, 0.06)
+    );
     font-weight: 500;
   }
 }
@@ -1328,7 +1333,6 @@ $sidebar-width: 30%;
     font-size: 9px;
     transition: background 0.05s ease;
   }
-
 
   // Мітка з часом в осередку (початок/кінець запису)
   .hour-time-label {
@@ -1554,11 +1558,10 @@ $sidebar-width: 30%;
 
   // Минулий запис — лавандова накладка (100%) покриває весь блок через overlay
   // opacity/filter прибрано — overlay є єдиним візуальним індикатором
-  &.week-block-past {
-
-    // Клас залишається для hover-логіки
+  &.week-block-past,
+  & {
+    // При наведенні — прибираємо overlay (і повністю, і частково минулий), щоб побачити повний колір
     &:hover .week-block-past-overlay {
-      // При наведенні — прибираємо overlay, щоб побачити повний колір
       opacity: 0;
     }
   }
@@ -1659,7 +1662,9 @@ $sidebar-width: 30%;
     z-index: 10;
     padding: 0 2px;
     line-height: 1;
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
 
     // Красивий CSS-тултіп замість браузерного title
     &::before {
@@ -1679,14 +1684,16 @@ $sidebar-width: 30%;
       border: 1px solid rgba(255, 255, 255, 0.1);
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.15s ease, transform 0.15s ease;
+      transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
       transform: translateX(-50%) translateY(4px);
       z-index: 200;
     }
 
     // Стрілочка вниз
     &::after {
-      content: '';
+      content: "";
       position: absolute;
       bottom: calc(100% + 2px);
       left: 50%;
@@ -1714,7 +1721,6 @@ $sidebar-width: 30%;
       }
     }
   }
-
 
   // Тултіп при наведенні
   .post-week-tooltip {

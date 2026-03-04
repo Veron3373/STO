@@ -213,7 +213,7 @@ class SchedulerApp {
     // 📡 Підключаємо Realtime підписку для автоматичного оновлення
     try {
       initPostArxivRealtimeSubscription();
-    } catch (e) { }
+    } catch (e) {}
   }
 
   private async loadDataFromDatabase(): Promise<void> {
@@ -693,6 +693,12 @@ class SchedulerApp {
 
   private updateTimeMarker(): void {
     const now = new Date();
+
+    // Оновлюємо today на випадок якщо сторінка відкрита після півночі
+    const newToday = new Date();
+    newToday.setHours(0, 0, 0, 0);
+    this.today = newToday;
+
     const startOfToday = new Date(this.today);
     const selected = new Date(this.selectedDate);
     selected.setHours(0, 0, 0, 0);
@@ -727,6 +733,145 @@ class SchedulerApp {
         decimal.toString(),
       );
     }
+
+    // === Оновлюємо тижневий вид в реальному часі ===
+    if (this.isWeekView && this.calendarGrid) {
+      this.updateWeekTimeElements(now);
+    }
+  }
+
+  /**
+   * Оновлює всі часові елементи тижневого виду:
+   * червону лінію, минулий/майбутній overlay, годинні клітинки, overlay блоків
+   */
+  private updateWeekTimeElements(now: Date): void {
+    if (!this.calendarGrid) return;
+
+    const currentHour = now.getHours();
+    const currentMins = (currentHour - 8) * 60 + now.getMinutes();
+    const totalMins = 12 * 60;
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    // 1. Оновлюємо годинні клітинки заголовка
+    const dayColHeaders = this.calendarGrid.querySelectorAll(
+      ".post-week-day-col-header",
+    );
+    dayColHeaders.forEach((col) => {
+      const colEl = col as HTMLElement;
+      const colDate = colEl.dataset.date;
+      const isToday = colDate === todayStr;
+
+      const hourCells = colEl.querySelectorAll(".post-week-hour-cell");
+      hourCells.forEach((cell) => {
+        const cellEl = cell as HTMLElement;
+        const h = parseInt(cellEl.textContent || "0", 10);
+        cellEl.classList.remove("hour-past", "hour-current", "hour-future");
+        if (isToday) {
+          if (h < currentHour) {
+            cellEl.classList.add("hour-past");
+          } else if (h === currentHour) {
+            cellEl.classList.add("hour-current");
+          } else {
+            cellEl.classList.add("hour-future");
+          }
+        } else if (colDate && colDate < todayStr) {
+          cellEl.classList.add("hour-past");
+        }
+      });
+    });
+
+    // 2. Оновлюємо доріжки днів: червону лінію, overlay минулого/майбутнього
+    const dayTracks = this.calendarGrid.querySelectorAll(
+      ".post-week-day-track",
+    );
+    dayTracks.forEach((track) => {
+      const trackEl = track as HTMLElement;
+      const trackDate = trackEl.dataset.date;
+      const isToday = trackDate === todayStr;
+      const isPast = trackDate ? trackDate < todayStr : false;
+
+      // Видаляємо старі часові елементи (тільки track-рівень)
+      trackEl
+        .querySelectorAll(
+          ".post-week-time-line, .post-week-past-overlay, .post-week-future-overlay",
+        )
+        .forEach((el) => {
+          if (el.parentElement === trackEl) el.remove();
+        });
+
+      if (isToday && currentMins > 0) {
+        const pastPercent = Math.min(currentMins / totalMins, 1) * 100;
+
+        const pastOverlay = document.createElement("div");
+        pastOverlay.className = "post-week-past-overlay";
+        pastOverlay.style.width = `${pastPercent}%`;
+        trackEl.appendChild(pastOverlay);
+
+        const timeLine = document.createElement("div");
+        timeLine.className = "post-week-time-line";
+        timeLine.style.left = `${pastPercent}%`;
+        trackEl.appendChild(timeLine);
+
+        const futureOverlay = document.createElement("div");
+        futureOverlay.className = "post-week-future-overlay";
+        futureOverlay.style.left = `${pastPercent}%`;
+        futureOverlay.style.right = "0";
+        trackEl.appendChild(futureOverlay);
+      } else if (isPast) {
+        const pastOverlay = document.createElement("div");
+        pastOverlay.className = "post-week-past-overlay";
+        pastOverlay.style.width = "100%";
+        trackEl.appendChild(pastOverlay);
+      }
+    });
+
+    // 3. Оновлюємо overlay блоків бронювань
+    const blocks = this.calendarGrid.querySelectorAll(".post-week-block");
+    blocks.forEach((block) => {
+      const blockEl = block as HTMLElement;
+      const blockDate = blockEl.dataset.date;
+      const startMins = parseInt(blockEl.dataset.start || "0", 10);
+      const endMins = parseInt(blockEl.dataset.end || "0", 10);
+
+      // Видаляємо старий overlay
+      blockEl
+        .querySelectorAll(".week-block-past-overlay")
+        .forEach((el) => el.remove());
+      blockEl.classList.remove("week-block-past");
+
+      const isBlockPast = blockDate ? blockDate < todayStr : false;
+      const isBlockToday = blockDate === todayStr;
+
+      if (isBlockPast || (isBlockToday && endMins <= currentMins)) {
+        // Повністю минулий блок
+        blockEl.classList.add("week-block-past");
+        const pastOverlay = document.createElement("div");
+        pastOverlay.className = "week-block-past-overlay";
+        pastOverlay.style.width = "100%";
+        pastOverlay.style.borderRadius = "4px";
+        blockEl.appendChild(pastOverlay);
+      } else if (
+        isBlockToday &&
+        startMins < currentMins &&
+        endMins > currentMins
+      ) {
+        // Частково минулий блок
+        const pastFraction = Math.min(
+          Math.max(
+            ((currentMins - startMins) / (endMins - startMins)) * 100,
+            0,
+          ),
+          100,
+        );
+        if (pastFraction > 0) {
+          const pastOverlay = document.createElement("div");
+          pastOverlay.className = "week-block-past-overlay";
+          pastOverlay.style.width = `${pastFraction}%`;
+          pastOverlay.style.borderRadius = "4px 0 0 4px";
+          blockEl.appendChild(pastOverlay);
+        }
+      }
+    });
   }
 
   private goToToday(): void {
@@ -878,6 +1023,8 @@ class SchedulerApp {
 
       const dayCol = document.createElement("div");
       dayCol.className = "post-week-day-col-header";
+      const dayDateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      dayCol.dataset.date = dayDateStr;
       if (isToday) dayCol.classList.add("post-week-today");
       if (isWeekend) dayCol.classList.add("post-week-weekend");
 
@@ -1219,8 +1366,13 @@ class SchedulerApp {
     // Обробляємо «минулий час» — клас для повністю минулих
     // Overlay додаємо ПІСЛЯ block.innerHTML (щоб не стерлося)
     const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const nowLocalMinsCheck = (now.getHours() - 8) * 60 + now.getMinutes();
 
-    if (dataOff < now) {
+    if (
+      dateStr < nowStr ||
+      (dateStr === nowStr && endMins <= nowLocalMinsCheck)
+    ) {
       block.classList.add("week-block-past");
     }
 
@@ -1261,20 +1413,29 @@ class SchedulerApp {
     block.innerHTML = blockHTML;
 
     // ✅ Overlay додається ПІСЛЯ innerHTML (щоб не було стерто)
-    // nowMins у UTC щоб відповідати startMins/endMins які теж UTC
-    const nowUTCMins = (now.getUTCHours() - 8) * 60 + now.getUTCMinutes();
-
-    if (dataOff < now) {
+    // Використовуємо вже обчислені nowStr / nowLocalMinsCheck
+    if (
+      dateStr < nowStr ||
+      (dateStr === nowStr && endMins <= nowLocalMinsCheck)
+    ) {
       // ПОВНІСТЮ минулий — лавандовий overlay на 100%
+      block.classList.add("week-block-past");
       const pastOverlay = document.createElement("div");
       pastOverlay.className = "week-block-past-overlay";
       pastOverlay.style.width = "100%";
       pastOverlay.style.borderRadius = "4px";
       block.appendChild(pastOverlay);
-    } else if (dataOn < now && dataOff > now) {
-      // ЧАСТКОВО минулий — overlay до поточної хвилини (UTC-координати)
+    } else if (
+      dateStr === nowStr &&
+      startMins < nowLocalMinsCheck &&
+      endMins > nowLocalMinsCheck
+    ) {
+      // ЧАСТКОВО минулий — overlay до поточної хвилини (локальний час)
       const pastFraction = Math.min(
-        Math.max(((nowUTCMins - startMins) / (endMins - startMins)) * 100, 0),
+        Math.max(
+          ((nowLocalMinsCheck - startMins) / (endMins - startMins)) * 100,
+          0,
+        ),
         100,
       );
       if (pastFraction > 0) {
@@ -1340,7 +1501,8 @@ class SchedulerApp {
     const durationMins = endMins - startMins;
     const durH = Math.floor(durationMins / 60);
     const durM = durationMins % 60;
-    const durStr = durM > 0 ? `${durH}:${String(durM).padStart(2, '0')}` : `${durH}:00`;
+    const durStr =
+      durM > 0 ? `${durH}:${String(durM).padStart(2, "0")}` : `${durH}:00`;
     tooltipHTML += `<div class="post-week-tooltip-row pw-tip-duration"><span class="pw-tip-emoji">🕐</span> <span class="pw-tip-time-range">${startH}:${startM} — ${endH}:${endM} / ${durStr}</span></div>`;
     tooltipHTML += `<div class="post-week-tooltip-row pw-tip-status-row" data-status="${status}"><span class="pw-tip-emoji">${emoji}</span> <span class="pw-tip-status">${status}</span></div>`;
     if (comment) {
@@ -1463,7 +1625,7 @@ class SchedulerApp {
         const userData = JSON.parse(stored);
         return userData.Name || "";
       }
-    } catch { }
+    } catch {}
     return "";
   }
 
@@ -1475,7 +1637,7 @@ class SchedulerApp {
         const userData = JSON.parse(stored);
         return userData.access || "";
       }
-    } catch { }
+    } catch {}
     return "";
   }
 
@@ -1547,17 +1709,19 @@ class SchedulerApp {
 
     const weekDays = this.getWeekDays(this.selectedDate);
     const dayIndex = weekDays.findIndex((d) => {
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       return ds === dateStr;
     });
     if (dayIndex < 0) return;
 
-    const dayColHeaders = this.calendarGrid.querySelectorAll('.post-week-day-col-header');
+    const dayColHeaders = this.calendarGrid.querySelectorAll(
+      ".post-week-day-col-header",
+    );
     const dayColHeader = dayColHeaders[dayIndex] as HTMLElement;
     if (!dayColHeader) return;
 
     const hourCells = Array.from(
-      dayColHeader.querySelectorAll('.post-week-hour-cell')
+      dayColHeader.querySelectorAll(".post-week-hour-cell"),
     ) as HTMLElement[];
 
     // Знаходимо cellIdx початку і кінця через порівняння BoundingRect
@@ -1570,7 +1734,7 @@ class SchedulerApp {
       if (cr.right > dragClientLeft && cr.left < dragClientRight) {
         if (firstActive < 0) firstActive = i;
         lastActive = i;
-        cell.classList.add('hour-drag-active');
+        cell.classList.add("hour-drag-active");
       }
     });
 
@@ -1586,21 +1750,18 @@ class SchedulerApp {
       // Перша комірка — час початку
       const sH = 8 + Math.floor(startMins / 60);
       const sM = startMins % 60;
-      hourCells[firstActive].textContent = sM > 0
-        ? `${sH}:${String(sM).padStart(2, '0')}`
-        : `${sH}`;
+      hourCells[firstActive].textContent =
+        sM > 0 ? `${sH}:${String(sM).padStart(2, "0")}` : `${sH}`;
 
       // Остання комірка — час кінця
       if (lastActive !== firstActive) {
         const eH = 8 + Math.floor(endMins / 60);
         const eM = endMins % 60;
-        hourCells[lastActive].textContent = eM > 0
-          ? `${eH}:${String(eM).padStart(2, '0')}`
-          : `${eH}`;
+        hourCells[lastActive].textContent =
+          eM > 0 ? `${eH}:${String(eM).padStart(2, "0")}` : `${eH}`;
       }
     }
   };
-
 
   private onWeekDragUp = (_e: MouseEvent): void => {
     document.removeEventListener("mousemove", this.onWeekDragMove);
@@ -1644,9 +1805,11 @@ class SchedulerApp {
   /** Знімає підсвічування drag-годин і відновлює числа у заголовку */
   private clearDragHourHighlight(): void {
     if (!this.calendarGrid) return;
-    const cells = this.calendarGrid.querySelectorAll('.post-week-hour-cell.hour-drag-active') as NodeListOf<HTMLElement>;
+    const cells = this.calendarGrid.querySelectorAll(
+      ".post-week-hour-cell.hour-drag-active",
+    ) as NodeListOf<HTMLElement>;
     cells.forEach((cell) => {
-      cell.classList.remove('hour-drag-active');
+      cell.classList.remove("hour-drag-active");
       // Відновлюємо оригінальне число години
       const absH = 8 + Array.from(cell.parentElement!.children).indexOf(cell);
       cell.textContent = String(absH);
@@ -1701,8 +1864,12 @@ class SchedulerApp {
     this.weekMovingOriginalLeft = this.weekMovingBlock.style.left;
     this.weekMovingOriginalWidth = this.weekMovingBlock.style.width;
     // Зберігаємо оригінальний текст часу
-    const origTimeEl = this.weekMovingBlock.querySelector(".post-week-block-line");
-    this.weekMovingOriginalTimeText = origTimeEl ? origTimeEl.textContent || "" : "";
+    const origTimeEl = this.weekMovingBlock.querySelector(
+      ".post-week-block-line",
+    );
+    this.weekMovingOriginalTimeText = origTimeEl
+      ? origTimeEl.textContent || ""
+      : "";
 
     const rect = this.weekMovingBlock.getBoundingClientRect();
     this.weekBlockDragOffsetX = e.clientX - rect.left;
@@ -1776,7 +1943,9 @@ class SchedulerApp {
         const sM = String(startMins % 60).padStart(2, "0");
         const eH = String(8 + Math.floor(endMins / 60)).padStart(2, "0");
         const eM = String(endMins % 60).padStart(2, "0");
-        const timeLine = this.weekMovingBlock.querySelector(".post-week-block-line");
+        const timeLine = this.weekMovingBlock.querySelector(
+          ".post-week-block-line",
+        );
         if (timeLine) {
           timeLine.textContent = `🕐 ${sH}:${sM}-${eH}:${eM}`;
         }
@@ -1787,31 +1956,40 @@ class SchedulerApp {
         if (dateStr && this.calendarGrid) {
           const weekDays = this.getWeekDays(this.selectedDate);
           const dayIndex = weekDays.findIndex((d) => {
-            const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
             return ds === dateStr;
           });
           if (dayIndex >= 0) {
-            const dayColHeader = this.calendarGrid
-              .querySelectorAll('.post-week-day-col-header')[dayIndex] as HTMLElement;
+            const dayColHeader = this.calendarGrid.querySelectorAll(
+              ".post-week-day-col-header",
+            )[dayIndex] as HTMLElement;
             if (dayColHeader) {
               // Межі блоку в clientX координатах
               const blockLeft = trackRect.left + Math.max(0, relativeX);
-              const blockRight = blockLeft + (endMins - startMins) / totalMinutes * trackRect.width;
-              (Array.from(dayColHeader.querySelectorAll('.post-week-hour-cell')) as HTMLElement[])
-                .forEach((cell) => {
-                  const cr = cell.getBoundingClientRect();
-                  if (cr.right > blockLeft && cr.left < blockRight) {
-                    cell.classList.add('hour-drag-active');
-                  }
-                });
+              const blockRight =
+                blockLeft +
+                ((endMins - startMins) / totalMinutes) * trackRect.width;
+              (
+                Array.from(
+                  dayColHeader.querySelectorAll(".post-week-hour-cell"),
+                ) as HTMLElement[]
+              ).forEach((cell) => {
+                const cr = cell.getBoundingClientRect();
+                if (cr.right > blockLeft && cr.left < blockRight) {
+                  cell.classList.add("hour-drag-active");
+                }
+              });
               // Час в першій та останній активній комірці
               const activeCells = Array.from(
-                dayColHeader.querySelectorAll('.post-week-hour-cell.hour-drag-active')
+                dayColHeader.querySelectorAll(
+                  ".post-week-hour-cell.hour-drag-active",
+                ),
               ) as HTMLElement[];
               if (activeCells.length > 0) {
                 activeCells[0].textContent = `${sH}:${sM}`;
                 if (activeCells.length > 1) {
-                  activeCells[activeCells.length - 1].textContent = `${eH}:${eM}`;
+                  activeCells[activeCells.length - 1].textContent =
+                    `${eH}:${eM}`;
                 }
               }
             }
@@ -1948,7 +2126,9 @@ class SchedulerApp {
     this.weekMovingBlock.style.position = "absolute";
     // Відновлюємо оригінальний текст часу
     if (this.weekMovingOriginalTimeText) {
-      const timeEl = this.weekMovingBlock.querySelector(".post-week-block-line");
+      const timeEl = this.weekMovingBlock.querySelector(
+        ".post-week-block-line",
+      );
       if (timeEl) timeEl.textContent = this.weekMovingOriginalTimeText;
     }
     this.weekMovingOriginalCell.appendChild(this.weekMovingBlock);
@@ -2080,11 +2260,11 @@ class SchedulerApp {
 
     const newStart = parseInt(
       this.weekResizingBlock.dataset.tempStart ||
-      this.weekResizeOrigStartMins.toString(),
+        this.weekResizeOrigStartMins.toString(),
     );
     const newEnd = parseInt(
       this.weekResizingBlock.dataset.tempEnd ||
-      this.weekResizeOrigEndMins.toString(),
+        this.weekResizeOrigEndMins.toString(),
     );
     delete this.weekResizingBlock.dataset.tempStart;
     delete this.weekResizingBlock.dataset.tempEnd;
@@ -2103,11 +2283,11 @@ class SchedulerApp {
     ) as HTMLElement;
     const hasOverlap = track
       ? this.checkWeekBlockOverlap(
-        newStart,
-        newEnd,
-        track,
-        this.weekResizingBlock,
-      )
+          newStart,
+          newEnd,
+          track,
+          this.weekResizingBlock,
+        )
       : false;
 
     if (hasOverlap) {
@@ -2167,7 +2347,6 @@ class SchedulerApp {
     this.weekResizingBlock = null;
     this.weekResizeHandleSide = null;
   }
-
 
   /**
    * Відкриває модалку для створення запису у тижневому виді
@@ -2261,7 +2440,7 @@ class SchedulerApp {
           const userData = JSON.parse(stored);
           xtoZapusav = userData.Name || "";
         }
-      } catch { }
+      } catch {}
 
       const payload: any = {
         status: data.status || "Запланований",
@@ -3095,8 +3274,9 @@ class SchedulerApp {
       "листопада",
       "грудня",
     ];
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]
-      } ${date.getFullYear()}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${
+      months[date.getMonth()]
+    } ${date.getFullYear()}`;
   }
 
   private getMonthName(monthIndex: number): string {

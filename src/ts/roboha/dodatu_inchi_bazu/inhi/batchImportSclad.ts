@@ -579,7 +579,7 @@ async function updateActWithDetails(
       .eq("act_id", parseInt(actNo, 10))
       .single();
     if (fetchError || !actData) {
-      // console.warn(`Акт №${actNo} не знайдено`);
+      console.warn(`Акт №${actNo} не знайдено`, fetchError);
       return false;
     }
     let actJsonData: any;
@@ -652,7 +652,7 @@ async function updateActWithDetails(
           (actJsonData["Загальна сума"] || 0) + sumDiff;
       }
       // console.log(
-        // `🔄 Оновлено існуючу деталь в акті №${actNo}: ${detailData["Каталог"]} (індекс: ${existingIndex})`,
+      // `🔄 Оновлено існуючу деталь в акті №${actNo}: ${detailData["Каталог"]} (індекс: ${existingIndex})`,
       // );
     } else {
       // Нова деталь — додаємо
@@ -663,7 +663,7 @@ async function updateActWithDetails(
           (actJsonData["Загальна сума"] || 0) + detailSum;
       }
       // console.log(
-        // `➕ Додано нову деталь в акт №${actNo}: ${detailData["Каталог"]}`,
+      // `➕ Додано нову деталь в акт №${actNo}: ${detailData["Каталог"]}`,
       // );
     }
 
@@ -672,12 +672,12 @@ async function updateActWithDetails(
       .update({ data: actJsonData })
       .eq("act_id", parseInt(actNo, 10));
     if (updateError) {
-      // console.error(`Помилка оновлення акта №${actNo}:`, updateError);
+      console.error(`Помилка оновлення акта №${actNo}:`, updateError);
       return false;
     }
     return true;
   } catch (err) {
-    // console.error(`Помилка при роботі з актом №${actNo}:`, err);
+    console.error(`Помилка при роботі з актом №${actNo}:`, err);
     return false;
   }
 }
@@ -1606,6 +1606,7 @@ function renderBatchTable(data: any[]) {
               ? "success-Excel"
               : "error-Excel"
       }">
+        <span class="status-text-Excel" style="display:none;">${row.status || "Помилка"}</span>
         <button class="delete-row-btn-Excel" data-index="${index}" title="${row.status || "Помилка"}">🗑️</button>
       </td>
     `;
@@ -2724,26 +2725,37 @@ async function uploadBatchData(data: any[]) {
               .delete()
               .eq("sclad_id", row._scladId);
 
+            const delDomIdx = (row.rowNumber || i + 1) - 1;
             if (deleteError) {
-              // console.error(
-                // `Помилка видалення sclad_id=${row._scladId}:`,
-                // deleteError,
-              // );
+              console.error(
+                `Помилка видалення sclad_id=${row._scladId}:`,
+                deleteError,
+              );
               errorCount++;
-              updateRowStatus(i, false, "❌ Помилка видалення");
+              updateRowStatus(delDomIdx, false, "❌ Помилка видалення");
+              if (parsedDataGlobal[delDomIdx])
+                parsedDataGlobal[delDomIdx].status = "❌ Помилка видалення";
             } else {
               successCount++;
-              updateRowStatus(i, true, "🗑️ Видалено");
+              updateRowStatus(delDomIdx, true, "🗑️ Видалено");
+              if (parsedDataGlobal[delDomIdx])
+                parsedDataGlobal[delDomIdx].status = "🗑️ Видалено";
             }
           } catch (err) {
-            // console.error(`Помилка видалення sclad_id=${row._scladId}:`, err);
+            const delDomIdx2 = (row.rowNumber || i + 1) - 1;
+            console.error(`Помилка видалення sclad_id=${row._scladId}:`, err);
             errorCount++;
-            updateRowStatus(i, false, "❌ Помилка видалення");
+            updateRowStatus(delDomIdx2, false, "❌ Помилка видалення");
+            if (parsedDataGlobal[delDomIdx2])
+              parsedDataGlobal[delDomIdx2].status = "❌ Помилка видалення";
           }
         } else {
           // Новий рядок з дією "Видалити" — просто пропускаємо
+          const skipDomIdx = (row.rowNumber || i + 1) - 1;
           successCount++;
-          updateRowStatus(i, true, "🗑️ Пропущено");
+          updateRowStatus(skipDomIdx, true, "🗑️ Пропущено");
+          if (parsedDataGlobal[skipDomIdx])
+            parsedDataGlobal[skipDomIdx].status = "🗑️ Пропущено";
         }
         await new Promise((resolve) => setTimeout(resolve, 50));
         continue;
@@ -2784,8 +2796,8 @@ async function uploadBatchData(data: any[]) {
 
           if (updateError) {
             // console.error(
-              // `Помилка оновлення sclad_id=${row._scladId}:`,
-              // updateError,
+            // `Помилка оновлення sclad_id=${row._scladId}:`,
+            // updateError,
             // );
             scladSuccess = false;
           } else {
@@ -2871,8 +2883,11 @@ async function uploadBatchData(data: any[]) {
       }
 
       if (!scladSuccess) {
+        const errDomIdx = (row.rowNumber || i + 1) - 1;
         errorCount++;
-        updateRowStatus(i, false, "Помилка збереження в sclad");
+        updateRowStatus(errDomIdx, false, "Помилка збереження в sclad");
+        if (parsedDataGlobal[errDomIdx])
+          parsedDataGlobal[errDomIdx].status = "❌ Помилка";
         continue;
       }
 
@@ -2902,7 +2917,7 @@ async function uploadBatchData(data: any[]) {
         const actNo = row.actNo.trim();
         const detailSum = (row.clientPrice || 0) * (row.qty || 0);
         const detailForAct = {
-          sclad_id: scladIdWeb || null,
+          sclad_id: scladIdWeb ? Number(scladIdWeb) : null,
           Сума: detailSum,
           Ціна: row.clientPrice || 0,
           Деталь: row.detail,
@@ -2912,19 +2927,31 @@ async function uploadBatchData(data: any[]) {
         };
         actSuccess = await updateActWithDetails(actNo, detailForAct);
         if (!actSuccess) {
-          // console.warn(`Не вдалося оновити акт №${actNo} для рядка ${i + 1}`);
+          console.warn(
+            `Не вдалося оновити акт №${actNo} для рядка ${row.rowNumber}`,
+          );
         }
       }
 
+      // Індекс рядка в DOM (rowNumber = 1-based)
+      const domRowIndex = (row.rowNumber || i + 1) - 1;
+
       if (scladSuccess && actSuccess) {
         successCount++;
-        updateRowStatus(i, true, "✅ Успішно");
+        updateRowStatus(domRowIndex, true, "✅ Успішно");
+        if (parsedDataGlobal[domRowIndex])
+          parsedDataGlobal[domRowIndex].status = "✅ Успішно";
       } else if (scladSuccess && !actSuccess) {
         successCount++;
-        updateRowStatus(i, true, "⚠️ Збережено (акт не оновлено)");
+        updateRowStatus(domRowIndex, true, "⚠️ Збережено (акт не оновлено)");
+        if (parsedDataGlobal[domRowIndex])
+          parsedDataGlobal[domRowIndex].status =
+            "⚠️ Збережено (акт не оновлено)";
       } else {
         errorCount++;
-        updateRowStatus(i, false, "❌ Помилка");
+        updateRowStatus(domRowIndex, false, "❌ Помилка");
+        if (parsedDataGlobal[domRowIndex])
+          parsedDataGlobal[domRowIndex].status = "❌ Помилка";
       }
 
       // маленька пауза, щоб не “забивати” UI

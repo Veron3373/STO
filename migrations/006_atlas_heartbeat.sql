@@ -54,3 +54,8 @@ BEGIN
   );
 END;
 $$;
+-- Увімкнути RLS
+ALTER TABLE atlas_app_heartbeat ENABLE ROW LEVEL SECURITY;
+
+-- Дозволити тільки авторизованим оновлювати через RPC (SECURITY DEFINER)
+-- Прямий доступ до таблиці заборонений — все через функції

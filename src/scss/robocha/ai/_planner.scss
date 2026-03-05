@@ -7,19 +7,10 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 14px;
   gap: 12px;
   background: #f8f9fb;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #d0d0e0;
-    border-radius: 2px;
-  }
 }
 
 // ── Заголовок панелі ──
@@ -62,11 +53,61 @@
   }
 }
 
+// ── Telegram статус ──
+.ai-planner-telegram-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  flex-shrink: 0;
+
+  &--linked {
+    background: linear-gradient(
+      135deg,
+      rgba(39, 174, 96, 0.08),
+      rgba(39, 174, 96, 0.04)
+    );
+    border: 1px solid rgba(39, 174, 96, 0.2);
+    color: #27ae60;
+  }
+
+  &--unlinked {
+    background: linear-gradient(
+      135deg,
+      rgba(52, 152, 219, 0.08),
+      rgba(52, 152, 219, 0.04)
+    );
+    border: 1px solid rgba(52, 152, 219, 0.25);
+    color: #2980b9;
+  }
+}
+
+.ai-planner-telegram-hint {
+  font-size: 11px;
+  opacity: 0.8;
+
+  a {
+    color: #0088cc;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+}
+
 // ── Фільтри ──
 .ai-planner-filters {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .ai-planner-filter {
@@ -98,6 +139,18 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d0d0e0;
+    border-radius: 2px;
+  }
 }
 
 // ── Порожній стан ──
@@ -213,6 +266,10 @@
   .ai-planner-card:hover & {
     opacity: 1;
   }
+
+  &--counting {
+    opacity: 1 !important;
+  }
 }
 
 .ai-planner-card-action {
@@ -240,6 +297,43 @@
   &--pause:hover {
     background: #fef3c7;
   }
+
+  // Відлік видалення
+  &--counting {
+    background: none !important;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+
+    &:hover {
+      background: none !important;
+      transform: none;
+    }
+
+    &:hover .ai-planner-delete-countdown {
+      background: #66d9a0;
+      box-shadow: 0 0 8px rgba(102, 217, 160, 0.6);
+      cursor: pointer;
+    }
+  }
+}
+
+.ai-planner-delete-countdown {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: countdown-pulse 1s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(231, 76, 60, 0.5);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
 }
 
 // Мета-інфо під заголовком

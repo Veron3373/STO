@@ -28,6 +28,8 @@ assets/
 node_modules/
 dist/
 
+# Windows reserved filenames
+nul
 
 .env
 .env.local

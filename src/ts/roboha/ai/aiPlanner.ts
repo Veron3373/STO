@@ -61,6 +61,7 @@ interface ScheduleRule {
 let currentFilter: "all" | "active" | "paused" | "completed" = "all";
 let reminders: ReminderFromRPC[] = [];
 let editingReminderId: number | null = null;
+let telegramLinked: boolean | null = null; // null = не перевірено
 
 // ── Утиліти ──
 
@@ -88,6 +89,42 @@ function getCurrentUserRole(): string {
     /* */
   }
   return "Невідомо";
+}
+
+async function checkTelegramLink(): Promise<boolean> {
+  const slyusarId = getCurrentSlyusarId();
+  if (!slyusarId) return false;
+  try {
+    const { data } = await supabase
+      .from("atlas_telegram_users")
+      .select("is_active")
+      .eq("slyusar_id", slyusarId)
+      .single();
+    telegramLinked = !!data?.is_active;
+    return telegramLinked;
+  } catch {
+    telegramLinked = false;
+    return false;
+  }
+}
+
+function renderTelegramStatus(): string {
+  const slyusarId = getCurrentSlyusarId();
+  if (telegramLinked) {
+    return `
+      <div class="ai-planner-telegram-status ai-planner-telegram-status--linked">
+        <span>✅ Telegram прив'язано</span>
+        <span class="ai-planner-telegram-hint">Telegram Атлас</span>
+      </div>`;
+  }
+  return `
+    <div class="ai-planner-telegram-status ai-planner-telegram-status--unlinked">
+      <span>🔗 Прив'язати Telegram</span>
+      <span class="ai-planner-telegram-hint">
+        Відкрийте <a href="https://t.me/atlas_sto_braclave_bot?start=${slyusarId || ""}" target="_blank" rel="noopener">@atlas_sto_braclave_bot</a>
+        та натисніть <b>Start</b> або надішліть: <code>/start ${slyusarId || "?"}</code>
+      </span>
+    </div>`;
 }
 
 // ── CRUD ──
@@ -361,7 +398,10 @@ function formatSchedule(schedule: any): string {
 
 // ── Головна функція рендерингу ──
 
-export function renderPlannerPanel(container: HTMLElement): void {
+export async function renderPlannerPanel(
+  container: HTMLElement,
+): Promise<void> {
+  if (telegramLinked === null) await checkTelegramLink();
   const filtered = filterReminders(reminders);
 
   container.innerHTML = `
@@ -373,6 +413,9 @@ export function renderPlannerPanel(container: HTMLElement): void {
           ➕ Створити
         </button>
       </div>
+
+      <!-- Telegram статус -->
+      ${renderTelegramStatus()}
 
       <!-- Фільтри -->
       <div class="ai-planner-filters">
@@ -505,15 +548,64 @@ function initPlannerHandlers(container: HTMLElement): void {
       if (!id) return;
 
       if (action === "delete") {
-        if (confirm("Видалити це нагадування?")) {
-          const ok = await deleteReminder(id);
-          if (ok) {
-            showToast("Видалено", "success");
-            await refreshPlanner(container);
-          } else {
-            showToast("Помилка видалення", "error");
+        const deleteBtn = btn as HTMLElement;
+        const card = deleteBtn.closest(".ai-planner-card") as HTMLElement;
+        if (!card || deleteBtn.dataset.counting === "true") return;
+
+        deleteBtn.dataset.counting = "true";
+        deleteBtn.innerHTML = "";
+        deleteBtn.classList.add("ai-planner-card-action--counting");
+
+        // Завжди показувати actions під час відліку
+        const actionsEl = deleteBtn.closest(
+          ".ai-planner-card-actions",
+        ) as HTMLElement;
+        if (actionsEl)
+          actionsEl.classList.add("ai-planner-card-actions--counting");
+
+        const countdown = document.createElement("span");
+        countdown.className = "ai-planner-delete-countdown";
+        countdown.textContent = "5";
+        deleteBtn.appendChild(countdown);
+
+        let timeLeft = 5;
+        let cancelled = false;
+
+        const interval = setInterval(() => {
+          timeLeft--;
+          countdown.textContent = String(timeLeft);
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            if (!cancelled) {
+              card.style.transition = "opacity 0.3s, transform 0.3s";
+              card.style.opacity = "0";
+              card.style.transform = "translateX(30px)";
+              setTimeout(async () => {
+                const ok = await deleteReminder(id);
+                if (ok) {
+                  showToast("Видалено", "success");
+                  await refreshPlanner(container);
+                } else {
+                  showToast("Помилка видалення", "error");
+                  card.style.opacity = "1";
+                  card.style.transform = "";
+                }
+              }, 300);
+            }
           }
-        }
+        }, 1000);
+
+        // Скасування при кліку на кружок
+        countdown.addEventListener("click", (ce) => {
+          ce.stopPropagation();
+          cancelled = true;
+          clearInterval(interval);
+          deleteBtn.dataset.counting = "";
+          deleteBtn.classList.remove("ai-planner-card-action--counting");
+          if (actionsEl)
+            actionsEl.classList.remove("ai-planner-card-actions--counting");
+          deleteBtn.innerHTML = "🗑️";
+        });
       } else if (action === "pause") {
         const reminder = reminders.find((r) => r.reminder_id === id);
         if (reminder) {
@@ -541,7 +633,7 @@ function initPlannerHandlers(container: HTMLElement): void {
 
 async function refreshPlanner(container: HTMLElement): Promise<void> {
   reminders = await loadReminders();
-  renderPlannerPanel(container);
+  await renderPlannerPanel(container);
 }
 
 // ── Toast ──
@@ -998,7 +1090,7 @@ export async function initPlannerTab(container: HTMLElement): Promise<void> {
 
   // Завантажити
   reminders = await loadReminders();
-  renderPlannerPanel(container);
+  await renderPlannerPanel(container);
 }
 
 // ═══════════════════════════════════════

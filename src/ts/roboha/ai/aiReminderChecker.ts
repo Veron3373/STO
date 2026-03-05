@@ -284,10 +284,10 @@ async function sendTelegramReminder(reminder: DueReminder): Promise<void> {
     const icon = getPriorityIcon(reminder.priority);
     const typeLabel = getTypeLabel(reminder.reminder_type);
     const messageText = [
-      `${icon} *${escapeMarkdown(reminder.title)}*`,
-      reminder.description ? `\n${escapeMarkdown(reminder.description)}` : "",
+      `${icon} <b>${escTg(reminder.title)}</b>`,
+      reminder.description ? `\n${escTg(reminder.description)}` : "",
       `\n📎 ${typeLabel} | Пріоритет: ${reminder.priority}`,
-      `👤 Створив: ${escapeMarkdown(reminder.creator_name)}`,
+      `👤 Створив: ${escTg(reminder.creator_name)}`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -298,7 +298,7 @@ async function sendTelegramReminder(reminder: DueReminder): Promise<void> {
           body: {
             chat_id: tgUser.telegram_chat_id,
             text: messageText,
-            parse_mode: "Markdown",
+            parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [
                 [
@@ -379,8 +379,11 @@ async function resolveRecipientIds(reminder: DueReminder): Promise<number[]> {
   return reminder.created_by ? [reminder.created_by] : [];
 }
 
-function escapeMarkdown(text: string): string {
-  return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
+function escTg(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 // ═══════════════════════════════════════════════════════

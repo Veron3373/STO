@@ -1105,7 +1105,12 @@ function initModalHandlers(
           showToast("Вкажіть дату/час!", "error");
           return;
         }
-        reminder.trigger_at = new Date(triggerAt).toISOString();
+        const isoTrigger = new Date(triggerAt).toISOString();
+        reminder.trigger_at = isoTrigger;
+        // Синхронізуємо next_trigger_at — саме за ним працює get_due_reminders
+        reminder.next_trigger_at = isoTrigger;
+        // Якщо редагуємо завершене — повертаємо в active
+        reminder.status = "active" as any;
       } else if (selectedType === "recurring") {
         const schedType = (
           overlay.querySelector("#planner-schedule-type") as HTMLSelectElement
@@ -1162,6 +1167,8 @@ function initModalHandlers(
         }
 
         reminder.schedule = schedule;
+        // Перерахувати next_trigger_at для recurring
+        reminder.next_trigger_at = calculateNextTrigger(schedule) as any;
       } else if (selectedType === "conditional") {
         const condQuery = (
           overlay.querySelector(

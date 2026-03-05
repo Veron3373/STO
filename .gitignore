@@ -65,3 +65,6 @@ project_clone_workflow*.png
 
 .vercel
 .env*.local
+
+.vercel
+.env*.local

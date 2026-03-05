@@ -136,6 +136,30 @@ async function loadTelegramUsers(): Promise<void> {
   }
 }
 
+function getRecipientsLabel(recipients: any): string {
+  if (!recipients || recipients === "self" || recipients === '"self"')
+    return "👤 Тільки мені";
+  if (recipients === "all" || recipients === '"all"') return "👥 Всім";
+  if (recipients === "mechanics" || recipients === '"mechanics"')
+    return "🔧 Слюсарям";
+  if (Array.isArray(recipients) && recipients.length > 0) {
+    const user = telegramUsers.find((u) => u.slyusar_id === recipients[0]);
+    return user ? `✈️ ${user.name}` : "👤 Тільки мені";
+  }
+  return "👤 Тільки мені";
+}
+
+function getRecipientsValue(recipients: any): string {
+  if (!recipients || recipients === "self" || recipients === '"self"')
+    return "self";
+  if (recipients === "all" || recipients === '"all"') return "all";
+  if (recipients === "mechanics" || recipients === '"mechanics"')
+    return "mechanics";
+  if (Array.isArray(recipients) && recipients.length > 0)
+    return `user_${recipients[0]}`;
+  return "self";
+}
+
 function renderTelegramStatus(): string {
   const slyusarId = getCurrentSlyusarId();
   if (telegramLinked) {
@@ -812,19 +836,27 @@ function showReminderModal(
         <!-- Адресати -->
         <div class="ai-planner-field">
           <label class="ai-planner-label">Кому</label>
-          <select class="ai-planner-select" id="planner-recipients">
-            <option value="self" ${!r.recipients || r.recipients === "self" || r.recipients === '"self"' ? "selected" : ""}>👤 Тільки мені</option>
-            <option value="all" ${r.recipients === "all" || r.recipients === '"all"' ? "selected" : ""}>👥 Всім</option>
-            <option value="mechanics" ${r.recipients === "mechanics" || r.recipients === '"mechanics"' ? "selected" : ""}>🔧 Слюсарям</option>
-            ${telegramUsers
-              .map((u) => {
-                const isSelected =
-                  Array.isArray(r.recipients) &&
-                  r.recipients.includes(u.slyusar_id);
-                return `<option value="user_${u.slyusar_id}" ${isSelected ? "selected" : ""}>✈️ ${escapeHtml(u.name)}</option>`;
-              })
-              .join("")}
-          </select>
+          <div class="ai-planner-dropdown" id="planner-recipients-dropdown">
+            <div class="ai-planner-dropdown-selected" id="planner-recipients-toggle">
+              <span id="planner-recipients-label">${getRecipientsLabel(r.recipients)}</span>
+              <svg class="ai-planner-dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="#999"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+            </div>
+            <div class="ai-planner-dropdown-menu" id="planner-recipients-menu">
+              <div class="ai-planner-dropdown-item ${!r.recipients || r.recipients === "self" || r.recipients === '"self"' ? "ai-planner-dropdown-item--active" : ""}" data-value="self">👤 Тільки мені</div>
+              <div class="ai-planner-dropdown-item ${r.recipients === "all" || r.recipients === '"all"' ? "ai-planner-dropdown-item--active" : ""}" data-value="all">👥 Всім</div>
+              <div class="ai-planner-dropdown-item ${r.recipients === "mechanics" || r.recipients === '"mechanics"' ? "ai-planner-dropdown-item--active" : ""}" data-value="mechanics">🔧 Слюсарям</div>
+              ${telegramUsers.length > 0 ? '<div class="ai-planner-dropdown-divider"></div>' : ""}
+              ${telegramUsers
+                .map((u) => {
+                  const isSelected =
+                    Array.isArray(r.recipients) &&
+                    r.recipients.includes(u.slyusar_id);
+                  return `<div class="ai-planner-dropdown-item ${isSelected ? "ai-planner-dropdown-item--active" : ""}" data-value="user_${u.slyusar_id}">✈️ ${escapeHtml(u.name)}</div>`;
+                })
+                .join("")}
+            </div>
+            <input type="hidden" id="planner-recipients" value="${getRecipientsValue(r.recipients)}" />
+          </div>
         </div>
       </div>
 
@@ -857,6 +889,44 @@ function initModalHandlers(
     ?.addEventListener("click", close);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
+  });
+
+  // Кастомний дропдаун «Кому»
+  const dropdown = overlay.querySelector(
+    "#planner-recipients-dropdown",
+  ) as HTMLElement;
+  const toggle = overlay.querySelector(
+    "#planner-recipients-toggle",
+  ) as HTMLElement;
+  const menu = overlay.querySelector("#planner-recipients-menu") as HTMLElement;
+  const hiddenInput = overlay.querySelector(
+    "#planner-recipients",
+  ) as HTMLInputElement;
+  const label = overlay.querySelector(
+    "#planner-recipients-label",
+  ) as HTMLElement;
+
+  toggle?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle("ai-planner-dropdown--open");
+  });
+
+  menu?.addEventListener("click", (e) => {
+    const item = (e.target as HTMLElement).closest(
+      ".ai-planner-dropdown-item",
+    ) as HTMLElement;
+    if (!item) return;
+    menu
+      .querySelectorAll(".ai-planner-dropdown-item")
+      .forEach((i) => i.classList.remove("ai-planner-dropdown-item--active"));
+    item.classList.add("ai-planner-dropdown-item--active");
+    hiddenInput.value = item.dataset.value || "self";
+    label.textContent = item.textContent || "👤 Тільки мені";
+    dropdown.classList.remove("ai-planner-dropdown--open");
+  });
+
+  overlay.addEventListener("click", () => {
+    dropdown?.classList.remove("ai-planner-dropdown--open");
   });
 
   // Вибір типу
@@ -998,7 +1068,7 @@ function initModalHandlers(
           overlay.querySelector("#planner-desc") as HTMLTextAreaElement
         ).value.trim() || null;
       const recipientsVal = (
-        overlay.querySelector("#planner-recipients") as HTMLSelectElement
+        overlay.querySelector("#planner-recipients") as HTMLInputElement
       ).value;
 
       const parsedRecipients = recipientsVal.startsWith("user_")

@@ -5377,7 +5377,6 @@ function initAIChatHandlers(modal: HTMLElement): void {
   const dashboardContent = modal.querySelector(
     "#ai-dashboard-content",
   ) as HTMLElement;
-  let plannerLoaded = false;
 
   // ── Закрити ──
   closeBtn?.addEventListener("click", () => {
@@ -5568,8 +5567,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
     } else if (activeTab === "planner") {
       tabPlanner?.classList.add("ai-chat-tab--active");
       panelPlanner?.classList.remove("hidden");
-      if (!plannerLoaded && panelPlanner) {
-        plannerLoaded = true;
+      if (panelPlanner) {
         initPlannerTab(panelPlanner);
       }
     } else {

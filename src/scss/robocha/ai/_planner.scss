@@ -122,8 +122,9 @@
   white-space: nowrap;
 
   &:hover {
-    border-color: #667eea;
-    color: #667eea;
+    border-color: #9b8ec4;
+    background: #f3f0ff;
+    color: #5b4a9e;
   }
 
   &--active {
@@ -131,6 +132,11 @@
     color: white;
     border-color: transparent;
     font-weight: 600;
+
+    &:hover {
+      background: linear-gradient(135deg, #5a71d4, #6a4293);
+      color: white;
+    }
   }
 }
 
@@ -582,8 +588,9 @@
   transition: all 0.15s;
 
   &:hover {
-    border-color: #667eea;
-    color: #667eea;
+    border-color: #9b8ec4;
+    background: #f3f0ff;
+    color: #5b4a9e;
   }
 
   &--active {
@@ -591,6 +598,11 @@
     color: white;
     border-color: transparent;
     font-weight: 600;
+
+    &:hover {
+      background: linear-gradient(135deg, #5a71d4, #6a4293);
+      color: white;
+    }
   }
 }
 
@@ -712,4 +724,122 @@
     opacity: 0;
     transform: translateY(20px);
   }
+}
+
+// ═══════════════════════════════════════
+// Кастомний дропдаун (відкривається вверх)
+// ═══════════════════════════════════════
+
+.ai-planner-dropdown {
+  position: relative;
+}
+
+.ai-planner-dropdown-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border: 1px solid #e0e0e8;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #333;
+  background: #fafbfc;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  user-select: none;
+
+  &:hover {
+    border-color: #9b8ec4;
+  }
+}
+
+.ai-planner-dropdown--open .ai-planner-dropdown-selected {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.ai-planner-dropdown-arrow {
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.ai-planner-dropdown--open .ai-planner-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.ai-planner-dropdown-menu {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e8;
+  border-radius: 10px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 20;
+  padding: 4px;
+  animation: dropUpIn 0.15s ease-out;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d0d0e0;
+    border-radius: 2px;
+  }
+}
+
+.ai-planner-dropdown--open .ai-planner-dropdown-menu {
+  display: block;
+}
+
+@keyframes dropUpIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-planner-dropdown-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: #f3f0ff;
+    color: #5b4a9e;
+  }
+
+  &--active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    font-weight: 600;
+
+    &:hover {
+      background: linear-gradient(135deg, #5a71d4, #6a4293);
+      color: white;
+    }
+  }
+}
+
+.ai-planner-dropdown-divider {
+  height: 1px;
+  background: #eee;
+  margin: 4px 8px;
 }

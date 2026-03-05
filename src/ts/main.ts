@@ -37,10 +37,24 @@ setTimeout(() => {
   initAIChatButton();
 }, 2000);
 
-// 🔔 Перевірка нагадувань Атласа (polling кожні 60 сек)
-import { initReminderChecker } from "./roboha/ai/aiReminderChecker";
+// 🔔 Перевірка нагадувань Атласа (polling кожні 15 сек + precision timer)
+import {
+  initReminderChecker,
+  setOnRemindersTriggered,
+} from "./roboha/ai/aiReminderChecker";
+import { initPlannerTab } from "./roboha/ai/aiPlanner";
 
 // Запускаємо після повної ініціалізації всіх модулів
 setTimeout(() => {
   initReminderChecker();
+
+  // Коли нагадування спрацювало — оновити UI планувальника (якщо відкритий)
+  setOnRemindersTriggered(() => {
+    const plannerPanel = document.querySelector(
+      ".ai-chat-panel-planner",
+    ) as HTMLElement | null;
+    if (plannerPanel && !plannerPanel.classList.contains("hidden")) {
+      initPlannerTab(plannerPanel);
+    }
+  });
 }, 4000);

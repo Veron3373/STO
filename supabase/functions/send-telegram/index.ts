@@ -1,11 +1,7 @@
 // supabase/functions/send-telegram/index.ts
-/// <reference lib="deno.ns" />
-/// <reference lib="deno.unstable" />
-// @ts-ignore: Deno глобальний у середовищі Edge Functions
 // ═══════════════════════════════════════════════════════
 // 📤 Send Telegram Message — допоміжна Edge Function
-// Викликається з клієнта (aiReminderChecker) для відправки
-// нагадувань у Telegram конкретному chat_id
+// Викликається для відправки нагадувань у Telegram
 // ═══════════════════════════════════════════════════════
 
 const corsHeaders = {

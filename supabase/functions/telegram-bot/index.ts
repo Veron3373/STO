@@ -7,13 +7,7 @@
 //   /status       — перевірка прив'язки
 // ═══════════════════════════════════════════════════════
 
-// @deno-types="npm:@supabase/supabase-js@2/dist/module/index.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-/// <reference lib="deno.ns" />
-/// <reference lib="deno.unstable" />
-// Для середовища Supabase Edge Functions
-// Edge Functions автоматично надають Deno та env
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

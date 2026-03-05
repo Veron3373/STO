@@ -114,7 +114,6 @@ function renderTelegramStatus(): string {
     return `
       <div class="ai-planner-telegram-status ai-planner-telegram-status--linked">
         <span>✅ Telegram прив'язано</span>
-        <span class="ai-planner-telegram-hint">Telegram Атлас</span>
       </div>`;
   }
   return `
@@ -408,14 +407,11 @@ export async function renderPlannerPanel(
     <div class="ai-planner">
       <!-- Заголовок -->
       <div class="ai-planner-header">
-        <div class="ai-planner-title">📋 Планувальник</div>
+        ${renderTelegramStatus()}
         <button class="ai-planner-add-btn" id="planner-add-btn">
           ➕ Створити
         </button>
       </div>
-
-      <!-- Telegram статус -->
-      ${renderTelegramStatus()}
 
       <!-- Фільтри -->
       <div class="ai-planner-filters">

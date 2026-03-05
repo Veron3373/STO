@@ -62,6 +62,7 @@ let currentFilter: "all" | "active" | "paused" | "completed" = "all";
 let reminders: ReminderFromRPC[] = [];
 let editingReminderId: number | null = null;
 let telegramLinked: boolean | null = null; // null = не перевірено
+let telegramUsers: { slyusar_id: number; name: string }[] = [];
 
 // ── Утиліти ──
 
@@ -105,6 +106,33 @@ async function checkTelegramLink(): Promise<boolean> {
   } catch {
     telegramLinked = false;
     return false;
+  }
+}
+
+async function loadTelegramUsers(): Promise<void> {
+  try {
+    const { data: tgUsers } = await supabase
+      .from("atlas_telegram_users")
+      .select("slyusar_id")
+      .eq("is_active", true);
+
+    if (!tgUsers?.length) {
+      telegramUsers = [];
+      return;
+    }
+
+    const ids = tgUsers.map((u: any) => u.slyusar_id);
+    const { data: slyusars } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, data")
+      .in("slyusar_id", ids);
+
+    telegramUsers = (slyusars || []).map((s: any) => ({
+      slyusar_id: s.slyusar_id,
+      name: s.data?.Name || `ID ${s.slyusar_id}`,
+    }));
+  } catch {
+    telegramUsers = [];
   }
 }
 
@@ -788,6 +816,14 @@ function showReminderModal(
             <option value="self" ${!r.recipients || r.recipients === "self" || r.recipients === '"self"' ? "selected" : ""}>👤 Тільки мені</option>
             <option value="all" ${r.recipients === "all" || r.recipients === '"all"' ? "selected" : ""}>👥 Всім</option>
             <option value="mechanics" ${r.recipients === "mechanics" || r.recipients === '"mechanics"' ? "selected" : ""}>🔧 Слюсарям</option>
+            ${telegramUsers
+              .map((u) => {
+                const isSelected =
+                  Array.isArray(r.recipients) &&
+                  r.recipients.includes(u.slyusar_id);
+                return `<option value="user_${u.slyusar_id}" ${isSelected ? "selected" : ""}>✈️ ${escapeHtml(u.name)}</option>`;
+              })
+              .join("")}
           </select>
         </div>
       </div>
@@ -961,9 +997,13 @@ function initModalHandlers(
         (
           overlay.querySelector("#planner-desc") as HTMLTextAreaElement
         ).value.trim() || null;
-      const recipients = (
+      const recipientsVal = (
         overlay.querySelector("#planner-recipients") as HTMLSelectElement
       ).value;
+
+      const parsedRecipients = recipientsVal.startsWith("user_")
+        ? [Number(recipientsVal.replace("user_", ""))]
+        : recipientsVal;
 
       const reminder: Partial<Reminder> = {
         title,
@@ -971,7 +1011,7 @@ function initModalHandlers(
         reminder_type: selectedType as any,
         priority: selectedPriority as any,
         channel: selectedChannel as any,
-        recipients: recipients as any,
+        recipients: parsedRecipients as any,
       };
 
       // Тип-специфічні поля
@@ -1085,6 +1125,7 @@ export async function initPlannerTab(container: HTMLElement): Promise<void> {
   `;
 
   // Завантажити
+  await loadTelegramUsers();
   reminders = await loadReminders();
   await renderPlannerPanel(container);
 }

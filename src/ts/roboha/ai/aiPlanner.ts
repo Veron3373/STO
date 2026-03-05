@@ -538,7 +538,6 @@ function renderReminderCard(r: ReminderFromRPC): string {
           `
               : ""
           }
-          <button class="ai-planner-card-action" data-action="edit" data-id="${r.reminder_id}" title="Редагувати">✏️</button>
           <button class="ai-planner-card-action ai-planner-card-action--delete" data-action="delete" data-id="${r.reminder_id}" title="Видалити">🗑️</button>
         </div>
       </div>
@@ -666,13 +665,20 @@ function initPlannerHandlers(container: HTMLElement): void {
             await refreshPlanner(container);
           }
         }
-      } else if (action === "edit") {
-        editingReminderId = id;
-        showReminderModal(
-          container,
-          reminders.find((r) => r.reminder_id === id),
-        );
       }
+    });
+  });
+
+  // Двойний клік на картку — редагування
+  container.querySelectorAll(".ai-planner-card").forEach((card) => {
+    card.addEventListener("dblclick", () => {
+      const id = Number((card as HTMLElement).dataset.reminderId);
+      if (!id) return;
+      editingReminderId = id;
+      showReminderModal(
+        container,
+        reminders.find((r) => r.reminder_id === id),
+      );
     });
   });
 }

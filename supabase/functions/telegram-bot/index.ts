@@ -42,6 +42,94 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const update = await req.json();
 
+    // ────────────────────────────────
+    // Callback Query (кнопки під повідомленням)
+    // ────────────────────────────────
+    const callbackQuery = update?.callback_query;
+    if (callbackQuery) {
+      const cbData = callbackQuery.data || "";
+      const cbChatId = callbackQuery.message?.chat?.id;
+      const cbMessageId = callbackQuery.message?.message_id;
+      const cbUsername =
+        callbackQuery.from?.first_name ||
+        callbackQuery.from?.username ||
+        "Користувач";
+
+      // Формат: rem_done_123, rem_snooze_123, rem_skip_123
+      const match = cbData.match(/^rem_(done|snooze|skip)_(\d+)$/);
+      if (match && cbChatId) {
+        const action = match[1];
+        const reminderId = parseInt(match[2], 10);
+
+        const actionLabels: Record<string, string> = {
+          done: "✅ Виконано",
+          snooze: "📅 Заплановано",
+          skip: "❌ Не планую",
+        };
+
+        // Оновити статус нагадування в БД
+        if (action === "done") {
+          await supabase
+            .from("atlas_reminders")
+            .update({
+              status: "completed",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("reminder_id", reminderId);
+        } else if (action === "skip") {
+          await supabase
+            .from("atlas_reminders")
+            .update({
+              status: "cancelled",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("reminder_id", reminderId);
+        }
+        // snooze — нічого не міняємо, залишаємо active
+
+        // Записати лог
+        await supabase.from("atlas_reminder_logs").insert({
+          reminder_id: reminderId,
+          channel: "telegram",
+          message_text: `Відповідь: ${actionLabels[action]} (від ${cbUsername})`,
+          delivery_status: "callback",
+        });
+
+        // Відповісти на callback (попап)
+        await fetch(
+          `https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              callback_query_id: callbackQuery.id,
+              text: actionLabels[action],
+            }),
+          },
+        );
+
+        // Оновити повідомлення — прибрати кнопки, додати відмітку
+        const originalText = callbackQuery.message?.text || "";
+        const updatedText = `${originalText}\n\n─────────────\n${actionLabels[action]} — ${cbUsername}`;
+
+        await fetch(
+          `https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: cbChatId,
+              message_id: cbMessageId,
+              text: updatedText,
+              parse_mode: "Markdown",
+            }),
+          },
+        );
+      }
+
+      return new Response("OK", { status: 200 });
+    }
+
     // Telegram надсилає об'єкт Update
     const message = update?.message;
     if (!message || !message.text) {

@@ -868,7 +868,7 @@ function showReminderModal(
 
       <div class="ai-planner-modal-footer">
         ${isEdit ? `<button class="ai-planner-btn ai-planner-btn--delete" id="planner-modal-delete">🗑️ Видалити</button>` : ""}
-        <button class="ai-planner-btn ai-planner-btn--cancel" id="planner-modal-cancel">Скасувати</button>
+        <button class="ai-planner-btn ai-planner-btn--cancel" id="planner-modal-cancel">↩️ Скасувати</button>
         <button class="ai-planner-btn ai-planner-btn--save" id="planner-modal-save">${isEdit ? "💾 Зберегти" : "➕ Створити"}</button>
       </div>
     </div>

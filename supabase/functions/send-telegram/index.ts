@@ -38,10 +38,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       chat_id,
       text,
       parse_mode = "Markdown",
+      reply_markup,
     }: {
       chat_id?: number;
       text?: string;
       parse_mode?: string;
+      reply_markup?: Record<string, unknown>;
     } = await req.json();
 
     if (!chat_id || !text) {
@@ -68,6 +70,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           text,
           parse_mode,
           disable_web_page_preview: true,
+          ...(reply_markup ? { reply_markup } : {}),
         }),
       },
     );

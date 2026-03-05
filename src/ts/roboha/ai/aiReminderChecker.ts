@@ -299,6 +299,24 @@ async function sendTelegramReminder(reminder: DueReminder): Promise<void> {
             chat_id: tgUser.telegram_chat_id,
             text: messageText,
             parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "✅ Виконано",
+                    callback_data: `rem_done_${reminder.reminder_id}`,
+                  },
+                  {
+                    text: "📅 Заплановано",
+                    callback_data: `rem_snooze_${reminder.reminder_id}`,
+                  },
+                  {
+                    text: "❌ Не планую",
+                    callback_data: `rem_skip_${reminder.reminder_id}`,
+                  },
+                ],
+              ],
+            },
           },
         });
 

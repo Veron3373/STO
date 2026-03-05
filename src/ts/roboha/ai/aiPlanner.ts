@@ -414,6 +414,12 @@ function formatDateTime(dateStr: string | null): string {
   });
 }
 
+function formatLocalDateTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function formatRecipients(recipients: any): string {
   if (recipients === "self" || recipients === '"self"') return "👤 Тільки я";
   if (recipients === "all" || recipients === '"all"') return "👥 Всі";
@@ -758,7 +764,7 @@ function showReminderModal(
         <div class="ai-planner-field" id="planner-once-fields" style="display:${(r.reminder_type || "once") === "once" ? "flex" : "none"}">
           <label class="ai-planner-label">Коли нагадати</label>
           <input class="ai-planner-input" id="planner-trigger-at" type="datetime-local"
-            value="${r.trigger_at ? new Date(r.trigger_at).toISOString().slice(0, 16) : ""}" />
+            value="${r.trigger_at ? formatLocalDateTime(r.trigger_at) : ""}" />
         </div>
 
         <!-- Розклад (для recurring) -->

@@ -36,6 +36,7 @@ export interface ReminderFromRPC {
   reminder_type: string;
   trigger_at: string | null;
   schedule: any;
+  condition_query: string | null;
   recipients: any;
   channel: string;
   priority: string;
@@ -751,16 +752,15 @@ function initPlannerHandlers(container: HTMLElement): void {
     });
   });
 
-  // Двойний клік на картку — редагування
+  // Клік на картку — перегляд
   container.querySelectorAll(".ai-planner-card").forEach((card) => {
-    card.addEventListener("dblclick", () => {
+    card.addEventListener("click", (e) => {
+      // Не відкривати перегляд при кліку на кнопки дій
+      if ((e.target as HTMLElement).closest("[data-action]")) return;
       const id = Number((card as HTMLElement).dataset.reminderId);
       if (!id) return;
-      editingReminderId = id;
-      showReminderModal(
-        container,
-        reminders.find((r) => r.reminder_id === id),
-      );
+      const r = reminders.find((rm) => rm.reminder_id === id);
+      if (r) showReminderViewModal(container, r);
     });
   });
 }
@@ -783,6 +783,216 @@ function showToast(
   toast.textContent = text;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
+}
+
+// ═══════════════════════════════════════
+// 👁️ МОДАЛКА ПЕРЕГЛЯДУ
+// ═══════════════════════════════════════
+
+function showReminderViewModal(
+  container: HTMLElement,
+  r: ReminderFromRPC,
+): void {
+  container
+    .closest(".ai-chat-window")
+    ?.querySelector(".ai-planner-modal-overlay")
+    ?.remove();
+
+  const timeInfo =
+    r.reminder_type === "once"
+      ? formatDateTime(r.trigger_at || r.next_trigger_at)
+      : r.reminder_type === "recurring"
+        ? formatSchedule(r.schedule)
+        : "Умовна перевірка";
+
+  const nextTrigger =
+    r.next_trigger_at && r.status === "active"
+      ? formatDateTime(r.next_trigger_at)
+      : null;
+
+  const callbackHtml = renderCallbackResponse(r.reminder_id);
+
+  const overlay = document.createElement("div");
+  overlay.className = "ai-planner-modal-overlay";
+  overlay.innerHTML = `
+    <div class="ai-planner-modal ai-planner-modal--view">
+      <div class="ai-planner-modal-header">
+        <div class="ai-planner-modal-title">📋 Перегляд</div>
+        <button class="ai-planner-modal-close" id="planner-view-close">✕</button>
+      </div>
+      <div class="ai-planner-modal-body ai-planner-view-body">
+
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">Назва</div>
+          <div class="ai-planner-view-value ai-planner-view-value--title">${escapeHtml(r.title)}</div>
+        </div>
+
+        ${
+          r.description
+            ? `
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">Опис</div>
+          <div class="ai-planner-view-value">${escapeHtml(r.description)}</div>
+        </div>`
+            : ""
+        }
+
+        <div class="ai-planner-view-row">
+          <div class="ai-planner-view-field">
+            <div class="ai-planner-view-label">Тип</div>
+            <div class="ai-planner-view-value">${TYPE_LABELS[r.reminder_type] || r.reminder_type}</div>
+          </div>
+          <div class="ai-planner-view-field">
+            <div class="ai-planner-view-label">Канал</div>
+            <div class="ai-planner-view-value">${CHANNEL_LABELS[r.channel] || r.channel}</div>
+          </div>
+        </div>
+
+        <div class="ai-planner-view-row">
+          <div class="ai-planner-view-field">
+            <div class="ai-planner-view-label">Пріоритет</div>
+            <div class="ai-planner-view-value">${PRIORITY_LABELS[r.priority] || r.priority}</div>
+          </div>
+          <div class="ai-planner-view-field">
+            <div class="ai-planner-view-label">Статус</div>
+            <div class="ai-planner-view-value">${r.status === "active" ? "✅ Активне" : r.status === "paused" ? "⏸️ Пауза" : r.status === "completed" ? "✔️ Завершене" : "❌ Скасоване"}</div>
+          </div>
+        </div>
+
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">${r.reminder_type === "once" ? "Коли" : "Розклад"}</div>
+          <div class="ai-planner-view-value">🕐 ${timeInfo}</div>
+        </div>
+
+        ${
+          nextTrigger
+            ? `
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">Наступне</div>
+          <div class="ai-planner-view-value">⏭️ ${nextTrigger}</div>
+        </div>`
+            : ""
+        }
+
+        <div class="ai-planner-view-row">
+          <div class="ai-planner-view-field">
+            <div class="ai-planner-view-label">Кому</div>
+            <div class="ai-planner-view-value">${formatRecipients(r.recipients)}</div>
+          </div>
+          ${
+            r.trigger_count > 0
+              ? `
+          <div class="ai-planner-view-field">
+            <div class="ai-planner-view-label">Надіслано</div>
+            <div class="ai-planner-view-value">🔔 ${r.trigger_count}×</div>
+          </div>`
+              : ""
+          }
+        </div>
+
+        ${
+          r.condition_query
+            ? `
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">SQL-умова</div>
+          <div class="ai-planner-view-value ai-planner-view-value--code">${escapeHtml(r.condition_query)}</div>
+        </div>`
+            : ""
+        }
+
+        ${
+          callbackHtml
+            ? `
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">Відповідь з Telegram</div>
+          ${callbackHtml}
+        </div>`
+            : ""
+        }
+
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">Створено</div>
+          <div class="ai-planner-view-value" style="font-size:11px;color:#999">${formatDateTime(r.created_at)}${r.creator_name ? " — " + escapeHtml(r.creator_name) : ""}</div>
+        </div>
+      </div>
+
+      <div class="ai-planner-modal-footer">
+        <button class="ai-planner-btn ai-planner-btn--delete" id="planner-view-delete">🗑️ Видалити</button>
+        <button class="ai-planner-btn ai-planner-btn--save" id="planner-view-edit">✏️ Редагувати</button>
+      </div>
+    </div>
+  `;
+
+  container.closest(".ai-chat-window")!.appendChild(overlay);
+
+  // ── Обробники ──
+  const close = () => overlay.remove();
+  overlay
+    .querySelector("#planner-view-close")
+    ?.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  // Редагувати
+  overlay.querySelector("#planner-view-edit")?.addEventListener("click", () => {
+    close();
+    editingReminderId = r.reminder_id;
+    showReminderModal(container, r);
+  });
+
+  // Видалити з відліком 5 секунд
+  const deleteBtn = overlay.querySelector(
+    "#planner-view-delete",
+  ) as HTMLElement;
+  deleteBtn?.addEventListener("click", () => {
+    if (deleteBtn.dataset.counting === "true") return;
+    deleteBtn.dataset.counting = "true";
+    const origText = deleteBtn.innerHTML;
+    let timeLeft = 5;
+    deleteBtn.innerHTML = `🗑️ Видалення... <span class="ai-planner-delete-countdown">${timeLeft}</span>`;
+    deleteBtn.classList.add("ai-planner-btn--counting");
+    let cancelled = false;
+
+    const interval = setInterval(() => {
+      timeLeft--;
+      const cd = deleteBtn.querySelector(".ai-planner-delete-countdown");
+      if (cd) cd.textContent = String(timeLeft);
+      if (timeLeft <= 0) {
+        clearInterval(interval);
+        if (!cancelled) {
+          (async () => {
+            const ok = await deleteReminder(r.reminder_id);
+            if (ok) {
+              showToast("Видалено", "success");
+              close();
+              await refreshPlanner(container);
+            } else {
+              showToast("Помилка видалення", "error");
+              deleteBtn.innerHTML = origText;
+              deleteBtn.dataset.counting = "";
+              deleteBtn.classList.remove("ai-planner-btn--counting");
+            }
+          })();
+        }
+      }
+    }, 1000);
+
+    // Повторний клік — скасування
+    deleteBtn.addEventListener(
+      "click",
+      function cancelDel(ce) {
+        ce.stopPropagation();
+        cancelled = true;
+        clearInterval(interval);
+        deleteBtn.innerHTML = origText;
+        deleteBtn.dataset.counting = "";
+        deleteBtn.classList.remove("ai-planner-btn--counting");
+        deleteBtn.removeEventListener("click", cancelDel);
+      },
+      { once: true },
+    );
+  });
 }
 
 // ═══════════════════════════════════════

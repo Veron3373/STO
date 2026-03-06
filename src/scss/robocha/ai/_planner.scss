@@ -812,6 +812,76 @@
       background: #fee2e2;
     }
   }
+
+  &--counting {
+    pointer-events: auto;
+    animation: pulse-red 1s infinite;
+  }
+}
+
+@keyframes pulse-red {
+  0%,
+  100% {
+    background: #fef2f2;
+  }
+  50% {
+    background: #fee2e2;
+  }
+}
+
+// ── Модалка перегляду ──
+.ai-planner-modal--view {
+  max-width: 400px;
+}
+
+.ai-planner-view-body {
+  gap: 10px !important;
+}
+
+.ai-planner-view-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ai-planner-view-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ai-planner-view-value {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.4;
+
+  &--title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #222;
+  }
+
+  &--code {
+    font-family: monospace;
+    font-size: 11px;
+    background: #f5f5fa;
+    padding: 8px 10px;
+    border-radius: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #555;
+  }
+}
+
+.ai-planner-view-row {
+  display: flex;
+  gap: 16px;
+
+  .ai-planner-view-field {
+    flex: 1;
+  }
 }
 
 // ── Спіннер завантаження ──

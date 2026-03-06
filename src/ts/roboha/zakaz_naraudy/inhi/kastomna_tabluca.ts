@@ -541,6 +541,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
   // Поточне значення поля для підсвічування збігу
   const currentTargetValue = (target.getAttribute("data-full-name") || target.textContent || "").trim().toLowerCase();
+  const currentScladIdAttr = target.getAttribute("data-sclad-id") || target.closest('tr')?.querySelector('[data-name="catalog"]')?.getAttribute("data-sclad-id");
+  const targetScladId = currentScladIdAttr ? Number(currentScladIdAttr) : undefined;
 
   const GAP = 4;
   const ROWS_MAX = 15;
@@ -566,14 +568,24 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
     if (itemType === "work") li.classList.add("item-work-cat");
     if (itemType === "detail") li.classList.add("item-detail-cat");
 
-    // Підсвічуємо рядок, який відповідає поточному значенню поля
-    // Порівнюємо ТІЛЬКИ по value (артикул для каталогу, назва для name)
-    if (currentTargetValue) {
-      const itemValue = (value || "").trim().toLowerCase();
-      if (itemValue === currentTargetValue) {
-        li.classList.add("active-suggestion");
-        activeItem = li;
+    // Підсвічуємо рядок, який відповідає поточній вибраній деталі (або за sclad_id, або за текстом)
+    let isActive = false;
+
+    // Пріоритетно перевіряємо sclad_id. Якщо він є у ячейці, шукаємо СУВОРО такий саме sclad_id
+    if (targetScladId !== undefined && !Number.isNaN(targetScladId) && targetScladId > 0) {
+      if (sclad_id === targetScladId) {
+        isActive = true;
       }
+    } else if (currentTargetValue && value) {
+      const itemValue = value.trim().toLowerCase();
+      if (itemValue === currentTargetValue) {
+        isActive = true;
+      }
+    }
+
+    if (isActive) {
+      li.classList.add("active-suggestion");
+      activeItem = li;
     }
 
     li.tabIndex = 0;

@@ -105,6 +105,8 @@ export interface ActItem {
   slyusar_id?: number | null;
   slyusarSum?: number; // ✅ Додано для зарплати слюсаря
   recordId?: string; // ✅ Унікальний ID запису для точного пошуку в історії слюсаря
+  detail_id?: number | null; // ✅ ID деталі без складу
+  work_id?: string | null; // ✅ ID роботи
 }
 
 export interface GlobalDataCache {

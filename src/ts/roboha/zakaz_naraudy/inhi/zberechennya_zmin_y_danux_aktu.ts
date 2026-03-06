@@ -657,6 +657,10 @@ function processItems(items: ParsedItem[]) {
         recordId ||
         `new_${name.substring(0, 20)}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+      // ✅ Шукаємо work_id в глобальному кеші за ім'ям роботи
+      const workObj = globalCache.worksWithId.find(w => w.name === name);
+      const work_id = catalog || (workObj ? workObj.work_id : null);
+
       works.push({
         ...itemBase,
         Робота: name,
@@ -666,6 +670,7 @@ function processItems(items: ParsedItem[]) {
         Зарплата: salary,
         Прибуток: profit,
         recordId: workRecordId, // ✅ Завжди є recordId
+        work_id, // ✅ Зберігаємо work_id в акт
       });
 
       totalWorksSum += sum;
@@ -690,12 +695,20 @@ function processItems(items: ParsedItem[]) {
 
       totalDetailsMargin += margin;
 
+      // ✅ Шукаємо detail_id в глобальному кеші для деталей не зі складу
+      let detail_id = null;
+      if (!sclad_id) {
+        const detailObj = globalCache.detailsWithId.find(d => d.name === name);
+        if (detailObj) detail_id = detailObj.detail_id;
+      }
+
       details.push({
         ...itemBase,
         Деталь: name,
         Магазин: pibMagazin,
         Каталог: catalog,
         sclad_id,
+        detail_id, // ✅ Зберігаємо detail_id в акт
         recordId, // ✅ Додаємо recordId для acts
       });
       totalDetailsSum += sum;

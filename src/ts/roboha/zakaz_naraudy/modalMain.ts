@@ -328,7 +328,7 @@ const handleIndexIconClick = async (e: MouseEvent) => {
         createChoiceModal(
           () => runWorkLogic(), // On Work
           () => runPartLogic(), // On Part
-          () => {}, // On Cancel
+          () => { }, // On Cancel
         );
       } else {
         // showNotification("Функція недоступна", "warning"); // Опціонально можна розкоментувати
@@ -1174,9 +1174,8 @@ function handleLoadError(error: any): void {
     "error",
   );
   if (body) {
-    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${
-      error?.message || "Перевірте підключення."
-    }</p>`;
+    body.innerHTML = `<p class="error-message">❌ Не вдалося завантажити акт. ${error?.message || "Перевірте підключення."
+      }</p>`;
   }
 }
 
@@ -1235,16 +1234,30 @@ function renderModalContent(
 
       // ✅ Беремо recordId з acts.data.Деталі (якщо є) або undefined
       const recordId = item["recordId"] || undefined;
+      const sclad_id = showCatalog ? item["sclad_id"] || null : null;
+      const detail_id = item["detail_id"] || null;
+
+      // Якщо є detail_id і немає sclad_id, оновлюємо назву з кешу, раптом вона змінилася
+      let finalDetailName = detailName;
+      if (!sclad_id && detail_id) {
+        const cachedDetail = globalCache.detailsWithId.find(d => d.detail_id === detail_id);
+        if (cachedDetail) finalDetailName = cachedDetail.name;
+      } else if (sclad_id) {
+        // Якщо зі складу, теж можна спробувати оновити назву
+        const scladPart = globalCache.skladParts.find(p => p.sclad_id === sclad_id);
+        if (scladPart) finalDetailName = scladPart.name;
+      }
 
       return {
         type: "detail",
-        name: detailName,
+        name: finalDetailName,
         quantity: item["Кількість"] || 0,
         price: item["Ціна"] || 0,
         sum: item["Сума"] || 0,
         person_or_store: shopName,
         catalog: showCatalog ? item["Каталог"] || "" : "",
-        sclad_id: showCatalog ? item["sclad_id"] || null : null,
+        sclad_id,
+        detail_id, // ✅ Зберігаємо detail_id
         slyusar_id: null,
         recordId, // ✅ Додаємо recordId для деталей
       };
@@ -1265,9 +1278,18 @@ function renderModalContent(
           ? getRecordIdFromHistory(slyusarName, workName, act.act_id, workIndex)
           : undefined);
 
+      const work_id = item["work_id"] || null;
+
+      // Якщо є work_id, оновлюємо назву з кешу, раптом вона змінилася
+      let finalWorkName = workName;
+      if (work_id) {
+        const cachedWork = globalCache.worksWithId.find(w => w.work_id === work_id);
+        if (cachedWork) finalWorkName = cachedWork.name;
+      }
+
       return {
         type: "work",
-        name: workName,
+        name: finalWorkName,
         quantity: item["Кількість"] || 0,
         price: item["Ціна"] || 0,
         sum: item["Сума"] || 0,
@@ -1275,6 +1297,7 @@ function renderModalContent(
         catalog: showCatalog ? item["Каталог"] || "" : "",
         sclad_id: showCatalog ? null : null,
         slyusar_id: item["slyusar_id"] || null,
+        work_id, // ✅ Зберігаємо work_id
         recordId, // ✅ Додаємо recordId для точного пошуку при збереженні
       };
     }),
@@ -1319,48 +1342,44 @@ function renderModalContent(
   const headerButtons = `
     <div class="zakaz_narayd-header-buttons">
       ${pruimalnykDisplay}
-      ${
-        showLockButton
-          ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}">
+      ${showLockButton
+      ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}">
                    ${isClosed ? "🔒" : "🗝️"}
                    </button>`
-          : ""
-      }
-      ${
-        !isRestricted && canShowPrintActBtn
-          ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
-          : ""
-      }
-      ${
-        canShowSmsBtn
-          ? (() => {
-              let tooltip = "Немає SMS";
-              const isSent = !!act.sms;
-              if (isSent) {
-                try {
-                  const dateString = String(act.sms).replace(" ", "T");
-                  const d = new Date(dateString);
-                  if (!isNaN(d.getTime())) {
-                    const { date, time } = formatDateTime(d);
-                    tooltip = `${time} / ${date}`;
-                  } else {
-                    tooltip = String(act.sms);
-                  }
-                } catch {
-                  tooltip = String(act.sms);
-                }
-              }
-              return !isSent
-                ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">✉️</button>`
-                : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📨</button>`;
-            })()
-          : ""
-      }
-      ${
-        !isRestricted && canShowCreateActBtn
-          ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
-          : ""
-      }
+      : ""
+    }
+      ${!isRestricted && canShowPrintActBtn
+      ? `<button id="print-act-button" title="Друк акту" class="print-button">🖨️</button>`
+      : ""
+    }
+      ${canShowSmsBtn
+      ? (() => {
+        let tooltip = "Немає SMS";
+        const isSent = !!act.sms;
+        if (isSent) {
+          try {
+            const dateString = String(act.sms).replace(" ", "T");
+            const d = new Date(dateString);
+            if (!isNaN(d.getTime())) {
+              const { date, time } = formatDateTime(d);
+              tooltip = `${time} / ${date}`;
+            } else {
+              tooltip = String(act.sms);
+            }
+          } catch {
+            tooltip = String(act.sms);
+          }
+        }
+        return !isSent
+          ? `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">✉️</button>`
+          : `<button class="status-lock-icon" id="sms-btn" data-act-id="${act.act_id}" title="${tooltip}">📨</button>`;
+      })()
+      : ""
+    }
+      ${!isRestricted && canShowCreateActBtn
+      ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
+      : ""
+    }
     </div>
   `;
 
@@ -1383,62 +1402,58 @@ function renderModalContent(
         ${createTableRow("Акт №", `<span id="act-number">${act.act_id}</span>`)}
         ${createTableRow("Клієнт", clientInfo.fio)}
         ${createTableRow(
-          "Телефон",
-          `<span style="color: blue;">${clientInfo.phone}</span>`,
-        )}
+    "Телефон",
+    `<span style="color: blue;">${clientInfo.phone}</span>`,
+  )}
         ${createTableRow("Примітка:", clientInfo.note)}
         ${createTableRow("Фото", photoCellHtml)}
       </table>
       <table class="zakaz_narayd-table right">
         ${createTableRow(
-          isClosed ? "Закритий" : "Відкритий",
-          `${
-            isClosed
-              ? `<span class="red">${formatDate(act.date_off)}</span> | <span class="green">${formatDate(act.date_on)}</span>`
-              : `<span class="green">${formatDate(act.date_on) || "-"}</span>`
-          }`,
-        )}
+    isClosed ? "Закритий" : "Відкритий",
+    `${isClosed
+      ? `<span class="red">${formatDate(act.date_off)}</span> | <span class="green">${formatDate(act.date_on)}</span>`
+      : `<span class="green">${formatDate(act.date_on) || "-"}</span>`
+    }`,
+  )}
         ${createTableRow(
-          "Автомобіль",
-          `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
-            carInfo.nomer || ""
-          ).trim()}`.trim() || "—",
-        )}
+    "Автомобіль",
+    `${(carInfo.auto || "").trim()} ${(carInfo.year || "").trim()} ${(
+      carInfo.nomer || ""
+    ).trim()}`.trim() || "—",
+  )}
         ${createTableRow("Vincode", carInfo.vin)}
         ${createTableRow("Двигун", carInfo.engine)}
         ${createTableRow(
-          "Пробіг",
-          `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
-            actDetails?.["Пробіг"],
-            0,
-            0,
-          )}</span>`,
-        )}
+    "Пробіг",
+    `<span id="${EDITABLE_PROBIG_ID}" ${editableAttr} class="editable ${editableClass}">${formatNumberWithSpaces(
+      actDetails?.["Пробіг"],
+      0,
+      0,
+    )}</span>`,
+  )}
       </table>
     </div>
     <div class="reason-container">
       <div class="zakaz_narayd-reason-line">
         <div class="reason-text">
           <strong>Причина звернення:</strong>
-          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
-            actDetails?.["Причина звернення"] || "—"
-          }</span>
+          <span id="${EDITABLE_REASON_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Причина звернення"] || "—"
+    }</span>
         </div>
       </div>
       <div class="zakaz_narayd-reason-line">
         <div class="recommendations-text">
           <strong>Рекомендації:</strong>
-          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
-            actDetails?.["Рекомендації"] || "—"
-          }</span>
+          <span id="${EDITABLE_RECOMMENDATIONS_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Рекомендації"] || "—"
+    }</span>
         </div>
       </div>
       <div class="zakaz_narayd-reason-line" id="notes-line-container">
         <div class="notes-text">
           <strong>Примітки:</strong>
-          <span id="${EDITABLE_NOTES_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${
-            actDetails?.["Примітки"] || "—"
-          }</span>
+          <span id="${EDITABLE_NOTES_ID}" class="highlight editable ${editableClass}" ${editableAttr} style="white-space: pre-wrap;">${actDetails?.["Примітки"] || "—"
+    }</span>
         </div>
       </div>
     </div>
@@ -2117,11 +2132,11 @@ export async function refreshActTableSilently(actId: number): Promise<void> {
           item["recordId"] ||
           (slyusarName
             ? getRecordIdFromHistory(
-                slyusarName,
-                workName,
-                act.act_id,
-                workIndex,
-              )
+              slyusarName,
+              workName,
+              act.act_id,
+              workIndex,
+            )
             : undefined);
 
         return {

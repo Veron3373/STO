@@ -505,7 +505,7 @@ export function createLoginModal(): Promise<string | null> {
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.id = "login-name_users";
-    nameInput.placeholder = "Ім'я (напр. Брацлавець Б. С.)";
+    nameInput.placeholder = "Ім'я (напр. Шевченко Т.Г.)";
     nameInput.className = "login-input";
     nameInput.autocomplete = "username";
     nameInput.style.marginBottom = "10px";
@@ -514,7 +514,7 @@ export function createLoginModal(): Promise<string | null> {
     const passInput = document.createElement("input");
     passInput.type = "password";
     passInput.id = "login-input_users";
-    passInput.placeholder = "Пароль";
+    passInput.placeholder = "Пароль (напр. 11111)";
     passInput.className = "login-input";
     passInput.autocomplete = "current-password";
 

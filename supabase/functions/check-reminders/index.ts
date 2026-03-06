@@ -1,9 +1,9 @@
 // supabase/functions/check-reminders/index.ts
 // ═══════════════════════════════════════════════════════
-// 🔔 Check Reminders — серверна перевірка нагадувань (fallback)
+// 🔔 Check Reminders — серверна відправка Telegram-нагадувань
 // Викликається pg_cron кожну хвилину.
-// Якщо клієнт (сайт) активний — пропускає (клієнт обробляє сам).
-// Якщо сайт закритий — знаходить due нагадування → відправляє Telegram.
+// ЗАВЖДИ обробляє due нагадування → відправляє Telegram.
+// Дедуплікація: перевіряє лог щоб не відправляти повторно.
 // ═══════════════════════════════════════════════════════
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -59,17 +59,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
   try {
-    // 0. Перевірити чи клієнт (сайт) активний
-    const { data: clientAlive } = await supabase.rpc("is_client_alive", {
-      threshold_seconds: 75,
-    });
-
-    if (clientAlive) {
-      return jsonResp({ skipped: true, reason: "client_active" });
-    }
-
-    console.log("🖥️ Клієнт неактивний — серверна обробка");
-
     // 1. Отримати нагадування які мають спрацювати
     const { data: dueReminders, error: rpcErr } =
       await supabase.rpc("get_due_reminders");
@@ -97,8 +86,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
         continue;
       }
 
-      // Telegram або both — відправити в Telegram
+      // Telegram або both — перевірити дедуплікацію
       if (reminder.channel === "telegram" || reminder.channel === "both") {
+        // Перевірити чи вже відправлялось за останні 90 секунд
+        const { data: recentLogs } = await supabase
+          .from("atlas_reminder_logs")
+          .select("id")
+          .eq("reminder_id", reminder.reminder_id)
+          .eq("channel", "telegram")
+          .eq("delivery_status", "delivered")
+          .gte("created_at", new Date(Date.now() - 90_000).toISOString())
+          .limit(1);
+
+        if (recentLogs && recentLogs.length > 0) {
+          console.log(
+            `⏭️ Дедуплікація: reminder_id=${reminder.reminder_id} вже відправлено`,
+          );
+          // Все одно оновити trigger для next_trigger_at
+          await supabase.rpc("trigger_reminder", {
+            p_reminder_id: reminder.reminder_id,
+          });
+          continue;
+        }
+
         const sent = await sendTelegramReminder(supabase, BOT_TOKEN, reminder);
         totalSent += sent;
       }

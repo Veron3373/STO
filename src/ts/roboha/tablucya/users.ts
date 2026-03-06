@@ -112,7 +112,11 @@ function safeParseJSON(data: any): any {
   return data;
 }
 
-async function checkPassword(inputPassword: string): Promise<{
+// Перевірка Name + Пароль разом
+async function checkCredentials(
+  inputName: string,
+  inputPassword: string,
+): Promise<{
   isValid: boolean;
   accessLevel: string | null;
   userName: string | null;
@@ -123,10 +127,7 @@ async function checkPassword(inputPassword: string): Promise<{
       .from("slyusars")
       .select("*");
 
-    // console.log("📦 Supabase response:", { slyusars, error });
-
     if (error || !slyusars) {
-      // console.error("❌ Помилка:", error);
       return {
         isValid: false,
         accessLevel: null,
@@ -135,21 +136,22 @@ async function checkPassword(inputPassword: string): Promise<{
       };
     }
 
-    // console.log("✅ Отримано записів:", slyusars.length);
-
     const foundUser = slyusars.find((slyusar) => {
-      const slyusarData = safeParseJSON(slyusar.data);
-      return slyusarData && String(slyusarData["Пароль"]) === inputPassword;
+      const d = safeParseJSON(slyusar.data);
+      if (!d) return false;
+      const nameMatch =
+        (d["Name"] || "").trim().toLowerCase() ===
+        inputName.trim().toLowerCase();
+      const passMatch = String(d["Пароль"]) === inputPassword;
+      return nameMatch && passMatch;
     });
 
     if (foundUser) {
       const userData = safeParseJSON(foundUser.data);
-      const access = userData?.["Доступ"] || "Адміністратор";
-      const name = userData?.["Name"] || userData?.["Ім'я"] || "Користувач";
       return {
         isValid: true,
-        accessLevel: access,
-        userName: name,
+        accessLevel: userData?.["Доступ"] || "Адміністратор",
+        userName: userData?.["Name"] || userData?.["Ім'я"] || "Користувач",
         slyusar_id: foundUser.slyusar_id,
       };
     }
@@ -160,8 +162,7 @@ async function checkPassword(inputPassword: string): Promise<{
       userName: null,
       slyusar_id: null,
     };
-  } catch (error) {
-    // console.error("💥 Критична помилка при перевірці пароля:", error);
+  } catch {
     return {
       isValid: false,
       accessLevel: null,
@@ -204,8 +205,8 @@ async function getSettingValue(
 
     if (error) {
       // console.error(
-        // `❌ Помилка при отриманні налаштування (ID:${settingId}, Key:${roleKey}):`,
-        // error,
+      // `❌ Помилка при отриманні налаштування (ID:${settingId}, Key:${roleKey}):`,
+      // error,
       // );
       return false;
     }
@@ -408,7 +409,7 @@ export async function attemptAutoLogin(): Promise<{
       isValid,
       accessLevel,
       userName: fetchedUserName,
-    } = await checkPassword(savedData.password);
+    } = await checkCredentials(savedData.name, savedData.password);
 
     if (isValid) {
       isAuthenticated = true;
@@ -420,13 +421,62 @@ export async function attemptAutoLogin(): Promise<{
       return { accessLevel: null, userName: null };
     }
   } catch (error) {
-    // console.error("💥 Помилка при автоматичному вході:", error);
     return { accessLevel: null, userName: null };
   }
 }
 
 export function createLoginModal(): Promise<string | null> {
   return new Promise((resolve) => {
+    // ─── БЛОКУВАННЯ СПРОБ ───
+    const LOCKOUT_KEY = "loginLockout";
+    // Цикл: 3 спроби=3хв, 6=10хв, 9=24год, потім знову
+    const LOCKOUT_STAGES = [
+      { attempts: 3, duration: 3 * 60 * 1000 }, // 3 хвилини
+      { attempts: 6, duration: 10 * 60 * 1000 }, // 10 хвилин
+      { attempts: 9, duration: 24 * 60 * 60 * 1000 }, // 24 години
+    ];
+
+    function getLockoutData(): {
+      attempts: number;
+      lockedUntil: number | null;
+    } {
+      try {
+        const raw = localStorage.getItem(LOCKOUT_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch {
+        /* */
+      }
+      return { attempts: 0, lockedUntil: null };
+    }
+
+    function saveLockoutData(
+      attempts: number,
+      lockedUntil: number | null,
+    ): void {
+      localStorage.setItem(
+        LOCKOUT_KEY,
+        JSON.stringify({ attempts, lockedUntil }),
+      );
+    }
+
+    function getLockoutDuration(attempts: number): number {
+      // Цикл: після 9 спроб скидаємо лічильник і повторюємо
+      const cycleAttempts = ((attempts - 1) % 9) + 1;
+      for (const stage of LOCKOUT_STAGES) {
+        if (cycleAttempts <= stage.attempts) return stage.duration;
+      }
+      return LOCKOUT_STAGES[LOCKOUT_STAGES.length - 1].duration;
+    }
+
+    function formatTimeLeft(ms: number): string {
+      if (ms >= 60 * 60 * 1000) {
+        const h = Math.ceil(ms / (60 * 60 * 1000));
+        return `${h} год${h === 1 ? "ину" : h < 5 ? "ини" : "ин"}`;
+      }
+      const m = Math.ceil(ms / (60 * 1000));
+      return `${m} хв${m === 1 ? "илину" : m < 5 ? "илини" : "илин"}`;
+    }
+
     // ───── ОВЕРЛЕЙ ─────
     const modal = document.createElement("div");
     modal.id = "login-modal_users";
@@ -449,15 +499,24 @@ export function createLoginModal(): Promise<string | null> {
     // ───── ПІДЗАГОЛОВОК ─────
     const subtitle = document.createElement("p");
     subtitle.className = "login-modal-subtitle";
-    subtitle.textContent = "Введіть свій пароль для доступу";
+    subtitle.textContent = "Введіть ім'я та пароль";
 
-    // ───── ІНПУТ ─────
-    const input = document.createElement("input");
-    input.type = "password";
-    input.id = "login-input_users";
-    input.placeholder = "••••••••";
-    input.className = "login-input";
-    input.autocomplete = "current-password";
+    // ───── ІНПУТ ІМ'Я ─────
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.id = "login-name_users";
+    nameInput.placeholder = "Ім'я (напр. Брацлавець Б. С.)";
+    nameInput.className = "login-input";
+    nameInput.autocomplete = "username";
+    nameInput.style.marginBottom = "10px";
+
+    // ───── ІНПУТ ПАРОЛЬ ─────
+    const passInput = document.createElement("input");
+    passInput.type = "password";
+    passInput.id = "login-input_users";
+    passInput.placeholder = "Пароль";
+    passInput.className = "login-input";
+    passInput.autocomplete = "current-password";
 
     // ───── ПОВІДОМЛЕННЯ ПРО ПОМИЛКУ ─────
     const errorDiv = document.createElement("div");
@@ -472,56 +531,114 @@ export function createLoginModal(): Promise<string | null> {
     button.className = "login-button";
 
     // ───── ОБРОБНИКИ ПОДІЙ ─────
-
-    // Помилка з shake-анімацією
     const showLoginError = (message: string) => {
       errorDiv.textContent = message;
       errorDiv.style.display = "block";
-      input.classList.remove("input-error");
-      // Trigger reflow для перезапуску анімації
-      void input.offsetWidth;
-      input.classList.add("input-error");
-      // Прибираємо клас помилки через час
-      setTimeout(() => input.classList.remove("input-error"), 600);
+      passInput.classList.remove("input-error");
+      nameInput.classList.remove("input-error");
+      void passInput.offsetWidth;
+      passInput.classList.add("input-error");
+      nameInput.classList.add("input-error");
+      setTimeout(() => {
+        passInput.classList.remove("input-error");
+        nameInput.classList.remove("input-error");
+      }, 600);
     };
 
-    // Стан завантаження
     const setLoadingState = (loading: boolean) => {
       if (loading) {
         button.innerHTML = '<span class="login-spinner"></span>';
         button.setAttribute("disabled", "true");
-        input.setAttribute("disabled", "true");
+        nameInput.setAttribute("disabled", "true");
+        passInput.setAttribute("disabled", "true");
       } else {
         button.innerHTML = "Увійти";
         button.removeAttribute("disabled");
-        input.removeAttribute("disabled");
+        nameInput.removeAttribute("disabled");
+        passInput.removeAttribute("disabled");
       }
     };
 
-    // Анімація успіху
     const showSuccessState = () => {
       icon.textContent = "✅";
       icon.classList.add("login-success-anim");
       title.textContent = "Ласкаво просимо!";
       title.style.color = "#4ade80";
-      input.classList.remove("input-error");
-      input.classList.add("input-success");
+      passInput.classList.remove("input-error");
+      nameInput.classList.remove("input-error");
+      passInput.classList.add("input-success");
+      nameInput.classList.add("input-success");
       button.innerHTML = "✓ Успішно";
-      button.style.background = "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+      button.style.background =
+        "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
     };
 
-    // Клік на кнопку — перевірка пароля
+    // Функція показу блокування
+    let lockoutTimer: ReturnType<typeof setInterval> | null = null;
+
+    const showLockoutState = (lockedUntil: number) => {
+      setLoadingState(false);
+      button.setAttribute("disabled", "true");
+      nameInput.setAttribute("disabled", "true");
+      passInput.setAttribute("disabled", "true");
+
+      const updateCountdown = () => {
+        const remaining = lockedUntil - Date.now();
+        if (remaining <= 0) {
+          if (lockoutTimer) clearInterval(lockoutTimer);
+          lockoutTimer = null;
+          errorDiv.style.display = "none";
+          button.removeAttribute("disabled");
+          nameInput.removeAttribute("disabled");
+          passInput.removeAttribute("disabled");
+          button.innerHTML = "Увійти";
+          nameInput.focus();
+          return;
+        }
+        const s = Math.ceil(remaining / 1000);
+        const mm = Math.floor(s / 60);
+        const ss = s % 60;
+        const timeStr =
+          mm > 0 ? `${mm}:хв ${String(ss).padStart(2, "0")}с` : `${ss}с`;
+        errorDiv.textContent = `⛔ Заблоковано. Спробуйте через ${timeStr}`;
+        errorDiv.style.display = "block";
+      };
+
+      updateCountdown();
+      lockoutTimer = setInterval(updateCountdown, 1000);
+    };
+
+    // Перевірка блокування при старті
+    const lockData = getLockoutData();
+    if (lockData.lockedUntil && lockData.lockedUntil > Date.now()) {
+      showLockoutState(lockData.lockedUntil);
+    }
+
+    // Клік на кнопку — перевірка
     button.addEventListener("click", async () => {
-      const loginValue = input.value.trim();
-      if (!loginValue) {
+      // Перевірка блокування
+      const ld = getLockoutData();
+      if (ld.lockedUntil && ld.lockedUntil > Date.now()) {
+        showLockoutState(ld.lockedUntil);
+        return;
+      }
+
+      const loginName = nameInput.value.trim();
+      const loginPass = passInput.value.trim();
+
+      if (!loginName) {
+        showLoginError("Введіть ім'я");
+        nameInput.focus();
+        return;
+      }
+      if (!loginPass) {
         showLoginError("Введіть пароль");
-        input.focus();
+        passInput.focus();
         return;
       }
 
       setLoadingState(true);
       errorDiv.style.display = "none";
-      input.classList.remove("input-error");
 
       try {
         const {
@@ -529,9 +646,11 @@ export function createLoginModal(): Promise<string | null> {
           accessLevel,
           userName: fetchedUserName,
           slyusar_id,
-        } = await checkPassword(loginValue);
+        } = await checkCredentials(loginName, loginPass);
 
         if (isValid) {
+          // Успіх — скидаємо лічильник
+          localStorage.removeItem(LOCKOUT_KEY);
           isAuthenticated = true;
           userAccessLevel = accessLevel;
           userName = fetchedUserName;
@@ -540,25 +659,42 @@ export function createLoginModal(): Promise<string | null> {
             saveUserDataToLocalStorage(
               userName,
               accessLevel,
-              loginValue,
+              loginPass,
               slyusar_id,
             );
           }
 
-          // Показуємо анімацію успіху перед закриттям
           showSuccessState();
           setTimeout(() => {
             modal.remove();
             resolve(userAccessLevel);
           }, 700);
         } else {
-          showLoginError("Невірний пароль");
-          setLoadingState(false);
-          input.focus();
-          input.select();
+          // Невірні дані — збільшуємо лічильник
+          const current = getLockoutData();
+          const newAttempts = (current.attempts || 0) + 1;
+
+          // Перевірка чи потрібно блокувати
+          const shouldLock = newAttempts % 3 === 0;
+          if (shouldLock) {
+            const duration = getLockoutDuration(newAttempts);
+            const lockedUntil = Date.now() + duration;
+            saveLockoutData(newAttempts, lockedUntil);
+            showLoginError(`⛔ Заброковано на ${formatTimeLeft(duration)}`);
+            setLoadingState(false);
+            showLockoutState(lockedUntil);
+          } else {
+            saveLockoutData(newAttempts, null);
+            const left = 3 - (newAttempts % 3);
+            showLoginError(
+              `Невірне ім'я або пароль (залишилось ${left} спроб)`,
+            );
+            setLoadingState(false);
+            nameInput.focus();
+            nameInput.select();
+          }
         }
       } catch (error) {
-        // console.error("💥 Помилка при перевірці пароля:", error);
         showLoginError("Помилка з'єднання. Спробуйте ще раз");
         setLoadingState(false);
         resolve(null);
@@ -566,11 +702,11 @@ export function createLoginModal(): Promise<string | null> {
     });
 
     // Enter для підтвердження
-    input.addEventListener("keypress", (event) => {
-      if (event.key === "Enter") {
-        button.click();
-      }
-    });
+    const onEnter = (event: KeyboardEvent) => {
+      if (event.key === "Enter") button.click();
+    };
+    nameInput.addEventListener("keypress", onEnter);
+    passInput.addEventListener("keypress", onEnter);
 
     // Блокування Escape
     const preventEscape = (e: KeyboardEvent) => {
@@ -584,6 +720,7 @@ export function createLoginModal(): Promise<string | null> {
     const originalRemove = modal.remove;
     modal.remove = function () {
       document.removeEventListener("keydown", preventEscape);
+      if (lockoutTimer) clearInterval(lockoutTimer);
       originalRemove.call(this);
     };
 
@@ -591,12 +728,13 @@ export function createLoginModal(): Promise<string | null> {
     modalContent.appendChild(icon);
     modalContent.appendChild(title);
     modalContent.appendChild(subtitle);
-    modalContent.appendChild(input);
+    modalContent.appendChild(nameInput);
+    modalContent.appendChild(passInput);
     modalContent.appendChild(errorDiv);
     modalContent.appendChild(button);
     modal.appendChild(modalContent);
 
-    setTimeout(() => input.focus(), 150);
+    setTimeout(() => nameInput.focus(), 150);
     document.body.appendChild(modal);
   });
 }
@@ -609,7 +747,7 @@ export async function showLoginModalBeforeTable(): Promise<string | null> {
 
   if (!session) {
     // console.warn(
-      // "⛔ Немає авторизації Google. Модальне вікно пароля приховано.",
+    // "⛔ Немає авторизації Google. Модальне вікно пароля приховано.",
     // );
     redirectToIndex();
     return null;
@@ -725,7 +863,7 @@ export async function canUserSeePriceColumns(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню.",
+    // "userAccessLevel порожній, показуємо Ціна/Сума по замовчуванню.",
     // );
     return true;
   }
@@ -867,7 +1005,7 @@ export async function canUserOpenClosedActs(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню.",
+    // "userAccessLevel порожній, показуємо доступ до відкриття актів по замовчуванню.",
     // );
     return true;
   }
@@ -916,7 +1054,7 @@ export async function canUserAddRowToAct(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню.",
+    // "userAccessLevel порожній, дозволяємо додавання рядків по замовчуванню.",
     // );
     return true;
   }
@@ -957,7 +1095,7 @@ export async function canUserSeeEmployeeButton(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню.",
+    // "userAccessLevel порожній, показуємо кнопку Співробітники по замовчуванню.",
     // );
     return true;
   }
@@ -1075,7 +1213,7 @@ export async function canUserPayMagazine(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, дозволяємо розрахунок по замовчуванню.",
+    // "userAccessLevel порожній, дозволяємо розрахунок по замовчуванню.",
     // );
     return true;
   }
@@ -1120,7 +1258,7 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, дозволяємо відміну розрахунку по замовчуванню.",
+    // "userAccessLevel порожній, дозволяємо відміну розрахунку по замовчуванню.",
     // );
     return true;
   }
@@ -1147,7 +1285,7 @@ export async function canUserUnpayMagazine(): Promise<boolean> {
       break;
     default:
       // console.warn(
-        // `Невідома роль "${role}", не дозволяємо відміну розрахунку.`,
+      // `Невідома роль "${role}", не дозволяємо відміну розрахунку.`,
       // );
       return false;
   }
@@ -1167,7 +1305,7 @@ export async function canUserReturnMagazine(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, дозволяємо повернення по замовчуванню.",
+    // "userAccessLevel порожній, дозволяємо повернення по замовчуванню.",
     // );
     return true;
   }
@@ -1212,7 +1350,7 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
 
   if (!role) {
     // console.warn(
-      // "userAccessLevel порожній, дозволяємо відміну повернення по замовчуванню.",
+    // "userAccessLevel порожній, дозволяємо відміну повернення по замовчуванню.",
     // );
     return true;
   }
@@ -1239,7 +1377,7 @@ export async function canUserCancelReturnMagazine(): Promise<boolean> {
       break;
     default:
       // console.warn(
-        // `Невідома роль "${role}", не дозволяємо відміну повернення.`,
+      // `Невідома роль "${role}", не дозволяємо відміну повернення.`,
       // );
       return false;
   }

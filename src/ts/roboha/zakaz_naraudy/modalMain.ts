@@ -1388,8 +1388,13 @@ function renderModalContent(
     ? ""
     : `background-color: ${globalCache.generalSettings.headerColor};`;
 
+  const logoImage = globalCache.generalSettings.logoUrl
+    ? `<img src="${globalCache.generalSettings.logoUrl}" class="zakaz_narayd-header-logo" alt="Логотип">`
+    : "";
+
   body.innerHTML = `
     <div class="${headerClass}" style="${headerStyle}">
+      ${logoImage}
       <div class="zakaz_narayd-header-info">
         <h1>${globalCache.generalSettings.stoName}</h1>
         <p>Адрес: ${globalCache.generalSettings.address}</p>

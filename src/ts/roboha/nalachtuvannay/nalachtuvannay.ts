@@ -639,6 +639,17 @@ function createGeneralSettingsHTML(): string {
         </label>
       </div>
 
+      <div class="general-input-group">
+        <label class="general-label" for="general-logo-url">
+          <span class="general-label-text">🖼️ Логотип компанії</span>
+          <div style="display: flex; gap: 10px; width: 100%; align-items: center;">
+            <input type="text" id="general-logo-url" class="general-input" placeholder="URL логотипу або завантажте файл" />
+            <input type="file" id="general-logo-file" accept="image/*" style="display: none;" />
+            <button type="button" class="general-btn" id="general-logo-upload-btn" style="white-space: nowrap; padding: 0 15px;">Обрати файл</button>
+          </div>
+        </label>
+      </div>
+
      <div class="general-input-group font-size-group font-size-group--offset" style="flex-direction: column; align-items: stretch; gap: 15px;">
         <div>
           <label class="general-label" style="margin-bottom: 8px; display: block;">
@@ -696,7 +707,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14])
       .order("setting_id");
 
     if (error) throw error;
@@ -799,6 +810,12 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           ) as HTMLInputElement;
           if (borderColorPicker) borderColorPicker.value = value || "#cccccc";
           break;
+        case 14: // Логотип компанії
+          const logoUrlInputLoad = modal.querySelector(
+            "#general-logo-url",
+          ) as HTMLInputElement;
+          if (logoUrlInputLoad) logoUrlInputLoad.value = value;
+          break;
       }
     });
 
@@ -849,6 +866,9 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const borderColorPickerSave = modal.querySelector(
     "#table-border-color",
   ) as HTMLInputElement;
+  const logoUrlInputSave = modal.querySelector(
+    "#general-logo-url",
+  ) as HTMLInputElement;
 
   const newValues = [
     { id: 1, value: nameInput?.value || "" },
@@ -878,6 +898,10 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     {
       id: 13,
       value: borderColorPickerSave?.value || "#cccccc",
+    },
+    {
+      id: 14,
+      value: logoUrlInputSave?.value || "",
     },
   ];
 
@@ -942,6 +966,7 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
       parseInt(borderWidthSliderSave?.value) || 1;
     globalCache.generalSettings.tableBorderColor =
       borderColorPickerSave?.value || "#cccccc";
+    globalCache.generalSettings.logoUrl = logoUrlInputSave?.value || "";
 
     // Зберігаємо в localStorage
     saveGeneralSettingsToLocalStorage();
@@ -1048,25 +1073,82 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       if (actOffsetSliderReset) actOffsetSliderReset.value = "0";
       if (actOffsetBubbleReset) actOffsetBubbleReset.textContent = "0";
 
-      // Скидаємо межі таблиці до дефолту (1px, #cccccc)
+      // Скидаємо повзунок товщини меж таблиці до 1px
       const borderWidthSliderReset = modal.querySelector(
         "#table-border-width-slider",
       ) as HTMLInputElement;
       const borderWidthBubbleReset = modal.querySelector(
         "#table-border-width-bubble",
       ) as HTMLElement;
+      if (borderWidthSliderReset) borderWidthSliderReset.value = "1";
+      if (borderWidthBubbleReset) borderWidthBubbleReset.textContent = "1px";
+
+      // Скидаємо колір меж таблиці до сірого
       const borderColorPickerReset = modal.querySelector(
         "#table-border-color",
       ) as HTMLInputElement;
-      if (borderWidthSliderReset) borderWidthSliderReset.value = "1";
-      if (borderWidthBubbleReset) borderWidthBubbleReset.textContent = "1px";
       if (borderColorPickerReset) borderColorPickerReset.value = "#cccccc";
 
+      // Очищаємо поле логотипу
+      const logoUrlInputReset = modal.querySelector(
+        "#general-logo-url",
+      ) as HTMLInputElement;
+      if (logoUrlInputReset) {
+        logoUrlInputReset.value = "";
+      }
+
       showNotification(
-        "Кольори, шпалери та розміри шрифтів скинуто до значень за замовчуванням",
+        "Налаштування скинуто до значень за замовчуванням",
         "info",
         1500,
       );
+    });
+  }
+
+  // Обробники для логотипу
+  const logoUploadBtn = modal.querySelector("#general-logo-upload-btn") as HTMLButtonElement;
+  const logoFileInput = modal.querySelector("#general-logo-file") as HTMLInputElement;
+  const logoUrlInput = modal.querySelector("#general-logo-url") as HTMLInputElement;
+
+  if (logoUploadBtn && logoFileInput && logoUrlInput) {
+    logoUploadBtn.addEventListener("click", () => {
+      logoFileInput.click();
+    });
+
+    logoFileInput.addEventListener("change", async (event) => {
+      const target = event.target as HTMLInputElement;
+      if (!target.files || target.files.length === 0) return;
+
+      const file = target.files[0];
+      try {
+        logoUploadBtn.textContent = "Завантаження...";
+        logoUploadBtn.disabled = true;
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `a1/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("ai-photos")
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from("ai-photos")
+          .getPublicUrl(filePath);
+
+        if (data && data.publicUrl) {
+          logoUrlInput.value = data.publicUrl;
+        }
+      } catch (err: any) {
+        // console.error(err);
+        showNotification("Помилка завантаження логотипу", "error", 2000);
+      } finally {
+        logoUploadBtn.textContent = "Обрати файл";
+        logoUploadBtn.disabled = false;
+        logoFileInput.value = "";
+      }
     });
   }
 

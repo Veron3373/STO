@@ -91,6 +91,7 @@ export interface GeneralSettings {
   actTextOffset: number; // Глобальний зсув шрифту (-5..+15) (setting_id: 11)
   tableBorderWidth: number; // Товщина меж таблиці акту (setting_id: 12)
   tableBorderColor: string; // Колір меж таблиці акту (setting_id: 13)
+  logoUrl: string; // Логотип компанії (setting_id: 14)
 }
 
 export interface ActItem {
@@ -185,6 +186,7 @@ export const globalCache: GlobalDataCache = {
     actTextOffset: 0, // Глобальний зсув шрифту (дефолт 0)
     tableBorderWidth: 1, // Товщина меж таблиці (дефолт 1px)
     tableBorderColor: "#cccccc", // Колір меж таблиці (дефолт сірий)
+    logoUrl: "", // Логотип компанії
   },
 };
 
@@ -242,6 +244,7 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         tableBorderWidth:
           parsed.tableBorderWidth !== undefined ? parsed.tableBorderWidth : 1,
         tableBorderColor: parsed.tableBorderColor || "#cccccc",
+        logoUrl: parsed.logoUrl || "",
       };
       // Застосовуємо шпалери після завантаження
       applyWallpapers();
@@ -278,7 +281,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
     const { data: generalSettingsRows } = (await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
       .order("setting_id")) as {
         data: Array<{
           setting_id: number;
@@ -344,6 +347,10 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
           case 13:
             // 🎨 Колір меж таблиці — записується в Загальні
             globalCache.generalSettings.tableBorderColor = value || "#cccccc";
+            break;
+          case 14:
+            // Логотип компанії
+            globalCache.generalSettings.logoUrl = value || "";
             break;
         }
       }

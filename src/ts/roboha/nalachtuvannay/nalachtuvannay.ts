@@ -639,13 +639,24 @@ function createGeneralSettingsHTML(): string {
         </label>
       </div>
 
-            <div class="general-input-group font-size-group font-size-group--offset">
+     <div class="general-input-group font-size-group font-size-group--offset">
         <label class="general-label">
           <span class="general-label-text">🔡 Розмір тексту в акті (+/- до базових)</span>
         </label>
         <div class="font-size-slider-wrapper">
           <input type="range" id="act-text-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
           <div class="font-size-bubble font-size-bubble--offset" id="act-text-offset-bubble">0</div>
+        </div>
+      </div>
+
+      <div class="general-input-group border-style-group">
+        <label class="general-label">
+          <span class="general-label-text">📏 Товщина та колір меж таблиці</span>
+        </label>
+        <div class="font-size-slider-wrapper" style="gap: 15px;">
+          <input type="range" id="table-border-width-slider" class="font-size-slider" min="0" max="5" value="1" step="1" />
+          <div class="font-size-bubble" id="table-border-width-bubble">1px</div>
+          <input type="color" id="table-border-color" class="color-picker" value="#cccccc" style="height: 38px; padding: 2px; cursor: pointer; border: 1px solid #ccc; border-radius: 8px;" />
         </div>
       </div>
       
@@ -766,6 +777,24 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           if (actOffsetSliderLoad) actOffsetSliderLoad.value = String(actSafeOffset);
           if (actOffsetBubbleLoad) actOffsetBubbleLoad.textContent = actSafeOffset > 0 ? `+${actSafeOffset}` : String(actSafeOffset);
           break;
+        case 12: // Товщина меж таблиці
+          const borderWidthSlider = modal.querySelector(
+            "#table-border-width-slider",
+          ) as HTMLInputElement;
+          const borderWidthBubble = modal.querySelector(
+            "#table-border-width-bubble",
+          ) as HTMLElement;
+          const borderWidthVal = parseInt(value);
+          const safeBorderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
+          if (borderWidthSlider) borderWidthSlider.value = String(safeBorderWidth);
+          if (borderWidthBubble) borderWidthBubble.textContent = `${safeBorderWidth}px`;
+          break;
+        case 13: // Колір меж таблиці
+          const borderColorPicker = modal.querySelector(
+            "#table-border-color",
+          ) as HTMLInputElement;
+          if (borderColorPicker) borderColorPicker.value = value || "#cccccc";
+          break;
       }
     });
 
@@ -810,6 +839,12 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const actTextOffsetSliderSave = modal.querySelector(
     "#act-text-offset-slider",
   ) as HTMLInputElement;
+  const borderWidthSliderSave = modal.querySelector(
+    "#table-border-width-slider",
+  ) as HTMLInputElement;
+  const borderColorPickerSave = modal.querySelector(
+    "#table-border-color",
+  ) as HTMLInputElement;
 
   const newValues = [
     { id: 1, value: nameInput?.value || "" },
@@ -831,6 +866,14 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     {
       id: 11,
       value: actTextOffsetSliderSave?.value || "0",
+    },
+    {
+      id: 12,
+      value: borderWidthSliderSave?.value || "1",
+    },
+    {
+      id: 13,
+      value: borderColorPickerSave?.value || "#cccccc",
     },
   ];
 
@@ -891,6 +934,10 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
       smsAfterPreview?.textContent?.trim() || "грн. Дякуємо за довіру!";
     globalCache.generalSettings.actTextOffset =
       parseInt(actTextOffsetSliderSave?.value) || 0;
+    globalCache.generalSettings.tableBorderWidth =
+      parseInt(borderWidthSliderSave?.value) || 1;
+    globalCache.generalSettings.tableBorderColor =
+      borderColorPickerSave?.value || "#cccccc";
 
     // Зберігаємо в localStorage
     saveGeneralSettingsToLocalStorage();
@@ -997,6 +1044,20 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       if (actOffsetSliderReset) actOffsetSliderReset.value = "0";
       if (actOffsetBubbleReset) actOffsetBubbleReset.textContent = "0";
 
+      // Скидаємо межі таблиці до дефолту (1px, #cccccc)
+      const borderWidthSliderReset = modal.querySelector(
+        "#table-border-width-slider",
+      ) as HTMLInputElement;
+      const borderWidthBubbleReset = modal.querySelector(
+        "#table-border-width-bubble",
+      ) as HTMLElement;
+      const borderColorPickerReset = modal.querySelector(
+        "#table-border-color",
+      ) as HTMLInputElement;
+      if (borderWidthSliderReset) borderWidthSliderReset.value = "1";
+      if (borderWidthBubbleReset) borderWidthBubbleReset.textContent = "1px";
+      if (borderColorPickerReset) borderColorPickerReset.value = "#cccccc";
+
       showNotification(
         "Кольори, шпалери та розміри шрифтів скинуто до значень за замовчуванням",
         "info",
@@ -1039,6 +1100,19 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
     actOffsetSlider.addEventListener("input", () => {
       const val = parseInt(actOffsetSlider.value);
       actOffsetBubble.textContent = val > 0 ? `+${val}` : String(val);
+    });
+  }
+
+  // Обробник для повзунка товщини меж таблиці
+  const borderWidthSlider = modal.querySelector(
+    "#table-border-width-slider",
+  ) as HTMLInputElement;
+  const borderWidthBubble = modal.querySelector(
+    "#table-border-width-bubble",
+  ) as HTMLElement;
+  if (borderWidthSlider && borderWidthBubble) {
+    borderWidthSlider.addEventListener("input", () => {
+      borderWidthBubble.textContent = `${borderWidthSlider.value}px`;
     });
   }
 }

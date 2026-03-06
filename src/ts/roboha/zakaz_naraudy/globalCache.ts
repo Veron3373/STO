@@ -89,6 +89,8 @@ export interface GeneralSettings {
   smsTextBefore: string; // SMS текст перед сумою (setting_id: 8)
   smsTextAfter: string; // SMS текст після суми (setting_id: 9)
   actTextOffset: number; // Глобальний зсув шрифту (-5..+15) (setting_id: 11)
+  tableBorderWidth: number; // Товщина меж таблиці акту (setting_id: 12)
+  tableBorderColor: string; // Колір меж таблиці акту (setting_id: 13)
 }
 
 export interface ActItem {
@@ -179,6 +181,8 @@ export const globalCache: GlobalDataCache = {
     smsTextBefore: "Ваше замовлення виконане. Сума:", // SMS текст перед сумою
     smsTextAfter: "грн. Дякуємо за довіру!", // SMS текст після суми
     actTextOffset: 0, // Глобальний зсув шрифту (дефолт 0)
+    tableBorderWidth: 1, // Товщина меж таблиці (дефолт 1px)
+    tableBorderColor: "#cccccc", // Колір меж таблиці (дефолт сірий)
   },
 };
 
@@ -233,11 +237,16 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         smsTextAfter: parsed.smsTextAfter || "грн. Дякуємо за довіру!",
         actTextOffset:
           parsed.actTextOffset !== undefined ? parsed.actTextOffset : 0,
+        tableBorderWidth:
+          parsed.tableBorderWidth !== undefined ? parsed.tableBorderWidth : 1,
+        tableBorderColor: parsed.tableBorderColor || "#cccccc",
       };
       // Застосовуємо шпалери після завантаження
       applyWallpapers();
       // Застосовуємо розміри шрифтів після завантаження
       applyFontSizes();
+      // Застосовуємо межі таблиці після завантаження
+      applyTableBorders();
       return true;
     }
   } catch (e) {
@@ -267,7 +276,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
     const { data: generalSettingsRows } = (await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
       .order("setting_id")) as {
         data: Array<{
           setting_id: number;
@@ -325,6 +334,15 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             globalCache.generalSettings.actTextOffset =
               parseInt(value) || 0;
             break;
+          case 12:
+            // 📏 Товщина меж таблиці — записується в Загальні
+            globalCache.generalSettings.tableBorderWidth =
+              parseInt(value) || 1;
+            break;
+          case 13:
+            // 🎨 Колір меж таблиці — записується в Загальні
+            globalCache.generalSettings.tableBorderColor = value || "#cccccc";
+            break;
         }
       }
       // Зберігаємо в localStorage
@@ -333,6 +351,8 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
       applyWallpapers();
       // Застосовуємо розміри шрифтів
       applyFontSizes();
+      // Застосовуємо межі таблиці
+      applyTableBorders();
     }
   } catch (e) {
     // console.error("❌ Помилка завантаження загальних налаштувань з БД:", e);
@@ -344,6 +364,14 @@ export function applyFontSizes(): void {
   const { actTextOffset } = globalCache.generalSettings;
   const root = document.documentElement;
   root.style.setProperty("--act-text-offset", `${actTextOffset ?? 0}`);
+}
+
+// 🔹 Застосовує товщину та колір меж таблиці (через CSS змінні)
+export function applyTableBorders(): void {
+  const { tableBorderWidth, tableBorderColor } = globalCache.generalSettings;
+  const root = document.documentElement;
+  root.style.setProperty("--table-border-width", `${tableBorderWidth ?? 1}px`);
+  root.style.setProperty("--table-border-color", tableBorderColor || "#cccccc");
 }
 
 // 🔹 Застосовує шпалери до body.page-2

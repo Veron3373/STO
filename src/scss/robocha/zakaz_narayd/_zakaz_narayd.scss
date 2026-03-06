@@ -191,7 +191,7 @@ body {
   border-collapse: collapse;
 
   td {
-    border: 1px solid #ccc;
+    border: var(--table-border-width, 1px) solid var(--table-border-color, #ccc);
     padding: 6px 8px;
 
     &:first-child {
@@ -239,7 +239,7 @@ body {
 
   th,
   td {
-    border: 1px solid #ccc;
+    border: var(--table-border-width, 1px) solid var(--table-border-color, #ccc);
     padding: 2px 5px;
     overflow: hidden;
     text-overflow: ellipsis;

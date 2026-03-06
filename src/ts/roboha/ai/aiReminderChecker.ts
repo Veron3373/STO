@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════
 // 🔔 aiReminderChecker.ts — Перевірка нагадувань (основний обробник)
-// Polling кожні 15 сек + precision timer → toast
-// Telegram відправляється ТІЛЬКИ сервером (check-reminders через pg_cron)
+// Polling кожні 15 сек + precision timer → toast + Telegram
+// Сервер (pg_cron) теж відправляє Telegram — дедуплікація через логи
 // ═══════════════════════════════════════════════════════
 
 import { supabase } from "../../vxid/supabaseClient";
@@ -89,6 +89,155 @@ function getSlyusarId(): number | null {
 
 // ── Головна перевірка ──
 
+// ── Відправка Telegram з клієнта (з дедуплікацією) ──
+
+async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
+  try {
+    // Дедуплікація: перевірити чи вже відправлено за останні 90 сек
+    const { data: recentLogs } = await supabase
+      .from("atlas_reminder_logs")
+      .select("id")
+      .eq("reminder_id", reminder.reminder_id)
+      .eq("channel", "telegram")
+      .eq("delivery_status", "delivered")
+      .gte("created_at", new Date(Date.now() - 90_000).toISOString())
+      .limit(1);
+
+    if (recentLogs && recentLogs.length > 0) {
+      console.log(
+        `[ReminderChecker] ⏭️ Telegram вже відправлено (дедуплікація) reminder_id=${reminder.reminder_id}`,
+      );
+      return;
+    }
+
+    const recipientIds = await resolveRecipientIds(reminder);
+    if (recipientIds.length === 0) return;
+
+    const { data: tgUsers, error } = await supabase
+      .from("atlas_telegram_users")
+      .select("slyusar_id, telegram_chat_id")
+      .in("slyusar_id", recipientIds)
+      .eq("is_active", true);
+
+    if (error || !tgUsers?.length) return;
+
+    const icon = getPriorityIcon(reminder.priority);
+    const typeLabel = getTypeLabel(reminder.reminder_type);
+    const priorityLabel = getPriorityLabel(reminder.priority);
+
+    const messageText = [
+      `${icon} <b>${escHtml(reminder.title)}</b>`,
+      reminder.description ? `\n${escHtml(reminder.description)}` : "",
+      `\n${typeLabel} | Пріоритет: ${priorityLabel}`,
+      `👤 Створив: ${escHtml(reminder.creator_name)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const reply_markup = {
+      inline_keyboard: [
+        [
+          {
+            text: "✅ Виконано",
+            callback_data: `rem_done_${reminder.reminder_id}`,
+          },
+          {
+            text: "📅 Заплановано",
+            callback_data: `rem_snooze_${reminder.reminder_id}`,
+          },
+          {
+            text: "❌ Не планую",
+            callback_data: `rem_skip_${reminder.reminder_id}`,
+          },
+        ],
+      ],
+    };
+
+    for (const tgUser of tgUsers) {
+      try {
+        await supabase.functions.invoke("send-telegram", {
+          body: {
+            chat_id: tgUser.telegram_chat_id,
+            text: messageText,
+            parse_mode: "HTML",
+            reply_markup,
+          },
+        });
+        await supabase.from("atlas_reminder_logs").insert({
+          reminder_id: reminder.reminder_id,
+          recipient_id: tgUser.slyusar_id,
+          channel: "telegram",
+          message_text: messageText,
+          delivery_status: "delivered",
+        });
+      } catch (err) {
+        console.error(
+          `[ReminderChecker] Telegram error for slyusar=${tgUser.slyusar_id}:`,
+          err,
+        );
+      }
+    }
+  } catch (err) {
+    console.error("[ReminderChecker] sendTelegramForReminder error:", err);
+  }
+}
+
+async function resolveRecipientIds(reminder: DueReminder): Promise<number[]> {
+  const recipients = reminder.recipients;
+
+  if (recipients === "self" || recipients === '"self"') {
+    return reminder.created_by ? [reminder.created_by] : [];
+  }
+
+  if (recipients === "all" || recipients === '"all"') {
+    const { data } = await supabase.from("slyusars").select("slyusar_id");
+    return data?.map((s: { slyusar_id: number }) => s.slyusar_id) || [];
+  }
+
+  if (recipients === "mechanics" || recipients === '"mechanics"') {
+    const { data } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, data")
+      .filter("data->>Посада", "eq", "Слюсар");
+    return data?.map((s: { slyusar_id: number }) => s.slyusar_id) || [];
+  }
+
+  if (Array.isArray(recipients)) return recipients;
+
+  if (typeof recipients === "string") {
+    try {
+      const parsed = JSON.parse(recipients);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      /* */
+    }
+  }
+
+  return reminder.created_by ? [reminder.created_by] : [];
+}
+
+function escHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function getPriorityLabel(priority: string): string {
+  switch (priority) {
+    case "urgent":
+      return "Терміновий";
+    case "high":
+      return "Високий";
+    case "normal":
+      return "Звичайний";
+    case "low":
+      return "Низький";
+    default:
+      return priority;
+  }
+}
+
 async function checkDueReminders(): Promise<void> {
   if (isChecking) return;
   isChecking = true;
@@ -144,7 +293,11 @@ async function checkDueReminders(): Promise<void> {
         showReminderToast(reminder);
       }
 
-      // Telegram відправляється ТІЛЬКИ сервером (check-reminders / pg_cron)
+      // Відправити Telegram (для telegram і both каналів)
+      // Дедуплікація: перевірити чи сервер вже не відправив
+      if (reminder.channel === "telegram" || reminder.channel === "both") {
+        await sendTelegramForReminder(reminder);
+      }
 
       // Записати лог + оновити trigger
       await markTriggered(reminder.reminder_id, true);

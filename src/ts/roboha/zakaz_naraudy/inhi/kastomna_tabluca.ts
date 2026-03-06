@@ -576,10 +576,14 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
       if (sclad_id === targetScladId) {
         isActive = true;
       }
-    } else if (currentTargetValue && value) {
-      const itemValue = value.trim().toLowerCase();
-      if (itemValue === currentTargetValue) {
-        isActive = true;
+    } else {
+      // Якщо sclad_id немає в комірці (наприклад, це робота або нова деталь),
+      // підсвічуємо по тексту ТІЛЬКИ якщо підказка НЕ зі складу
+      // Це запобігає масовому підсвічуванню всіх деталей з однаковою назвою
+      if (sclad_id === undefined && currentTargetValue && value) {
+        if (value.trim().toLowerCase() === currentTargetValue) {
+          isActive = true;
+        }
       }
     }
 

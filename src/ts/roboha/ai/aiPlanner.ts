@@ -218,7 +218,7 @@ export async function loadReminders(): Promise<ReminderFromRPC[]> {
     const { data, error } = await supabase
       .from("atlas_reminders")
       .select("*")
-      .in("status", ["active", "paused", "completed"])
+      .in("status", ["active", "paused", "completed", "cancelled"])
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -517,7 +517,7 @@ export async function renderPlannerPanel(
           ⏸️ Пауза (${reminders.filter((r) => r.status === "paused").length})
         </button>
         <button class="ai-planner-filter ${currentFilter === "completed" ? "ai-planner-filter--active" : ""}" data-filter="completed">
-          ✅ Завершені (${reminders.filter((r) => r.status === "completed").length})
+          ✅ Завершені (${reminders.filter((r) => r.status === "completed" || r.status === "cancelled").length})
         </button>
       </div>
 
@@ -534,6 +534,10 @@ export async function renderPlannerPanel(
 
 function filterReminders(list: ReminderFromRPC[]): ReminderFromRPC[] {
   if (currentFilter === "all") return list;
+  if (currentFilter === "completed")
+    return list.filter(
+      (r) => r.status === "completed" || r.status === "cancelled",
+    );
   return list.filter((r) => r.status === currentFilter);
 }
 
@@ -570,7 +574,7 @@ function renderReminderCard(r: ReminderFromRPC): string {
         <div class="ai-planner-card-title">${escapeHtml(r.title)}</div>
         <div class="ai-planner-card-actions">
           ${
-            r.status !== "completed"
+            r.status !== "completed" && r.status !== "cancelled"
               ? `
             <button class="ai-planner-card-action ai-planner-card-action--pause" data-action="pause" data-id="${r.reminder_id}" title="${r.status === "paused" ? "Відновити" : "Пауза"}">
               ${r.status === "paused" ? "▶️" : "⏸️"}

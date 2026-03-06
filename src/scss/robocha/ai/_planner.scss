@@ -234,6 +234,15 @@
       text-decoration: line-through;
     }
   }
+
+  &--cancelled {
+    opacity: 0.5;
+    border-left-color: #f87171;
+
+    .ai-planner-card-title {
+      text-decoration: line-through;
+    }
+  }
 }
 
 @keyframes urgentPulse {

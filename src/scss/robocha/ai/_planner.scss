@@ -257,11 +257,9 @@
   &--completed {
     border-left-color: #4ade80;
 
-    .ai-planner-card-title,
-    .ai-planner-card-meta,
-    .ai-planner-card-time,
-    .ai-planner-card-footer {
+    .ai-planner-card-title {
       text-decoration: line-through;
+      text-decoration-color: #ef4444;
       color: #999;
     }
   }
@@ -269,10 +267,7 @@
   &--cancelled {
     border-left-color: #f87171;
 
-    .ai-planner-card-title,
-    .ai-planner-card-meta,
-    .ai-planner-card-time,
-    .ai-planner-card-footer {
+    .ai-planner-card-title {
       text-decoration: line-through;
       text-decoration-color: #ef4444;
       color: #999;

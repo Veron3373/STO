@@ -2,9 +2,10 @@
 // ═══════════════════════════════════════════════════════
 // 🤖 Telegram Bot Webhook — Атлас
 // Обробляє вхідні повідомлення від Telegram Bot API:
-//   /start <код> — прив'язка Telegram до акаунту слюсаря
-//   /stop         — відв'язка
-//   /status       — перевірка прив'язки
+//   /start         — інструкція прив'язки (Name + Пароль)
+//   Name\nПароль   — прив'язка Telegram до акаунту слюсаря
+//   /stop          — відв'язка
+//   /status        — перевірка прив'язки
 // ═══════════════════════════════════════════════════════
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -173,74 +174,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const username = message.from?.username || null;
 
     // ────────────────────────────────
-    // /start <slyusar_id> — прив'язка
+    // /start — прив'язка через Name + Пароль
     // ────────────────────────────────
     if (text.startsWith("/start")) {
       const parts = text.split(" ");
       const linkCode = parts[1]?.trim();
 
-      if (!linkCode) {
+      // Якщо є старий формат /start <id> — ігноруємо, просимо Name+Пароль
+      if (linkCode) {
         await sendTelegramMessage(
           BOT_TOKEN,
           chatId,
-          "👋 Привіт! Я — *Атлас*, бот СТО B.S.Motorservice.\n\n" +
-            "Щоб прив'язати ваш Telegram до акаунту, " +
-            "відкрийте *Повідомлення* в додатку і натисніть " +
-            '"🔗 Прив\'язати Telegram".\n\n' +
-            "Вам буде надано персональну посилання.",
-        );
-        return new Response("OK", { status: 200 });
-      }
-
-      // linkCode = slyusar_id (простий варіант)
-      const slyusarId = parseInt(linkCode, 10);
-      if (isNaN(slyusarId)) {
-        await sendTelegramMessage(
-          BOT_TOKEN,
-          chatId,
-          "❌ Невірний код прив'язки. Спробуйте ще раз через додаток.",
-        );
-        return new Response("OK", { status: 200 });
-      }
-
-      // Перевірити, чи існує слюсар
-      const { data: slyusar, error: slyusarErr } = await supabase
-        .from("slyusars")
-        .select("slyusar_id, data")
-        .eq("slyusar_id", slyusarId)
-        .single();
-
-      if (slyusarErr || !slyusar) {
-        await sendTelegramMessage(
-          BOT_TOKEN,
-          chatId,
-          "❌ Працівника з таким ID не знайдено.",
-        );
-        return new Response("OK", { status: 200 });
-      }
-
-      const slyusarName = slyusar.data?.Name || `ID ${slyusarId}`;
-
-      // Upsert прив'язки
-      const { error: upsertErr } = await supabase
-        .from("atlas_telegram_users")
-        .upsert(
-          {
-            slyusar_id: slyusarId,
-            telegram_chat_id: chatId,
-            telegram_username: username,
-            linked_at: new Date().toISOString(),
-            is_active: true,
-          },
-          { onConflict: "slyusar_id" },
-        );
-
-      if (upsertErr) {
-        console.error("Upsert error:", upsertErr);
-        await sendTelegramMessage(
-          BOT_TOKEN,
-          chatId,
-          "❌ Помилка прив'язки. Спробуйте пізніше.",
+          "⚠️ Формат змінився.\n\n" +
+            "Для прив'язки надішліть ваше *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
+            "Наприклад:\n" +
+            "`Брацлавець Б. С.`\n" +
+            "`48535`",
         );
         return new Response("OK", { status: 200 });
       }
@@ -248,11 +197,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       await sendTelegramMessage(
         BOT_TOKEN,
         chatId,
-        `✅ *Прив'язано!*\n\n` +
-          `👤 Працівник: *${slyusarName}*\n` +
-          `🆔 ID: ${slyusarId}\n\n` +
-          `Тепер ви будете отримувати нагадування від Атласа тут.\n` +
-          `Для відключення — /stop`,
+        "👋 Привіт! Я — *Атлас*, бот СТО B.S.Motorservice.\n\n" +
+          "Для прив'язки Telegram надішліть *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
+          "Наприклад:\n" +
+          "`Брацлавець Б. С.`\n" +
+          "`48535`",
       );
       return new Response("OK", { status: 200 });
     }
@@ -311,16 +260,128 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // ────────────────────────────────
-    // Будь-яке інше повідомлення
+    // Будь-яке інше повідомлення → спроба прив'язки через Name + Пароль
     // ────────────────────────────────
-    await sendTelegramMessage(
-      BOT_TOKEN,
-      chatId,
-      "🤖 Я — *Атлас*, бот нагадувань B.S.Motorservice.\n\n" +
-        "Доступні команди:\n" +
-        "/status — перевірити прив'язку\n" +
-        "/stop — вимкнути сповіщення",
-    );
+
+    // Перевіряємо чи це 2 рядки (Name + Пароль)
+    const lines = text
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter((l: string) => l.length > 0);
+
+    if (lines.length === 2) {
+      const inputName = lines[0];
+      const inputPass = lines[1];
+
+      // Завантажити всіх слюсарів і знайти по Name + Пароль
+      const { data: slyusars, error: slyusarErr } = await supabase
+        .from("slyusars")
+        .select("slyusar_id, data");
+
+      if (slyusarErr || !slyusars) {
+        await sendTelegramMessage(
+          BOT_TOKEN,
+          chatId,
+          "❌ Помилка з'єднання. Спробуйте пізніше.",
+        );
+        return new Response("OK", { status: 200 });
+      }
+
+      const foundUser = slyusars.find((s: any) => {
+        const d = typeof s.data === "string" ? JSON.parse(s.data) : s.data;
+        if (!d) return false;
+        const nameMatch =
+          (d["Name"] || "").trim().toLowerCase() === inputName.toLowerCase();
+        const passMatch = String(d["Пароль"]) === inputPass;
+        return nameMatch && passMatch;
+      });
+
+      if (!foundUser) {
+        await sendTelegramMessage(
+          BOT_TOKEN,
+          chatId,
+          "❌ *Невірне ім'я або пароль.*\n\n" +
+            "Перевірте дані та спробуйте ще раз.\n" +
+            "Формат — кожне на окремому рядку:\n" +
+            "`Ім'я`\n" +
+            "`Пароль`",
+        );
+        return new Response("OK", { status: 200 });
+      }
+
+      const userData =
+        typeof foundUser.data === "string"
+          ? JSON.parse(foundUser.data)
+          : foundUser.data;
+      const slyusarName = userData?.Name || `ID ${foundUser.slyusar_id}`;
+
+      // Upsert прив'язки
+      const { error: upsertErr } = await supabase
+        .from("atlas_telegram_users")
+        .upsert(
+          {
+            slyusar_id: foundUser.slyusar_id,
+            telegram_chat_id: chatId,
+            telegram_username: username,
+            linked_at: new Date().toISOString(),
+            is_active: true,
+          },
+          { onConflict: "slyusar_id" },
+        );
+
+      if (upsertErr) {
+        console.error("Upsert error:", upsertErr);
+        await sendTelegramMessage(
+          BOT_TOKEN,
+          chatId,
+          "❌ Помилка прив'язки. Спробуйте пізніше.",
+        );
+        return new Response("OK", { status: 200 });
+      }
+
+      await sendTelegramMessage(
+        BOT_TOKEN,
+        chatId,
+        `✅ *Прив'язано!*\n\n` +
+          `👤 Працівник: *${slyusarName}*\n\n` +
+          `Тепер ви будете отримувати нагадування від Атласа тут.\n` +
+          `Для відключення — /stop`,
+      );
+      return new Response("OK", { status: 200 });
+    }
+
+    // Якщо не 2 рядки — показуємо допомогу
+    // Перевіримо, чи вже прив'язаний
+    const { data: existingLink } = await supabase
+      .from("atlas_telegram_users")
+      .select("slyusar_id, is_active")
+      .eq("telegram_chat_id", chatId)
+      .single();
+
+    if (existingLink && existingLink.is_active) {
+      await sendTelegramMessage(
+        BOT_TOKEN,
+        chatId,
+        "🤖 Я — *Атлас*, бот нагадувань B.S.Motorservice.\n\n" +
+          "✅ Ваш Telegram прив'язано.\n\n" +
+          "Доступні команди:\n" +
+          "/status — перевірити прив'язку\n" +
+          "/stop — вимкнути сповіщення",
+      );
+    } else {
+      await sendTelegramMessage(
+        BOT_TOKEN,
+        chatId,
+        "🤖 Я — *Атлас*, бот нагадувань B.S.Motorservice.\n\n" +
+          "Для прив'язки надішліть *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
+          "Наприклад:\n" +
+          "`Брацлавець Б. С.`\n" +
+          "`48535`\n\n" +
+          "Доступні команди:\n" +
+          "/status — перевірити прив'язку\n" +
+          "/stop — вимкнути сповіщення",
+      );
+    }
 
     return new Response("OK", { status: 200 });
   } catch (e: unknown) {

@@ -662,33 +662,13 @@ function createGeneralSettingsHTML(): string {
 
       <div class="settings-divider"></div>
 
-      <div class="general-input-group font-size-group">
-        <label class="general-label">
-          <span class="general-label-text">🔡 Розмір шрифту акту (загальний)</span>
-        </label>
-        <div class="font-size-slider-wrapper">
-          <input type="range" id="act-font-size-slider" class="font-size-slider" min="10" max="50" value="15" step="1" />
-          <div class="font-size-bubble" id="act-font-size-bubble">15</div>
-        </div>
-      </div>
-
-      <div class="general-input-group font-size-group">
-        <label class="general-label">
-          <span class="general-label-text">🔡 Розмір шрифту таблиці</span>
-        </label>
-        <div class="font-size-slider-wrapper">
-          <input type="range" id="table-font-size-slider" class="font-size-slider" min="10" max="50" value="14" step="1" />
-          <div class="font-size-bubble" id="table-font-size-bubble">14</div>
-        </div>
-      </div>
-
       <div class="general-input-group font-size-group font-size-group--offset">
         <label class="general-label">
-          <span class="general-label-text">🏷️ Шрифт шапки (зсув від base)</span>
+          <span class="general-label-text">🔡 Розмір тексту в акті (+/- до базових)</span>
         </label>
         <div class="font-size-slider-wrapper">
-          <input type="range" id="header-font-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
-          <div class="font-size-bubble font-size-bubble--offset" id="header-font-offset-bubble">0</div>
+          <input type="range" id="act-text-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
+          <div class="font-size-bubble font-size-bubble--offset" id="act-text-offset-bubble">0</div>
         </div>
       </div>
 
@@ -702,7 +682,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11])
       .order("setting_id");
 
     if (error) throw error;
@@ -775,39 +755,17 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           const smsAfterValue = value || "грн. Дякуємо за довіру!";
           if (smsAfterPreview) smsAfterPreview.textContent = smsAfterValue;
           break;
-        case 11: // Розмір шрифту акту
-          const actFontSlider = modal.querySelector(
-            "#act-font-size-slider",
+        case 11: // Глобальний зсув шрифту
+          const actOffsetSliderLoad = modal.querySelector(
+            "#act-text-offset-slider",
           ) as HTMLInputElement;
-          const actFontBubble = modal.querySelector(
-            "#act-font-size-bubble",
+          const actOffsetBubbleLoad = modal.querySelector(
+            "#act-text-offset-bubble",
           ) as HTMLElement;
-          const actFontVal = parseInt(value) || 14;
-          if (actFontSlider) actFontSlider.value = String(actFontVal);
-          if (actFontBubble) actFontBubble.textContent = String(actFontVal);
-          break;
-        case 12: // Розмір шрифту таблиці
-          const tableFontSlider = modal.querySelector(
-            "#table-font-size-slider",
-          ) as HTMLInputElement;
-          const tableFontBubble = modal.querySelector(
-            "#table-font-size-bubble",
-          ) as HTMLElement;
-          const tableFontVal = parseInt(value) || 14;
-          if (tableFontSlider) tableFontSlider.value = String(tableFontVal);
-          if (tableFontBubble) tableFontBubble.textContent = String(tableFontVal);
-          break;
-        case 13: // Зсув шрифту шапки
-          const headerOffsetSliderLoad = modal.querySelector(
-            "#header-font-offset-slider",
-          ) as HTMLInputElement;
-          const headerOffsetBubbleLoad = modal.querySelector(
-            "#header-font-offset-bubble",
-          ) as HTMLElement;
-          const headerOffsetVal = parseInt(value);
-          const safeOffset = isNaN(headerOffsetVal) ? 0 : headerOffsetVal;
-          if (headerOffsetSliderLoad) headerOffsetSliderLoad.value = String(safeOffset);
-          if (headerOffsetBubbleLoad) headerOffsetBubbleLoad.textContent = safeOffset > 0 ? `+${safeOffset}` : String(safeOffset);
+          const actOffsetVal = parseInt(value);
+          const actSafeOffset = isNaN(actOffsetVal) ? 0 : actOffsetVal;
+          if (actOffsetSliderLoad) actOffsetSliderLoad.value = String(actSafeOffset);
+          if (actOffsetBubbleLoad) actOffsetBubbleLoad.textContent = actSafeOffset > 0 ? `+${actSafeOffset}` : String(actSafeOffset);
           break;
       }
     });
@@ -850,14 +808,8 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const smsAfterPreview = modal.querySelector(
     ".sms-text-after-preview",
   ) as HTMLElement;
-  const actFontSliderSave = modal.querySelector(
-    "#act-font-size-slider",
-  ) as HTMLInputElement;
-  const tableFontSliderSave = modal.querySelector(
-    "#table-font-size-slider",
-  ) as HTMLInputElement;
-  const headerOffsetSliderSave = modal.querySelector(
-    "#header-font-offset-slider",
+  const actTextOffsetSliderSave = modal.querySelector(
+    "#act-text-offset-slider",
   ) as HTMLInputElement;
 
   const newValues = [
@@ -879,15 +831,7 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     },
     {
       id: 11,
-      value: actFontSliderSave?.value || "15",
-    },
-    {
-      id: 12,
-      value: tableFontSliderSave?.value || "14",
-    },
-    {
-      id: 13,
-      value: headerOffsetSliderSave?.value || "0",
+      value: actTextOffsetSliderSave?.value || "0",
     },
   ];
 
@@ -946,12 +890,8 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
       "Ваше замовлення виконане. Сума:";
     globalCache.generalSettings.smsTextAfter =
       smsAfterPreview?.textContent?.trim() || "грн. Дякуємо за довіру!";
-    globalCache.generalSettings.actFontSize =
-      parseInt(actFontSliderSave?.value) || 15;
-    globalCache.generalSettings.tableFontSize =
-      parseInt(tableFontSliderSave?.value) || 14;
-    globalCache.generalSettings.headerFontOffset =
-      parseInt(headerOffsetSliderSave?.value) || 0;
+    globalCache.generalSettings.actTextOffset =
+      parseInt(actTextOffsetSliderSave?.value) || 0;
 
     // Зберігаємо в localStorage
     saveGeneralSettingsToLocalStorage();
@@ -1048,32 +988,15 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       if (wallpaperMainInput) {
         wallpaperMainInput.value = "";
       }
-      // Скидаємо повзунки розміру шрифту до дефолтних значень (14)
-      const actFontSlider = modal.querySelector(
-        "#act-font-size-slider",
+      // Скидаємо повзунок глобального зсуву шрифту до 0
+      const actOffsetSliderReset = modal.querySelector(
+        "#act-text-offset-slider",
       ) as HTMLInputElement;
-      const actFontBubble = modal.querySelector(
-        "#act-font-size-bubble",
+      const actOffsetBubbleReset = modal.querySelector(
+        "#act-text-offset-bubble",
       ) as HTMLElement;
-      const tableFontSlider = modal.querySelector(
-        "#table-font-size-slider",
-      ) as HTMLInputElement;
-      const tableFontBubble = modal.querySelector(
-        "#table-font-size-bubble",
-      ) as HTMLElement;
-      if (actFontSlider) actFontSlider.value = "15"; // дефолт акту = 15px
-      if (actFontBubble) actFontBubble.textContent = "15";
-      if (tableFontSlider) tableFontSlider.value = "14"; // дефолт таблиці = 14px
-      if (tableFontBubble) tableFontBubble.textContent = "14";
-      // Скидаємо повзунок зсуву шапки до 0
-      const headerOffsetSliderReset = modal.querySelector(
-        "#header-font-offset-slider",
-      ) as HTMLInputElement;
-      const headerOffsetBubbleReset = modal.querySelector(
-        "#header-font-offset-bubble",
-      ) as HTMLElement;
-      if (headerOffsetSliderReset) headerOffsetSliderReset.value = "0";
-      if (headerOffsetBubbleReset) headerOffsetBubbleReset.textContent = "0";
+      if (actOffsetSliderReset) actOffsetSliderReset.value = "0";
+      if (actOffsetBubbleReset) actOffsetBubbleReset.textContent = "0";
 
       showNotification(
         "Кольори, шпалери та розміри шрифтів скинуто до значень за замовчуванням",
@@ -1106,42 +1029,17 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
     );
   }
 
-  // Обробники для повзунків розміру шрифту
-  const actFontSlider = modal.querySelector(
-    "#act-font-size-slider",
+  // Обробник для глобального повзунка зсуву шрифту
+  const actOffsetSlider = modal.querySelector(
+    "#act-text-offset-slider",
   ) as HTMLInputElement;
-  const actFontBubble = modal.querySelector(
-    "#act-font-size-bubble",
+  const actOffsetBubble = modal.querySelector(
+    "#act-text-offset-bubble",
   ) as HTMLElement;
-  const tableFontSlider = modal.querySelector(
-    "#table-font-size-slider",
-  ) as HTMLInputElement;
-  const tableFontBubble = modal.querySelector(
-    "#table-font-size-bubble",
-  ) as HTMLElement;
-
-  if (actFontSlider && actFontBubble) {
-    actFontSlider.addEventListener("input", () => {
-      actFontBubble.textContent = actFontSlider.value;
-    });
-  }
-  if (tableFontSlider && tableFontBubble) {
-    tableFontSlider.addEventListener("input", () => {
-      tableFontBubble.textContent = tableFontSlider.value;
-    });
-  }
-
-  // Обробник для повзунка зсуву шапки
-  const headerOffsetSlider = modal.querySelector(
-    "#header-font-offset-slider",
-  ) as HTMLInputElement;
-  const headerOffsetBubble = modal.querySelector(
-    "#header-font-offset-bubble",
-  ) as HTMLElement;
-  if (headerOffsetSlider && headerOffsetBubble) {
-    headerOffsetSlider.addEventListener("input", () => {
-      const val = parseInt(headerOffsetSlider.value);
-      headerOffsetBubble.textContent = val > 0 ? `+${val}` : String(val);
+  if (actOffsetSlider && actOffsetBubble) {
+    actOffsetSlider.addEventListener("input", () => {
+      const val = parseInt(actOffsetSlider.value);
+      actOffsetBubble.textContent = val > 0 ? `+${val}` : String(val);
     });
   }
 }

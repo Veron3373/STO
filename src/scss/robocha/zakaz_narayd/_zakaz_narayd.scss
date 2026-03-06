@@ -111,12 +111,12 @@ body {
       margin: 0;
       font-weight: 700;
       color: #fff;
-      font-size: calc(1.6rem + var(--header-font-offset, 0) * 1px);
+      font-size: calc(1.6rem + var(--act-text-offset, 0) * 1px);
     }
 
     p {
       margin: 2px 0;
-      font-size: calc(14px + var(--header-font-offset, 0) * 1px);
+      font-size: calc(14px + var(--act-text-offset, 0) * 1px);
       color: #fff;
     }
   }
@@ -184,7 +184,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   padding: 10px 24px 0 24px;
-  font-size: var(--act-font-size, 15px);
+  font-size: calc(15px + var(--act-text-offset, 0) * 1px);
 }
 
 .zakaz_narayd-table {
@@ -233,7 +233,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
-  font-size: var(--table-font-size, 14px);
+  font-size: calc(14px + var(--act-text-offset, 0) * 1px);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 
@@ -381,7 +381,7 @@ body {
 .zakaz_narayd-sums-footer {
   text-align: right;
   padding: 10px 24px;
-  font-size: var(--act-font-size, 15px);
+  font-size: calc(15px + var(--act-text-offset, 0) * 1px);
 
   p {
     margin: 5px 0;
@@ -483,7 +483,7 @@ body {
 
 .reason-container {
   padding: 0 24px;
-  font-size: var(--act-font-size, 15px);
+  font-size: calc(15px + var(--act-text-offset, 0) * 1px);
 }
 
 .zakaz_narayd-reason-line {

@@ -88,9 +88,7 @@ export interface GeneralSettings {
   voiceInputEnabled: boolean; // 🎙️ Голосове введення (setting_id: 10, data)
   smsTextBefore: string; // SMS текст перед сумою (setting_id: 8)
   smsTextAfter: string; // SMS текст після суми (setting_id: 9)
-  actFontSize: number; // Розмір шрифту акту загальний (setting_id: 11)
-  tableFontSize: number; // Розмір шрифту таблиці (setting_id: 12)
-  headerFontOffset: number; // Зсув шрифту шапки h1/p (-5..+15) (setting_id: 13)
+  actTextOffset: number; // Глобальний зсув шрифту (-5..+15) (setting_id: 11)
 }
 
 export interface ActItem {
@@ -180,9 +178,7 @@ export const globalCache: GlobalDataCache = {
     voiceInputEnabled: false, // За замовчуванням голосове введення вимкнено
     smsTextBefore: "Ваше замовлення виконане. Сума:", // SMS текст перед сумою
     smsTextAfter: "грн. Дякуємо за довіру!", // SMS текст після суми
-    actFontSize: 15, // Розмір шрифту акту загальний (дефолт 15px)
-    tableFontSize: 14, // Розмір шрифту таблиці (дефолт 14px)
-    headerFontOffset: 0, // Зсув шрифту шапки (дефолт 0px)
+    actTextOffset: 0, // Глобальний зсув шрифту (дефолт 0)
   },
 };
 
@@ -235,12 +231,8 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         smsTextBefore:
           parsed.smsTextBefore || "Ваше замовлення виконане. Сума:",
         smsTextAfter: parsed.smsTextAfter || "грн. Дякуємо за довіру!",
-        actFontSize:
-          parsed.actFontSize !== undefined ? parsed.actFontSize : 15,
-        tableFontSize:
-          parsed.tableFontSize !== undefined ? parsed.tableFontSize : 14,
-        headerFontOffset:
-          parsed.headerFontOffset !== undefined ? parsed.headerFontOffset : 0,
+        actTextOffset:
+          parsed.actTextOffset !== undefined ? parsed.actTextOffset : 0,
       };
       // Застосовуємо шпалери після завантаження
       applyWallpapers();
@@ -275,7 +267,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
     const { data: generalSettingsRows } = (await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
       .order("setting_id")) as {
         data: Array<{
           setting_id: number;
@@ -329,19 +321,9 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
               (row as any).data === true || (row as any).data === "true";
             break;
           case 11:
-            // 🔡 Розмір шрифту акту — записується в Загальні
-            globalCache.generalSettings.actFontSize =
-              parseInt(value) || 15; // дефолт 15px
-            break;
-          case 12:
-            // 🔡 Розмір шрифту таблиці — записується в Загальні
-            globalCache.generalSettings.tableFontSize =
-              parseInt(value) || 14; // дефолт 14px
-            break;
-          case 13:
-            // 🔡 Зсув шрифту шапки — записується в Загальні
-            globalCache.generalSettings.headerFontOffset =
-              parseInt(value) || 0; // дефолт 0
+            // 🔡 Глобальний зсув шрифту — записується в Загальні
+            globalCache.generalSettings.actTextOffset =
+              parseInt(value) || 0;
             break;
         }
       }
@@ -357,13 +339,11 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
   }
 }
 
-// 🔹 Застосовує розміри шрифтів до body (через CSS змінні)
+// 🔹 Застосовує глобальний зсув шрифту (через CSS змінну)
 export function applyFontSizes(): void {
-  const { actFontSize, tableFontSize, headerFontOffset } = globalCache.generalSettings;
+  const { actTextOffset } = globalCache.generalSettings;
   const root = document.documentElement;
-  root.style.setProperty("--act-font-size", `${actFontSize || 15}px`);
-  root.style.setProperty("--table-font-size", `${tableFontSize || 14}px`);
-  root.style.setProperty("--header-font-offset", `${headerFontOffset ?? 0}`);
+  root.style.setProperty("--act-text-offset", `${actTextOffset ?? 0}`);
 }
 
 // 🔹 Застосовує шпалери до body.page-2

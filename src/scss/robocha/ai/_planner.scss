@@ -430,6 +430,53 @@
   color: #bbb;
 }
 
+// ── Відповідь користувача з Telegram ──
+.ai-planner-card-callback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  &--done {
+    background: rgba(39, 174, 96, 0.07);
+    border-color: rgba(39, 174, 96, 0.18);
+  }
+
+  &--snooze {
+    background: rgba(52, 152, 219, 0.07);
+    border-color: rgba(52, 152, 219, 0.18);
+  }
+
+  &--skip {
+    background: rgba(231, 76, 60, 0.07);
+    border-color: rgba(231, 76, 60, 0.18);
+  }
+
+  &-icon {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  &-text {
+    flex: 1;
+    color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &-time {
+    flex-shrink: 0;
+    color: #aaa;
+    font-size: 9px;
+  }
+}
+
 // ═══════════════════════════════════════
 // Модалка створення/редагування
 // ═══════════════════════════════════════

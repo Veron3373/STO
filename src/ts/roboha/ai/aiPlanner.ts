@@ -63,6 +63,8 @@ let reminders: ReminderFromRPC[] = [];
 let editingReminderId: number | null = null;
 let telegramLinked: boolean | null = null; // null = не перевірено
 let telegramUsers: { slyusar_id: number; name: string }[] = [];
+let callbackLogs: Map<number, { message_text: string; sent_at: string }> =
+  new Map();
 
 // ── Утиліти ──
 
@@ -133,6 +135,33 @@ async function loadTelegramUsers(): Promise<void> {
     }));
   } catch {
     telegramUsers = [];
+  }
+}
+
+async function loadCallbackLogs(reminderIds: number[]): Promise<void> {
+  callbackLogs = new Map();
+  if (!reminderIds.length) return;
+  try {
+    const { data } = await supabase
+      .from("atlas_reminder_logs")
+      .select("reminder_id, message_text, sent_at")
+      .in("reminder_id", reminderIds)
+      .eq("delivery_status", "callback")
+      .order("sent_at", { ascending: false });
+
+    if (data) {
+      for (const row of data) {
+        // Зберігаємо лише останню відповідь по кожному reminder
+        if (!callbackLogs.has(row.reminder_id)) {
+          callbackLogs.set(row.reminder_id, {
+            message_text: row.message_text,
+            sent_at: row.sent_at,
+          });
+        }
+      }
+    }
+  } catch {
+    // Не критично
   }
 }
 
@@ -459,6 +488,11 @@ export async function renderPlannerPanel(
   container: HTMLElement,
 ): Promise<void> {
   if (telegramLinked === null) await checkTelegramLink();
+
+  // Завантажуємо callback-відповіді
+  const ids = reminders.map((r) => r.reminder_id);
+  await loadCallbackLogs(ids);
+
   const filtered = filterReminders(reminders);
 
   container.innerHTML = `
@@ -563,6 +597,8 @@ function renderReminderCard(r: ReminderFromRPC): string {
         <div class="ai-planner-card-recipients">${formatRecipients(r.recipients)}</div>
         ${r.trigger_count > 0 ? `<div class="ai-planner-card-trigger-count">🔔 ${r.trigger_count}×</div>` : ""}
       </div>
+
+      ${renderCallbackResponse(r.reminder_id)}
     </div>
   `;
 }
@@ -571,6 +607,35 @@ function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function renderCallbackResponse(reminderId: number): string {
+  const log = callbackLogs.get(reminderId);
+  if (!log) return "";
+
+  const time = formatDateTime(log.sent_at);
+  const text = log.message_text;
+
+  let icon = "💬";
+  let cssModifier = "";
+  if (text.includes("✅")) {
+    icon = "✅";
+    cssModifier = "done";
+  } else if (text.includes("📅")) {
+    icon = "📅";
+    cssModifier = "snooze";
+  } else if (text.includes("❌")) {
+    icon = "❌";
+    cssModifier = "skip";
+  }
+
+  return `
+    <div class="ai-planner-card-callback ${cssModifier ? `ai-planner-card-callback--${cssModifier}` : ""}">
+      <span class="ai-planner-card-callback-icon">${icon}</span>
+      <span class="ai-planner-card-callback-text">${escapeHtml(text)}</span>
+      <span class="ai-planner-card-callback-time">${time}</span>
+    </div>
+  `;
 }
 
 // ═══════════════════════════════════════

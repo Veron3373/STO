@@ -5,6 +5,105 @@
 
 import { supabase } from "../../vxid/supabaseClient";
 
+// ── AI генерація SQL ──
+
+const GEMINI_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+async function loadAIKeys(): Promise<string[]> {
+  try {
+    const { data } = await supabase
+      .from("settings")
+      .select('setting_id, "Загальні"')
+      .gte("setting_id", 20)
+      .not("Загальні", "is", null)
+      .order("setting_id");
+    if (!data) return [];
+    return data
+      .map((r: any) => r["Загальні"])
+      .filter((v: any) => v && typeof v === "string" && v.trim())
+      .map((v: string) => v.trim());
+  } catch {
+    return [];
+  }
+}
+
+const SQL_SYSTEM_PROMPT = `Ти — SQL-генератор для PostgreSQL бази автосервісу (СТО).
+Твоя задача: отримати опис умови УКРАЇНСЬКОЮ і повернути ТІЛЬКИ SQL SELECT-запит.
+
+СТРУКТУРА БАЗИ:
+- acts: act_id, date_on (timestamp), date_off (timestamp|null=відкритий), client_id, cars_id,
+  data (JSONB): ПІБ, Клієнт, Телефон, Марка, Модель, "Держ. номер", VIN, Пробіг,
+  Приймальник, Слюсар, "Причина звернення", Рекомендації, Примітки,
+  Знижка, Аванс, "За деталі", "За роботу", "Загальна сума",
+  Роботи [{Робота, Кількість, Ціна, Зарплата}], Деталі [{Деталь, Кількість, Ціна, Сума}]
+- clients: client_id, data (JSONB): ПІБ, Телефон
+- cars: cars_id, client_id, data (JSONB): Авто, "Номер авто", Vincode, Рік
+- slyusars: slyusar_id, Name, data (JSONB): Name, "Ім'я", Доступ, Телефон, Посада
+- atlas_telegram_users: slyusar_id, telegram_chat_id, is_active
+
+ПРАВИЛА:
+1. ТІЛЬКИ SELECT (без INSERT/UPDATE/DELETE)
+2. Відкритий акт: date_off IS NULL
+3. Старіший за N днів: date_on < NOW() - INTERVAL 'N days'
+4. JSONB доступ: data->>'ПІБ', data->>'Слюсар'
+5. Якщо потрібно слюсаря — з'єднуй acts.data->>'Слюсар' з slyusars."Name"
+6. Поверни корисні колонки: act_id, дані клієнта, авто, роботи
+7. Поверни ТІЛЬКИ SQL запит, без пояснень, без \`\`\`sql, без коментарів
+8. Один рядок або кілька — але тільки SQL`;
+
+async function generateSQLFromDescription(
+  description: string,
+): Promise<string> {
+  const keys = await loadAIKeys();
+  if (keys.length === 0) throw new Error("Немає AI ключів");
+
+  for (const key of keys) {
+    try {
+      if (key.startsWith("gsk_")) {
+        // Groq
+        const resp = await fetch(GROQ_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: SQL_SYSTEM_PROMPT },
+              { role: "user", content: description },
+            ],
+            max_tokens: 1024,
+            temperature: 0.1,
+          }),
+        });
+        if (!resp.ok) continue;
+        const data = await resp.json();
+        return (data.choices?.[0]?.message?.content || "").trim();
+      } else {
+        // Gemini
+        const resp = await fetch(`${GEMINI_URL}?key=${key}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: SQL_SYSTEM_PROMPT }] },
+            contents: [{ role: "user", parts: [{ text: description }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+          }),
+        });
+        if (!resp.ok) continue;
+        const data = await resp.json();
+        return (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+      }
+    } catch {
+      continue;
+    }
+  }
+  throw new Error("Всі AI ключі не працюють");
+}
+
 // ── Типи ──
 
 export interface Reminder {
@@ -891,10 +990,19 @@ function showReminderViewModal(
         </div>
 
         ${
+          r.meta?.condition_description
+            ? `
+        <div class="ai-planner-view-field">
+          <div class="ai-planner-view-label">Умова</div>
+          <div class="ai-planner-view-value">${escapeHtml(r.meta.condition_description)}</div>
+        </div>`
+            : ""
+        }
+        ${
           r.condition_query
             ? `
         <div class="ai-planner-view-field">
-          <div class="ai-planner-view-label">SQL-умова</div>
+          <div class="ai-planner-view-label">SQL-запит</div>
           <div class="ai-planner-view-value ai-planner-view-value--code">${escapeHtml(r.condition_query)}</div>
         </div>`
             : ""
@@ -1104,10 +1212,20 @@ function showReminderModal(
         </div>
 
         <!-- Умовний запит (для conditional) -->
-        <div class="ai-planner-field" id="planner-conditional-fields" style="display:${r.reminder_type === "conditional" ? "flex" : "none"}">
-          <label class="ai-planner-label">SQL-умова (які записи перевіряти)</label>
-          <textarea class="ai-planner-textarea" id="planner-condition-query" style="min-height:80px;font-family:monospace;font-size:12px"
-            placeholder="SELECT act_id, data->>'ПІБ' FROM acts WHERE date_off IS NULL AND date_on < NOW() - INTERVAL '21 days'">${escapeHtml(r.condition_query || "")}</textarea>
+        <div id="planner-conditional-fields" style="display:${r.reminder_type === "conditional" ? "flex" : "none"};flex-direction:column;gap:10px">
+          <div class="ai-planner-field">
+            <label class="ai-planner-label">Опишіть умову звичайною мовою</label>
+            <textarea class="ai-planner-textarea" id="planner-condition-desc" style="min-height:70px"
+              placeholder="Наприклад: Перевіряй всі акти відкриті більше 21 дня, і відправляй слюсару номер акту, ПІБ клієнта та які роботи треба зробити">${escapeHtml(r.meta?.condition_description || "")}</textarea>
+          </div>
+          <div class="ai-planner-field">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <label class="ai-planner-label">SQL-запит (згенерований AI)</label>
+              <button type="button" class="ai-planner-btn ai-planner-btn--generate" id="planner-generate-sql">🤖 Згенерувати</button>
+            </div>
+            <textarea class="ai-planner-textarea" id="planner-condition-query" style="min-height:60px;font-family:monospace;font-size:11px;color:#666;background:#f8f8fc"
+              placeholder="SQL буде згенеровано автоматично...">${escapeHtml(r.condition_query || "")}</textarea>
+          </div>
         </div>
 
         <!-- Пріоритет -->
@@ -1188,6 +1306,38 @@ function initModalHandlers(
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
   });
+
+  // Кнопка «Згенерувати SQL»
+  overlay
+    .querySelector("#planner-generate-sql")
+    ?.addEventListener("click", async () => {
+      const descEl = overlay.querySelector(
+        "#planner-condition-desc",
+      ) as HTMLTextAreaElement;
+      const sqlEl = overlay.querySelector(
+        "#planner-condition-query",
+      ) as HTMLTextAreaElement;
+      const desc = descEl?.value.trim();
+      if (!desc) {
+        showToast("Опишіть умову!", "error");
+        return;
+      }
+      const genBtn = overlay.querySelector(
+        "#planner-generate-sql",
+      ) as HTMLButtonElement;
+      genBtn.disabled = true;
+      genBtn.textContent = "⏳ Генерую...";
+      try {
+        const sql = await generateSQLFromDescription(desc);
+        sqlEl.value = sql;
+        showToast("SQL згенеровано ✅", "success");
+      } catch {
+        showToast("Помилка генерації SQL", "error");
+      } finally {
+        genBtn.disabled = false;
+        genBtn.textContent = "🤖 Згенерувати";
+      }
+    });
 
   // Кастомний дропдаун «Кому»
   const dropdown = overlay.querySelector(
@@ -1456,16 +1606,44 @@ function initModalHandlers(
         // Перерахувати next_trigger_at для recurring
         reminder.next_trigger_at = calculateNextTrigger(schedule) as any;
       } else if (selectedType === "conditional") {
-        const condQuery = (
+        const condDesc = (
+          overlay.querySelector(
+            "#planner-condition-desc",
+          ) as HTMLTextAreaElement
+        ).value.trim();
+        let condQuery = (
           overlay.querySelector(
             "#planner-condition-query",
           ) as HTMLTextAreaElement
         ).value.trim();
-        if (!condQuery) {
-          showToast("Вкажіть SQL-умову!", "error");
+
+        if (!condDesc && !condQuery) {
+          showToast("Опишіть умову!", "error");
           return;
         }
+
+        // Якщо є опис але немає SQL — генеруємо
+        if (condDesc && !condQuery) {
+          try {
+            showToast("🤖 Генерую SQL...", "info");
+            condQuery = await generateSQLFromDescription(condDesc);
+            (
+              overlay.querySelector(
+                "#planner-condition-query",
+              ) as HTMLTextAreaElement
+            ).value = condQuery;
+          } catch {
+            showToast("Помилка генерації SQL", "error");
+            return;
+          }
+        }
+
         reminder.condition_query = condQuery;
+        if (!reminder.meta) reminder.meta = {} as any;
+        (reminder as any).meta = {
+          ...(reminder as any).meta,
+          condition_description: condDesc,
+        };
       }
 
       // Зберігаємо

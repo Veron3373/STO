@@ -818,6 +818,23 @@
     pointer-events: auto;
     animation: pulse-red 1s infinite;
   }
+
+  &--generate {
+    padding: 4px 10px;
+    font-size: 11px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 8px;
+
+    &:hover {
+      opacity: 0.9;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+  }
 }
 
 @keyframes pulse-red {

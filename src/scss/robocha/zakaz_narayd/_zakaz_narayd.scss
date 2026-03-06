@@ -183,7 +183,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   padding: 10px 24px 0 24px;
-  font-size: 15px;
+  font-size: var(--act-font-size, 15px);
 }
 
 .zakaz_narayd-table {
@@ -232,7 +232,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
-  font-size: clamp(10px, 1.6vw, 14px);
+  font-size: var(--table-font-size, 14px);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 
@@ -295,7 +295,7 @@ body {
     word-break: break-word;
 
     /* Прибираємо зайві обгортки та забезпечуємо повну ширину */
-    > div {
+    >div {
       display: block;
       width: 100%;
       min-height: 20px;
@@ -380,6 +380,7 @@ body {
 .zakaz_narayd-sums-footer {
   text-align: right;
   padding: 10px 24px;
+  font-size: var(--act-font-size, 15px);
 
   p {
     margin: 5px 0;
@@ -481,6 +482,7 @@ body {
 
 .reason-container {
   padding: 0 24px;
+  font-size: var(--act-font-size, 15px);
 }
 
 .zakaz_narayd-reason-line {
@@ -757,6 +759,7 @@ h1 {
 
 // Магія Flexbox для розташування
 .zakaz_narayd-buttons-container {
+
   // Кнопка "Додати рядок"
   #add-row-button {
     margin-right: auto; // Відштовхує все, що праворуч, до правого краю
@@ -919,6 +922,7 @@ tr:hover .delete-row-btn {
   0% {
     background-position: -200px 0;
   }
+
   100% {
     background-position: calc(200px + 100%) 0;
   }

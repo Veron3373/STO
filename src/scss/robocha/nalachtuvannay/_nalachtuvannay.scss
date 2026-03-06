@@ -872,6 +872,89 @@
     }
   }
 
+  // ── Повзунки розміру шрифту ────────────────────────────────
+  .font-size-group {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8eaf6 100%);
+    border-radius: 12px;
+    padding: 14px 16px;
+    border: 1px solid #c5cae9;
+  }
+
+  .font-size-slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 8px;
+    padding: 4px 0;
+  }
+
+  .font-size-slider {
+    flex: 1;
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    outline: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35);
+    }
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border: 3px solid #667eea;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+
+      &:hover {
+        transform: scale(1.15);
+        border-color: #764ba2;
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.45);
+      }
+
+      &:active {
+        transform: scale(1.05);
+      }
+    }
+
+    &::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      background: white;
+      border: 3px solid #667eea;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+  }
+
+  .font-size-bubble {
+    min-width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
   @media (max-width: 480px) {
     .general-input {
       padding: 10px 14px;

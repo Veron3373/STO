@@ -88,6 +88,8 @@ export interface GeneralSettings {
   voiceInputEnabled: boolean; // 🎙️ Голосове введення (setting_id: 10, data)
   smsTextBefore: string; // SMS текст перед сумою (setting_id: 8)
   smsTextAfter: string; // SMS текст після суми (setting_id: 9)
+  actFontSize: number; // Розмір шрифту акту загальний (setting_id: 11)
+  tableFontSize: number; // Розмір шрифту таблиці (setting_id: 12)
 }
 
 export interface ActItem {
@@ -109,8 +111,8 @@ export interface GlobalDataCache {
   worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
   detailsWithId: Array<{ detail_id: number; name: string }>;
-  slyusars: Array<{ Name: string; [k: string]: any }>;
-  shops: Array<{ Name: string; [k: string]: any }>;
+  slyusars: Array<{ Name: string;[k: string]: any }>;
+  shops: Array<{ Name: string;[k: string]: any }>;
   settings: {
     showPibMagazin: boolean;
     showCatalog: boolean;
@@ -177,6 +179,8 @@ export const globalCache: GlobalDataCache = {
     voiceInputEnabled: false, // За замовчуванням голосове введення вимкнено
     smsTextBefore: "Ваше замовлення виконане. Сума:", // SMS текст перед сумою
     smsTextAfter: "грн. Дякуємо за довіру!", // SMS текст після суми
+    actFontSize: 15, // Розмір шрифту акту загальний (дефолт 15px)
+    tableFontSize: 14, // Розмір шрифту таблиці (дефолт 14px)
   },
 };
 
@@ -229,9 +233,15 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
         smsTextBefore:
           parsed.smsTextBefore || "Ваше замовлення виконане. Сума:",
         smsTextAfter: parsed.smsTextAfter || "грн. Дякуємо за довіру!",
+        actFontSize:
+          parsed.actFontSize !== undefined ? parsed.actFontSize : 15,
+        tableFontSize:
+          parsed.tableFontSize !== undefined ? parsed.tableFontSize : 14,
       };
       // Застосовуємо шпалери після завантаження
       applyWallpapers();
+      // Застосовуємо розміри шрифтів після завантаження
+      applyFontSizes();
       return true;
     }
   } catch (e) {
@@ -249,8 +259,8 @@ export function saveGeneralSettingsToLocalStorage(): void {
     );
   } catch (e) {
     // console.warn(
-      // "⚠️ Помилка збереження загальних налаштувань в localStorage:",
-      // e,
+    // "⚠️ Помилка збереження загальних налаштувань в localStorage:",
+    // e,
     // );
   }
 }
@@ -261,14 +271,14 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
     const { data: generalSettingsRows } = (await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
       .order("setting_id")) as {
-      data: Array<{
-        setting_id: number;
-        Загальні: string | null;
-        data: boolean | null;
-      }> | null;
-    };
+        data: Array<{
+          setting_id: number;
+          Загальні: string | null;
+          data: boolean | null;
+        }> | null;
+      };
 
     if (generalSettingsRows) {
       for (const row of generalSettingsRows) {
@@ -314,16 +324,36 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             globalCache.generalSettings.voiceInputEnabled =
               (row as any).data === true || (row as any).data === "true";
             break;
+          case 11:
+            // 🔡 Розмір шрифту акту — записується в Загальні
+            globalCache.generalSettings.actFontSize =
+              parseInt(value) || 15; // дефолт 15px
+            break;
+          case 12:
+            // 🔡 Розмір шрифту таблиці — записується в Загальні
+            globalCache.generalSettings.tableFontSize =
+              parseInt(value) || 14; // дефолт 14px
+            break;
         }
       }
       // Зберігаємо в localStorage
       saveGeneralSettingsToLocalStorage();
       // Застосовуємо шпалери
       applyWallpapers();
+      // Застосовуємо розміри шрифтів
+      applyFontSizes();
     }
   } catch (e) {
     // console.error("❌ Помилка завантаження загальних налаштувань з БД:", e);
   }
+}
+
+// 🔹 Застосовує розміри шрифтів до body (через CSS змінні)
+export function applyFontSizes(): void {
+  const { actFontSize, tableFontSize } = globalCache.generalSettings;
+  const root = document.documentElement;
+  root.style.setProperty("--act-font-size", `${actFontSize || 14}px`);
+  root.style.setProperty("--table-font-size", `${tableFontSize || 14}px`);
 }
 
 // 🔹 Застосовує шпалери до body.page-2
@@ -385,9 +415,8 @@ function dedupeSklad<
   const seen = new Set<string>();
   const out: T[] = [];
   for (const r of rows) {
-    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${
-      r.quantity
-    }`;
+    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${r.quantity
+      }`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -544,7 +573,7 @@ export async function loadGlobalData(
         .filter(Boolean) || [];
 
     // магазини: ТЕПЕР витягуємо Name і з об'єктів, і з подвійно-JSON-рядків, і з «просто рядка»
-    const shopsParsed: Array<{ Name: string; [k: string]: any }> = [];
+    const shopsParsed: Array<{ Name: string;[k: string]: any }> = [];
     for (const row of shopsData || []) {
       let raw = row?.data;
 
@@ -709,8 +738,8 @@ export async function ensureSkladLoaded(): Promise<void> {
     .order("sclad_id", { ascending: false });
   if (error) {
     // console.warn(
-      // "⚠️ ensureSkladLoaded(): не вдалося отримати sclad:",
-      // error.message,
+    // "⚠️ ensureSkladLoaded(): не вдалося отримати sclad:",
+    // error.message,
     // );
     return;
   }
@@ -920,7 +949,7 @@ export function initDetailsRealtimeSubscription() {
         handleDetailsChange(payload);
       },
     )
-    .subscribe(() => {});
+    .subscribe(() => { });
 }
 
 function handleDetailsChange(payload: any) {

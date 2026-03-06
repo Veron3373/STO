@@ -6,6 +6,7 @@ import {
   globalCache,
   saveGeneralSettingsToLocalStorage,
   applyWallpapers,
+  applyFontSizes,
 } from "../zakaz_naraudy/globalCache";
 import { resetAISettingsCache } from "../ai/aiService";
 import { initAIChatButton, resetGeminiKeysCache } from "../ai/aiChat";
@@ -659,6 +660,28 @@ function createGeneralSettingsHTML(): string {
         </div>
       </div>
 
+      <div class="settings-divider"></div>
+
+      <div class="general-input-group font-size-group">
+        <label class="general-label">
+          <span class="general-label-text">🔡 Розмір шрифту акту (загальний)</span>
+        </label>
+        <div class="font-size-slider-wrapper">
+          <input type="range" id="act-font-size-slider" class="font-size-slider" min="10" max="50" value="15" step="1" />
+          <div class="font-size-bubble" id="act-font-size-bubble">15</div>
+        </div>
+      </div>
+
+      <div class="general-input-group font-size-group">
+        <label class="general-label">
+          <span class="general-label-text">🔡 Розмір шрифту таблиці</span>
+        </label>
+        <div class="font-size-slider-wrapper">
+          <input type="range" id="table-font-size-slider" class="font-size-slider" min="10" max="50" value="14" step="1" />
+          <div class="font-size-bubble" id="table-font-size-bubble">14</div>
+        </div>
+      </div>
+
     </div>
   `;
 }
@@ -669,7 +692,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12])
       .order("setting_id");
 
     if (error) throw error;
@@ -742,6 +765,28 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           const smsAfterValue = value || "грн. Дякуємо за довіру!";
           if (smsAfterPreview) smsAfterPreview.textContent = smsAfterValue;
           break;
+        case 11: // Розмір шрифту акту
+          const actFontSlider = modal.querySelector(
+            "#act-font-size-slider",
+          ) as HTMLInputElement;
+          const actFontBubble = modal.querySelector(
+            "#act-font-size-bubble",
+          ) as HTMLElement;
+          const actFontVal = parseInt(value) || 14;
+          if (actFontSlider) actFontSlider.value = String(actFontVal);
+          if (actFontBubble) actFontBubble.textContent = String(actFontVal);
+          break;
+        case 12: // Розмір шрифту таблиці
+          const tableFontSlider = modal.querySelector(
+            "#table-font-size-slider",
+          ) as HTMLInputElement;
+          const tableFontBubble = modal.querySelector(
+            "#table-font-size-bubble",
+          ) as HTMLElement;
+          const tableFontVal = parseInt(value) || 14;
+          if (tableFontSlider) tableFontSlider.value = String(tableFontVal);
+          if (tableFontBubble) tableFontBubble.textContent = String(tableFontVal);
+          break;
       }
     });
 
@@ -783,6 +828,12 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const smsAfterPreview = modal.querySelector(
     ".sms-text-after-preview",
   ) as HTMLElement;
+  const actFontSliderSave = modal.querySelector(
+    "#act-font-size-slider",
+  ) as HTMLInputElement;
+  const tableFontSliderSave = modal.querySelector(
+    "#table-font-size-slider",
+  ) as HTMLInputElement;
 
   const newValues = [
     { id: 1, value: nameInput?.value || "" },
@@ -800,6 +851,14 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     {
       id: 9,
       value: smsAfterPreview?.textContent?.trim() || "грн. Дякуємо за довіру!",
+    },
+    {
+      id: 11,
+      value: actFontSliderSave?.value || "15",
+    },
+    {
+      id: 12,
+      value: tableFontSliderSave?.value || "14",
     },
   ];
 
@@ -858,12 +917,19 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
       "Ваше замовлення виконане. Сума:";
     globalCache.generalSettings.smsTextAfter =
       smsAfterPreview?.textContent?.trim() || "грн. Дякуємо за довіру!";
+    globalCache.generalSettings.actFontSize =
+      parseInt(actFontSliderSave?.value) || 15;
+    globalCache.generalSettings.tableFontSize =
+      parseInt(tableFontSliderSave?.value) || 14;
 
     // Зберігаємо в localStorage
     saveGeneralSettingsToLocalStorage();
 
     // Застосовуємо шпалери одразу після збереження
     applyWallpapers();
+
+    // Застосовуємо розміри шрифтів одразу після збереження
+    applyFontSizes();
 
     // Інвалідуємо кеш глобальних даних
     invalidateGlobalDataCache();
@@ -951,8 +1017,26 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       if (wallpaperMainInput) {
         wallpaperMainInput.value = "";
       }
+      // Скидаємо повзунки розміру шрифту до дефолтних значень (14)
+      const actFontSlider = modal.querySelector(
+        "#act-font-size-slider",
+      ) as HTMLInputElement;
+      const actFontBubble = modal.querySelector(
+        "#act-font-size-bubble",
+      ) as HTMLElement;
+      const tableFontSlider = modal.querySelector(
+        "#table-font-size-slider",
+      ) as HTMLInputElement;
+      const tableFontBubble = modal.querySelector(
+        "#table-font-size-bubble",
+      ) as HTMLElement;
+      if (actFontSlider) actFontSlider.value = "15"; // дефолт акту = 15px
+      if (actFontBubble) actFontBubble.textContent = "15";
+      if (tableFontSlider) tableFontSlider.value = "14"; // дефолт таблиці = 14px
+      if (tableFontBubble) tableFontBubble.textContent = "14";
+
       showNotification(
-        "Кольори та шпалери скинуто до значень за замовчуванням",
+        "Кольори, шпалери та розміри шрифтів скинуто до значень за замовчуванням",
         "info",
         1500,
       );
@@ -980,6 +1064,31 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
     smsAfterPreview.addEventListener("input", () =>
       updateSmsCharCounter(modal),
     );
+  }
+
+  // Обробники для повзунків розміру шрифту
+  const actFontSlider = modal.querySelector(
+    "#act-font-size-slider",
+  ) as HTMLInputElement;
+  const actFontBubble = modal.querySelector(
+    "#act-font-size-bubble",
+  ) as HTMLElement;
+  const tableFontSlider = modal.querySelector(
+    "#table-font-size-slider",
+  ) as HTMLInputElement;
+  const tableFontBubble = modal.querySelector(
+    "#table-font-size-bubble",
+  ) as HTMLElement;
+
+  if (actFontSlider && actFontBubble) {
+    actFontSlider.addEventListener("input", () => {
+      actFontBubble.textContent = actFontSlider.value;
+    });
+  }
+  if (tableFontSlider && tableFontBubble) {
+    tableFontSlider.addEventListener("input", () => {
+      tableFontBubble.textContent = tableFontSlider.value;
+    });
   }
 }
 
@@ -1063,14 +1172,13 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${
-        isFrozen
-          ? `<div class="percentage-buttons-container">
+      ${isFrozen
+      ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-      }
+      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+    }
     </div>
   `;
 

@@ -5233,7 +5233,7 @@ export async function createAIChatModal(): Promise<void> {
       <!-- Tabs -->
       <div class="ai-chat-tabs">
         <button class="ai-chat-tab ai-chat-tab--active" id="tab-chat" data-tab="chat">💬 Чат</button>
-        <button class="ai-chat-tab" id="tab-planner" data-tab="planner">📋 Планувальник</button>
+        <button class="ai-chat-tab" id="tab-planner" data-tab="planner">� Повідомлення</button>
         <button class="ai-chat-tab" id="tab-dashboard" data-tab="dashboard">📊 Дашборд</button>
       </div>
 

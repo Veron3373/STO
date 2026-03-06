@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// 📋 aiPlanner.ts — Планувальник Атласа
+// � aiPlanner.ts — Повідомлення Атласа
 // CRUD нагадувань + рендеринг UI
 // ═══════════════════════════════════════
 
@@ -1288,7 +1288,7 @@ export async function initPlannerTab(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="ai-planner-loading">
       <div class="ai-spinner"></div>
-      <span>Завантаження планувальника...</span>
+      <span>Завантаження повідомлень...</span>
     </div>
   `;
 

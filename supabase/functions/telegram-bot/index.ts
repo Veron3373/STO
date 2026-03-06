@@ -33,6 +33,45 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return new Response("OK", { status: 200 });
     }
 
+    // ────────────────────────────────
+    // Встановлення webhook (одноразово)
+    // GET ?setup_webhook=1
+    // ────────────────────────────────
+    const url = new URL(req.url);
+    if (url.searchParams.get("setup_webhook") === "1") {
+      const webhookUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+      const tgResp = await fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: webhookUrl,
+            allowed_updates: ["message", "callback_query"],
+          }),
+        },
+      );
+      const tgResult = await tgResp.text();
+      console.log("setWebhook result:", tgResult);
+      return new Response(tgResult, {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ────────────────────────────────
+    // Інформація про webhook
+    // GET ?webhook_info=1
+    // ────────────────────────────────
+    if (url.searchParams.get("webhook_info") === "1") {
+      const tgResp = await fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`,
+      );
+      const tgResult = await tgResp.text();
+      return new Response(tgResult, {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const update = await req.json();
 
@@ -115,7 +154,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
               chat_id: cbChatId,
               message_id: cbMessageId,
               text: updatedText,
-              parse_mode: "Markdown",
             }),
           },
         );
@@ -147,7 +185,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           chatId,
           "👋 Привіт! Я — *Атлас*, бот СТО B.S.Motorservice.\n\n" +
             "Щоб прив'язати ваш Telegram до акаунту, " +
-            "відкрийте *Планувальник* в додатку і натисніть " +
+            "відкрийте *Повідомлення* в додатку і натисніть " +
             '"🔗 Прив\'язати Telegram".\n\n' +
             "Вам буде надано персональну посилання.",
         );
@@ -238,7 +276,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         await sendTelegramMessage(
           BOT_TOKEN,
           chatId,
-          "🔕 Сповіщення вимкнено.\nЩоб увімкнути знову — зайдіть у Планувальник та прив'яжіть Telegram повторно.",
+          "🔕 Сповіщення вимкнено.\nЩоб увімкнути знову — зайдіть у Повідомлення та прив'яжіть Telegram повторно.",
         );
       }
       return new Response("OK", { status: 200 });

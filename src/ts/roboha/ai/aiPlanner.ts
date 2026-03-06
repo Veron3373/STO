@@ -950,7 +950,7 @@ function showReminderViewModal(
     deleteBtn.dataset.counting = "true";
     const origText = deleteBtn.innerHTML;
     let timeLeft = 5;
-    deleteBtn.innerHTML = `🗑️ Видалення... <span class="ai-planner-delete-countdown">${timeLeft}</span>`;
+    deleteBtn.innerHTML = `<span class="ai-planner-delete-countdown">${timeLeft}</span>`;
     deleteBtn.classList.add("ai-planner-btn--counting");
     let cancelled = false;
 

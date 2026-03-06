@@ -54,9 +54,9 @@ export function getModalFormValues() {
   const get = (id: string) =>
     (
       document.getElementById(id) as
-        | HTMLInputElement
-        | HTMLTextAreaElement
-        | null
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | null
     )?.value || "";
   const phoneValue = get(phoneInputId);
   return {
@@ -705,10 +705,7 @@ export async function showModalCreateSakazNarad() {
       confirmToggle.textContent = state.icon;
       confirmToggle.className = `confirm-button ${state.class}`;
       confirmToggle.title = state.title;
-      if (userConfirmation === null) {
-        selectedClientId = null;
-        selectedCarId = null;
-      }
+      // Do not reset selectedClientId and selectedCarId here, otherwise updating fails
     };
     applyState(currentStateIndex);
     confirmToggle.addEventListener("click", () => {

@@ -617,23 +617,37 @@ function renderCallbackResponse(reminderId: number): string {
   const text = log.message_text;
 
   let icon = "💬";
+  let statusLabel = "Відповідь";
   let cssModifier = "";
   if (text.includes("✅")) {
     icon = "✅";
+    statusLabel = "Виконано";
     cssModifier = "done";
   } else if (text.includes("📅")) {
     icon = "📅";
+    statusLabel = "Заплановано";
     cssModifier = "snooze";
   } else if (text.includes("❌")) {
     icon = "❌";
+    statusLabel = "Не планую";
     cssModifier = "skip";
   }
 
+  // Витягуємо ім'я відповідача з тексту "(від Ім'я)"
+  const nameMatch = text.match(/\(від\s+(.+?)\)/);
+  const responder = nameMatch ? nameMatch[1] : "";
+
   return `
     <div class="ai-planner-card-callback ${cssModifier ? `ai-planner-card-callback--${cssModifier}` : ""}">
-      <span class="ai-planner-card-callback-icon">${icon}</span>
-      <span class="ai-planner-card-callback-text">${escapeHtml(text)}</span>
-      <span class="ai-planner-card-callback-time">${time}</span>
+      <div class="ai-planner-card-callback__header">
+        <span class="ai-planner-card-callback__icon">${icon}</span>
+        <span class="ai-planner-card-callback__status">${statusLabel}</span>
+      </div>
+      <div class="ai-planner-card-callback__details">
+        ${responder ? `<span class="ai-planner-card-callback__who">👤 ${escapeHtml(responder)}</span>` : ""}
+        <span class="ai-planner-card-callback__when">🕐 ${time}</span>
+      </div>
+      <div class="ai-planner-card-callback__source">Telegram</div>
     </div>
   `;
 }

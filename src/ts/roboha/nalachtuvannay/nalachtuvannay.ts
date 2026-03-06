@@ -642,10 +642,14 @@ function createGeneralSettingsHTML(): string {
       <div class="general-input-group">
         <label class="general-label" for="general-logo-url">
           <span class="general-label-text">🖼️ Логотип компанії</span>
-          <div style="display: flex; gap: 10px; width: 100%; align-items: center;">
-            <input type="text" id="general-logo-url" class="general-input" placeholder="URL логотипу або завантажте файл" />
+          <div class="logo-input-wrapper">
+            <input type="text" id="general-logo-url" class="general-input logo-url-input" placeholder="Вставте URL або натисніть 📎 для завантаження" />
             <input type="file" id="general-logo-file" accept="image/*" style="display: none;" />
-            <button type="button" class="general-btn" id="general-logo-upload-btn" style="white-space: nowrap; padding: 0 15px;">Обрати файл</button>
+            <button type="button" id="general-logo-upload-btn" class="logo-upload-icon" title="Завантажити файл">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
           </div>
         </label>
       </div>
@@ -1121,7 +1125,7 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
 
       const file = target.files[0];
       try {
-        logoUploadBtn.textContent = "Завантаження...";
+        logoUploadBtn.classList.add("logo-upload-icon--loading");
         logoUploadBtn.disabled = true;
 
         const fileExt = file.name.split('.').pop();
@@ -1140,17 +1144,20 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
 
         if (data && data.publicUrl) {
           logoUrlInput.value = data.publicUrl;
+          logoUrlInput.classList.add("logo-url-input--success");
+          setTimeout(() => logoUrlInput.classList.remove("logo-url-input--success"), 1500);
         }
       } catch (err: any) {
         // console.error(err);
         showNotification("Помилка завантаження логотипу", "error", 2000);
       } finally {
-        logoUploadBtn.textContent = "Обрати файл";
+        logoUploadBtn.classList.remove("logo-upload-icon--loading");
         logoUploadBtn.disabled = false;
         logoFileInput.value = "";
       }
     });
   }
+
 
   // Обробники для підрахунку символів SMS
   const smsBeforePreview = modal.querySelector(

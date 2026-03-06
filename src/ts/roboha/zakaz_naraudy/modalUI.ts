@@ -785,9 +785,8 @@ function createRowHtml(
   const catalogCellHTML = `<td contenteditable="${isCatalogEditable}" class="editable-autocomplete catalog-cell" data-name="catalog" ${scladIdAttr}${!showCatalog ? ' style="display: none;"' : ""}>${showCatalog ? catalogValue : ""}</td>`;
 
   const pibMagazinCellHTML = showPibMagazin
-    ? `<td contenteditable="${isPibMagazinEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${
-        item ? pibMagazinType : ""
-      }" data-prev-value="${displayPibMagazinValue}">${displayPibMagazinValue}</td>`
+    ? `<td contenteditable="${isPibMagazinEditable}" class="editable-autocomplete pib-magazin-cell" data-name="pib_magazin" data-type="${item ? pibMagazinType : ""
+    }" data-prev-value="${displayPibMagazinValue}">${displayPibMagazinValue}</td>`
     : "";
 
   /* ===== ЗМІНИ: відображення пустоти замість 0 ===== */
@@ -848,35 +847,33 @@ function createRowHtml(
   const rowAttrs: string[] = [];
   if (isWorkRowWithEmptyPib) rowAttrs.push('data-partial-edit="true"');
   rowAttrs.push(`data-record-id="${rowRecordId}"`);
+  // ✅ НАДІЙНЕ ВИЗНАЧЕННЯ ТИПУ: зберігаємо тип прямо на рядку
+  if (item?.type === "work") rowAttrs.push('data-item-type="work"');
+  else if (item?.type === "detail") rowAttrs.push('data-item-type="detail"');
   const rowAttrsStr = rowAttrs.length > 0 ? " " + rowAttrs.join(" ") : "";
 
   return `
     <tr${rowAttrsStr}>
-      <td class="row-index" style="${
-        item?.type === "work" && showCatalog && !catalogValue
-          ? "cursor: pointer;"
-          : ""
-      }">${
-        item?.type === "work"
-          ? `🛠️ ${index + 1}`
-          : item?.type === "detail"
-            ? `⚙️ ${index + 1}`
-            : `${index + 1}`
-      }</td>
+      <td class="row-index" style="${item?.type === "work" && showCatalog && !catalogValue
+      ? "cursor: pointer;"
+      : ""
+    }">${item?.type === "work"
+      ? `🛠️ ${index + 1}`
+      : item?.type === "detail"
+        ? `⚙️ ${index + 1}`
+        : `${index + 1}`
+    }</td>
       <td style="position: relative; padding-right: 30px;" class="name-cell">
-        <div contenteditable="${isNameEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}"${hasShortened ? ` data-full-name="${fullName.replace(/"/g, "&quot;")}"` : ""} style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${
-          displayName
-        }</div>
-        ${
-          showDeleteBtn
-            ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
-            : ""
-        }
+        <div contenteditable="${isNameEditable}" class="editable-autocomplete" data-name="name" data-type="${dataTypeForName}"${hasShortened ? ` data-full-name="${fullName.replace(/"/g, "&quot;")}"` : ""} style="display: inline-block; width: 100%; outline: none; min-width: 50px;">${displayName
+    }</div>
+        ${showDeleteBtn
+      ? `<button class="delete-row-btn" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin: 0; z-index: 10; pointer-events: auto; line-height: 1; opacity: 0.6; transition: opacity 0.2s;" title="Видалити рядок">🗑️</button>`
+      : ""
+    }
       </td>
       ${catalogCellHTML}
-      <td contenteditable="${isQtyEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${
-        item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
-      }</td>
+      <td contenteditable="${isQtyEditable}" class="text-right editable-autocomplete qty-cell" data-name="id_count">${item && item.quantity ? formatNumberWithSpaces(item.quantity) : ""
+    }</td>
       ${priceCellHTML}
       ${sumCellHTML}
       ${zarplataCellHTML}
@@ -904,17 +901,17 @@ export function generateTableHTML(
   const actItemsHtml =
     allItems.length > 0
       ? allItems
-          .map(
-            (item, index) =>
-              createRowHtml(
-                item,
-                index,
-                showPibMagazin,
-                showCatalog,
-                canAddRow,
-              ), // <--- ПЕРЕДАЄМО canAddRow
-          )
-          .join("")
+        .map(
+          (item, index) =>
+            createRowHtml(
+              item,
+              index,
+              showPibMagazin,
+              showCatalog,
+              canAddRow,
+            ), // <--- ПЕРЕДАЄМО canAddRow
+        )
+        .join("")
       : createRowHtml(null, 0, showPibMagazin, showCatalog, canAddRow); // <--- ПЕРЕДАЄМО canAddRow
 
   const isActClosed = globalCache.isActClosed;
@@ -963,9 +960,8 @@ export function generateTableHTML(
     globalCache.isActClosed || !canAddRow
       ? ""
       : `
-    <div class="zakaz_narayd-buttons-container${
-      isRestricted ? " obmesheniy" : ""
-    }">
+    <div class="zakaz_narayd-buttons-container${isRestricted ? " obmesheniy" : ""
+      }">
       <button id="add-row-button" class="action-button add-row-button">➕ Додати рядок</button>
       <button id="save-act-data" class="zakaz_narayd-save-button" style="padding: 0.5rem 1rem;"> 💾 Зберегти зміни</button>
     </div>`;
@@ -1491,9 +1487,8 @@ export function createTableRow(
   value: string,
   className: string = "",
 ): string {
-  return `<tr><td>${label}</td><td${
-    className ? ` class="${className}"` : ""
-  }>${value}</td></tr>`;
+  return `<tr><td>${label}</td><td${className ? ` class="${className}"` : ""
+    }>${value}</td></tr>`;
 }
 
 export function createModal(): void {

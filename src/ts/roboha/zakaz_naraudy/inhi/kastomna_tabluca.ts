@@ -630,6 +630,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
               nameCell.dispatchEvent(new Event("input", { bubbles: true }));
             }
           }
+          // ✅ Маркуємо рядок як роботу
+          (row as HTMLElement).setAttribute("data-item-type", "work");
           // Update # to 🛠️
           if (indexCell) {
             const num =
@@ -661,6 +663,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
             '[data-name="name"]',
           ) as HTMLElement;
           if (nameCell) nameCell.setAttribute("data-type", "details");
+          // ✅ Маркуємо рядок як деталь
+          (row as HTMLElement).setAttribute("data-item-type", "detail");
         }
 
         // ✅ Автозаповнення кількості = 1 якщо поле порожнє (вибір через каталог)
@@ -686,6 +690,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
 
         const typeToSet = rawItemType === "detail" ? "details" : "works";
         target.setAttribute("data-type", typeToSet);
+        // ✅ Маркуємо рядок надійно - для 100% визначення типу при збереженні
+        (row as HTMLElement).setAttribute("data-item-type", rawItemType);
 
         // Update # Emoji
         if (indexCell) {

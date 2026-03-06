@@ -90,6 +90,7 @@ export interface GeneralSettings {
   smsTextAfter: string; // SMS текст після суми (setting_id: 9)
   actFontSize: number; // Розмір шрифту акту загальний (setting_id: 11)
   tableFontSize: number; // Розмір шрифту таблиці (setting_id: 12)
+  headerFontOffset: number; // Зсув шрифту шапки h1/p (-5..+15) (setting_id: 13)
 }
 
 export interface ActItem {
@@ -181,6 +182,7 @@ export const globalCache: GlobalDataCache = {
     smsTextAfter: "грн. Дякуємо за довіру!", // SMS текст після суми
     actFontSize: 15, // Розмір шрифту акту загальний (дефолт 15px)
     tableFontSize: 14, // Розмір шрифту таблиці (дефолт 14px)
+    headerFontOffset: 0, // Зсув шрифту шапки (дефолт 0px)
   },
 };
 
@@ -237,6 +239,8 @@ export function loadGeneralSettingsFromLocalStorage(): boolean {
           parsed.actFontSize !== undefined ? parsed.actFontSize : 15,
         tableFontSize:
           parsed.tableFontSize !== undefined ? parsed.tableFontSize : 14,
+        headerFontOffset:
+          parsed.headerFontOffset !== undefined ? parsed.headerFontOffset : 0,
       };
       // Застосовуємо шпалери після завантаження
       applyWallpapers();
@@ -271,7 +275,7 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
     const { data: generalSettingsRows } = (await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
       .order("setting_id")) as {
         data: Array<{
           setting_id: number;
@@ -334,6 +338,11 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             globalCache.generalSettings.tableFontSize =
               parseInt(value) || 14; // дефолт 14px
             break;
+          case 13:
+            // 🔡 Зсув шрифту шапки — записується в Загальні
+            globalCache.generalSettings.headerFontOffset =
+              parseInt(value) || 0; // дефолт 0
+            break;
         }
       }
       // Зберігаємо в localStorage
@@ -350,10 +359,11 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
 
 // 🔹 Застосовує розміри шрифтів до body (через CSS змінні)
 export function applyFontSizes(): void {
-  const { actFontSize, tableFontSize } = globalCache.generalSettings;
+  const { actFontSize, tableFontSize, headerFontOffset } = globalCache.generalSettings;
   const root = document.documentElement;
-  root.style.setProperty("--act-font-size", `${actFontSize || 14}px`);
+  root.style.setProperty("--act-font-size", `${actFontSize || 15}px`);
   root.style.setProperty("--table-font-size", `${tableFontSize || 14}px`);
+  root.style.setProperty("--header-font-offset", `${headerFontOffset ?? 0}`);
 }
 
 // 🔹 Застосовує шпалери до body.page-2

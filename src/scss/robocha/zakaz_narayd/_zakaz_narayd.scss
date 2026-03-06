@@ -111,11 +111,12 @@ body {
       margin: 0;
       font-weight: 700;
       color: #fff;
+      font-size: calc(1.6rem + var(--header-font-offset, 0) * 1px);
     }
 
     p {
       margin: 2px 0;
-      font-size: 14px;
+      font-size: calc(14px + var(--header-font-offset, 0) * 1px);
       color: #fff;
     }
   }

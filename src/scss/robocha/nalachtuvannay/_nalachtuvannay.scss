@@ -953,6 +953,37 @@
     transition: all 0.2s ease;
     flex-shrink: 0;
     user-select: none;
+
+    // Варіант для offset-повзунка (помаранчевий, показує +/-)
+    &--offset {
+      min-width: 52px;
+      background: linear-gradient(135deg, #ff8c00 0%, #ff5722 100%);
+      box-shadow: 0 3px 10px rgba(255, 87, 34, 0.4);
+    }
+  }
+
+  // Offset-повзунок — помаранчевий трек
+  .font-size-slider--offset {
+    background: linear-gradient(to right, #ff5722 0%, #ff8c00 100%);
+
+    &::-webkit-slider-thumb {
+      border-color: #ff5722;
+
+      &:hover {
+        border-color: #e64a19;
+        box-shadow: 0 3px 10px rgba(255, 87, 34, 0.45);
+      }
+    }
+
+    &::-moz-range-thumb {
+      border-color: #ff5722;
+    }
+  }
+
+  // Група для offset (з трохи іншим фоном)
+  .font-size-group--offset {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    border-color: #ffcc80;
   }
 
   @media (max-width: 480px) {

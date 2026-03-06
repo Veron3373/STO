@@ -682,6 +682,16 @@ function createGeneralSettingsHTML(): string {
         </div>
       </div>
 
+      <div class="general-input-group font-size-group font-size-group--offset">
+        <label class="general-label">
+          <span class="general-label-text">🏷️ Шрифт шапки (зсув від base)</span>
+        </label>
+        <div class="font-size-slider-wrapper">
+          <input type="range" id="header-font-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
+          <div class="font-size-bubble font-size-bubble--offset" id="header-font-offset-bubble">0</div>
+        </div>
+      </div>
+
     </div>
   `;
 }
@@ -692,7 +702,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13])
       .order("setting_id");
 
     if (error) throw error;
@@ -787,6 +797,18 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           if (tableFontSlider) tableFontSlider.value = String(tableFontVal);
           if (tableFontBubble) tableFontBubble.textContent = String(tableFontVal);
           break;
+        case 13: // Зсув шрифту шапки
+          const headerOffsetSliderLoad = modal.querySelector(
+            "#header-font-offset-slider",
+          ) as HTMLInputElement;
+          const headerOffsetBubbleLoad = modal.querySelector(
+            "#header-font-offset-bubble",
+          ) as HTMLElement;
+          const headerOffsetVal = parseInt(value);
+          const safeOffset = isNaN(headerOffsetVal) ? 0 : headerOffsetVal;
+          if (headerOffsetSliderLoad) headerOffsetSliderLoad.value = String(safeOffset);
+          if (headerOffsetBubbleLoad) headerOffsetBubbleLoad.textContent = safeOffset > 0 ? `+${safeOffset}` : String(safeOffset);
+          break;
       }
     });
 
@@ -834,6 +856,9 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const tableFontSliderSave = modal.querySelector(
     "#table-font-size-slider",
   ) as HTMLInputElement;
+  const headerOffsetSliderSave = modal.querySelector(
+    "#header-font-offset-slider",
+  ) as HTMLInputElement;
 
   const newValues = [
     { id: 1, value: nameInput?.value || "" },
@@ -859,6 +884,10 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     {
       id: 12,
       value: tableFontSliderSave?.value || "14",
+    },
+    {
+      id: 13,
+      value: headerOffsetSliderSave?.value || "0",
     },
   ];
 
@@ -921,6 +950,8 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
       parseInt(actFontSliderSave?.value) || 15;
     globalCache.generalSettings.tableFontSize =
       parseInt(tableFontSliderSave?.value) || 14;
+    globalCache.generalSettings.headerFontOffset =
+      parseInt(headerOffsetSliderSave?.value) || 0;
 
     // Зберігаємо в localStorage
     saveGeneralSettingsToLocalStorage();
@@ -1034,6 +1065,15 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       if (actFontBubble) actFontBubble.textContent = "15";
       if (tableFontSlider) tableFontSlider.value = "14"; // дефолт таблиці = 14px
       if (tableFontBubble) tableFontBubble.textContent = "14";
+      // Скидаємо повзунок зсуву шапки до 0
+      const headerOffsetSliderReset = modal.querySelector(
+        "#header-font-offset-slider",
+      ) as HTMLInputElement;
+      const headerOffsetBubbleReset = modal.querySelector(
+        "#header-font-offset-bubble",
+      ) as HTMLElement;
+      if (headerOffsetSliderReset) headerOffsetSliderReset.value = "0";
+      if (headerOffsetBubbleReset) headerOffsetBubbleReset.textContent = "0";
 
       showNotification(
         "Кольори, шпалери та розміри шрифтів скинуто до значень за замовчуванням",
@@ -1088,6 +1128,20 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
   if (tableFontSlider && tableFontBubble) {
     tableFontSlider.addEventListener("input", () => {
       tableFontBubble.textContent = tableFontSlider.value;
+    });
+  }
+
+  // Обробник для повзунка зсуву шапки
+  const headerOffsetSlider = modal.querySelector(
+    "#header-font-offset-slider",
+  ) as HTMLInputElement;
+  const headerOffsetBubble = modal.querySelector(
+    "#header-font-offset-bubble",
+  ) as HTMLElement;
+  if (headerOffsetSlider && headerOffsetBubble) {
+    headerOffsetSlider.addEventListener("input", () => {
+      const val = parseInt(headerOffsetSlider.value);
+      headerOffsetBubble.textContent = val > 0 ? `+${val}` : String(val);
     });
   }
 }

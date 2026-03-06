@@ -638,6 +638,16 @@ function createGeneralSettingsHTML(): string {
           <input type="text" id="general-wallpaper-main" class="general-input" placeholder="Введіть URL зображення для основної сторінки" />
         </label>
       </div>
+
+            <div class="general-input-group font-size-group font-size-group--offset">
+        <label class="general-label">
+          <span class="general-label-text">🔡 Розмір тексту в акті (+/- до базових)</span>
+        </label>
+        <div class="font-size-slider-wrapper">
+          <input type="range" id="act-text-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
+          <div class="font-size-bubble font-size-bubble--offset" id="act-text-offset-bubble">0</div>
+        </div>
+      </div>
       
       <div class="reset-colors-wrapper">
         <button type="button" id="reset-colors-btn" class="reset-colors-btn">
@@ -661,17 +671,6 @@ function createGeneralSettingsHTML(): string {
       </div>
 
       <div class="settings-divider"></div>
-
-      <div class="general-input-group font-size-group font-size-group--offset">
-        <label class="general-label">
-          <span class="general-label-text">🔡 Розмір тексту в акті (+/- до базових)</span>
-        </label>
-        <div class="font-size-slider-wrapper">
-          <input type="range" id="act-text-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
-          <div class="font-size-bubble font-size-bubble--offset" id="act-text-offset-bubble">0</div>
-        </div>
-      </div>
-
     </div>
   `;
 }

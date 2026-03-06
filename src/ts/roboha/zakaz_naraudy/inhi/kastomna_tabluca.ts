@@ -311,6 +311,8 @@ function ensureAutocompleteStyles() {
     /* Styles for Catalog specific items */
     .autocomplete-item.item-work-cat { color: #2e7d32; } /* Green */
     .autocomplete-item.item-detail-cat { color: #1565c0; } /* Blue */
+    /* Підсвічування поточного значення в списку */
+    .autocomplete-item.active-suggestion { background: #cce8ff !important; border-left: 3px solid #1976d2; padding-left: 7px; }
   `;
   const tag = document.createElement("style");
   tag.id = "autocomplete-styles";
@@ -537,6 +539,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   closeAutocompleteList();
   if (!suggestions.length) return;
 
+  // Поточне значення поля для підсвічування збігу
+  const currentTargetValue = (target.getAttribute("data-full-name") || target.textContent || "").trim().toLowerCase();
+
   const GAP = 4;
   const ROWS_MAX = 15;
 
@@ -548,6 +553,8 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   list.style.visibility = "hidden";
   list.style.zIndex = "100000";
 
+  let activeItem: HTMLElement | null = null;
+
   suggestions.forEach((s) => {
     const { label, value, sclad_id, labelHtml, fullName, itemType } = s;
     const li = document.createElement("li");
@@ -558,6 +565,15 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
     // Special classes for Catalog dropdown colors
     if (itemType === "work") li.classList.add("item-work-cat");
     if (itemType === "detail") li.classList.add("item-detail-cat");
+
+    // Підсвічуємо рядок, який відповідає поточному значенню поля
+    if (currentTargetValue) {
+      const itemValue = (fullName || value || "").trim().toLowerCase();
+      if (itemValue === currentTargetValue) {
+        li.classList.add("active-suggestion");
+        activeItem = li;
+      }
+    }
 
     li.tabIndex = 0;
     li.dataset.value = value;
@@ -777,6 +793,13 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   });
 
   document.body.appendChild(list);
+
+  // Прокручуємо список до підсвіченого елементу після рендеру
+  if (activeItem) {
+    requestAnimationFrame(() => {
+      (activeItem as HTMLElement).scrollIntoView({ block: "nearest" });
+    });
+  }
 
   const tr = target.getBoundingClientRect();
   const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;

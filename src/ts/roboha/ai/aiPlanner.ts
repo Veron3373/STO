@@ -189,7 +189,7 @@ function getRecipientsValue(recipients: any): string {
   return "self";
 }
 
-function renderTelegramStatus(): string {
+/* function renderTelegramStatus(): string {
   const slyusarId = getCurrentSlyusarId();
   if (telegramLinked) {
     return `
@@ -206,7 +206,7 @@ function renderTelegramStatus(): string {
       </span>
     </div>`;
 }
-
+ */
 // ── CRUD ──
 
 export async function loadReminders(): Promise<ReminderFromRPC[]> {
@@ -497,28 +497,21 @@ export async function renderPlannerPanel(
 
   container.innerHTML = `
     <div class="ai-planner">
-      <!-- Заголовок -->
-      <div class="ai-planner-header">
-        ${renderTelegramStatus()}
-        <button class="ai-planner-add-btn" id="planner-add-btn">
-          ➕ Створити
-        </button>
-      </div>
-
       <!-- Фільтри -->
       <div class="ai-planner-filters">
         <button class="ai-planner-filter ${currentFilter === "all" ? "ai-planner-filter--active" : ""}" data-filter="all">
-          Всі (${reminders.length})
+          Всі <span class="ai-planner-filter-badge">${reminders.length}</span>
         </button>
         <button class="ai-planner-filter ${currentFilter === "active" ? "ai-planner-filter--active" : ""}" data-filter="active">
-          ⏳ Активні (${reminders.filter((r) => r.status === "active").length})
+          ⏳ Активні <span class="ai-planner-filter-badge">${reminders.filter((r) => r.status === "active").length}</span>
         </button>
         <button class="ai-planner-filter ${currentFilter === "paused" ? "ai-planner-filter--active" : ""}" data-filter="paused">
-          ⏸️ Пауза (${reminders.filter((r) => r.status === "paused").length})
+          ⏸️ Пауза <span class="ai-planner-filter-badge">${reminders.filter((r) => r.status === "paused").length}</span>
         </button>
         <button class="ai-planner-filter ${currentFilter === "completed" ? "ai-planner-filter--active" : ""}" data-filter="completed">
-          ✅ Завершені (${reminders.filter((r) => r.status === "completed" || r.status === "cancelled").length})
+          ✅ Завершені <span class="ai-planner-filter-badge">${reminders.filter((r) => r.status === "completed" || r.status === "cancelled").length}</span>
         </button>
+        <button class="ai-planner-add-btn" id="planner-add-btn">+</button>
       </div>
 
       <!-- Список -->

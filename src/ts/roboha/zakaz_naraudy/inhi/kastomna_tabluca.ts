@@ -567,8 +567,9 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
     if (itemType === "detail") li.classList.add("item-detail-cat");
 
     // Підсвічуємо рядок, який відповідає поточному значенню поля
+    // Порівнюємо ТІЛЬКИ по value (артикул для каталогу, назва для name)
     if (currentTargetValue) {
-      const itemValue = (fullName || value || "").trim().toLowerCase();
+      const itemValue = (value || "").trim().toLowerCase();
       if (itemValue === currentTargetValue) {
         li.classList.add("active-suggestion");
         activeItem = li;

@@ -336,7 +336,7 @@ async function schedulePrecisionCheck(): Promise<void> {
       .not("next_trigger_at", "is", null)
       .order("next_trigger_at", { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!data?.next_trigger_at) return;
 

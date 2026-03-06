@@ -135,7 +135,29 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-Write-Host "[4/4] DONE!"
+Write-Host "[4/4] Deploying Supabase Edge Functions..."
+npx supabase functions deploy telegram-bot --no-verify-jwt
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️ telegram-bot deploy failed (non-critical)" -ForegroundColor Yellow
+} else {
+    Write-Host "✅ telegram-bot deployed!" -ForegroundColor Green
+}
+
+npx supabase functions deploy check-reminders --no-verify-jwt
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️ check-reminders deploy failed (non-critical)" -ForegroundColor Yellow
+} else {
+    Write-Host "✅ check-reminders deployed!" -ForegroundColor Green
+}
+
+npx supabase functions deploy send-telegram --no-verify-jwt
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️ send-telegram deploy failed (non-critical)" -ForegroundColor Yellow
+} else {
+    Write-Host "✅ send-telegram deployed!" -ForegroundColor Green
+}
+
+Write-Host "[5/5] DONE!"
 Write-Host ""
 Write-Host "========================================"
 Write-Host "  ✅ DEPLOYMENT STARTED"

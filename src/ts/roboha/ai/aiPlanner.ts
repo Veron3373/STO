@@ -1243,8 +1243,8 @@ function showReminderModal(
         <div class="ai-planner-field">
           <label class="ai-planner-label">Куди надіслати</label>
           <div class="ai-planner-btn-group" id="planner-channel-group">
-            <button class="ai-planner-btn-option ${(r.channel || "app") === "app" ? "ai-planner-btn-option--active" : ""}" data-value="app">📱 Додаток</button>
-            <button class="ai-planner-btn-option ${r.channel === "telegram" ? "ai-planner-btn-option--active" : ""}" data-value="telegram">✈️ Telegram</button>
+            <button class="ai-planner-btn-option ${r.channel === "app" ? "ai-planner-btn-option--active" : ""}" data-value="app">📱 Додаток</button>
+            <button class="ai-planner-btn-option ${(r.channel || "telegram") === "telegram" ? "ai-planner-btn-option--active" : ""}" data-value="telegram">✈️ Telegram</button>
             <button class="ai-planner-btn-option ${r.channel === "both" ? "ai-planner-btn-option--active" : ""}" data-value="both">📱✈️ Обидва</button>
           </div>
         </div>
@@ -1430,6 +1430,18 @@ function initModalHandlers(
     ).style.display = v === "interval" ? "none" : "flex";
   });
 
+  // Клік по datetime-local — одразу відкрити календар
+  const triggerAtInput = overlay.querySelector(
+    "#planner-trigger-at",
+  ) as HTMLInputElement;
+  triggerAtInput?.addEventListener("click", () => {
+    try {
+      triggerAtInput.showPicker();
+    } catch (_) {
+      /* unsupported */
+    }
+  });
+
   // Дні тижня — мультивибір
   overlay
     .querySelector("#planner-days-group")
@@ -1468,7 +1480,7 @@ function initModalHandlers(
       overlay.querySelector(
         "#planner-channel-group .ai-planner-btn-option--active",
       ) as HTMLElement
-    )?.dataset.value || "app";
+    )?.dataset.value || "telegram";
   overlay
     .querySelector("#planner-channel-group")
     ?.addEventListener("click", (e) => {
@@ -1480,7 +1492,7 @@ function initModalHandlers(
         .querySelectorAll("#planner-channel-group .ai-planner-btn-option")
         .forEach((b) => b.classList.remove("ai-planner-btn-option--active"));
       btn.classList.add("ai-planner-btn-option--active");
-      selectedChannel = btn.dataset.value || "app";
+      selectedChannel = btn.dataset.value || "telegram";
     });
 
   // Видалити (тільки edit)

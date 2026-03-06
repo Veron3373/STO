@@ -639,24 +639,28 @@ function createGeneralSettingsHTML(): string {
         </label>
       </div>
 
-     <div class="general-input-group font-size-group font-size-group--offset">
-        <label class="general-label">
-          <span class="general-label-text">🔡 Розмір тексту в акті (+/- до базових)</span>
-        </label>
-        <div class="font-size-slider-wrapper">
-          <input type="range" id="act-text-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
-          <div class="font-size-bubble font-size-bubble--offset" id="act-text-offset-bubble">0</div>
+     <div class="general-input-group font-size-group font-size-group--offset" style="flex-direction: column; align-items: stretch; gap: 15px;">
+        <div>
+          <label class="general-label" style="margin-bottom: 8px; display: block;">
+            <span class="general-label-text">🔡 Розмір тексту в акті (+/- до базових)</span>
+          </label>
+          <div class="font-size-slider-wrapper">
+            <input type="range" id="act-text-offset-slider" class="font-size-slider font-size-slider--offset" min="-5" max="15" value="0" step="1" />
+            <div class="font-size-bubble font-size-bubble--offset" id="act-text-offset-bubble">0</div>
+          </div>
         </div>
-      </div>
 
-      <div class="general-input-group border-style-group">
-        <label class="general-label">
-          <span class="general-label-text">📏 Товщина та колір меж таблиці</span>
-        </label>
-        <div class="font-size-slider-wrapper" style="gap: 15px;">
-          <input type="range" id="table-border-width-slider" class="font-size-slider" min="0" max="5" value="1" step="1" />
-          <div class="font-size-bubble" id="table-border-width-bubble">1px</div>
-          <input type="color" id="table-border-color" class="color-picker" value="#cccccc" style="height: 38px; padding: 2px; cursor: pointer; border: 1px solid #ccc; border-radius: 8px;" />
+        <div class="settings-divider" style="margin: 0; border-color: rgba(255, 140, 0, 0.2);"></div>
+
+        <div>
+          <label class="general-label" style="margin-bottom: 8px; display: block;">
+            <span class="general-label-text">📏 Товщина та колір меж таблиці</span>
+          </label>
+          <div class="font-size-slider-wrapper" style="gap: 15px; margin-top: 5px;">
+            <input type="range" id="table-border-width-slider" class="font-size-slider font-size-slider--offset" min="0" max="5" value="1" step="1" />
+            <div class="font-size-bubble font-size-bubble--offset" id="table-border-width-bubble">1px</div>
+            <input type="color" id="table-border-color" class="color-picker" value="#cccccc" title="Обрати колір межі" style="width: 52px; height: 38px; padding: 0; cursor: pointer; border: 2px solid rgba(255, 140, 0, 0.5); border-radius: 8px; background: #fff;" />
+          </div>
         </div>
       </div>
       
@@ -692,7 +696,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13])
       .order("setting_id");
 
     if (error) throw error;

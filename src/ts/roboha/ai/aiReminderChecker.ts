@@ -648,15 +648,7 @@ async function checkRealtimeReminders(changedTablesList: string[]): Promise<void
         const schedule = typeof r.schedule === "string" ? JSON.parse(r.schedule) : r.schedule;
         if (schedule?.type !== "realtime") return false;
 
-        // Розумний фільтр: чи є в SQL-запиті хоча б одна з таблиць, які щойно змінились?
-        const query = r.condition_query || "";
-        const queriesChangedTable = changedTablesList.some((tableName) => {
-          const regex = new RegExp(`\\b${tableName}\\b`, "i");
-          return regex.test(query);
-        });
-
-        if (!queriesChangedTable) return false;
-        return true;
+        return true; // Скасував суворий фільтр по назві таблиці, перевіряємо всі Контрольні нагадування на будь-яку зміну
       } catch {
         return false;
       }
@@ -713,8 +705,11 @@ async function checkRealtimeReminders(changedTablesList: string[]): Promise<void
       // 🚨 ЗАХИСТ ВІД СПАМУ: Перевіряємо чи змінились результати
       let resultText = "";
       const currentResultHash = JSON.stringify(condResult);
+
+      console.log(`[ReminderChecker] 🔍 Хеш старий: ${reminder.meta?.last_result_hash?.substring(0, 30)}... Хеш новий: ${currentResultHash.substring(0, 30)}...`);
+
       if (reminder.meta?.last_result_hash === currentResultHash) {
-        console.log(`[ReminderChecker] ⏭️ Результати SQL не змінились (spam protection) reminder_id=${reminder.reminder_id}`);
+        console.log(`[ReminderChecker] ⏭️ Результати SQL не змінились (спам-захист) reminder_id=${reminder.reminder_id}`);
         continue;
       }
 

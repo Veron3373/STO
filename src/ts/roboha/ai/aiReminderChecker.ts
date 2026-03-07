@@ -1,6 +1,7 @@
-// ═══════════════════════════════════════════════════════
 // 🔔 aiReminderChecker.ts — Перевірка нагадувань (основний обробник)
-// Polling кожні 15 сек + precision timer → toast + Telegram
+// Смарт-Менеджер: авто вмик./вимик. polling + realtime
+// Polling 60с + precision timer → toast + Telegram
+// Realtime: event-based моніторинг БД (без SQL!)
 // Сервер (pg_cron) теж відправляє Telegram — дедуплікація через логи
 // ═══════════════════════════════════════════════════════
 
@@ -136,9 +137,6 @@ export function initReminderChecker(): void {
   }
 
   // Створити контейнер для toast-ів
-  ensureToastContainer();
-
-  // Перша перевірка відразу
   ensureToastContainer();
 
   // Замість ручного запуску всіх процесів, активуємо Смарт-Менеджер,
@@ -784,6 +782,15 @@ function initRealtimeMonitoring(): void {
 
       // для кожної таблиці — окремий channel
       for (const [tableName, entries] of tableReminderMap) {
+
+        // Кешуємо events у верхньому регістрі одразу (не при кожному payload)
+        const cachedEntries = entries.map(({ rem, rule }) => ({
+          rem,
+          rule,
+          eventsUpper: rule?.events?.map((e: string) => e.toUpperCase()) || null,
+          isForUser: isReminderForUser(rem, currentSlyusarId!),
+        }));
+
         const ch = supabase
           .channel(`rt-${tableName}-${Date.now()}`)
           .on(
@@ -792,51 +799,56 @@ function initRealtimeMonitoring(): void {
             async (payload: any) => {
               console.log(`[RT] 🔴 ${payload.eventType} @ ${payload.table}`);
 
-              // Унікальний ID payload для дедуплікації
-              const rowId = JSON.stringify({ e: payload.eventType, t: payload.table, id: payload.new?.act_id || payload.new?.id || payload.old?.act_id || payload.old?.id, ts: Date.now() });
+              // Дедуплікація: БЕЗ Date.now() — щоб одна і та ж подія не оброблялась двічі
+              const rowId = `${payload.eventType}:${payload.table}:${payload.new?.act_id || payload.new?.id || payload.old?.act_id || payload.old?.id || "?"}`;
               if (sentPayloadIds.has(rowId)) return;
               sentPayloadIds.add(rowId);
-              setTimeout(() => sentPayloadIds.delete(rowId), 30_000);
+              setTimeout(() => sentPayloadIds.delete(rowId), 10_000);
 
-              for (const { rem, rule } of entries) {
+              for (const { rem, rule, eventsUpper, isForUser } of cachedEntries) {
                 try {
-                  if (!isReminderForUser(rem, currentSlyusarId!)) continue;
+                  if (!isForUser) continue;
 
-                  // Перевірити подію
-                  if (rule && rule.events && !rule.events.map((e: string) => e.toUpperCase()).includes(payload.eventType)) continue;
+                  // Перевірити подію (кешоване порівняння)
+                  if (eventsUpper && !eventsUpper.includes(payload.eventType)) continue;
 
-                  // Перевірити умову check
+                  // Перевірити умову check (без запитів до БД)
                   if (!evalCheck(rule?.check, payload.new || {}, payload.old || {})) continue;
 
-                  console.log(`[RT] ✅ Тригер нагадування reminder_id=${rem.reminder_id}`);
+                  console.log(`[RT] ✅ Тригер reminder_id=${rem.reminder_id}`);
 
-                  // Формуємо повідомлення
+                  // Формуємо повідомлення (без запитів — тільки з payload)
                   const resultText = formatPayloadMessage(payload, rule);
                   rem.meta = rem.meta || {};
                   rem.meta.condition_result_text = resultText;
 
-                  // Оновити лічильник срацьовань
-                  await supabase
-                    .from("atlas_reminders")
-                    .update({ trigger_count: (rem.trigger_count || 0) + 1, last_triggered_at: new Date().toISOString() })
-                    .eq("reminder_id", rem.reminder_id);
-
-                  // Toast
+                  // Toast (миттєво, без запитів)
                   if (rem.channel === "app" || rem.channel === "both") showReminderToast(rem);
 
-                  // Telegram
-                  if (rem.channel === "telegram" || rem.channel === "both") await sendTelegramForReminder(rem);
+                  // Паралельно: оновити лічильник + записати лог + Telegram
+                  const dbPromises: PromiseLike<any>[] = [
+                    supabase
+                      .from("atlas_reminders")
+                      .update({ trigger_count: (rem.trigger_count || 0) + 1, last_triggered_at: new Date().toISOString() })
+                      .eq("reminder_id", rem.reminder_id)
+                      .then(() => { }),
+                    supabase.from("atlas_reminder_logs").insert({
+                      reminder_id: rem.reminder_id,
+                      recipient_id: currentSlyusarId,
+                      channel: rem.channel === "telegram" ? "telegram" : "app",
+                      message_text: `🔴 ${rem.title} | ${resultText.substring(0, 100)}`,
+                      delivery_status: "delivered",
+                    }).then(() => { }),
+                  ];
 
-                  // Лог
-                  await supabase.from("atlas_reminder_logs").insert({
-                    reminder_id: rem.reminder_id,
-                    recipient_id: currentSlyusarId,
-                    channel: rem.channel === "telegram" ? "telegram" : "app",
-                    message_text: `🔴 Realtime: ${rem.title} | ${resultText.substring(0, 100)}`,
-                    delivery_status: "delivered",
-                  });
+                  if (rem.channel === "telegram" || rem.channel === "both") {
+                    dbPromises.push(sendTelegramForReminder(rem));
+                  }
+
+                  await Promise.all(dbPromises);
+
                 } catch (innerErr) {
-                  console.error("[RT] Помилка обробки нагадування:", innerErr);
+                  console.error("[RT] Помилка:", innerErr);
                 }
               }
             },

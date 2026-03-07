@@ -825,7 +825,7 @@ function initPlannerHandlers(container: HTMLElement): void {
         }, 1000);
 
         // Скасування при кліку на кружок
-        countdown.addEventListener("click", (ce) => {
+        const cancelDelete = (ce: Event) => {
           ce.stopPropagation();
           cancelled = true;
           clearInterval(interval);
@@ -834,7 +834,10 @@ function initPlannerHandlers(container: HTMLElement): void {
           if (actionsEl)
             actionsEl.classList.remove("ai-planner-card-actions--counting");
           deleteBtn.innerHTML = "🗑️";
-        });
+        };
+
+        countdown.addEventListener("click", cancelDelete);
+        deleteBtn.addEventListener("click", cancelDelete, { once: true });
       } else if (action === "pause") {
         const reminder = reminders.find((r) => r.reminder_id === id);
         if (reminder) {
@@ -1670,9 +1673,7 @@ function initModalHandlers(
     });
 }
 
-// ═══════════════════════════════════════
-// 🚀 ІНІЦІАЛІЗАЦІЯ (викликається з aiChat.ts)
-// ═══════════════════════════════════════
+let plannerRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 
 export async function initPlannerTab(container: HTMLElement): Promise<void> {
   // Показати спіннер
@@ -1687,7 +1688,34 @@ export async function initPlannerTab(container: HTMLElement): Promise<void> {
   await loadTelegramUsers();
   reminders = await loadReminders();
   await renderPlannerPanel(container);
+
+  if (!plannerRealtimeChannel) {
+    plannerRealtimeChannel = supabase
+      .channel("custom-planner-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "atlas_reminder_logs" },
+        async (_payload) => {
+          // Завантажуємо оновлені дані (або просто додаємо в мапу локально, але краще перевикликати рендер)
+          const ids = reminders.map((r) => r.reminder_id);
+          await loadCallbackLogs(ids);
+          await renderPlannerPanel(container);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "atlas_reminders" },
+        async (_payload) => {
+          // Так само оновлювати статус або список
+          reminders = await loadReminders();
+          await renderPlannerPanel(container);
+        }
+      )
+      .subscribe();
+  }
 }
+
+
 
 // ═══════════════════════════════════════
 // 🔧 FUNCTION CALLING — Tool Declaration

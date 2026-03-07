@@ -111,7 +111,11 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
     }
 
     const recipientIds = await resolveRecipientIds(reminder);
-    if (recipientIds.length === 0) return;
+    console.log(`[ReminderChecker] 👥 Recipients:`, recipientIds);
+    if (recipientIds.length === 0) {
+      console.log(`[ReminderChecker] ❌ Немає одержувачів — пропускаємо`);
+      return;
+    }
 
     const { data: tgUsers, error } = await supabase
       .from("atlas_telegram_users")
@@ -119,7 +123,11 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
       .in("slyusar_id", recipientIds)
       .eq("is_active", true);
 
-    if (error || !tgUsers?.length) return;
+    console.log(`[ReminderChecker] 📱 TG users:`, tgUsers, `error:`, error);
+    if (error || !tgUsers?.length) {
+      console.log(`[ReminderChecker] ❌ Немає TG users або помилка`);
+      return;
+    }
 
     const icon = getPriorityIcon(reminder.priority);
     const typeLabel = getTypeLabel(reminder.reminder_type);
@@ -134,6 +142,8 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
     ]
       .filter(Boolean)
       .join("\n");
+
+    console.log(`[ReminderChecker] 📨 Message text (first 300 chars):`, messageText.substring(0, 300));
 
     const reply_markup = {
       inline_keyboard: [
@@ -156,7 +166,8 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
 
     for (const tgUser of tgUsers) {
       try {
-        await supabase.functions.invoke("send-telegram", {
+        console.log(`[ReminderChecker] 📤 Sending to chat_id=${tgUser.telegram_chat_id}...`);
+        const sendResult = await supabase.functions.invoke("send-telegram", {
           body: {
             chat_id: tgUser.telegram_chat_id,
             text: messageText,
@@ -164,6 +175,7 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
             reply_markup,
           },
         });
+        console.log(`[ReminderChecker] 📤 Send result:`, sendResult?.data, sendResult?.error);
         await supabase.from("atlas_reminder_logs").insert({
           reminder_id: reminder.reminder_id,
           recipient_id: tgUser.slyusar_id,
@@ -281,12 +293,17 @@ async function checkDueReminders(): Promise<void> {
         reminder.reminder_type === "conditional" &&
         reminder.condition_query
       ) {
+        console.log(`[ReminderChecker] 📊 Conditional reminder_id=${reminder.reminder_id}, query:`, reminder.condition_query);
         const condResult = await checkCondition(reminder.condition_query);
+        console.log(`[ReminderChecker] 📊 Condition result:`, condResult);
         if (!condResult) {
+          console.log(`[ReminderChecker] ❌ Умова НЕ виконана (false/empty) — пропускаємо`);
           // Умова не виконана → просто оновити next_trigger_at
           await markTriggered(reminder.reminder_id, false, "Умова не виконана");
           continue;
         }
+
+        console.log(`[ReminderChecker] ✅ Умова виконана! Форматуємо результат...`);
 
         // Форматуємо результат для Telegram
         let resultText = "";
@@ -312,22 +329,26 @@ async function checkDueReminders(): Promise<void> {
           resultText = String(condResult);
         }
 
+        console.log(`[ReminderChecker] 📝 Formatted result text:`, resultText.substring(0, 200));
         if (!reminder.meta) reminder.meta = {};
         reminder.meta.condition_result_text = resultText;
       }
 
       // Показати toast (для app і both каналів)
       if (reminder.channel === "app" || reminder.channel === "both") {
+        console.log(`[ReminderChecker] 🔔 Показуємо toast для reminder_id=${reminder.reminder_id}`);
         showReminderToast(reminder);
       }
 
       // Відправити Telegram (для telegram і both каналів)
       // Дедуплікація: перевірити чи сервер вже не відправив
       if (reminder.channel === "telegram" || reminder.channel === "both") {
+        console.log(`[ReminderChecker] ✈️ Відправляємо Telegram для reminder_id=${reminder.reminder_id}`);
         await sendTelegramForReminder(reminder);
       }
 
       // Записати лог + оновити trigger
+      console.log(`[ReminderChecker] ✅ markTriggered для reminder_id=${reminder.reminder_id}`);
       await markTriggered(reminder.reminder_id, true);
 
       anyTriggered = true;

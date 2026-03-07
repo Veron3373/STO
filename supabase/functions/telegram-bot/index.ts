@@ -8,6 +8,7 @@
 //   /status        — перевірка прив'язки
 // ═══════════════════════════════════════════════════════
 
+// @ts-ignore: Deno module
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -23,8 +24,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    // @ts-ignore
     const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
+    // @ts-ignore
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    // @ts-ignore
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     if (!BOT_TOKEN || !SUPABASE_URL || !SERVICE_ROLE) {
@@ -121,11 +125,39 @@ Deno.serve(async (req: Request): Promise<Response> => {
         }
         // snooze — нічого не міняємо, залишаємо active
 
+        let realName = cbUsername;
+
+        try {
+          // Отримуємо прив'язаного співробітника за telegram_chat_id
+          const { data: link } = await supabase
+            .from("atlas_telegram_users")
+            .select("slyusar_id")
+            .eq("telegram_chat_id", cbChatId)
+            .single();
+
+          if (link?.slyusar_id) {
+            const { data: slyusar } = await supabase
+              .from("slyusars")
+              .select("data")
+              .eq("slyusar_id", link.slyusar_id)
+              .single();
+
+            if (slyusar?.data) {
+              const d = typeof slyusar.data === "string" ? JSON.parse(slyusar.data) : slyusar.data;
+              if (d["Name"]) {
+                realName = `${cbUsername} (${d["Name"]})`;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error fetching real user name:", e);
+        }
+
         // Записати лог
         await supabase.from("atlas_reminder_logs").insert({
           reminder_id: reminderId,
           channel: "telegram",
-          message_text: `Відповідь: ${actionLabels[action]} (від ${cbUsername})`,
+          message_text: `Відповідь: ${actionLabels[action]} (від ${realName})`,
           delivery_status: "callback",
         });
 
@@ -144,7 +176,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
         // Оновити повідомлення — прибрати кнопки, додати відмітку
         const originalText = callbackQuery.message?.text || "";
-        const updatedText = `${originalText}\n\n─────────────\n${actionLabels[action]} — ${cbUsername}`;
+        const updatedText = `${originalText}\n\n─────────────\n${actionLabels[action]} — ${realName}`;
 
         await fetch(
           `https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`,
@@ -186,10 +218,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
           BOT_TOKEN,
           chatId,
           "⚠️ Формат змінився.\n\n" +
-            "Для прив'язки надішліть ваше *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
-            "Наприклад:\n" +
-            "`Шевченко Т.Г.`\n" +
-            "`11111`",
+          "Для прив'язки надішліть ваше *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
+          "Наприклад:\n" +
+          "`Шевченко Т.Г.`\n" +
+          "`11111`",
         );
         return new Response("OK", { status: 200 });
       }
@@ -198,10 +230,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
         BOT_TOKEN,
         chatId,
         "👋 Привіт! Я — *Атлас*, бот СТО B.S.Motorservice.\n\n" +
-          "Для прив'язки Telegram надішліть *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
-          "Наприклад:\n" +
-          "`Шевченко Т.Г.`\n" +
-          "`11111`",
+        "Для прив'язки Telegram надішліть *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
+        "Наприклад:\n" +
+        "`Шевченко Т.Г.`\n" +
+        "`11111`",
       );
       return new Response("OK", { status: 200 });
     }
@@ -301,10 +333,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
           BOT_TOKEN,
           chatId,
           "❌ *Невірне ім'я або пароль.*\n\n" +
-            "Перевірте дані та спробуйте ще раз.\n" +
-            "Формат — кожне на окремому рядку:\n" +
-            "`Ім'я`\n" +
-            "`Пароль`",
+          "Перевірте дані та спробуйте ще раз.\n" +
+          "Формат — кожне на окремому рядку:\n" +
+          "`Ім'я`\n" +
+          "`Пароль`",
         );
         return new Response("OK", { status: 200 });
       }
@@ -343,9 +375,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         BOT_TOKEN,
         chatId,
         `✅ *Прив'язано!*\n\n` +
-          `👤 Працівник: *${slyusarName}*\n\n` +
-          `Тепер ви будете отримувати нагадування від Атласа тут.\n` +
-          `Для відключення — /stop`,
+        `👤 Працівник: *${slyusarName}*\n\n` +
+        `Тепер ви будете отримувати нагадування від Атласа тут.\n` +
+        `Для відключення — /stop`,
       );
       return new Response("OK", { status: 200 });
     }
@@ -363,23 +395,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
         BOT_TOKEN,
         chatId,
         "🤖 Я — *Атлас*, бот нагадувань B.S.Motorservice.\n\n" +
-          "✅ Ваш Telegram прив'язано.\n\n" +
-          "Доступні команди:\n" +
-          "/status — перевірити прив'язку\n" +
-          "/stop — вимкнути сповіщення",
+        "✅ Ваш Telegram прив'язано.\n\n" +
+        "Доступні команди:\n" +
+        "/status — перевірити прив'язку\n" +
+        "/stop — вимкнути сповіщення",
       );
     } else {
       await sendTelegramMessage(
         BOT_TOKEN,
         chatId,
         "🤖 Я — *Атлас*, бот нагадувань B.S.Motorservice.\n\n" +
-          "Для прив'язки надішліть *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
-          "Наприклад:\n" +
-          "`Шевченко Т.Г.`\n" +
-          "`11111`\n\n" +
-          "Доступні команди:\n" +
-          "/status — перевірити прив'язку\n" +
-          "/stop — вимкнути сповіщення",
+        "Для прив'язки надішліть *ім'я* та *пароль* — кожне на окремому рядку.\n\n" +
+        "Наприклад:\n" +
+        "`Шевченко Т.Г.`\n" +
+        "`11111`\n\n" +
+        "Доступні команди:\n" +
+        "/status — перевірити прив'язку\n" +
+        "/stop — вимкнути сповіщення",
       );
     }
 

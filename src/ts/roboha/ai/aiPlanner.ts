@@ -666,15 +666,14 @@ function renderReminderCard(r: ReminderFromRPC): string {
       <div class="ai-planner-card-header">
         <div class="ai-planner-card-title">${escapeHtml(r.title)}</div>
         <div class="ai-planner-card-actions">
-          ${
-            r.status !== "completed" && r.status !== "cancelled"
-              ? `
+          ${r.status !== "completed" && r.status !== "cancelled"
+      ? `
             <button class="ai-planner-card-action ai-planner-card-action--pause" data-action="pause" data-id="${r.reminder_id}" title="${r.status === "paused" ? "Відновити" : "Пауза"}">
               ${r.status === "paused" ? "▶️" : "⏸️"}
             </button>
           `
-              : ""
-          }
+      : ""
+    }
           <button class="ai-planner-card-action ai-planner-card-action--delete" data-action="delete" data-id="${r.reminder_id}" title="Видалити">🗑️</button>
         </div>
       </div>
@@ -731,7 +730,8 @@ function renderCallbackResponse(reminderId: number): string {
   }
 
   // Витягуємо ім'я відповідача з тексту "(від Ім'я)"
-  const nameMatch = text.match(/\(від\s+(.+?)\)/);
+  // Змінюємо regex на жадібний `.+` замість лінивого `.+?`, щоб захопити вкладені дужки
+  const nameMatch = text.match(/\(від\s+(.+)\)/);
   const responder = nameMatch ? nameMatch[1] : "";
 
   return `
@@ -926,15 +926,14 @@ function showReminderViewModal(
           <div class="ai-planner-view-value ai-planner-view-value--title">${escapeHtml(r.title)}</div>
         </div>
 
-        ${
-          r.description
-            ? `
+        ${r.description
+      ? `
         <div class="ai-planner-view-field">
           <div class="ai-planner-view-label">Опис</div>
           <div class="ai-planner-view-value">${escapeHtml(r.description)}</div>
         </div>`
-            : ""
-        }
+      : ""
+    }
 
         <div class="ai-planner-view-row">
           <div class="ai-planner-view-field">
@@ -963,60 +962,55 @@ function showReminderViewModal(
           <div class="ai-planner-view-value">🕐 ${timeInfo}</div>
         </div>
 
-        ${
-          nextTrigger
-            ? `
+        ${nextTrigger
+      ? `
         <div class="ai-planner-view-field">
           <div class="ai-planner-view-label">Наступне</div>
           <div class="ai-planner-view-value">⏭️ ${nextTrigger}</div>
         </div>`
-            : ""
-        }
+      : ""
+    }
 
         <div class="ai-planner-view-row">
           <div class="ai-planner-view-field">
             <div class="ai-planner-view-label">Кому</div>
             <div class="ai-planner-view-value">${formatRecipients(r.recipients)}</div>
           </div>
-          ${
-            r.trigger_count > 0
-              ? `
+          ${r.trigger_count > 0
+      ? `
           <div class="ai-planner-view-field">
             <div class="ai-planner-view-label">Надіслано</div>
             <div class="ai-planner-view-value">🔔 ${r.trigger_count}×</div>
           </div>`
-              : ""
-          }
+      : ""
+    }
         </div>
 
-        ${
-          r.meta?.condition_description
-            ? `
+        ${r.meta?.condition_description
+      ? `
         <div class="ai-planner-view-field">
           <div class="ai-planner-view-label">Умова</div>
           <div class="ai-planner-view-value">${escapeHtml(r.meta.condition_description)}</div>
         </div>`
-            : ""
-        }
-        ${
-          r.condition_query
-            ? `
+      : ""
+    }
+        ${r.condition_query
+      ? `
         <div class="ai-planner-view-field">
           <div class="ai-planner-view-label">SQL-запит</div>
           <div class="ai-planner-view-value ai-planner-view-value--code">${escapeHtml(r.condition_query)}</div>
         </div>`
-            : ""
-        }
+      : ""
+    }
 
-        ${
-          callbackHtml
-            ? `
+        ${callbackHtml
+      ? `
         <div class="ai-planner-view-field">
           <div class="ai-planner-view-label">Відповідь з Telegram</div>
           ${callbackHtml}
         </div>`
-            : ""
-        }
+      : ""
+    }
 
         <div class="ai-planner-view-field">
           <div class="ai-planner-view-label">Створено</div>
@@ -1188,20 +1182,20 @@ function showReminderModal(
             <label class="ai-planner-label">Дні тижня</label>
             <div class="ai-planner-btn-group" id="planner-days-group">
               ${["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-                .map((d) => {
-                  const names: Record<string, string> = {
-                    mon: "Пн",
-                    tue: "Вт",
-                    wed: "Ср",
-                    thu: "Чт",
-                    fri: "Пт",
-                    sat: "Сб",
-                    sun: "Нд",
-                  };
-                  const isActive = r.schedule?.days?.includes(d);
-                  return `<button class="ai-planner-btn-option ${isActive ? "ai-planner-btn-option--active" : ""}" data-day="${d}">${names[d]}</button>`;
-                })
-                .join("")}
+      .map((d) => {
+        const names: Record<string, string> = {
+          mon: "Пн",
+          tue: "Вт",
+          wed: "Ср",
+          thu: "Чт",
+          fri: "Пт",
+          sat: "Сб",
+          sun: "Нд",
+        };
+        const isActive = r.schedule?.days?.includes(d);
+        return `<button class="ai-planner-btn-option ${isActive ? "ai-planner-btn-option--active" : ""}" data-day="${d}">${names[d]}</button>`;
+      })
+      .join("")}
             </div>
           </div>
           <div class="ai-planner-field" id="planner-month-day-field" style="display:${r.schedule?.type === "monthly" ? "flex" : "none"}">
@@ -1263,13 +1257,13 @@ function showReminderModal(
               <div class="ai-planner-dropdown-item ${r.recipients === "mechanics" || r.recipients === '"mechanics"' ? "ai-planner-dropdown-item--active" : ""}" data-value="mechanics">🔧 Слюсарям</div>
               ${telegramUsers.length > 0 ? '<div class="ai-planner-dropdown-divider"></div>' : ""}
               ${telegramUsers
-                .map((u) => {
-                  const isSelected =
-                    Array.isArray(r.recipients) &&
-                    r.recipients.includes(u.slyusar_id);
-                  return `<div class="ai-planner-dropdown-item ${isSelected ? "ai-planner-dropdown-item--active" : ""}" data-value="user_${u.slyusar_id}">✈️ ${escapeHtml(u.name)}</div>`;
-                })
-                .join("")}
+      .map((u) => {
+        const isSelected =
+          Array.isArray(r.recipients) &&
+          r.recipients.includes(u.slyusar_id);
+        return `<div class="ai-planner-dropdown-item ${isSelected ? "ai-planner-dropdown-item--active" : ""}" data-value="user_${u.slyusar_id}">✈️ ${escapeHtml(u.name)}</div>`;
+      })
+      .join("")}
             </div>
             <input type="hidden" id="planner-recipients" value="${getRecipientsValue(r.recipients)}" />
           </div>

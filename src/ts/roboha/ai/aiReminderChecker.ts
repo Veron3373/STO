@@ -50,8 +50,11 @@ export function initReminderChecker(): void {
   // Запустити precision-планувальник (точно до секунди)
   schedulePrecisionCheck();
 
+  // Запустити Realtime моніторинг змін у таблиці acts
+  initRealtimeMonitoring();
+
   console.log(
-    `[ReminderChecker] ✅ Запущено (кожні ${CHECK_INTERVAL_MS / 1000}с + precision) для slyusar_id=${currentSlyusarId}`,
+    `[ReminderChecker] ✅ Запущено (кожні ${CHECK_INTERVAL_MS / 1000}с + precision + realtime) для slyusar_id=${currentSlyusarId}`,
   );
 }
 
@@ -497,6 +500,153 @@ async function checkCondition(conditionQuery: string): Promise<any | false> {
     return !!data ? data : false;
   } catch {
     return false;
+  }
+}
+
+// ── Realtime моніторинг змін у БД ──
+
+let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+let realtimeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function initRealtimeMonitoring(): void {
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+  }
+
+  realtimeChannel = supabase
+    .channel("realtime-acts-monitor")
+    .on(
+      "postgres_changes" as any,
+      { event: "*", schema: "public", table: "acts" },
+      (payload: any) => {
+        console.log(`[ReminderChecker] 🔴 Realtime: acts ${payload.eventType}`, payload.new?.act_id || payload.old?.act_id);
+        // Debounce — якщо кілька змін підряд, чекаємо 3 секунди
+        if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
+        realtimeDebounceTimer = setTimeout(() => {
+          checkRealtimeReminders();
+        }, 3000);
+      },
+    )
+    .subscribe((status: string) => {
+      console.log(`[ReminderChecker] 🔴 Realtime subscription: ${status}`);
+    });
+}
+
+async function checkRealtimeReminders(): Promise<void> {
+  if (!currentSlyusarId) return;
+
+  try {
+    // Завантажити всі активні нагадування з режимом "realtime"
+    const { data: reminders, error } = await supabase
+      .from("atlas_reminders")
+      .select("*")
+      .eq("status", "active")
+      .eq("reminder_type", "conditional")
+      .not("condition_query", "is", null);
+
+    if (error || !reminders?.length) return;
+
+    // Фільтруємо тільки realtime-нагадування
+    const realtimeReminders = reminders.filter((r: any) => {
+      try {
+        const schedule = typeof r.schedule === "string" ? JSON.parse(r.schedule) : r.schedule;
+        return schedule?.type === "realtime";
+      } catch {
+        return false;
+      }
+    });
+
+    if (realtimeReminders.length === 0) return;
+
+    console.log(`[ReminderChecker] 🔴 Перевіряємо ${realtimeReminders.length} realtime-нагадувань...`);
+
+    const fieldLabels: Record<string, string> = {
+      act_id: "Акт №", date_on: "Відкритий", date_off: "Закритий",
+      total_amount: "Сума", status: "Статус", client_name: "Клієнт",
+      client_phone: "Телефон", slusar: "Слюсар", car: "Авто",
+      vin: "VIN", description: "Опис", count: "Кількість",
+    };
+    const formatFieldName = (key: string): string => fieldLabels[key] || key;
+    const formatValue = (v: any): string => {
+      if (v === null || v === undefined) return "—";
+      if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+        return new Date(v).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      }
+      return String(v);
+    };
+
+    for (const reminder of realtimeReminders) {
+      // Перевірити чи стосується цього користувача
+      if (!isReminderForUser(reminder, currentSlyusarId)) continue;
+
+      // Дедуплікація — не відправляти частіше ніж раз на 60 сек для одного нагадування
+      const { data: recentLogs } = await supabase
+        .from("atlas_reminder_logs")
+        .select("id")
+        .eq("reminder_id", reminder.reminder_id)
+        .eq("channel", "telegram")
+        .eq("delivery_status", "delivered")
+        .gte("created_at", new Date(Date.now() - 60_000).toISOString())
+        .limit(1);
+
+      if (recentLogs && recentLogs.length > 0) {
+        console.log(`[ReminderChecker] ⏭️ Realtime дедуплікація: reminder_id=${reminder.reminder_id}`);
+        continue;
+      }
+
+      // Виконати SQL-запит умови
+      const condResult = await checkCondition(reminder.condition_query);
+      if (!condResult) {
+        console.log(`[ReminderChecker] 🔴 Умова НЕ виконана для realtime reminder_id=${reminder.reminder_id}`);
+        continue;
+      }
+
+      console.log(`[ReminderChecker] 🔴 ✅ Умова виконана! Відправляємо повідомлення...`);
+
+      // Форматуємо результат
+      let resultText = "";
+      if (Array.isArray(condResult)) {
+        resultText = condResult.map((row: any, i: number) => {
+          if (typeof row === "object" && row !== null) {
+            return `${i + 1}. ` + Object.entries(row)
+              .map(([k, v]) => `${formatFieldName(k)}: ${formatValue(v)}`)
+              .join(" | ");
+          }
+          return `${i + 1}. ${String(row)}`;
+        }).join("\n");
+      } else if (typeof condResult === "object" && condResult !== null) {
+        resultText = Object.entries(condResult)
+          .map(([k, v]) => `• ${formatFieldName(k)}: ${formatValue(v)}`)
+          .join("\n");
+      } else {
+        resultText = String(condResult);
+      }
+
+      // Додаємо результат в meta і відправляємо
+      reminder.meta = reminder.meta || {};
+      reminder.meta.condition_result_text = resultText;
+
+      // Відправити toast
+      if (reminder.channel === "app" || reminder.channel === "both") {
+        showReminderToast(reminder);
+      }
+
+      // Відправити Telegram
+      if (reminder.channel === "telegram" || reminder.channel === "both") {
+        await sendTelegramForReminder(reminder);
+      }
+
+      // Записати лог (але НЕ змінювати статус — realtime працює постійно)
+      await supabase.from("atlas_reminder_logs").insert({
+        reminder_id: reminder.reminder_id,
+        recipient_id: currentSlyusarId,
+        channel: "app",
+        message_text: `Realtime: ${reminder.title} — умова спрацювала`,
+        delivery_status: "sent",
+      });
+    }
+  } catch (err) {
+    console.error("[ReminderChecker] Realtime check error:", err);
   }
 }
 

@@ -582,6 +582,7 @@ function formatRecipients(recipients: any): string {
 
 function formatSchedule(schedule: any): string {
   if (!schedule) return "";
+  if (schedule.type === "realtime") return "🔴 Реал. час (Контроль змін)";
   if (schedule.type === "daily") return `Щодня о ${schedule.time || "09:00"}`;
   if (schedule.type === "weekly") {
     const dayNames: Record<string, string> = {
@@ -1235,8 +1236,9 @@ function showReminderModal(
           <div class="ai-planner-field">
             <label class="ai-planner-label">Режим перевірки</label>
             <select class="ai-planner-select" id="planner-cond-freq">
-              <option value="once" ${r.trigger_at || !r.schedule ? "selected" : ""}>Одноразово (за датою і часом)</option>
-              <option value="recurring" ${r.schedule ? "selected" : ""}>За розкладом (щодня, щотижня...)</option>
+              <option value="once" ${r.trigger_at || (!r.schedule && !(r.schedule as any)?.type) ? "selected" : ""}>Одноразово (за датою і часом)</option>
+              <option value="recurring" ${r.schedule && (r.schedule as any)?.type !== "realtime" ? "selected" : ""}>За розкладом (щодня, щотижня...)</option>
+              <option value="realtime" ${(r.schedule as any)?.type === "realtime" ? "selected" : ""}>🔴 Контроль (моніторинг змін)</option>
             </select>
           </div>
           <div class="ai-planner-field">
@@ -1430,6 +1432,7 @@ function initModalHandlers(
 
       const showOnce = selectedType === "once" || (selectedType === "conditional" && condFreq === "once");
       const showRecurring = selectedType === "recurring" || (selectedType === "conditional" && condFreq === "recurring");
+      // Для realtime — ховаємо всі часові поля
 
       (
         overlay.querySelector("#planner-once-fields") as HTMLElement
@@ -1452,6 +1455,16 @@ function initModalHandlers(
     const freq = (overlay.querySelector("#planner-cond-freq") as HTMLSelectElement).value;
     (overlay.querySelector("#planner-once-fields") as HTMLElement).style.display = freq === "once" ? "flex" : "none";
     (overlay.querySelector("#planner-recurring-fields") as HTMLElement).style.display = freq === "recurring" ? "flex" : "none";
+    // Показати підказку для realtime режиму
+    let realtimeHint = overlay.querySelector("#planner-realtime-hint") as HTMLElement;
+    if (!realtimeHint) {
+      realtimeHint = document.createElement("div");
+      realtimeHint.id = "planner-realtime-hint";
+      realtimeHint.style.cssText = "padding:10px 14px;background:#fff3e0;border-radius:8px;font-size:12px;color:#e65100;line-height:1.5;display:none";
+      realtimeHint.innerHTML = "🔴 <b>Режим контролю</b> — система моніторить зміни в базі даних (акти, роботи) в реальному часі. Повідомлення надійде одразу при виконанні описаної умови.";
+      overlay.querySelector("#planner-conditional-fields")?.appendChild(realtimeHint);
+    }
+    realtimeHint.style.display = freq === "realtime" ? "block" : "none";
   });
 
   // Частота (для recurring)
@@ -1714,6 +1727,11 @@ function initModalHandlers(
           const isoTrigger = new Date(triggerAt).toISOString();
           reminder.trigger_at = isoTrigger;
           reminder.next_trigger_at = isoTrigger as any;
+        } else if (condFreq === "realtime") {
+          // Режим контролю — без часу, моніторинг змін у реальному часі
+          reminder.schedule = { type: "realtime" } as any;
+          reminder.trigger_at = null as any;
+          reminder.next_trigger_at = null as any;
         } else {
           const schedType = (
             overlay.querySelector("#planner-schedule-type") as HTMLSelectElement

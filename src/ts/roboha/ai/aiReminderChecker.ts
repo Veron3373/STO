@@ -99,7 +99,8 @@ async function syncReminderCapabilities() {
       console.log(
         "[ReminderChecker] 🟡 'Контрольних' нагадувань немає. Моніторинг БД зупинено.",
       );
-      supabase.removeChannel(realtimeChannel);
+      for (const ch of realtimeChannels) supabase.removeChannel(ch);
+      realtimeChannels = [];
       realtimeChannel = null;
     }
   } catch (err) {

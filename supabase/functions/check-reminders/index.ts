@@ -6,6 +6,7 @@
 // Дедуплікація: перевіряє лог щоб не відправляти повторно.
 // ═══════════════════════════════════════════════════════
 
+// @ts-ignore: Deno module
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -29,7 +30,7 @@ interface DueReminder {
   trigger_count: number;
   created_by: number | null;
   creator_name: string;
-  meta: unknown;
+  meta: any;
 }
 
 interface TelegramUser {
@@ -39,13 +40,17 @@ interface TelegramUser {
 
 // ── Головний обробник ──
 
+// @ts-ignore: Deno глобальний у середовищі Edge Functions
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // @ts-ignore
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
+  // @ts-ignore
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+  // @ts-ignore
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!BOT_TOKEN || !SUPABASE_URL || !SERVICE_ROLE) {
@@ -79,11 +84,40 @@ Deno.serve(async (req: Request): Promise<Response> => {
     for (const reminder of dueReminders as DueReminder[]) {
       // Пропустити нагадування тільки для app-каналу
       if (reminder.channel === "app") {
-        // Тільки оновити trigger (для app — клієнт покаже toast)
         await supabase.rpc("trigger_reminder", {
           p_reminder_id: reminder.reminder_id,
         });
         continue;
+      }
+
+      // Для умовних — виконати condition_query і перевірити результат
+      let conditionResultText: string | null = null;
+      if (
+        reminder.reminder_type === "conditional" &&
+        reminder.condition_query
+      ) {
+        conditionResultText = await executeConditionQuery(
+          supabase,
+          reminder.condition_query,
+        );
+
+        if (conditionResultText === null) {
+          // Умова не виконана (0 рядків) → пропустити, але оновити trigger
+          console.log(
+            `📊 Умова не виконана для reminder_id=${reminder.reminder_id}`,
+          );
+          await supabase.rpc("trigger_reminder", {
+            p_reminder_id: reminder.reminder_id,
+          });
+          await supabase.from("atlas_reminder_logs").insert({
+            reminder_id: reminder.reminder_id,
+            recipient_id: reminder.created_by,
+            channel: "app",
+            message_text: "Умова не виконана — дані не знайдено",
+            delivery_status: "sent",
+          });
+          continue;
+        }
       }
 
       // Telegram або both — перевірити дедуплікацію
@@ -102,14 +136,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
           console.log(
             `⏭️ Дедуплікація: reminder_id=${reminder.reminder_id} вже відправлено`,
           );
-          // Все одно оновити trigger для next_trigger_at
           await supabase.rpc("trigger_reminder", {
             p_reminder_id: reminder.reminder_id,
           });
           continue;
         }
 
-        const sent = await sendTelegramReminder(supabase, BOT_TOKEN, reminder);
+        const sent = await sendTelegramReminder(
+          supabase,
+          BOT_TOKEN,
+          reminder,
+          conditionResultText,
+        );
         totalSent += sent;
       }
 
@@ -143,12 +181,86 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 });
 
+// ── Виконання condition_query та форматування результату ──
+
+async function executeConditionQuery(
+  supabase: ReturnType<typeof createClient>,
+  conditionQuery: string,
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc("execute_condition_query", {
+      query_text: conditionQuery,
+    });
+
+    if (error) {
+      console.error("execute_condition_query error:", error.message);
+      return null;
+    }
+
+    // Перевіряємо чи є результати
+    const isEmpty =
+      data === null ||
+      data === undefined ||
+      (Array.isArray(data) && data.length === 0) ||
+      (typeof data === "number" && data === 0);
+
+    if (isEmpty) return null;
+
+    // Форматуємо текст для Telegram
+    let resultText = "";
+
+    if (Array.isArray(data)) {
+      // Обмежуємо до 15 рядків щоб не перевищити ліміт Telegram (4096 символів)
+      const rows = data.slice(0, 15);
+      resultText = rows
+        .map((row: any) => {
+          if (typeof row === "object" && row !== null) {
+            return Object.entries(row)
+              .map(([k, v]) => {
+                // Форматуємо дати автоматично
+                const val =
+                  typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)
+                    ? new Date(v).toLocaleString("uk-UA", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                    : v;
+                return `• <b>${escHtml(String(k))}</b>: ${escHtml(String(val ?? "—"))}`;
+              })
+              .join("\n");
+          }
+          return `• ${escHtml(String(row))}`;
+        })
+        .join("\n\n");
+
+      if (data.length > 15) {
+        resultText += `\n\n<i>...та ще ${data.length - 15} записів</i>`;
+      }
+
+      resultText = `📋 <b>Знайдено: ${data.length} записів</b>\n\n${resultText}`;
+    } else if (typeof data === "number") {
+      resultText = `📋 <b>Знайдено: ${data} записів</b>`;
+    } else {
+      resultText = escHtml(String(data));
+    }
+
+    return resultText;
+  } catch (err) {
+    console.error("executeConditionQuery exception:", err);
+    return null;
+  }
+}
+
 // ── Відправка в Telegram ──
 
 async function sendTelegramReminder(
   supabase: ReturnType<typeof createClient>,
   botToken: string,
   reminder: DueReminder,
+  conditionResultText: string | null = null,
 ): Promise<number> {
   // Визначити адресатів
   const recipientIds = await resolveRecipientIds(supabase, reminder);
@@ -168,14 +280,15 @@ async function sendTelegramReminder(
   const typeLabel = getTypeLabel(reminder.reminder_type);
   const priorityLabel = getPriorityLabel(reminder.priority);
 
-  const messageText = [
+  const messageParts = [
     `${icon} <b>${escHtml(reminder.title)}</b>`,
     reminder.description ? `\n${escHtml(reminder.description)}` : "",
+    conditionResultText ? `\n\n${conditionResultText}` : "",
     `\n${typeLabel} | Пріоритет: ${priorityLabel}`,
     `👤 Створив: ${escHtml(reminder.creator_name)}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ];
+
+  const messageText = messageParts.filter(Boolean).join("\n");
 
   let sentCount = 0;
 

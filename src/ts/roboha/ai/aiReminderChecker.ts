@@ -128,6 +128,7 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
     const messageText = [
       `${icon} <b>${escHtml(reminder.title)}</b>`,
       reminder.description ? `\n${escHtml(reminder.description)}` : "",
+      reminder.meta?.condition_result_text ? `\n<b>📊 Результат перевірки:</b>\n${escHtml(reminder.meta.condition_result_text)}` : "",
       `\n${typeLabel} | Пріоритет: ${priorityLabel}`,
       `👤 Створив: ${escHtml(reminder.creator_name)}`,
     ]
@@ -280,12 +281,39 @@ async function checkDueReminders(): Promise<void> {
         reminder.reminder_type === "conditional" &&
         reminder.condition_query
       ) {
-        const conditionMet = await checkCondition(reminder.condition_query);
-        if (!conditionMet) {
+        const condResult = await checkCondition(reminder.condition_query);
+        if (!condResult) {
           // Умова не виконана → просто оновити next_trigger_at
           await markTriggered(reminder.reminder_id, false, "Умова не виконана");
           continue;
         }
+
+        // Форматуємо результат для Telegram
+        let resultText = "";
+        if (Array.isArray(condResult)) {
+          // Обмежуємо до 15 рядків щоб не перевищити ліміт Telegram
+          const rows = condResult.slice(0, 15);
+          resultText = rows.map((row: any) => {
+            if (typeof row === "object" && row !== null) {
+              return Object.entries(row)
+                .map(([k, v]) => `• ${k}: ${v}`)
+                .join("\n");
+            }
+            return String(row);
+          }).join("\n\n");
+          if (condResult.length > 15) {
+            resultText += `\n\n...та ще ${condResult.length - 15} записів.`;
+          }
+        } else if (typeof condResult === "object" && condResult !== null) {
+          resultText = Object.entries(condResult)
+            .map(([k, v]) => `• ${k}: ${v}`)
+            .join("\n");
+        } else {
+          resultText = String(condResult);
+        }
+
+        if (!reminder.meta) reminder.meta = {};
+        reminder.meta.condition_result_text = resultText;
       }
 
       // Показати toast (для app і both каналів)
@@ -411,10 +439,9 @@ function isCurrentUserMechanic(): boolean {
 
 // ── Перевірка умови (conditional) ──
 
-async function checkCondition(conditionQuery: string): Promise<boolean> {
+async function checkCondition(conditionQuery: string): Promise<any | false> {
   try {
     // Виконати SQL-запит через rpc (read-only, безпечний SELECT)
-    // Умова вважається виконаною, якщо запит повертає хоча б 1 рядок
     const { data, error } = await supabase.rpc("execute_condition_query", {
       query_text: conditionQuery,
     });
@@ -424,16 +451,11 @@ async function checkCondition(conditionQuery: string): Promise<boolean> {
       return false;
     }
 
-    // Якщо функція повертає кількість рядків > 0
-    if (typeof data === "number") return data > 0;
+    if (typeof data === "number") return data > 0 ? { count: data } : false;
+    if (Array.isArray(data)) return data.length > 0 ? data : false;
+    if (typeof data === "boolean") return data ? { result: true } : false;
 
-    // Якщо повертає масив
-    if (Array.isArray(data)) return data.length > 0;
-
-    // Якщо boolean
-    if (typeof data === "boolean") return data;
-
-    return !!data;
+    return !!data ? data : false;
   } catch {
     return false;
   }
@@ -524,10 +546,9 @@ function showReminderToast(reminder: DueReminder): void {
       <span class="atlas-reminder-toast__title">${escapeHtml(reminder.title)}</span>
       <button class="atlas-reminder-toast__close" title="Закрити">&times;</button>
     </div>
-    ${
-      reminder.description
-        ? `<div class="atlas-reminder-toast__body">${escapeHtml(reminder.description)}</div>`
-        : ""
+    ${reminder.description
+      ? `<div class="atlas-reminder-toast__body">${escapeHtml(reminder.description)}</div>`
+      : ""
     }
     <div class="atlas-reminder-toast__footer">
       <span class="atlas-reminder-toast__type">${typeLabel}</span>

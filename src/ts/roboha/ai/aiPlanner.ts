@@ -1674,8 +1674,11 @@ function initModalHandlers(
 }
 
 let plannerRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+let currentPlannerContainer: HTMLElement | null = null;
 
 export async function initPlannerTab(container: HTMLElement): Promise<void> {
+  currentPlannerContainer = container;
+
   // Показати спіннер
   container.innerHTML = `
     <div class="ai-planner-loading">
@@ -1696,19 +1699,19 @@ export async function initPlannerTab(container: HTMLElement): Promise<void> {
         "postgres_changes",
         { event: "*", schema: "public", table: "atlas_reminder_logs" },
         async (_payload) => {
-          // Завантажуємо оновлені дані (або просто додаємо в мапу локально, але краще перевикликати рендер)
+          if (!currentPlannerContainer || !document.body.contains(currentPlannerContainer)) return;
           const ids = reminders.map((r) => r.reminder_id);
           await loadCallbackLogs(ids);
-          await renderPlannerPanel(container);
+          await renderPlannerPanel(currentPlannerContainer);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "atlas_reminders" },
         async (_payload) => {
-          // Так само оновлювати статус або список
+          if (!currentPlannerContainer || !document.body.contains(currentPlannerContainer)) return;
           reminders = await loadReminders();
-          await renderPlannerPanel(container);
+          await renderPlannerPanel(currentPlannerContainer);
         }
       )
       .subscribe();

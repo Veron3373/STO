@@ -1151,11 +1151,11 @@ function showReminderModal(
           </div>
         </div>
 
-        <!-- Дата/час (для once) -->
-        <div class="ai-planner-field" id="planner-once-fields" style="display:${(r.reminder_type || "once") === "once" ? "flex" : "none"}">
-          <label class="ai-planner-label">Коли нагадати</label>
+        <!-- Дата/час (для once та conditional) -->
+        <div class="ai-planner-field" id="planner-once-fields" style="display:${(r.reminder_type || "once") === "once" || r.reminder_type === "conditional" ? "flex" : "none"}">
+          <label class="ai-planner-label" id="planner-once-label">${r.reminder_type === "conditional" ? "Коли перевірити умову" : "Коли нагадати"}</label>
           <input class="ai-planner-input" id="planner-trigger-at" type="datetime-local"
-            value="${r.trigger_at ? formatLocalDateTime(r.trigger_at) : ""}" />
+            value="${r.trigger_at ? formatLocalDateTime(r.trigger_at) : (r.next_trigger_at ? formatLocalDateTime(r.next_trigger_at) : "")}" />
         </div>
 
         <!-- Розклад (для recurring) -->
@@ -1210,6 +1210,13 @@ function showReminderModal(
 
         <!-- Умовний запит (для conditional) -->
         <div id="planner-conditional-fields" style="display:${r.reminder_type === "conditional" ? "flex" : "none"};flex-direction:column;gap:10px">
+          <div class="ai-planner-field">
+            <label class="ai-planner-label">Режим перевірки</label>
+            <select class="ai-planner-select" id="planner-cond-freq">
+              <option value="once" ${r.trigger_at || !r.schedule ? "selected" : ""}>Одноразово (за датою і часом)</option>
+              <option value="recurring" ${r.schedule ? "selected" : ""}>За розкладом (щодня, щотижня...)</option>
+            </select>
+          </div>
           <div class="ai-planner-field">
             <label class="ai-planner-label">Опишіть умову звичайною мовою</label>
             <textarea class="ai-planner-textarea" id="planner-condition-desc" style="min-height:70px"
@@ -1396,16 +1403,34 @@ function initModalHandlers(
       selectedType = btn.dataset.value || "once";
 
       // Показати/сховати поля
+      const condFreqEl = overlay.querySelector("#planner-cond-freq") as HTMLSelectElement;
+      const condFreq = condFreqEl ? condFreqEl.value : "once";
+
+      const showOnce = selectedType === "once" || (selectedType === "conditional" && condFreq === "once");
+      const showRecurring = selectedType === "recurring" || (selectedType === "conditional" && condFreq === "recurring");
+
       (
         overlay.querySelector("#planner-once-fields") as HTMLElement
-      ).style.display = selectedType === "once" ? "flex" : "none";
+      ).style.display = showOnce ? "flex" : "none";
+
+      const onceLabel = overlay.querySelector("#planner-once-label");
+      if (onceLabel) {
+        onceLabel.textContent = selectedType === "conditional" ? "Коли перевірити умову" : "Коли нагадати";
+      }
+
       (
         overlay.querySelector("#planner-recurring-fields") as HTMLElement
-      ).style.display = selectedType === "recurring" ? "flex" : "none";
+      ).style.display = showRecurring ? "flex" : "none";
       (
         overlay.querySelector("#planner-conditional-fields") as HTMLElement
       ).style.display = selectedType === "conditional" ? "flex" : "none";
     });
+
+  overlay.querySelector("#planner-cond-freq")?.addEventListener("change", () => {
+    const freq = (overlay.querySelector("#planner-cond-freq") as HTMLSelectElement).value;
+    (overlay.querySelector("#planner-once-fields") as HTMLElement).style.display = freq === "once" ? "flex" : "none";
+    (overlay.querySelector("#planner-recurring-fields") as HTMLElement).style.display = freq === "recurring" ? "flex" : "none";
+  });
 
   // Частота (для recurring)
   const scheduleType = overlay.querySelector(
@@ -1653,6 +1678,80 @@ function initModalHandlers(
           ...(reminder as any).meta,
           condition_description: condDesc,
         };
+
+        const condFreq = (overlay.querySelector("#planner-cond-freq") as HTMLSelectElement).value;
+
+        if (condFreq === "once") {
+          const triggerAt = (
+            overlay.querySelector("#planner-trigger-at") as HTMLInputElement
+          ).value;
+          if (!triggerAt) {
+            showToast("Вкажіть коли перевірити умову!", "error");
+            return;
+          }
+          const isoTrigger = new Date(triggerAt).toISOString();
+          reminder.trigger_at = isoTrigger;
+          reminder.next_trigger_at = isoTrigger as any;
+        } else {
+          const schedType = (
+            overlay.querySelector("#planner-schedule-type") as HTMLSelectElement
+          ).value;
+          const schedule: any = { type: schedType };
+
+          if (
+            schedType === "daily" ||
+            schedType === "weekly" ||
+            schedType === "monthly"
+          ) {
+            schedule.time =
+              (
+                overlay.querySelector(
+                  "#planner-schedule-time",
+                ) as HTMLInputElement
+              ).value || "09:00";
+          }
+
+          if (schedType === "weekly") {
+            schedule.days = Array.from(
+              overlay.querySelectorAll(
+                "#planner-days-group .ai-planner-btn-option--active",
+              ),
+            )
+              .map((btn) => (btn as HTMLElement).dataset.day)
+              .filter(Boolean);
+            if (schedule.days.length === 0) {
+              showToast("Оберіть хоча б один день!", "error");
+              return;
+            }
+          }
+
+          if (schedType === "monthly") {
+            schedule.day =
+              Number(
+                (
+                  overlay.querySelector(
+                    "#planner-schedule-day",
+                  ) as HTMLInputElement
+                ).value,
+              ) || 1;
+          }
+
+          if (schedType === "interval") {
+            schedule.hours =
+              Number(
+                (
+                  overlay.querySelector(
+                    "#planner-schedule-hours",
+                  ) as HTMLInputElement
+                ).value,
+              ) || 4;
+          }
+
+          reminder.schedule = schedule;
+          reminder.next_trigger_at = calculateNextTrigger(schedule) as any;
+        }
+
+        reminder.status = "active" as any;
       }
 
       // Зберігаємо

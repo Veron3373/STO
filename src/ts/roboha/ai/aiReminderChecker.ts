@@ -594,175 +594,261 @@ async function checkCondition(conditionQuery: string): Promise<any | false> {
   }
 }
 
-// ── Realtime моніторинг змін у БД ──
+// ── Realtime моніторинг змін у БД — ПОДІЄВИЙ (без SQL!) ──
+
+// Структура правила спостереження:
+// {
+//   "table":  "acts",                          // таблиця для прослуховування
+//   "events": ["INSERT","UPDATE","DELETE"],       // події
+//   "check":  "date_off IS NOT NULL",            // необов’язковий фільтр на payload.new
+//   "show_fields": ["act_id","ПІБ","Марка+Модель","Загальна сума","Приймальник"]
+// }
+//
+// Або звичайний режим (старий SQL SELECT) — в ньому випадку
+// condition_query починається з SELECT і виконується як раніше
 
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
-let realtimeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-let changedTables = new Set<string>();
+let realtimeChannels: Array<ReturnType<typeof supabase.channel>> = [];
 
-function initRealtimeMonitoring(): void {
-  if (realtimeChannel) {
-    supabase.removeChannel(realtimeChannel);
+// Парсинг JSON-правила з condition_query
+function parseWatchRule(conditionQuery: string | null): {
+  table: string; events: string[]; check?: string; show_fields?: string[]
+} | null {
+  if (!conditionQuery) return null;
+  const trimmed = conditionQuery.trim();
+  if (trimmed.startsWith("{")) {
+    try { return JSON.parse(trimmed); } catch { return null; }
   }
-
-  realtimeChannel = supabase
-    .channel("realtime-all-monitor")
-    .on(
-      "postgres_changes" as any,
-      { event: "*", schema: "public" }, // Видалив table: "acts", щоб слухати всі таблиці
-      (payload: any) => {
-        console.log(`[ReminderChecker] 🔴 Realtime: таблиця ${payload.table}, подія ${payload.eventType}`);
-        changedTables.add(payload.table);
-
-        // Debounce — якщо кілька змін підряд, чекаємо 3 секунди
-        if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
-        realtimeDebounceTimer = setTimeout(() => {
-          const tablesToCheck = Array.from(changedTables);
-          changedTables.clear();
-          checkRealtimeReminders(tablesToCheck);
-        }, 3000);
-      },
-    )
-    .subscribe((status: string) => {
-      console.log(`[ReminderChecker] 🔴 Realtime subscription: ${status}`);
-    });
+  return null; // старий SQL-режим
 }
 
-async function checkRealtimeReminders(changedTablesList: string[]): Promise<void> {
-  if (!currentSlyusarId || changedTablesList.length === 0) return;
+// Перевірка умови check на об’єкті payload.new
+function evalCheck(check: string | undefined, newRow: Record<string, any>, oldRow: Record<string, any>): boolean {
+  if (!check) return true; // без фільтру — завжди тригер
 
-  try {
-    // Завантажити всі активні нагадування з режимом "realtime"
-    const { data: reminders, error } = await supabase
-      .from("atlas_reminders")
-      .select("*")
-      .eq("status", "active")
-      .eq("reminder_type", "conditional")
-      .not("condition_query", "is", null);
+  const c = check.trim().toLowerCase();
+  const row = newRow;
 
-    if (error || !reminders?.length) return;
-
-    // Фільтруємо тільки realtime-нагадування, які стосуються змінених таблиць
-    const realtimeReminders = reminders.filter((r: any) => {
-      try {
-        const schedule = typeof r.schedule === "string" ? JSON.parse(r.schedule) : r.schedule;
-        if (schedule?.type !== "realtime") return false;
-
-        return true; // Скасував суворий фільтр по назві таблиці, перевіряємо всі Контрольні нагадування на будь-яку зміну
-      } catch {
-        return false;
-      }
-    });
-
-    if (realtimeReminders.length === 0) return;
-
-    console.log(`[ReminderChecker] 🔴 Перевіряємо ${realtimeReminders.length} realtime-нагадувань...`);
-
-    const fieldLabels: Record<string, string> = {
-      act_id: "Акт №", date_on: "Відкритий", date_off: "Закритий",
-      total_amount: "Сума", status: "Статус", client_name: "Клієнт",
-      client_phone: "Телефон", slusar: "Слюсар", car: "Авто",
-      vin: "VIN", description: "Опис", count: "Кількість",
-    };
-    const formatFieldName = (key: string): string => fieldLabels[key] || key;
-    const formatValue = (v: any): string => {
-      if (v === null || v === undefined) return "—";
-      if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
-        return new Date(v).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-      }
-      return String(v);
-    };
-
-    for (const reminder of realtimeReminders) {
-      // Перевірити чи стосується цього користувача
-      if (!isReminderForUser(reminder, currentSlyusarId)) continue;
-
-      // Дедуплікація — не відправляти частіше ніж раз на 60 сек для одного нагадування
-      const { data: recentLogs } = await supabase
-        .from("atlas_reminder_logs")
-        .select("id")
-        .eq("reminder_id", reminder.reminder_id)
-        .eq("channel", "telegram")
-        .eq("delivery_status", "delivered")
-        .gte("created_at", new Date(Date.now() - 60_000).toISOString())
-        .limit(1);
-
-      if (recentLogs && recentLogs.length > 0) {
-        console.log(`[ReminderChecker] ⏭️ Realtime дедуплікація: reminder_id=${reminder.reminder_id}`);
-        continue;
-      }
-
-      // Виконати SQL-запит умови
-      const condResult = await checkCondition(reminder.condition_query);
-      if (!condResult) {
-        console.log(`[ReminderChecker] 🔴 Умова НЕ виконана для realtime reminder_id=${reminder.reminder_id}`);
-        continue;
-      }
-
-      console.log(`[ReminderChecker] 🔴 ✅ Умова виконана! Відправляємо повідомлення...`);
-
-      // Форматуємо результат
-      // 🚨 ЗАХИСТ ВІД СПАМУ: Перевіряємо чи змінились результати
-      let resultText = "";
-      const currentResultHash = JSON.stringify(condResult);
-
-      console.log(`[ReminderChecker] 🔍 Хеш старий: ${reminder.meta?.last_result_hash?.substring(0, 30)}... Хеш новий: ${currentResultHash.substring(0, 30)}...`);
-
-      if (reminder.meta?.last_result_hash === currentResultHash) {
-        console.log(`[ReminderChecker] ⏭️ Результати SQL не змінились (спам-захист) reminder_id=${reminder.reminder_id}`);
-        continue;
-      }
-
-      if (Array.isArray(condResult)) {
-        resultText = condResult.map((row: any, i: number) => {
-          if (typeof row === "object" && row !== null) {
-            return `${i + 1}. ` + Object.entries(row)
-              .map(([k, v]) => `${formatFieldName(k)}: ${formatValue(v)}`)
-              .join(" | ");
-          }
-          return `${i + 1}. ${String(row)}`;
-        }).join("\n");
-      } else if (typeof condResult === "object" && condResult !== null) {
-        resultText = Object.entries(condResult)
-          .map(([k, v]) => `• ${formatFieldName(k)}: ${formatValue(v)}`)
-          .join("\n");
-      } else {
-        resultText = String(condResult);
-      }
-
-      // Додаємо результат в meta і відправляємо
-      reminder.meta = reminder.meta || {};
-      reminder.meta.condition_result_text = resultText;
-      reminder.meta.last_result_hash = currentResultHash;
-
-      // Одразу зберігаємо хеш в БД, щоб інші клієнти і сервер не дублювали відправку
-      await supabase
-        .from("atlas_reminders")
-        .update({ meta: reminder.meta })
-        .eq("reminder_id", reminder.reminder_id);
-
-      // Відправити toast
-      if (reminder.channel === "app" || reminder.channel === "both") {
-        showReminderToast(reminder);
-      }
-
-      // Відправити Telegram
-      if (reminder.channel === "telegram" || reminder.channel === "both") {
-        await sendTelegramForReminder(reminder);
-      }
-
-      // Записати лог (але НЕ змінювати статус — realtime працює постійно)
-      await supabase.from("atlas_reminder_logs").insert({
-        reminder_id: reminder.reminder_id,
-        recipient_id: currentSlyusarId,
-        channel: "app",
-        message_text: `Realtime: ${reminder.title} — умова спрацювала`,
-        delivery_status: "sent",
-      });
-    }
-  } catch (err) {
-    console.error("[ReminderChecker] Realtime check error:", err);
+  // Прості умови: поле IS NOT NULL
+  const isNotNull = c.match(/^(\w+)\s+is\s+not\s+null$/);
+  if (isNotNull) {
+    const field = isNotNull[1];
+    return row[field] != null && row[field] !== "";
   }
+
+  // Прості умови: поле IS NULL
+  const isNull = c.match(/^(\w+)\s+is\s+null$/);
+  if (isNull) {
+    const field = isNull[1];
+    return row[field] == null || row[field] === "";
+  }
+
+  // Зміна поля: field CHANGED
+  const changed = c.match(/^(\w+)\s+changed$/);
+  if (changed) {
+    const field = changed[1];
+    return String(oldRow?.[field] ?? "") !== String(row?.[field] ?? "");
+  }
+
+  // Зміна з null на NOT NULL: field CLOSED
+  const closed = c.match(/^(\w+)\s+closed$/);
+  if (closed) {
+    const field = closed[1];
+    return (oldRow?.[field] == null) && (row?.[field] != null);
+  }
+
+  // Зміна з NOT NULL на null: field OPENED
+  const opened = c.match(/^(\w+)\s+opened$/);
+  if (opened) {
+    const field = opened[1];
+    return (oldRow?.[field] != null) && (row?.[field] == null);
+  }
+
+  // Будь-яка зміна (без фільтру)
+  if (c === "any" || c === "*" || c === "true") return true;
+
+  return true; // за замовчуванням — тригер
+}
+
+// Форматування повідомлення з payload
+function formatPayloadMessage(
+  payload: { eventType: string; table: string; new: Record<string, any>; old: Record<string, any> },
+  _rule: { show_fields?: string[] } | null,
+): string {
+  const eventLabels: Record<string, string> = {
+    INSERT: "🟢 Додано",
+    UPDATE: "✏️ Оновлено",
+    DELETE: "🔴 Видалено",
+  };
+  const action = eventLabels[payload.eventType] || payload.eventType;
+  const row = payload.eventType === "DELETE" ? payload.old : payload.new;
+  const data = row?.data || {};
+  const jsonData = typeof data === "string" ? (() => { try { return JSON.parse(data); } catch { return {}; } })() : data;
+
+  const formatTs = (v: any) => {
+    if (!v) return "—";
+    try { return new Date(v).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
+    catch { return String(v); }
+  };
+
+  // Збираємо ключові поля автоматично
+  const lines: string[] = [];
+
+  // Id
+  const id = row?.act_id || row?.client_id || row?.slyusar_id || row?.sclad_id || row?.id;
+  if (id) lines.push(`🔢 № ${id}`);
+
+  // Розміщення по пріоритетним полям
+  const priorityFields = [
+    ["ПІБ", "👤 Клієнт"], ["Name", "👤 Ім’я"], ["Назва", "📌 Назва"],
+    ["Телефон", "📞 Тел"], ["Марка", "🚗"], ["Модель", ""],
+    ["Держ. номер", "📍"], ["Приймальник", "👷‍♂️ Приймал"],
+    ["Слюсар", "🔧 Слюсар"], ["Загальна сума", "💰 Сума"], ["Посада", "💼 Посада"],
+    ["Кількість", "📊 Кількість"], ["Ціна", "💰 Ціна"]
+  ];
+  for (const [field, label] of priorityFields) {
+    const val = jsonData[field] ?? row?.[field.toLowerCase().replace(/ /g, "_")];
+    if (val != null && String(val).trim() !== "") {
+      lines.push(`${label}: ${val}`);
+    }
+  }
+
+  // Дати
+  if (row?.date_off) lines.push(`📅 Закритий: ${formatTs(row.date_off)}`);
+  if (row?.date_on) lines.push(`📅 Відкритий: ${formatTs(row.date_on)}`);
+  if (row?.created_at && !row?.date_on && !row?.date_off) lines.push(`📅 ${formatTs(row.created_at)}`);
+
+  // Додатково виводимо змінw (UPDATE)
+  if (payload.eventType === "UPDATE" && payload.old) {
+    const changedParts: string[] = [];
+    for (const key of Object.keys(payload.new)) {
+      const oldVal = payload.old[key], newVal = payload.new[key];
+      if (JSON.stringify(oldVal) !== JSON.stringify(newVal) && key !== "updated_at") {
+        if (key === "data") continue; // data вже розібрано 'вище
+        const ts = (v: any) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v) ? formatTs(v) : String(v ?? "—");
+        changedParts.push(`${key}: ${ts(oldVal)} → ${ts(newVal)}`);
+      }
+    }
+    // Вивести зміни в JSONB data
+    if (payload.new.data && payload.old.data) {
+      const dOld = typeof payload.old.data === "string" ? JSON.parse(payload.old.data) : payload.old.data;
+      const dNew = typeof payload.new.data === "string" ? JSON.parse(payload.new.data) : payload.new.data;
+      for (const key of Object.keys(dNew)) {
+        if (JSON.stringify(dOld[key]) !== JSON.stringify(dNew[key])) {
+          // Не показуємо поля, вже виведені вище
+          const alreadyShown = priorityFields.some(([f]) => f === key);
+          if (!alreadyShown) {
+            changedParts.push(`${key}: «${dOld[key] ?? "—"}» → «${dNew[key] ?? "—"}»`);
+          }
+        }
+      }
+    }
+    if (changedParts.length > 0) lines.push(`\n� Зміни:\n${changedParts.join("\n")}`);
+  }
+
+  return `${action} • ${payload.table}\n${lines.join("\n") || "—"}`;
+}
+
+// Дедуплікація: пам’ять останніх унікальних ідентифікаторів payload
+const sentPayloadIds = new Set<string>();
+
+function initRealtimeMonitoring(): void {
+  // Анулюємо всі старі підписки
+  for (const ch of realtimeChannels) supabase.removeChannel(ch);
+  realtimeChannels = [];
+  if (realtimeChannel) { supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+
+  // Завантажимо активні Realtime-нагадування
+  supabase
+    .from("atlas_reminders")
+    .select("*")
+    .eq("status", "active")
+    .eq("reminder_type", "conditional")
+    .then(({ data: reminders }) => {
+      if (!reminders?.length) return;
+
+      // Групуємо нагадування за таблицями
+      const tableReminderMap = new Map<string, any[]>();
+
+      for (const rem of reminders) {
+        try {
+          const sched = typeof rem.schedule === "string" ? JSON.parse(rem.schedule) : rem.schedule;
+          if (sched?.type !== "realtime") continue;
+          const rule = parseWatchRule(rem.condition_query);
+          const tableName = rule?.table || "acts"; // за замовчуванням слухаємо acts
+          if (!tableReminderMap.has(tableName)) tableReminderMap.set(tableName, []);
+          tableReminderMap.get(tableName)!.push({ rem, rule });
+        } catch { /* */ }
+      }
+
+      // для кожної таблиці — окремий channel
+      for (const [tableName, entries] of tableReminderMap) {
+        const ch = supabase
+          .channel(`rt-${tableName}-${Date.now()}`)
+          .on(
+            "postgres_changes" as any,
+            { event: "*", schema: "public", table: tableName },
+            async (payload: any) => {
+              console.log(`[RT] 🔴 ${payload.eventType} @ ${payload.table}`);
+
+              // Унікальний ID payload для дедуплікації
+              const rowId = JSON.stringify({ e: payload.eventType, t: payload.table, id: payload.new?.act_id || payload.new?.id || payload.old?.act_id || payload.old?.id, ts: Date.now() });
+              if (sentPayloadIds.has(rowId)) return;
+              sentPayloadIds.add(rowId);
+              setTimeout(() => sentPayloadIds.delete(rowId), 30_000);
+
+              for (const { rem, rule } of entries) {
+                try {
+                  if (!isReminderForUser(rem, currentSlyusarId!)) continue;
+
+                  // Перевірити подію
+                  if (rule && rule.events && !rule.events.map((e: string) => e.toUpperCase()).includes(payload.eventType)) continue;
+
+                  // Перевірити умову check
+                  if (!evalCheck(rule?.check, payload.new || {}, payload.old || {})) continue;
+
+                  console.log(`[RT] ✅ Тригер нагадування reminder_id=${rem.reminder_id}`);
+
+                  // Формуємо повідомлення
+                  const resultText = formatPayloadMessage(payload, rule);
+                  rem.meta = rem.meta || {};
+                  rem.meta.condition_result_text = resultText;
+
+                  // Оновити лічильник срацьовань
+                  await supabase
+                    .from("atlas_reminders")
+                    .update({ trigger_count: (rem.trigger_count || 0) + 1, last_triggered_at: new Date().toISOString() })
+                    .eq("reminder_id", rem.reminder_id);
+
+                  // Toast
+                  if (rem.channel === "app" || rem.channel === "both") showReminderToast(rem);
+
+                  // Telegram
+                  if (rem.channel === "telegram" || rem.channel === "both") await sendTelegramForReminder(rem);
+
+                  // Лог
+                  await supabase.from("atlas_reminder_logs").insert({
+                    reminder_id: rem.reminder_id,
+                    recipient_id: currentSlyusarId,
+                    channel: rem.channel === "telegram" ? "telegram" : "app",
+                    message_text: `🔴 Realtime: ${rem.title} | ${resultText.substring(0, 100)}`,
+                    delivery_status: "delivered",
+                  });
+                } catch (innerErr) {
+                  console.error("[RT] Помилка обробки нагадування:", innerErr);
+                }
+              }
+            },
+          )
+          .subscribe((status: string) => {
+            console.log(`[RT] ${tableName}: ${status}`);
+          });
+
+        realtimeChannels.push(ch);
+      }
+      realtimeChannel = realtimeChannels[0] || null;
+      console.log(`[ReminderChecker] 🔴 Realtime підписки: ${[...tableReminderMap.keys()].join(", ")}`);
+    });
 }
 
 // ── Позначити нагадування як спрацьоване ──

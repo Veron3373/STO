@@ -106,11 +106,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let totalSent = 0;
 
     for (const reminder of allReminders) {
+      // Перевіряємо, чи це Realtime
+      let isRealtimeNull = false;
+      try {
+        const schedule = typeof reminder.schedule === "string" ? JSON.parse(reminder.schedule) : reminder.schedule;
+        isRealtimeNull = schedule?.type === "realtime";
+      } catch { /* */ }
+
       // Пропустити нагадування тільки для app-каналу
       if (reminder.channel === "app") {
-        await supabase.rpc("trigger_reminder", {
-          p_reminder_id: reminder.reminder_id,
-        });
+        if (!isRealtimeNull) {
+          await supabase.rpc("trigger_reminder", {
+            p_reminder_id: reminder.reminder_id,
+          });
+        }
         continue;
       }
 
@@ -131,9 +140,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
           console.log(
             `📊 Умова не виконана для reminder_id=${reminder.reminder_id}`,
           );
-          await supabase.rpc("trigger_reminder", {
-            p_reminder_id: reminder.reminder_id,
-          });
+          if (!isRealtimeNull) {
+            await supabase.rpc("trigger_reminder", {
+              p_reminder_id: reminder.reminder_id,
+            });
+          }
           await supabase.from("atlas_reminder_logs").insert({
             reminder_id: reminder.reminder_id,
             recipient_id: reminder.created_by,
@@ -190,13 +201,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
         totalSent += sent;
       }
 
-      // Оновити trigger (next_trigger_at, count, status)
-      await supabase.rpc("trigger_reminder", {
-        p_reminder_id: reminder.reminder_id,
-      });
+      // Оновити trigger (next_trigger_at, count, status) тільки для тих, що не є realtime
+      let isRealtime = false;
+      try {
+        const schedule = typeof reminder.schedule === "string" ? JSON.parse(reminder.schedule) : reminder.schedule;
+        isRealtime = schedule?.type === "realtime";
+      } catch { /* */ }
+
+      if (!isRealtime) {
+        await supabase.rpc("trigger_reminder", {
+          p_reminder_id: reminder.reminder_id,
+        });
+      }
 
       // Зберегти хеш результату для realtime-нагадувань
-      if (conditionResultHash) {
+      if (conditionResultHash && isRealtime) {
+        reminder.meta = reminder.meta || {};
+        reminder.meta.last_result_hash = conditionResultHash;
+        await supabase
+          .from("atlas_reminders")
+          .update({ meta: reminder.meta, trigger_count: (reminder.trigger_count || 0) + 1 })
+          .eq("reminder_id", reminder.reminder_id);
+      } else if (!isRealtime && conditionResultHash) {
+        // Якщо не realtime, але conditional - теж зберігаємо хеш, але без trigger_count, бо rpc його оновлює
         reminder.meta = reminder.meta || {};
         reminder.meta.last_result_hash = conditionResultHash;
         await supabase

@@ -710,7 +710,14 @@ async function checkRealtimeReminders(changedTablesList: string[]): Promise<void
       console.log(`[ReminderChecker] 🔴 ✅ Умова виконана! Відправляємо повідомлення...`);
 
       // Форматуємо результат
+      // 🚨 ЗАХИСТ ВІД СПАМУ: Перевіряємо чи змінились результати
       let resultText = "";
+      const currentResultHash = JSON.stringify(condResult);
+      if (reminder.meta?.last_result_hash === currentResultHash) {
+        console.log(`[ReminderChecker] ⏭️ Результати SQL не змінились (spam protection) reminder_id=${reminder.reminder_id}`);
+        continue;
+      }
+
       if (Array.isArray(condResult)) {
         resultText = condResult.map((row: any, i: number) => {
           if (typeof row === "object" && row !== null) {
@@ -731,6 +738,13 @@ async function checkRealtimeReminders(changedTablesList: string[]): Promise<void
       // Додаємо результат в meta і відправляємо
       reminder.meta = reminder.meta || {};
       reminder.meta.condition_result_text = resultText;
+      reminder.meta.last_result_hash = currentResultHash;
+
+      // Одразу зберігаємо хеш в БД, щоб інші клієнти і сервер не дублювали відправку
+      await supabase
+        .from("atlas_reminders")
+        .update({ meta: reminder.meta })
+        .eq("reminder_id", reminder.reminder_id);
 
       // Відправити toast
       if (reminder.channel === "app" || reminder.channel === "both") {

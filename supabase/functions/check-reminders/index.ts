@@ -73,15 +73,39 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return jsonResp({ error: rpcErr.message, sent: 0 });
     }
 
-    if (!dueReminders || dueReminders.length === 0) {
+    let allReminders: DueReminder[] = (dueReminders as DueReminder[]) || [];
+
+    // Отримати всі Контрольні нагадування (realtime), оскільки у них next_trigger_at = null
+    const { data: realtimeReminders } = await supabase
+      .from("atlas_reminders")
+      .select("*")
+      .eq("status", "active")
+      .eq("reminder_type", "conditional")
+      .not("condition_query", "is", null);
+
+    if (realtimeReminders && realtimeReminders.length > 0) {
+      const activeRtReminders = realtimeReminders.filter((r: any) => {
+        try {
+          const sched =
+            typeof r.schedule === "string" ? JSON.parse(r.schedule) : r.schedule;
+          return sched?.type === "realtime";
+        } catch {
+          return false;
+        }
+      });
+      // Додаємо їх до загального списку
+      allReminders = [...allReminders, ...(activeRtReminders as DueReminder[])];
+    }
+
+    if (!allReminders || allReminders.length === 0) {
       return jsonResp({ message: "Немає нагадувань", sent: 0 });
     }
 
-    console.log(`🔔 Знайдено ${dueReminders.length} нагадувань`);
+    console.log(`🔔 Знайдено ${allReminders.length} нагадувань`);
 
     let totalSent = 0;
 
-    for (const reminder of dueReminders as DueReminder[]) {
+    for (const reminder of allReminders) {
       // Пропустити нагадування тільки для app-каналу
       if (reminder.channel === "app") {
         await supabase.rpc("trigger_reminder", {
@@ -92,16 +116,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       // Для умовних — виконати condition_query і перевірити результат
       let conditionResultText: string | null = null;
+      let conditionResultHash: string | null = null;
       if (
         reminder.reminder_type === "conditional" &&
         reminder.condition_query
       ) {
-        conditionResultText = await executeConditionQuery(
+        const condOk = await executeConditionQuery(
           supabase,
           reminder.condition_query,
         );
 
-        if (conditionResultText === null) {
+        if (condOk === null) {
           // Умова не виконана (0 рядків) → пропустити, але оновити trigger
           console.log(
             `📊 Умова не виконана для reminder_id=${reminder.reminder_id}`,
@@ -118,6 +143,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
           });
           continue;
         }
+
+        // Перевіряємо хеш, якщо це Контроль (реалтайм)
+        try {
+          const schedule = typeof reminder.schedule === "string" ? JSON.parse(reminder.schedule) : reminder.schedule;
+          if (schedule?.type === "realtime" && reminder.meta?.last_result_hash === condOk.hash) {
+            console.log(
+              `⏭️ Результат SQL не змінився (spam protection) reminder_id=${reminder.reminder_id}`,
+            );
+            continue;
+          }
+        } catch { /* */ }
+
+        conditionResultText = condOk.text;
+        conditionResultHash = condOk.hash;
       }
 
       // Telegram або both — перевірити дедуплікацію
@@ -156,6 +195,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
         p_reminder_id: reminder.reminder_id,
       });
 
+      // Зберегти хеш результату для realtime-нагадувань
+      if (conditionResultHash) {
+        reminder.meta = reminder.meta || {};
+        reminder.meta.last_result_hash = conditionResultHash;
+        await supabase
+          .from("atlas_reminders")
+          .update({ meta: reminder.meta })
+          .eq("reminder_id", reminder.reminder_id);
+      }
+
       // Записати лог
       await supabase.from("atlas_reminder_logs").insert({
         reminder_id: reminder.reminder_id,
@@ -186,7 +235,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 async function executeConditionQuery(
   supabase: ReturnType<typeof createClient>,
   conditionQuery: string,
-): Promise<string | null> {
+): Promise<{ text: string; hash: string } | null> {
   try {
     const { data, error } = await supabase.rpc("execute_condition_query", {
       query_text: conditionQuery,
@@ -257,7 +306,7 @@ async function executeConditionQuery(
       resultText = escHtml(String(data));
     }
 
-    return resultText;
+    return { text: resultText, hash: JSON.stringify(data) };
   } catch (err) {
     console.error("executeConditionQuery exception:", err);
     return null;

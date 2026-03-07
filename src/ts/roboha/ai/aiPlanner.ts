@@ -674,12 +674,14 @@ function renderReminderCard(r: ReminderFromRPC): string {
   const statusClass =
     r.status !== "active" ? `ai-planner-card--${r.status}` : "";
 
-  const timeInfo =
-    r.reminder_type === "once"
-      ? `🕐 ${formatDateTime(r.trigger_at || r.next_trigger_at)}`
-      : r.reminder_type === "recurring"
-        ? `🔄 ${formatSchedule(r.schedule)}`
-        : `📊 Умовна перевірка`;
+  let timeInfo = "❓";
+  if (r.reminder_type === "once") {
+    timeInfo = `🕐 ${formatDateTime(r.trigger_at || r.next_trigger_at)}`;
+  } else if (r.reminder_type === "recurring") {
+    timeInfo = `🔄 ${formatSchedule(r.schedule)}`;
+  } else {
+    timeInfo = (r.schedule as any)?.type === "realtime" ? "🔴 Контроль змін (реалтайм)" : "📊 Умовна перевірка";
+  }
 
   const nextTrigger =
     r.next_trigger_at && r.status === "active"
@@ -925,12 +927,14 @@ function showReminderViewModal(
     ?.querySelector(".ai-planner-modal-overlay")
     ?.remove();
 
-  const timeInfo =
-    r.reminder_type === "once"
-      ? formatDateTime(r.trigger_at || r.next_trigger_at)
-      : r.reminder_type === "recurring"
-        ? formatSchedule(r.schedule)
-        : "Умовна перевірка";
+  let timeInfo = "❓";
+  if (r.reminder_type === "once") {
+    timeInfo = formatDateTime(r.trigger_at || r.next_trigger_at);
+  } else if (r.reminder_type === "recurring") {
+    timeInfo = formatSchedule(r.schedule);
+  } else {
+    timeInfo = (r.schedule as any)?.type === "realtime" ? "🔴 Контроль змін (реалтайм)" : "Умовна перевірка";
+  }
 
   const nextTrigger =
     r.next_trigger_at && r.status === "active"

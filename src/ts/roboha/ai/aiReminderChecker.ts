@@ -8,7 +8,7 @@ import { supabase } from "../../vxid/supabaseClient";
 
 // ── Конфігурація ──
 
-const CHECK_INTERVAL_MS = 15_000; // 15 секунд — базовий polling
+const CHECK_INTERVAL_MS = 60_000; // 60 секунд — базовий polling (оптимізовано для економії трафіку)
 const TOAST_DISPLAY_MS = 12_000; // Час показу toast (12 сек)
 const TOAST_STACK_GAP = 12; // Відстань між toast-ами в стеку
 const MAX_TOASTS_VISIBLE = 5; // Макс. кількість одночасних toast
@@ -25,6 +25,105 @@ let currentSlyusarId: number | null = null;
 let notificationPermissionAsked = false;
 let onRemindersTriggered: (() => void) | null = null;
 
+let hasActiveReminders = false;
+
+let remindersStateChannel: ReturnType<typeof supabase.channel> | null = null;
+let stateSyncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function syncReminderCapabilities() {
+  if (!currentSlyusarId) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("atlas_reminders")
+      .select("status, reminder_type, schedule, created_by, recipients")
+      .eq("status", "active");
+
+    if (error) {
+      console.warn("[ReminderChecker] Помилка синхронізації стану:", error.message);
+      return;
+    }
+
+    // Фільтруємо ті активні нагадування, що стосуються поточного користувача
+    const myReminders = (data || []).filter((r: any) =>
+      isReminderForUser(r, currentSlyusarId!),
+    );
+
+    const activeCount = myReminders.length;
+    const newHasActiveReminders = activeCount > 0;
+    const newHasRealtimeReminders = myReminders.some((r: any) => {
+      try {
+        if (r.reminder_type !== "conditional") return false;
+        const sched =
+          typeof r.schedule === "string"
+            ? JSON.parse(r.schedule)
+            : r.schedule;
+        return sched?.type === "realtime";
+      } catch {
+        return false;
+      }
+    });
+
+    console.log(
+      `[ReminderChecker] 🧠 Смарт-менеджер: Активних=${activeCount}, Контроль=${newHasRealtimeReminders}`,
+    );
+
+    // Управління Polling (інтервалом опитування)
+    if (newHasActiveReminders && !intervalId) {
+      console.log(
+        "[ReminderChecker] 🟢 Є активні нагадування. Запуск опитування.",
+      );
+      checkDueReminders();
+      intervalId = setInterval(checkDueReminders, CHECK_INTERVAL_MS);
+      schedulePrecisionCheck();
+    } else if (!newHasActiveReminders && intervalId) {
+      console.log(
+        "[ReminderChecker] 🟡 Активних нагадувань немає. Опитування зупинено (економія).",
+      );
+      clearInterval(intervalId);
+      intervalId = null;
+      if (precisionTimerId) {
+        clearTimeout(precisionTimerId);
+        precisionTimerId = null;
+      }
+    }
+    hasActiveReminders = newHasActiveReminders;
+
+    // Управління Realtime
+    if (newHasRealtimeReminders && !realtimeChannel) {
+      console.log(
+        "[ReminderChecker] 🔴 Є 'Контрольні' нагадування. Запуск моніторингу БД.",
+      );
+      initRealtimeMonitoring();
+    } else if (!newHasRealtimeReminders && realtimeChannel) {
+      console.log(
+        "[ReminderChecker] 🟡 'Контрольних' нагадувань немає. Моніторинг БД зупинено.",
+      );
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+  } catch (err) {
+    console.warn("[ReminderChecker] sync fail:", err);
+  }
+}
+
+function initRemindersStateListener() {
+  if (remindersStateChannel) return;
+  syncReminderCapabilities();
+
+  remindersStateChannel = supabase
+    .channel("atlas_reminders_status")
+    .on(
+      "postgres_changes" as any,
+      { event: "*", schema: "public", table: "atlas_reminders" },
+      () => {
+        if (stateSyncDebounceTimer) clearTimeout(stateSyncDebounceTimer);
+        stateSyncDebounceTimer = setTimeout(syncReminderCapabilities, 1500);
+      },
+    )
+    .subscribe();
+}
+
 // ── Ініціалізація ──
 
 export function initReminderChecker(): void {
@@ -39,22 +138,14 @@ export function initReminderChecker(): void {
   ensureToastContainer();
 
   // Перша перевірка відразу
-  checkDueReminders();
+  ensureToastContainer();
 
-  // Запустити базовий polling (15 сек)
-  if (intervalId) clearInterval(intervalId);
-  intervalId = setInterval(() => {
-    checkDueReminders();
-  }, CHECK_INTERVAL_MS);
-
-  // Запустити precision-планувальник (точно до секунди)
-  schedulePrecisionCheck();
-
-  // Запустити Realtime моніторинг змін у таблиці acts
-  initRealtimeMonitoring();
+  // Замість ручного запуску всіх процесів, активуємо Смарт-Менеджер,
+  // який сам проаналізує БД і увімкне необхідні системи ТІЛЬКИ якщо є АКТИВНІ нагадування
+  initRemindersStateListener();
 
   console.log(
-    `[ReminderChecker] ✅ Запущено (кожні ${CHECK_INTERVAL_MS / 1000}с + precision + realtime) для slyusar_id=${currentSlyusarId}`,
+    `[ReminderChecker] ✅ Смарт-Менеджер ініціалізовано для slyusar_id=${currentSlyusarId}`,
   );
 }
 
@@ -255,7 +346,7 @@ function getPriorityLabel(priority: string): string {
 }
 
 async function checkDueReminders(): Promise<void> {
-  if (isChecking) return;
+  if (isChecking || !hasActiveReminders) return;
   isChecking = true;
 
   try {
@@ -507,6 +598,7 @@ async function checkCondition(conditionQuery: string): Promise<any | false> {
 
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 let realtimeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let changedTables = new Set<string>();
 
 function initRealtimeMonitoring(): void {
   if (realtimeChannel) {
@@ -514,16 +606,20 @@ function initRealtimeMonitoring(): void {
   }
 
   realtimeChannel = supabase
-    .channel("realtime-acts-monitor")
+    .channel("realtime-all-monitor")
     .on(
       "postgres_changes" as any,
-      { event: "*", schema: "public", table: "acts" },
+      { event: "*", schema: "public" }, // Видалив table: "acts", щоб слухати всі таблиці
       (payload: any) => {
-        console.log(`[ReminderChecker] 🔴 Realtime: acts ${payload.eventType}`, payload.new?.act_id || payload.old?.act_id);
+        console.log(`[ReminderChecker] 🔴 Realtime: таблиця ${payload.table}, подія ${payload.eventType}`);
+        changedTables.add(payload.table);
+
         // Debounce — якщо кілька змін підряд, чекаємо 3 секунди
         if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
         realtimeDebounceTimer = setTimeout(() => {
-          checkRealtimeReminders();
+          const tablesToCheck = Array.from(changedTables);
+          changedTables.clear();
+          checkRealtimeReminders(tablesToCheck);
         }, 3000);
       },
     )
@@ -532,8 +628,8 @@ function initRealtimeMonitoring(): void {
     });
 }
 
-async function checkRealtimeReminders(): Promise<void> {
-  if (!currentSlyusarId) return;
+async function checkRealtimeReminders(changedTablesList: string[]): Promise<void> {
+  if (!currentSlyusarId || changedTablesList.length === 0) return;
 
   try {
     // Завантажити всі активні нагадування з режимом "realtime"
@@ -546,11 +642,21 @@ async function checkRealtimeReminders(): Promise<void> {
 
     if (error || !reminders?.length) return;
 
-    // Фільтруємо тільки realtime-нагадування
+    // Фільтруємо тільки realtime-нагадування, які стосуються змінених таблиць
     const realtimeReminders = reminders.filter((r: any) => {
       try {
         const schedule = typeof r.schedule === "string" ? JSON.parse(r.schedule) : r.schedule;
-        return schedule?.type === "realtime";
+        if (schedule?.type !== "realtime") return false;
+
+        // Розумний фільтр: чи є в SQL-запиті хоча б одна з таблиць, які щойно змінились?
+        const query = r.condition_query || "";
+        const queriesChangedTable = changedTablesList.some((tableName) => {
+          const regex = new RegExp(`\\b${tableName}\\b`, "i");
+          return regex.test(query);
+        });
+
+        if (!queriesChangedTable) return false;
+        return true;
       } catch {
         return false;
       }

@@ -306,24 +306,42 @@ async function checkDueReminders(): Promise<void> {
         console.log(`[ReminderChecker] ✅ Умова виконана! Форматуємо результат...`);
 
         // Форматуємо результат для Telegram
+        const fieldLabels: Record<string, string> = {
+          act_id: "Акт №",
+          date_on: "Відкритий",
+          date_off: "Закритий",
+          total_amount: "Сума",
+          status: "Статус",
+          client_name: "Клієнт",
+          client_phone: "Телефон",
+          slusar: "Слюсар",
+          car: "Авто",
+          vin: "VIN",
+          description: "Опис",
+          count: "Кількість",
+        };
+        const formatFieldName = (key: string): string => fieldLabels[key] || key;
+        const formatValue = (v: any): string => {
+          if (v === null || v === undefined) return "—";
+          if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+            return new Date(v).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+          }
+          return String(v);
+        };
+
         let resultText = "";
         if (Array.isArray(condResult)) {
-          // Обмежуємо до 15 рядків щоб не перевищити ліміт Telegram
-          const rows = condResult.slice(0, 15);
-          resultText = rows.map((row: any) => {
+          resultText = condResult.map((row: any, i: number) => {
             if (typeof row === "object" && row !== null) {
-              return Object.entries(row)
-                .map(([k, v]) => `• ${k}: ${v}`)
-                .join("\n");
+              return `${i + 1}. ` + Object.entries(row)
+                .map(([k, v]) => `${formatFieldName(k)}: ${formatValue(v)}`)
+                .join(" | ");
             }
-            return String(row);
-          }).join("\n\n");
-          if (condResult.length > 15) {
-            resultText += `\n\n...та ще ${condResult.length - 15} записів.`;
-          }
+            return `${i + 1}. ${String(row)}`;
+          }).join("\n");
         } else if (typeof condResult === "object" && condResult !== null) {
           resultText = Object.entries(condResult)
-            .map(([k, v]) => `• ${k}: ${v}`)
+            .map(([k, v]) => `• ${formatFieldName(k)}: ${formatValue(v)}`)
             .join("\n");
         } else {
           resultText = String(condResult);

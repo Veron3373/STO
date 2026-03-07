@@ -207,38 +207,48 @@ async function executeConditionQuery(
     if (isEmpty) return null;
 
     // Форматуємо текст для Telegram
+    const fieldLabels: Record<string, string> = {
+      act_id: "Акт №",
+      date_on: "Відкритий",
+      date_off: "Закритий",
+      total_amount: "Сума",
+      status: "Статус",
+      client_name: "Клієнт",
+      client_phone: "Телефон",
+      slusar: "Слюсар",
+      car: "Авто",
+      vin: "VIN",
+      description: "Опис",
+      count: "Кількість",
+    };
+    const formatFieldName = (key: string): string => fieldLabels[key] || key;
+    const formatValue = (v: any): string => {
+      if (v === null || v === undefined) return "—";
+      if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+        return new Date(v).toLocaleString("uk-UA", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+      return String(v);
+    };
+
     let resultText = "";
 
     if (Array.isArray(data)) {
-      // Обмежуємо до 15 рядків щоб не перевищити ліміт Telegram (4096 символів)
-      const rows = data.slice(0, 15);
-      resultText = rows
-        .map((row: any) => {
+      resultText = data
+        .map((row: any, i: number) => {
           if (typeof row === "object" && row !== null) {
-            return Object.entries(row)
-              .map(([k, v]) => {
-                // Форматуємо дати автоматично
-                const val =
-                  typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)
-                    ? new Date(v).toLocaleString("uk-UA", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                    : v;
-                return `• <b>${escHtml(String(k))}</b>: ${escHtml(String(val ?? "—"))}`;
-              })
-              .join("\n");
+            return `${i + 1}. ` + Object.entries(row)
+              .map(([k, v]) => `<b>${escHtml(formatFieldName(k))}</b>: ${escHtml(formatValue(v))}`)
+              .join(" | ");
           }
-          return `• ${escHtml(String(row))}`;
+          return `${i + 1}. ${escHtml(String(row))}`;
         })
-        .join("\n\n");
-
-      if (data.length > 15) {
-        resultText += `\n\n<i>...та ще ${data.length - 15} записів</i>`;
-      }
+        .join("\n");
 
       resultText = `📋 <b>Знайдено: ${data.length} записів</b>\n\n${resultText}`;
     } else if (typeof data === "number") {

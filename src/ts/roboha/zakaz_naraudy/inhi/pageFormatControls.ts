@@ -7,6 +7,7 @@ interface FormatState {
   allTextSize: number;
   tableTextSize: number;
   cellPadding: number;
+  lineSpacing: number;
   offsetTop: number;
   offsetBottom: number;
   offsetLeft: number;
@@ -32,6 +33,7 @@ export function attachPageFormatControls(
     allTextSize: options.defaultAllTextSize,
     tableTextSize: options.defaultTableTextSize,
     cellPadding: options.defaultCellPadding,
+    lineSpacing: 1.3,
     offsetTop: 10,
     offsetBottom: 15,
     offsetLeft: 10,
@@ -67,23 +69,17 @@ export function attachPageFormatControls(
     <div class="pf-joystick">
       <div class="pf-joy-title">Стиснути / Розтягнути</div>
       <div class="pf-joy-row">
-        <span class="pf-joy-val pf-joy-val-squeeze" data-value="sq-top">${state.offsetTop}mm</span>
-      </div>
-      <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально (top і bottom −1)">▲</button>
+        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально (міжрядковий +)">▲</button>
       </div>
       <div class="pf-joy-row">
         <span class="pf-joy-val pf-joy-val-side" data-value="sq-left">${state.offsetLeft}mm</span>
         <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків (left і right +1)">◀</button>
-        <span class="pf-joy-icon">⊞</span>
+        <span class="pf-joy-val" data-value="sq-line">${state.lineSpacing}</span>
         <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально (left і right −1)">▶</button>
         <span class="pf-joy-val pf-joy-val-side" data-value="sq-right">${state.offsetRight}mm</span>
       </div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально (top і bottom +1)">▼</button>
-      </div>
-      <div class="pf-joy-row">
-        <span class="pf-joy-val pf-joy-val-squeeze" data-value="sq-bottom">${state.offsetBottom}mm</span>
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально (міжрядковий −)">▼</button>
       </div>
     </div>
     <div class="pf-divider"></div>
@@ -148,12 +144,13 @@ export function attachPageFormatControls(
         state.cellPadding = Math.max(0, state.cellPadding - 1);
         break;
       case "stretch-v":
-        state.offsetTop = Math.max(0, state.offsetTop - 1);
-        state.offsetBottom = Math.max(0, state.offsetBottom - 1);
+        state.lineSpacing = Math.round((state.lineSpacing + 0.1) * 10) / 10;
         break;
       case "squeeze-v":
-        state.offsetTop += 1;
-        state.offsetBottom += 1;
+        state.lineSpacing = Math.max(
+          0.8,
+          Math.round((state.lineSpacing - 0.1) * 10) / 10,
+        );
         break;
       case "squeeze-h":
         state.offsetLeft += 1;
@@ -234,6 +231,9 @@ function applyStyles(
 
   container.style.fontSize = `${state.allTextSize}pt`;
 
+  // Застосовуємо міжрядковий інтервал
+  container.style.lineHeight = `${state.lineSpacing}`;
+
   // Застосовуємо зміщення (джойстик) як padding контейнера
   container.style.padding = `${state.offsetTop}mm ${state.offsetRight}mm ${state.offsetBottom}mm ${state.offsetLeft}mm`;
 
@@ -272,12 +272,10 @@ function updateLabels(toolbar: HTMLElement, state: FormatState): void {
   if (joyRight) joyRight.textContent = `${state.offsetRight}mm`;
 
   // Оновлюємо індикатори першого джойстика (стиснути/розтягнути)
-  const sqTop = toolbar.querySelector('[data-value="sq-top"]');
-  const sqBottom = toolbar.querySelector('[data-value="sq-bottom"]');
+  const sqLine = toolbar.querySelector('[data-value="sq-line"]');
   const sqLeft = toolbar.querySelector('[data-value="sq-left"]');
   const sqRight = toolbar.querySelector('[data-value="sq-right"]');
-  if (sqTop) sqTop.textContent = `${state.offsetTop}mm`;
-  if (sqBottom) sqBottom.textContent = `${state.offsetBottom}mm`;
+  if (sqLine) sqLine.textContent = `${state.lineSpacing}`;
   if (sqLeft) sqLeft.textContent = `${state.offsetLeft}mm`;
   if (sqRight) sqRight.textContent = `${state.offsetRight}mm`;
 }

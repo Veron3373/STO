@@ -69,17 +69,17 @@ export function attachPageFormatControls(
     <div class="pf-joystick">
       <div class="pf-joy-title">Стиснути / Розтягнути</div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально (міжрядковий +)">▲</button>
+        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально (міжрядковий +)">⊕</button>
       </div>
       <div class="pf-joy-row">
         <span class="pf-joy-val pf-joy-val-side" data-value="sq-left">${state.offsetLeft}mm</span>
-        <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків (left і right +1)">◀</button>
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків (left і right +1)">⊖</button>
         <span class="pf-joy-val" data-value="sq-line">${state.lineSpacing}</span>
-        <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально (left і right −1)">▶</button>
+        <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально (left і right −1)">⊕</button>
         <span class="pf-joy-val pf-joy-val-side" data-value="sq-right">${state.offsetRight}mm</span>
       </div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально (міжрядковий −)">▼</button>
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально (міжрядковий −)">⊖</button>
       </div>
     </div>
     <div class="pf-divider"></div>
@@ -281,36 +281,150 @@ function updateLabels(toolbar: HTMLElement, state: FormatState): void {
   if (sqRight) sqRight.textContent = `${state.offsetRight}mm`;
 }
 
+/**
+ * Отримує межі рядків таблиці відносно контейнера
+ */
+function getRowBoundsPx(
+  container: HTMLElement,
+  tableSelector: string,
+): Array<{ top: number; bottom: number }> {
+  const tbody = container.querySelector(
+    `${tableSelector} tbody`,
+  ) as HTMLElement | null;
+  if (!tbody) return [];
+
+  const containerRect = container.getBoundingClientRect();
+  return Array.from(tbody.querySelectorAll("tr")).map((tr) => {
+    const r = (tr as HTMLElement).getBoundingClientRect();
+    return {
+      top: r.top - containerRect.top,
+      bottom: r.bottom - containerRect.top,
+    };
+  });
+}
+
+/**
+ * Отримує межі елемента відносно контейнера
+ */
+function getElementBoundsPx(container: HTMLElement, selector: string) {
+  const el = container.querySelector(selector) as HTMLElement | null;
+  if (!el) return null;
+  const containerRect = container.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const top = r.top - containerRect.top;
+  const bottom = r.bottom - containerRect.top;
+  return { top, bottom, height: bottom - top };
+}
+
+/**
+ * Визначає точки розриву сторінок за тією ж логікою, що й PDF-генерація
+ */
+function calculateSmartBreaks(container: HTMLElement): number[] {
+  const containerHeight = container.scrollHeight;
+  const pxPerMm = container.offsetWidth / 210;
+  const pageHeightPx = PDF_CONTENT_HEIGHT_MM * pxPerMm;
+
+  // Визначаємо тип контейнера
+  const isAct = container.classList.contains("fakturaAct-container");
+
+  const tableSelector = isAct ? ".fakturaAct-table" : ".invoice-table";
+  const rowBounds = getRowBoundsPx(container, tableSelector);
+
+  // Отримуємо межі ключових секцій
+  const sectionSelectors = isAct
+    ? [".fakturaAct-total-section", ".fakturaAct-footer"]
+    : [".sum-in-words", ".vat-note", ".signature-section"];
+
+  const sectionBounds = sectionSelectors
+    .map((sel) => getElementBoundsPx(container, sel))
+    .filter(Boolean) as Array<{ top: number; bottom: number; height: number }>;
+
+  const breaks: number[] = [];
+  let currentDomY = 0;
+
+  while (currentDomY < containerHeight - 10) {
+    const pageMaxDomY = currentDomY + pageHeightPx;
+
+    if (pageMaxDomY >= containerHeight - 10) break;
+
+    // 1) Шукаємо останній повний рядок таблиці, що влазить
+    let safeCutDomY = currentDomY;
+    let foundRowBreak = false;
+
+    for (let i = 0; i < rowBounds.length; i++) {
+      if (
+        rowBounds[i].bottom <= pageMaxDomY &&
+        rowBounds[i].bottom > currentDomY
+      ) {
+        safeCutDomY = rowBounds[i].bottom;
+        foundRowBreak = true;
+      } else if (rowBounds[i].bottom > pageMaxDomY) {
+        break;
+      }
+    }
+
+    if (!foundRowBreak || safeCutDomY <= currentDomY) {
+      safeCutDomY = Math.min(pageMaxDomY, containerHeight);
+    }
+
+    // 2) Перевіряємо ключові секції — чи можуть повністю влізти
+    for (const bounds of sectionBounds) {
+      const startsOnThisPage =
+        bounds.top >= currentDomY && bounds.top <= pageMaxDomY;
+      if (startsOnThisPage) {
+        const remainingSpace = pageMaxDomY - safeCutDomY;
+        if (bounds.height <= remainingSpace) {
+          safeCutDomY = bounds.bottom;
+        }
+      }
+    }
+
+    breaks.push(safeCutDomY);
+    currentDomY = safeCutDomY;
+  }
+
+  return breaks;
+}
+
 function updatePageBreakMarkers(container: HTMLElement): void {
   // Видаляємо старі маркери та фонові області
   container.querySelectorAll(".page-break-marker").forEach((el) => el.remove());
   container.querySelectorAll(".page-background").forEach((el) => el.remove());
 
   const containerHeight = container.scrollHeight;
-  // Визначаємо скільки пікселів в 1 мм на основі ширини контейнера (210mm)
-  const pxPerMm = container.offsetWidth / 210;
-  // Використовуємо реальну висоту контенту PDF (272mm), а не повну А4 (297mm)
-  const pageHeightPx = PDF_CONTENT_HEIGHT_MM * pxPerMm;
 
-  let pageNum = 1;
-  let breakPos = pageHeightPx;
+  // Обчислюємо розумні точки розриву (як у PDF)
+  const breaks = calculateSmartBreaks(container);
+
+  if (breaks.length === 0) {
+    // Все на одній сторінці — просто фон
+    const pageBg = document.createElement("div");
+    pageBg.className = "page-background";
+    pageBg.setAttribute("data-no-pdf", "true");
+    pageBg.style.top = "0px";
+    pageBg.style.height = `${containerHeight}px`;
+    pageBg.innerHTML = `<span class="page-number">Аркуш 1</span>`;
+    container.appendChild(pageBg);
+    return;
+  }
 
   // Фонова область першої сторінки
   const firstPageBg = document.createElement("div");
   firstPageBg.className = "page-background";
   firstPageBg.setAttribute("data-no-pdf", "true");
   firstPageBg.style.top = "0px";
-  firstPageBg.style.height = `${Math.min(pageHeightPx, containerHeight)}px`;
+  firstPageBg.style.height = `${breaks[0]}px`;
   firstPageBg.innerHTML = `<span class="page-number">Аркуш 1</span>`;
   container.appendChild(firstPageBg);
 
-  // Створюємо маркери розриву та фонові області для наступних сторінок
-  while (breakPos < containerHeight - 10) {
-    // Маркер розриву (центрується на точці розриву)
+  for (let i = 0; i < breaks.length; i++) {
+    const breakPos = breaks[i];
+    const pageNum = i + 1;
+
+    // Маркер розриву
     const marker = document.createElement("div");
     marker.className = "page-break-marker";
     marker.setAttribute("data-no-pdf", "true");
-    // Маркер центрується: 15px вгору від точки розриву
     marker.style.top = `${breakPos - 15}px`;
     marker.innerHTML = `
       <div class="page-break-bottom">
@@ -323,19 +437,15 @@ function updatePageBreakMarkers(container: HTMLElement): void {
     `;
     container.appendChild(marker);
 
-    pageNum++;
-
     // Фонова область наступної сторінки
+    const nextBreak = i + 1 < breaks.length ? breaks[i + 1] : containerHeight;
     const pageBg = document.createElement("div");
     pageBg.className = "page-background";
     pageBg.setAttribute("data-no-pdf", "true");
     pageBg.style.top = `${breakPos}px`;
-    const remainingHeight = containerHeight - breakPos;
-    pageBg.style.height = `${Math.min(pageHeightPx, remainingHeight)}px`;
-    pageBg.innerHTML = `<span class="page-number">Аркуш ${pageNum}</span>`;
+    pageBg.style.height = `${nextBreak - breakPos}px`;
+    pageBg.innerHTML = `<span class="page-number">Аркуш ${pageNum + 1}</span>`;
     container.appendChild(pageBg);
-
-    breakPos += pageHeightPx;
   }
 }
 

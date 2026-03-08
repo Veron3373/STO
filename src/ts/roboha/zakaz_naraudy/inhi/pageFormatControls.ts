@@ -65,25 +65,45 @@ export function attachPageFormatControls(
     </div>
     <div class="pf-divider"></div>
     <div class="pf-joystick">
+      <div class="pf-joy-title">Стиснути / Розтягнути</div>
+      <div class="pf-joy-row">
+        <span class="pf-joy-val pf-joy-val-squeeze" data-value="sq-top">${state.offsetTop}mm</span>
+      </div>
+      <div class="pf-joy-row">
+        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально (top і bottom −1)">▲</button>
+      </div>
+      <div class="pf-joy-row">
+        <span class="pf-joy-val pf-joy-val-side" data-value="sq-left">${state.offsetLeft}mm</span>
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків (left і right +1)">◀</button>
+        <span class="pf-joy-icon">⊞</span>
+        <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально (left і right −1)">▶</button>
+        <span class="pf-joy-val pf-joy-val-side" data-value="sq-right">${state.offsetRight}mm</span>
+      </div>
+      <div class="pf-joy-row">
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально (top і bottom +1)">▼</button>
+      </div>
+      <div class="pf-joy-row">
+        <span class="pf-joy-val pf-joy-val-squeeze" data-value="sq-bottom">${state.offsetBottom}mm</span>
+      </div>
+    </div>
+    <div class="pf-divider"></div>
+    <div class="pf-joystick">
+      <div class="pf-joy-title">Пересунути</div>
       <div class="pf-joy-row">
         <span class="pf-joy-val" data-value="joy-top">${state.offsetTop}mm</span>
       </div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="shift-up" title="Пересунути вгору">△</button>
-        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально">▲</button>
+        <button class="pf-btn pf-joy-btn" data-action="shift-up" title="Пересунути вгору (top −1, bottom +1)">▲</button>
       </div>
       <div class="pf-joy-row">
         <span class="pf-joy-val pf-joy-val-side" data-value="joy-left">${state.offsetLeft}mm</span>
-        <button class="pf-btn pf-joy-btn" data-action="shift-left" title="Пересунути лівіше">◁</button>
-        <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків">◀</button>
-        <span class="pf-joy-label">Поля</span>
-        <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально">▶</button>
-        <button class="pf-btn pf-joy-btn" data-action="shift-right" title="Пересунути правіше">▷</button>
+        <button class="pf-btn pf-joy-btn" data-action="shift-left" title="Пересунути лівіше (left −1, right +1)">◀</button>
+        <span class="pf-joy-icon">✥</span>
+        <button class="pf-btn pf-joy-btn" data-action="shift-right" title="Пересунути правіше (left +1, right −1)">▶</button>
         <span class="pf-joy-val pf-joy-val-side" data-value="joy-right">${state.offsetRight}mm</span>
       </div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально">▼</button>
-        <button class="pf-btn pf-joy-btn" data-action="shift-down" title="Пересунути вниз">▽</button>
+        <button class="pf-btn pf-joy-btn" data-action="shift-down" title="Пересунути вниз (top +1, bottom −1)">▼</button>
       </div>
       <div class="pf-joy-row">
         <span class="pf-joy-val" data-value="joy-bottom">${state.offsetBottom}mm</span>
@@ -250,6 +270,16 @@ function updateLabels(toolbar: HTMLElement, state: FormatState): void {
   if (joyBottom) joyBottom.textContent = `${state.offsetBottom}mm`;
   if (joyLeft) joyLeft.textContent = `${state.offsetLeft}mm`;
   if (joyRight) joyRight.textContent = `${state.offsetRight}mm`;
+
+  // Оновлюємо індикатори першого джойстика (стиснути/розтягнути)
+  const sqTop = toolbar.querySelector('[data-value="sq-top"]');
+  const sqBottom = toolbar.querySelector('[data-value="sq-bottom"]');
+  const sqLeft = toolbar.querySelector('[data-value="sq-left"]');
+  const sqRight = toolbar.querySelector('[data-value="sq-right"]');
+  if (sqTop) sqTop.textContent = `${state.offsetTop}mm`;
+  if (sqBottom) sqBottom.textContent = `${state.offsetBottom}mm`;
+  if (sqLeft) sqLeft.textContent = `${state.offsetLeft}mm`;
+  if (sqRight) sqRight.textContent = `${state.offsetRight}mm`;
 }
 
 function updatePageBreakMarkers(container: HTMLElement): void {

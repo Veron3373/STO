@@ -4899,16 +4899,21 @@ async function refreshSidebarChats(
   const creatorIds = [
     ...new Set(chatList.map((c) => c.user_id).filter(Boolean)),
   ];
+  const numericCreatorIds = creatorIds.map(Number).filter((n) => !isNaN(n));
   const creatorNamesMap = new Map<string, string>();
-  if (creatorIds.length > 0) {
-    const { data: slyusarsData } = await supabase
-      .from("slyusars")
-      .select("slyusar_id, Name")
-      .in("slyusar_id", creatorIds.map(Number));
-    if (slyusarsData) {
-      for (const s of slyusarsData) {
-        creatorNamesMap.set(String(s.slyusar_id), s.Name || "");
+  if (numericCreatorIds.length > 0) {
+    try {
+      const { data: slyusarsData } = await supabase
+        .from("slyusars")
+        .select("slyusar_id, data")
+        .in("slyusar_id", numericCreatorIds);
+      if (slyusarsData) {
+        for (const s of slyusarsData) {
+          creatorNamesMap.set(String(s.slyusar_id), s.data?.Name || "");
+        }
       }
+    } catch {
+      // Не критично
     }
   }
 

@@ -7,6 +7,10 @@ interface FormatState {
   allTextSize: number;
   tableTextSize: number;
   cellPadding: number;
+  offsetTop: number;
+  offsetBottom: number;
+  offsetLeft: number;
+  offsetRight: number;
 }
 
 /**
@@ -23,10 +27,15 @@ export function attachPageFormatControls(
     tableSelector: string;
   },
 ): void {
+  // За замовчуванням padding контейнера: 10mm 20mm 15mm 10mm (top right bottom left)
   const state: FormatState = {
     allTextSize: options.defaultAllTextSize,
     tableTextSize: options.defaultTableTextSize,
     cellPadding: options.defaultCellPadding,
+    offsetTop: 10,
+    offsetBottom: 15,
+    offsetLeft: 10,
+    offsetRight: 20,
   };
 
   const toolbar = document.createElement("div");
@@ -53,6 +62,20 @@ export function attachPageFormatControls(
       <button class="pf-btn" data-action="padding-minus">−</button>
       <span class="pf-value" data-value="padding">${state.cellPadding}px</span>
       <button class="pf-btn" data-action="padding-plus">+</button>
+    </div>
+    <div class="pf-divider"></div>
+    <div class="pf-joystick">
+      <div class="pf-joy-row">
+        <button class="pf-btn pf-joy-btn" data-action="move-up">▲</button>
+      </div>
+      <div class="pf-joy-row">
+        <button class="pf-btn pf-joy-btn" data-action="move-left">◀</button>
+        <span class="pf-joy-label">Змістити</span>
+        <button class="pf-btn pf-joy-btn" data-action="move-right">▶</button>
+      </div>
+      <div class="pf-joy-row">
+        <button class="pf-btn pf-joy-btn" data-action="move-down">▼</button>
+      </div>
     </div>
   `;
 
@@ -92,6 +115,18 @@ export function attachPageFormatControls(
       case "padding-minus":
         state.cellPadding = Math.max(0, state.cellPadding - 1);
         break;
+      case "move-up":
+        state.offsetTop = Math.max(0, state.offsetTop - 1);
+        break;
+      case "move-down":
+        state.offsetTop += 1;
+        break;
+      case "move-left":
+        state.offsetLeft = Math.max(0, state.offsetLeft - 1);
+        break;
+      case "move-right":
+        state.offsetLeft += 1;
+        break;
     }
 
     applyStyles(container, state, options.tableSelector);
@@ -125,11 +160,37 @@ function applyStyles(
   state: FormatState,
   tableSelector: string,
 ): void {
+  // Встановлюємо розмір шрифту на всіх елементах контейнера, крім таблиці
+  const table = container.querySelector(tableSelector) as HTMLElement;
+
+  // Збираємо всі елементи з явним font-size (заголовки, секції тощо)
+  const allElements = container.querySelectorAll("*");
+  allElements.forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    // Пропускаємо таблицю та її дочірні елементи — вони керуються окремо
+    if (table && (htmlEl === table || table.contains(htmlEl))) return;
+    // Пропускаємо маркери та кнопки
+    if (
+      htmlEl.classList.contains("page-break-marker") ||
+      htmlEl.closest(".invoice-controls") ||
+      htmlEl.closest(".fakturaAct-controls")
+    )
+      return;
+
+    htmlEl.style.fontSize = `${state.allTextSize}pt`;
+  });
+
   container.style.fontSize = `${state.allTextSize}pt`;
 
-  const table = container.querySelector(tableSelector) as HTMLElement;
+  // Застосовуємо зміщення (джойстик) як padding контейнера
+  container.style.padding = `${state.offsetTop}mm ${state.offsetRight}mm ${state.offsetBottom}mm ${state.offsetLeft}mm`;
+
   if (table) {
     table.style.fontSize = `${state.tableTextSize}pt`;
+    // Повертаємо розмір шрифту таблиці для всіх її дочірніх елементів
+    table.querySelectorAll("*").forEach((el) => {
+      (el as HTMLElement).style.fontSize = `${state.tableTextSize}pt`;
+    });
   }
 
   const cells = container.querySelectorAll(

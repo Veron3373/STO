@@ -218,9 +218,10 @@ function applyStyles(
     const htmlEl = el as HTMLElement;
     // Пропускаємо таблицю та її дочірні елементи — вони керуються окремо
     if (table && (htmlEl === table || table.contains(htmlEl))) return;
-    // Пропускаємо маркери та кнопки
+    // Пропускаємо маркери, фонові області та кнопки
     if (
       htmlEl.classList.contains("page-break-marker") ||
+      htmlEl.classList.contains("page-background") ||
       htmlEl.closest(".invoice-controls") ||
       htmlEl.closest(".fakturaAct-controls")
     )
@@ -281,7 +282,9 @@ function updateLabels(toolbar: HTMLElement, state: FormatState): void {
 }
 
 function updatePageBreakMarkers(container: HTMLElement): void {
+  // Видаляємо старі маркери та фонові області
   container.querySelectorAll(".page-break-marker").forEach((el) => el.remove());
+  container.querySelectorAll(".page-background").forEach((el) => el.remove());
 
   const containerHeight = container.scrollHeight;
   // Визначаємо скільки пікселів в 1 мм на основі ширини контейнера (210mm)
@@ -289,18 +292,49 @@ function updatePageBreakMarkers(container: HTMLElement): void {
   // Використовуємо реальну висоту контенту PDF (272mm), а не повну А4 (297mm)
   const pageHeightPx = PDF_CONTENT_HEIGHT_MM * pxPerMm;
 
-  let pageNum = 1;
-  let breakPos = pageHeightPx;
+  // Відступ між сторінками (візуальний)
+  const PAGE_GAP = 20; // px
 
-  while (breakPos < containerHeight - 10) {
-    const marker = document.createElement("div");
-    marker.className = "page-break-marker";
-    marker.setAttribute("data-no-pdf", "true");
-    marker.style.top = `${breakPos}px`;
-    marker.innerHTML = `<span>✂ Кінець аркуша ${pageNum} — Початок аркуша ${pageNum + 1}</span>`;
-    container.appendChild(marker);
-    pageNum++;
-    breakPos += pageHeightPx;
+  let pageNum = 1;
+  let currentTop = 0;
+
+  // Створюємо фонові області для кожної сторінки
+  while (currentTop < containerHeight) {
+    const pageHeight = Math.min(pageHeightPx, containerHeight - currentTop);
+
+    // Фонова область сторінки
+    const pageBg = document.createElement("div");
+    pageBg.className = "page-background";
+    pageBg.setAttribute("data-no-pdf", "true");
+    pageBg.style.top = `${currentTop}px`;
+    pageBg.style.height = `${pageHeight}px`;
+    pageBg.innerHTML = `<span class="page-number">Аркуш ${pageNum}</span>`;
+    container.appendChild(pageBg);
+
+    const nextTop = currentTop + pageHeightPx;
+
+    // Маркер розриву сторінки (тільки якщо є наступна сторінка)
+    if (nextTop < containerHeight - 10) {
+      const marker = document.createElement("div");
+      marker.className = "page-break-marker";
+      marker.setAttribute("data-no-pdf", "true");
+      marker.style.top = `${nextTop - PAGE_GAP / 2}px`;
+      marker.innerHTML = `
+        <div class="page-break-bottom">
+          <span>▼ Кінець аркуша ${pageNum} ▼</span>
+        </div>
+        <div class="page-break-gap"></div>
+        <div class="page-break-top">
+          <span>▲ Початок аркуша ${pageNum + 1} ▲</span>
+        </div>
+      `;
+      container.appendChild(marker);
+
+      pageNum++;
+      currentTop = nextTop + PAGE_GAP;
+    } else {
+      break;
+    }
   }
 }
 
@@ -308,16 +342,20 @@ function updatePageBreakMarkers(container: HTMLElement): void {
  * Ховає елементи керування та маркери перед генерацією PDF.
  */
 export function hideFormatControlsForPdf(container: HTMLElement): void {
-  container.querySelectorAll(".page-break-marker").forEach((el) => {
-    (el as HTMLElement).style.display = "none";
-  });
+  container
+    .querySelectorAll(".page-break-marker, .page-background")
+    .forEach((el) => {
+      (el as HTMLElement).style.display = "none";
+    });
 }
 
 /**
  * Повертає видимість елементів після генерації PDF.
  */
 export function showFormatControlsAfterPdf(container: HTMLElement): void {
-  container.querySelectorAll(".page-break-marker").forEach((el) => {
-    (el as HTMLElement).style.display = "";
-  });
+  container
+    .querySelectorAll(".page-break-marker, .page-background")
+    .forEach((el) => {
+      (el as HTMLElement).style.display = "";
+    });
 }

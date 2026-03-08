@@ -4895,6 +4895,23 @@ async function refreshSidebarChats(
     chatList = await loadChats(userId);
   }
 
+  // Завантажуємо імена авторів чатів
+  const creatorIds = [
+    ...new Set(chatList.map((c) => c.user_id).filter(Boolean)),
+  ];
+  const creatorNamesMap = new Map<string, string>();
+  if (creatorIds.length > 0) {
+    const { data: slyusarsData } = await supabase
+      .from("slyusars")
+      .select("slyusar_id, Name")
+      .in("slyusar_id", creatorIds.map(Number));
+    if (slyusarsData) {
+      for (const s of slyusarsData) {
+        creatorNamesMap.set(String(s.slyusar_id), s.Name || "");
+      }
+    }
+  }
+
   // Оновлюємо бейдж кількості чатів
   updateChatCountBadge(chatList.length);
 
@@ -4941,7 +4958,7 @@ async function refreshSidebarChats(
         </button>
         <div class="ai-sidebar-chat-info">
           <div class="ai-sidebar-chat-title">${escapeHtml(c.title)}</div>
-          <div class="ai-sidebar-chat-date">${date}</div>
+          <div class="ai-sidebar-chat-date">${date}${creatorNamesMap.get(c.user_id) ? ` <span class="ai-sidebar-chat-creator">${escapeHtml(creatorNamesMap.get(c.user_id)!)}</span>` : ""}</div>
         </div>
         <div class="ai-sidebar-chat-actions">
           <button class="ai-sidebar-rename" data-chat-id="${c.chat_id}" title="Перейменувати">✏️</button>

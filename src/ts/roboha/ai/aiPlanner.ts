@@ -768,7 +768,13 @@ function formatRecipients(recipients: any): string {
   if (recipients === "all" || recipients === '"all"') return "👥 Всі";
   if (recipients === "mechanics" || recipients === '"mechanics"')
     return "🔧 Слюсарі";
-  if (Array.isArray(recipients)) return `👥 ${recipients.length} осіб`;
+  if (Array.isArray(recipients) && recipients.length > 0) {
+    const names = recipients.map((id: number) => {
+      const user = telegramUsers.find((u) => u.slyusar_id === id);
+      return user ? user.name : `#${id}`;
+    });
+    return `👥 ${names.join(", ")}`;
+  }
   return "👤 Тільки я";
 }
 
@@ -911,6 +917,7 @@ function renderReminderCard(r: ReminderFromRPC): string {
       ${nextTrigger ? `<div class="ai-planner-card-time" style="margin-top:2px">${nextTrigger}</div>` : ""}
 
       <div class="ai-planner-card-footer">
+        ${r.creator_name ? `<div class="ai-planner-card-creator">✍️ ${escapeHtml(r.creator_name)}</div>` : ""}
         <div class="ai-planner-card-recipients">${formatRecipients(r.recipients)}</div>
         ${r.trigger_count > 0 ? `<div class="ai-planner-card-trigger-count">🔔 ${r.trigger_count}×</div>` : ""}
       </div>

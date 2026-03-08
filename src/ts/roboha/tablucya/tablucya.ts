@@ -32,6 +32,7 @@ import {
 import {
   loadAndApplyPhoneIndicatorSetting,
   loadAndApplyVoiceInputSetting,
+  loadAndApplyAiProSetting,
   subscribeToSettingsRealtime,
 } from "../nalachtuvannay/nalachtuvannay";
 
@@ -2065,6 +2066,9 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 🎙️ ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ГОЛОСОВОГО ВВЕДЕННЯ
     await loadAndApplyVoiceInputSetting();
+
+    // 🤖 ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ШІ АТЛАС
+    await loadAndApplyAiProSetting();
 
     // ⚙️ REALTIME ПІДПИСКА НА ЗМІНИ НАЛАШТУВАНЬ
     subscribeToSettingsRealtime();

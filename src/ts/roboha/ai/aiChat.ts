@@ -37,6 +37,7 @@ import {
   getStorageStats,
   getDatabaseStats,
   toggleFavorite,
+  loadAllChats,
   type AiChat,
 } from "./aiChatStorage";
 import {
@@ -4766,7 +4767,14 @@ async function refreshSidebarChats(
     updateChatCountBadge(0);
     return;
   }
-  chatList = await loadChats(userId);
+  // 🔒 Адміністратор бачить всі чати, інші — тільки свої
+  const _ud = JSON.parse(localStorage.getItem("userAuthData") || "{}");
+  const _isAdmin = _ud?.["Доступ"] === "Адміністратор";
+  if (_isAdmin) {
+    chatList = await loadAllChats();
+  } else {
+    chatList = await loadChats(userId);
+  }
 
   // Оновлюємо бейдж кількості чатів
   updateChatCountBadge(chatList.length);
@@ -5325,6 +5333,16 @@ export async function createAIChatModal(): Promise<void> {
 
   document.body.appendChild(modal);
   initAIChatHandlers(modal);
+
+  // 🔒 Приховуємо Дашборд для не-адміністраторів
+  try {
+    const _userData = JSON.parse(localStorage.getItem("userAuthData") || "{}");
+    const _userRole = _userData?.["Доступ"] || "";
+    if (_userRole !== "Адміністратор") {
+      const dashTab = modal.querySelector("#tab-dashboard");
+      if (dashTab) (dashTab as HTMLElement).style.display = "none";
+    }
+  } catch (_) { /* */ }
 
   // Підвантажуємо кількість чатів для бейджа
   getCurrentUserId().then(async (uid) => {

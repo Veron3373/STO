@@ -114,6 +114,7 @@ const ROLE_SETTINGS = {
     { id: 19, label: "📋 Акт Створити PDF Акту 🖨️" },
     { id: 20, label: "📋 Акт SMS ✉️" },
     { id: 23, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
+    { id: 24, label: "🤖 ШІ Атлас", class: "_ai_pro" },
     { divider: true },
     { id: 21, label: "Планування" },
     { divider: true },
@@ -124,6 +125,7 @@ const ROLE_SETTINGS = {
     { id: 2, label: "📋 Акт Ціна та Сума" },
     { id: 3, label: "📋 Акт Завершення робіт 🗝️" },
     { id: 8, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
+    { id: 9, label: "🤖 ШІ Атлас", class: "_ai_pro" },
     { divider: true },
     { id: 6, label: "Планування" },
     { divider: true },
@@ -159,6 +161,7 @@ const ROLE_SETTINGS = {
     { id: 21, label: "📋 Акт SMS ✉️" },
     { id: 22, label: "📋 Акт ➕ Додати рядок 💾 Зберегти зміни 🗑️ Видалити" },
     { id: 25, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
+    { id: 26, label: "🤖 ШІ Атлас", class: "_ai_pro" },
     { divider: true },
     { id: 23, label: "Планування" },
     { divider: true },
@@ -191,6 +194,7 @@ const ROLE_SETTINGS = {
     { id: 18, label: "📋 Акт SMS ✉️" },
     { id: 19, label: "📋 Акт ➕ Додати рядок 💾 Зберегти зміни 🗑️ Видалити" },
     { id: 22, label: "📋 Акт 🎙️ Голосове введення", class: "_voice" },
+    { id: 23, label: "🤖 ШІ Атлас", class: "_ai_pro" },
     { divider: true },
     { id: 20, label: "Планування" },
     { divider: true },
@@ -220,6 +224,18 @@ const VOICE_SETTINGS_MAP: Record<
   Слюсар: { settingId: 8, toggleId: 8 },
   Запчастист: { settingId: 25, toggleId: 25 },
   Складовщик: { settingId: 22, toggleId: 22 },
+};
+
+// 🤖 Конфігурація setting_id для налаштування "ШІ Атлас" по ролям
+const AI_PRO_SETTINGS_MAP: Record<
+  string,
+  { settingId: number; toggleId: number }
+> = {
+  Адміністратор: { settingId: 9, toggleId: 9 },
+  Приймальник: { settingId: 24, toggleId: 24 },
+  Слюсар: { settingId: 9, toggleId: 9 },
+  Запчастист: { settingId: 26, toggleId: 26 },
+  Складовщик: { settingId: 23, toggleId: 23 },
 };
 
 const ROLE_TO_COLUMN = {
@@ -358,6 +374,54 @@ export async function loadAndApplyVoiceInputSetting(): Promise<void> {
 /**
  * Застосовує видимість кнопки голосового введення
  */
+/**
+ * 🤖 Завантажує та застосовує налаштування ШІ Атлас для поточної ролі
+ */
+export async function loadAndApplyAiProSetting(): Promise<void> {
+  try {
+    const USER_DATA_KEY = "userAuthData";
+    const storedData = localStorage.getItem(USER_DATA_KEY);
+    if (!storedData) return;
+
+    const userData = JSON.parse(storedData);
+    const role = userData?.["Доступ"] as string;
+
+    if (!role || !AI_PRO_SETTINGS_MAP[role]) {
+      return;
+    }
+
+    // Адміністратор — його toggle зберігається в data, вже обробляється в globalCache
+    if (role === "Адміністратор") return;
+
+    const { settingId } = AI_PRO_SETTINGS_MAP[role];
+    const column = ROLE_TO_COLUMN[role as keyof typeof ROLE_TO_COLUMN];
+
+    if (!column) return;
+
+    const { data, error } = await supabase
+      .from("settings")
+      .select(`"${column}"`)
+      .eq("setting_id", settingId)
+      .single();
+
+    if (error && error.code !== "PGRST116") return;
+
+    const enabled = data ? !!data[column] : false;
+    globalCache.generalSettings.aiChatEnabled = enabled;
+    saveGeneralSettingsToLocalStorage();
+    if (enabled) {
+      initAIChatButton();
+    } else {
+      const chatBtn = document.getElementById("ai-chat-menu-btn");
+      if (chatBtn) chatBtn.closest("li")?.remove();
+      const chatModal = document.getElementById("ai-chat-modal");
+      if (chatModal) chatModal.classList.add("hidden");
+    }
+  } catch (_) {
+    /* ігноруємо */
+  }
+}
+
 function applyVoiceInputVisibility(show: boolean): void {
   // Кнопка мікрофона в актах
   const voiceBtn = document.getElementById("voice-input-button");
@@ -536,6 +600,28 @@ function handleRoleSettingsChange(
       globalCache.generalSettings.voiceInputEnabled = !!value;
       saveGeneralSettingsToLocalStorage();
       applyVoiceInputVisibility(!!value);
+    }
+  }
+
+  // 🤖 Перевіряємо чи ця зміна стосується налаштування "ШІ Атлас" для поточної ролі
+  const aiProConfig = AI_PRO_SETTINGS_MAP[currentRole];
+  if (
+    aiProConfig &&
+    settingId === aiProConfig.settingId &&
+    currentRole !== "Адміністратор"
+  ) {
+    const value = newRecord?.[column];
+    if (value !== undefined) {
+      globalCache.generalSettings.aiChatEnabled = !!value;
+      saveGeneralSettingsToLocalStorage();
+      if (!!value) {
+        initAIChatButton();
+      } else {
+        const chatBtn = document.getElementById("ai-chat-menu-btn");
+        if (chatBtn) chatBtn.closest("li")?.remove();
+        const chatModal = document.getElementById("ai-chat-modal");
+        if (chatModal) chatModal.classList.add("hidden");
+      }
     }
   }
 }
@@ -793,8 +879,11 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           ) as HTMLElement;
           const actOffsetVal = parseInt(value);
           const actSafeOffset = isNaN(actOffsetVal) ? 0 : actOffsetVal;
-          if (actOffsetSliderLoad) actOffsetSliderLoad.value = String(actSafeOffset);
-          if (actOffsetBubbleLoad) actOffsetBubbleLoad.textContent = actSafeOffset > 0 ? `+${actSafeOffset}` : String(actSafeOffset);
+          if (actOffsetSliderLoad)
+            actOffsetSliderLoad.value = String(actSafeOffset);
+          if (actOffsetBubbleLoad)
+            actOffsetBubbleLoad.textContent =
+              actSafeOffset > 0 ? `+${actSafeOffset}` : String(actSafeOffset);
           break;
         case 12: // Товщина меж таблиці
           const borderWidthSlider = modal.querySelector(
@@ -805,8 +894,10 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           ) as HTMLElement;
           const borderWidthVal = parseInt(value);
           const safeBorderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
-          if (borderWidthSlider) borderWidthSlider.value = String(safeBorderWidth);
-          if (borderWidthBubble) borderWidthBubble.textContent = `${safeBorderWidth}px`;
+          if (borderWidthSlider)
+            borderWidthSlider.value = String(safeBorderWidth);
+          if (borderWidthBubble)
+            borderWidthBubble.textContent = `${safeBorderWidth}px`;
           break;
         case 13: // Колір меж таблиці
           const borderColorPicker = modal.querySelector(
@@ -1110,9 +1201,15 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
   }
 
   // Обробники для логотипу
-  const logoUploadBtn = modal.querySelector("#general-logo-upload-btn") as HTMLButtonElement;
-  const logoFileInput = modal.querySelector("#general-logo-file") as HTMLInputElement;
-  const logoUrlInput = modal.querySelector("#general-logo-url") as HTMLInputElement;
+  const logoUploadBtn = modal.querySelector(
+    "#general-logo-upload-btn",
+  ) as HTMLButtonElement;
+  const logoFileInput = modal.querySelector(
+    "#general-logo-file",
+  ) as HTMLInputElement;
+  const logoUrlInput = modal.querySelector(
+    "#general-logo-url",
+  ) as HTMLInputElement;
 
   if (logoUploadBtn && logoFileInput && logoUrlInput) {
     logoUploadBtn.addEventListener("click", () => {
@@ -1128,7 +1225,7 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
         logoUploadBtn.classList.add("logo-upload-icon--loading");
         logoUploadBtn.disabled = true;
 
-        const fileExt = file.name.split('.').pop();
+        const fileExt = file.name.split(".").pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `a1/${fileName}`;
 
@@ -1145,7 +1242,10 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
         if (data && data.publicUrl) {
           logoUrlInput.value = data.publicUrl;
           logoUrlInput.classList.add("logo-url-input--success");
-          setTimeout(() => logoUrlInput.classList.remove("logo-url-input--success"), 1500);
+          setTimeout(
+            () => logoUrlInput.classList.remove("logo-url-input--success"),
+            1500,
+          );
         }
       } catch (err: any) {
         // console.error(err);
@@ -1157,7 +1257,6 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       }
     });
   }
-
 
   // Обробники для підрахунку символів SMS
   const smsBeforePreview = modal.querySelector(
@@ -1290,13 +1389,14 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${isFrozen
-      ? `<div class="percentage-buttons-container">
+      ${
+        isFrozen
+          ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-    }
+          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+      }
     </div>
   `;
 
@@ -1669,8 +1769,8 @@ async function loadRoleSettings(
     // 🔹 Очищуємо попередній стан
     initialSettingsState.clear();
 
-    // Охоплюємо повний діапазон id 1..25
-    const settingIds = Array.from({ length: 25 }, (_, i) => i + 1);
+    // Охоплюємо повний діапазон id 1..26
+    const settingIds = Array.from({ length: 26 }, (_, i) => i + 1);
 
     const { data, error } = await supabase
       .from("settings")
@@ -1699,7 +1799,7 @@ async function loadRoleSettings(
       presentIds.add(row.setting_id);
     });
 
-    // Для всіх id 1..24, де немає записів у БД — фіксуємо дефолт (стан чекбокса або false)
+    // Для всіх id 1..26, де немає записів у БД — фіксуємо дефолт (стан чекбокса або false)
     settingIds.forEach((id: number) => {
       if (!presentIds.has(id)) {
         const checkbox = modal.querySelector(
@@ -2093,8 +2193,8 @@ async function saveSettings(modal: HTMLElement): Promise<boolean> {
       // Зберегти налаштування для секції "Загальні"
       changesCount = await saveGeneralSettings(modal);
     } else {
-      // Зберегти налаштування для інших ролей — покриваємо id 1..25, працюємо лише з наявними чекбоксами
-      for (let id = 1; id <= 25; id++) {
+      // Зберегти налаштування для інших ролей — покриваємо id 1..26, працюємо лише з наявними чекбоксами
+      for (let id = 1; id <= 26; id++) {
         const checkbox = modal.querySelector(
           `#role-toggle-${id}`,
         ) as HTMLInputElement;
@@ -2573,22 +2673,6 @@ export async function createSettingsModal(): Promise<void> {
         openAiProKeysModal();
       }
     });
-  }
-
-  // 🔒 Приховуємо ШІ Атлас для не-адміністраторів
-  const USER_DATA_KEY_CHECK = "userAuthData";
-  const storedUserData = localStorage.getItem(USER_DATA_KEY_CHECK);
-  if (storedUserData) {
-    try {
-      const userData = JSON.parse(storedUserData);
-      const userRole = userData?.["Доступ"];
-      if (userRole !== "Адміністратор") {
-        const aiProLabel = modal.querySelector(".toggle-switch._ai_pro");
-        if (aiProLabel) (aiProLabel as HTMLElement).style.display = "none";
-      }
-    } catch (_) {
-      /* ігноруємо */
-    }
   }
 
   // Обробник для кнопки додавання нового рядка відсотків

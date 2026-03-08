@@ -44,6 +44,19 @@ export async function loadChats(userId: string): Promise<AiChat[]> {
   return (data as AiChat[]) || [];
 }
 
+/** Завантажити ВСІ чати (для адміністратора) */
+export async function loadAllChats(): Promise<AiChat[]> {
+  const { data, error } = await supabase
+    .from("ai_chats")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(100);
+  if (error) {
+    return [];
+  }
+  return (data as AiChat[]) || [];
+}
+
 /** Створити новий чат */
 export async function createChat(
   userId: string,

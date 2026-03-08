@@ -55,8 +55,8 @@ export function attachPageFormatControls(
     </div>
   `;
 
-  // Вставляємо тулбар перед контейнером (в overlay, але поза A4-контейнером)
-  overlay.insertBefore(toolbar, container);
+  // Вставляємо тулбар в overlay (позиціонується CSS fixed справа)
+  overlay.appendChild(toolbar);
 
   toolbar.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;

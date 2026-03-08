@@ -1,46 +1,44 @@
 // _pageFormatControls.scss
 
-// --- Панель керування розміром тексту ---
+// --- Панель керування розміром тексту (вертикальна, справа зверху) ---
 .page-format-toolbar {
-  position: sticky;
-  top: 10px;
+  position: fixed;
+  top: 50px;
+  right: 12px;
   z-index: 10001;
   background: rgba(30, 30, 30, 0.95);
   border-radius: 10px;
-  padding: 8px 16px;
+  padding: 10px 8px;
   display: flex;
-  gap: 16px;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 15px;
-  width: fit-content;
-  margin-left: auto;
-  margin-right: auto;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  flex-shrink: 0;
+  width: auto;
 
   .pf-group {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
+    justify-content: space-between;
   }
 
   .pf-label {
     color: #bbb;
     font-size: 11px;
     white-space: nowrap;
-    margin-right: 2px;
+    min-width: 60px;
   }
 
   .pf-btn {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     border: 1px solid #555;
     background: #333;
     color: white;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
     cursor: pointer;
     display: flex;
@@ -49,6 +47,7 @@
     transition: all 0.15s;
     line-height: 1;
     padding: 0;
+    flex-shrink: 0;
 
     &:hover {
       background: #555;
@@ -64,7 +63,7 @@
   .pf-value {
     color: white;
     font-size: 11px;
-    min-width: 34px;
+    min-width: 32px;
     text-align: center;
     font-weight: bold;
     font-family: monospace;

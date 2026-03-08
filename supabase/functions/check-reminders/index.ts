@@ -126,6 +126,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
           await supabase.rpc("trigger_reminder", {
             p_reminder_id: reminder.reminder_id,
           });
+          // Для interval — перерахувати next_trigger_at
+          try {
+            const sched =
+              typeof reminder.schedule === "string"
+                ? JSON.parse(reminder.schedule)
+                : reminder.schedule;
+            if (sched?.type === "interval") {
+              const hours = sched.hours || 0;
+              const minutes = sched.minutes || 0;
+              const totalMs =
+                (hours * 60 + minutes) * 60 * 1000 || 60 * 60 * 1000;
+              await supabase
+                .from("atlas_reminders")
+                .update({
+                  next_trigger_at: new Date(Date.now() + totalMs).toISOString(),
+                })
+                .eq("reminder_id", reminder.reminder_id);
+            }
+          } catch {
+            /* */
+          }
         }
         continue;
       }
@@ -162,6 +183,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
             await supabase.rpc("trigger_reminder", {
               p_reminder_id: reminder.reminder_id,
             });
+            // Для interval — перерахувати next_trigger_at
+            try {
+              const sched2 =
+                typeof reminder.schedule === "string"
+                  ? JSON.parse(reminder.schedule)
+                  : reminder.schedule;
+              if (sched2?.type === "interval") {
+                const hours = sched2.hours || 0;
+                const minutes = sched2.minutes || 0;
+                const totalMs =
+                  (hours * 60 + minutes) * 60 * 1000 || 60 * 60 * 1000;
+                await supabase
+                  .from("atlas_reminders")
+                  .update({
+                    next_trigger_at: new Date(
+                      Date.now() + totalMs,
+                    ).toISOString(),
+                  })
+                  .eq("reminder_id", reminder.reminder_id);
+              }
+            } catch {
+              /* */
+            }
           }
           continue;
         }
@@ -208,6 +252,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
           await supabase.rpc("trigger_reminder", {
             p_reminder_id: reminder.reminder_id,
           });
+          // Для interval — перерахувати next_trigger_at
+          try {
+            const sched =
+              typeof reminder.schedule === "string"
+                ? JSON.parse(reminder.schedule)
+                : reminder.schedule;
+            if (sched?.type === "interval") {
+              const hours = sched.hours || 0;
+              const minutes = sched.minutes || 0;
+              const totalMs =
+                (hours * 60 + minutes) * 60 * 1000 || 60 * 60 * 1000;
+              await supabase
+                .from("atlas_reminders")
+                .update({
+                  next_trigger_at: new Date(Date.now() + totalMs).toISOString(),
+                })
+                .eq("reminder_id", reminder.reminder_id);
+            }
+          } catch {
+            /* */
+          }
           continue;
         }
 
@@ -236,6 +301,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
         await supabase.rpc("trigger_reminder", {
           p_reminder_id: reminder.reminder_id,
         });
+
+        // Для interval-типу — явно перерахувати next_trigger_at з урахуванням minutes
+        // (RPC може не знати про поле minutes і ставити now + 0)
+        try {
+          const sched =
+            typeof reminder.schedule === "string"
+              ? JSON.parse(reminder.schedule)
+              : reminder.schedule;
+          if (sched?.type === "interval") {
+            const hours = sched.hours || 0;
+            const minutes = sched.minutes || 0;
+            const totalMs =
+              (hours * 60 + minutes) * 60 * 1000 || 60 * 60 * 1000;
+            const nextTrigger = new Date(Date.now() + totalMs).toISOString();
+            await supabase
+              .from("atlas_reminders")
+              .update({ next_trigger_at: nextTrigger })
+              .eq("reminder_id", reminder.reminder_id);
+            console.log(
+              `⏱️ Interval next_trigger_at = ${nextTrigger} (${hours}h ${minutes}m) reminder_id=${reminder.reminder_id}`,
+            );
+          }
+        } catch {
+          /* */
+        }
       }
 
       // Зберегти хеш результату для realtime-нагадувань

@@ -11,7 +11,12 @@ const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-async function loadAIKeys(): Promise<string[]> {
+interface AIKeyInfo {
+  key: string;
+  settingId: number;
+}
+
+async function loadAIKeys(): Promise<AIKeyInfo[]> {
   try {
     const { data } = await supabase
       .from("settings")
@@ -21,11 +26,49 @@ async function loadAIKeys(): Promise<string[]> {
       .order("setting_id");
     if (!data) return [];
     return data
-      .map((r: any) => r["Загальні"])
-      .filter((v: any) => v && typeof v === "string" && v.trim())
-      .map((v: string) => v.trim());
+      .filter(
+        (r: any) =>
+          r["Загальні"] &&
+          typeof r["Загальні"] === "string" &&
+          r["Загальні"].trim(),
+      )
+      .map((r: any) => ({
+        key: r["Загальні"].trim(),
+        settingId: r.setting_id,
+      }));
   } catch {
     return [];
+  }
+}
+
+/**
+ * Додає токени до лічильника ключа в БД (інкрементно — безпечно для конкурентного доступу)
+ */
+async function addTokensToDB(
+  settingId: number,
+  tokensToAdd: number,
+): Promise<void> {
+  if (settingId <= 0 || tokensToAdd <= 0) return;
+  try {
+    await supabase
+      .rpc("increment_token", { sid: settingId, amount: tokensToAdd })
+      .maybeSingle();
+  } catch {
+    // Фолбек: читаємо поточне значення і оновлюємо
+    try {
+      const { data } = await supabase
+        .from("settings")
+        .select("token")
+        .eq("setting_id", settingId)
+        .single();
+      const current = (data as any)?.token ?? 0;
+      await supabase
+        .from("settings")
+        .update({ token: current + tokensToAdd })
+        .eq("setting_id", settingId);
+    } catch {
+      /* silent */
+    }
   }
 }
 
@@ -220,7 +263,7 @@ async function generateSQLFromDescription(
   const keys = await loadAIKeys();
   if (keys.length === 0) throw new Error("Немає AI ключів");
 
-  for (const key of keys) {
+  for (const { key, settingId } of keys) {
     try {
       if (key.startsWith("gsk_")) {
         // Groq
@@ -242,6 +285,8 @@ async function generateSQLFromDescription(
         });
         if (!resp.ok) continue;
         const data = await resp.json();
+        const tokens = data.usage?.total_tokens ?? 0;
+        if (tokens > 0) addTokensToDB(settingId, tokens);
         return (data.choices?.[0]?.message?.content || "").trim();
       } else {
         // Gemini
@@ -256,6 +301,8 @@ async function generateSQLFromDescription(
         });
         if (!resp.ok) continue;
         const data = await resp.json();
+        const tokens = data.usageMetadata?.totalTokenCount ?? 0;
+        if (tokens > 0) addTokensToDB(settingId, tokens);
         return (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
       }
     } catch {
@@ -272,7 +319,7 @@ async function generateRealtimeRuleFromDescription(
   const keys = await loadAIKeys();
   if (keys.length === 0) throw new Error("Немає AI ключів");
 
-  for (const key of keys) {
+  for (const { key, settingId } of keys) {
     try {
       if (key.startsWith("gsk_")) {
         const resp = await fetch(GROQ_URL, {
@@ -293,6 +340,8 @@ async function generateRealtimeRuleFromDescription(
         });
         if (!resp.ok) continue;
         const data = await resp.json();
+        const tokens = data.usage?.total_tokens ?? 0;
+        if (tokens > 0) addTokensToDB(settingId, tokens);
         return (data.choices?.[0]?.message?.content || "").trim();
       } else {
         const resp = await fetch(`${GEMINI_URL}?key=${key}`, {
@@ -306,6 +355,8 @@ async function generateRealtimeRuleFromDescription(
         });
         if (!resp.ok) continue;
         const data = await resp.json();
+        const tokens = data.usageMetadata?.totalTokenCount ?? 0;
+        if (tokens > 0) addTokensToDB(settingId, tokens);
         return (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
       }
     } catch {

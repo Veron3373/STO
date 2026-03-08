@@ -1,6 +1,7 @@
 // src/ts/roboha/zakaz_naraudy/inhi/pageFormatControls.ts
 
-const A4_HEIGHT_MM = 297;
+// Висота контенту на сторінці PDF: 297mm - 10mm(marginTop) - 15mm(marginBottom) = 272mm
+const PDF_CONTENT_HEIGHT_MM = 272;
 
 interface FormatState {
   allTextSize: number;
@@ -55,8 +56,17 @@ export function attachPageFormatControls(
     </div>
   `;
 
-  // Вставляємо тулбар в overlay (позиціонується CSS fixed справа)
-  overlay.appendChild(toolbar);
+  // Вставляємо тулбар в body (позиціонується CSS fixed, не скролиться)
+  document.body.appendChild(toolbar);
+
+  // Прибираємо тулбар коли модалка закривається
+  const cleanupObserver = new MutationObserver(() => {
+    if (!document.body.contains(overlay)) {
+      toolbar.remove();
+      cleanupObserver.disconnect();
+    }
+  });
+  cleanupObserver.observe(document.body, { childList: true });
 
   toolbar.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
@@ -146,7 +156,8 @@ function updatePageBreakMarkers(container: HTMLElement): void {
   const containerHeight = container.scrollHeight;
   // Визначаємо скільки пікселів в 1 мм на основі ширини контейнера (210mm)
   const pxPerMm = container.offsetWidth / 210;
-  const pageHeightPx = A4_HEIGHT_MM * pxPerMm;
+  // Використовуємо реальну висоту контенту PDF (272mm), а не повну А4 (297mm)
+  const pageHeightPx = PDF_CONTENT_HEIGHT_MM * pxPerMm;
 
   let pageNum = 1;
   let breakPos = pageHeightPx;

@@ -66,15 +66,23 @@ export function attachPageFormatControls(
     <div class="pf-divider"></div>
     <div class="pf-joystick">
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="move-up">▲</button>
+        <span class="pf-joy-val" data-value="joy-top">${state.offsetTop}mm</span>
       </div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="move-left">◀</button>
-        <span class="pf-joy-label">Змістити</span>
-        <button class="pf-btn pf-joy-btn" data-action="move-right">▶</button>
+        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально">▲</button>
       </div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="move-down">▼</button>
+        <span class="pf-joy-val pf-joy-val-side" data-value="joy-left">${state.offsetLeft}mm</span>
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків">◀</button>
+        <span class="pf-joy-label">Поля</span>
+        <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально">▶</button>
+        <span class="pf-joy-val pf-joy-val-side" data-value="joy-right">${state.offsetRight}mm</span>
+      </div>
+      <div class="pf-joy-row">
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально">▼</button>
+      </div>
+      <div class="pf-joy-row">
+        <span class="pf-joy-val" data-value="joy-bottom">${state.offsetBottom}mm</span>
       </div>
     </div>
   `;
@@ -115,17 +123,21 @@ export function attachPageFormatControls(
       case "padding-minus":
         state.cellPadding = Math.max(0, state.cellPadding - 1);
         break;
-      case "move-up":
+      case "stretch-v":
         state.offsetTop = Math.max(0, state.offsetTop - 1);
+        state.offsetBottom = Math.max(0, state.offsetBottom - 1);
         break;
-      case "move-down":
+      case "squeeze-v":
         state.offsetTop += 1;
+        state.offsetBottom += 1;
         break;
-      case "move-left":
-        state.offsetLeft = Math.max(0, state.offsetLeft - 1);
-        break;
-      case "move-right":
+      case "squeeze-h":
         state.offsetLeft += 1;
+        state.offsetRight += 1;
+        break;
+      case "stretch-h":
+        state.offsetLeft = Math.max(0, state.offsetLeft - 1);
+        state.offsetRight = Math.max(0, state.offsetRight - 1);
         break;
     }
 
@@ -209,6 +221,15 @@ function updateLabels(toolbar: HTMLElement, state: FormatState): void {
   if (allLabel) allLabel.textContent = `${state.allTextSize}pt`;
   if (tableLabel) tableLabel.textContent = `${state.tableTextSize}pt`;
   if (paddingLabel) paddingLabel.textContent = `${state.cellPadding}px`;
+
+  const joyTop = toolbar.querySelector('[data-value="joy-top"]');
+  const joyBottom = toolbar.querySelector('[data-value="joy-bottom"]');
+  const joyLeft = toolbar.querySelector('[data-value="joy-left"]');
+  const joyRight = toolbar.querySelector('[data-value="joy-right"]');
+  if (joyTop) joyTop.textContent = `${state.offsetTop}mm`;
+  if (joyBottom) joyBottom.textContent = `${state.offsetBottom}mm`;
+  if (joyLeft) joyLeft.textContent = `${state.offsetLeft}mm`;
+  if (joyRight) joyRight.textContent = `${state.offsetRight}mm`;
 }
 
 function updatePageBreakMarkers(container: HTMLElement): void {

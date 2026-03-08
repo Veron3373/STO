@@ -911,14 +911,8 @@ function formatPayloadMessage(
     new: Record<string, any>;
     old: Record<string, any>;
   },
-  _rule: { show_fields?: string[] } | null,
+  _rule: { show_fields?: string[]; check?: string } | null,
 ): string {
-  const eventLabels: Record<string, string> = {
-    INSERT: "🟢 Додано",
-    UPDATE: "✏️ Оновлено",
-    DELETE: "🔴 Видалено",
-  };
-  const action = eventLabels[payload.eventType] || payload.eventType;
   const row = payload.eventType === "DELETE" ? payload.old : payload.new;
   const data = row?.data || {};
   const jsonData =
@@ -947,7 +941,38 @@ function formatPayloadMessage(
     }
   };
 
-  // Збираємо ключові поля автоматично
+  // Визначаємо розумну назву дії
+  const checkStr = (_rule?.check || "").trim().toLowerCase();
+  let action = "";
+
+  // Розумне визначення статусу для date_off
+  if (payload.eventType === "UPDATE" && checkStr.includes("date_off")) {
+    const oldDateOff = payload.old?.date_off;
+    const newDateOff = payload.new?.date_off;
+    if (
+      (oldDateOff == null || oldDateOff === "") &&
+      newDateOff != null &&
+      newDateOff !== ""
+    ) {
+      action = "🔴 Акт закрито";
+    } else if (
+      oldDateOff != null &&
+      oldDateOff !== "" &&
+      (newDateOff == null || newDateOff === "")
+    ) {
+      action = "🟢 Акт відкрито (повернено)";
+    } else {
+      action = "✏️ Дату закриття змінено";
+    }
+  } else {
+    const eventLabels: Record<string, string> = {
+      INSERT: "🟢 Додано",
+      UPDATE: "✏️ Оновлено",
+      DELETE: "🔴 Видалено",
+    };
+    action = (eventLabels[payload.eventType] || payload.eventType) + " • " + payload.table;
+  }
+
   const lines: string[] = [];
 
   // Id
@@ -959,41 +984,58 @@ function formatPayloadMessage(
     row?.id;
   if (id) lines.push(`🔢 № ${id}`);
 
-  // Розміщення по пріоритетним полям
-  const priorityFields = [
-    ["ПІБ", "👤 Клієнт"],
-    ["Клієнт", "👤 Клієнт"],
-    ["Name", "👤 Ім’я"],
-    ["Назва", "📌 Назва"],
-    ["Телефон", "📞 Тел"],
-    ["Авто", "🚗 Авто"],
-    ["Марка", "🚗"],
-    ["Модель", ""],
-    ["Держ. номер", "📍"],
-    ["Приймальник", "👷‍♂️ Приймал"],
-    ["Слюсар", "🔧 Слюсар"],
-    ["Загальна сума", "💰 Сума"],
-    ["За роботу", "🔧 За роботу"],
-    ["За деталі", "📦 За деталі"],
-    ["Посада", "💼 Посада"],
-    ["Кількість", "📊 Кількість"],
-    ["Ціна", "💰 Ціна"],
-  ];
-  for (const [field, label] of priorityFields) {
+  // Карта полів для виводу
+  const fieldMap: Record<string, string> = {
+    "ПІБ": "👤 Клієнт",
+    "Клієнт": "👤 Клієнт",
+    "Name": "👤 Ім'я",
+    "Назва": "📌 Назва",
+    "Телефон": "📞 Тел",
+    "Авто": "🚗 Авто",
+    "Марка": "🚗",
+    "Модель": "",
+    "Держ. номер": "📍",
+    "Приймальник": "👷‍♂️",
+    "Слюсар": "🔧 Слюсар",
+    "Загальна сума": "💰 Сума",
+    "За роботу": "🔧 За роботу",
+    "За деталі": "📦 За деталі",
+    "Посада": "💼 Посада",
+    "Кількість": "📊 Кількість",
+    "Ціна": "💰 Ціна",
+  };
+
+  // Якщо rule має show_fields — показуємо ТІЛЬКИ вказані поля
+  // Якщо ні — показуємо всі з fieldMap
+  const showFields = _rule?.show_fields;
+  const fieldsToShow = showFields || Object.keys(fieldMap);
+
+  for (const field of fieldsToShow) {
+    const label = fieldMap[field] || field;
     const val =
       jsonData[field] ?? row?.[field.toLowerCase().replace(/ /g, "_")];
     if (val != null && String(val).trim() !== "") {
+      if (Array.isArray(val)) continue; // масиви — тільки в diff
       lines.push(`${label}: ${val}`);
     }
   }
 
-  // Дати
-  if (row?.date_off) lines.push(`📅 Закритий: ${formatTs(row.date_off)}`);
-  if (row?.date_on) lines.push(`📅 Відкритий: ${formatTs(row.date_on)}`);
-  if (row?.created_at && !row?.date_on && !row?.date_off)
-    lines.push(`📅 ${formatTs(row.created_at)}`);
+  // Хто виконав дію (Приймальник) — завжди для acts, якщо не в show_fields
+  const performer = jsonData["Приймальник"];
+  if (performer && !fieldsToShow.includes("Приймальник") && payload.table === "acts") {
+    lines.push(`👷‍♂️ Виконав: ${performer}`);
+  }
 
-  // Додатково виводимо змінw (UPDATE)
+  // Дати — тільки якщо НЕ обмежено show_fields
+  if (!showFields) {
+    if (row?.date_off && !checkStr.includes("date_off"))
+      lines.push(`📅 Закритий: ${formatTs(row.date_off)}`);
+    if (row?.date_on) lines.push(`📅 Відкритий: ${formatTs(row.date_on)}`);
+    if (row?.created_at && !row?.date_on && !row?.date_off)
+      lines.push(`📅 ${formatTs(row.created_at)}`);
+  }
+
+  // Зміни (UPDATE)
   if (payload.eventType === "UPDATE" && payload.old) {
     const changedParts: string[] = [];
     for (const key of Object.keys(payload.new)) {
@@ -1001,9 +1043,11 @@ function formatPayloadMessage(
         newVal = payload.new[key];
       if (
         JSON.stringify(oldVal) !== JSON.stringify(newVal) &&
-        key !== "updated_at"
+        key !== "updated_at" &&
+        key !== "data"
       ) {
-        if (key === "data") continue; // data вже розібрано 'вище
+        // date_off вже показано як статус
+        if (key === "date_off" && checkStr.includes("date_off")) continue;
         const ts = (v: any) =>
           typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)
             ? formatTs(v)
@@ -1011,7 +1055,7 @@ function formatPayloadMessage(
         changedParts.push(`${key}: ${ts(oldVal)} → ${ts(newVal)}`);
       }
     }
-    // Вивести зміни в JSONB data
+    // Зміни в JSONB data
     if (payload.new.data && payload.old.data) {
       const dOld =
         typeof payload.old.data === "string"
@@ -1029,7 +1073,6 @@ function formatPayloadMessage(
         if (JSON.stringify(dOld?.[key]) !== JSON.stringify(dNew?.[key])) {
           const ov = dOld?.[key];
           const nv = dNew?.[key];
-          // Масиви об'єктів (Роботи / Деталі) — детальний diff
           if (Array.isArray(ov) && Array.isArray(nv)) {
             changedParts.push(diffArrays(key, ov, nv));
           } else if (Array.isArray(nv) && ov == null) {
@@ -1046,7 +1089,7 @@ function formatPayloadMessage(
       lines.push(`\n📝 Зміни:\n${changedParts.join("\n")}`);
   }
 
-  return `${action} • ${payload.table}\n${lines.join("\n") || "—"}`;
+  return `${action}\n${lines.join("\n") || "—"}`;
 }
 
 // Дедуплікація: пам’ять останніх унікальних ідентифікаторів payload

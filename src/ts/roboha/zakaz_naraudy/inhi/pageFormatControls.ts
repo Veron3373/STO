@@ -292,49 +292,50 @@ function updatePageBreakMarkers(container: HTMLElement): void {
   // Використовуємо реальну висоту контенту PDF (272mm), а не повну А4 (297mm)
   const pageHeightPx = PDF_CONTENT_HEIGHT_MM * pxPerMm;
 
-  // Відступ між сторінками (візуальний)
-  const PAGE_GAP = 20; // px
-
   let pageNum = 1;
-  let currentTop = 0;
+  let breakPos = pageHeightPx;
 
-  // Створюємо фонові області для кожної сторінки
-  while (currentTop < containerHeight) {
-    const pageHeight = Math.min(pageHeightPx, containerHeight - currentTop);
+  // Фонова область першої сторінки
+  const firstPageBg = document.createElement("div");
+  firstPageBg.className = "page-background";
+  firstPageBg.setAttribute("data-no-pdf", "true");
+  firstPageBg.style.top = "0px";
+  firstPageBg.style.height = `${Math.min(pageHeightPx, containerHeight)}px`;
+  firstPageBg.innerHTML = `<span class="page-number">Аркуш 1</span>`;
+  container.appendChild(firstPageBg);
 
-    // Фонова область сторінки
+  // Створюємо маркери розриву та фонові області для наступних сторінок
+  while (breakPos < containerHeight - 10) {
+    // Маркер розриву (центрується на точці розриву)
+    const marker = document.createElement("div");
+    marker.className = "page-break-marker";
+    marker.setAttribute("data-no-pdf", "true");
+    // Маркер центрується: 15px вгору від точки розриву
+    marker.style.top = `${breakPos - 15}px`;
+    marker.innerHTML = `
+      <div class="page-break-bottom">
+        <span>▼ Кінець аркуша ${pageNum} ▼</span>
+      </div>
+      <div class="page-break-gap"></div>
+      <div class="page-break-top">
+        <span>▲ Початок аркуша ${pageNum + 1} ▲</span>
+      </div>
+    `;
+    container.appendChild(marker);
+
+    pageNum++;
+
+    // Фонова область наступної сторінки
     const pageBg = document.createElement("div");
     pageBg.className = "page-background";
     pageBg.setAttribute("data-no-pdf", "true");
-    pageBg.style.top = `${currentTop}px`;
-    pageBg.style.height = `${pageHeight}px`;
+    pageBg.style.top = `${breakPos}px`;
+    const remainingHeight = containerHeight - breakPos;
+    pageBg.style.height = `${Math.min(pageHeightPx, remainingHeight)}px`;
     pageBg.innerHTML = `<span class="page-number">Аркуш ${pageNum}</span>`;
     container.appendChild(pageBg);
 
-    const nextTop = currentTop + pageHeightPx;
-
-    // Маркер розриву сторінки (тільки якщо є наступна сторінка)
-    if (nextTop < containerHeight - 10) {
-      const marker = document.createElement("div");
-      marker.className = "page-break-marker";
-      marker.setAttribute("data-no-pdf", "true");
-      marker.style.top = `${nextTop - PAGE_GAP / 2}px`;
-      marker.innerHTML = `
-        <div class="page-break-bottom">
-          <span>▼ Кінець аркуша ${pageNum} ▼</span>
-        </div>
-        <div class="page-break-gap"></div>
-        <div class="page-break-top">
-          <span>▲ Початок аркуша ${pageNum + 1} ▲</span>
-        </div>
-      `;
-      container.appendChild(marker);
-
-      pageNum++;
-      currentTop = nextTop + PAGE_GAP;
-    } else {
-      break;
-    }
+    breakPos += pageHeightPx;
   }
 }
 

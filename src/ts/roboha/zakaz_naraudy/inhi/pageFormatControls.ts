@@ -144,13 +144,13 @@ export function attachPageFormatControls(
         state.cellPadding = Math.max(0, state.cellPadding - 1);
         break;
       case "stretch-v":
-        state.lineSpacing = Math.round((state.lineSpacing + 0.1) * 10) / 10;
-        break;
-      case "squeeze-v":
         state.lineSpacing = Math.max(
           0.8,
           Math.round((state.lineSpacing - 0.1) * 10) / 10,
         );
+        break;
+      case "squeeze-v":
+        state.lineSpacing = Math.round((state.lineSpacing + 0.1) * 10) / 10;
         break;
       case "squeeze-h":
         state.offsetLeft += 1;

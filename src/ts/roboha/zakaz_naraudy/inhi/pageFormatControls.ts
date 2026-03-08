@@ -69,17 +69,21 @@ export function attachPageFormatControls(
         <span class="pf-joy-val" data-value="joy-top">${state.offsetTop}mm</span>
       </div>
       <div class="pf-joy-row">
+        <button class="pf-btn pf-joy-btn" data-action="shift-up" title="Пересунути вгору">△</button>
         <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально">▲</button>
       </div>
       <div class="pf-joy-row">
         <span class="pf-joy-val pf-joy-val-side" data-value="joy-left">${state.offsetLeft}mm</span>
+        <button class="pf-btn pf-joy-btn" data-action="shift-left" title="Пересунути лівіше">◁</button>
         <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків">◀</button>
         <span class="pf-joy-label">Поля</span>
         <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально">▶</button>
+        <button class="pf-btn pf-joy-btn" data-action="shift-right" title="Пересунути правіше">▷</button>
         <span class="pf-joy-val pf-joy-val-side" data-value="joy-right">${state.offsetRight}mm</span>
       </div>
       <div class="pf-joy-row">
         <button class="pf-btn pf-joy-btn" data-action="squeeze-v" title="Стиснути вертикально">▼</button>
+        <button class="pf-btn pf-joy-btn" data-action="shift-down" title="Пересунути вниз">▽</button>
       </div>
       <div class="pf-joy-row">
         <span class="pf-joy-val" data-value="joy-bottom">${state.offsetBottom}mm</span>
@@ -138,6 +142,22 @@ export function attachPageFormatControls(
       case "stretch-h":
         state.offsetLeft = Math.max(0, state.offsetLeft - 1);
         state.offsetRight = Math.max(0, state.offsetRight - 1);
+        break;
+      case "shift-left":
+        state.offsetLeft = Math.max(0, state.offsetLeft - 1);
+        state.offsetRight += 1;
+        break;
+      case "shift-right":
+        state.offsetLeft += 1;
+        state.offsetRight = Math.max(0, state.offsetRight - 1);
+        break;
+      case "shift-up":
+        state.offsetTop = Math.max(0, state.offsetTop - 1);
+        state.offsetBottom += 1;
+        break;
+      case "shift-down":
+        state.offsetTop += 1;
+        state.offsetBottom = Math.max(0, state.offsetBottom - 1);
         break;
     }
 

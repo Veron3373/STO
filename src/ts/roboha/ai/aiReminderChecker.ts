@@ -838,6 +838,71 @@ function getNestedValues(
   return [resolve(oldRow), resolve(newRow)];
 }
 
+// Людський формат для значення JSONB (масиви, об'єкти, примітиви)
+function fmtVal(v: any): string {
+  if (v == null) return "—";
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "(порожньо)";
+    return v
+      .map((item) => {
+        if (typeof item === "object" && item !== null) {
+          return (
+            item["Найменування"] ||
+            item.Робота ||
+            item.Деталь ||
+            item.Назва ||
+            item.Name ||
+            JSON.stringify(item)
+          );
+        }
+        return String(item);
+      })
+      .join(", ");
+  }
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+// Детальний diff масивів об'єктів (Роботи / Деталі)
+function diffArrays(key: string, oldArr: any[], newArr: any[]): string {
+  const nameOf = (item: any): string => {
+    if (typeof item !== "object" || item === null) return String(item);
+    return (
+      item["Найменування"] ||
+      item.Робота ||
+      item.Деталь ||
+      item.Назва ||
+      item.Name ||
+      JSON.stringify(item)
+    );
+  };
+  const detailOf = (item: any): string => {
+    if (typeof item !== "object" || item === null) return "";
+    const parts: string[] = [];
+    const qty = item["Кількість"] ?? item["К-ть"];
+    const price = item.Ціна;
+    const sum = item.Сума;
+    const salary = item.Зарплата ?? item["Зар-та"];
+    if (qty != null) parts.push(`${qty} шт`);
+    if (price != null) parts.push(`${price} грн`);
+    if (sum != null && sum !== price) parts.push(`сума ${sum}`);
+    if (salary != null) parts.push(`зп ${salary}`);
+    return parts.length ? ` (${parts.join(", ")})` : "";
+  };
+
+  const oldNames = oldArr.map(nameOf);
+  const newNames = newArr.map(nameOf);
+  const added = newArr.filter((_, i) => !oldNames.includes(newNames[i]));
+  const removed = oldArr.filter((_, i) => !newNames.includes(oldNames[i]));
+  const lines: string[] = [];
+  for (const a of added) lines.push(`  ➕ ${nameOf(a)}${detailOf(a)}`);
+  for (const r of removed) lines.push(`  ➖ ${nameOf(r)}${detailOf(r)}`);
+  if (lines.length === 0) {
+    return `${key}: ${oldArr.length} → ${newArr.length} записів`;
+  }
+  return `${key}:\n${lines.join("\n")}`;
+}
+
 // Форматування повідомлення з payload
 function formatPayloadMessage(
   payload: {
@@ -897,15 +962,19 @@ function formatPayloadMessage(
   // Розміщення по пріоритетним полям
   const priorityFields = [
     ["ПІБ", "👤 Клієнт"],
+    ["Клієнт", "👤 Клієнт"],
     ["Name", "👤 Ім’я"],
     ["Назва", "📌 Назва"],
     ["Телефон", "📞 Тел"],
+    ["Авто", "🚗 Авто"],
     ["Марка", "🚗"],
     ["Модель", ""],
     ["Держ. номер", "📍"],
     ["Приймальник", "👷‍♂️ Приймал"],
     ["Слюсар", "🔧 Слюсар"],
     ["Загальна сума", "💰 Сума"],
+    ["За роботу", "🔧 За роботу"],
+    ["За деталі", "📦 За деталі"],
     ["Посада", "💼 Посада"],
     ["Кількість", "📊 Кількість"],
     ["Ціна", "💰 Ціна"],
@@ -958,9 +1027,18 @@ function formatPayloadMessage(
       ]);
       for (const key of allKeys) {
         if (JSON.stringify(dOld?.[key]) !== JSON.stringify(dNew?.[key])) {
-          changedParts.push(
-            `${key}: «${dOld?.[key] ?? "—"}» → «${dNew?.[key] ?? "—"}»`,
-          );
+          const ov = dOld?.[key];
+          const nv = dNew?.[key];
+          // Масиви об'єктів (Роботи / Деталі) — детальний diff
+          if (Array.isArray(ov) && Array.isArray(nv)) {
+            changedParts.push(diffArrays(key, ov, nv));
+          } else if (Array.isArray(nv) && ov == null) {
+            changedParts.push(diffArrays(key, [], nv));
+          } else if (Array.isArray(ov) && nv == null) {
+            changedParts.push(diffArrays(key, ov, []));
+          } else {
+            changedParts.push(`${key}: «${fmtVal(ov)}» → «${fmtVal(nv)}»`);
+          }
         }
       }
     }
@@ -997,17 +1075,28 @@ function initRealtimeMonitoring(): void {
 
       // Завантажимо імена створювачів для всіх нагадувань
       const creatorIds = [
-        ...new Set(reminders.map((r: any) => r.created_by).filter(Boolean)),
+        ...new Set(
+          reminders
+            .map((r: any) => Number(r.created_by))
+            .filter((id: number) => id && !isNaN(id)),
+        ),
       ];
       const creatorNames: Record<number, string> = {};
       if (creatorIds.length > 0) {
-        const { data: creators } = await supabase
+        const { data: creators, error: creatorsErr } = await supabase
           .from("slyusars")
-          .select("slyusar_id, Name")
+          .select("slyusar_id, data")
           .in("slyusar_id", creatorIds);
+        if (creatorsErr) {
+          console.warn(
+            "[ReminderChecker] Помилка завантаження імен:",
+            creatorsErr.message,
+          );
+        }
         if (creators) {
           for (const c of creators)
-            creatorNames[c.slyusar_id] = c.Name || "Невідомий";
+            creatorNames[c.slyusar_id] =
+              c.data?.Name || c.data?.["Ім'я"] || "Невідомий";
         }
       }
 

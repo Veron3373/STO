@@ -366,6 +366,7 @@ interface ScheduleRule {
   days?: string[];
   day?: number;
   hours?: number;
+  minutes?: number;
 }
 
 // ── Стан ──
@@ -715,8 +716,10 @@ function calculateNextTrigger(schedule: ScheduleRule): string | null {
   }
 
   if (schedule.type === "interval") {
-    const hours = schedule.hours || 1;
-    return new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString();
+    const hours = schedule.hours || 0;
+    const minutes = schedule.minutes || 0;
+    const totalMs = (hours * 60 + minutes) * 60 * 1000 || 60 * 60 * 1000;
+    return new Date(now.getTime() + totalMs).toISOString();
   }
 
   return null;
@@ -769,7 +772,11 @@ function formatCountdown(dateStr: string | null): string {
   const target = new Date(dateStr);
   const diffMs = target.getTime() - now.getTime();
   if (diffMs <= 0)
-    return '<span style="color:#b71c1c;font-weight:600">⏱ вже час!</span>';
+    return (
+      '<span class="ai-planner-countdown" data-target="' +
+      dateStr +
+      '" style="color:#b71c1c;font-weight:600">⏱ вже час!</span>'
+    );
   const totalMin = Math.floor(diffMs / 60000);
   const hours = Math.floor(totalMin / 60);
   const minutes = totalMin % 60;
@@ -779,8 +786,37 @@ function formatCountdown(dateStr: string | null): string {
   if (days > 0) text += `${days}д `;
   if (h > 0) text += `${h}год `;
   text += `${minutes}хв`;
-  return `<span style="color:#b71c1c;font-weight:600">⏱ через ${text.trim()}</span>`;
+  return `<span class="ai-planner-countdown" data-target="${dateStr}" style="color:#b71c1c;font-weight:600">⏱ через ${text.trim()}</span>`;
 }
+
+// Живий таймер оновлення відліку
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+function startCountdownTimer(): void {
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => {
+    document.querySelectorAll(".ai-planner-countdown").forEach((el) => {
+      const target = (el as HTMLElement).dataset.target;
+      if (!target) return;
+      const diffMs = new Date(target).getTime() - Date.now();
+      if (diffMs <= 0) {
+        el.textContent = "⏱ вже час!";
+        return;
+      }
+      const totalMin = Math.floor(diffMs / 60000);
+      const hours = Math.floor(totalMin / 60);
+      const minutes = totalMin % 60;
+      const days = Math.floor(hours / 24);
+      const h = hours % 24;
+      let text = "";
+      if (days > 0) text += `${days}д `;
+      if (h > 0) text += `${h}год `;
+      text += `${minutes}хв`;
+      el.textContent = `⏱ через ${text.trim()}`;
+    });
+  }, 30000); // оновлювати кожні 30 секунд
+}
+
 
 function formatRecipients(recipients: any): string {
   if (recipients === "self" || recipients === '"self"') return "👤 Тільки я";
@@ -818,7 +854,13 @@ function formatSchedule(schedule: any): string {
   }
   if (schedule.type === "monthly")
     return `${schedule.day}-го числа о ${schedule.time || "09:00"}`;
-  if (schedule.type === "interval") return `Кожні ${schedule.hours} год.`;
+  if (schedule.type === "interval") {
+    const h = schedule.hours || 0;
+    const m = schedule.minutes || 0;
+    if (h > 0 && m > 0) return `Кожні ${h} год. ${m} хв.`;
+    if (h > 0) return `Кожні ${h} год.`;
+    return `Кожні ${m} хв.`;
+  }
   return "";
 }
 
@@ -1435,8 +1477,13 @@ function showReminderModal(
             </div>
             <div class="ai-planner-field" id="planner-interval-field" style="display:${r.schedule?.type === "interval" ? "flex" : "none"}">
               <label class="ai-planner-label">Годин</label>
-              <input class="ai-planner-input" id="planner-schedule-hours" type="number" min="1" max="168"
-                value="${r.schedule?.hours || 4}" />
+              <input class="ai-planner-input" id="planner-schedule-hours" type="number" min="0" max="100"
+                value="${r.schedule?.hours || 0}" />
+            </div>
+            <div class="ai-planner-field" id="planner-interval-minutes-field" style="display:${r.schedule?.type === "interval" ? "flex" : "none"}">
+              <label class="ai-planner-label">Хвилин</label>
+              <input class="ai-planner-input" id="planner-schedule-minutes" type="number" min="0" max="59"
+                value="${r.schedule?.minutes || 0}" />
             </div>
           </div>
           <div class="ai-planner-field" id="planner-days-field" style="display:${r.schedule?.type === "weekly" ? "block" : "none"}">
@@ -1547,13 +1594,14 @@ function showReminderModal(
   container.closest(".ai-chat-window")!.appendChild(overlay);
 
   // ── Обробники модалки ──
-  initModalHandlers(overlay, container, isEdit);
+  initModalHandlers(overlay, container, isEdit, existing);
 }
 
 function initModalHandlers(
   overlay: HTMLElement,
   plannerContainer: HTMLElement,
   isEdit: boolean,
+  existing?: ReminderFromRPC,
 ): void {
   // Закрити
   const close = () => overlay.remove();
@@ -1749,6 +1797,9 @@ function initModalHandlers(
       overlay.querySelector("#planner-interval-field") as HTMLElement
     ).style.display = v === "interval" ? "flex" : "none";
     (
+      overlay.querySelector("#planner-interval-minutes-field") as HTMLElement
+    ).style.display = v === "interval" ? "flex" : "none";
+    (
       overlay.querySelector("#planner-time-field") as HTMLElement
     ).style.display = v === "interval" ? "none" : "flex";
   });
@@ -1934,12 +1985,41 @@ function initModalHandlers(
                   "#planner-schedule-hours",
                 ) as HTMLInputElement
               ).value,
-            ) || 4;
+            ) || 0;
+          schedule.minutes =
+            Number(
+              (
+                overlay.querySelector(
+                  "#planner-schedule-minutes",
+                ) as HTMLInputElement
+              ).value,
+            ) || 0;
+          if (schedule.hours === 0 && schedule.minutes === 0) {
+            showToast("Вкажіть хоча б 1 хвилину або 1 годину!", "error");
+            return;
+          }
         }
 
         reminder.schedule = schedule;
-        // Перерахувати next_trigger_at для recurring
-        reminder.next_trigger_at = calculateNextTrigger(schedule) as any;
+        // Перерахувати next_trigger_at тільки якщо розклад змінився або це нове нагадування
+        if (isEdit && existing?.next_trigger_at) {
+          const oldSchedule = existing.schedule;
+          const scheduleChanged =
+            !oldSchedule ||
+            oldSchedule.type !== schedule.type ||
+            oldSchedule.time !== schedule.time ||
+            oldSchedule.hours !== schedule.hours ||
+            oldSchedule.minutes !== schedule.minutes ||
+            oldSchedule.day !== schedule.day ||
+            JSON.stringify(oldSchedule.days || []) !==
+              JSON.stringify(schedule.days || []);
+          if (scheduleChanged) {
+            reminder.next_trigger_at = calculateNextTrigger(schedule) as any;
+          }
+          // Якщо розклад не змінився — не чіпаємо next_trigger_at
+        } else {
+          reminder.next_trigger_at = calculateNextTrigger(schedule) as any;
+        }
       } else if (selectedType === "conditional") {
         const condDesc = (
           overlay.querySelector(
@@ -2109,6 +2189,7 @@ export async function initPlannerTab(container: HTMLElement): Promise<void> {
   await loadTelegramUsers();
   reminders = await loadReminders();
   await renderPlannerPanel(container);
+  startCountdownTimer();
 
   if (!plannerRealtimeChannel) {
     plannerRealtimeChannel = supabase

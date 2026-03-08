@@ -763,6 +763,25 @@ function formatLocalDateTime(dateStr: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function formatCountdown(dateStr: string | null): string {
+  if (!dateStr) return "";
+  const now = new Date();
+  const target = new Date(dateStr);
+  const diffMs = target.getTime() - now.getTime();
+  if (diffMs <= 0)
+    return '<span style="color:#b71c1c;font-weight:600">⏱ вже час!</span>';
+  const totalMin = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMin / 60);
+  const minutes = totalMin % 60;
+  const days = Math.floor(hours / 24);
+  const h = hours % 24;
+  let text = "";
+  if (days > 0) text += `${days}д `;
+  if (h > 0) text += `${h}год `;
+  text += `${minutes}хв`;
+  return `<span style="color:#b71c1c;font-weight:600">⏱ через ${text.trim()}</span>`;
+}
+
 function formatRecipients(recipients: any): string {
   if (recipients === "self" || recipients === '"self"') return "👤 Тільки я";
   if (recipients === "all" || recipients === '"all"') return "👥 Всі";
@@ -884,7 +903,7 @@ function renderReminderCard(r: ReminderFromRPC): string {
 
   const nextTrigger =
     r.next_trigger_at && r.status === "active"
-      ? `⏭️ Наступне: ${formatDateTime(r.next_trigger_at)}`
+      ? `⏭️ Наступне: ${formatDateTime(r.next_trigger_at)} ${formatCountdown(r.next_trigger_at)}`
       : "";
 
   return `
@@ -1142,7 +1161,7 @@ function showReminderViewModal(
 
   const nextTrigger =
     r.next_trigger_at && r.status === "active"
-      ? formatDateTime(r.next_trigger_at)
+      ? `${formatDateTime(r.next_trigger_at)} ${formatCountdown(r.next_trigger_at)}`
       : null;
 
   const callbackHtml = renderCallbackResponse(r.reminder_id);
@@ -1412,7 +1431,7 @@ function showReminderModal(
             <div class="ai-planner-field" id="planner-time-field">
               <label class="ai-planner-label">Час</label>
               <input class="ai-planner-input" id="planner-schedule-time" type="time"
-                value="${r.schedule?.time || "09:00"}" />
+                value="${r.schedule?.time || (r.next_trigger_at ? new Date(r.next_trigger_at).toTimeString().slice(0, 5) : "09:00")}" />
             </div>
             <div class="ai-planner-field" id="planner-interval-field" style="display:${r.schedule?.type === "interval" ? "flex" : "none"}">
               <label class="ai-planner-label">Годин</label>

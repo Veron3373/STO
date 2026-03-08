@@ -87,7 +87,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const activeRtReminders = realtimeReminders.filter((r: any) => {
         try {
           const sched =
-            typeof r.schedule === "string" ? JSON.parse(r.schedule) : r.schedule;
+            typeof r.schedule === "string"
+              ? JSON.parse(r.schedule)
+              : r.schedule;
           return sched?.type === "realtime";
         } catch {
           return false;
@@ -109,9 +111,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // Перевіряємо, чи це Realtime
       let isRealtimeNull = false;
       try {
-        const schedule = typeof reminder.schedule === "string" ? JSON.parse(reminder.schedule) : reminder.schedule;
+        const schedule =
+          typeof reminder.schedule === "string"
+            ? JSON.parse(reminder.schedule)
+            : reminder.schedule;
         isRealtimeNull = schedule?.type === "realtime";
-      } catch { /* */ }
+      } catch {
+        /* */
+      }
 
       // Пропустити нагадування тільки для app-каналу
       if (reminder.channel === "app") {
@@ -130,6 +137,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
         reminder.reminder_type === "conditional" &&
         reminder.condition_query
       ) {
+        // Перевірити: якщо condition_query — JSON правило (Realtime), НЕ виконуємо як SQL
+        const trimmedCQ = reminder.condition_query.trim();
+        if (trimmedCQ.startsWith("{")) {
+          // JSON Realtime правило — обробляється клієнтом через Supabase Realtime
+          // Сервер НЕ може виконати event-based моніторинг, пропускаємо
+          console.log(
+            `🔴 Realtime JSON правило — пропускаємо SQL (reminder_id=${reminder.reminder_id})`,
+          );
+          continue;
+        }
+
         const condOk = await executeConditionQuery(
           supabase,
           reminder.condition_query,
@@ -157,14 +175,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
         // Перевіряємо хеш, якщо це Контроль (реалтайм)
         try {
-          const schedule = typeof reminder.schedule === "string" ? JSON.parse(reminder.schedule) : reminder.schedule;
-          if (schedule?.type === "realtime" && reminder.meta?.last_result_hash === condOk.hash) {
+          const schedule =
+            typeof reminder.schedule === "string"
+              ? JSON.parse(reminder.schedule)
+              : reminder.schedule;
+          if (
+            schedule?.type === "realtime" &&
+            reminder.meta?.last_result_hash === condOk.hash
+          ) {
             console.log(
               `⏭️ Результат SQL не змінився (spam protection) reminder_id=${reminder.reminder_id}`,
             );
             continue;
           }
-        } catch { /* */ }
+        } catch {
+          /* */
+        }
 
         conditionResultText = condOk.text;
         conditionResultHash = condOk.hash;
@@ -204,9 +230,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // Оновити trigger (next_trigger_at, count, status) тільки для тих, що не є realtime
       let isRealtime = false;
       try {
-        const schedule = typeof reminder.schedule === "string" ? JSON.parse(reminder.schedule) : reminder.schedule;
+        const schedule =
+          typeof reminder.schedule === "string"
+            ? JSON.parse(reminder.schedule)
+            : reminder.schedule;
         isRealtime = schedule?.type === "realtime";
-      } catch { /* */ }
+      } catch {
+        /* */
+      }
 
       if (!isRealtime) {
         await supabase.rpc("trigger_reminder", {
@@ -220,7 +251,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
         reminder.meta.last_result_hash = conditionResultHash;
         await supabase
           .from("atlas_reminders")
-          .update({ meta: reminder.meta, trigger_count: (reminder.trigger_count || 0) + 1 })
+          .update({
+            meta: reminder.meta,
+            trigger_count: (reminder.trigger_count || 0) + 1,
+          })
           .eq("reminder_id", reminder.reminder_id);
       } else if (!isRealtime && conditionResultHash) {
         // Якщо не realtime, але conditional - теж зберігаємо хеш, але без trigger_count, бо rpc його оновлює
@@ -318,9 +352,15 @@ async function executeConditionQuery(
       resultText = data
         .map((row: any, i: number) => {
           if (typeof row === "object" && row !== null) {
-            return `${i + 1}. ` + Object.entries(row)
-              .map(([k, v]) => `<b>${escHtml(formatFieldName(k))}</b>: ${escHtml(formatValue(v))}`)
-              .join(" | ");
+            return (
+              `${i + 1}. ` +
+              Object.entries(row)
+                .map(
+                  ([k, v]) =>
+                    `<b>${escHtml(formatFieldName(k))}</b>: ${escHtml(formatValue(v))}`,
+                )
+                .join(" | ")
+            );
           }
           return `${i + 1}. ${escHtml(String(row))}`;
         })

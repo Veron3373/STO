@@ -9,7 +9,8 @@ import { supabase } from "../../vxid/supabaseClient";
 
 // ── Конфігурація ──
 
-const CHECK_INTERVAL_MS = 60_000; // 60 секунд — базовий polling (оптимізовано для економії трафіку)
+const CHECK_INTERVAL_ACTIVE_MS = 60_000; // 60с — polling коли вкладка активна
+const CHECK_INTERVAL_HIDDEN_MS = 300_000; // 5хв — polling коли вкладка прихована (сервер відправить Telegram)
 const TOAST_DISPLAY_MS = 12_000; // Час показу toast (12 сек)
 const TOAST_STACK_GAP = 12; // Відстань між toast-ами в стеку
 const MAX_TOASTS_VISIBLE = 5; // Макс. кількість одночасних toast
@@ -27,12 +28,20 @@ let notificationPermissionAsked = false;
 let onRemindersTriggered: (() => void) | null = null;
 
 let hasActiveReminders = false;
+let isTabVisible = true; // Visibility API: чи вкладка активна
+let cachedNextTriggerAt: number | null = null; // Кеш найближчого спрацювання (ms)
 
 let remindersStateChannel: ReturnType<typeof supabase.channel> | null = null;
 let stateSyncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let lastSyncTime = 0; // Час останньої синхронізації (тротлінг 10с)
 
 async function syncReminderCapabilities() {
   if (!currentSlyusarId) return;
+
+  // Тротлінг: не частіше ніж раз на 10 секунд
+  const now = Date.now();
+  if (now - lastSyncTime < 10_000) return;
+  lastSyncTime = now;
 
   try {
     const { data, error } = await supabase
@@ -41,7 +50,10 @@ async function syncReminderCapabilities() {
       .eq("status", "active");
 
     if (error) {
-      console.warn("[ReminderChecker] Помилка синхронізації стану:", error.message);
+      console.warn(
+        "[ReminderChecker] Помилка синхронізації стану:",
+        error.message,
+      );
       return;
     }
 
@@ -56,9 +68,7 @@ async function syncReminderCapabilities() {
       try {
         if (r.reminder_type !== "conditional") return false;
         const sched =
-          typeof r.schedule === "string"
-            ? JSON.parse(r.schedule)
-            : r.schedule;
+          typeof r.schedule === "string" ? JSON.parse(r.schedule) : r.schedule;
         return sched?.type === "realtime";
       } catch {
         return false;
@@ -75,8 +85,7 @@ async function syncReminderCapabilities() {
         "[ReminderChecker] 🟢 Є активні нагадування. Запуск опитування.",
       );
       checkDueReminders();
-      intervalId = setInterval(checkDueReminders, CHECK_INTERVAL_MS);
-      schedulePrecisionCheck();
+      startPollingWithVisibility();
     } else if (!newHasActiveReminders && intervalId) {
       console.log(
         "[ReminderChecker] 🟡 Активних нагадувань немає. Опитування зупинено (економія).",
@@ -142,10 +151,47 @@ export function initReminderChecker(): void {
   // Замість ручного запуску всіх процесів, активуємо Смарт-Менеджер,
   // який сам проаналізує БД і увімкне необхідні системи ТІЛЬКИ якщо є АКТИВНІ нагадування
   initRemindersStateListener();
+  initVisibilityListener();
 
   console.log(
     `[ReminderChecker] ✅ Смарт-Менеджер ініціалізовано для slyusar_id=${currentSlyusarId}`,
   );
+}
+
+// ── Visibility API: управління polling при приховуванні/показі вкладки ──
+
+function initVisibilityListener(): void {
+  document.addEventListener("visibilitychange", () => {
+    isTabVisible = !document.hidden;
+    if (isTabVisible) {
+      console.log("[ReminderChecker] 👁 Вкладка активна — прискорений polling");
+      // При поверненні — одразу перевірити і переключити на активний інтервал
+      if (hasActiveReminders) {
+        checkDueReminders();
+        restartPollingInterval(CHECK_INTERVAL_ACTIVE_MS);
+      }
+    } else {
+      console.log(
+        "[ReminderChecker] 😴 Вкладка прихована — сервер відправить Telegram, сповільнюємо polling",
+      );
+      if (hasActiveReminders && intervalId) {
+        restartPollingInterval(CHECK_INTERVAL_HIDDEN_MS);
+      }
+    }
+  });
+}
+
+function startPollingWithVisibility(): void {
+  const interval = isTabVisible
+    ? CHECK_INTERVAL_ACTIVE_MS
+    : CHECK_INTERVAL_HIDDEN_MS;
+  intervalId = setInterval(checkDueReminders, interval);
+  schedulePrecisionCheck();
+}
+
+function restartPollingInterval(newIntervalMs: number): void {
+  if (intervalId) clearInterval(intervalId);
+  intervalId = setInterval(checkDueReminders, newIntervalMs);
 }
 
 /** Колбек для оновлення UI планувальника після спрацювання */
@@ -186,6 +232,15 @@ function getSlyusarId(): number | null {
 
 async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
   try {
+    // Коли вкладка прихована — не відправляємо Telegram з клієнта.
+    // Серверна функція check-reminders (pg_cron) відправить сама.
+    if (!isTabVisible) {
+      console.log(
+        `[ReminderChecker] 😴 Вкладка прихована — Telegram відправить сервер (reminder_id=${reminder.reminder_id})`,
+      );
+      return;
+    }
+
     // Дедуплікація: перевірити чи вже відправлено за останні 90 сек
     const { data: recentLogs } = await supabase
       .from("atlas_reminder_logs")
@@ -229,14 +284,19 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
     const messageText = [
       `${icon} <b>${escHtml(reminder.title)}</b>`,
       reminder.description ? `\n${escHtml(reminder.description)}` : "",
-      reminder.meta?.condition_result_text ? `\n<b>📊 Результат перевірки:</b>\n${escHtml(reminder.meta.condition_result_text)}` : "",
+      reminder.meta?.condition_result_text
+        ? `\n<b>📊 Результат перевірки:</b>\n${escHtml(reminder.meta.condition_result_text)}`
+        : "",
       `\n${typeLabel} | Пріоритет: ${priorityLabel}`,
       `👤 Створив: ${escHtml(reminder.creator_name)}`,
     ]
       .filter(Boolean)
       .join("\n");
 
-    console.log(`[ReminderChecker] 📨 Message text (first 300 chars):`, messageText.substring(0, 300));
+    console.log(
+      `[ReminderChecker] 📨 Message text (first 300 chars):`,
+      messageText.substring(0, 300),
+    );
 
     const reply_markup = {
       inline_keyboard: [
@@ -259,7 +319,9 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
 
     for (const tgUser of tgUsers) {
       try {
-        console.log(`[ReminderChecker] 📤 Sending to chat_id=${tgUser.telegram_chat_id}...`);
+        console.log(
+          `[ReminderChecker] 📤 Sending to chat_id=${tgUser.telegram_chat_id}...`,
+        );
         const sendResult = await supabase.functions.invoke("send-telegram", {
           body: {
             chat_id: tgUser.telegram_chat_id,
@@ -268,7 +330,11 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
             reply_markup,
           },
         });
-        console.log(`[ReminderChecker] 📤 Send result:`, sendResult?.data, sendResult?.error);
+        console.log(
+          `[ReminderChecker] 📤 Send result:`,
+          sendResult?.data,
+          sendResult?.error,
+        );
         await supabase.from("atlas_reminder_logs").insert({
           reminder_id: reminder.reminder_id,
           recipient_id: tgUser.slyusar_id,
@@ -322,7 +388,8 @@ async function resolveRecipientIds(reminder: DueReminder): Promise<number[]> {
   return reminder.created_by ? [reminder.created_by] : [];
 }
 
-function escHtml(text: string): string {
+function escHtml(text: string | null | undefined): string {
+  if (!text) return "—";
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -365,8 +432,8 @@ async function checkDueReminders(): Promise<void> {
     }
 
     if (!dueReminders || dueReminders.length === 0) {
-      // Немає due, але перевіримо чи є найближче — для precision timer
-      schedulePrecisionCheck();
+      // Немає due — precision timer підхопить при активній вкладці
+      if (isTabVisible) schedulePrecisionCheck();
       return;
     }
 
@@ -386,17 +453,24 @@ async function checkDueReminders(): Promise<void> {
         reminder.reminder_type === "conditional" &&
         reminder.condition_query
       ) {
-        console.log(`[ReminderChecker] 📊 Conditional reminder_id=${reminder.reminder_id}, query:`, reminder.condition_query);
+        console.log(
+          `[ReminderChecker] 📊 Conditional reminder_id=${reminder.reminder_id}, query:`,
+          reminder.condition_query,
+        );
         const condResult = await checkCondition(reminder.condition_query);
         console.log(`[ReminderChecker] 📊 Condition result:`, condResult);
         if (!condResult) {
-          console.log(`[ReminderChecker] ❌ Умова НЕ виконана (false/empty) — пропускаємо`);
+          console.log(
+            `[ReminderChecker] ❌ Умова НЕ виконана (false/empty) — пропускаємо`,
+          );
           // Умова не виконана → просто оновити next_trigger_at
           await markTriggered(reminder.reminder_id, false, "Умова не виконана");
           continue;
         }
 
-        console.log(`[ReminderChecker] ✅ Умова виконана! Форматуємо результат...`);
+        console.log(
+          `[ReminderChecker] ✅ Умова виконана! Форматуємо результат...`,
+        );
 
         // Форматуємо результат для Telegram
         const fieldLabels: Record<string, string> = {
@@ -413,25 +487,37 @@ async function checkDueReminders(): Promise<void> {
           description: "Опис",
           count: "Кількість",
         };
-        const formatFieldName = (key: string): string => fieldLabels[key] || key;
+        const formatFieldName = (key: string): string =>
+          fieldLabels[key] || key;
         const formatValue = (v: any): string => {
           if (v === null || v === undefined) return "—";
           if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
-            return new Date(v).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+            return new Date(v).toLocaleString("uk-UA", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
           }
           return String(v);
         };
 
         let resultText = "";
         if (Array.isArray(condResult)) {
-          resultText = condResult.map((row: any, i: number) => {
-            if (typeof row === "object" && row !== null) {
-              return `${i + 1}. ` + Object.entries(row)
-                .map(([k, v]) => `${formatFieldName(k)}: ${formatValue(v)}`)
-                .join(" | ");
-            }
-            return `${i + 1}. ${String(row)}`;
-          }).join("\n");
+          resultText = condResult
+            .map((row: any, i: number) => {
+              if (typeof row === "object" && row !== null) {
+                return (
+                  `${i + 1}. ` +
+                  Object.entries(row)
+                    .map(([k, v]) => `${formatFieldName(k)}: ${formatValue(v)}`)
+                    .join(" | ")
+                );
+              }
+              return `${i + 1}. ${String(row)}`;
+            })
+            .join("\n");
         } else if (typeof condResult === "object" && condResult !== null) {
           resultText = Object.entries(condResult)
             .map(([k, v]) => `• ${formatFieldName(k)}: ${formatValue(v)}`)
@@ -440,26 +526,35 @@ async function checkDueReminders(): Promise<void> {
           resultText = String(condResult);
         }
 
-        console.log(`[ReminderChecker] 📝 Formatted result text:`, resultText.substring(0, 200));
+        console.log(
+          `[ReminderChecker] 📝 Formatted result text:`,
+          resultText.substring(0, 200),
+        );
         if (!reminder.meta) reminder.meta = {};
         reminder.meta.condition_result_text = resultText;
       }
 
       // Показати toast (для app і both каналів)
       if (reminder.channel === "app" || reminder.channel === "both") {
-        console.log(`[ReminderChecker] 🔔 Показуємо toast для reminder_id=${reminder.reminder_id}`);
+        console.log(
+          `[ReminderChecker] 🔔 Показуємо toast для reminder_id=${reminder.reminder_id}`,
+        );
         showReminderToast(reminder);
       }
 
       // Відправити Telegram (для telegram і both каналів)
       // Дедуплікація: перевірити чи сервер вже не відправив
       if (reminder.channel === "telegram" || reminder.channel === "both") {
-        console.log(`[ReminderChecker] ✈️ Відправляємо Telegram для reminder_id=${reminder.reminder_id}`);
+        console.log(
+          `[ReminderChecker] ✈️ Відправляємо Telegram для reminder_id=${reminder.reminder_id}`,
+        );
         await sendTelegramForReminder(reminder);
       }
 
       // Записати лог + оновити trigger
-      console.log(`[ReminderChecker] ✅ markTriggered для reminder_id=${reminder.reminder_id}`);
+      console.log(
+        `[ReminderChecker] ✅ markTriggered для reminder_id=${reminder.reminder_id}`,
+      );
       await markTriggered(reminder.reminder_id, true);
 
       anyTriggered = true;
@@ -470,8 +565,11 @@ async function checkDueReminders(): Promise<void> {
       onRemindersTriggered();
     }
 
-    // Перепланувати precision timer
-    schedulePrecisionCheck();
+    // Перепланувати precision timer (тільки для активної вкладки)
+    if (isTabVisible) {
+      cachedNextTriggerAt = null; // Скинути кеш — нагадування оброблене
+      schedulePrecisionCheck();
+    }
   } catch (err) {
     console.error("[ReminderChecker] Невідома помилка:", err);
   } finally {
@@ -480,6 +578,8 @@ async function checkDueReminders(): Promise<void> {
 }
 
 // ── Precision timer: точний запуск в момент next_trigger_at ──
+// Оптимізація: використовуємо кеш next_trigger_at з відповіді get_due_reminders,
+// і звертаємося до БД ТІЛЬКИ якщо кеш пустий
 
 async function schedulePrecisionCheck(): Promise<void> {
   if (precisionTimerId) {
@@ -487,26 +587,38 @@ async function schedulePrecisionCheck(): Promise<void> {
     precisionTimerId = null;
   }
 
+  // Якщо вкладка прихована — не встановлювати precision timer (сервер +  повільний polling)
+  if (!isTabVisible) return;
+
   try {
-    // Знайти найближче активне нагадування
-    const { data } = await supabase
-      .from("atlas_reminders")
-      .select("next_trigger_at")
-      .eq("status", "active")
-      .not("next_trigger_at", "is", null)
-      .order("next_trigger_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    let nextMs: number | null = cachedNextTriggerAt;
 
-    if (!data?.next_trigger_at) return;
+    // Звертаємося до БД тільки якщо кеш пустий або вже минув
+    if (!nextMs || nextMs <= Date.now()) {
+      const { data } = await supabase
+        .from("atlas_reminders")
+        .select("next_trigger_at")
+        .eq("status", "active")
+        .not("next_trigger_at", "is", null)
+        .order("next_trigger_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
-    const nextMs = new Date(data.next_trigger_at).getTime();
+      if (!data?.next_trigger_at) {
+        cachedNextTriggerAt = null;
+        return;
+      }
+      nextMs = new Date(data.next_trigger_at).getTime();
+      cachedNextTriggerAt = nextMs;
+    }
+
     const nowMs = Date.now();
     // Запустити через дельту (мінімум 1 сек, максимум 5 хв)
     const delayMs = Math.max(1_000, Math.min(nextMs - nowMs + 500, 300_000));
 
     precisionTimerId = setTimeout(() => {
       precisionTimerId = null;
+      cachedNextTriggerAt = null; // Скинути кеш після спрацювання
       checkDueReminders();
     }, delayMs);
 
@@ -611,56 +723,72 @@ let realtimeChannels: Array<ReturnType<typeof supabase.channel>> = [];
 
 // Парсинг JSON-правила з condition_query
 function parseWatchRule(conditionQuery: string | null): {
-  table: string; events: string[]; check?: string; show_fields?: string[]
+  table: string;
+  events: string[];
+  check?: string;
+  show_fields?: string[];
 } | null {
   if (!conditionQuery) return null;
   const trimmed = conditionQuery.trim();
   if (trimmed.startsWith("{")) {
-    try { return JSON.parse(trimmed); } catch { return null; }
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
   }
   return null; // старий SQL-режим
 }
 
 // Перевірка умови check на об’єкті payload.new
-function evalCheck(check: string | undefined, newRow: Record<string, any>, oldRow: Record<string, any>): boolean {
+function evalCheck(
+  check: string | undefined,
+  newRow: Record<string, any>,
+  oldRow: Record<string, any>,
+): boolean {
   if (!check) return true; // без фільтру — завжди тригер
 
   const c = check.trim().toLowerCase();
   const row = newRow;
 
-  // Прості умови: поле IS NOT NULL
-  const isNotNull = c.match(/^(\w+)\s+is\s+not\s+null$/);
+  // Прості умови: поле IS NOT NULL (з підтримкою вкладених: data.Пароль IS NOT NULL)
+  const isNotNull = c.match(/^([\w.]+)\s+is\s+not\s+null$/);
   if (isNotNull) {
     const field = isNotNull[1];
-    return row[field] != null && row[field] !== "";
+    const [, newVal] = getNestedValues(field, oldRow, row);
+    return newVal != null && newVal !== "";
   }
 
   // Прості умови: поле IS NULL
-  const isNull = c.match(/^(\w+)\s+is\s+null$/);
+  const isNull = c.match(/^([\w.]+)\s+is\s+null$/);
   if (isNull) {
     const field = isNull[1];
-    return row[field] == null || row[field] === "";
+    const [, newVal] = getNestedValues(field, oldRow, row);
+    return newVal == null || newVal === "";
   }
 
-  // Зміна поля: field CHANGED
-  const changed = c.match(/^(\w+)\s+changed$/);
+  // Зміна поля: field CHANGED (підтримка вкладених полів: data.Пароль CHANGED)
+  const changed = c.match(/^([\w.]+)\s+changed$/);
   if (changed) {
     const field = changed[1];
-    return String(oldRow?.[field] ?? "") !== String(row?.[field] ?? "");
+    const [oldVal, newVal] = getNestedValues(field, oldRow, row);
+    return String(oldVal ?? "") !== String(newVal ?? "");
   }
 
   // Зміна з null на NOT NULL: field CLOSED
-  const closed = c.match(/^(\w+)\s+closed$/);
+  const closed = c.match(/^([\w.]+)\s+closed$/);
   if (closed) {
     const field = closed[1];
-    return (oldRow?.[field] == null) && (row?.[field] != null);
+    const [oldVal, newVal] = getNestedValues(field, oldRow, row);
+    return (oldVal == null || oldVal === "") && newVal != null && newVal !== "";
   }
 
   // Зміна з NOT NULL на null: field OPENED
-  const opened = c.match(/^(\w+)\s+opened$/);
+  const opened = c.match(/^([\w.]+)\s+opened$/);
   if (opened) {
     const field = opened[1];
-    return (oldRow?.[field] != null) && (row?.[field] == null);
+    const [oldVal, newVal] = getNestedValues(field, oldRow, row);
+    return oldVal != null && oldVal !== "" && (newVal == null || newVal === "");
   }
 
   // Будь-яка зміна (без фільтру)
@@ -669,9 +797,48 @@ function evalCheck(check: string | undefined, newRow: Record<string, any>, oldRo
   return true; // за замовчуванням — тригер
 }
 
+// Отримати значення вкладеного поля (напр. data.Пароль) з old і new рядків
+function getNestedValues(
+  fieldPath: string,
+  oldRow: Record<string, any>,
+  newRow: Record<string, any>,
+): [any, any] {
+  if (!fieldPath.includes(".")) {
+    return [oldRow?.[fieldPath], newRow?.[fieldPath]];
+  }
+  const parts = fieldPath.split(".");
+  const resolve = (obj: any): any => {
+    let val = obj;
+    for (const part of parts) {
+      if (val == null) return undefined;
+      if (typeof val === "object") {
+        // Якщо поле — рядок JSON (JSONB при трансмісії може бути серіалізований)
+        if (typeof val[part] === "string" && part === parts[0]) {
+          try {
+            val = JSON.parse(val[part]);
+          } catch {
+            val = val[part];
+          }
+        } else {
+          val = val[part];
+        }
+      } else {
+        return undefined;
+      }
+    }
+    return val;
+  };
+  return [resolve(oldRow), resolve(newRow)];
+}
+
 // Форматування повідомлення з payload
 function formatPayloadMessage(
-  payload: { eventType: string; table: string; new: Record<string, any>; old: Record<string, any> },
+  payload: {
+    eventType: string;
+    table: string;
+    new: Record<string, any>;
+    old: Record<string, any>;
+  },
   _rule: { show_fields?: string[] } | null,
 ): string {
   const eventLabels: Record<string, string> = {
@@ -682,31 +849,63 @@ function formatPayloadMessage(
   const action = eventLabels[payload.eventType] || payload.eventType;
   const row = payload.eventType === "DELETE" ? payload.old : payload.new;
   const data = row?.data || {};
-  const jsonData = typeof data === "string" ? (() => { try { return JSON.parse(data); } catch { return {}; } })() : data;
+  const jsonData =
+    typeof data === "string"
+      ? (() => {
+          try {
+            return JSON.parse(data);
+          } catch {
+            return {};
+          }
+        })()
+      : data;
 
   const formatTs = (v: any) => {
     if (!v) return "—";
-    try { return new Date(v).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
-    catch { return String(v); }
+    try {
+      return new Date(v).toLocaleString("uk-UA", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return String(v);
+    }
   };
 
   // Збираємо ключові поля автоматично
   const lines: string[] = [];
 
   // Id
-  const id = row?.act_id || row?.client_id || row?.slyusar_id || row?.sclad_id || row?.id;
+  const id =
+    row?.act_id ||
+    row?.client_id ||
+    row?.slyusar_id ||
+    row?.sclad_id ||
+    row?.id;
   if (id) lines.push(`🔢 № ${id}`);
 
   // Розміщення по пріоритетним полям
   const priorityFields = [
-    ["ПІБ", "👤 Клієнт"], ["Name", "👤 Ім’я"], ["Назва", "📌 Назва"],
-    ["Телефон", "📞 Тел"], ["Марка", "🚗"], ["Модель", ""],
-    ["Держ. номер", "📍"], ["Приймальник", "👷‍♂️ Приймал"],
-    ["Слюсар", "🔧 Слюсар"], ["Загальна сума", "💰 Сума"], ["Посада", "💼 Посада"],
-    ["Кількість", "📊 Кількість"], ["Ціна", "💰 Ціна"]
+    ["ПІБ", "👤 Клієнт"],
+    ["Name", "👤 Ім’я"],
+    ["Назва", "📌 Назва"],
+    ["Телефон", "📞 Тел"],
+    ["Марка", "🚗"],
+    ["Модель", ""],
+    ["Держ. номер", "📍"],
+    ["Приймальник", "👷‍♂️ Приймал"],
+    ["Слюсар", "🔧 Слюсар"],
+    ["Загальна сума", "💰 Сума"],
+    ["Посада", "💼 Посада"],
+    ["Кількість", "📊 Кількість"],
+    ["Ціна", "💰 Ціна"],
   ];
   for (const [field, label] of priorityFields) {
-    const val = jsonData[field] ?? row?.[field.toLowerCase().replace(/ /g, "_")];
+    const val =
+      jsonData[field] ?? row?.[field.toLowerCase().replace(/ /g, "_")];
     if (val != null && String(val).trim() !== "") {
       lines.push(`${label}: ${val}`);
     }
@@ -715,34 +914,51 @@ function formatPayloadMessage(
   // Дати
   if (row?.date_off) lines.push(`📅 Закритий: ${formatTs(row.date_off)}`);
   if (row?.date_on) lines.push(`📅 Відкритий: ${formatTs(row.date_on)}`);
-  if (row?.created_at && !row?.date_on && !row?.date_off) lines.push(`📅 ${formatTs(row.created_at)}`);
+  if (row?.created_at && !row?.date_on && !row?.date_off)
+    lines.push(`📅 ${formatTs(row.created_at)}`);
 
   // Додатково виводимо змінw (UPDATE)
   if (payload.eventType === "UPDATE" && payload.old) {
     const changedParts: string[] = [];
     for (const key of Object.keys(payload.new)) {
-      const oldVal = payload.old[key], newVal = payload.new[key];
-      if (JSON.stringify(oldVal) !== JSON.stringify(newVal) && key !== "updated_at") {
+      const oldVal = payload.old[key],
+        newVal = payload.new[key];
+      if (
+        JSON.stringify(oldVal) !== JSON.stringify(newVal) &&
+        key !== "updated_at"
+      ) {
         if (key === "data") continue; // data вже розібрано 'вище
-        const ts = (v: any) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v) ? formatTs(v) : String(v ?? "—");
+        const ts = (v: any) =>
+          typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)
+            ? formatTs(v)
+            : String(v ?? "—");
         changedParts.push(`${key}: ${ts(oldVal)} → ${ts(newVal)}`);
       }
     }
     // Вивести зміни в JSONB data
     if (payload.new.data && payload.old.data) {
-      const dOld = typeof payload.old.data === "string" ? JSON.parse(payload.old.data) : payload.old.data;
-      const dNew = typeof payload.new.data === "string" ? JSON.parse(payload.new.data) : payload.new.data;
-      for (const key of Object.keys(dNew)) {
-        if (JSON.stringify(dOld[key]) !== JSON.stringify(dNew[key])) {
-          // Не показуємо поля, вже виведені вище
-          const alreadyShown = priorityFields.some(([f]) => f === key);
-          if (!alreadyShown) {
-            changedParts.push(`${key}: «${dOld[key] ?? "—"}» → «${dNew[key] ?? "—"}»`);
-          }
+      const dOld =
+        typeof payload.old.data === "string"
+          ? JSON.parse(payload.old.data)
+          : payload.old.data;
+      const dNew =
+        typeof payload.new.data === "string"
+          ? JSON.parse(payload.new.data)
+          : payload.new.data;
+      const allKeys = new Set([
+        ...Object.keys(dOld || {}),
+        ...Object.keys(dNew || {}),
+      ]);
+      for (const key of allKeys) {
+        if (JSON.stringify(dOld?.[key]) !== JSON.stringify(dNew?.[key])) {
+          changedParts.push(
+            `${key}: «${dOld?.[key] ?? "—"}» → «${dNew?.[key] ?? "—"}»`,
+          );
         }
       }
     }
-    if (changedParts.length > 0) lines.push(`\n� Зміни:\n${changedParts.join("\n")}`);
+    if (changedParts.length > 0)
+      lines.push(`\n📝 Зміни:\n${changedParts.join("\n")}`);
   }
 
   return `${action} • ${payload.table}\n${lines.join("\n") || "—"}`;
@@ -755,7 +971,10 @@ function initRealtimeMonitoring(): void {
   // Анулюємо всі старі підписки
   for (const ch of realtimeChannels) supabase.removeChannel(ch);
   realtimeChannels = [];
-  if (realtimeChannel) { supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
 
   // Завантажимо активні Realtime-нагадування
   supabase
@@ -763,31 +982,59 @@ function initRealtimeMonitoring(): void {
     .select("*")
     .eq("status", "active")
     .eq("reminder_type", "conditional")
-    .then(({ data: reminders }) => {
+    .then(async ({ data: reminders }) => {
       if (!reminders?.length) return;
 
       // Групуємо нагадування за таблицями
       const tableReminderMap = new Map<string, any[]>();
 
+      // Завантажимо імена створювачів для всіх нагадувань
+      const creatorIds = [
+        ...new Set(reminders.map((r: any) => r.created_by).filter(Boolean)),
+      ];
+      const creatorNames: Record<number, string> = {};
+      if (creatorIds.length > 0) {
+        const { data: creators } = await supabase
+          .from("slyusars")
+          .select("slyusar_id, Name")
+          .in("slyusar_id", creatorIds);
+        if (creators) {
+          for (const c of creators)
+            creatorNames[c.slyusar_id] = c.Name || "Невідомий";
+        }
+      }
+
       for (const rem of reminders) {
         try {
-          const sched = typeof rem.schedule === "string" ? JSON.parse(rem.schedule) : rem.schedule;
+          const sched =
+            typeof rem.schedule === "string"
+              ? JSON.parse(rem.schedule)
+              : rem.schedule;
           if (sched?.type !== "realtime") continue;
+          // Додаємо creator_name якщо відсутній
+          if (!rem.creator_name && rem.created_by) {
+            rem.creator_name = creatorNames[rem.created_by] || "Невідомий";
+          } else if (!rem.creator_name) {
+            rem.creator_name = "Невідомий";
+          }
           const rule = parseWatchRule(rem.condition_query);
           const tableName = rule?.table || "acts"; // за замовчуванням слухаємо acts
-          if (!tableReminderMap.has(tableName)) tableReminderMap.set(tableName, []);
+          if (!tableReminderMap.has(tableName))
+            tableReminderMap.set(tableName, []);
           tableReminderMap.get(tableName)!.push({ rem, rule });
-        } catch { /* */ }
+        } catch {
+          /* */
+        }
       }
 
       // для кожної таблиці — окремий channel
       for (const [tableName, entries] of tableReminderMap) {
-
         // Кешуємо events у верхньому регістрі одразу (не при кожному payload)
         const cachedEntries = entries.map(({ rem, rule }) => ({
           rem,
           rule,
-          eventsUpper: rule?.events?.map((e: string) => e.toUpperCase()) || null,
+          eventsUpper:
+            rule?.events?.map((e: string) => e.toUpperCase()) || null,
           isForUser: isReminderForUser(rem, currentSlyusarId!),
         }));
 
@@ -805,15 +1052,28 @@ function initRealtimeMonitoring(): void {
               sentPayloadIds.add(rowId);
               setTimeout(() => sentPayloadIds.delete(rowId), 10_000);
 
-              for (const { rem, rule, eventsUpper, isForUser } of cachedEntries) {
+              for (const {
+                rem,
+                rule,
+                eventsUpper,
+                isForUser,
+              } of cachedEntries) {
                 try {
                   if (!isForUser) continue;
 
                   // Перевірити подію (кешоване порівняння)
-                  if (eventsUpper && !eventsUpper.includes(payload.eventType)) continue;
+                  if (eventsUpper && !eventsUpper.includes(payload.eventType))
+                    continue;
 
                   // Перевірити умову check (без запитів до БД)
-                  if (!evalCheck(rule?.check, payload.new || {}, payload.old || {})) continue;
+                  if (
+                    !evalCheck(
+                      rule?.check,
+                      payload.new || {},
+                      payload.old || {},
+                    )
+                  )
+                    continue;
 
                   console.log(`[RT] ✅ Тригер reminder_id=${rem.reminder_id}`);
 
@@ -823,22 +1083,30 @@ function initRealtimeMonitoring(): void {
                   rem.meta.condition_result_text = resultText;
 
                   // Toast (миттєво, без запитів)
-                  if (rem.channel === "app" || rem.channel === "both") showReminderToast(rem);
+                  if (rem.channel === "app" || rem.channel === "both")
+                    showReminderToast(rem);
 
                   // Паралельно: оновити лічильник + записати лог + Telegram
                   const dbPromises: PromiseLike<any>[] = [
                     supabase
                       .from("atlas_reminders")
-                      .update({ trigger_count: (rem.trigger_count || 0) + 1, last_triggered_at: new Date().toISOString() })
+                      .update({
+                        trigger_count: (rem.trigger_count || 0) + 1,
+                        last_triggered_at: new Date().toISOString(),
+                      })
                       .eq("reminder_id", rem.reminder_id)
-                      .then(() => { }),
-                    supabase.from("atlas_reminder_logs").insert({
-                      reminder_id: rem.reminder_id,
-                      recipient_id: currentSlyusarId,
-                      channel: rem.channel === "telegram" ? "telegram" : "app",
-                      message_text: `🔴 ${rem.title} | ${resultText.substring(0, 100)}`,
-                      delivery_status: "delivered",
-                    }).then(() => { }),
+                      .then(() => {}),
+                    supabase
+                      .from("atlas_reminder_logs")
+                      .insert({
+                        reminder_id: rem.reminder_id,
+                        recipient_id: currentSlyusarId,
+                        channel:
+                          rem.channel === "telegram" ? "telegram" : "app",
+                        message_text: `🔴 ${rem.title} | ${resultText.substring(0, 100)}`,
+                        delivery_status: "delivered",
+                      })
+                      .then(() => {}),
                   ];
 
                   if (rem.channel === "telegram" || rem.channel === "both") {
@@ -846,7 +1114,6 @@ function initRealtimeMonitoring(): void {
                   }
 
                   await Promise.all(dbPromises);
-
                 } catch (innerErr) {
                   console.error("[RT] Помилка:", innerErr);
                 }
@@ -860,7 +1127,9 @@ function initRealtimeMonitoring(): void {
         realtimeChannels.push(ch);
       }
       realtimeChannel = realtimeChannels[0] || null;
-      console.log(`[ReminderChecker] 🔴 Realtime підписки: ${[...tableReminderMap.keys()].join(", ")}`);
+      console.log(
+        `[ReminderChecker] 🔴 Realtime підписки: ${[...tableReminderMap.keys()].join(", ")}`,
+      );
     });
 }
 
@@ -949,9 +1218,10 @@ function showReminderToast(reminder: DueReminder): void {
       <span class="atlas-reminder-toast__title">${escapeHtml(reminder.title)}</span>
       <button class="atlas-reminder-toast__close" title="Закрити">&times;</button>
     </div>
-    ${reminder.description
-      ? `<div class="atlas-reminder-toast__body">${escapeHtml(reminder.description)}</div>`
-      : ""
+    ${
+      reminder.description
+        ? `<div class="atlas-reminder-toast__body">${escapeHtml(reminder.description)}</div>`
+        : ""
     }
     <div class="atlas-reminder-toast__footer">
       <span class="atlas-reminder-toast__type">${typeLabel}</span>

@@ -163,13 +163,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
               p_reminder_id: reminder.reminder_id,
             });
           }
-          await supabase.from("atlas_reminder_logs").insert({
-            reminder_id: reminder.reminder_id,
-            recipient_id: reminder.created_by,
-            channel: "app",
-            message_text: "Умова не виконана — дані не знайдено",
-            delivery_status: "sent",
-          });
           continue;
         }
 

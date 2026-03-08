@@ -639,6 +639,9 @@ export async function updateReminder(
 }
 
 export async function deleteReminder(id: number): Promise<boolean> {
+  // Спочатку видаляємо логи нагадування
+  await supabase.from("atlas_reminder_logs").delete().eq("reminder_id", id);
+
   const { error } = await supabase
     .from("atlas_reminders")
     .delete()

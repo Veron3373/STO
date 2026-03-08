@@ -540,9 +540,22 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
   if (!suggestions.length) return;
 
   // Поточне значення поля для підсвічування збігу
-  const currentTargetValue = (target.getAttribute("data-full-name") || target.textContent || "").trim().toLowerCase();
-  const currentScladIdAttr = target.getAttribute("data-sclad-id") || target.closest('tr')?.querySelector('[data-name="catalog"]')?.getAttribute("data-sclad-id");
-  const targetScladId = currentScladIdAttr ? Number(currentScladIdAttr) : undefined;
+  const currentTargetValue = (
+    target.getAttribute("data-full-name") ||
+    target.textContent ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+  const currentScladIdAttr =
+    target.getAttribute("data-sclad-id") ||
+    target
+      .closest("tr")
+      ?.querySelector('[data-name="catalog"]')
+      ?.getAttribute("data-sclad-id");
+  const targetScladId = currentScladIdAttr
+    ? Number(currentScladIdAttr)
+    : undefined;
 
   const GAP = 4;
   const ROWS_MAX = 15;
@@ -572,7 +585,11 @@ function renderAutocompleteList(target: HTMLElement, suggestions: Suggest[]) {
     let isActive = false;
 
     // Пріоритетно перевіряємо sclad_id. Якщо він є у ячейці, шукаємо СУВОРО такий саме sclad_id
-    if (targetScladId !== undefined && !Number.isNaN(targetScladId) && targetScladId > 0) {
+    if (
+      targetScladId !== undefined &&
+      !Number.isNaN(targetScladId) &&
+      targetScladId > 0
+    ) {
       if (sclad_id === targetScladId) {
         isActive = true;
       }
@@ -990,6 +1007,26 @@ export function setupAutocompleteForEditableCells(
         e.preventDefault();
         closeAutocompleteList();
       }
+    }
+  });
+
+  // 📌 Підсвітка активного рядка
+  container.addEventListener("focusin", (e) => {
+    const target = e.target as HTMLElement;
+    const row = target.closest("tr") as HTMLElement | null;
+    if (!row || !row.parentElement?.closest("tbody")) return;
+    const prev = container.querySelector("tr.active-row");
+    if (prev && prev !== row) prev.classList.remove("active-row");
+    row.classList.add("active-row");
+  });
+  container.addEventListener("focusout", (e) => {
+    const target = e.target as HTMLElement;
+    const row = target.closest("tr") as HTMLElement | null;
+    // Знімаємо підсвітку тільки якщо фокус пішов за межі цього рядка
+    if (!row) return;
+    const related = (e as FocusEvent).relatedTarget as HTMLElement | null;
+    if (!related || !row.contains(related)) {
+      row.classList.remove("active-row");
     }
   });
 

@@ -144,23 +144,11 @@ export function buildAIContext(): AIContext {
   const user = getUserContext();
   const system = getSystemContext();
 
-  // Формуємо текстовий блок
+  // 💡 ОПТИМІЗАЦІЯ: компактний формат без декоративних ліній (економія токенів)
   const lines: string[] = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `📅 ДАТА: ${system.dateFormatted} (${system.weekday})`,
-    `🕐 ЧАС: ${system.timeFormatted} (${system.timezone})`,
-    `👤 КОРИСТУВАЧ: ${user.name}`,
-    `🔑 РОЛЬ: ${user.role}`,
+    `📅${system.dateFormatted} (${system.weekday}) 🕐${system.timeFormatted}`,
+    `👤${user.name} 🔑${user.role}${user.userId ? ` ID:${user.userId}` : ""}`,
   ];
-
-  if (user.userId) {
-    lines.push(`🆔 ID: ${user.userId}`);
-  }
-
-  lines.push(
-    `💻 ПЛАТФОРМА: ${system.platform}`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-  );
 
   return {
     user,

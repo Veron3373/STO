@@ -35,6 +35,7 @@ import {
   loadAndApplyAiProSetting,
   subscribeToSettingsRealtime,
 } from "../nalachtuvannay/nalachtuvannay";
+import { initAIChatButton } from "../ai/aiChat";
 
 // 🔍 РОЗУМНИЙ ПОШУК
 import {
@@ -556,8 +557,8 @@ function subscribeToGlobalActPresence() {
       supabase.removeChannel(globalPresenceChannel);
     } catch (err) {
       // console.warn(
-        // "⚠️ [subscribeToGlobalActPresence] Помилка при видаленні каналу:",
-        // err,
+      // "⚠️ [subscribeToGlobalActPresence] Помилка при видаленні каналу:",
+      // err,
       // );
     } finally {
       globalPresenceChannel = null;
@@ -2069,6 +2070,8 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 🤖 ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ШІ АТЛАС
     await loadAndApplyAiProSetting();
+    // 🤖 Гарантовано ініціалізуємо кнопку після завантаження налаштувань
+    initAIChatButton();
 
     // ⚙️ REALTIME ПІДПИСКА НА ЗМІНИ НАЛАШТУВАНЬ
     subscribeToSettingsRealtime();

@@ -308,7 +308,7 @@ body {
     word-break: break-word;
 
     /* Прибираємо зайві обгортки та забезпечуємо повну ширину */
-    >div {
+    > div {
       display: block;
       width: 100%;
       min-height: 20px;
@@ -772,7 +772,6 @@ h1 {
 
 // Магія Flexbox для розташування
 .zakaz_narayd-buttons-container {
-
   // Кнопка "Додати рядок"
   #add-row-button {
     margin-right: auto; // Відштовхує все, що праворуч, до правого краю
@@ -811,6 +810,25 @@ tr:hover .delete-row-btn {
 [data-name="pib_magazin"]:focus {
   outline: 2px solid #000 !important;
   outline-offset: -2px;
+}
+
+/* Підсвітка активного рядка при кліку на комірку */
+tr.active-row {
+  background-color: rgba(25, 118, 210, 0.07) !important;
+  box-shadow: inset 3px 0 0 0 #1976d2;
+
+  td {
+    border-top-color: rgba(25, 118, 210, 0.35) !important;
+    border-bottom-color: rgba(25, 118, 210, 0.35) !important;
+  }
+
+  td:first-child {
+    border-left-color: rgba(25, 118, 210, 0.35) !important;
+  }
+
+  td:last-child {
+    border-right-color: rgba(25, 118, 210, 0.35) !important;
+  }
 }
 
 /* ===== Модалка підтвердження закриття акту / SMS ===== */

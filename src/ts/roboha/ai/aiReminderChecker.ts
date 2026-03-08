@@ -50,10 +50,6 @@ async function syncReminderCapabilities() {
       .eq("status", "active");
 
     if (error) {
-      console.warn(
-        "[ReminderChecker] Помилка синхронізації стану:",
-        error.message,
-      );
       return;
     }
 
@@ -75,21 +71,11 @@ async function syncReminderCapabilities() {
       }
     });
 
-    console.log(
-      `[ReminderChecker] 🧠 Смарт-менеджер: Активних=${activeCount}, Контроль=${newHasRealtimeReminders}`,
-    );
-
     // Управління Polling (інтервалом опитування)
     if (newHasActiveReminders && !intervalId) {
-      console.log(
-        "[ReminderChecker] 🟢 Є активні нагадування. Запуск опитування.",
-      );
       checkDueReminders();
       startPollingWithVisibility();
     } else if (!newHasActiveReminders && intervalId) {
-      console.log(
-        "[ReminderChecker] 🟡 Активних нагадувань немає. Опитування зупинено (економія).",
-      );
       clearInterval(intervalId);
       intervalId = null;
       if (precisionTimerId) {
@@ -101,21 +87,13 @@ async function syncReminderCapabilities() {
 
     // Управління Realtime
     if (newHasRealtimeReminders && !realtimeChannel) {
-      console.log(
-        "[ReminderChecker] 🔴 Є 'Контрольні' нагадування. Запуск моніторингу БД.",
-      );
       initRealtimeMonitoring();
     } else if (!newHasRealtimeReminders && realtimeChannel) {
-      console.log(
-        "[ReminderChecker] 🟡 'Контрольних' нагадувань немає. Моніторинг БД зупинено.",
-      );
       for (const ch of realtimeChannels) supabase.removeChannel(ch);
       realtimeChannels = [];
       realtimeChannel = null;
     }
-  } catch (err) {
-    console.warn("[ReminderChecker] sync fail:", err);
-  }
+  } catch (err) {}
 }
 
 function initRemindersStateListener() {
@@ -141,7 +119,6 @@ export function initReminderChecker(): void {
   // Визначити поточного користувача
   currentSlyusarId = getSlyusarId();
   if (!currentSlyusarId) {
-    console.log("[ReminderChecker] Користувач не авторизований, пропускаємо");
     return;
   }
 
@@ -152,10 +129,6 @@ export function initReminderChecker(): void {
   // який сам проаналізує БД і увімкне необхідні системи ТІЛЬКИ якщо є АКТИВНІ нагадування
   initRemindersStateListener();
   initVisibilityListener();
-
-  console.log(
-    `[ReminderChecker] ✅ Смарт-Менеджер ініціалізовано для slyusar_id=${currentSlyusarId}`,
-  );
 }
 
 // ── Visibility API: управління polling при приховуванні/показі вкладки ──
@@ -164,16 +137,12 @@ function initVisibilityListener(): void {
   document.addEventListener("visibilitychange", () => {
     isTabVisible = !document.hidden;
     if (isTabVisible) {
-      console.log("[ReminderChecker] 👁 Вкладка активна — прискорений polling");
       // При поверненні — одразу перевірити і переключити на активний інтервал
       if (hasActiveReminders) {
         checkDueReminders();
         restartPollingInterval(CHECK_INTERVAL_ACTIVE_MS);
       }
     } else {
-      console.log(
-        "[ReminderChecker] 😴 Вкладка прихована — сервер відправить Telegram, сповільнюємо polling",
-      );
       if (hasActiveReminders && intervalId) {
         restartPollingInterval(CHECK_INTERVAL_HIDDEN_MS);
       }
@@ -208,7 +177,6 @@ export function stopReminderChecker(): void {
     clearTimeout(precisionTimerId);
     precisionTimerId = null;
   }
-  console.log("[ReminderChecker] ⏹ Зупинено");
 }
 
 // ── Отримати slyusar_id ──
@@ -235,16 +203,13 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
     // Коли вкладка прихована — не відправляємо Telegram з клієнта.
     // Серверна функція check-reminders (pg_cron) відправить сама.
     if (!isTabVisible) {
-      console.log(
-        `[ReminderChecker] 😴 Вкладка прихована — Telegram відправить сервер (reminder_id=${reminder.reminder_id})`,
-      );
       return;
     }
 
     // Дедуплікація: перевірити чи вже відправлено за останні 90 сек
     const { data: recentLogs } = await supabase
       .from("atlas_reminder_logs")
-      .select("id")
+      .select("reminder_id")
       .eq("reminder_id", reminder.reminder_id)
       .eq("channel", "telegram")
       .eq("delivery_status", "delivered")
@@ -252,16 +217,11 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
       .limit(1);
 
     if (recentLogs && recentLogs.length > 0) {
-      console.log(
-        `[ReminderChecker] ⏭️ Telegram вже відправлено (дедуплікація) reminder_id=${reminder.reminder_id}`,
-      );
       return;
     }
 
     const recipientIds = await resolveRecipientIds(reminder);
-    console.log(`[ReminderChecker] 👥 Recipients:`, recipientIds);
     if (recipientIds.length === 0) {
-      console.log(`[ReminderChecker] ❌ Немає одержувачів — пропускаємо`);
       return;
     }
 
@@ -271,9 +231,7 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
       .in("slyusar_id", recipientIds)
       .eq("is_active", true);
 
-    console.log(`[ReminderChecker] 📱 TG users:`, tgUsers, `error:`, error);
     if (error || !tgUsers?.length) {
-      console.log(`[ReminderChecker] ❌ Немає TG users або помилка`);
       return;
     }
 
@@ -292,11 +250,6 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
     ]
       .filter(Boolean)
       .join("\n");
-
-    console.log(
-      `[ReminderChecker] 📨 Message text (first 300 chars):`,
-      messageText.substring(0, 300),
-    );
 
     const reply_markup = {
       inline_keyboard: [
@@ -319,10 +272,7 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
 
     for (const tgUser of tgUsers) {
       try {
-        console.log(
-          `[ReminderChecker] 📤 Sending to chat_id=${tgUser.telegram_chat_id}...`,
-        );
-        const sendResult = await supabase.functions.invoke("send-telegram", {
+        await supabase.functions.invoke("send-telegram", {
           body: {
             chat_id: tgUser.telegram_chat_id,
             text: messageText,
@@ -330,11 +280,6 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
             reply_markup,
           },
         });
-        console.log(
-          `[ReminderChecker] 📤 Send result:`,
-          sendResult?.data,
-          sendResult?.error,
-        );
         await supabase.from("atlas_reminder_logs").insert({
           reminder_id: reminder.reminder_id,
           recipient_id: tgUser.slyusar_id,
@@ -342,16 +287,9 @@ async function sendTelegramForReminder(reminder: DueReminder): Promise<void> {
           message_text: messageText,
           delivery_status: "delivered",
         });
-      } catch (err) {
-        console.error(
-          `[ReminderChecker] Telegram error for slyusar=${tgUser.slyusar_id}:`,
-          err,
-        );
-      }
+      } catch (err) {}
     }
-  } catch (err) {
-    console.error("[ReminderChecker] sendTelegramForReminder error:", err);
-  }
+  } catch (err) {}
 }
 
 async function resolveRecipientIds(reminder: DueReminder): Promise<number[]> {
@@ -427,7 +365,6 @@ async function checkDueReminders(): Promise<void> {
       await supabase.rpc("get_due_reminders");
 
     if (error) {
-      console.error("[ReminderChecker] Помилка get_due_reminders:", error);
       return;
     }
 
@@ -436,10 +373,6 @@ async function checkDueReminders(): Promise<void> {
       if (isTabVisible) schedulePrecisionCheck();
       return;
     }
-
-    console.log(
-      `[ReminderChecker] 🔔 Знайдено ${dueReminders.length} нагадувань`,
-    );
 
     let anyTriggered = false;
 
@@ -453,24 +386,12 @@ async function checkDueReminders(): Promise<void> {
         reminder.reminder_type === "conditional" &&
         reminder.condition_query
       ) {
-        console.log(
-          `[ReminderChecker] 📊 Conditional reminder_id=${reminder.reminder_id}, query:`,
-          reminder.condition_query,
-        );
         const condResult = await checkCondition(reminder.condition_query);
-        console.log(`[ReminderChecker] 📊 Condition result:`, condResult);
         if (!condResult) {
-          console.log(
-            `[ReminderChecker] ❌ Умова НЕ виконана (false/empty) — пропускаємо`,
-          );
           // Умова не виконана → просто оновити next_trigger_at
           await markTriggered(reminder.reminder_id, false, "Умова не виконана");
           continue;
         }
-
-        console.log(
-          `[ReminderChecker] ✅ Умова виконана! Форматуємо результат...`,
-        );
 
         // Форматуємо результат для Telegram
         const fieldLabels: Record<string, string> = {
@@ -526,35 +447,22 @@ async function checkDueReminders(): Promise<void> {
           resultText = String(condResult);
         }
 
-        console.log(
-          `[ReminderChecker] 📝 Formatted result text:`,
-          resultText.substring(0, 200),
-        );
         if (!reminder.meta) reminder.meta = {};
         reminder.meta.condition_result_text = resultText;
       }
 
       // Показати toast (для app і both каналів)
       if (reminder.channel === "app" || reminder.channel === "both") {
-        console.log(
-          `[ReminderChecker] 🔔 Показуємо toast для reminder_id=${reminder.reminder_id}`,
-        );
         showReminderToast(reminder);
       }
 
       // Відправити Telegram (для telegram і both каналів)
       // Дедуплікація: перевірити чи сервер вже не відправив
       if (reminder.channel === "telegram" || reminder.channel === "both") {
-        console.log(
-          `[ReminderChecker] ✈️ Відправляємо Telegram для reminder_id=${reminder.reminder_id}`,
-        );
         await sendTelegramForReminder(reminder);
       }
 
       // Записати лог + оновити trigger
-      console.log(
-        `[ReminderChecker] ✅ markTriggered для reminder_id=${reminder.reminder_id}`,
-      );
       await markTriggered(reminder.reminder_id, true);
 
       anyTriggered = true;
@@ -571,7 +479,6 @@ async function checkDueReminders(): Promise<void> {
       schedulePrecisionCheck();
     }
   } catch (err) {
-    console.error("[ReminderChecker] Невідома помилка:", err);
   } finally {
     isChecking = false;
   }
@@ -621,10 +528,6 @@ async function schedulePrecisionCheck(): Promise<void> {
       cachedNextTriggerAt = null; // Скинути кеш після спрацювання
       checkDueReminders();
     }, delayMs);
-
-    console.log(
-      `[ReminderChecker] ⏱ Precision timer: ${Math.round(delayMs / 1000)}с до наступного`,
-    );
   } catch {
     // Ігноруємо — базовий polling підстрахує
   }
@@ -691,7 +594,6 @@ async function checkCondition(conditionQuery: string): Promise<any | false> {
     });
 
     if (error) {
-      console.warn("[ReminderChecker] Помилка перевірки умови:", error.message);
       return false;
     }
 
@@ -970,7 +872,10 @@ function formatPayloadMessage(
       UPDATE: "✏️ Оновлено",
       DELETE: "🔴 Видалено",
     };
-    action = (eventLabels[payload.eventType] || payload.eventType) + " • " + payload.table;
+    action =
+      (eventLabels[payload.eventType] || payload.eventType) +
+      " • " +
+      payload.table;
   }
 
   const lines: string[] = [];
@@ -986,23 +891,23 @@ function formatPayloadMessage(
 
   // Карта полів для виводу
   const fieldMap: Record<string, string> = {
-    "ПІБ": "👤 Клієнт",
-    "Клієнт": "👤 Клієнт",
-    "Name": "👤 Ім'я",
-    "Назва": "📌 Назва",
-    "Телефон": "📞 Тел",
-    "Авто": "🚗 Авто",
-    "Марка": "🚗",
-    "Модель": "",
+    ПІБ: "👤 Клієнт",
+    Клієнт: "👤 Клієнт",
+    Name: "👤 Ім'я",
+    Назва: "📌 Назва",
+    Телефон: "📞 Тел",
+    Авто: "🚗 Авто",
+    Марка: "🚗",
+    Модель: "",
     "Держ. номер": "📍",
-    "Приймальник": "👷‍♂️",
-    "Слюсар": "🔧 Слюсар",
+    Приймальник: "👷‍♂️",
+    Слюсар: "🔧 Слюсар",
     "Загальна сума": "💰 Сума",
     "За роботу": "🔧 За роботу",
     "За деталі": "📦 За деталі",
-    "Посада": "💼 Посада",
-    "Кількість": "📊 Кількість",
-    "Ціна": "💰 Ціна",
+    Посада: "💼 Посада",
+    Кількість: "📊 Кількість",
+    Ціна: "💰 Ціна",
   };
 
   // Якщо rule має show_fields — показуємо ТІЛЬКИ вказані поля
@@ -1022,7 +927,11 @@ function formatPayloadMessage(
 
   // Хто виконав дію (Приймальник) — завжди для acts, якщо не в show_fields
   const performer = jsonData["Приймальник"];
-  if (performer && !fieldsToShow.includes("Приймальник") && payload.table === "acts") {
+  if (
+    performer &&
+    !fieldsToShow.includes("Приймальник") &&
+    payload.table === "acts"
+  ) {
     lines.push(`👷‍♂️ Виконав: ${performer}`);
   }
 
@@ -1131,10 +1040,6 @@ function initRealtimeMonitoring(): void {
           .select("slyusar_id, data")
           .in("slyusar_id", creatorIds);
         if (creatorsErr) {
-          console.warn(
-            "[ReminderChecker] Помилка завантаження імен:",
-            creatorsErr.message,
-          );
         }
         if (creators) {
           for (const c of creators)
@@ -1183,8 +1088,6 @@ function initRealtimeMonitoring(): void {
             "postgres_changes" as any,
             { event: "*", schema: "public", table: tableName },
             async (payload: any) => {
-              console.log(`[RT] 🔴 ${payload.eventType} @ ${payload.table}`);
-
               // Дедуплікація: БЕЗ Date.now() — щоб одна і та ж подія не оброблялась двічі
               const rowId = `${payload.eventType}:${payload.table}:${payload.new?.act_id || payload.new?.id || payload.old?.act_id || payload.old?.id || "?"}`;
               if (sentPayloadIds.has(rowId)) return;
@@ -1213,8 +1116,6 @@ function initRealtimeMonitoring(): void {
                     )
                   )
                     continue;
-
-                  console.log(`[RT] ✅ Тригер reminder_id=${rem.reminder_id}`);
 
                   // Формуємо повідомлення (без запитів — тільки з payload)
                   const resultText = formatPayloadMessage(payload, rule);
@@ -1253,22 +1154,15 @@ function initRealtimeMonitoring(): void {
                   }
 
                   await Promise.all(dbPromises);
-                } catch (innerErr) {
-                  console.error("[RT] Помилка:", innerErr);
-                }
+                } catch (innerErr) {}
               }
             },
           )
-          .subscribe((status: string) => {
-            console.log(`[RT] ${tableName}: ${status}`);
-          });
+          .subscribe(() => {});
 
         realtimeChannels.push(ch);
       }
       realtimeChannel = realtimeChannels[0] || null;
-      console.log(
-        `[ReminderChecker] 🔴 Realtime підписки: ${[...tableReminderMap.keys()].join(", ")}`,
-      );
     });
 }
 
@@ -1297,9 +1191,7 @@ async function markTriggered(
         p_reminder_id: reminderId,
       });
     }
-  } catch (err) {
-    console.error("[ReminderChecker] Помилка markTriggered:", err);
-  }
+  } catch (err) {}
 }
 
 // ═══════════════════════════════════════════════════════

@@ -4144,11 +4144,18 @@ function parseClientDataFromAI(text: string): ParsedClientData {
   // ── Адреса / Місце реєстрації / Місце проживання / C.1.3 (адресне) ──
   result.address = extractField(text, [
     new RegExp(
-      `(?:адреса|місце\\s*(?:проживання|реєстрації)|address|residence)${SEP}(.+)`,
+      `(?:адреса\\s*(?:власника|проживання|реєстрації|клієнта)?|місце\\s*(?:проживання|реєстрації)|місцезнаходження|address|residence)${SEP}(.+)`,
       "im",
     ),
     new RegExp(`(?:c\\.?\\s*4|c4)${SEP}(.+)`, "im"), // C.4 — адреса у техпаспорті
   ]);
+  // Fallback: шукаємо рядок що містить ознаки адреси (обл., м., р-н, вул., буд.)
+  if (!result.address) {
+    const addrLine = text.match(
+      /^[^:：\n]*[:：]\s*(.+(?:обл\.|р-н|м\.\s*\S+|вул\.|буд\.|пров\.|район|область|місто).+)$/im,
+    );
+    if (addrLine) result.address = addrLine[1].trim();
+  }
 
   // ── Додатково / Примітка ──
   result.extra = extractField(text, [
@@ -4465,10 +4472,6 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
     // ОСТАННІМ — Автомобіль з фокусом для автокомплітера
     fillCarModelFieldAndFocus(getCarSearchText(parsed));
   }
-
-  // Закриваємо AI чат (щоб бачити картку)
-  const aiModal = document.getElementById("ai-chat-modal");
-  if (aiModal) aiModal.classList.add("hidden");
 }
 
 // ============================================================

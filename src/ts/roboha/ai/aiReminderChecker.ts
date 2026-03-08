@@ -772,6 +772,9 @@ function evalCheck(
   if (changed) {
     const field = changed[1];
     const [oldVal, newVal] = getNestedValues(field, oldRow, row);
+    // Якщо old рядок не містить поле (REPLICA IDENTITY не FULL — old містить лише PK),
+    // ми не можемо підтвердити, що значення НЕ змінилось → тригеримо завжди
+    if (oldVal === undefined && newVal !== undefined) return true;
     return String(oldVal ?? "") !== String(newVal ?? "");
   }
 
@@ -780,14 +783,18 @@ function evalCheck(
   if (closed) {
     const field = closed[1];
     const [oldVal, newVal] = getNestedValues(field, oldRow, row);
+    // Якщо old не містить поле (REPLICA IDENTITY не FULL) — перевіряємо лише new
+    if (oldVal === undefined) return newVal != null && newVal !== "";
     return (oldVal == null || oldVal === "") && newVal != null && newVal !== "";
   }
 
-  // Зміна з NOT NULL на null: field OPENED
+  // Зміна з NOT NULL на null: field OPENED (очищення комірки)
   const opened = c.match(/^([\w.]+)\s+opened$/);
   if (opened) {
     const field = opened[1];
     const [oldVal, newVal] = getNestedValues(field, oldRow, row);
+    // Якщо old не містить поле (REPLICA IDENTITY не FULL) — тригеримо якщо new порожнє
+    if (oldVal === undefined) return newVal == null || newVal === "";
     return oldVal != null && oldVal !== "" && (newVal == null || newVal === "");
   }
 

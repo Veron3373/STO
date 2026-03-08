@@ -817,7 +817,6 @@ function startCountdownTimer(): void {
   }, 30000); // оновлювати кожні 30 секунд
 }
 
-
 function formatRecipients(recipients: any): string {
   if (recipients === "self" || recipients === '"self"') return "👤 Тільки я";
   if (recipients === "all" || recipients === '"all"') return "👥 Всі";
@@ -1469,7 +1468,7 @@ function showReminderModal(
               <option value="interval" ${r.schedule?.type === "interval" ? "selected" : ""}>Через N годин</option>
             </select>
           </div>
-          <div class="ai-planner-row">
+          <div class="ai-planner-row${r.schedule?.type === "interval" ? " ai-planner-row--interval" : ""}" id="planner-schedule-row">
             <div class="ai-planner-field" id="planner-time-field">
               <label class="ai-planner-label">Час</label>
               <input class="ai-planner-input" id="planner-schedule-time" type="time"
@@ -1802,6 +1801,10 @@ function initModalHandlers(
     (
       overlay.querySelector("#planner-time-field") as HTMLElement
     ).style.display = v === "interval" ? "none" : "flex";
+    const row = overlay.querySelector("#planner-schedule-row") as HTMLElement;
+    if (row) {
+      row.classList.toggle("ai-planner-row--interval", v === "interval");
+    }
   });
 
   // Клік по datetime-local — одразу відкрити календар

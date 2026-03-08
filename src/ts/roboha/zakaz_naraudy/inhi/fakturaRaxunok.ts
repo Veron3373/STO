@@ -5,6 +5,11 @@ import { formatNumberWithSpaces } from "../globalCache";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { showNotification } from "./vspluvauhe_povidomlenna";
+import {
+  attachPageFormatControls,
+  hideFormatControlsForPdf,
+  showFormatControlsAfterPdf,
+} from "./pageFormatControls";
 
 export const INVOICE_PREVIEW_MODAL_ID = "invoice-preview-modal";
 
@@ -402,6 +407,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
   ) as HTMLButtonElement;
 
   if (controls) controls.style.display = "none";
+  hideFormatControlsForPdf(modalBody);
 
   // Зберігаємо оригінальні стилі
   const originalStyle = modalBody.style.cssText;
@@ -583,6 +589,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
   } finally {
     // Повертаємо оригінальні стилі
     if (controls) controls.style.display = "flex";
+    showFormatControlsAfterPdf(modalBody);
     modalBody.style.cssText = originalStyle;
     if (btnPrint) {
       btnPrint.classList.remove("loading");
@@ -747,6 +754,18 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
 
   const overlay = document.getElementById(INVOICE_PREVIEW_MODAL_ID);
   if (overlay) {
+    const a4Container = overlay.querySelector(
+      ".invoice-a4-container",
+    ) as HTMLElement;
+    if (a4Container) {
+      attachPageFormatControls(overlay, a4Container, {
+        defaultAllTextSize: 10,
+        defaultTableTextSize: 10,
+        defaultCellPadding: 4,
+        tableSelector: ".invoice-table",
+      });
+    }
+
     overlay.addEventListener("click", (event) => {
       if (event.target === overlay) {
         overlay.remove();

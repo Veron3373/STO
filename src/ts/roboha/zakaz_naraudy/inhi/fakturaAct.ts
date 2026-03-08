@@ -5,6 +5,11 @@ import { jsPDF } from "jspdf";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import { supabase } from "../../../vxid/supabaseClient";
 import { formatNumberWithSpaces } from "../globalCache";
+import {
+  attachPageFormatControls,
+  hideFormatControlsForPdf,
+  showFormatControlsAfterPdf,
+} from "./pageFormatControls";
 
 export const ACT_PREVIEW_MODAL_ID = "act-preview-modal";
 
@@ -220,6 +225,20 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   document.body.insertAdjacentHTML("beforeend", modalHtml);
 
   const overlay = document.getElementById(ACT_PREVIEW_MODAL_ID);
+  if (overlay) {
+    const a4Container = overlay.querySelector(
+      ".fakturaAct-container",
+    ) as HTMLElement;
+    if (a4Container) {
+      attachPageFormatControls(overlay, a4Container, {
+        defaultAllTextSize: 11,
+        defaultTableTextSize: 10,
+        defaultCellPadding: 4,
+        tableSelector: ".fakturaAct-table",
+      });
+    }
+  }
+
   overlay?.addEventListener("click", (e) => {
     if (e.target === overlay) overlay.remove();
   });
@@ -515,6 +534,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
     ".fakturaAct-controls",
   ) as HTMLElement;
   if (controls) controls.style.display = "none";
+  hideFormatControlsForPdf(container);
 
   // Зберігаємо оригінальні стилі
   const originalStyle = container.style.cssText;
@@ -678,6 +698,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
   } finally {
     // Повертаємо оригінальні стилі
     if (controls) controls.style.display = "flex";
+    showFormatControlsAfterPdf(container);
     container.style.cssText = originalStyle;
   }
 }

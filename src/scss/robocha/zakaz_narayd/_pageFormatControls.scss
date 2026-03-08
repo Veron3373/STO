@@ -1,0 +1,107 @@
+// _pageFormatControls.scss
+
+// --- Панель керування розміром тексту ---
+.page-format-toolbar {
+  position: sticky;
+  top: 10px;
+  z-index: 10001;
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 10px;
+  padding: 8px 16px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+
+  .pf-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .pf-label {
+    color: #bbb;
+    font-size: 11px;
+    white-space: nowrap;
+    margin-right: 2px;
+  }
+
+  .pf-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid #555;
+    background: #333;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    line-height: 1;
+    padding: 0;
+
+    &:hover {
+      background: #555;
+      border-color: #888;
+    }
+
+    &:active {
+      transform: scale(0.9);
+      background: #666;
+    }
+  }
+
+  .pf-value {
+    color: white;
+    font-size: 11px;
+    min-width: 34px;
+    text-align: center;
+    font-weight: bold;
+    font-family: monospace;
+  }
+}
+
+// --- Індикатор розриву сторінки А4 ---
+.page-break-marker {
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  height: 0;
+  border-top: 2px dashed #e74c3c;
+  z-index: 100;
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #e74c3c;
+    color: white;
+    font-size: 10px;
+    padding: 2px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+    font-family: Arial, sans-serif;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.4);
+  }
+}
+
+// --- Друк: ховаємо елементи керування ---
+@media print {
+  .page-format-toolbar,
+  .page-break-marker {
+    display: none !important;
+  }
+}

@@ -69,11 +69,11 @@ export function attachPageFormatControls(
     <div class="pf-joystick">
       <div class="pf-joy-title">Стиснути / Розтягнути</div>
       <div class="pf-joy-row">
-        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально (міжрядковий +)">+</button>
+        <button class="pf-btn pf-joy-btn" data-action="stretch-v" title="Розтягнути вертикально (міжрядковий +)">−</button>
       </div>
       <div class="pf-joy-row">
         <span class="pf-joy-val pf-joy-val-side" data-value="sq-left">${state.offsetLeft}mm</span>
-        <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків (left і right +1)">−</button>
+        <button class="pf-btn pf-joy-btn" data-action="squeeze-h" title="Стиснути з боків (left і right +1)">+</button>
         <span class="pf-joy-val" data-value="sq-line">${state.lineSpacing}</span>
         <button class="pf-btn pf-joy-btn" data-action="stretch-h" title="Розтягнути горизонтально (left і right −1)">+</button>
         <span class="pf-joy-val pf-joy-val-side" data-value="sq-right">${state.offsetRight}mm</span>
@@ -320,6 +320,12 @@ function getElementBoundsPx(container: HTMLElement, selector: string) {
  * Визначає точки розриву сторінок за тією ж логікою, що й PDF-генерація
  */
 function calculateSmartBreaks(container: HTMLElement): number[] {
+  // Тимчасово прибираємо min-height для точного розрахунку (як при PDF-генерації)
+  const origMinHeight = container.style.minHeight;
+  const origHeight = container.style.height;
+  container.style.minHeight = "auto";
+  container.style.height = "auto";
+
   const containerHeight = container.scrollHeight;
   const pxPerMm = container.offsetWidth / 210;
   const pageHeightPx = PDF_CONTENT_HEIGHT_MM * pxPerMm;
@@ -383,6 +389,10 @@ function calculateSmartBreaks(container: HTMLElement): number[] {
     currentDomY = safeCutDomY;
   }
 
+  // Відновлюємо оригінальні стилі
+  container.style.minHeight = origMinHeight;
+  container.style.height = origHeight;
+
   return breaks;
 }
 
@@ -392,40 +402,44 @@ function updatePageBreakMarkers(container: HTMLElement): void {
   container.querySelectorAll(".page-background").forEach((el) => el.remove());
 
   const containerHeight = container.scrollHeight;
+  const pxPerMm = container.offsetWidth / 210;
+  // Висота нижнього поля PDF (у пікселях)
+  const marginBottomPx = Math.round(15 * pxPerMm); // 15mm нижнє поле
 
   // Обчислюємо розумні точки розриву (як у PDF)
   const breaks = calculateSmartBreaks(container);
 
-  if (breaks.length === 0) {
-    // Все на одній сторінці — просто фон
+  // Створює фонову область сторінки з зонами полів
+  function createPageBg(top: number, height: number, pageNum: number) {
     const pageBg = document.createElement("div");
     pageBg.className = "page-background";
     pageBg.setAttribute("data-no-pdf", "true");
-    pageBg.style.top = "0px";
-    pageBg.style.height = `${containerHeight}px`;
-    pageBg.innerHTML = `<span class="page-number">Аркуш 1</span>`;
+    pageBg.style.top = `${top}px`;
+    pageBg.style.height = `${height}px`;
+    pageBg.innerHTML = `
+      <div class="page-margin-zone page-margin-bottom" style="height: ${marginBottomPx}px"></div>
+      <span class="page-number">Аркуш ${pageNum}</span>
+    `;
     container.appendChild(pageBg);
+  }
+
+  if (breaks.length === 0) {
+    createPageBg(0, containerHeight, 1);
     return;
   }
 
-  // Фонова область першої сторінки
-  const firstPageBg = document.createElement("div");
-  firstPageBg.className = "page-background";
-  firstPageBg.setAttribute("data-no-pdf", "true");
-  firstPageBg.style.top = "0px";
-  firstPageBg.style.height = `${breaks[0]}px`;
-  firstPageBg.innerHTML = `<span class="page-number">Аркуш 1</span>`;
-  container.appendChild(firstPageBg);
+  // Перша сторінка
+  createPageBg(0, breaks[0], 1);
 
   for (let i = 0; i < breaks.length; i++) {
     const breakPos = breaks[i];
     const pageNum = i + 1;
 
-    // Маркер розриву
+    // Маркер розриву — висота 50px, центрується на breakPos
     const marker = document.createElement("div");
     marker.className = "page-break-marker";
     marker.setAttribute("data-no-pdf", "true");
-    marker.style.top = `${breakPos - 15}px`;
+    marker.style.top = `${breakPos - 25}px`;
     marker.innerHTML = `
       <div class="page-break-bottom">
         <span>▼ Кінець аркуша ${pageNum} ▼</span>
@@ -439,13 +453,7 @@ function updatePageBreakMarkers(container: HTMLElement): void {
 
     // Фонова область наступної сторінки
     const nextBreak = i + 1 < breaks.length ? breaks[i + 1] : containerHeight;
-    const pageBg = document.createElement("div");
-    pageBg.className = "page-background";
-    pageBg.setAttribute("data-no-pdf", "true");
-    pageBg.style.top = `${breakPos}px`;
-    pageBg.style.height = `${nextBreak - breakPos}px`;
-    pageBg.innerHTML = `<span class="page-number">Аркуш ${pageNum + 1}</span>`;
-    container.appendChild(pageBg);
+    createPageBg(breakPos, nextBreak - breakPos, pageNum + 1);
   }
 }
 

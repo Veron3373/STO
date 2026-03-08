@@ -135,8 +135,9 @@
   position: absolute;
   left: 0;
   right: 0;
-  background: rgba(240, 248, 255, 0.3);
-  border: 1px dashed rgba(100, 149, 237, 0.3);
+  background: rgba(240, 248, 255, 0.15);
+  border-left: 2px solid rgba(100, 149, 237, 0.25);
+  border-right: 2px solid rgba(100, 149, 237, 0.25);
   z-index: 1;
   pointer-events: none;
 
@@ -152,14 +153,32 @@
     border-radius: 12px;
     font-family: Arial, sans-serif;
   }
+
+  // Зона нижнього поля PDF (15mm)
+  .page-margin-zone {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+
+    &.page-margin-bottom {
+      bottom: 0;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(231, 76, 60, 0.06)
+      );
+      border-top: 1px dotted rgba(231, 76, 60, 0.3);
+    }
+  }
 }
 
 // --- Індикатор розриву сторінки А4 ---
 .page-break-marker {
   position: absolute;
-  left: -5px;
-  right: -5px;
-  height: 30px;
+  left: -8px;
+  right: -8px;
+  height: 50px;
   z-index: 150;
   pointer-events: none;
   display: flex;
@@ -169,10 +188,14 @@
 
   .page-break-bottom {
     width: 100%;
-    height: 12px;
+    flex: 1;
     border-bottom: 3px solid #e74c3c;
     position: relative;
-    background: linear-gradient(to bottom, transparent, rgba(231, 76, 60, 0.2));
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgba(231, 76, 60, 0.15)
+    );
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -194,15 +217,12 @@
 
   .page-break-gap {
     width: 100%;
-    height: 6px;
-    background: repeating-linear-gradient(
-      90deg,
-      #ff6b6b 0,
-      #ff6b6b 8px,
-      #4caf50 8px,
-      #4caf50 16px
-    );
+    height: 10px;
+    background: #555;
     position: relative;
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.5),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.5);
 
     &::before {
       content: "✂";
@@ -211,19 +231,19 @@
       top: 50%;
       transform: translate(-50%, -50%);
       font-size: 14px;
-      background: white;
-      padding: 0 4px;
+      background: #555;
+      color: #fff;
+      padding: 0 6px;
       border-radius: 3px;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
     }
   }
 
   .page-break-top {
     width: 100%;
-    height: 12px;
+    flex: 1;
     border-top: 3px solid #4caf50;
     position: relative;
-    background: linear-gradient(to top, transparent, rgba(76, 175, 80, 0.2));
+    background: linear-gradient(to top, transparent, rgba(76, 175, 80, 0.15));
     display: flex;
     align-items: flex-start;
     justify-content: center;

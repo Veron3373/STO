@@ -19,7 +19,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $gitAccounts = @(
-    @{ Name = "Veron3373 (GitHub)"; Email = "veron3373@gmail.com"; Username = "Veron3373" }
+    @{ Name = "Vovklesia (GitHub)"; Email = "vovklesia2018@gmail.com"; Username = "vovklesia" }
 )
 
 # Create form
@@ -136,21 +136,21 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "[4/4] Deploying Supabase Edge Functions..."
-npx supabase functions deploy telegram-bot --no-verify-jwt --project-ref eksifjzzszcqsufwcbsx
+npx supabase functions deploy telegram-bot --no-verify-jwt
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠️ telegram-bot deploy failed (non-critical)" -ForegroundColor Yellow
 } else {
     Write-Host "✅ telegram-bot deployed!" -ForegroundColor Green
 }
 
-npx supabase functions deploy check-reminders --no-verify-jwt --project-ref eksifjzzszcqsufwcbsx
+npx supabase functions deploy check-reminders --no-verify-jwt
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠️ check-reminders deploy failed (non-critical)" -ForegroundColor Yellow
 } else {
     Write-Host "✅ check-reminders deployed!" -ForegroundColor Green
 }
 
-npx supabase functions deploy send-telegram --no-verify-jwt --project-ref eksifjzzszcqsufwcbsx
+npx supabase functions deploy send-telegram --no-verify-jwt
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠️ send-telegram deploy failed (non-critical)" -ForegroundColor Yellow
 } else {
@@ -161,5 +161,5 @@ Write-Host "[5/5] DONE!"
 Write-Host ""
 Write-Host "========================================"
 Write-Host "  ✅ DEPLOYMENT STARTED"
-Write-Host "  - GitHub Pages: https://veron3373.github.io/STO/"
+Write-Host "  - GitHub Pages: https://vovklesia.github.io/STO/"
 Write-Host "========================================"

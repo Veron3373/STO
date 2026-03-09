@@ -536,6 +536,10 @@ async function generateActPdf(actNumber: string): Promise<void> {
   if (controls) controls.style.display = "none";
   hideFormatControlsForPdf(container);
 
+  // Ховаємо плаваючу кнопку голосового введення
+  const voiceBtn = document.getElementById("voice-input-button") as HTMLElement;
+  if (voiceBtn) voiceBtn.style.display = "none";
+
   // Зберігаємо оригінальні стилі
   const originalStyle = container.style.cssText;
 
@@ -699,6 +703,7 @@ async function generateActPdf(actNumber: string): Promise<void> {
     // Повертаємо оригінальні стилі
     if (controls) controls.style.display = "flex";
     showFormatControlsAfterPdf(container);
+    if (voiceBtn) voiceBtn.style.display = "";
     container.style.cssText = originalStyle;
   }
 }

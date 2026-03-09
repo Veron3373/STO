@@ -1020,7 +1020,11 @@ async function gatherSTOContext(
   try {
     const [clRes, crRes] = await Promise.all([
       supabase.from("clients").select("client_id, data").limit(50000),
-      supabase.from("cars").select("cars_id, client_id, data").limit(50000),
+      supabase
+        .from("cars")
+        .select("cars_id, client_id, data")
+        .not("is_deleted", "is", true)
+        .limit(50000),
     ]);
     if (clRes.data) {
       for (const c of clRes.data) {
@@ -2644,6 +2648,10 @@ async function geminiWithFunctionCalling(
   let currentContents = [...contents];
   let totalTokens = 0;
 
+  // Функції, які повинні виконуватись лише один раз (запобігання дублікатам)
+  const ONE_SHOT_FUNCTIONS = new Set(["create_reminder"]);
+  const executedOneShot = new Set<string>();
+
   for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
     const requestBody: any = {
       contents: currentContents,
@@ -2701,10 +2709,32 @@ async function geminiWithFunctionCalling(
       for (const fcPart of functionCallParts) {
         const fc = fcPart.functionCall;
 
+        // 🛡️ Захист від дублікатів: one-shot функції виконуються лише раз
+        if (ONE_SHOT_FUNCTIONS.has(fc.name) && executedOneShot.has(fc.name)) {
+          functionResponseParts.push({
+            functionResponse: {
+              name: fc.name,
+              response: {
+                content: JSON.stringify({
+                  success: true,
+                  message:
+                    "Вже виконано раніше в цьому запиті. Не потрібно повторювати.",
+                }),
+              },
+            },
+          });
+          continue;
+        }
+
         // 🔍 Оновлюємо typing indicator з назвою інструменту
         updateTypingStatus(getToolDisplayName(fc.name));
 
         const result = await handleFunctionCall(fc.name, fc.args || {});
+
+        // Позначаємо one-shot функцію як виконану
+        if (ONE_SHOT_FUNCTIONS.has(fc.name)) {
+          executedOneShot.add(fc.name);
+        }
 
         functionResponseParts.push({
           functionResponse: {
@@ -2788,6 +2818,10 @@ async function groqWithFunctionCalling(
     },
   }));
 
+  // Функції, які повинні виконуватись лише один раз (запобігання дублікатам)
+  const ONE_SHOT_FUNCTIONS = new Set(["create_reminder"]);
+  const executedOneShot = new Set<string>();
+
   for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
     const requestBody: any = {
       model,
@@ -2845,7 +2879,27 @@ async function groqWithFunctionCalling(
         } catch {
           args = {};
         }
+
+        // 🛡️ Захист від дублікатів: one-shot функції виконуються лише раз
+        if (ONE_SHOT_FUNCTIONS.has(fc.name) && executedOneShot.has(fc.name)) {
+          currentMessages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({
+              success: true,
+              message:
+                "Вже виконано раніше в цьому запиті. Не потрібно повторювати.",
+            }),
+          });
+          continue;
+        }
+
         const result = await handleFunctionCall(fc.name, args);
+
+        // Позначаємо one-shot функцію як виконану
+        if (ONE_SHOT_FUNCTIONS.has(fc.name)) {
+          executedOneShot.add(fc.name);
+        }
 
         currentMessages.push({
           role: "tool",
@@ -3596,7 +3650,11 @@ async function loadDailyStats(date?: Date): Promise<DailyStats> {
             .in("client_id", clientIds)
         : Promise.resolve({ data: [] as any[], error: null }),
       carsIds.length > 0
-        ? supabase.from("cars").select("cars_id, data").in("cars_id", carsIds)
+        ? supabase
+            .from("cars")
+            .select("cars_id, data")
+            .in("cars_id", carsIds)
+            .not("is_deleted", "is", true)
         : Promise.resolve({ data: [] as any[], error: null }),
     ]);
 
@@ -4187,7 +4245,8 @@ async function fillClientFormFromAI(aiText: string): Promise<void> {
     const { data: clientCars } = await supabase
       .from("cars")
       .select("cars_id, data")
-      .eq("client_id", foundClient.client_id);
+      .eq("client_id", foundClient.client_id)
+      .not("is_deleted", "is", true);
 
     let foundCar: { cars_id: string; data: any } | null = null;
     if (clientCars && clientCars.length > 0) {

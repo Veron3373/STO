@@ -2378,6 +2378,24 @@ export function getReminderToolDeclaration() {
   };
 }
 
+/**
+ * Додає локальний часовий пояс до ISO-рядка, якщо його немає.
+ * AI генерує '2026-03-09T09:00:00' (без TZ) — Supabase трактує як UTC.
+ * Додаємо зсув браузера, щоб час зберігався правильно.
+ */
+function ensureTimezone(isoString: string): string {
+  // Вже має часовий пояс (Z, +03:00, -05:00 тощо)
+  if (/[Zz]$/.test(isoString) || /[+-]\d{2}:\d{2}$/.test(isoString)) {
+    return isoString;
+  }
+  // Додаємо локальний зсув
+  const offset = new Date().getTimezoneOffset(); // хвилин від UTC (від'ємне = схід)
+  const sign = offset <= 0 ? "+" : "-";
+  const absH = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+  const absM = String(Math.abs(offset) % 60).padStart(2, "0");
+  return `${isoString}${sign}${absH}:${absM}`;
+}
+
 /** Виконує створення нагадування через Function Calling */
 export async function executeCreateReminder(
   args: Record<string, any>,
@@ -2394,7 +2412,9 @@ export async function executeCreateReminder(
 
     // Одноразове
     if (args.reminder_type === "once" && args.trigger_at) {
-      reminder.trigger_at = args.trigger_at;
+      // AI генерує час без часового поясу — додаємо локальний зсув,
+      // щоб Supabase (timestamptz) не інтерпретував як UTC
+      reminder.trigger_at = ensureTimezone(args.trigger_at);
     }
 
     // Повторюване

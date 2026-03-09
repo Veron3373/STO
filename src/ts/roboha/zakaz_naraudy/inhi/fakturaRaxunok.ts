@@ -409,6 +409,10 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
   if (controls) controls.style.display = "none";
   hideFormatControlsForPdf(modalBody);
 
+  // Ховаємо плаваючу кнопку голосового введення
+  const voiceBtn = document.getElementById("voice-input-button") as HTMLElement;
+  if (voiceBtn) voiceBtn.style.display = "none";
+
   // Зберігаємо оригінальні стилі
   const originalStyle = modalBody.style.cssText;
 
@@ -590,6 +594,7 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
     // Повертаємо оригінальні стилі
     if (controls) controls.style.display = "flex";
     showFormatControlsAfterPdf(modalBody);
+    if (voiceBtn) voiceBtn.style.display = "";
     modalBody.style.cssText = originalStyle;
     if (btnPrint) {
       btnPrint.classList.remove("loading");

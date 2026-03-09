@@ -23,11 +23,11 @@ export const PROJECT_INFO = {
 // URL-ADRESY DEPLOYU
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const DEPLOY_URLS = {
-  vercel: "stobraclavec.vercel.app",
-  githubUsername: "veron3373",
+  vercel: "vovklesia.vercel.app",
+  githubUsername: "vovklesia",
   githubRepo: "STO",
   localPort: 5173,
-  
+
   get vercelUrl() { return `https://${this.vercel}`; },
   get githubPagesUrl() { return `https://${this.githubUsername}.github.io/${this.githubRepo}`; },
   get localUrl() { return `http://localhost:${this.localPort}`; },
@@ -37,11 +37,11 @@ export const DEPLOY_URLS = {
 // SUPABASE KONFIGURACIYA
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const SUPABASE_CONFIG = {
-  get url() { 
-    return import.meta.env.VITE_SUPABASE_URL || "https://eksifjzzszcqsufwcbsx.supabase.co"; 
+  get url() {
+    return import.meta.env.VITE_SUPABASE_URL || "https://hprzwzqfdnryysqutenc.supabase.co";
   },
-  get anonKey() { 
-    return import.meta.env.VITE_SUPABASE_KEY || ""; 
+  get anonKey() {
+    return import.meta.env.VITE_SUPABASE_KEY || "";
   },
   get projectId() {
     const match = this.url.match(/https:\/\/([^.]+)\.supabase\.co/);
@@ -56,8 +56,8 @@ export const SUPABASE_CONFIG = {
 // GOOGLE OAUTH KONFIGURACIYA
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const GOOGLE_CONFIG = {
-  get clientId() { 
-    return import.meta.env.VITE_GOOGLE_CLIENT_ID || ""; 
+  get clientId() {
+    return import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
   },
   driveScopes: "https://www.googleapis.com/auth/drive.file",
   get isConfigured() {
@@ -69,14 +69,14 @@ export const GOOGLE_CONFIG = {
 // GIT AKAUNTY (dlya deploy skryptiv)
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const GIT_ACCOUNTS = [
-  { name: "Veron3373 (GitHub)", email: "veron3373@gmail.com", username: "Veron3373" },
+  { name: "vovklesia (GitHub)", email: "vovklesia2018@gmail.com", username: "vovklesia" },
 ] as const;
 
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // VERCEL AKAUNTY
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const VERCEL_ACCOUNTS = [
-  { name: "Veron3373 (Main)", team: "", scope: "" },
+  { name: "vovklesia (Main)", team: "", scope: "" },
 ] as const;
 
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
@@ -85,7 +85,7 @@ export const VERCEL_ACCOUNTS = [
 
 export function getCurrentEnvironment(): 'vercel' | 'github' | 'localhost' | 'unknown' {
   const hostname = window.location.hostname;
-  
+
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'localhost';
   }
@@ -100,7 +100,7 @@ export function getCurrentEnvironment(): 'vercel' | 'github' | 'localhost' | 'un
 
 export function getBaseUrl(): string {
   const env = getCurrentEnvironment();
-  
+
   switch (env) {
     case 'localhost':
       return DEPLOY_URLS.localUrl;
@@ -133,17 +133,17 @@ export function getAllowedOrigins(): string[] {
 export function getAllowedRedirectUris(): string[] {
   const pages = ['main.html', 'index.html'];
   const origins = getAllowedOrigins();
-  
+
   const uris: string[] = [];
-  
+
   for (const origin of origins) {
     for (const page of pages) {
       uris.push(`${origin}/${page}`);
     }
   }
-  
+
   uris.push(SUPABASE_CONFIG.authCallbackUrl);
-  
+
   return uris;
 }
 

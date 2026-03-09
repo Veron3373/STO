@@ -16,13 +16,13 @@ function getGitNameFallback(): string {
     if (cached) {
       return cached;
     }
-    
+
     // Якщо кешу немає - беремо з URL
     const hostname = window.location.hostname; // наприклад: "
     if (hostname.endsWith('.github.io')) {
       return hostname.replace('.github.io', ''); // ""
     }
-    
+
     // Для localhost - повертаємо з кешу або пустий рядок
     return cached || "";
   } catch {
@@ -38,12 +38,12 @@ export async function getGitName(): Promise<string> {
   // 🔥 Для Vercel/localhost не потрібно отримувати gitName з БД
   // URL формується динамічно через window.location.origin
   const hostname = window.location.hostname;
-  
+
   // На Vercel або localhost - просто повертаємо fallback
-  if (hostname.includes('main.sto-braclavets.pages.dev') || hostname.includes('sto-braclavets.pages.dev') || hostname === 'localhost' || hostname === '127.0.0.1') {
+  if (hostname.includes('main.sto-vovklesia.pages.dev') || hostname.includes('sto-vovklesia.pages.dev') || hostname === 'localhost' || hostname === '127.0.0.1') {
     return getGitNameFallback();
   }
-  
+
   // Тільки для GitHub Pages пробуємо отримати з кешу
   return getGitNameFallback();
 }
@@ -61,9 +61,9 @@ export function buildGitUrl(gitName: string, path: string = ""): string {
   // На GitHub Pages: "https://username.github.io"
   // На localhost: "http://localhost:5173"
   const hostname = window.location.hostname;
-  
+
   let baseUrl: string;
-  
+
   if (hostname.endsWith('.github.io')) {
     // GitHub Pages - старий формат
     baseUrl = `https://${gitName}.github.io/STO`;
@@ -71,7 +71,7 @@ export function buildGitUrl(gitName: string, path: string = ""): string {
     // Vercel, localhost або інший хостинг - використовуємо origin
     baseUrl = window.location.origin;
   }
-  
+
   return path ? `${baseUrl}/${path}` : `${baseUrl}/`;
 }
 

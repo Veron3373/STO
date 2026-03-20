@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 
 export default defineConfig({
-  base: process.env.DEPLOY_TARGET === "github" ? "/STO/" : "/",
+  base: "/",
   plugins: [react()],
   build: {
     modulePreload: false,

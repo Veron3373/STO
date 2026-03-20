@@ -24,15 +24,18 @@ export const PROJECT_INFO = {
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const DEPLOY_URLS = {
   vercel: "stobraclavec.vercel.app",
-  githubUsername: "stobraclavec",
-  githubRepo: "STO",
+  githubUsername: "veron3373",
+  githubRepo: "",
   localPort: 5173,
 
   get vercelUrl() {
     return `https://${this.vercel}`;
   },
   get githubPagesUrl() {
-    return `https://${this.githubUsername}.github.io/${this.githubRepo}`;
+    const repo = this.githubRepo;
+    return repo
+      ? `https://${this.githubUsername}.github.io/${repo}`
+      : `https://${this.githubUsername}.github.io`;
   },
   get localUrl() {
     return `http://localhost:${this.localPort}`;

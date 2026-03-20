@@ -491,8 +491,115 @@ export async function recommendSlyusar(
 }
 
 // ============================================================
-// GEMINI FUNCTION DECLARATION
+// ПЕРЕДБАЧЕННЯ ТЕХНІЧНОГО ОБСЛУГОВУВАННЯ (Predictive Maintenance)
 // ============================================================
+
+export interface MaintenancePrediction {
+  car_id: number;
+  work_name: string;
+  last_date: string;
+  last_mileage: number;
+  current_mileage: number;
+  interval_km: number;
+  interval_days: number;
+  km_left: number;
+  days_left: number;
+  urgency: "low" | "medium" | "high" | "critical";
+  recommendation: string;
+}
+
+/**
+ * Аналізує історію авто та передбачає наступні роботи.
+ */
+export async function getCarMaintenancePrediction(
+  carId: number,
+  currentMileage: number,
+): Promise<AnalyticsResult> {
+  try {
+    // Отримуємо всі акти для цього автомобіля
+    const { data: acts, error } = await supabase
+      .from("acts")
+      .select("act_id, data, date_on, date_off")
+      .eq("cars_id", carId)
+      .order("date_on", { ascending: false });
+
+    if (error) throw error;
+    if (!acts || acts.length === 0) {
+      return { success: true, type: "maintenance", data: [], summary: "Історія обслуговування відсутня" };
+    }
+
+    const predictions: MaintenancePrediction[] = [];
+    const now = new Date();
+
+    const checkList = [
+      { name: "Заміна масла", keywords: ["масло", "олива", "oil"], interval_km: 10000, interval_days: 365 },
+      { name: "Заміна ГРМ", keywords: ["грм", "ремень грм", "ланцюг грм"], interval_km: 60000, interval_days: 1825 },
+      { name: "Гальмівні колодки", keywords: ["колодк", "тормозн"], interval_km: 30000, interval_days: 730 },
+      { name: "Свічки запалювання", keywords: ["свічк", "свеч"], interval_km: 40000, interval_days: 1095 },
+      { name: "Фільтр паливний", keywords: ["фільтр палив", "топливн"], interval_km: 30000, interval_days: 730 },
+    ];
+
+    for (const item of checkList) {
+      let lastAct: any = null;
+      let lastMileage = 0;
+
+      // Шукаємо останню таку роботу в історії
+      for (const act of acts) {
+        const works = act.data?.["Роботи"] || [];
+        const found = works.some((w: any) => 
+          item.keywords.some(k => (w["Робота"] || "").toLowerCase().includes(k))
+        );
+
+        if (found) {
+          lastAct = act;
+          lastMileage = parseInt(act.data?.["Пробіг"]) || 0;
+          break;
+        }
+      }
+
+      if (lastAct) {
+        const lastDate = new Date(lastAct.date_off || lastAct.date_on);
+        const diffKm = currentMileage - lastMileage;
+        const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        const kmLeft = item.interval_km - diffKm;
+        const daysLeft = item.interval_days - diffDays;
+
+        let urgency: "low" | "medium" | "high" | "critical" = "low";
+        if (kmLeft < 500 || daysLeft < 14) urgency = "critical";
+        else if (kmLeft < 2000 || daysLeft < 30) urgency = "high";
+        else if (kmLeft < 4000 || daysLeft < 90) urgency = "medium";
+
+        if (urgency !== "low") {
+          predictions.push({
+            car_id: carId,
+            work_name: item.name,
+            last_date: lastDate.toISOString().split("T")[0],
+            last_mileage: lastMileage,
+            current_mileage: currentMileage,
+            interval_km: item.interval_km,
+            interval_days: item.interval_days,
+            km_left: kmLeft,
+            days_left: daysLeft,
+            urgency,
+            recommendation: `Пора планувати: ${item.name}. ${kmLeft < 0 ? "Пробіг перевищено!" : `Залишилось ~${kmLeft} км`}`
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      type: "maintenance",
+      data: predictions,
+      summary: predictions.length > 0 
+        ? `Виявлено ${predictions.length} критичних рекомендацій по ТО` 
+        : "Автомобіль в хорошому стані, планових робіт найближчим часом не виявлено"
+    };
+  } catch (err: any) {
+    return { success: false, type: "maintenance", error: err.message };
+  }
+}
 
 /**
  * Повертає Gemini function declaration для get_analytics
@@ -500,12 +607,7 @@ export async function recommendSlyusar(
 export function getAnalyticsToolDeclaration(): any {
   return {
     name: "get_analytics",
-    description: `Отримує аналітичні звіти по СТО. Доступні типи аналітики:
-- vip_clients: Топ VIP-клієнтів за виручкою (ім'я, сума, візити, VIP-рівень)
-- slyusar_ranking: Рейтинг слюсарів (виручка, кількість актів, спеціалізація, завантаженість)
-- financial_report: Фінансовий звіт (виручка, витрати, прибуток, маржа, тренди порівняно з минулим періодом)
-- recommend_slyusar: Рекомендація слюсаря для певного типу робіт (за спеціалізацією, рейтингом та завантаженістю)
-Використовуй коли питають: "топ клієнти", "VIP", "рейтинг слюсарів", "фінансовий звіт", "хто вільний?", "кому дати цю роботу?"`,
+    description: `Аналітичні звіти СТО: vip_clients(топ клієнтів), slyusar_ranking(рейтинг), financial_report(фінзвіт), recommend_slyusar(рекомендація слюсаря).`,
     parameters: {
       type: "object",
       properties: {
@@ -521,18 +623,16 @@ export function getAnalyticsToolDeclaration(): any {
         },
         period_days: {
           type: "integer",
-          description:
-            "Період аналізу в днях (за замовчуванням: 365 для VIP-клієнтів, 30 для решти). Наприклад: 7, 30, 90, 365",
+          description: "Період днів (замовч: VIP=365, інші=30)",
         },
         work_type: {
           type: "string",
           description:
-            'Тип робіт для recommend_slyusar. Наприклад: "Двигун", "Ходова", "Електрика", "ТО", "Діагностика"',
+            'Тип робіт для recommend_slyusar: "Двигун","Ходова","Електрика"',
         },
         top_n: {
           type: "integer",
-          description:
-            "Кількість записів у топі (за замовчуванням 20 для VIP, без ліміту для решти)",
+          description: "К-сть записів у топі (замовч 20)",
         },
       },
       required: ["analytics_type"],

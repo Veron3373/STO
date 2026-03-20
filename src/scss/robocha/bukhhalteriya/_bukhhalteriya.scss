@@ -865,7 +865,7 @@ body {
   padding: 8px;
 }
 
-/* Стиль для колонки складу в таблиці */
+/* Стиль для складу в таблиці */
 .sklad-cell {
   text-align: center;
   font-weight: bold;
@@ -1461,4 +1461,40 @@ body {
   font-weight: bold;
   font-size: 1.5em;
   line-height: 1;
+}
+
+/* Audit Log Styles */
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.role-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.role-Адміністратор { background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; }
+.role-Приймальник { background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }
+.role-Слюсар { background: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; }
+.role-Запчастист { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+.role-Складовщик { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+.action-label {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-closed { background: #ffebee; color: #c62828; }
+.status-open { background: #e8f5e9; color: #2e7d32; }
+.status-update { background: #fff8e1; color: #f57f17; }
+.status-info { background: #e3f2fd; color: #0277bd; }
+
+.log-added, .log-deleted {
+  margin-bottom: 2px;
 }

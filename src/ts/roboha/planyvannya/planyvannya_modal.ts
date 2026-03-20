@@ -329,7 +329,7 @@ export class PlanyvannyaModal {
 
     const modalHTML = `
       <div class="post-arxiv-modal-overlay" id="postArxivModalOverlay">
-        <div class="post-arxiv-modal">
+        <div class="post-arxiv-modal animate-slide-up">
             <div class="post-arxiv-header" id="postArxivHeader">
                 <div class="post-arxiv-header-row">
                     <h2>Запис</h2>
@@ -391,7 +391,7 @@ export class PlanyvannyaModal {
             </div>
           </div>
           <div class="post-arxiv-footer">
-            <button class="post-btn post-btn-primary" id="postArxivSubmit">ОК</button>
+            <button class="post-btn post-btn-primary btn-wow-pulse" id="postArxivSubmit">ОК</button>
           </div>
         </div>
       </div>
@@ -1526,6 +1526,23 @@ export class PlanyvannyaModal {
     this.close();
   }
 
+  private async showSuccessAnimation(): Promise<void> {
+    const modal = document.getElementById("postArxivModal");
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="success-animation-container">
+        <svg viewBox="0 0 52 52">
+          <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+          <path class="checkmark" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+        <h3>Збережено!</h3>
+      </div>
+    `;
+
+    return new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
   private async handleSubmit(): Promise<void> {
     const nameInput = document.getElementById(
       "postArxivClientName"
@@ -1579,11 +1596,7 @@ export class PlanyvannyaModal {
       this.onSubmitCallback(data);
     }
 
+    await this.showSuccessAnimation();
     this.close();
   }
-
-  /**
-   * Парсить дату і час з заголовку модального вікна
-   * Вхідний формат: "Середа, 17 грудня 2025 з 11:30 по 18:00"
-   */
 }

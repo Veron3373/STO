@@ -164,8 +164,10 @@ export async function printModalToPdf(): Promise<void> {
     // <--- ДОДАНО: Приховуємо нові кнопки-іконки під час друку
     document.getElementById("create-act-btn") as HTMLElement,
     document.getElementById("create-invoice-btn") as HTMLElement,
+    document.getElementById("copy-act-btn") as HTMLElement,
     // <--- КІНЕЦЬ ДОДАНОГО
 
+    document.getElementById("voice-input-button") as HTMLElement, // Приховуємо кнопку голосового введення
     document.querySelector(".modal-close-button") as HTMLElement,
     document.querySelector(".modal-footer") as HTMLElement,
     document.querySelector(".act-pruimalnyk-info") as HTMLElement, // <--- Приховуємо ім'я приймальника

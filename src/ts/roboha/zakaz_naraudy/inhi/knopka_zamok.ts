@@ -1,5 +1,6 @@
 // src/ts/roboha/zakaz_naraudy/inhi/knopka_zamok.ts
 import { supabase } from "../../../vxid/supabaseClient";
+import { logAction } from "../../../utils/auditLogger";
 import { showNotification } from "./vspluvauhe_povidomlenna";
 import {
   showViknoPidtverdchennayZakruttiaAkty,
@@ -852,6 +853,9 @@ export function initStatusLockDelegation(): void {
         if (actError)
           throw new Error("Не вдалося відкрити акт: " + actError.message);
 
+        // ✅ ЛОГУВАННЯ ДІЇ
+        await logAction("open_act", actId);
+
         const { date_on } = await fetchActDates(actId);
         const dateKey = toISODateOnly(date_on);
         if (dateKey) {
@@ -997,6 +1001,9 @@ export function initStatusLockDelegation(): void {
           .eq("act_id", actId);
         if (actError)
           throw new Error("Не вдалося закрити акт: " + actError.message);
+
+        // ✅ ЛОГУВАННЯ ДІЇ
+        await logAction("close_act", actId, { date_off: currentDateTime });
 
         // 🗑️ ПРИХОВУВАННЯ PUSH-ПОВІДОМЛЕНЬ ПРО slusarsOn ПРИ ЗАКРИТТІ АКТУ
         try {

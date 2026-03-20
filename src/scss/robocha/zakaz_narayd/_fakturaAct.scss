@@ -43,8 +43,18 @@
     padding-top: 20px;
     border-top: 2px dashed #ccc;
     display: flex;
-    justify-content: center;
-    gap: 20px;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+
+    &__row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      width: 100%;
+    }
 
     button {
       padding: 10px 30px;
@@ -210,12 +220,108 @@
   }
 
   .col-num {
-    width: 30px;
+    width: 46px;
+    text-align: center;
+    position: relative;
+  }
+
+  .doc-row-index {
+    display: inline-block;
+    width: 100%;
     text-align: center;
   }
 
   .col-name {
     text-align: left;
+    vertical-align: top;
+  }
+
+  .doc-name-input,
+  .doc-qty-input,
+  .doc-price-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+
+    &:focus {
+      outline: none;
+      background: #fff3cd;
+    }
+  }
+
+  .doc-qty-input,
+  .doc-price-input {
+    text-align: right;
+  }
+
+  .doc-name-input {
+    display: block;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    min-height: 22px;
+    line-height: 1.25;
+    box-sizing: border-box;
+  }
+
+  .doc-row-actions {
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .doc-row-btn {
+    width: 18px;
+    height: 18px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 0;
+    line-height: 1;
+    font-size: 13px;
+    cursor: pointer;
+    color: #fff;
+
+    &.doc-row-btn--delete {
+      background: #d64545;
+      border-color: #b93c3c;
+    }
+
+    &.doc-row-btn--add {
+      background: #2ea44f;
+      border-color: #258a42;
+    }
+
+    &:hover {
+      filter: brightness(1.06);
+    }
+  }
+
+  .doc-suggest-main {
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .doc-suggest-sub {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  tbody tr:not(.total-row):hover .doc-row-actions {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .col-unit {
@@ -396,6 +502,10 @@
 // --- Друк ---
 @media print {
   .fakturaAct-controls {
+    display: none !important;
+  }
+
+  .doc-row-actions {
     display: none !important;
   }
 

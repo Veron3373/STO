@@ -5,6 +5,12 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
+  "crons": [
+    {
+      "path": "/api/keep-alive",
+      "schedule": "0 8 * * 1,4"
+    }
+  ],
   "rewrites": [
     {
       "source": "/bukhhalteriya",

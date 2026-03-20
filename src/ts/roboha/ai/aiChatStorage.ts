@@ -151,6 +151,19 @@ export async function deleteChat(chatId: number): Promise<boolean> {
       }
     }
 
+    // 2b. Додатково: видаляємо ВСЮ папку chatId/ в бакеті (на випадок сирітських файлів)
+    try {
+      const { data: folderFiles } = await supabase.storage
+        .from("ai-photos")
+        .list(String(chatId), { limit: 1000 });
+      if (folderFiles && folderFiles.length > 0) {
+        const folderPaths = folderFiles.map((f) => `${chatId}/${f.name}`);
+        await supabase.storage.from("ai-photos").remove(folderPaths);
+      }
+    } catch {
+      // Не критично — основні файли вже видалені вище
+    }
+
     // 3. Видаляємо чат (CASCADE видалить ai_messages автоматично)
     const { error } = await supabase
       .from("ai_chats")

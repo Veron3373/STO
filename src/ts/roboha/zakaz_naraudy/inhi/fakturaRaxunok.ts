@@ -197,16 +197,40 @@ function amountToWordsUA(amount: number): string {
   return words.charAt(0).toUpperCase() + words.slice(1) + " " + kopecksWords;
 }
 
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function parseInputNumber(value: string): number {
+  const normalized = value.replace(/\s/g, "").replace(",", ".");
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatClientSelectLabel(raw: string, maxLength = 88): string {
+  const singleLine = raw
+    .replace(/\s*\n\s*/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (singleLine.length <= maxLength) return singleLine;
+  return `${singleLine.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
+}
+
 /**
  * Отримує номер рахунку для поточного акту.
  * Джерело лічильника — таблиця faktura, стовпець namber
- * (запис, де name містить "Брацлавець").
+ * (обраний контрагент або запис де name містить "Брацлавець").
  */
 async function getInvoiceNumber(
   currentActId: number,
+  supplierFakturaId?: number | null,
 ): Promise<{ number: string; isNew: boolean }> {
   try {
-    // 1) Якщо у поточного акту вже є contrAgent_raxunok — повертаємо його
+    // Спочатку перевіряємо збережений номер в акті — якщо є, повертаємо його
     const { data: currentAct, error: currentError } = await supabase
       .from("acts")
       .select("contrAgent_raxunok")
@@ -224,26 +248,28 @@ async function getInvoiceNumber(
       };
     }
 
-    // 2) Номер для нового рахунку беремо з faktura.namber
-    const { data: fakturaRow, error: fakturaError } = await supabase
-      .from("faktura")
-      .select("namber")
-      .ilike("name", "%Брацлавець%")
-      .limit(1)
-      .maybeSingle();
+    // Якщо номера ще немає і обрано контрагента — генеруємо новий namber + 1
+    if (supplierFakturaId) {
+      const { data: fakturaRow, error: fakturaError } = await supabase
+        .from("faktura")
+        .select("namber")
+        .eq("faktura_id", supplierFakturaId)
+        .single();
 
-    if (fakturaError) {
-      // console.error("Помилка отримання namber з faktura:", fakturaError);
-      return { number: "0000001", isNew: true };
+      if (fakturaError || !fakturaRow) {
+        return { number: "0000001", isNew: true };
+      }
+
+      const currentNumber = parseInt(fakturaRow?.namber || "0");
+      const nextNumber = currentNumber + 1;
+
+      return {
+        number: formatNumberWithZeros(nextNumber),
+        isNew: true,
+      };
     }
 
-    const currentNumber = parseInt(fakturaRow?.namber || "0");
-    const nextNumber = currentNumber + 1;
-
-    return {
-      number: formatNumberWithZeros(nextNumber),
-      isNew: true,
-    };
+    return { number: "0000001", isNew: true };
   } catch (error) {
     // console.error("Помилка отримання номера рахунку:", error);
     return { number: "0000001", isNew: true };
@@ -259,27 +285,27 @@ async function saveInvoiceNumber(
   invoiceNumber: string,
   isoDateString: string,
   fakturaId: number | null,
+  supplierFakturaId?: number | null,
 ): Promise<boolean> {
   try {
-    // 1) Оновлюємо лічильник у faktura.namber (де name містить "Брацлавець")
-    const { data: fakturaRow, error: readError } = await supabase
-      .from("faktura")
-      .select("faktura_id, namber")
-      .ilike("name", "%Брацлавець%")
-      .limit(1)
-      .maybeSingle();
+    // 1) Оновлюємо лічильник у faktura.namber обраного контрагента
+    if (supplierFakturaId) {
+      const { data: fakturaRow, error: readError } = await supabase
+        .from("faktura")
+        .select("faktura_id, namber")
+        .eq("faktura_id", supplierFakturaId)
+        .single();
 
-    if (readError) {
-      // console.error("❌ Помилка зчитування faktura:", readError);
-    } else if (fakturaRow) {
-      const currentNamber = parseInt(fakturaRow.namber || "0");
-      const newNum = parseInt(invoiceNumber);
+      if (!readError && fakturaRow) {
+        const currentNamber = parseInt(fakturaRow.namber || "0");
+        const newNum = parseInt(invoiceNumber);
 
-      if (newNum > currentNamber) {
-        await supabase
-          .from("faktura")
-          .update({ namber: newNum })
-          .eq("faktura_id", fakturaRow.faktura_id);
+        if (newNum > currentNamber) {
+          await supabase
+            .from("faktura")
+            .update({ namber: newNum })
+            .eq("faktura_id", fakturaRow.faktura_id);
+        }
       }
     }
 
@@ -352,8 +378,11 @@ export function getCurrentActDataFromDOM(): any {
     const price = Math.round(rawPrice * discountMultiplier * 100) / 100;
     const suma = Math.round(rawSuma * discountMultiplier * 100) / 100;
 
+    const itemType =
+      (row as HTMLElement).getAttribute("data-item-type") || "work";
+
     if (name) {
-      items.push({ name, quantity, price, suma });
+      items.push({ name, quantity, price, suma, type: itemType });
     }
   });
 
@@ -392,6 +421,59 @@ function getInvoiceElementBoundsPx(container: HTMLElement, selector: string) {
   return { top, bottom, height: bottom - top };
 }
 
+function replaceInvoiceTextareasForPdf(container: HTMLElement): Array<{
+  parent: HTMLElement;
+  textarea: HTMLTextAreaElement;
+  proxy: HTMLDivElement;
+}> {
+  const replacements: Array<{
+    parent: HTMLElement;
+    textarea: HTMLTextAreaElement;
+    proxy: HTMLDivElement;
+  }> = [];
+
+  const textareas = container.querySelectorAll(
+    ".doc-name-input",
+  ) as NodeListOf<HTMLTextAreaElement>;
+
+  textareas.forEach((textarea) => {
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    const parent = textarea.parentElement;
+    if (!parent) return;
+
+    const styles = window.getComputedStyle(textarea);
+    const proxy = document.createElement("div");
+
+    proxy.textContent = textarea.value;
+    proxy.style.width = `${textarea.offsetWidth}px`;
+    proxy.style.minHeight = `${Math.max(
+      textarea.scrollHeight,
+      textarea.offsetHeight,
+      22,
+    )}px`;
+    proxy.style.font = styles.font;
+    proxy.style.fontSize = styles.fontSize;
+    proxy.style.fontFamily = styles.fontFamily;
+    proxy.style.fontWeight = styles.fontWeight;
+    proxy.style.lineHeight = styles.lineHeight;
+    proxy.style.letterSpacing = styles.letterSpacing;
+    proxy.style.color = styles.color;
+    proxy.style.padding = styles.padding;
+    proxy.style.margin = styles.margin;
+    proxy.style.border = styles.border;
+    proxy.style.boxSizing = styles.boxSizing;
+    proxy.style.background = "transparent";
+    proxy.style.whiteSpace = "pre-wrap";
+    proxy.style.overflowWrap = "anywhere";
+    proxy.style.wordBreak = "break-word";
+
+    parent.replaceChild(proxy, textarea);
+    replacements.push({ parent, textarea, proxy });
+  });
+
+  return replacements;
+}
+
 async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
   const modalBody = document.querySelector(
     ".invoice-a4-container",
@@ -409,6 +491,10 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
   if (controls) controls.style.display = "none";
   hideFormatControlsForPdf(modalBody);
 
+  // Ховаємо плаваючу кнопку голосового введення
+  const voiceBtn = document.getElementById("voice-input-button") as HTMLElement;
+  if (voiceBtn) voiceBtn.style.display = "none";
+
   // Зберігаємо оригінальні стилі
   const originalStyle = modalBody.style.cssText;
 
@@ -417,6 +503,8 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
   modalBody.style.minHeight = "auto";
   modalBody.style.overflow = "visible";
   modalBody.style.boxShadow = "none";
+
+  const textareaReplacements = replaceInvoiceTextareasForPdf(modalBody);
 
   try {
     const canvas = await html2canvas(modalBody, {
@@ -587,9 +675,16 @@ async function generateInvoicePdf(invoiceNumber: string): Promise<void> {
     // console.error("Помилка PDF:", error);
     alert("Не вдалося створити PDF.");
   } finally {
+    textareaReplacements.forEach(({ parent, textarea, proxy }) => {
+      if (proxy.parentElement === parent) {
+        parent.replaceChild(textarea, proxy);
+      }
+    });
+
     // Повертаємо оригінальні стилі
     if (controls) controls.style.display = "flex";
     showFormatControlsAfterPdf(modalBody);
+    if (voiceBtn) voiceBtn.style.display = "";
     modalBody.style.cssText = originalStyle;
     if (btnPrint) {
       btnPrint.classList.remove("loading");
@@ -607,11 +702,13 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
   let supplierName = "";
   let foundFakturaId: number | null = null;
 
+  // Завантажуємо постачальника: обраний контрагент або faktura_id=1
+  const supplierFakturaId = actData.overrideSupplierFakturaId || 1;
   try {
     const { data: fakturaData, error } = await supabase
       .from("faktura")
       .select("oderjyvach")
-      .eq("faktura_id", 1)
+      .eq("faktura_id", supplierFakturaId)
       .single();
 
     if (error) {
@@ -622,8 +719,6 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
   } catch (err) {
     // console.error("Критична помилка:", err);
   }
-
-  const recipientName = actData.client || "Одержувач не вказаний";
 
   if (actData.client) {
     try {
@@ -645,7 +740,12 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
     }
   }
 
-  const { number: invoiceNumber } = await getInvoiceNumber(actData.act_id);
+  const recipientName = actData.client || "Одержувач не вказаний";
+
+  const { number: invoiceNumber } = await getInvoiceNumber(
+    actData.act_id,
+    actData.overrideSupplierFakturaId,
+  );
 
   const now = new Date();
   const dateString = `${now.getDate()} ${getMonthNameGenitive(
@@ -663,12 +763,17 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
   let rowsHtml = actData.items
     .map(
       (item: any, index: number) => `
-      <tr>
-          <td class="col-num">${index + 1}</td>
-          <td class="col-name">${item.name}</td>
+      <tr data-item-type="${item.type || "work"}">
+          <td class="col-num"><span class="doc-row-index">${index + 1}</span>
+            <span class="doc-row-actions" data-no-pdf="true">
+              <button type="button" class="doc-row-btn doc-row-btn--delete" title="Видалити рядок">-</button>
+              <button type="button" class="doc-row-btn doc-row-btn--add" title="Додати рядок">+</button>
+            </span>
+          </td>
+          <td class="col-name"><textarea class="doc-name-input editable-autocomplete" rows="1" placeholder="Почніть вводити назву">${escapeHtmlAttr(item.name || "")}</textarea></td>
           <td class="col-unit" contenteditable="true" title="Натисніть, щоб змінити">шт</td>
-          <td class="col-qty">${item.quantity}</td>
-          <td class="col-price">${formatNumberWithSpaces(item.price)}</td>
+          <td class="col-qty"><input type="number" class="doc-qty-input" min="1" step="1" value="${Math.max(1, Number(item.quantity) || 1)}" /></td>
+          <td class="col-price"><input type="number" class="doc-price-input" min="0" step="0.01" value="${Number(item.price) || 0}" /></td>
           <td class="col-sum">${formatNumberWithSpaces(item.suma)}</td>
       </tr>
   `,
@@ -709,7 +814,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
 
               <div class="invoice-title">
                   Рахунок-фактура № СФ-<span contenteditable="true" id="editable-invoice-number" title="Натисніть, щоб змінити номер">${invoiceNumber}</span><br>
-                  від ${dateString}
+                  від <span contenteditable="true" title="Натисніть, щоб змінити дату">${dateString}</span>
               </div>
 
               <table class="invoice-table">
@@ -742,8 +847,20 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
                   </div>
               </div>
               <div class="invoice-controls">
-                  <button id="btn-add-invoice" class="btn-save">💾 Зберегти</button>
-                  <button id="btn-print-invoice" class="btn-print">📥 Завантажити</button>
+                  <div class="invoice-controls__row invoice-controls__row--top">
+                      <div class="doc-filter-group">
+                          <button class="doc-filter-btn doc-filter-btn--all active" data-filter="all">✅ Все</button>
+                          <button class="doc-filter-btn doc-filter-btn--detail" data-filter="detail">🔩 Деталі</button>
+                          <button class="doc-filter-btn doc-filter-btn--work" data-filter="work">🔧 Послуги</button>
+                      </div>
+                      <select id="invoice-client-select" class="doc-client-select">
+                          <option value="">— Оберіть платника —</option>
+                      </select>
+                  </div>
+                  <div class="invoice-controls__row invoice-controls__row--bottom">
+                      <button id="btn-add-invoice" class="btn-save">💾 Зберегти</button>
+                      <button id="btn-print-invoice" class="btn-print">📥 Завантажити</button>
+                  </div>
               </div>
           </div>
       </div>
@@ -807,6 +924,7 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
       editedInvoiceNumber,
       dateForDB,
       foundFakturaId,
+      actData.overrideSupplierFakturaId,
     );
 
     if (success) {
@@ -831,5 +949,560 @@ export async function renderInvoicePreviewModal(actData: any): Promise<void> {
       btnAdd.disabled = false;
       btnAdd.textContent = "💾 Зберегти";
     }
+  });
+
+  // --- Dropdown: вибір контрагента-одержувача з таблиці faktura ---
+  const invoiceClientSelect = document.getElementById(
+    "invoice-client-select",
+  ) as HTMLSelectElement | null;
+  if (invoiceClientSelect) {
+    (async () => {
+      try {
+        const { data: fakturaList } = await supabase
+          .from("faktura")
+          .select("faktura_id, oderjyvach, prumitka")
+          .not("prumitka", "is", null)
+          .order("faktura_id", { ascending: true });
+        if (fakturaList) {
+          (
+            fakturaList as Array<{
+              faktura_id: number;
+              oderjyvach: string | null;
+              prumitka: string | null;
+            }>
+          ).forEach((row) => {
+            if (!row.prumitka) return;
+            const opt = document.createElement("option");
+            opt.value = String(row.faktura_id);
+            const fullLabel =
+              row.prumitka
+                .replace(/\s*\n\s*/g, " ")
+                .replace(/\s{2,}/g, " ")
+                .trim() || `ID ${row.faktura_id}`;
+            opt.textContent = formatClientSelectLabel(fullLabel);
+            opt.title = fullLabel;
+            opt.dataset.oderjyvach = row.oderjyvach || "";
+            invoiceClientSelect.appendChild(opt);
+          });
+        }
+      } catch {
+        /* silent */
+      }
+    })();
+
+    invoiceClientSelect.addEventListener("change", () => {
+      const sel =
+        invoiceClientSelect.options[invoiceClientSelect.selectedIndex];
+      if (!sel?.value) return;
+      const recipientCell = overlay?.querySelector(
+        ".header-table tr:nth-child(2) .value-cell",
+      ) as HTMLElement | null;
+      if (recipientCell) {
+        recipientCell.textContent =
+          sel.dataset.oderjyvach || sel.textContent || "";
+      }
+    });
+  }
+
+  // --- Кнопки фільтру: Деталі / Послуги / Все ---
+  const invoiceTbody = overlay?.querySelector(
+    ".invoice-table tbody",
+  ) as HTMLTableSectionElement | null;
+  let currentAutocompleteList: HTMLElement | null = null;
+  let currentAutocompleteInput: HTMLInputElement | HTMLTextAreaElement | null =
+    null;
+  let autocompleteRepositionHandler: (() => void) | null = null;
+  let autocompleteScrollParents: HTMLElement[] = [];
+
+  const inputSourceTypeByValue = new Map<string, "work" | "detail">();
+  const nameInputTimers = new WeakMap<
+    HTMLInputElement | HTMLTextAreaElement,
+    number
+  >();
+
+  function createEditableInvoiceRow(index: number): HTMLTableRowElement {
+    const row = document.createElement("tr");
+    row.dataset.itemType = "work";
+    row.innerHTML = `
+      <td class="col-num"><span class="doc-row-index">${index}</span>
+        <span class="doc-row-actions" data-no-pdf="true">
+          <button type="button" class="doc-row-btn doc-row-btn--delete" title="Видалити рядок">-</button>
+          <button type="button" class="doc-row-btn doc-row-btn--add" title="Додати рядок">+</button>
+        </span>
+      </td>
+      <td class="col-name"><textarea class="doc-name-input editable-autocomplete" rows="1" placeholder="Почніть вводити назву"></textarea></td>
+      <td class="col-unit" contenteditable="true" title="Натисніть, щоб змінити">шт</td>
+      <td class="col-qty"><input type="number" class="doc-qty-input" min="1" step="1" value="1" /></td>
+      <td class="col-price"><input type="number" class="doc-price-input" min="0" step="0.01" value="0" /></td>
+      <td class="col-sum">0</td>
+    `;
+    return row;
+  }
+
+  async function fetchInvoiceSuggestions(
+    query: string,
+  ): Promise<Array<{ value: string; type: "work" | "detail" }>> {
+    const term = query.trim();
+    if (term.length < 3) return [];
+
+    const [worksRes, detailsRes] = await Promise.allSettled([
+      supabase.from("works").select("data").ilike("data", `%${term}%`).limit(8),
+      supabase
+        .from("details")
+        .select("data")
+        .ilike("data", `%${term}%`)
+        .limit(8),
+    ]);
+
+    const out: Array<{ value: string; type: "work" | "detail" }> = [];
+    const seen = new Set<string>();
+
+    const worksRows =
+      worksRes.status === "fulfilled" ? worksRes.value.data || [] : [];
+    const detailsRows =
+      detailsRes.status === "fulfilled" ? detailsRes.value.data || [] : [];
+
+    worksRows.forEach((row: { data: string | null }) => {
+      const name = (row.data || "").trim();
+      if (!name || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      out.push({ value: name, type: "work" });
+    });
+
+    detailsRows.forEach((row: { data: string | null }) => {
+      const name = (row.data || "").trim();
+      if (!name || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      out.push({ value: name, type: "detail" });
+    });
+
+    return out;
+  }
+
+  function closeInvoiceAutocompleteList(): void {
+    if (currentAutocompleteList) currentAutocompleteList.remove();
+    if (currentAutocompleteInput) {
+      currentAutocompleteInput.classList.remove("ac-open");
+      currentAutocompleteInput.onkeydown = null;
+    }
+    currentAutocompleteList = null;
+    currentAutocompleteInput = null;
+    if (autocompleteRepositionHandler) {
+      window.removeEventListener("scroll", autocompleteRepositionHandler, true);
+      window.removeEventListener("resize", autocompleteRepositionHandler);
+      autocompleteScrollParents.forEach((parent) => {
+        parent.removeEventListener("scroll", autocompleteRepositionHandler!);
+      });
+      autocompleteScrollParents = [];
+      autocompleteRepositionHandler = null;
+    }
+  }
+
+  function getScrollableParents(element: HTMLElement): HTMLElement[] {
+    const parents: HTMLElement[] = [];
+    let current = element.parentElement;
+
+    while (current) {
+      const style = window.getComputedStyle(current);
+      const overflow = `${style.overflow}${style.overflowY}${style.overflowX}`;
+      if (/(auto|scroll|overlay)/.test(overflow)) {
+        parents.push(current);
+      }
+      current = current.parentElement;
+    }
+
+    return parents;
+  }
+
+  function isNameInputElement(
+    element: EventTarget | null,
+  ): element is HTMLInputElement | HTMLTextAreaElement {
+    return (
+      (element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement) &&
+      element.classList.contains("doc-name-input")
+    );
+  }
+
+  function autoResizeNameInput(
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ): void {
+    if (!(element instanceof HTMLTextAreaElement)) return;
+    element.style.height = "auto";
+    element.style.height = `${Math.max(element.scrollHeight, 22)}px`;
+  }
+
+  function positionInvoiceAutocompleteList(
+    input: HTMLInputElement | HTMLTextAreaElement,
+    list: HTMLElement,
+  ): void {
+    const rect = input.getBoundingClientRect();
+    list.style.position = "fixed";
+    list.style.left = `${rect.left}px`;
+    list.style.top = `${rect.bottom + 4}px`;
+    list.style.width = `${Math.max(rect.width, 320)}px`;
+    list.style.maxHeight = "320px";
+    list.style.overflowY = "auto";
+    list.style.zIndex = "100001";
+  }
+
+  function renderInvoiceAutocompleteList(
+    input: HTMLInputElement | HTMLTextAreaElement,
+    suggestions: Array<{ value: string; type: "work" | "detail" }>,
+  ): void {
+    closeInvoiceAutocompleteList();
+    if (!suggestions.length || !overlay) return;
+
+    const list = document.createElement("ul");
+    list.className = "autocomplete-list";
+    const suggestionItems: HTMLLIElement[] = [];
+    let activeIndex = -1;
+
+    const applySuggestion = (suggestion: {
+      value: string;
+      type: "work" | "detail";
+    }): void => {
+      input.value = suggestion.value;
+      const row = input.closest("tr") as HTMLTableRowElement | null;
+      if (row) row.dataset.itemType = suggestion.type;
+      closeInvoiceAutocompleteList();
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    };
+
+    const setActiveIndex = (index: number): void => {
+      if (!suggestionItems.length) return;
+      const nextIndex = Math.max(
+        0,
+        Math.min(index, suggestionItems.length - 1),
+      );
+      activeIndex = nextIndex;
+
+      suggestionItems.forEach((el, i) => {
+        el.classList.toggle("active-suggestion", i === activeIndex);
+      });
+
+      const activeEl = suggestionItems[activeIndex];
+      activeEl.scrollIntoView({ block: "nearest" });
+    };
+
+    suggestions.forEach((suggestion) => {
+      const item = document.createElement("li");
+      item.className = `autocomplete-item ${
+        suggestion.type === "work" ? "item-work" : "item-detail"
+      }`;
+      item.dataset.value = suggestion.value;
+      item.dataset.itemType = suggestion.type;
+      item.innerHTML = `<div class="doc-suggest-main">${escapeHtmlAttr(
+        suggestion.value,
+      )}</div><div class="doc-suggest-sub">${
+        suggestion.type === "work" ? "Послуга" : "Деталь"
+      }</div>`;
+
+      item.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        applySuggestion(suggestion);
+      });
+
+      item.addEventListener("mouseenter", () => {
+        const hoveredIndex = suggestionItems.indexOf(item);
+        if (hoveredIndex >= 0) setActiveIndex(hoveredIndex);
+      });
+
+      list.appendChild(item);
+      suggestionItems.push(item);
+    });
+
+    overlay.appendChild(list);
+    input.classList.add("ac-open");
+    positionInvoiceAutocompleteList(input, list);
+
+    const reposition = () => positionInvoiceAutocompleteList(input, list);
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    autocompleteScrollParents = getScrollableParents(input);
+    autocompleteScrollParents.forEach((parent) => {
+      parent.addEventListener("scroll", reposition, { passive: true });
+    });
+    autocompleteRepositionHandler = reposition;
+    currentAutocompleteList = list;
+    currentAutocompleteInput = input;
+
+    input.onkeydown = (event: KeyboardEvent) => {
+      if (!currentAutocompleteList) return;
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex(activeIndex < 0 ? 0 : activeIndex + 1);
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex(
+          activeIndex < 0 ? suggestionItems.length - 1 : activeIndex - 1,
+        );
+        return;
+      }
+
+      if (event.key === "Enter") {
+        if (activeIndex >= 0 && suggestionItems[activeIndex]) {
+          event.preventDefault();
+          const selected = suggestions[activeIndex];
+          if (selected) applySuggestion(selected);
+        }
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeInvoiceAutocompleteList();
+      }
+    };
+  }
+
+  function normalizeInvoiceRowNumbersAndTotal(): void {
+    if (!invoiceTbody) return;
+
+    let visibleIndex = 1;
+    let visibleSum = 0;
+    const rows = Array.from(invoiceTbody.querySelectorAll("tr"));
+
+    rows.forEach((row) => {
+      if (row.classList.contains("total-row")) return;
+      const rowEl = row as HTMLTableRowElement;
+      const qtyInput = rowEl.querySelector(
+        ".doc-qty-input",
+      ) as HTMLInputElement | null;
+      const priceInput = rowEl.querySelector(
+        ".doc-price-input",
+      ) as HTMLInputElement | null;
+      const sumCell = rowEl.querySelector(".col-sum") as HTMLElement | null;
+      const numCell = rowEl.querySelector(".col-num") as HTMLElement | null;
+
+      const quantity = Math.max(
+        1,
+        Math.floor(parseInputNumber(qtyInput?.value || "1")),
+      );
+      const price = Math.max(0, parseInputNumber(priceInput?.value || "0"));
+      const rowSum = quantity * price;
+
+      if (qtyInput && String(quantity) !== qtyInput.value) {
+        qtyInput.value = String(quantity);
+      }
+      if (priceInput && !Number.isFinite(parseInputNumber(priceInput.value))) {
+        priceInput.value = "0";
+      }
+
+      if (sumCell) {
+        sumCell.textContent = formatNumberWithSpaces(rowSum);
+      }
+
+      if ((rowEl as HTMLElement).style.display !== "none") {
+        if (numCell) {
+          const indexEl = numCell.querySelector(
+            ".doc-row-index",
+          ) as HTMLElement | null;
+          if (indexEl) indexEl.textContent = String(visibleIndex++);
+        }
+        visibleSum += rowSum;
+      }
+    });
+
+    const totalCell = invoiceTbody.querySelector(
+      ".total-value",
+    ) as HTMLElement | null;
+    if (totalCell) {
+      totalCell.textContent = formatNumberWithSpaces(visibleSum);
+    }
+
+    const sumWords = overlay?.querySelector(
+      ".sum-in-words span[contenteditable]",
+    ) as HTMLElement | null;
+    if (sumWords) {
+      sumWords.textContent = amountToWordsUA(visibleSum);
+    }
+  }
+
+  function applyInvoiceFilter(filter: string): void {
+    if (!invoiceTbody) return;
+    Array.from(invoiceTbody.querySelectorAll("tr")).forEach((tr) => {
+      if (tr.classList.contains("total-row")) return;
+      const type = (tr as HTMLElement).dataset.itemType || "work";
+      const show = filter === "all" || type === filter;
+      (tr as HTMLElement).style.display = show ? "" : "none";
+    });
+    normalizeInvoiceRowNumbersAndTotal();
+  }
+
+  invoiceTbody?.addEventListener("input", (event) => {
+    const target = event.target as HTMLElement;
+
+    if (isNameInputElement(target)) {
+      autoResizeNameInput(target);
+      const previousTimer = nameInputTimers.get(target);
+      if (previousTimer) window.clearTimeout(previousTimer);
+
+      const term = target.value.trim();
+      if (term.length < 3) {
+        closeInvoiceAutocompleteList();
+        inputSourceTypeByValue.clear();
+        return;
+      }
+
+      const timer = window.setTimeout(async () => {
+        try {
+          const suggestions = await fetchInvoiceSuggestions(term);
+          inputSourceTypeByValue.clear();
+
+          suggestions.forEach((item) => {
+            inputSourceTypeByValue.set(item.value, item.type);
+          });
+          renderInvoiceAutocompleteList(target, suggestions);
+        } catch {
+          closeInvoiceAutocompleteList();
+          inputSourceTypeByValue.clear();
+        }
+      }, 250);
+
+      nameInputTimers.set(target, timer);
+      return;
+    }
+
+    if (
+      target instanceof HTMLInputElement &&
+      (target.classList.contains("doc-qty-input") ||
+        target.classList.contains("doc-price-input"))
+    ) {
+      normalizeInvoiceRowNumbersAndTotal();
+    }
+  });
+
+  invoiceTbody?.addEventListener("change", (event) => {
+    const target = event.target as HTMLElement;
+
+    if (isNameInputElement(target)) {
+      autoResizeNameInput(target);
+      const row = target.closest("tr") as HTMLTableRowElement | null;
+      if (row) {
+        const type = inputSourceTypeByValue.get(target.value.trim());
+        if (type) row.dataset.itemType = type;
+      }
+      return;
+    }
+
+    if (!(target instanceof HTMLInputElement)) return;
+
+    if (target.classList.contains("doc-qty-input")) {
+      const normalizedQty = Math.max(
+        1,
+        Math.floor(parseInputNumber(target.value || "1")),
+      );
+      target.value = String(normalizedQty);
+      normalizeInvoiceRowNumbersAndTotal();
+    }
+
+    if (target.classList.contains("doc-price-input")) {
+      const normalizedPrice = Math.max(
+        0,
+        parseInputNumber(target.value || "0"),
+      );
+      target.value = String(normalizedPrice);
+      normalizeInvoiceRowNumbersAndTotal();
+    }
+  });
+
+  invoiceTbody?.addEventListener("focusin", (event) => {
+    const target = event.target as HTMLElement;
+    if (!isNameInputElement(target)) return;
+    autoResizeNameInput(target);
+    if (target.value.trim().length < 3) return;
+
+    window.setTimeout(async () => {
+      if (document.activeElement !== target) return;
+      const suggestions = await fetchInvoiceSuggestions(target.value.trim());
+      renderInvoiceAutocompleteList(target, suggestions);
+    }, 0);
+  });
+
+  invoiceTbody?.addEventListener("focusout", (event) => {
+    const target = event.target as HTMLElement;
+    if (!isNameInputElement(target)) return;
+    window.setTimeout(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !active.closest(".autocomplete-list")) {
+        closeInvoiceAutocompleteList();
+      }
+    }, 120);
+  });
+
+  invoiceTbody?.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement;
+    const addBtn = target.closest(
+      ".doc-row-btn--add",
+    ) as HTMLButtonElement | null;
+    const deleteBtn = target.closest(
+      ".doc-row-btn--delete",
+    ) as HTMLButtonElement | null;
+    const currentRow = target.closest("tr") as HTMLTableRowElement | null;
+    if (
+      !currentRow ||
+      currentRow.classList.contains("total-row") ||
+      !invoiceTbody
+    )
+      return;
+
+    if (addBtn) {
+      const newRow = createEditableInvoiceRow(1);
+      currentRow.insertAdjacentElement("afterend", newRow);
+      const nameInput = newRow.querySelector(".doc-name-input") as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+      if (nameInput) {
+        autoResizeNameInput(nameInput);
+        nameInput.focus();
+      }
+      normalizeInvoiceRowNumbersAndTotal();
+      return;
+    }
+
+    if (deleteBtn) {
+      const dataRowsCount =
+        invoiceTbody.querySelectorAll("tr:not(.total-row)").length;
+      if (dataRowsCount <= 1) {
+        showNotification("Має залишитись хоча б один рядок", "warning", 2000);
+        return;
+      }
+      currentRow.remove();
+      normalizeInvoiceRowNumbersAndTotal();
+    }
+  });
+
+  overlay?.addEventListener("mousedown", (event) => {
+    const target = event.target as HTMLElement;
+    if (
+      !target.closest(".autocomplete-list") &&
+      !target.closest(".doc-name-input")
+    ) {
+      closeInvoiceAutocompleteList();
+    }
+  });
+
+  invoiceTbody?.querySelectorAll(".doc-name-input").forEach((el) => {
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      autoResizeNameInput(el);
+    }
+  });
+
+  normalizeInvoiceRowNumbersAndTotal();
+
+  const filterBtns = overlay?.querySelectorAll(".doc-filter-btn");
+  filterBtns?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      applyInvoiceFilter((btn as HTMLElement).dataset.filter || "all");
+    });
   });
 }

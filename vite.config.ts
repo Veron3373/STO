@@ -6,7 +6,7 @@ export default defineConfig({
   base: process.env.DEPLOY_TARGET === "github" ? "/STO/" : "/",
   plugins: [react()],
   build: {
-    chunkSizeWarningLimit: 1800, // ⬅ підняли ліміт з 500 до 600
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       input: {
         index: resolve(__dirname, "index.html"),
@@ -15,12 +15,31 @@ export default defineConfig({
         planyvannya: resolve(__dirname, "planyvannya.html"),
       },
       output: {
-        manualChunks: {
-          supabase: ["@supabase/supabase-js"],
-          pdf: ["jspdf", "html2canvas"],
-          react: ["react", "react-dom"],
+        manualChunks(id) {
+          // Supabase — окремий chunk (великий, рідко змінюється)
+          if (id.includes("@supabase")) return "supabase";
+
+          // PDF генерація — завантажується тільки при друку
+          if (id.includes("jspdf") || id.includes("html2canvas")) return "pdf";
+
+          // React — окремо
+          if (id.includes("react-dom") || id.includes("react/")) return "react";
+
+          // ШІ-модулі — великі, завантажуємо разом але окремо від решти
+          if (id.includes("/ai/aiChat") || id.includes("/ai/aiPlanner")) return "ai-chat";
+          if (id.includes("/ai/aiReminder")) return "ai-reminders";
+
+          // Бухгалтерія — окремий chunk (тільки для бухгалтерської сторінки)
+          if (id.includes("/bukhhalteriya/")) return "bukhhalteriya";
+
+          // Планування — окремий chunk
+          if (id.includes("/planyvannya/")) return "planyvannya";
+
+          // Модальне вікно акту — великий модуль
+          if (id.includes("/zakaz_naraudy/modalMain") || id.includes("/zakaz_naraudy/modalUI")) return "modal-act";
         },
       },
     },
   },
 });
+

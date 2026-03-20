@@ -1313,6 +1313,38 @@ function showNoAccessNotification(): void {
 // РЕНДЕРИНГ РЯДКІВ
 // =============================================================================
 
+/**
+ * 🦴 Рендерить скелетон-рядки для імітації завантаження
+ */
+function renderSkeletonRows(
+  tbody: HTMLTableSectionElement,
+  count: number = 12,
+  showSuma: boolean = true,
+): void {
+  tbody.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const row = document.createElement("tr");
+    row.className = "skeleton-row";
+
+    const cols = showSuma ? 5 : 4;
+    for (let j = 0; j < cols; j++) {
+      const td = document.createElement("td");
+      const skeleton = document.createElement("div");
+      skeleton.className = "skeleton-cell";
+
+      // Різна ширина для реалістичності
+      if (j === 0) skeleton.style.width = "40px"; // №
+      if (j === 1) skeleton.style.width = "80px"; // Дата
+      if (j === 2) skeleton.style.width = "70%"; // Клієнт
+      if (j === 3) skeleton.style.width = "60%"; // Авто
+
+      td.appendChild(skeleton);
+      row.appendChild(td);
+    }
+    tbody.appendChild(row);
+  }
+}
+
 function renderActsRows(
   acts: any[],
   clients: any[],
@@ -1324,12 +1356,18 @@ function renderActsRows(
 ): void {
   tbody.innerHTML = "";
 
-  acts.forEach((act) => {
+  acts.forEach((act, index) => {
     const isClosed = isActClosed(act);
     const lockIcon = isClosed ? "🔒" : "🗝️";
     const clientInfo = getClientInfo(act, clients);
     const carInfo = getCarInfo(act, cars);
     const row = document.createElement("tr");
+
+    // ✨ Ефект появи рядків (тільки для перших 40, щоб не навантажувати)
+    row.classList.add("fade-in-row");
+    if (index < 40) {
+      row.style.animationDelay = `${index * 0.04}s`;
+    }
 
     row.classList.add(isClosed ? "row-closed" : "row-open");
 
@@ -1788,8 +1826,15 @@ function showNoDataMessage(message: string): void {
   const container = document.getElementById(
     "table-container-modal-sakaz_narad",
   );
-  if (container)
-    container.innerHTML = `<div style="text-align: center; padding: 20px; color: #666;">${message}</div>`;
+  if (container) {
+    container.innerHTML = `
+      <div class="empty-state-container" style="text-align: center; padding: 60px 20px; color: #888; animation: postOverlayFadeIn 0.5s ease-out;">
+        <div style="font-size: 80px; margin-bottom: 20px; opacity: 0.5;">🔍</div>
+        <h3 style="margin-bottom: 10px; color: #555; font-size: 1.25rem; font-weight: 600;">Нічого не знайдено</h3>
+        <p style="font-size: 14px; max-width: 300px; margin: 0 auto; line-height: 1.5;">${message}</p>
+      </div>
+    `;
+  }
 }
 
 function showAuthRequiredMessage(): void {
@@ -1891,6 +1936,19 @@ export async function loadActsTable(
       }
     }
 
+    // 🦴 Показуємо скелетон поки йде завантаження з БД
+    const container = document.getElementById(
+      "table-container-modal-sakaz_narad",
+    );
+    const showSumaColumn = await canUserSeePriceColumns();
+    if (container) {
+      const skeletonTable = createTable(userAccessLevel, showSumaColumn);
+      const skeletonTbody = skeletonTable.querySelector("tbody");
+      if (skeletonTbody) renderSkeletonRows(skeletonTbody, 12, showSumaColumn);
+      container.innerHTML = "";
+      container.appendChild(skeletonTable);
+    }
+
     // ✅ Завантажуємо акти, клієнтів, машини + СПОВІЩЕННЯ + КІЛЬКІСТЬ ПОВІДОМЛЕНЬ
     const [acts, clients, cars, modifiedIds, notificationCounts] =
       await Promise.all([
@@ -1916,11 +1974,7 @@ export async function loadActsTable(
     }
 
     // ✅ Перевіряємо налаштування для приховування стовпця "Сума"
-    const showSumaColumn = await canUserSeePriceColumns();
     const table = createTable(userAccessLevel, showSumaColumn);
-    const container = document.getElementById(
-      "table-container-modal-sakaz_narad",
-    );
     if (!container) return;
     container.innerHTML = "";
     container.appendChild(table);
@@ -2070,6 +2124,33 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 🤖 ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ШІ АТЛАС
     await loadAndApplyAiProSetting();
+
+    // 📱 ВІДКРИТТЯ АКТУ ПО QR-КОДУ (act_id або qr_token в URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const actIdFromUrl = urlParams.get('act_id');
+    const qrTokenFromUrl = urlParams.get('qr_token');
+
+    if (actIdFromUrl) {
+      const actId = Number(actIdFromUrl);
+      if (!isNaN(actId)) {
+        setTimeout(() => {
+          showModal(actId);
+        }, 800);
+      }
+    } else if (qrTokenFromUrl) {
+      // 🔍 Пошук акту за qr_token у базі
+      setTimeout(async () => {
+        const { data: acts, error } = await supabase
+          .from("acts")
+          .select("act_id, data")
+          .filter("data->>qr_token", "eq", qrTokenFromUrl);
+
+        if (!error && acts && acts.length > 0) {
+          showModal(acts[0].act_id);
+        }
+      }, 800);
+    }
+
     // 🤖 Гарантовано ініціалізуємо кнопку після завантаження налаштувань
     initAIChatButton();
 

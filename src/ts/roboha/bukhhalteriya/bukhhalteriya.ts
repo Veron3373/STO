@@ -1,5 +1,6 @@
 // src/ts/roboha/bukhhalteriya/bukhhalteriya.ts
 // Усі повідомлення через showNotification. Без confirm у масовому розрахунку магазину.
+import { supabase } from "../../vxid/supabaseClient";
 import { runMassPaymentCalculation as runMassPaymentCalculationForPodlegle } from "./zarplata";
 import { runMassPaymentCalculationForMagazine } from "./shopsBuxha";
 import { runMassPaymentCalculationForDetails } from "./poAktam";
@@ -62,7 +63,7 @@ import {
   clearDetailsForm,
 } from "./poAktam";
 
-type TabName = "podlegle" | "magazine" | "details" | "vutratu" | "analityka";
+type TabName = "podlegle" | "magazine" | "details" | "vutratu" | "analityka" | "audit";
 
 let currentTab: TabName = "magazine";
 let selectedRowIndex: number | null = null;
@@ -163,15 +164,19 @@ export function updateTotalSum(): void {
   }
 }
 
-export function switchTab(e: Event, tabName: TabName) {
+export function switchTab(e: Event | null, tabName: TabName) {
+  currentTab = tabName;
   // Видаляємо активний клас з всіх кнопок вкладок
   const buttons = document.querySelectorAll<HTMLElement>(".Bukhhalter-tab-btn");
   buttons.forEach((button) => button.classList.remove("Bukhhalter-active"));
 
   // Додаємо активний клас до натиснутої кнопки
-  const target = e.currentTarget as HTMLElement | null;
-  if (target) {
-    target.classList.add("Bukhhalter-active");
+  if (e && e.currentTarget) {
+    (e.currentTarget as HTMLElement).classList.add("Bukhhalter-active");
+  } else {
+    // Якщо виклик без івенту (ініціалізація), шукаємо кнопку за id
+    const btn = document.getElementById(`tab-btn-${tabName}`);
+    if (btn) btn.classList.add("Bukhhalter-active");
   }
 
   // Видаляємо активний клас з всіх форм
@@ -190,6 +195,20 @@ export function switchTab(e: Event, tabName: TabName) {
   updateTableDisplay();
   updateTotalSum();
 }
+
+(window as any).switchTab = switchTab;
+
+document.addEventListener("DOMContentLoaded", () => {
+  // 📱 Реєстрація Service Worker для PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(() => {
+      // console.log('SW registered');
+    }).catch(() => {
+      // console.log('SW registration failed');
+    });
+  }
+});
+
 function updateTableDisplay(): void {
   const tableTitle = byId<HTMLDivElement>("table-title");
   const magazineContainer = byId<HTMLDivElement>("magazine-table-container");
@@ -197,12 +216,14 @@ function updateTableDisplay(): void {
   const detailsContainer = byId<HTMLDivElement>("details-table-container");
   const vutratuContainer = byId<HTMLDivElement>("vutratu-table-container");
   const analitykaContainer = byId<HTMLDivElement>("analityka-table-container");
+  const auditContainer = byId<HTMLDivElement>("audit-table-container");
 
   if (podlegleContainer) podlegleContainer.style.display = "none";
   if (magazineContainer) magazineContainer.style.display = "none";
   if (detailsContainer) detailsContainer.style.display = "none";
   if (vutratuContainer) vutratuContainer.style.display = "none";
   if (analitykaContainer) analitykaContainer.style.display = "none";
+  if (auditContainer) auditContainer.style.display = "none";
 
   if (currentTab === "magazine") {
     if (tableTitle) tableTitle.innerHTML = "🏪 Дані по складу";
@@ -224,6 +245,10 @@ function updateTableDisplay(): void {
     if (tableTitle) tableTitle.innerHTML = "📊 Аналітика";
     if (analitykaContainer) analitykaContainer.style.display = "block";
     initAnalityka();
+  } else if (currentTab === "audit") {
+    if (tableTitle) tableTitle.innerHTML = "📝 Лог дій";
+    if (auditContainer) auditContainer.style.display = "block";
+    updateAuditTable();
   }
 
   updateTotalSum();
@@ -1061,6 +1086,7 @@ window.addEventListener("load", async function () {
     const btnVutratu = document.getElementById("tab-btn-vutratu");
     const btnDetails = document.getElementById("tab-btn-details");
     const btnAnalityka = document.getElementById("tab-btn-analityka");
+    const btnAudit = document.getElementById("tab-btn-audit");
 
     // 3. Логіка відображення кнопок (ХОВАЄМО/ПОКАЗУЄМО)
 
@@ -1086,6 +1112,9 @@ window.addEventListener("load", async function () {
     }
     if (btnAnalityka) {
       btnAnalityka.style.display = isAdmin ? "" : "none";
+    }
+    if (btnAudit) {
+      btnAudit.style.display = isAdmin ? "" : "none";
     }
 
     // 4. Ініціалізація даних (завантажуємо довідники, селекти тощо)
@@ -1211,3 +1240,83 @@ window.togglePayment = togglePayment;
 window.runMassPaymentCalculation = runMassPaymentCalculation;
 // @ts-ignore
 window.refreshAnalityka = refreshAnalityka;
+
+/**
+ * 📝 Завантажує та відображає лог дій (Аудит)
+ */
+async function updateAuditTable(): Promise<void> {
+  const container = byId("audit-logs-list");
+  if (!container) return;
+
+  container.innerHTML = '<div class="Bukhhalter-no-data">Завантаження логів...</div>';
+
+  try {
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="Bukhhalter-no-data">Логів поки немає</div>';
+      return;
+    }
+
+    let html = `
+      <table class="Bukhhalter-data-table audit-table">
+        <thead>
+          <tr>
+            <th>📅 Дата</th>
+            <th>👤 Користувач</th>
+            <th>🎭 Роль</th>
+            <th>⚡ Дія</th>
+            <th>📋 Акт №</th>
+            <th>📝 Деталі</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    data.forEach((log: any) => {
+      const date = new Date(log.created_at).toLocaleString("uk-UA");
+      let actionText = log.action;
+      let actionClass = "";
+
+      if (log.action === "close_act") { actionText = "🔒 Закрив акт"; actionClass = "status-closed"; }
+      else if (log.action === "open_act") { actionText = "🗝️ Відкрив акт"; actionClass = "status-open"; }
+      else if (log.action === "update_act_items") { actionText = "✏️ Змінив рядки"; actionClass = "status-update"; }
+      else if (log.action === "update_act_info") { actionText = "ℹ️ Оновив інфо"; actionClass = "status-info"; }
+
+      let detailsHtml = "";
+      if (log.details) {
+        if (log.details.added && log.details.added.length > 0) {
+          detailsHtml += `<div class='log-added' style='color: #2e7d32;'>➕ Додано: ${log.details.added.map((i: any) => i.name).join(", ")}</div>`;
+        }
+        if (log.details.deleted && log.details.deleted.length > 0) {
+          detailsHtml += `<div class='log-deleted' style='color: #d32f2f;'>🗑️ Видалено: ${log.details.deleted.map((i: any) => i.name).join(", ")}</div>`;
+        }
+      }
+
+      html += `
+        <tr>
+          <td>${date}</td>
+          <td style="font-weight: bold;">${log.user_login}</td>
+          <td><span class="role-badge role-${log.user_role}">${log.user_role}</span></td>
+          <td><span class="action-label ${actionClass}">${actionText}</span></td>
+          <td>${log.act_id || "-"}</td>
+          <td style="font-size: 12px; max-width: 300px; white-space: normal;">${detailsHtml || "-"}</td>
+        </tr>
+      `;
+    });
+
+    html += "</tbody></table>";
+    container.innerHTML = html;
+  } catch (err: any) {
+    container.innerHTML = `<div class="Bukhhalter-no-data red">Помилка: ${err.message}</div>`;
+  }
+}
+
+// @ts-ignore
+window.updateAuditTable = updateAuditTable;

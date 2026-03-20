@@ -1,0 +1,22 @@
+{
+  "name": "stoBraclave",
+  "short_name": "stoBraclave",
+  "description": "Система управління СТО Braclave",
+  "start_url": "./main.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#177245",
+  "icons": [
+    {
+      "src": "logoOsnovne.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "logoOsnovne.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ],
+  "orientation": "portrait"
+}

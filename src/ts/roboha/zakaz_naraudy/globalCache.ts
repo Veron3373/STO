@@ -127,6 +127,7 @@ export interface GlobalDataCache {
   };
   isActClosed: boolean;
   currentActId: number | null;
+  carId: number | null; // ← ДОДАНО
   currentActDateOn: string | null;
   skladParts: Array<{
     sclad_id: number;
@@ -165,6 +166,7 @@ export const globalCache: GlobalDataCache = {
   },
   isActClosed: false,
   currentActId: null,
+  carId: null, // ← ДОДАНО
   currentActDateOn: null,
   skladParts: [],
   skladLite: [],
@@ -757,39 +759,46 @@ export function findScladItemsByName(name: string) {
 
 export async function ensureSkladLoaded(): Promise<void> {
   if (globalCache.skladParts.length > 0) return;
-  const { data, error } = await supabase
-    .from("sclad")
-    .select(
-      "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on, scladNomer, statys",
-    )
-    .order("sclad_id", { ascending: false });
-  if (error) {
-    // console.warn(
-    // "⚠️ ensureSkladLoaded(): не вдалося отримати sclad:",
-    // error.message,
-    // );
-    return;
-  }
-  const mapped =
-    (data || []).map((r: any) => {
-      const on = Number(r.kilkist_on ?? 0);
-      const off = Number(r.kilkist_off ?? 0);
-      const shopName = extractShopNameFromAny(r.shops);
-      return {
-        sclad_id: Number(r.sclad_id ?? 0),
-        part_number: String(r.part_number || "").trim(),
-        name: String(r.name || "").trim(),
-        price: Number(r.price ?? 0),
-        kilkist_on: on,
-        kilkist_off: off,
-        quantity: on - off,
-        unit: r.unit_measurement ?? null,
-        shop: shopName,
-        time_on: r.time_on ?? null,
-        scladNomer: r.scladNomer ?? null,
-        statys: r.statys ?? null,
-      };
-    }) || [];
+
+  // ✅ ВИПРАВЛЕНО: використовуємо пагінацію — більше не обрізаємо на 1000 записах
+  const data = await fetchAllWithPagination<{
+    sclad_id: number;
+    part_number: string;
+    name: string;
+    price: number;
+    kilkist_on: number;
+    kilkist_off: number;
+    unit_measurement: string | null;
+    shops: any;
+    time_on: string | null;
+    scladNomer: number | null;
+    statys: string | null;
+  }>(
+    "sclad",
+    "sclad_id, part_number, name, price, kilkist_on, kilkist_off, unit_measurement, shops, time_on, scladNomer, statys",
+    "sclad_id",
+  );
+
+  const mapped = data.map((r: any) => {
+    const on = Number(r.kilkist_on ?? 0);
+    const off = Number(r.kilkist_off ?? 0);
+    const shopName = extractShopNameFromAny(r.shops);
+    return {
+      sclad_id: Number(r.sclad_id ?? 0),
+      part_number: String(r.part_number || "").trim(),
+      name: String(r.name || "").trim(),
+      price: Number(r.price ?? 0),
+      kilkist_on: on,
+      kilkist_off: off,
+      quantity: on - off,
+      unit: r.unit_measurement ?? null,
+      shop: shopName,
+      time_on: r.time_on ?? null,
+      scladNomer: r.scladNomer ?? null,
+      statys: r.statys ?? null,
+    };
+  });
+
   globalCache.skladParts = dedupeSklad(mapped);
 }
 

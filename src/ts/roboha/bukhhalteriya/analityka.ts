@@ -83,6 +83,20 @@ interface CarRow {
   data: { Авто?: string; "Номер авто"?: string } | null;
 }
 
+interface PostArxivRow {
+  post_arxiv_id: number;
+  data_on: string | null;
+  data_off: string | null;
+  name_post: string | null;
+  slyusar_id: number | null;
+  status: string | null;
+}
+
+interface PostNameRow {
+  post_id: number;
+  name: string;
+}
+
 interface MonthlyRevenue {
   month: string;
   label: string;
@@ -98,12 +112,18 @@ interface TopWork {
   count: number;
 }
 
+interface ServiceCategory {
+  name: string;
+  value: number;
+}
+
 interface MechanicStats {
   name: string;
   actsCount: number;
   totalEarned: number;
   totalSalary: number;
   avgPerAct: number;
+  totalWorks: number;
 }
 
 interface Anomaly {
@@ -131,7 +151,10 @@ interface TopCar {
 
 let revenueChart: ApexCharts | null = null;
 let topWorksChart: ApexCharts | null = null;
+let topServicesDonutChart: ApexCharts | null = null;
 let mechanicsChart: ApexCharts | null = null;
+let mechanicLoadChart: ApexCharts | null = null;
+let workloadHeatmapChart: ApexCharts | null = null;
 let isLoading = false;
 
 // Кешовані дані
@@ -140,6 +163,8 @@ let cachedSlyusars: SlyusarRow[] = [];
 let cachedVutratu: VutratuRow[] = [];
 let cachedClients: ClientRow[] = [];
 let cachedCars: CarRow[] = [];
+let cachedPostArxiv: PostArxivRow[] = [];
+let cachedPosts: PostNameRow[] = [];
 
 // Фільтр дат
 let filterDateFrom: Date | null = null;
@@ -174,7 +199,7 @@ function getFilteredVutratu(): VutratuRow[] {
 async function loadAnalyticsData(): Promise<boolean> {
   try {
     // Паралельне завантаження всіх даних
-    const [actsRes, slyusarsRes, vutratuRes, clientsRes, carsRes] =
+    const [actsRes, slyusarsRes, vutratuRes, clientsRes, carsRes, postArxivRes, postsRes] =
       await Promise.all([
         supabase
           .from("acts")
@@ -188,7 +213,14 @@ async function loadAnalyticsData(): Promise<boolean> {
           .select("vutratu_id, dataOnn, kategoria, suma, act, opys_vytraty")
           .order("dataOnn", { ascending: false }),
         supabase.from("clients").select("client_id, data"),
-        supabase.from("cars").select("cars_id, data"),
+        supabase
+          .from("cars")
+          .select("cars_id, data")
+          .not("is_deleted", "is", true),
+        supabase
+          .from("post_arxiv")
+          .select("post_arxiv_id, data_on, data_off, name_post, slyusar_id, status"),
+        supabase.from("post_name").select("post_id, name"),
       ]);
 
     if (actsRes.error) throw actsRes.error;
@@ -196,12 +228,16 @@ async function loadAnalyticsData(): Promise<boolean> {
     if (vutratuRes.error) throw vutratuRes.error;
     if (clientsRes.error) throw clientsRes.error;
     if (carsRes.error) throw carsRes.error;
+    if (postArxivRes.error) throw postArxivRes.error;
+    if (postsRes.error) throw postsRes.error;
 
     cachedActs = (actsRes.data || []) as ActRow[];
     cachedSlyusars = (slyusarsRes.data || []) as SlyusarRow[];
     cachedVutratu = (vutratuRes.data || []) as VutratuRow[];
     cachedClients = (clientsRes.data || []) as ClientRow[];
     cachedCars = (carsRes.data || []) as CarRow[];
+    cachedPostArxiv = (postArxivRes.data || []) as PostArxivRow[];
+    cachedPosts = (postsRes.data || []) as PostNameRow[];
 
     return true;
   } catch (err) {
@@ -326,6 +362,51 @@ function calcTopWorks(): TopWork[] {
     .slice(0, 10);
 }
 
+/** Групування послуг для Donut Chart */
+function calcServiceCategories(): ServiceCategory[] {
+  const categories: Record<string, string[]> = {
+    "Ходова": ["важіль", "амортизатор", "сайлентблок", "тяга", "наконечник", "кульова", "підшипник", "пружина", "втулка", "стійка", "ходова", "кулак", "балка", "развал", "сход"],
+    "Двигун": ["двигун", "гзм", "грм", "масло", "фільтр", "прокладка", "сальник", "свічки", "клапан", "головка", "циліндр", "поршень", "ремен", "ланцюг", "турбіна", "гбц"],
+    "Гальмівна": ["гальм", "колодки", "диск", "супорт", "шланг", "циліндр гальм", "абс", "abs", "ручник"],
+    "Трансмісія": ["кпп", "акпп", "зчеплення", "демпфер", "шрус", "піввісь", "редуктор", "кардан", "масло кпп"],
+    "Електрика": ["світло", "фара", "ламп", "провод", "датчик", "стартер", "генератор", "акумулятор", "діагностика", "комп", "електри"],
+    "ТО": ["діагностика", "огляд", "перевірка", "то-", "технічне обслуговування", "фільтр повітр", "фільтр палив"],
+    "Вихлопна": ["глушник", "резонатор", "каталізатор", "зварювання", "гофра"],
+    "Охолодження": ["радіатор", "помпа", "термостат", "антифриз", "патрубок", "вентилятор"]
+  };
+
+  const results = new Map<string, number>();
+  const acts = getFilteredActs();
+
+  for (const act of acts) {
+    const works = act.data?.Роботи;
+    if (!works) continue;
+
+    for (const w of works) {
+      const name = (w.Робота || "").toLowerCase();
+      const sum = (w.Ціна || 0) * (w.Кількість || 1);
+      
+      let assigned = false;
+      for (const [catName, keywords] of Object.entries(categories)) {
+        if (keywords.some(k => name.includes(k))) {
+          results.set(catName, (results.get(catName) || 0) + sum);
+          assigned = true;
+          break;
+        }
+      }
+      
+      if (!assigned) {
+        results.set("Інше", (results.get("Інше") || 0) + sum);
+      }
+    }
+  }
+
+  return Array.from(results.entries())
+    .map(([name, value]) => ({ name, value }))
+    .filter(c => c.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
 /** Ефективність механіків (з урахуванням фільтра дат) */
 function calcMechanicStats(): MechanicStats[] {
   const stats: MechanicStats[] = [];
@@ -340,6 +421,7 @@ function calcMechanicStats(): MechanicStats[] {
     let actsCount = 0;
     let totalEarned = 0;
     let totalSalary = 0;
+    let totalWorks = 0;
 
     const history = data.Історія;
     for (const dateKey of Object.keys(history)) {
@@ -359,6 +441,7 @@ function calcMechanicStats(): MechanicStats[] {
         totalEarned += entry.СуммаРоботи || 0;
 
         if (entry.Записи) {
+          totalWorks += entry.Записи.length;
           for (const rec of entry.Записи) {
             totalSalary += rec.Зарплата || 0;
           }
@@ -374,6 +457,7 @@ function calcMechanicStats(): MechanicStats[] {
       totalEarned,
       totalSalary,
       avgPerAct: Math.round(totalEarned / actsCount),
+      totalWorks,
     });
   }
 
@@ -520,7 +604,146 @@ function calcForecast(monthlyData: MonthlyRevenue[]): {
   return { nextMonthLabel, forecastRevenue, forecastProfit, trend };
 }
 
+/** Розрахунок теплової карти завантаженості (по годинах і днях) */
+function calcWorkloadHeatmap() {
+  const hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+  const postCount = Math.max(1, cachedPosts.length);
+  
+  // Визначаємо період
+  let start: Date;
+  let end: Date;
+
+  if (filterDateFrom && filterDateTo) {
+    // Якщо вибрано обидві дати — показуємо саме цей період
+    start = new Date(filterDateFrom);
+    end = new Date(filterDateTo);
+  } else if (filterDateFrom) {
+    // Якщо тільки "Від" — показуємо 15 днів від цієї дати
+    start = new Date(filterDateFrom);
+    end = new Date(start);
+    end.setDate(start.getDate() + 14);
+  } else if (filterDateTo) {
+    // Якщо тільки "До" — показуємо 15 днів до цієї дати
+    end = new Date(filterDateTo);
+    start = new Date(end);
+    start.setDate(end.getDate() - 14);
+  } else {
+    // За замовчуванням — останні 15 днів (включаючи сьогодні)
+    end = new Date();
+    start = new Date();
+    start.setDate(end.getDate() - 14);
+  }
+  
+  // Очищаємо час для коректного порівняння днів
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+  
+  const days: string[] = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(fmtInputDate(d));
+  }
+
+  const heatmapData: Record<number, Record<string, number>> = {};
+  hours.forEach(h => {
+    heatmapData[h] = {};
+    days.forEach(d => { heatmapData[h][d] = 0; });
+  });
+
+  cachedPostArxiv.forEach(item => {
+    if (!item.data_on || !item.data_off || item.status === "Скасовано") return;
+    const tOn = new Date(item.data_on);
+    const tOff = new Date(item.data_off);
+    
+    // Перевіряємо чи запис входить у наш діапазон
+    if (tOff < start || tOn > end) return;
+    
+    // Спрощений розрахунок: кожні 15хв
+    for (let t = new Date(tOn); t < tOff; t.setMinutes(t.getMinutes() + 15)) {
+      const dStr = fmtInputDate(t);
+      const h = t.getHours();
+      if (heatmapData[h] && heatmapData[h][dStr] !== undefined) {
+        heatmapData[h][dStr] += 15;
+      }
+    }
+  });
+
+  return hours.map(h => ({
+    name: `${String(h).padStart(2, '0')}:00`,
+    data: days.map(d => {
+      const mins = heatmapData[h][d];
+      const val = Math.min(100, Math.round((mins / (60 * postCount)) * 100));
+      return { x: d.split('-').reverse().slice(0, 2).join('.'), y: val };
+    })
+  })).reverse();
+}
+
 // ===================== РЕНДЕРИНГ ГРАФІКІВ =====================
+
+function renderWorkloadHeatmap(): void {
+  const el = document.getElementById("analityka-workload-heatmap");
+  if (!el) return;
+  if (workloadHeatmapChart) { workloadHeatmapChart.destroy(); workloadHeatmapChart = null; }
+
+  const series = calcWorkloadHeatmap();
+  const options: ApexCharts.ApexOptions = {
+    chart: { 
+      type: 'heatmap', 
+      height: 380, // Трохи збільшимо висоту
+      toolbar: { show: true },
+      animations: { enabled: false }
+    },
+    dataLabels: { enabled: false },
+    series: series,
+    xaxis: {
+      type: 'category',
+      position: 'top', // Дати будуть зверху
+      labels: {
+        rotate: -45, // Нахил для кращої читаємості
+        style: { fontSize: '10px', fontWeight: 500 }
+      },
+      tooltip: { enabled: false }
+    },
+    yaxis: {
+      labels: {
+        style: { fontSize: '12px', fontWeight: 600 }
+      }
+    },
+    tooltip: {
+      y: {
+        formatter: (val: number) => `${val}% завантажено`,
+      },
+      x: { show: true }
+    },
+    plotOptions: {
+      heatmap: {
+        shadeIntensity: 0.5,
+        radius: 2,
+        useFillColorAsStroke: true,
+        colorScale: {
+          ranges: [
+            { from: 0, to: 0, name: 'Пусто', color: '#f5f5f5' },
+            { from: 1, to: 30, name: 'Низька', color: '#e8f5e9' },
+            { from: 31, to: 60, name: 'Середня', color: '#81c784' },
+            { from: 61, to: 90, name: 'Висока', color: '#4caf50' },
+            { from: 91, to: 100, name: 'Аншлаг', color: '#1b5e20' }
+          ]
+        }
+      }
+    },
+    legend: {
+      position: 'bottom',
+      horizontalAlign: 'center'
+    },
+    title: { 
+      text: '🌡️ Завантаженість постів по годинах (%)', 
+      align: 'left',
+      style: { fontSize: '16px', fontWeight: 600, color: '#333' } 
+    }
+  };
+
+  workloadHeatmapChart = new ApexCharts(el, options);
+  workloadHeatmapChart.render();
+}
 
 function renderRevenueChart(data: MonthlyRevenue[]): void {
   const el = document.getElementById("analityka-revenue-chart");
@@ -534,13 +757,10 @@ function renderRevenueChart(data: MonthlyRevenue[]): void {
   const options: ApexCharts.ApexOptions = {
     chart: {
       type: "area",
-      height: 320,
-      fontFamily: "Arial, sans-serif",
-      toolbar: {
-        show: true,
-        tools: { download: true, zoom: true, pan: false, reset: true },
-      },
-      animations: { enabled: true, speed: 600 },
+      height: 350,
+      fontFamily: "inherit",
+      toolbar: { show: true },
+      animations: { enabled: true, speed: 800 },
     },
     series: [
       { name: "Дохід", data: data.map((m) => m.revenue) },
@@ -549,34 +769,118 @@ function renderRevenueChart(data: MonthlyRevenue[]): void {
     ],
     xaxis: {
       categories: data.map((m) => m.label),
-      labels: { style: { fontSize: "11px" } },
     },
     yaxis: {
       labels: {
         formatter: (val: number) => formatMoney(val),
-        style: { fontSize: "11px" },
       },
     },
-    colors: ["#4caf50", "#f44336", "#2196f3"],
+    colors: ["#667eea", "#f44336", "#4caf50"],
     fill: {
       type: "gradient",
       gradient: {
         shadeIntensity: 1,
-        opacityFrom: 0.4,
+        opacityFrom: 0.45,
         opacityTo: 0.05,
         stops: [0, 100],
       },
     },
-    stroke: { curve: "smooth", width: 2 },
-    tooltip: {
-      y: { formatter: (val: number) => `${formatMoney(val)} грн` },
-    },
-    legend: { position: "top" },
+    stroke: { curve: "smooth", width: 3 },
     dataLabels: { enabled: false },
+    tooltip: { y: { formatter: (v) => formatMoney(v) + " грн" } },
   };
 
   revenueChart = new ApexCharts(el, options);
   revenueChart.render();
+}
+
+function renderTopServicesDonut(data: ServiceCategory[]): void {
+  const el = document.getElementById("analityka-services-donut");
+  if (!el) return;
+
+  if (topServicesDonutChart) {
+    topServicesDonutChart.destroy();
+    topServicesDonutChart = null;
+  }
+
+  const options: ApexCharts.ApexOptions = {
+    chart: {
+      type: "donut",
+      height: 350,
+      fontFamily: "inherit",
+    },
+    series: data.map((d) => d.value),
+    labels: data.map((d) => d.name),
+    colors: ["#667eea", "#4caf50", "#ff9800", "#f44336", "#2196f3", "#9c27b0", "#00bcd4", "#607d8b"],
+    legend: { position: "bottom" },
+    plotOptions: {
+      pie: {
+        donut: {
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: "Всього",
+              formatter: (w) => {
+                const total = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
+                return formatMoney(total) + " ₴";
+              },
+            },
+          },
+        },
+      },
+    },
+    tooltip: { y: { formatter: (v) => formatMoney(v) + " грн" } },
+    title: { text: "Топ категорій послуг", align: "center", style: { fontSize: "16px" } },
+  };
+
+  topServicesDonutChart = new ApexCharts(el, options);
+  topServicesDonutChart.render();
+}
+
+function renderMechanicLoadChart(data: MechanicStats[]): void {
+  const el = document.getElementById("analityka-mechanics-load-chart");
+  if (!el) return;
+
+  if (mechanicLoadChart) {
+    mechanicLoadChart.destroy();
+    mechanicLoadChart = null;
+  }
+
+  const options: ApexCharts.ApexOptions = {
+    chart: {
+      type: "bar",
+      height: 350,
+      fontFamily: "inherit",
+      toolbar: { show: false },
+    },
+    series: [
+      { name: "Кількість робіт", data: data.map((m) => m.totalWorks) },
+      { name: "Закрито актів", data: data.map((m) => m.actsCount) },
+    ],
+    xaxis: {
+      categories: data.map((m) => m.name),
+    },
+    colors: ["#667eea", "#00e396"],
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        columnWidth: "55%",
+        distributed: false,
+        dataLabels: { position: "top" },
+      },
+    },
+    dataLabels: {
+      enabled: true,
+      offsetY: -20,
+      style: { fontSize: "10px", colors: ["#333"] },
+    },
+    legend: { position: "top" },
+    title: { text: "Завантаженість майстрів", align: "center", style: { fontSize: "16px" } },
+  };
+
+  mechanicLoadChart = new ApexCharts(el, options);
+  mechanicLoadChart.render();
 }
 
 function renderTopWorksChart(data: TopWork[]): void {
@@ -1297,28 +1601,28 @@ function truncateText(text: string, max: number): string {
 function redrawDashboard(): void {
   const monthlyData = calcMonthlyRevenue();
   const topWorks = calcTopWorks();
+  const serviceCategories = calcServiceCategories();
   const mechanicStats = calcMechanicStats();
   const anomalies = detectAnomalies();
   const forecast = calcForecast(monthlyData);
 
-  // Знищуємо старі графіки
-  if (revenueChart) {
-    revenueChart.destroy();
-    revenueChart = null;
-  }
-  if (topWorksChart) {
-    topWorksChart.destroy();
-    topWorksChart = null;
-  }
-  if (mechanicsChart) {
-    mechanicsChart.destroy();
-    mechanicsChart = null;
-  }
+  // Знищуємо всі старі графіки перед перемальовуванням
+  [revenueChart, topWorksChart, topServicesDonutChart, mechanicsChart, mechanicLoadChart].forEach(ch => {
+    if (ch) ch.destroy();
+  });
+  revenueChart = null;
+  topWorksChart = null;
+  topServicesDonutChart = null;
+  mechanicsChart = null;
+  mechanicLoadChart = null;
 
   renderSummaryCards(monthlyData, forecast);
   renderRevenueChart(monthlyData);
+  renderWorkloadHeatmap();
   renderTopWorksChart(topWorks);
+  renderTopServicesDonut(serviceCategories);
   renderMechanicsChart(mechanicStats);
+  renderMechanicLoadChart(mechanicStats);
   renderMechanicsTable(mechanicStats);
   renderTopPartsSection();
   renderTopClientsSection();
@@ -1461,11 +1765,20 @@ export async function initAnalityka(): Promise<void> {
     return;
   }
 
-  // Показуємо лоадер
+  // Показуємо скелетони (Skeleton Screens)
   container.innerHTML = `
-    <div class="analityka-loader">
+    <div class="analityka-date-filter skeleton" style="height: 60px; margin-bottom: 20px;"></div>
+    <div class="analityka-summary-cards">
+      ${Array(7).fill('<div class="analityka-card skeleton" style="height: 80px;"></div>').join("")}
+    </div>
+    <div class="analityka-chart-block skeleton" style="height: 350px; margin-bottom: 20px;"></div>
+    <div class="analityka-row">
+      <div class="analityka-chart-block analityka-half skeleton" style="height: 320px;"></div>
+      <div class="analityka-chart-block analityka-half skeleton" style="height: 320px;"></div>
+    </div>
+    <div class="analityka-loader" style="margin-top: -100px; position: relative; z-index: 10;">
       <div class="analityka-spinner"></div>
-      <span>Завантаження аналітики...</span>
+      <span style="background: rgba(255,255,255,0.8); padding: 4px 12px; border-radius: 12px;">Отримання даних із бази...</span>
     </div>
   `;
 
@@ -1514,19 +1827,37 @@ export async function initAnalityka(): Promise<void> {
 
     <!-- Графік доходу по місяцях -->
     <div class="analityka-chart-block">
-      <h3 class="analityka-chart-title">📈 Дохід / Витрати / Прибуток по місяцях</h3>
+      <h3 class="analityka-chart-title">📈 Фінансова динаміка (Дохід / Витрати / Прибуток)</h3>
       <div id="analityka-revenue-chart"></div>
     </div>
 
-    <!-- Два блока: Топ робіт + Механіки -->
+    <!-- 🌡️ Теплова карта завантаженості -->
+    <div class="analityka-chart-block">
+      <h3 class="analityka-chart-title">🌡️ Теплова карта завантаженості СТО (Heatmap)</h3>
+      <div id="analityka-workload-heatmap"></div>
+    </div>
+
+    <!-- Два блока: Топ робіт + Топ категорій (Пончик) -->
     <div class="analityka-row">
       <div class="analityka-chart-block analityka-half">
         <h3 class="analityka-chart-title">🏆 Топ-10 найприбутковіших робіт</h3>
         <div id="analityka-top-works-chart"></div>
       </div>
       <div class="analityka-chart-block analityka-half">
-        <h3 class="analityka-chart-title">👨‍🔧 Ефективність механіків</h3>
+        <h3 class="analityka-chart-title">🍩 Розподіл по категоріях послуг</h3>
+        <div id="analityka-services-donut"></div>
+      </div>
+    </div>
+
+    <!-- Два блока: Ефективність + Завантаженість -->
+    <div class="analityka-row">
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">👨‍🔧 Фінансова ефективність майстрів</h3>
         <div id="analityka-mechanics-chart"></div>
+      </div>
+      <div class="analityka-chart-block analityka-half">
+        <h3 class="analityka-chart-title">📊 Завантаженість (кількість робіт)</h3>
+        <div id="analityka-mechanics-load-chart"></div>
       </div>
     </div>
 

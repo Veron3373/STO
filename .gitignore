@@ -40,6 +40,7 @@ deploy-vercel.ps1
 .vercel
 .env*.local
 SUPABASE_REDIRECT_SETUP.md
+MIGRATION_README.md
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -69,5 +70,8 @@ project_clone_workflow*.png
 # Supabase temp files
 supabase/.temp/
 
+.vercel
+.env*.local
+MIGRATION_README.md
 .vercel
 .env*.local

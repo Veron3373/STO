@@ -13,11 +13,52 @@ import {
 
 export const ACT_PREVIEW_MODAL_ID = "act-preview-modal";
 
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function parseInputNumber(value: string): number {
+  const normalized = value.replace(/\s/g, "").replace(",", ".");
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatClientSelectLabel(raw: string, maxLength = 88): string {
+  const singleLine = raw
+    .replace(/\s*\n\s*/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (singleLine.length <= maxLength) return singleLine;
+  return `${singleLine.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
+}
+
 export async function renderActPreviewModal(data: any): Promise<void> {
   const oldModal = document.getElementById(ACT_PREVIEW_MODAL_ID);
   if (oldModal) oldModal.remove();
 
-  const rawNum = data.foundContrAgentRaxunok || 0;
+  // Номер акту: спочатку перевіряємо збережений contrAgent_act, потім contrAgent_raxunok
+  let rawNum = data.foundContrAgentAct || data.foundContrAgentRaxunok || 0;
+
+  // Якщо номера ще немає і обрано контрагента — беремо його namber + 1
+  if (!rawNum && data.overrideSupplierFakturaId) {
+    try {
+      const { data: supplierData } = await supabase
+        .from("faktura")
+        .select("namber")
+        .eq("faktura_id", data.overrideSupplierFakturaId)
+        .single();
+      if (supplierData?.namber != null) {
+        rawNum = supplierData.namber + 1;
+      }
+    } catch {
+      /* keep rawNum */
+    }
+  }
+
   const actNumber = String(rawNum).padStart(7, "0");
   const invoiceNumber = `СФ-${actNumber}`;
 
@@ -30,16 +71,16 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   let executorPrumitka = "";
   let clientPrumitka = "";
 
-  const invoiceDateText = formatInvoiceDate(
-    data?.foundContrAgentRaxunokData || data?.contrAgent_raxunok_data || null,
-  );
+  const invoiceDateText = formatInvoiceDate(new Date());
   const todayDateText = formatDateWithMonthName(new Date());
 
   try {
+    // Завантажуємо виконавця: обраний контрагент або faktura_id=1
+    const supplierFakturaId = data.overrideSupplierFakturaId || 1;
     const { data: myData, error: myError } = await supabase
       .from("faktura")
       .select("name, prumitka")
-      .eq("faktura_id", 1)
+      .eq("faktura_id", supplierFakturaId)
       .single();
 
     if (myError) {
@@ -143,12 +184,17 @@ export async function renderActPreviewModal(data: any): Promise<void> {
   let rowsHtml = items
     .map(
       (item: any, index: number) => `
-    <tr>
-      <td class="col-num">${index + 1}</td>
-      <td class="col-name">${item.name || ""}</td>
+    <tr data-item-type="${item.type || "work"}">
+      <td class="col-num"><span class="doc-row-index">${index + 1}</span>
+        <span class="doc-row-actions" data-no-pdf="true">
+          <button type="button" class="doc-row-btn doc-row-btn--delete" title="Видалити рядок">-</button>
+          <button type="button" class="doc-row-btn doc-row-btn--add" title="Додати рядок">+</button>
+        </span>
+      </td>
+      <td class="col-name"><textarea class="doc-name-input editable-autocomplete" rows="1" placeholder="Почніть вводити назву">${escapeHtmlAttr(item.name || "")}</textarea></td>
       <td class="col-unit" contenteditable="true" title="Натисніть, щоб змінити">шт</td>
-      <td class="col-qty">${item.quantity || 0}</td>
-      <td class="col-price">${formatNumberWithSpaces(item.price || 0)}</td>
+      <td class="col-qty"><input type="number" class="doc-qty-input" min="1" step="1" value="${Math.max(1, Number(item.quantity) || 1)}" /></td>
+      <td class="col-price"><input type="number" class="doc-price-input" min="0" step="0.01" value="${Number(item.price) || 0}" /></td>
       <td class="col-sum">${formatNumberWithSpaces(item.suma || 0)}</td>
     </tr>
   `,
@@ -191,9 +237,9 @@ export async function renderActPreviewModal(data: any): Promise<void> {
             <tbody>${rowsHtml}</tbody>
           </table>
           <div class="fakturaAct-total-section">
-            <p>Загальна вартість робіт (послуг) без ПДВ ${formatNumberWithSpaces(
+            <p>Загальна вартість робіт (послуг) без ПДВ <span id="act-total-amount">${formatNumberWithSpaces(
               totalSum,
-            )} грн <span contenteditable="true">${totalSumWords}</span></p>
+            )}</span> грн <span contenteditable="true">${totalSumWords}</span></p>
             <p>Сторони претензій одна до одної не мають.</p>
           </div>
           <div class="fakturaAct-footer">
@@ -204,20 +250,32 @@ export async function renderActPreviewModal(data: any): Promise<void> {
                 <div class="fakturaAct-footer-signature">____________________</div>
                 <div class="fakturaAct-signature-name" contenteditable="true" title="Натисніть, щоб змінити">${executorFullName}</div>
                 <div class="fakturaAct-footer-note">* Відповідальний за здійснення господарської операції і правильність її оформлення</div>
-                <div class="fakturaAct-footer-date">${todayDateText}</div>
+                <div class="fakturaAct-footer-date" contenteditable="true" title="Натисніть, щоб змінити дату">${todayDateText}</div>
                 <div class="fakturaAct-footer-details" contenteditable="true" title="Натисніть, щоб змінити">${executorPrumitka}</div>
               </div>
               <div class="fakturaAct-footer-right">
                 <div class="fakturaAct-footer-title">Від Замовника:</div>
                 <div class="fakturaAct-footer-signatureZamov">____________________</div>
-                <div class="fakturaAct-footer-date">${todayDateText}</div>
+                <div class="fakturaAct-footer-date" contenteditable="true" title="Натисніть, щоб змінити дату">${todayDateText}</div>
                 <div class="fakturaAct-footer-details" contenteditable="true" title="Натисніть, щоб змінити">${clientPrumitka}</div>
               </div>
             </div>
           </div>
           <div class="fakturaAct-controls">
-            <button id="btn-save-act" class="btn-save">💾 Зберегти</button>
-            <button id="btn-print-act" class="btn-print">📥 Завантажити</button>
+            <div class="fakturaAct-controls__row fakturaAct-controls__row--top">
+              <div class="doc-filter-group">
+                <button class="doc-filter-btn doc-filter-btn--all active" data-filter="all">✅ Все</button>
+                <button class="doc-filter-btn doc-filter-btn--detail" data-filter="detail">🔩 Деталі</button>
+                <button class="doc-filter-btn doc-filter-btn--work" data-filter="work">🔧 Послуги</button>
+              </div>
+              <select id="act-client-select" class="doc-client-select">
+                <option value="">— Оберіть платника —</option>
+              </select>
+            </div>
+            <div class="fakturaAct-controls__row fakturaAct-controls__row--bottom">
+              <button id="btn-save-act" class="btn-save">💾 Зберегти</button>
+              <button id="btn-print-act" class="btn-print">📥 Завантажити</button>
+            </div>
           </div>
       </div>
   </div>`;
@@ -251,7 +309,11 @@ export async function renderActPreviewModal(data: any): Promise<void> {
       document.getElementById("editable-act-number")?.textContent?.trim() ||
       actNumber;
     const editedRawNum = parseInt(editedActNumber) || rawNum;
-    const success = await saveActData(data.act_id, editedRawNum);
+    const success = await saveActData(
+      data.act_id,
+      editedRawNum,
+      data.overrideSupplierFakturaId,
+    );
     if (success) {
       btnSave.textContent = "✅ Збережено";
       btnSave.style.backgroundColor = "#4caf50";
@@ -286,6 +348,624 @@ export async function renderActPreviewModal(data: any): Promise<void> {
       btnPrint.textContent = "📥 Завантажити";
       btnPrint.disabled = false;
     }, 50);
+  });
+
+  // --- Dropdown: вибір контрагента-замовника з таблиці faktura ---
+  const actClientSelect = document.getElementById(
+    "act-client-select",
+  ) as HTMLSelectElement | null;
+  if (actClientSelect) {
+    (async () => {
+      try {
+        const { data: fakturaList } = await supabase
+          .from("faktura")
+          .select("faktura_id, name, prumitka")
+          .not("prumitka", "is", null)
+          .order("faktura_id", { ascending: true });
+        if (fakturaList) {
+          (
+            fakturaList as Array<{
+              faktura_id: number;
+              name: string | null;
+              prumitka: string | null;
+            }>
+          ).forEach((row) => {
+            if (!row.prumitka) return;
+            const opt = document.createElement("option");
+            opt.value = String(row.faktura_id);
+            const fullLabel =
+              row.prumitka
+                .replace(/\s*\n\s*/g, " ")
+                .replace(/\s{2,}/g, " ")
+                .trim() || `ID ${row.faktura_id}`;
+            opt.textContent = formatClientSelectLabel(fullLabel);
+            opt.title = fullLabel;
+            opt.dataset.name = row.name || "";
+            opt.dataset.prumitka = row.prumitka || "";
+            actClientSelect.appendChild(opt);
+          });
+        }
+      } catch {
+        /* silent */
+      }
+    })();
+
+    actClientSelect.addEventListener("change", () => {
+      const sel = actClientSelect.options[actClientSelect.selectedIndex];
+      if (!sel?.value) return;
+      const selectedName = sel.dataset.name || "";
+      const selectedPrumitka = sel.dataset.prumitka || "";
+
+      // 1. Оновлюємо правий блок "ЗАТВЕРДЖУЮ" (другий fakturaAct-approval-content)
+      const approvalContents = overlay?.querySelectorAll(
+        ".fakturaAct-approval-content",
+      );
+      const rightApproval = approvalContents?.[1] as HTMLElement | null;
+      if (rightApproval) {
+        rightApproval.textContent = selectedName;
+      }
+
+      // 2. Парсимо ім'я організації та директора для вступного тексту
+      let newZamovnykPart = "";
+      let newDirectorGenitive = "";
+      if (selectedName) {
+        const lines = selectedName
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const orgLines: string[] = [];
+        for (const line of lines) {
+          if (
+            line.includes("ЄДРПОУ") ||
+            line.includes("тел.") ||
+            line.includes("IBAN") ||
+            line.includes("директор") ||
+            /^_{3,}$/.test(line)
+          )
+            continue;
+          const words = line.split(/\s+/);
+          if (
+            words.length === 3 &&
+            /^[А-ЯЄІЇҐ]/.test(line) &&
+            line.toUpperCase() !== line
+          ) {
+            newDirectorGenitive = convertToGenitive(line);
+            break;
+          }
+          orgLines.push(line);
+        }
+        newZamovnykPart = orgLines.join(" ");
+      }
+      if (!newZamovnykPart && selectedName) {
+        newZamovnykPart = normalizeSingleLine(selectedName);
+      }
+
+      // 3. Оновлюємо вступний текст акту
+      const introTextEl = overlay?.querySelector(
+        ".fakturaAct-intro-text",
+      ) as HTMLElement | null;
+      if (introTextEl) {
+        const currentActNum =
+          (
+            overlay?.querySelector("#editable-act-number") as HTMLElement | null
+          )?.textContent?.trim() || actNumber;
+        const currentInvoiceNumber = `СФ-${currentActNum}`;
+        introTextEl.innerHTML = `Ми, представники Замовника ${newZamovnykPart} директора <u>${newDirectorGenitive}</u>, з одного боку, та представник Виконавця ${executorSentencePart}, з іншого боку, склали цей акт про те, що Виконавцем були проведені такі роботи (надані такі послуги) по рахунку № ${currentInvoiceNumber}${invoiceDateText ? ` від ${invoiceDateText}` : ""}:`;
+      }
+
+      // 4. Оновлюємо реквізити замовника в нижній частині (права колонка)
+      const rightFooterDetails = overlay?.querySelector(
+        ".fakturaAct-footer-right .fakturaAct-footer-details",
+      ) as HTMLElement | null;
+      if (rightFooterDetails) {
+        rightFooterDetails.textContent = selectedPrumitka;
+      }
+    });
+  }
+
+  // --- Кнопки фільтру: Деталі / Послуги / Все ---
+  const actTbody = overlay?.querySelector(
+    ".fakturaAct-table tbody",
+  ) as HTMLTableSectionElement | null;
+  let currentAutocompleteList: HTMLElement | null = null;
+  let currentAutocompleteInput: HTMLInputElement | HTMLTextAreaElement | null =
+    null;
+  let autocompleteRepositionHandler: (() => void) | null = null;
+  let autocompleteScrollParents: HTMLElement[] = [];
+
+  const inputSourceTypeByValue = new Map<string, "work" | "detail">();
+  const nameInputTimers = new WeakMap<
+    HTMLInputElement | HTMLTextAreaElement,
+    number
+  >();
+
+  function createEditableActRow(index: number): HTMLTableRowElement {
+    const row = document.createElement("tr");
+    row.dataset.itemType = "work";
+    row.innerHTML = `
+      <td class="col-num"><span class="doc-row-index">${index}</span>
+        <span class="doc-row-actions" data-no-pdf="true">
+          <button type="button" class="doc-row-btn doc-row-btn--delete" title="Видалити рядок">-</button>
+          <button type="button" class="doc-row-btn doc-row-btn--add" title="Додати рядок">+</button>
+        </span>
+      </td>
+      <td class="col-name"><textarea class="doc-name-input editable-autocomplete" rows="1" placeholder="Почніть вводити назву"></textarea></td>
+      <td class="col-unit" contenteditable="true" title="Натисніть, щоб змінити">шт</td>
+      <td class="col-qty"><input type="number" class="doc-qty-input" min="1" step="1" value="1" /></td>
+      <td class="col-price"><input type="number" class="doc-price-input" min="0" step="0.01" value="0" /></td>
+      <td class="col-sum">0</td>
+    `;
+    return row;
+  }
+
+  async function fetchActSuggestions(
+    query: string,
+  ): Promise<Array<{ value: string; type: "work" | "detail" }>> {
+    const term = query.trim();
+    if (term.length < 3) return [];
+
+    const [worksRes, detailsRes] = await Promise.allSettled([
+      supabase.from("works").select("data").ilike("data", `%${term}%`).limit(8),
+      supabase
+        .from("details")
+        .select("data")
+        .ilike("data", `%${term}%`)
+        .limit(8),
+    ]);
+
+    const out: Array<{ value: string; type: "work" | "detail" }> = [];
+    const seen = new Set<string>();
+
+    const worksRows =
+      worksRes.status === "fulfilled" ? worksRes.value.data || [] : [];
+    const detailsRows =
+      detailsRes.status === "fulfilled" ? detailsRes.value.data || [] : [];
+
+    worksRows.forEach((row: { data: string | null }) => {
+      const name = (row.data || "").trim();
+      if (!name || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      out.push({ value: name, type: "work" });
+    });
+
+    detailsRows.forEach((row: { data: string | null }) => {
+      const name = (row.data || "").trim();
+      if (!name || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      out.push({ value: name, type: "detail" });
+    });
+
+    return out;
+  }
+
+  function closeActAutocompleteList(): void {
+    if (currentAutocompleteList) currentAutocompleteList.remove();
+    if (currentAutocompleteInput) {
+      currentAutocompleteInput.classList.remove("ac-open");
+      currentAutocompleteInput.onkeydown = null;
+    }
+    currentAutocompleteList = null;
+    currentAutocompleteInput = null;
+    if (autocompleteRepositionHandler) {
+      window.removeEventListener("scroll", autocompleteRepositionHandler, true);
+      window.removeEventListener("resize", autocompleteRepositionHandler);
+      autocompleteScrollParents.forEach((parent) => {
+        parent.removeEventListener("scroll", autocompleteRepositionHandler!);
+      });
+      autocompleteScrollParents = [];
+      autocompleteRepositionHandler = null;
+    }
+  }
+
+  function getScrollableParents(element: HTMLElement): HTMLElement[] {
+    const parents: HTMLElement[] = [];
+    let current = element.parentElement;
+
+    while (current) {
+      const style = window.getComputedStyle(current);
+      const overflow = `${style.overflow}${style.overflowY}${style.overflowX}`;
+      if (/(auto|scroll|overlay)/.test(overflow)) {
+        parents.push(current);
+      }
+      current = current.parentElement;
+    }
+
+    return parents;
+  }
+
+  function isNameInputElement(
+    element: EventTarget | null,
+  ): element is HTMLInputElement | HTMLTextAreaElement {
+    return (
+      (element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement) &&
+      element.classList.contains("doc-name-input")
+    );
+  }
+
+  function autoResizeNameInput(
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ): void {
+    if (!(element instanceof HTMLTextAreaElement)) return;
+    element.style.height = "auto";
+    element.style.height = `${Math.max(element.scrollHeight, 22)}px`;
+  }
+
+  function positionActAutocompleteList(
+    input: HTMLInputElement | HTMLTextAreaElement,
+    list: HTMLElement,
+  ): void {
+    const rect = input.getBoundingClientRect();
+    list.style.position = "fixed";
+    list.style.left = `${rect.left}px`;
+    list.style.top = `${rect.bottom + 4}px`;
+    list.style.width = `${Math.max(rect.width, 320)}px`;
+    list.style.maxHeight = "320px";
+    list.style.overflowY = "auto";
+    list.style.zIndex = "100001";
+  }
+
+  function renderActAutocompleteList(
+    input: HTMLInputElement | HTMLTextAreaElement,
+    suggestions: Array<{ value: string; type: "work" | "detail" }>,
+  ): void {
+    closeActAutocompleteList();
+    if (!suggestions.length || !overlay) return;
+
+    const list = document.createElement("ul");
+    list.className = "autocomplete-list";
+    const suggestionItems: HTMLLIElement[] = [];
+    let activeIndex = -1;
+
+    const applySuggestion = (suggestion: {
+      value: string;
+      type: "work" | "detail";
+    }): void => {
+      input.value = suggestion.value;
+      const row = input.closest("tr") as HTMLTableRowElement | null;
+      if (row) row.dataset.itemType = suggestion.type;
+      closeActAutocompleteList();
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    };
+
+    const setActiveIndex = (index: number): void => {
+      if (!suggestionItems.length) return;
+      const nextIndex = Math.max(
+        0,
+        Math.min(index, suggestionItems.length - 1),
+      );
+      activeIndex = nextIndex;
+
+      suggestionItems.forEach((el, i) => {
+        el.classList.toggle("active-suggestion", i === activeIndex);
+      });
+
+      const activeEl = suggestionItems[activeIndex];
+      activeEl.scrollIntoView({ block: "nearest" });
+    };
+
+    suggestions.forEach((suggestion) => {
+      const item = document.createElement("li");
+      item.className = `autocomplete-item ${
+        suggestion.type === "work" ? "item-work" : "item-detail"
+      }`;
+      item.dataset.value = suggestion.value;
+      item.dataset.itemType = suggestion.type;
+      item.innerHTML = `<div class="doc-suggest-main">${escapeHtmlAttr(
+        suggestion.value,
+      )}</div><div class="doc-suggest-sub">${
+        suggestion.type === "work" ? "Послуга" : "Деталь"
+      }</div>`;
+
+      item.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        applySuggestion(suggestion);
+      });
+
+      item.addEventListener("mouseenter", () => {
+        const hoveredIndex = suggestionItems.indexOf(item);
+        if (hoveredIndex >= 0) setActiveIndex(hoveredIndex);
+      });
+
+      list.appendChild(item);
+      suggestionItems.push(item);
+    });
+
+    overlay.appendChild(list);
+    input.classList.add("ac-open");
+    positionActAutocompleteList(input, list);
+
+    const reposition = () => positionActAutocompleteList(input, list);
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    autocompleteScrollParents = getScrollableParents(input);
+    autocompleteScrollParents.forEach((parent) => {
+      parent.addEventListener("scroll", reposition, { passive: true });
+    });
+    autocompleteRepositionHandler = reposition;
+    currentAutocompleteList = list;
+    currentAutocompleteInput = input;
+
+    input.onkeydown = (event: KeyboardEvent) => {
+      if (!currentAutocompleteList) return;
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex(activeIndex < 0 ? 0 : activeIndex + 1);
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex(
+          activeIndex < 0 ? suggestionItems.length - 1 : activeIndex - 1,
+        );
+        return;
+      }
+
+      if (event.key === "Enter") {
+        if (activeIndex >= 0 && suggestionItems[activeIndex]) {
+          event.preventDefault();
+          const selected = suggestions[activeIndex];
+          if (selected) applySuggestion(selected);
+        }
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeActAutocompleteList();
+      }
+    };
+  }
+
+  function normalizeActRowNumbersAndTotal(): void {
+    if (!actTbody) return;
+
+    let visibleIndex = 1;
+    let visibleSum = 0;
+    const rows = Array.from(actTbody.querySelectorAll("tr"));
+
+    rows.forEach((row) => {
+      if (row.classList.contains("total-row")) return;
+      const rowEl = row as HTMLTableRowElement;
+      const qtyInput = rowEl.querySelector(
+        ".doc-qty-input",
+      ) as HTMLInputElement | null;
+      const priceInput = rowEl.querySelector(
+        ".doc-price-input",
+      ) as HTMLInputElement | null;
+      const sumCell = rowEl.querySelector(".col-sum") as HTMLElement | null;
+      const numCell = rowEl.querySelector(".col-num") as HTMLElement | null;
+
+      const quantity = Math.max(
+        1,
+        Math.floor(parseInputNumber(qtyInput?.value || "1")),
+      );
+      const price = Math.max(0, parseInputNumber(priceInput?.value || "0"));
+      const rowSum = quantity * price;
+
+      if (qtyInput && String(quantity) !== qtyInput.value) {
+        qtyInput.value = String(quantity);
+      }
+      if (priceInput && !Number.isFinite(parseInputNumber(priceInput.value))) {
+        priceInput.value = "0";
+      }
+
+      if (sumCell) {
+        sumCell.textContent = formatNumberWithSpaces(rowSum);
+      }
+
+      if ((rowEl as HTMLElement).style.display !== "none") {
+        if (numCell) {
+          const indexEl = numCell.querySelector(
+            ".doc-row-index",
+          ) as HTMLElement | null;
+          if (indexEl) indexEl.textContent = String(visibleIndex++);
+        }
+        visibleSum += rowSum;
+      }
+    });
+
+    const totalCell = actTbody.querySelector(
+      ".total-value",
+    ) as HTMLElement | null;
+    if (totalCell) {
+      totalCell.textContent = formatNumberWithSpaces(visibleSum);
+    }
+
+    const amountSpan = overlay?.querySelector(
+      "#act-total-amount",
+    ) as HTMLElement | null;
+    if (amountSpan) {
+      amountSpan.textContent = formatNumberWithSpaces(visibleSum);
+    }
+
+    const wordsSpan = overlay?.querySelector(
+      ".fakturaAct-total-section p:first-child span[contenteditable]",
+    ) as HTMLElement | null;
+    if (wordsSpan) {
+      wordsSpan.textContent = amountToWordsUA(visibleSum);
+    }
+  }
+
+  function applyActFilter(filter: string): void {
+    if (!actTbody) return;
+    Array.from(actTbody.querySelectorAll("tr")).forEach((tr) => {
+      if (tr.classList.contains("total-row")) return;
+      const type = (tr as HTMLElement).dataset.itemType || "work";
+      const show = filter === "all" || type === filter;
+      (tr as HTMLElement).style.display = show ? "" : "none";
+    });
+    normalizeActRowNumbersAndTotal();
+  }
+
+  actTbody?.addEventListener("input", (event) => {
+    const target = event.target as HTMLElement;
+
+    if (isNameInputElement(target)) {
+      autoResizeNameInput(target);
+      const previousTimer = nameInputTimers.get(target);
+      if (previousTimer) window.clearTimeout(previousTimer);
+
+      const term = target.value.trim();
+      if (term.length < 3) {
+        closeActAutocompleteList();
+        inputSourceTypeByValue.clear();
+        return;
+      }
+
+      const timer = window.setTimeout(async () => {
+        try {
+          const suggestions = await fetchActSuggestions(term);
+          inputSourceTypeByValue.clear();
+
+          suggestions.forEach((item) => {
+            inputSourceTypeByValue.set(item.value, item.type);
+          });
+          renderActAutocompleteList(target, suggestions);
+        } catch {
+          closeActAutocompleteList();
+          inputSourceTypeByValue.clear();
+        }
+      }, 250);
+
+      nameInputTimers.set(target, timer);
+      return;
+    }
+
+    if (
+      target instanceof HTMLInputElement &&
+      (target.classList.contains("doc-qty-input") ||
+        target.classList.contains("doc-price-input"))
+    ) {
+      normalizeActRowNumbersAndTotal();
+    }
+  });
+
+  actTbody?.addEventListener("change", (event) => {
+    const target = event.target as HTMLElement;
+
+    if (isNameInputElement(target)) {
+      autoResizeNameInput(target);
+      const row = target.closest("tr") as HTMLTableRowElement | null;
+      if (row) {
+        const type = inputSourceTypeByValue.get(target.value.trim());
+        if (type) row.dataset.itemType = type;
+      }
+      return;
+    }
+
+    if (!(target instanceof HTMLInputElement)) return;
+
+    if (target.classList.contains("doc-qty-input")) {
+      const normalizedQty = Math.max(
+        1,
+        Math.floor(parseInputNumber(target.value || "1")),
+      );
+      target.value = String(normalizedQty);
+      normalizeActRowNumbersAndTotal();
+    }
+
+    if (target.classList.contains("doc-price-input")) {
+      const normalizedPrice = Math.max(
+        0,
+        parseInputNumber(target.value || "0"),
+      );
+      target.value = String(normalizedPrice);
+      normalizeActRowNumbersAndTotal();
+    }
+  });
+
+  actTbody?.addEventListener("focusin", (event) => {
+    const target = event.target as HTMLElement;
+    if (!isNameInputElement(target)) return;
+    autoResizeNameInput(target);
+    if (target.value.trim().length < 3) return;
+
+    window.setTimeout(async () => {
+      if (document.activeElement !== target) return;
+      const suggestions = await fetchActSuggestions(target.value.trim());
+      renderActAutocompleteList(target, suggestions);
+    }, 0);
+  });
+
+  actTbody?.addEventListener("focusout", (event) => {
+    const target = event.target as HTMLElement;
+    if (!isNameInputElement(target)) return;
+    window.setTimeout(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !active.closest(".autocomplete-list")) {
+        closeActAutocompleteList();
+      }
+    }, 120);
+  });
+
+  actTbody?.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement;
+    const addBtn = target.closest(
+      ".doc-row-btn--add",
+    ) as HTMLButtonElement | null;
+    const deleteBtn = target.closest(
+      ".doc-row-btn--delete",
+    ) as HTMLButtonElement | null;
+    const currentRow = target.closest("tr") as HTMLTableRowElement | null;
+    if (!currentRow || currentRow.classList.contains("total-row") || !actTbody)
+      return;
+
+    if (addBtn) {
+      const newRow = createEditableActRow(1);
+      currentRow.insertAdjacentElement("afterend", newRow);
+      const nameInput = newRow.querySelector(".doc-name-input") as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+      if (nameInput) {
+        autoResizeNameInput(nameInput);
+        nameInput.focus();
+      }
+      normalizeActRowNumbersAndTotal();
+      return;
+    }
+
+    if (deleteBtn) {
+      const dataRowsCount =
+        actTbody.querySelectorAll("tr:not(.total-row)").length;
+      if (dataRowsCount <= 1) {
+        showNotification("Має залишитись хоча б один рядок", "warning", 2000);
+        return;
+      }
+      currentRow.remove();
+      normalizeActRowNumbersAndTotal();
+    }
+  });
+
+  overlay?.addEventListener("mousedown", (event) => {
+    const target = event.target as HTMLElement;
+    if (
+      !target.closest(".autocomplete-list") &&
+      !target.closest(".doc-name-input")
+    ) {
+      closeActAutocompleteList();
+    }
+  });
+
+  actTbody?.querySelectorAll(".doc-name-input").forEach((el) => {
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      autoResizeNameInput(el);
+    }
+  });
+
+  normalizeActRowNumbersAndTotal();
+
+  const filterBtns = overlay?.querySelectorAll(".doc-filter-btn");
+  filterBtns?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      applyActFilter((btn as HTMLElement).dataset.filter || "all");
+    });
   });
 }
 
@@ -455,7 +1135,11 @@ function amountToWordsUA(amount: number): string {
     .padStart(2, "0")} ${getForm(kopecks, "копійка", "копійки", "копійок")}`;
 }
 
-async function saveActData(actId: number, actNumber: number): Promise<boolean> {
+async function saveActData(
+  actId: number,
+  actNumber: number,
+  supplierFakturaId?: number | null,
+): Promise<boolean> {
   try {
     const now = new Date();
     const todayISO = `${now.getFullYear()}-${String(
@@ -470,18 +1154,41 @@ async function saveActData(actId: number, actNumber: number): Promise<boolean> {
     } catch (e) {
       // console.error(e);
     }
+    const updatePayload: Record<string, any> = {
+      contrAgent_act: actNumber,
+      contrAgent_act_data: todayISO,
+      xto_vbpbsav: userName,
+    };
+    if (supplierFakturaId) {
+      updatePayload.faktura_id_akt = supplierFakturaId;
+    }
     const { error } = await supabase
       .from("acts")
-      .update({
-        contrAgent_act: actNumber,
-        contrAgent_act_data: todayISO,
-        xto_vbpbsav: userName,
-      })
+      .update(updatePayload)
       .eq("act_id", actId);
     if (error) {
       // console.error("❌ Помилка збереження акту:", error);
       return false;
     }
+
+    // Оновлюємо лічильник namber у контрагента
+    if (supplierFakturaId) {
+      const { data: fakturaRow } = await supabase
+        .from("faktura")
+        .select("namber")
+        .eq("faktura_id", supplierFakturaId)
+        .single();
+      if (fakturaRow) {
+        const currentNamber = parseInt(fakturaRow.namber || "0");
+        if (actNumber > currentNamber) {
+          await supabase
+            .from("faktura")
+            .update({ namber: actNumber })
+            .eq("faktura_id", supplierFakturaId);
+        }
+      }
+    }
+
     return true;
   } catch (e) {
     // console.error("❌ Критична помилка:", e);
@@ -524,6 +1231,59 @@ function getActElementBoundsPx(container: HTMLElement, selector: string) {
   return { top, bottom, height: bottom - top };
 }
 
+function replaceActTextareasForPdf(container: HTMLElement): Array<{
+  parent: HTMLElement;
+  textarea: HTMLTextAreaElement;
+  proxy: HTMLDivElement;
+}> {
+  const replacements: Array<{
+    parent: HTMLElement;
+    textarea: HTMLTextAreaElement;
+    proxy: HTMLDivElement;
+  }> = [];
+
+  const textareas = container.querySelectorAll(
+    ".doc-name-input",
+  ) as NodeListOf<HTMLTextAreaElement>;
+
+  textareas.forEach((textarea) => {
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    const parent = textarea.parentElement;
+    if (!parent) return;
+
+    const styles = window.getComputedStyle(textarea);
+    const proxy = document.createElement("div");
+
+    proxy.textContent = textarea.value;
+    proxy.style.width = `${textarea.offsetWidth}px`;
+    proxy.style.minHeight = `${Math.max(
+      textarea.scrollHeight,
+      textarea.offsetHeight,
+      22,
+    )}px`;
+    proxy.style.font = styles.font;
+    proxy.style.fontSize = styles.fontSize;
+    proxy.style.fontFamily = styles.fontFamily;
+    proxy.style.fontWeight = styles.fontWeight;
+    proxy.style.lineHeight = styles.lineHeight;
+    proxy.style.letterSpacing = styles.letterSpacing;
+    proxy.style.color = styles.color;
+    proxy.style.padding = styles.padding;
+    proxy.style.margin = styles.margin;
+    proxy.style.border = styles.border;
+    proxy.style.boxSizing = styles.boxSizing;
+    proxy.style.background = "transparent";
+    proxy.style.whiteSpace = "pre-wrap";
+    proxy.style.overflowWrap = "anywhere";
+    proxy.style.wordBreak = "break-word";
+
+    parent.replaceChild(proxy, textarea);
+    replacements.push({ parent, textarea, proxy });
+  });
+
+  return replacements;
+}
+
 async function generateActPdf(actNumber: string): Promise<void> {
   const container = document.querySelector(
     ".fakturaAct-container",
@@ -536,6 +1296,10 @@ async function generateActPdf(actNumber: string): Promise<void> {
   if (controls) controls.style.display = "none";
   hideFormatControlsForPdf(container);
 
+  // Ховаємо плаваючу кнопку голосового введення
+  const voiceBtn = document.getElementById("voice-input-button") as HTMLElement;
+  if (voiceBtn) voiceBtn.style.display = "none";
+
   // Зберігаємо оригінальні стилі
   const originalStyle = container.style.cssText;
 
@@ -544,6 +1308,8 @@ async function generateActPdf(actNumber: string): Promise<void> {
   container.style.minHeight = "auto";
   container.style.overflow = "visible";
   container.style.boxShadow = "none";
+
+  const textareaReplacements = replaceActTextareasForPdf(container);
 
   try {
     const canvas = await html2canvas(container, {
@@ -696,9 +1462,16 @@ async function generateActPdf(actNumber: string): Promise<void> {
     pdf.save(`Акт_ОУ-${actNumber}.pdf`);
   } catch (error) {
   } finally {
+    textareaReplacements.forEach(({ parent, textarea, proxy }) => {
+      if (proxy.parentElement === parent) {
+        parent.replaceChild(textarea, proxy);
+      }
+    });
+
     // Повертаємо оригінальні стилі
     if (controls) controls.style.display = "flex";
     showFormatControlsAfterPdf(container);
+    if (voiceBtn) voiceBtn.style.display = "";
     container.style.cssText = originalStyle;
   }
 }

@@ -1,5 +1,16 @@
 import "./roboha/tablucya/tablucya";
 import "./roboha/tablucya/perevirka_avtoruzacii";
+
+// 📱 Реєстрація Service Worker для PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(() => {
+      // console.log('SW registered');
+    }).catch(() => {
+      // console.log('SW registration failed');
+    });
+  });
+}
 import "./roboha/redahyvatu_klient_machuna/vikno_klient_machuna";
 import "./roboha/dodatu_inchi_bazu/dodatu_inchi_bazu_danux";
 import "./roboha/nalachtuvannay/nalachtuvannay";

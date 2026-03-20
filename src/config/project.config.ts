@@ -25,17 +25,14 @@ export const PROJECT_INFO = {
 export const DEPLOY_URLS = {
   vercel: "stobraclavec.vercel.app",
   githubUsername: "veron3373",
-  githubRepo: "",
+  githubRepo: "STO",
   localPort: 5173,
 
   get vercelUrl() {
     return `https://${this.vercel}`;
   },
   get githubPagesUrl() {
-    const repo = this.githubRepo;
-    return repo
-      ? `https://${this.githubUsername}.github.io/${repo}`
-      : `https://${this.githubUsername}.github.io`;
+    return `https://${this.githubUsername}.github.io/${this.githubRepo}`;
   },
   get localUrl() {
     return `http://localhost:${this.localPort}`;

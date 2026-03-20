@@ -70,8 +70,8 @@ export function buildGitUrl(gitName: string, path: string = ""): string {
   let baseUrl: string;
 
   if (hostname.endsWith(".github.io")) {
-    // GitHub Pages - використовуємо origin (вже містить правильний домен)
-    baseUrl = `https://${gitName}.github.io`;
+    // GitHub Pages - repo STO
+    baseUrl = `https://${gitName}.github.io/STO`;
   } else {
     // Vercel, localhost або інший хостинг - використовуємо origin
     baseUrl = window.location.origin;

@@ -665,6 +665,45 @@ export function initStatusLockDelegation(): void {
     btn.disabled = true;
 
     try {
+      // ☀️ РОЗМОРОЗКА — якщо акт заморожений і натиснули ☀️
+      {
+        const { data: frozenCheck } = await supabase
+          .from("acts")
+          .select("frozen")
+          .eq("act_id", actId)
+          .single();
+
+        if (frozenCheck?.frozen === true) {
+          const level = getCurrentAccessLevel();
+          if (!FULL_ACCESS_ALIASES.includes(level) && level !== "приймальник") {
+            showNotification(
+              "❌ Розморозка доступна лише Адміністратору або Приймальнику",
+              "warning",
+            );
+            btn.disabled = false;
+            return;
+          }
+
+          const confirmed = await showSlusarConfirm(
+            "☀️ Розморозити акт?\n\nДеталі будуть списані зі складу знову.",
+          );
+          if (!confirmed) {
+            btn.disabled = false;
+            return;
+          }
+
+          showNotification("☀️ Розморожування акту...", "info");
+          await unfreezeAct(actId);
+          showNotification("☀️ Акт розморожено", "success");
+          globalCache.isActClosed = false;
+          await loadGlobalData();
+          await showModal(actId, "client");
+          refreshActsTable();
+          btn.disabled = false;
+          return;
+        }
+      }
+
       // 🔵 СПЕЦІАЛЬНА ЛОГІКА ДЛЯ СЛЮСАРЯ - НЕ ЗАКРИВАТИ АКТ, А ЗАПИСУВАТИ slusarsOn
       if (userAccessLevel === "Слюсар") {
         // ⚠️ ПЕРЕВІРКА: Чи акт закритий?
@@ -1060,4 +1099,213 @@ export function initStatusLockDelegation(): void {
       btn.disabled = false;
     }
   });
+}
+
+/* =============================== ❄️ ЗАМОРОЗКА / РОЗМОРОЗКА АКТУ =============================== */
+
+let __freezeDelegationAttached = false;
+
+export function initFreezeDelegation(): void {
+  if (__freezeDelegationAttached) return;
+  __freezeDelegationAttached = true;
+
+  // 1) Клік на ❄️ (заморозити) — делегація на freeze-act-btn
+  document.addEventListener(
+    "click",
+    async (ev) => {
+      const target = ev.target as HTMLElement | null;
+      const freezeBtn = target?.closest?.(
+        "#freeze-act-btn",
+      ) as HTMLElement | null;
+      if (!freezeBtn) return;
+
+      ev.stopPropagation(); // Не пропускаємо клік до status-lock-btn
+
+      // Доступ лише для Адміна та Приймальника
+      const level = getCurrentAccessLevel();
+      if (!FULL_ACCESS_ALIASES.includes(level) && level !== "приймальник") {
+        showNotification(
+          "❌ Заморозка доступна лише Адміністратору або Приймальнику",
+          "warning",
+        );
+        return;
+      }
+
+      const lockBtn = freezeBtn.closest(
+        "#status-lock-btn",
+      ) as HTMLElement | null;
+      const actId = lockBtn?.getAttribute("data-act-id");
+      if (!actId) return;
+
+      const confirmed = await showSlusarConfirm(
+        "❄️ Заморозити акт?\n\nДеталі будуть повернуті на склад,\nзарплати скасовані.",
+      );
+      if (!confirmed) return;
+
+      try {
+        showNotification("❄️ Заморожування акту...", "info");
+        await freezeAct(Number(actId));
+        showNotification("❄️ Акт заморожено", "success");
+        globalCache.isActClosed = false;
+        await loadGlobalData();
+        await showModal(Number(actId), "client");
+        refreshActsTable();
+      } catch (err: any) {
+        showNotification("Помилка: " + (err?.message || err), "error");
+      }
+    },
+    true,
+  ); // capture phase to intercept before status-lock-btn
+
+  // 2) Клік на ☀️ (status-lock-btn з frozen=true) — розморозка
+  //    Обробляється всередині initStatusLockDelegation через перевірку frozen
+}
+
+/**
+ * ❄️ Заморозити акт:
+ * 1. Повернути деталі на склад (зменшити kilkist_off)
+ * 2. Видалити зарплати з slyusars Історія
+ * 3. Встановити acts.frozen = true
+ */
+async function freezeAct(actId: number): Promise<void> {
+  // 1. Повернути деталі на склад
+  const { data: scladRows, error: scladErr } = await supabase
+    .from("sclad")
+    .select("sclad_id, kilkist_off")
+    .eq("akt", actId);
+
+  if (scladErr) throw new Error("Помилка читання складу: " + scladErr.message);
+
+  if (scladRows && scladRows.length > 0) {
+    for (const row of scladRows) {
+      const qty = Number(row.kilkist_off) || 0;
+      if (qty > 0) {
+        // Повертаємо на склад: delta = -kilkist_off (зменшуємо kilkist_off до 0)
+        await supabase.rpc("apply_sclad_delta", {
+          sid: row.sclad_id,
+          delta_val: -qty,
+        });
+      }
+    }
+  }
+
+  // 2. Видалити зарплати з slyusars Історія для цього акту
+  await removeSalaryFromSlyusars(actId);
+
+  // 3. Встановити frozen = true
+  const { error: actErr } = await supabase
+    .from("acts")
+    .update({ frozen: true })
+    .eq("act_id", actId);
+  if (actErr) throw new Error("Помилка заморозки акту: " + actErr.message);
+
+  await logAction("freeze_act", actId);
+}
+
+/**
+ * ☀️ Розморозити акт:
+ * 1. Повернути kilkist_off назад (списати деталі зі складу знову)
+ * 2. Встановити acts.frozen = false
+ * (зарплати перераховуються при наступному збереженні акту)
+ */
+async function unfreezeAct(actId: number): Promise<void> {
+  // 1. Списати деталі зі складу знову
+  const { data: scladRows, error: scladErr } = await supabase
+    .from("sclad")
+    .select("sclad_id, kilkist_on")
+    .eq("akt", actId);
+
+  if (scladErr) throw new Error("Помилка читання складу: " + scladErr.message);
+
+  if (scladRows && scladRows.length > 0) {
+    for (const row of scladRows) {
+      const qty = Number(row.kilkist_on) || 0;
+      if (qty > 0) {
+        // Списуємо зі складу: delta = +kilkist_on
+        await supabase.rpc("apply_sclad_delta", {
+          sid: row.sclad_id,
+          delta_val: qty,
+        });
+      }
+    }
+  }
+
+  // 2. Встановити frozen = false
+  const { error: actErr } = await supabase
+    .from("acts")
+    .update({ frozen: false })
+    .eq("act_id", actId);
+  if (actErr) throw new Error("Помилка розморозки акту: " + actErr.message);
+
+  await logAction("unfreeze_act", actId);
+}
+
+/**
+ * Видалити зарплати з slyusars Історія для даного акту
+ * (Приймальник, Слюсар, Запчастист)
+ */
+async function removeSalaryFromSlyusars(actId: number): Promise<void> {
+  const { data: slyusarsData, error } = await supabase
+    .from("slyusars")
+    .select("*");
+
+  if (error || !slyusarsData) return;
+
+  const primaryKeyCandidates = ["slyusar_id", "id", "slyusars_id"];
+  const availableKeys = Object.keys(slyusarsData[0] || {});
+  let primaryKey: string | null = null;
+  for (const c of primaryKeyCandidates) {
+    if (availableKeys.includes(c)) {
+      primaryKey = c;
+      break;
+    }
+  }
+  if (!primaryKey) return;
+
+  for (const row of slyusarsData) {
+    let slyusarData: any = {};
+    if (typeof row.data === "string") {
+      try {
+        slyusarData = JSON.parse(row.data);
+      } catch {
+        continue;
+      }
+    } else if (typeof row.data === "object" && row.data !== null) {
+      slyusarData = row.data;
+    } else {
+      continue;
+    }
+
+    const access = (slyusarData["Доступ"] || "")
+      .toLowerCase()
+      .normalize("NFKC")
+      .trim();
+    // Обробляємо: Приймальник, Слюсар, Запчастист
+    if (!["приймальник", "слюсар", "запчастист"].includes(access)) continue;
+
+    const history = slyusarData["Історія"];
+    if (!history || typeof history !== "object") continue;
+
+    let modified = false;
+    for (const dateKey in history) {
+      if (!Array.isArray(history[dateKey])) continue;
+      const before = history[dateKey].length;
+      history[dateKey] = history[dateKey].filter((entry: any) => {
+        return Number(entry?.["Акт"]) !== actId;
+      });
+      if (history[dateKey].length !== before) modified = true;
+      // Видаляємо порожні дати
+      if (history[dateKey].length === 0) {
+        delete history[dateKey];
+      }
+    }
+
+    if (modified) {
+      slyusarData["Історія"] = history;
+      await supabase
+        .from("slyusars")
+        .update({ data: slyusarData })
+        .eq(primaryKey, row[primaryKey]);
+    }
+  }
 }

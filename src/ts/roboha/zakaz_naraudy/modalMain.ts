@@ -1326,19 +1326,27 @@ function renderModalContent(
   globalCache.initialActItems = allItems;
 
   const showLockButton = canShowLockButton;
+  const isFrozen = act.frozen === true;
+
+  // ❄️ Заморозка/розморозка доступна лише Адміністратору та Приймальнику
+  const canFreeze =
+    userAccessLevel === "Адміністратор" || userAccessLevel === "Приймальник";
 
   // 💛 ПЕРЕВІРКА slusarsOn ДЛЯ ФАРБУВАННЯ ЗАГОЛОВКА (ТІЛЬКИ ДЛЯ ВІДКРИТИХ АКТІВ)
   const shouldShowSlusarsOn =
     act.slusarsOn === true &&
     !isClosed &&
+    !isFrozen &&
     (userAccessLevel === "Адміністратор" ||
       userAccessLevel === "Слюсар" ||
       (userAccessLevel === "Приймальник" &&
         act.pruimalnyk === currentUserName));
 
-  const headerClass = shouldShowSlusarsOn
-    ? "zakaz_narayd-header zakaz_narayd-header-slusar-on"
-    : "zakaz_narayd-header";
+  const headerClass = isFrozen
+    ? "zakaz_narayd-header zakaz_narayd-header-frozen"
+    : shouldShowSlusarsOn
+      ? "zakaz_narayd-header zakaz_narayd-header-slusar-on"
+      : "zakaz_narayd-header";
 
   // Генеруємо HTML кнопок для header
   const pruimalnykDisplay = act.pruimalnyk
@@ -1350,8 +1358,9 @@ function renderModalContent(
       ${pruimalnykDisplay}
       ${
         showLockButton
-          ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}">
-                   ${isClosed ? "🔒" : "🗝️"}
+          ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}" style="position:relative;">
+                   ${isClosed ? "🔒" : isFrozen ? "☀️" : "🗝️"}
+                   ${canFreeze && !isClosed && !isFrozen ? '<span class="freeze-hover-btn" id="freeze-act-btn" title="Заморозити акт">❄️</span>' : ""}
                    </button>`
           : ""
       }
@@ -1398,10 +1407,11 @@ function renderModalContent(
     </div>
   `;
 
-  // Визначаємо стиль для header (не застосовуємо колір якщо slusarsOn активний - буде золотистий)
-  const headerStyle = shouldShowSlusarsOn
-    ? ""
-    : `background-color: ${globalCache.generalSettings.headerColor};`;
+  // Визначаємо стиль для header (не застосовуємо колір якщо slusarsOn або frozen активний)
+  const headerStyle =
+    shouldShowSlusarsOn || isFrozen
+      ? ""
+      : `background-color: ${globalCache.generalSettings.headerColor};`;
 
   const logoImage = globalCache.generalSettings.logoUrl
     ? `<img src="${globalCache.generalSettings.logoUrl}" class="zakaz_narayd-header-logo" alt="Логотип">`
@@ -1409,6 +1419,7 @@ function renderModalContent(
 
   body.innerHTML = `
     <div class="${headerClass}" style="${headerStyle}">
+      ${isFrozen ? '<span class="frozen-snowflake-extra">❄</span>' : ""}
       ${logoImage}
       <div class="zakaz_narayd-header-info">
         <h1>${globalCache.generalSettings.stoName}</h1>
@@ -1592,9 +1603,12 @@ async function addModalHandlers(
     renderAIRecommendations(carId, currentMileage);
   }
 
-  import("./inhi/knopka_zamok").then(({ initStatusLockDelegation }) => {
-    initStatusLockDelegation();
-  });
+  import("./inhi/knopka_zamok").then(
+    ({ initStatusLockDelegation, initFreezeDelegation }) => {
+      initStatusLockDelegation();
+      initFreezeDelegation();
+    },
+  );
 
   initPhoneClickHandler(body, clientPhone);
   addSaveHandler(actId, actDetails);

@@ -17,27 +17,45 @@
 
 // Плавне зникнення
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 // Пульсація для Skeleton Screens
 @keyframes skeletonPulse {
-  0% { background-color: #f0f0f0; }
-  50% { background-color: #e0e0e0; }
-  100% { background-color: #f0f0f0; }
+  0% {
+    background-color: #f0f0f0;
+  }
+  50% {
+    background-color: #e0e0e0;
+  }
+  100% {
+    background-color: #f0f0f0;
+  }
 }
 
 // Мікро-пульсація для кнопок (Success)
 @keyframes buttonPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 // Малювання галочки (Success Checkmark)
 @keyframes drawCheck {
-  to { stroke-dashoffset: 0; }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* ==================== SKELETON SCREENS ==================== */
@@ -82,4 +100,106 @@
   stroke-dasharray: 100;
   stroke-dashoffset: 100;
   animation: drawCheck 0.5s ease forwards;
+}
+
+/* ==================== FROZEN ACT (❄️) ==================== */
+
+// Сніжинки що падають
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes iceShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+// Frozen header — світло-блакитний з льодовим ефектом
+.zakaz_narayd-header-frozen {
+  background: linear-gradient(
+    135deg,
+    #d6eef8 0%,
+    #b3ddf0 30%,
+    #e0f2fa 60%,
+    #b3ddf0 100%
+  ) !important;
+  background-size: 200% 100%;
+  animation: iceShimmer 6s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+
+  // Сніжинки-частинки
+  &::before,
+  &::after {
+    content: "❄";
+    position: absolute;
+    font-size: 14px;
+    opacity: 0.4;
+    animation: snowfall 4s linear infinite;
+    pointer-events: none;
+  }
+  &::before {
+    left: 15%;
+    top: -10px;
+    animation-delay: 0s;
+    animation-duration: 3.5s;
+  }
+  &::after {
+    left: 75%;
+    top: -10px;
+    animation-delay: 1.8s;
+    animation-duration: 4.2s;
+  }
+}
+
+// Третя сніжинка через додатковий елемент
+.frozen-snowflake-extra {
+  position: absolute;
+  font-size: 12px;
+  opacity: 0.35;
+  animation: snowfall 5s linear infinite;
+  pointer-events: none;
+  left: 45%;
+  top: -10px;
+  animation-delay: 0.8s;
+}
+
+// Frozen row у таблиці — легкий блакитний фон
+.row-frozen {
+  background: linear-gradient(90deg, #e8f4fd 0%, #f0f8ff 100%) !important;
+  td:first-child {
+    color: #2196f3;
+  }
+}
+
+// Freeze hover кнопка — з'являється при ховері на 🗝️ / ☀️
+.freeze-hover-btn {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 5;
+  line-height: 1;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.status-lock-icon:hover .freeze-hover-btn,
+.freeze-hover-btn:hover {
+  opacity: 1;
 }

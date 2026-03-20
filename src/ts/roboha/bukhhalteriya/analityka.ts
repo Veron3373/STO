@@ -11,6 +11,7 @@ interface ActRow {
   act_id: number;
   date_on: string | null;
   date_off: string | null;
+  frozen?: boolean;
   rosraxovano: string | null;
   data: ActData | null;
   avans: number | string | null;
@@ -172,8 +173,10 @@ let filterDateTo: Date | null = null;
 
 /** Повертає акти, відфільтровані по обраному діапазону дат */
 function getFilteredActs(): ActRow[] {
-  if (!filterDateFrom && !filterDateTo) return cachedActs;
-  return cachedActs.filter((a) => {
+  // ❄️ Виключаємо заморожені акти з фінансових розрахунків
+  const nonFrozen = cachedActs.filter((a) => a.frozen !== true);
+  if (!filterDateFrom && !filterDateTo) return nonFrozen;
+  return nonFrozen.filter((a) => {
     const dateStr = a.date_off || a.date_on;
     if (!dateStr) return false;
     const d = new Date(dateStr);
@@ -199,29 +202,38 @@ function getFilteredVutratu(): VutratuRow[] {
 async function loadAnalyticsData(): Promise<boolean> {
   try {
     // Паралельне завантаження всіх даних
-    const [actsRes, slyusarsRes, vutratuRes, clientsRes, carsRes, postArxivRes, postsRes] =
-      await Promise.all([
-        supabase
-          .from("acts")
-          .select(
-            "act_id, date_on, date_off, rosraxovano, data, avans, tupOplatu, client_id, cars_id",
-          )
-          .order("date_on", { ascending: false }),
-        supabase.from("slyusars").select("slyusar_id, data"),
-        supabase
-          .from("vutratu")
-          .select("vutratu_id, dataOnn, kategoria, suma, act, opys_vytraty")
-          .order("dataOnn", { ascending: false }),
-        supabase.from("clients").select("client_id, data"),
-        supabase
-          .from("cars")
-          .select("cars_id, data")
-          .not("is_deleted", "is", true),
-        supabase
-          .from("post_arxiv")
-          .select("post_arxiv_id, data_on, data_off, name_post, slyusar_id, status"),
-        supabase.from("post_name").select("post_id, name"),
-      ]);
+    const [
+      actsRes,
+      slyusarsRes,
+      vutratuRes,
+      clientsRes,
+      carsRes,
+      postArxivRes,
+      postsRes,
+    ] = await Promise.all([
+      supabase
+        .from("acts")
+        .select(
+          "act_id, date_on, date_off, frozen, rosraxovano, data, avans, tupOplatu, client_id, cars_id",
+        )
+        .order("date_on", { ascending: false }),
+      supabase.from("slyusars").select("slyusar_id, data"),
+      supabase
+        .from("vutratu")
+        .select("vutratu_id, dataOnn, kategoria, suma, act, opys_vytraty")
+        .order("dataOnn", { ascending: false }),
+      supabase.from("clients").select("client_id, data"),
+      supabase
+        .from("cars")
+        .select("cars_id, data")
+        .not("is_deleted", "is", true),
+      supabase
+        .from("post_arxiv")
+        .select(
+          "post_arxiv_id, data_on, data_off, name_post, slyusar_id, status",
+        ),
+      supabase.from("post_name").select("post_id, name"),
+    ]);
 
     if (actsRes.error) throw actsRes.error;
     if (slyusarsRes.error) throw slyusarsRes.error;
@@ -365,14 +377,94 @@ function calcTopWorks(): TopWork[] {
 /** Групування послуг для Donut Chart */
 function calcServiceCategories(): ServiceCategory[] {
   const categories: Record<string, string[]> = {
-    "Ходова": ["важіль", "амортизатор", "сайлентблок", "тяга", "наконечник", "кульова", "підшипник", "пружина", "втулка", "стійка", "ходова", "кулак", "балка", "развал", "сход"],
-    "Двигун": ["двигун", "гзм", "грм", "масло", "фільтр", "прокладка", "сальник", "свічки", "клапан", "головка", "циліндр", "поршень", "ремен", "ланцюг", "турбіна", "гбц"],
-    "Гальмівна": ["гальм", "колодки", "диск", "супорт", "шланг", "циліндр гальм", "абс", "abs", "ручник"],
-    "Трансмісія": ["кпп", "акпп", "зчеплення", "демпфер", "шрус", "піввісь", "редуктор", "кардан", "масло кпп"],
-    "Електрика": ["світло", "фара", "ламп", "провод", "датчик", "стартер", "генератор", "акумулятор", "діагностика", "комп", "електри"],
-    "ТО": ["діагностика", "огляд", "перевірка", "то-", "технічне обслуговування", "фільтр повітр", "фільтр палив"],
-    "Вихлопна": ["глушник", "резонатор", "каталізатор", "зварювання", "гофра"],
-    "Охолодження": ["радіатор", "помпа", "термостат", "антифриз", "патрубок", "вентилятор"]
+    Ходова: [
+      "важіль",
+      "амортизатор",
+      "сайлентблок",
+      "тяга",
+      "наконечник",
+      "кульова",
+      "підшипник",
+      "пружина",
+      "втулка",
+      "стійка",
+      "ходова",
+      "кулак",
+      "балка",
+      "развал",
+      "сход",
+    ],
+    Двигун: [
+      "двигун",
+      "гзм",
+      "грм",
+      "масло",
+      "фільтр",
+      "прокладка",
+      "сальник",
+      "свічки",
+      "клапан",
+      "головка",
+      "циліндр",
+      "поршень",
+      "ремен",
+      "ланцюг",
+      "турбіна",
+      "гбц",
+    ],
+    Гальмівна: [
+      "гальм",
+      "колодки",
+      "диск",
+      "супорт",
+      "шланг",
+      "циліндр гальм",
+      "абс",
+      "abs",
+      "ручник",
+    ],
+    Трансмісія: [
+      "кпп",
+      "акпп",
+      "зчеплення",
+      "демпфер",
+      "шрус",
+      "піввісь",
+      "редуктор",
+      "кардан",
+      "масло кпп",
+    ],
+    Електрика: [
+      "світло",
+      "фара",
+      "ламп",
+      "провод",
+      "датчик",
+      "стартер",
+      "генератор",
+      "акумулятор",
+      "діагностика",
+      "комп",
+      "електри",
+    ],
+    ТО: [
+      "діагностика",
+      "огляд",
+      "перевірка",
+      "то-",
+      "технічне обслуговування",
+      "фільтр повітр",
+      "фільтр палив",
+    ],
+    Вихлопна: ["глушник", "резонатор", "каталізатор", "зварювання", "гофра"],
+    Охолодження: [
+      "радіатор",
+      "помпа",
+      "термостат",
+      "антифриз",
+      "патрубок",
+      "вентилятор",
+    ],
   };
 
   const results = new Map<string, number>();
@@ -385,16 +477,16 @@ function calcServiceCategories(): ServiceCategory[] {
     for (const w of works) {
       const name = (w.Робота || "").toLowerCase();
       const sum = (w.Ціна || 0) * (w.Кількість || 1);
-      
+
       let assigned = false;
       for (const [catName, keywords] of Object.entries(categories)) {
-        if (keywords.some(k => name.includes(k))) {
+        if (keywords.some((k) => name.includes(k))) {
           results.set(catName, (results.get(catName) || 0) + sum);
           assigned = true;
           break;
         }
       }
-      
+
       if (!assigned) {
         results.set("Інше", (results.get("Інше") || 0) + sum);
       }
@@ -403,7 +495,7 @@ function calcServiceCategories(): ServiceCategory[] {
 
   return Array.from(results.entries())
     .map(([name, value]) => ({ name, value }))
-    .filter(c => c.value > 0)
+    .filter((c) => c.value > 0)
     .sort((a, b) => b.value - a.value);
 }
 
@@ -608,7 +700,7 @@ function calcForecast(monthlyData: MonthlyRevenue[]): {
 function calcWorkloadHeatmap() {
   const hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
   const postCount = Math.max(1, cachedPosts.length);
-  
+
   // Визначаємо період
   let start: Date;
   let end: Date;
@@ -633,30 +725,32 @@ function calcWorkloadHeatmap() {
     start = new Date();
     start.setDate(end.getDate() - 14);
   }
-  
+
   // Очищаємо час для коректного порівняння днів
   start.setHours(0, 0, 0, 0);
   end.setHours(23, 59, 59, 999);
-  
+
   const days: string[] = [];
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     days.push(fmtInputDate(d));
   }
 
   const heatmapData: Record<number, Record<string, number>> = {};
-  hours.forEach(h => {
+  hours.forEach((h) => {
     heatmapData[h] = {};
-    days.forEach(d => { heatmapData[h][d] = 0; });
+    days.forEach((d) => {
+      heatmapData[h][d] = 0;
+    });
   });
 
-  cachedPostArxiv.forEach(item => {
+  cachedPostArxiv.forEach((item) => {
     if (!item.data_on || !item.data_off || item.status === "Скасовано") return;
     const tOn = new Date(item.data_on);
     const tOff = new Date(item.data_off);
-    
+
     // Перевіряємо чи запис входить у наш діапазон
     if (tOff < start || tOn > end) return;
-    
+
     // Спрощений розрахунок: кожні 15хв
     for (let t = new Date(tOn); t < tOff; t.setMinutes(t.getMinutes() + 15)) {
       const dStr = fmtInputDate(t);
@@ -667,14 +761,16 @@ function calcWorkloadHeatmap() {
     }
   });
 
-  return hours.map(h => ({
-    name: `${String(h).padStart(2, '0')}:00`,
-    data: days.map(d => {
-      const mins = heatmapData[h][d];
-      const val = Math.min(100, Math.round((mins / (60 * postCount)) * 100));
-      return { x: d.split('-').reverse().slice(0, 2).join('.'), y: val };
-    })
-  })).reverse();
+  return hours
+    .map((h) => ({
+      name: `${String(h).padStart(2, "0")}:00`,
+      data: days.map((d) => {
+        const mins = heatmapData[h][d];
+        const val = Math.min(100, Math.round((mins / (60 * postCount)) * 100));
+        return { x: d.split("-").reverse().slice(0, 2).join("."), y: val };
+      }),
+    }))
+    .reverse();
 }
 
 // ===================== РЕНДЕРИНГ ГРАФІКІВ =====================
@@ -682,37 +778,40 @@ function calcWorkloadHeatmap() {
 function renderWorkloadHeatmap(): void {
   const el = document.getElementById("analityka-workload-heatmap");
   if (!el) return;
-  if (workloadHeatmapChart) { workloadHeatmapChart.destroy(); workloadHeatmapChart = null; }
+  if (workloadHeatmapChart) {
+    workloadHeatmapChart.destroy();
+    workloadHeatmapChart = null;
+  }
 
   const series = calcWorkloadHeatmap();
   const options: ApexCharts.ApexOptions = {
-    chart: { 
-      type: 'heatmap', 
+    chart: {
+      type: "heatmap",
       height: 380, // Трохи збільшимо висоту
       toolbar: { show: true },
-      animations: { enabled: false }
+      animations: { enabled: false },
     },
     dataLabels: { enabled: false },
     series: series,
     xaxis: {
-      type: 'category',
-      position: 'top', // Дати будуть зверху
+      type: "category",
+      position: "top", // Дати будуть зверху
       labels: {
         rotate: -45, // Нахил для кращої читаємості
-        style: { fontSize: '10px', fontWeight: 500 }
+        style: { fontSize: "10px", fontWeight: 500 },
       },
-      tooltip: { enabled: false }
+      tooltip: { enabled: false },
     },
     yaxis: {
       labels: {
-        style: { fontSize: '12px', fontWeight: 600 }
-      }
+        style: { fontSize: "12px", fontWeight: 600 },
+      },
     },
     tooltip: {
       y: {
         formatter: (val: number) => `${val}% завантажено`,
       },
-      x: { show: true }
+      x: { show: true },
     },
     plotOptions: {
       heatmap: {
@@ -721,24 +820,24 @@ function renderWorkloadHeatmap(): void {
         useFillColorAsStroke: true,
         colorScale: {
           ranges: [
-            { from: 0, to: 0, name: 'Пусто', color: '#f5f5f5' },
-            { from: 1, to: 30, name: 'Низька', color: '#e8f5e9' },
-            { from: 31, to: 60, name: 'Середня', color: '#81c784' },
-            { from: 61, to: 90, name: 'Висока', color: '#4caf50' },
-            { from: 91, to: 100, name: 'Аншлаг', color: '#1b5e20' }
-          ]
-        }
-      }
+            { from: 0, to: 0, name: "Пусто", color: "#f5f5f5" },
+            { from: 1, to: 30, name: "Низька", color: "#e8f5e9" },
+            { from: 31, to: 60, name: "Середня", color: "#81c784" },
+            { from: 61, to: 90, name: "Висока", color: "#4caf50" },
+            { from: 91, to: 100, name: "Аншлаг", color: "#1b5e20" },
+          ],
+        },
+      },
     },
     legend: {
-      position: 'bottom',
-      horizontalAlign: 'center'
+      position: "bottom",
+      horizontalAlign: "center",
     },
-    title: { 
-      text: '🌡️ Завантаженість постів по годинах (%)', 
-      align: 'left',
-      style: { fontSize: '16px', fontWeight: 600, color: '#333' } 
-    }
+    title: {
+      text: "🌡️ Завантаженість постів по годинах (%)",
+      align: "left",
+      style: { fontSize: "16px", fontWeight: 600, color: "#333" },
+    },
   };
 
   workloadHeatmapChart = new ApexCharts(el, options);
@@ -811,7 +910,16 @@ function renderTopServicesDonut(data: ServiceCategory[]): void {
     },
     series: data.map((d) => d.value),
     labels: data.map((d) => d.name),
-    colors: ["#667eea", "#4caf50", "#ff9800", "#f44336", "#2196f3", "#9c27b0", "#00bcd4", "#607d8b"],
+    colors: [
+      "#667eea",
+      "#4caf50",
+      "#ff9800",
+      "#f44336",
+      "#2196f3",
+      "#9c27b0",
+      "#00bcd4",
+      "#607d8b",
+    ],
     legend: { position: "bottom" },
     plotOptions: {
       pie: {
@@ -822,7 +930,10 @@ function renderTopServicesDonut(data: ServiceCategory[]): void {
               show: true,
               label: "Всього",
               formatter: (w) => {
-                const total = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
+                const total = w.globals.seriesTotals.reduce(
+                  (a: number, b: number) => a + b,
+                  0,
+                );
                 return formatMoney(total) + " ₴";
               },
             },
@@ -831,7 +942,11 @@ function renderTopServicesDonut(data: ServiceCategory[]): void {
       },
     },
     tooltip: { y: { formatter: (v) => formatMoney(v) + " грн" } },
-    title: { text: "Топ категорій послуг", align: "center", style: { fontSize: "16px" } },
+    title: {
+      text: "Топ категорій послуг",
+      align: "center",
+      style: { fontSize: "16px" },
+    },
   };
 
   topServicesDonutChart = new ApexCharts(el, options);
@@ -876,7 +991,11 @@ function renderMechanicLoadChart(data: MechanicStats[]): void {
       style: { fontSize: "10px", colors: ["#333"] },
     },
     legend: { position: "top" },
-    title: { text: "Завантаженість майстрів", align: "center", style: { fontSize: "16px" } },
+    title: {
+      text: "Завантаженість майстрів",
+      align: "center",
+      style: { fontSize: "16px" },
+    },
   };
 
   mechanicLoadChart = new ApexCharts(el, options);
@@ -1607,7 +1726,13 @@ function redrawDashboard(): void {
   const forecast = calcForecast(monthlyData);
 
   // Знищуємо всі старі графіки перед перемальовуванням
-  [revenueChart, topWorksChart, topServicesDonutChart, mechanicsChart, mechanicLoadChart].forEach(ch => {
+  [
+    revenueChart,
+    topWorksChart,
+    topServicesDonutChart,
+    mechanicsChart,
+    mechanicLoadChart,
+  ].forEach((ch) => {
     if (ch) ch.destroy();
   });
   revenueChart = null;

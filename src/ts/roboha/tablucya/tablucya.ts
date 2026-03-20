@@ -1358,7 +1358,8 @@ function renderActsRows(
 
   acts.forEach((act, index) => {
     const isClosed = isActClosed(act);
-    const lockIcon = isClosed ? "🔒" : "🗝️";
+    const isFrozen = act.frozen === true;
+    const lockIcon = isFrozen ? "❄️" : isClosed ? "🔒" : "🗝️";
     const clientInfo = getClientInfo(act, clients);
     const carInfo = getCarInfo(act, cars);
     const row = document.createElement("tr");
@@ -1371,11 +1372,17 @@ function renderActsRows(
 
     row.classList.add(isClosed ? "row-closed" : "row-open");
 
+    // ❄️ Frozen row styling
+    if (isFrozen) {
+      row.classList.add("row-frozen");
+    }
+
     // 💛 ПЕРЕВІРКА slusarsOn ДЛЯ ЗОЛОТИСТОГО ФАРБУВАННЯ (ТІЛЬКИ ДЛЯ ВІДКРИТИХ АКТІВ)
     // ✨ Для Приймальника показувати тільки якщо pruimalnyk === currentUserName
     const shouldShowSlusarsOn =
       act.slusarsOn === true &&
       !isClosed &&
+      !isFrozen &&
       (userAccessLevel === "Адміністратор" ||
         userAccessLevel === "Слюсар" ||
         (userAccessLevel === "Приймальник" &&
@@ -2127,8 +2134,8 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 📱 ВІДКРИТТЯ АКТУ ПО QR-КОДУ (act_id або qr_token в URL)
     const urlParams = new URLSearchParams(window.location.search);
-    const actIdFromUrl = urlParams.get('act_id');
-    const qrTokenFromUrl = urlParams.get('qr_token');
+    const actIdFromUrl = urlParams.get("act_id");
+    const qrTokenFromUrl = urlParams.get("qr_token");
 
     if (actIdFromUrl) {
       const actId = Number(actIdFromUrl);

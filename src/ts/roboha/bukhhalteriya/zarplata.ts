@@ -97,6 +97,7 @@ let slyusarPercentCache: Map<string, number> = new Map();
 
 // 🔹 Кеш для дат закриття актів (act_id → date_off з таблиці acts)
 let actsDateOffMap: Map<string, string> = new Map();
+let frozenActIds: Set<string> = new Set();
 
 // 🔹 Хелпер для отримання дати закриття акту (пріоритет: acts.date_off, fallback: slyusars.Історія.ДатаЗакриття)
 function getActDateClose(actId: string, fallbackDate: string | null): string {
@@ -774,18 +775,26 @@ export async function loadSlyusarsData(): Promise<void> {
     // 🔹 Паралельно завантажуємо slyusars та acts.date_off
     const [slyusarsResult, actsResult] = await Promise.all([
       supabase.from("slyusars").select("*"),
-      supabase.from("acts").select("act_id, date_off"),
+      supabase.from("acts").select("act_id, date_off, frozen"),
     ]);
 
     const { data, error } = slyusarsResult;
 
-    // 🔹 Завантажуємо дати закриття актів в map
+    // 🔹 Завантажуємо дати закриття актів в map + збираємо заморожені
+    frozenActIds.clear();
     if (actsResult.data && Array.isArray(actsResult.data)) {
       actsDateOffMap.clear();
       actsResult.data.forEach(
-        (act: { act_id: number; date_off: string | null }) => {
+        (act: {
+          act_id: number;
+          date_off: string | null;
+          frozen?: boolean;
+        }) => {
           if (act.date_off) {
             actsDateOffMap.set(String(act.act_id), act.date_off);
+          }
+          if (act.frozen === true) {
+            frozenActIds.add(String(act.act_id));
           }
         },
       );
@@ -1355,6 +1364,9 @@ export function searchDataInDatabase(
 
     Object.keys(slyusar.Історія).forEach((openDmy) => {
       slyusar.Історія[openDmy].forEach((record) => {
+        // ❄️ Пропускаємо заморожені акти
+        if (record.Акт && frozenActIds.has(String(record.Акт))) return;
+
         // 1. ЛОГІКА ДЛЯ СЛЮСАРІВ (з масивом Записи)
         if (
           record.Записи &&

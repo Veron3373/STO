@@ -25,11 +25,11 @@ const SETTINGS = {
   7: { id: "toggle-ai", label: "🤖 ШІ підказки", class: "_ai" },
   8: { id: "toggle-phone-admin", label: "📞 Телефон", class: "_phone" },
   9: {
-      id: "toggle-ai-pro",
-      label:
-        '<span class="ai-pro-emoji-btn" title="Налаштування API ключів">🤖</span> ШІ Атлас',
-      class: "_ai_pro",
-    }, 
+    id: "toggle-ai-pro",
+    label:
+      '<span class="ai-pro-emoji-btn" title="Налаштування API ключів">🤖</span> ШІ Атлас',
+    class: "_ai_pro",
+  },
   10: {
     id: "toggle-voice-input",
     label: "🎙️ Голосове введення",
@@ -439,7 +439,7 @@ function applyVoiceInputVisibility(show: boolean): void {
 // 🔄 REALTIME СИНХРОНІЗАЦІЯ НАЛАШТУВАНЬ
 // ============================================================
 
-let settingsRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+let settingsRealtimeChannel: any = null;
 
 /**
  * Підписка на Realtime зміни в таблиці settings
@@ -1389,13 +1389,14 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${isFrozen
-      ? `<div class="percentage-buttons-container">
+      ${
+        isFrozen
+          ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-    }
+          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+      }
     </div>
   `;
 

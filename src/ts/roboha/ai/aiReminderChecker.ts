@@ -31,7 +31,7 @@ let hasActiveReminders = false;
 let isTabVisible = true; // Visibility API: чи вкладка активна
 let cachedNextTriggerAt: number | null = null; // Кеш найближчого спрацювання (ms)
 
-let remindersStateChannel: ReturnType<typeof supabase.channel> | null = null;
+let remindersStateChannel: any = null;
 let stateSyncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastSyncTime = 0; // Час останньої синхронізації (тротлінг 10с)
 
@@ -733,8 +733,8 @@ async function checkCondition(conditionQuery: string): Promise<any | false> {
 // Або звичайний режим (старий SQL SELECT) — в ньому випадку
 // condition_query починається з SELECT і виконується як раніше
 
-let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
-let realtimeChannels: Array<ReturnType<typeof supabase.channel>> = [];
+let realtimeChannel: any = null;
+let realtimeChannels: any[] = [];
 
 // Парсинг JSON-правила з condition_query
 function parseWatchRule(conditionQuery: string | null): {

@@ -2211,7 +2211,7 @@ function initModalHandlers(
     });
 }
 
-let plannerRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+let plannerRealtimeChannel: any = null;
 let currentPlannerContainer: HTMLElement | null = null;
 
 function ensurePlannerRealtimeSync(): void {

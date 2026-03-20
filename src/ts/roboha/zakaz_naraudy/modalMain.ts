@@ -1415,7 +1415,7 @@ function renderModalContent(
         <p>Адрес: ${globalCache.generalSettings.address}</p>
         <p>${globalCache.generalSettings.phone} тел</p>
       </div>
-      ${!isClosed ? '<canvas id="header-qr-canvas" style="height: 80px; width: 80px; margin-left: 20px; flex-shrink: 0; z-index: 1;"></canvas>' : ''}
+      ${!isClosed ? '<canvas id="header-qr-canvas" style="height: 80px; width: 80px; margin-left: 20px; flex-shrink: 0; z-index: 1;"></canvas>' : ""}
       ${headerButtons}
     </div>
     <div class="zakaz_narayd-table-container">
@@ -1610,16 +1610,19 @@ async function addModalHandlers(
 
   // 📱 Генерація QR-коду в хедері (тільки для відкритих актів)
   if (!isClosed) {
-    const canvas = document.getElementById("header-qr-canvas") as HTMLCanvasElement;
+    const canvas = document.getElementById(
+      "header-qr-canvas",
+    ) as HTMLCanvasElement;
     if (canvas && (window as any).QRCode) {
       // 🔗 Використовуємо існуючий qr_token або генеруємо новий
       let qrToken = actDetails?.["qr_token"];
-      
+
       if (!qrToken) {
         qrToken = crypto.randomUUID();
         // Записуємо в БД (у поле data акту)
-        const updatedDetails = { ...actDetails, "qr_token": qrToken };
-        supabase.from("acts")
+        const updatedDetails = { ...actDetails, qr_token: qrToken };
+        supabase
+          .from("acts")
           .update({ data: updatedDetails }) // Використовуємо 'data'
           .eq("act_id", actId)
           .then(() => {
@@ -1628,13 +1631,18 @@ async function addModalHandlers(
       }
 
       const url = new URL(window.location.origin + window.location.pathname);
-      url.searchParams.set('qr_token', qrToken);
-      
-      (window as any).QRCode.toCanvas(canvas, url.toString(), { width: 80, margin: 1 }, (error: any) => {
-        if (error) {
-          // console.error(error);
-        }
-      });
+      url.searchParams.set("qr_token", qrToken);
+
+      (window as any).QRCode.toCanvas(
+        canvas,
+        url.toString(),
+        { width: 80, margin: 1 },
+        (error: any) => {
+          if (error) {
+            // console.error(error);
+          }
+        },
+      );
     }
   }
 
@@ -2047,7 +2055,7 @@ function toggleActsTableSumaColumn(show: boolean): void {
 // 📢 REALTIME ПІДПИСКА НА ЗМІНИ slusarsOn (ОНОВЛЕННЯ ЗАГОЛОВКА)
 // ============================================================================
 
-let slusarsOnSubscription: ReturnType<typeof supabase.channel> | null = null;
+let slusarsOnSubscription: any = null;
 
 /**
  * Підписується на зміни slusarsOn для конкретного акту

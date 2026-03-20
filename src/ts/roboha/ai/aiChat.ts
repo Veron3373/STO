@@ -164,6 +164,14 @@ interface DailyStats {
 const CHAT_MODAL_ID = "ai-chat-modal";
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+/** Визначає провайдера за форматом ключа */
+function getKeyProvider(key: string): "gemini" | "groq" {
+  if (key.startsWith("gsk_")) return "groq";
+  return "gemini";
+}
 
 let chatHistory: ChatMessage[] = [];
 let geminiApiKeys: string[] = []; // Всі 10 ключів (setting_id 20-29)
@@ -3439,6 +3447,7 @@ ${functionCallingBlock}`;
       const keyIdx = startIndex % keys.length;
       triedIndices.add(keyIdx);
       const apiKey = keys[keyIdx];
+      const provider = getKeyProvider(apiKey);
 
       try {
         let text: string | undefined;

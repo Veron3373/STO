@@ -104,82 +104,46 @@
 
 /* ==================== FROZEN ACT (❄️) ==================== */
 
-// Сніжинки що падають
-@keyframes snowfall {
+@keyframes frozenShift {
   0% {
-    transform: translateY(-10px) rotate(0deg);
-    opacity: 1;
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
   100% {
-    transform: translateY(100px) rotate(360deg);
-    opacity: 0;
+    background-position: 0% 50%;
   }
 }
 
-@keyframes iceShimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
-}
-
-// Frozen header — світло-блакитний з льодовим ефектом
+// Frozen header — анімований біло-синій градієнт
 .zakaz_narayd-header-frozen {
   background: linear-gradient(
-    135deg,
-    #d6eef8 0%,
-    #b3ddf0 30%,
-    #e0f2fa 60%,
-    #b3ddf0 100%
+    90deg,
+    #e3f2fd,
+    #90caf9,
+    #42a5f5,
+    #90caf9,
+    #e3f2fd
   ) !important;
-  background-size: 200% 100%;
-  animation: iceShimmer 6s ease-in-out infinite;
-  position: relative;
-  overflow: hidden;
-
-  // Сніжинки-частинки
-  &::before,
-  &::after {
-    content: "❄";
-    position: absolute;
-    font-size: 14px;
-    opacity: 0.4;
-    animation: snowfall 4s linear infinite;
-    pointer-events: none;
-  }
-  &::before {
-    left: 15%;
-    top: -10px;
-    animation-delay: 0s;
-    animation-duration: 3.5s;
-  }
-  &::after {
-    left: 75%;
-    top: -10px;
-    animation-delay: 1.8s;
-    animation-duration: 4.2s;
-  }
+  background-size: 300% 100% !important;
+  animation: frozenShift 6s ease-in-out infinite !important;
 }
 
-// Третя сніжинка через додатковий елемент
-.frozen-snowflake-extra {
-  position: absolute;
-  font-size: 12px;
-  opacity: 0.35;
-  animation: snowfall 5s linear infinite;
-  pointer-events: none;
-  left: 45%;
-  top: -10px;
-  animation-delay: 0.8s;
-}
-
-// Frozen row у таблиці — легкий блакитний фон
+// Frozen row у таблиці — той самий градієнт як хедер + колір тексту
 .row-frozen {
-  background: linear-gradient(90deg, #e8f4fd 0%, #f0f8ff 100%) !important;
-  td:first-child {
-    color: #2196f3;
+  background: linear-gradient(
+    90deg,
+    #e3f2fd,
+    #90caf9,
+    #60adeb,
+
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: frozenShift 6s ease-in-out infinite !important;
+
+  td {
+    color: #0d47a1 !important;
   }
 }
 

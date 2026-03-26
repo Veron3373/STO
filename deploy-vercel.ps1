@@ -6,8 +6,26 @@ Set-Location -LiteralPath $Root
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Читаємо конфіг з .env
+$VERCEL_DOMAIN = ""
+$GIT_NAME = ""
+$PROJECT_NAME = ""
+if (Test-Path ".env") {
+    $envContent = Get-Content ".env"
+    $domainLine = $envContent | Where-Object { $_ -match '^VITE_VERCEL_DOMAIN=' }
+    $nameLine = $envContent | Where-Object { $_ -match '^VITE_GIT_USER_NAME=' }
+    $projLine = $envContent | Where-Object { $_ -match '^VITE_PROJECT_NAME=' }
+    if ($domainLine -match '=(.+)') { $VERCEL_DOMAIN = $Matches[1].Trim() }
+    if ($nameLine -match '=(.+)') { $GIT_NAME = $Matches[1].Trim() }
+    if ($projLine -match '=(.+)') { $PROJECT_NAME = $Matches[1].Trim() }
+}
+if (-not $VERCEL_DOMAIN -or -not $PROJECT_NAME) {
+    Write-Host "❌ VITE_VERCEL_DOMAIN або VITE_PROJECT_NAME не знайдено в .env" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "========================================"
-Write-Host "  Deploy to Vercel - stobraclavec.vercel.app"
+Write-Host "  Deploy to Vercel - $VERCEL_DOMAIN"
 Write-Host "========================================"
 Write-Host ""
 
@@ -19,7 +37,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $vercelAccounts = @(
-    @{ Name = "Veron3373 (Main)"; Team = ""; Scope = "" }
+    @{ Name = "$GIT_NAME (Main)"; Team = ""; Scope = "" }
 )
 
 # Create form
@@ -102,8 +120,8 @@ Write-Host "========================================"
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $projects = @(
-    @{ Name = "sto"; Url = "https://stobraclavec.vercel.app" },
-    @{ Name = "stobraclavec"; Url = "https://stobraclavec.vercel.app" }
+    @{ Name = "sto"; Url = "https://$VERCEL_DOMAIN" },
+    @{ Name = $PROJECT_NAME; Url = "https://$VERCEL_DOMAIN" }
 )
 
 # Create project selection form

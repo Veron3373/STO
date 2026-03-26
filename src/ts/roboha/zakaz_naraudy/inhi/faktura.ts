@@ -32,6 +32,11 @@ export function createModalActRaxunok(): HTMLElement {
       <button class="act-raxunok-close" id="act-raxunok-close">✕</button>
       <div class="act-raxunok-header"><h2>Оберіть тип документа</h2></div>
       <div class="act-raxunok-buttons">
+        <button class="act-raxunok-btn act-raxunok-btn-copy" id="copy-act-raxunok-btn">
+          <span class="btn-icon">📄</span>
+          <span class="btn-text">Копія акту</span>
+          <span class="btn-description">Створити копію акту?</span>
+        </button>
         <button class="act-raxunok-btn act-raxunok-btn-invoice" id="create-raxunok-btn">
           <span class="btn-icon">🧾</span>
           <span class="btn-text">Рахунок</span>
@@ -151,6 +156,20 @@ export function initModalActRaxunokHandlers(): void {
       // console.error(error);
       showNotification("Помилка при створенні акту", "error");
     }
+  });
+
+  // Кнопка "Копія акту" → відкриваємо модалку вибору клієнта
+  const copyBtn = document.getElementById("copy-act-raxunok-btn");
+  copyBtn?.addEventListener("click", async () => {
+    const actNumberSpan = document.getElementById("act-number");
+    const actId = actNumberSpan ? parseInt(actNumberSpan.innerText.trim()) : 0;
+    if (!actId) {
+      showNotification("Помилка: ID акту не знайдено", "error");
+      return;
+    }
+    closeModalActRaxunok();
+    const { openCopyActPicker } = await import("./copy_act");
+    openCopyActPicker(actId);
   });
 
   document.addEventListener("keydown", (e) => {

@@ -117,11 +117,11 @@ export async function printModalToPdf(): Promise<void> {
   const modalContent = modalBody.closest(
     ".zakaz_narayd-modal-content",
   ) as HTMLElement | null;
+  const isNarrowViewport = window.matchMedia("(max-width: 869px)").matches;
 
   // збереження стилів
   const originalBodyStyle = modalBody.style.cssText;
-  const originalModalWidth = modalContent?.style.width || "";
-  const originalModalMaxWidth = modalContent?.style.maxWidth || ""; // елементи, які ховаємо
+  const originalModalContentStyle = modalContent?.style.cssText || "";
 
   // Перевірка режиму друку і застосування чорно-білих стилів
   const isBlackAndWhiteMode = !globalCache.generalSettings.printColorMode;
@@ -164,7 +164,6 @@ export async function printModalToPdf(): Promise<void> {
     // <--- ДОДАНО: Приховуємо нові кнопки-іконки під час друку
     document.getElementById("create-act-btn") as HTMLElement,
     document.getElementById("create-invoice-btn") as HTMLElement,
-    document.getElementById("copy-act-btn") as HTMLElement,
     // <--- КІНЕЦЬ ДОДАНОГО
 
     document.getElementById("voice-input-button") as HTMLElement, // Приховуємо кнопку голосового введення
@@ -237,10 +236,20 @@ export async function printModalToPdf(): Promise<void> {
     el.style.display = "none";
   });
 
-  // розширити модалку для якісного скріншота
+  // Розширити модалку для якісного скріншота.
+  // На вузьких екранах (<870) тимчасово вмикаємо desktop-геометрію,
+  // щоб PDF формувався як на широкому екрані.
   if (modalContent) {
-    modalContent.style.width = "1000px";
-    modalContent.style.maxWidth = "1000px";
+    const targetWidth = isNarrowViewport ? "1200px" : "1000px";
+    modalContent.style.width = targetWidth;
+    modalContent.style.maxWidth = targetWidth;
+
+    if (isNarrowViewport) {
+      modalContent.style.height = "auto";
+      modalContent.style.maxHeight = "none";
+      modalContent.style.overflow = "visible";
+      modalContent.style.overflowY = "visible";
+    }
   }
   modalBody.style.overflow = "visible";
   modalBody.style.height = "auto";
@@ -431,8 +440,7 @@ export async function printModalToPdf(): Promise<void> {
     originalDisplays.forEach((disp, el) => (el.style.display = disp));
     modalBody.style.cssText = originalBodyStyle;
     if (modalContent) {
-      modalContent.style.width = originalModalWidth;
-      modalContent.style.maxWidth = originalModalMaxWidth;
+      modalContent.style.cssText = originalModalContentStyle;
     }
   }
 }

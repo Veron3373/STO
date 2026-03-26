@@ -120,162 +120,6 @@ export function isSpeechRecognitionSupported(): boolean {
   );
 }
 
-function startListening(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      reject(new Error("Браузер не підтримує розпізнавання мови"));
-      return;
-    }
-
-    recognition = new SpeechRecognition();
-    recognition.lang = "uk-UA";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    let fullTranscript = "";
-    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
-    let resolved = false;
-
-    // Кодові слова для зупинки
-    const STOP_PHRASES = [
-      "це все",
-      "це всі",
-      "усе",
-      "все",
-      "готово",
-      "стоп",
-      "кінець",
-    ];
-
-    function finishRecognition() {
-      if (resolved) return;
-      resolved = true;
-      if (silenceTimer) clearTimeout(silenceTimer);
-      try {
-        recognition?.stop();
-      } catch {
-        /* ignore */
-      }
-
-      // Прибираємо кодове слово з кінця тексту
-      let result = fullTranscript.trim();
-      const lower = result.toLowerCase();
-      for (const phrase of STOP_PHRASES) {
-        if (lower.endsWith(phrase)) {
-          result = result.slice(0, -phrase.length).trim();
-          // Прибираємо можливу кому/крапку перед кодовим словом
-          result = result.replace(/[,.\s]+$/, "");
-          break;
-        }
-      }
-
-      resolve(result || "");
-    }
-
-    // Скидаємо таймер тиші при кожному новому результаті
-    function resetSilenceTimer() {
-      if (silenceTimer) clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => {
-        finishRecognition();
-      }, 2000); // 2 секунди тиші → зупинка
-    }
-
-    // Загальний таймаут — 30с максимум
-    const maxTimeout = setTimeout(() => {
-      finishRecognition();
-    }, 30000);
-
-    recognition.onresult = (event: any) => {
-      let interim = "";
-      let final = "";
-
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          final += result[0].transcript;
-        } else {
-          interim += result[0].transcript;
-        }
-      }
-
-      fullTranscript = final;
-      const currentText = (final + interim).toLowerCase().trim();
-
-      // Перевірка кодових слів зупинки
-      for (const phrase of STOP_PHRASES) {
-        if (
-          currentText.endsWith(phrase) ||
-          currentText.endsWith(phrase + ".") ||
-          currentText.endsWith(phrase + ",")
-        ) {
-          clearTimeout(maxTimeout);
-          // Невелика затримка щоб зафіксувати фінальний результат
-          setTimeout(() => finishRecognition(), 300);
-          return;
-        }
-      }
-
-      // Скидаємо таймер тиші
-      resetSilenceTimer();
-    };
-
-    recognition.onerror = (event: any) => {
-      if (resolved) return;
-      clearTimeout(maxTimeout);
-      if (silenceTimer) clearTimeout(silenceTimer);
-
-      // Якщо вже є текст — повертаємо його
-      if (fullTranscript.trim()) {
-        finishRecognition();
-        return;
-      }
-
-      if (event.error === "no-speech")
-        reject(new Error("Мову не виявлено. Спробуйте ще раз."));
-      else if (event.error === "audio-capture")
-        reject(new Error("Мікрофон не знайдено."));
-      else if (event.error === "not-allowed")
-        reject(new Error("Доступ до мікрофона заборонений."));
-      else reject(new Error(`Помилка: ${event.error}`));
-    };
-
-    recognition.onend = () => {
-      clearTimeout(maxTimeout);
-      if (!resolved) {
-        // Браузер сам зупинив — повертаємо що є
-        if (fullTranscript.trim()) {
-          finishRecognition();
-        } else {
-          recognition = null;
-        }
-      } else {
-        recognition = null;
-      }
-    };
-
-    // Початковий таймер тиші — якщо 7с нічого не сказано
-    silenceTimer = setTimeout(() => {
-      if (!fullTranscript.trim()) {
-        resolved = true;
-        clearTimeout(maxTimeout);
-        try {
-          recognition?.stop();
-        } catch {
-          /* ignore */
-        }
-        reject(new Error("Мову не виявлено. Спробуйте ще раз."));
-      }
-    }, 7000);
-
-    recognition.start();
-  });
-}
-
 export function stopListening(): void {
   if (recognition) {
     try {
@@ -910,9 +754,7 @@ ${slyusarNames.join(", ")}
 {"action":"ADD","items":[{"type":"detail","name":"Точна назва зі списку","price":3300,"quantity":4,"slyusar":null,"slyusarSum":null}],"targetRow":null,"field":null}`;
 
   const requestBody = JSON.stringify({
-    contents: [
-      { role: "user", parts: [{ text: `Команда: "${transcript}"` }] },
-    ],
+    contents: [{ role: "user", parts: [{ text: `Команда: "${transcript}"` }] }],
     systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.1,
@@ -948,7 +790,9 @@ ${slyusarNames.join(", ")}
           try {
             const parsed = JSON.parse(jsonMatch[0]);
             if (parsed.action) return parsed as ParsedNaturalCommand;
-          } catch { /* fallthrough */ }
+          } catch {
+            /* fallthrough */
+          }
         }
         return null;
       }
@@ -1057,11 +901,7 @@ async function executeNaturalCommand(
 
     case "ADD": {
       if (!result.items?.length) {
-        showNotification(
-          "⚠️ Не вдалося визначити що додати",
-          "warning",
-          3000,
-        );
+        showNotification("⚠️ Не вдалося визначити що додати", "warning", 3000);
         return;
       }
 
@@ -1089,7 +929,9 @@ async function executeNaturalCommand(
         const match = findBestMatch(parsed.name, parsed.type);
         const finalName = match?.name || parsed.name;
         const icon = parsed.type === "work" ? "🛠️" : "⚙️";
-        const priceStr = parsed.price ? ` × ${parsed.quantity ?? 1} = ${(parsed.price * (parsed.quantity ?? 1)).toLocaleString("uk-UA")} грн` : "";
+        const priceStr = parsed.price
+          ? ` × ${parsed.quantity ?? 1} = ${(parsed.price * (parsed.quantity ?? 1)).toLocaleString("uk-UA")} грн`
+          : "";
         addedNames.push(`${icon} ${finalName}${priceStr}`);
       }
 
@@ -1382,7 +1224,7 @@ function fillFullRow(row: HTMLTableRowElement, parsed: ParsedFullRow): void {
   }
 
   if (parsed.price === null && finalName) {
-    handleItemSelection(row, finalName, parsed.type).catch(() => { });
+    handleItemSelection(row, finalName, parsed.type).catch(() => {});
   }
 
   updateCalculatedSumsInFooter();
@@ -1523,10 +1365,200 @@ function updateMicButton(btn: HTMLElement, state: VoiceState): void {
 // ГОЛОВНИЙ ОБРОБНИК
 // ============================================================
 
+// ============================================================
+// OVERLAY — плаваюча панель під час диктування
+// ============================================================
+
+function createVoiceOverlay(): HTMLElement {
+  let overlay = document.getElementById("voice-realtime-overlay");
+  if (overlay) return overlay;
+
+  overlay = document.createElement("div");
+  overlay.id = "voice-realtime-overlay";
+  overlay.style.cssText = `
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20,20,30,0.92);
+    color: #fff;
+    border-radius: 16px;
+    padding: 14px 22px;
+    font-size: 15px;
+    max-width: 480px;
+    min-width: 240px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    z-index: 99999;
+    pointer-events: none;
+    display: none;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    transition: opacity 0.2s;
+  `;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+export function showVoiceOverlay(text: string): void {
+  const overlay = createVoiceOverlay();
+  overlay.innerHTML = `<span style="color:#f87171;margin-right:8px;">🎙️</span><span>${text}</span>`;
+  overlay.style.display = "block";
+}
+
+export function hideVoiceOverlay(): void {
+  const overlay = document.getElementById("voice-realtime-overlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+/**
+ * Слухає мікрофон з real-time колбеком.
+ * onFinalSegment — викликається щоразу коли браузер «закріплює» шматок тексту (isFinal).
+ * Повертає Promise «весь текст за сесію» (для fallback).
+ */
+function startListeningRealtime(
+  onFinalSegment: (segment: string, accumulated: string) => void,
+  onInterimUpdate: (text: string) => void,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      reject(new Error("Браузер не підтримує розпізнавання мови"));
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = "uk-UA";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    let accumulated = "";
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+    let resolved = false;
+    const STOP_PHRASES = [
+      "це все",
+      "це всі",
+      "усе",
+      "готово",
+      "стоп",
+      "кінець",
+    ];
+
+    function finish() {
+      if (resolved) return;
+      resolved = true;
+      if (silenceTimer) clearTimeout(silenceTimer);
+      clearTimeout(maxTimeout);
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+      resolve(accumulated.trim());
+    }
+
+    function resetSilence() {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => finish(), 2500);
+    }
+
+    const maxTimeout = setTimeout(() => finish(), 30000);
+
+    rec.onresult = (event: any) => {
+      let interim = "";
+      let newFinal = "";
+
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          // Беремо тільки нові фінальні (після вже накопичених)
+          const totalFinal = Array.from({ length: i + 1 })
+            .map((_, j) =>
+              event.results[j].isFinal ? event.results[j][0].transcript : "",
+            )
+            .join("");
+          if (totalFinal.length > accumulated.length) {
+            newFinal = totalFinal.slice(accumulated.length);
+            accumulated = totalFinal;
+          }
+        } else {
+          interim += event.results[i][0].transcript;
+        }
+      }
+
+      // Показуємо в overlay: вже зафіксоване + поточне проміжне
+      const display = (accumulated + " " + interim).trim();
+      onInterimUpdate(display);
+
+      // Якщо є новий фінальний шматок — передаємо для негайного виконання
+      if (newFinal.trim()) {
+        onFinalSegment(newFinal.trim(), accumulated);
+      }
+
+      // Перевірка стоп-слів
+      const lower = display.toLowerCase();
+      for (const phrase of STOP_PHRASES) {
+        if (lower.endsWith(phrase) || lower.endsWith(phrase + ".")) {
+          accumulated = accumulated
+            .replace(new RegExp(phrase + "[.,]?\\s*$", "i"), "")
+            .trim();
+          setTimeout(() => finish(), 300);
+          return;
+        }
+      }
+      resetSilence();
+    };
+
+    rec.onerror = (event: any) => {
+      if (resolved) return;
+      clearTimeout(maxTimeout);
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (accumulated.trim()) {
+        finish();
+        return;
+      }
+      if (event.error === "no-speech")
+        reject(new Error("Мову не виявлено. Спробуйте ще раз."));
+      else if (event.error === "audio-capture")
+        reject(new Error("Мікрофон не знайдено."));
+      else if (event.error === "not-allowed")
+        reject(new Error("Доступ до мікрофона заборонено."));
+      else reject(new Error(`Помилка: ${event.error}`));
+    };
+
+    rec.onend = () => {
+      clearTimeout(maxTimeout);
+      if (!resolved) {
+        if (accumulated.trim()) finish();
+      }
+    };
+
+    silenceTimer = setTimeout(() => {
+      if (!accumulated.trim()) {
+        resolved = true;
+        clearTimeout(maxTimeout);
+        try {
+          rec.stop();
+        } catch {
+          /* ignore */
+        }
+        reject(new Error("Мову не виявлено. Спробуйте ще раз."));
+      }
+    }, 7000);
+
+    // Зберігаємо refs щоб зовні можна зупинити
+    recognition = rec;
+    rec.start();
+  });
+}
+
 export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
   if (voiceState === "listening") {
     stopListening();
     updateMicButton(btn, "idle");
+    hideVoiceOverlay();
     return;
   }
   if (voiceState === "processing") return;
@@ -1542,16 +1574,114 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
 
   try {
     updateMicButton(btn, "listening");
+    showVoiceOverlay("Говоріть команду...");
     showNotification(
-      `🎙️ Говоріть команду, наприклад:\n• "Додай поршні 4 штуки по 3300"\n• "Фільтр масляний і колодки гальмівні"\n• "пробіг 150000"\n• "рядок 2 ціна 500"\n• "видали рядок 3"`,
+      `Говоріть команду, наприклад:\n• "Додай поршні 4 штуки по 3300"\n• "Фільтр масляний і колодки гальмівні"\n• "пробіг 150000"\n• "рядок 2 ціна 500"\n• "видали рядок 3"`,
       "info",
       5000,
     );
 
-    const transcript = await startListening();
+    // Буфер для сегментів що ще обробляються (не дати race condition)
+    let processingSegment = false;
+    const pendingSegments: string[] = [];
+    let handledAnyRealtimeSegment = false;
+
+    async function processSegment(segment: string): Promise<void> {
+      if (!segment.trim()) return;
+      if (processingSegment) {
+        pendingSegments.push(segment);
+        return;
+      }
+      processingSegment = true;
+      showVoiceOverlay(`⚙️ Виконую: "${segment}"`);
+
+      try {
+        // Спочатку швидкий локальний парсер
+        const cmd = parseVoiceCommand(segment);
+        if (cmd) {
+          await executeParsedCommand(cmd);
+          handledAnyRealtimeSegment = true;
+        } else {
+          // Gemini для складних/натуральних команд
+          const naturalResult = await parseNaturalCommandWithGemini(segment);
+          if (naturalResult?.action) {
+            await executeNaturalCommand(naturalResult);
+            handledAnyRealtimeSegment = true;
+          } else {
+            // Фолбек — пошук по кешу
+            const localMatch =
+              findBestMatch(segment, "work") ||
+              findBestMatch(segment, "detail");
+            if (localMatch) {
+              addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
+              const newRow = getTableRow(getRowCount());
+              if (newRow) {
+                fillFullRow(newRow, {
+                  type: localMatch.workId ? "work" : "detail",
+                  name: localMatch.name,
+                  price: null,
+                  quantity: 1,
+                  slyusar: null,
+                  slyusarSum: null,
+                });
+                const icon = localMatch.workId ? "🛠️" : "⚙️";
+                showNotification(
+                  `✅ Додано: ${icon} ${localMatch.name}`,
+                  "success",
+                  3000,
+                );
+                handledAnyRealtimeSegment = true;
+              }
+            }
+          }
+        }
+      } catch {
+        /* ignore per-segment errors */
+      }
+
+      processingSegment = false;
+      // Обробити наступний очікуючий сегмент
+      if (pendingSegments.length > 0) {
+        const next = pendingSegments.shift()!;
+        await processSegment(next);
+      }
+    }
+
+    const transcript = await startListeningRealtime(
+      // onFinalSegment — негайне виконання при кожному закріпленому шматку
+      (segment) => {
+        processSegment(segment);
+      },
+      // onInterimUpdate — оновлення overlay
+      (text) => {
+        if (voiceState === "listening") showVoiceOverlay(`🎙️ ${text}`);
+      },
+    );
+
+    hideVoiceOverlay();
 
     if (!transcript?.trim()) {
       showNotification("�️ Мову не розпізнано. Спробуйте ще.", "warning", 2500);
+      updateMicButton(btn, "idle");
+      return;
+    }
+
+    // Якщо пройшов режим реального часу — але щось ще не обробилось через race
+    // Чекаємо поки обробиться останній сегмент
+    await new Promise<void>((r) => {
+      const check = () => {
+        if (!processingSegment && pendingSegments.length === 0) {
+          r();
+          return;
+        }
+        setTimeout(check, 100);
+      };
+      check();
+    });
+
+    // Якщо команди вже були виконані по сегментах у real-time,
+    // не запускаємо повторний прохід по повному transcript (уникнення дублювання).
+    if (handledAnyRealtimeSegment) {
       updateMicButton(btn, "idle");
       return;
     }
@@ -1815,6 +1945,7 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
       3500,
     );
   } finally {
+    hideVoiceOverlay();
     updateMicButton(btn, "idle");
   }
 }
@@ -1822,6 +1953,119 @@ export async function handleVoiceButtonClick(btn: HTMLElement): Promise<void> {
 // ============================================================
 // СТВОРЕННЯ ТА ІНІЦІАЛІЗАЦІЯ
 // ============================================================
+
+/**
+ * Виконує результат локального parseVoiceCommand.
+ * Використовується і в real-time режимі (на льоту), і у fallback.
+ */
+async function executeParsedCommand(command: {
+  target: VoiceTarget;
+  value: string;
+}): Promise<void> {
+  const { target, value } = command;
+
+  if (target.kind === "field") {
+    let finalValue = value;
+    if (
+      target.fieldId === "editable-probig" ||
+      target.fieldId === "editable-avans" ||
+      target.fieldId === "editable-discount"
+    ) {
+      const num = tryParseNumberLocally(value);
+      if (num !== null) finalValue = String(num);
+    }
+    if (!finalValue) return;
+    fillField(target.fieldId, finalValue);
+    showNotification(`✅ ${target.label}: ${finalValue}`, "success", 3000);
+    return;
+  }
+
+  if (target.kind === "cell") {
+    let row: HTMLTableRowElement | null = null;
+
+    if (target.rowIndex === -1) {
+      addNewRow(ACT_ITEMS_TABLE_CONTAINER_ID);
+      row = getTableRow(getRowCount());
+      if (!row) return;
+    } else {
+      row = getTableRow(target.rowIndex);
+      if (!row) {
+        showNotification(
+          `❌ Рядок ${target.rowIndex} не існує. Є ${getRowCount()} рядків.`,
+          "error",
+          3000,
+        );
+        return;
+      }
+    }
+
+    if (target.column === "name") {
+      if (!value) return;
+      const localMatch =
+        findBestMatch(value, "work") || findBestMatch(value, "detail");
+      let parsed = await parseFullRowWithGemini(value);
+      if (
+        parsed &&
+        (!parsed.name || parsed.name.includes("...") || parsed.name.length < 3)
+      ) {
+        if (localMatch) {
+          parsed.name = localMatch.name;
+          parsed.type = localMatch.workId ? "work" : "detail";
+        }
+      }
+      if (!parsed && localMatch) {
+        parsed = {
+          type: localMatch.workId ? "work" : "detail",
+          name: localMatch.name,
+          price: null,
+          quantity: 1,
+          slyusar: null,
+          slyusarSum: null,
+        };
+      }
+      if (!parsed) {
+        parsed = {
+          type: "work",
+          name: value,
+          price: null,
+          quantity: 1,
+          slyusar: null,
+          slyusarSum: null,
+        };
+      }
+      fillFullRow(row, parsed);
+      const finalName =
+        findBestMatch(parsed.name, parsed.type)?.name || parsed.name;
+      const icon = parsed.type === "work" ? "🛠️" : "⚙️";
+      const rowIdx = target.rowIndex === -1 ? getRowCount() : target.rowIndex;
+      showNotification(
+        `✅ Рядок ${rowIdx}: ${icon} ${finalName}`,
+        "success",
+        3000,
+      );
+    } else {
+      if (!value) return;
+      let finalValue: string | number | null = null;
+      if (["id_count", "price", "slyusar_sum"].includes(target.column)) {
+        finalValue = tryParseNumberLocally(value);
+      }
+      if (target.column === "pib_magazin") {
+        finalValue = findSlyusarOrShop(value);
+      }
+      if (finalValue === null) {
+        finalValue = await parseSingleFieldWithGemini(value, target.column);
+      }
+      if (finalValue === null) finalValue = value;
+      fillSingleCell(row, target.column, finalValue);
+      const rowIdx = target.rowIndex === -1 ? getRowCount() : target.rowIndex;
+      showNotification(
+        `✅ Рядок ${rowIdx}, ${target.label}: ${finalValue}`,
+        "success",
+        3000,
+      );
+    }
+  }
+}
 
 export function createVoiceButton(): HTMLButtonElement {
   const btn = document.createElement("button");
@@ -1879,6 +2123,17 @@ export function initVoiceInput(): void {
  * Зупинка: кодове слово "це все" або 2 секунди тиші.
  */
 export function startChatVoiceInput(): Promise<string> {
+  return startChatVoiceInputRealtime(null);
+}
+
+/**
+ * 🎙️ Real-time голосовий ввід для AI-чату.
+ * onInterim(text) — викликається на КОЖЕН проміжний результат (для відображення в textarea).
+ * Повертає фінальний текст після тиші/стоп-слова.
+ */
+export function startChatVoiceInputRealtime(
+  onInterim: ((text: string) => void) | null,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
@@ -1955,6 +2210,11 @@ export function startChatVoiceInput(): Promise<string> {
       }
       fullTranscript = final;
       const currentText = (final + interim).toLowerCase().trim();
+
+      // ← Реальний час: передаємо поточний текст назовні одразу
+      if (onInterim) {
+        onInterim((final + interim).trim());
+      }
 
       for (const phrase of STOP_PHRASES) {
         if (

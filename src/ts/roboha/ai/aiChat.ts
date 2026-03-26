@@ -338,9 +338,8 @@ let aiContextLevel: AIContextLevel =
 /** Якщо true — ключ зафіксовано, ротація при 429 вимкнена */
 let lockKey: boolean = localStorage.getItem("aiLockKey") === "true";
 
-/** Якщо true — Gemini використовує Google Search Grounding (доступ до інтернету) */
-let aiSearchEnabled: boolean =
-  localStorage.getItem("aiSearchEnabled") === "true";
+/** Пошук Google завжди увімкнений */
+const aiSearchEnabled: boolean = true;
 
 /** Завантажує налаштування AI з БД (settings.API):
  *  setting_id=1 → API: null=light, false=medium, true=heavy
@@ -369,13 +368,7 @@ async function loadAISettingsFromDB(): Promise<void> {
         lockKey = row.API === true;
         localStorage.setItem("aiLockKey", lockKey ? "true" : "false");
       }
-      if (row.setting_id === 3) {
-        aiSearchEnabled = row.API === true;
-        localStorage.setItem(
-          "aiSearchEnabled",
-          aiSearchEnabled ? "true" : "false",
-        );
-      }
+      // setting_id=3 (Google Search) — більше не потрібен, пошук завжди увімкнений
     }
   } catch {
     /* silent — використовуємо localStorage як fallback */
@@ -405,17 +398,6 @@ async function saveAILockKeyToDB(locked: boolean): Promise<void> {
   }
 }
 
-/** Зберігає стан Google Search в settings.API (setting_id=3, bool) */
-async function saveAISearchToDB(enabled: boolean): Promise<void> {
-  try {
-    await supabase
-      .from("settings")
-      .update({ API: enabled })
-      .eq("setting_id", 3);
-  } catch {
-    /* silent */
-  }
-}
 
 // ============================================================
 // ЗАВАНТАЖЕННЯ КЛЮЧІВ GEMINI (3 ключі з фолбеком)
@@ -5791,11 +5773,7 @@ export async function createAIChatModal(): Promise<void> {
     if (existingLock) existingLock.checked = lockKey;
     const existingBtn = document.querySelector(".ai-lock-key-btn");
     if (existingBtn) existingBtn.textContent = lockKey ? "ВКЛ" : "ВИКЛ";
-    const existingSearch = document.getElementById("ai-search-toggle");
-    if (existingSearch) {
-      existingSearch.innerHTML = `<span class="ai-search-icon">🌐</span>${aiSearchEnabled ? "" : '<span class="ai-search-cross">❌</span>'}`;
-      existingSearch.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
-    }
+
 
     document.getElementById(CHAT_MODAL_ID)!.classList.remove("hidden");
     // При кожному відкритті — підвантажуємо ключі та показуємо активний
@@ -5914,9 +5892,7 @@ export async function createAIChatModal(): Promise<void> {
             <option value="medium"${aiContextLevel === "medium" ? " selected" : ""}> ⚡ Помірний</option>
             <option value="heavy"${aiContextLevel === "heavy" ? " selected" : ""}>🛡️ Високий</option>
           </select>
-          <button id="ai-search-toggle" class="ai-search-toggle ${aiSearchEnabled ? "ai-search-toggle--on" : ""}" title="${aiSearchEnabled ? "🌐 Пошук Google увімкнено" : "❌ Пошук Google вимкнено"}" type="button">
-            <span class="ai-search-icon">🌐</span>${aiSearchEnabled ? "" : '<span class="ai-search-cross">❌</span>'}
-          </button>
+
           <label class="ai-lock-key-toggle" id="ai-lock-key-label" title="${lockKey ? "Вимкнути перебір ключів" : "Увімкнути перебір ключів"}">
             <input type="checkbox" id="ai-lock-key-cb" ${lockKey ? "checked" : ""}>
             <span class="ai-lock-key-btn">${lockKey ? "ВКЛ" : "ВИКЛ"}</span>
@@ -6288,25 +6264,7 @@ function initAIChatHandlers(modal: HTMLElement): void {
     });
   }
 
-  // ── 🌐 Перемикач Google Search ──
-  const searchToggle = modal.querySelector(
-    "#ai-search-toggle",
-  ) as HTMLButtonElement | null;
-  if (searchToggle) {
-    searchToggle.addEventListener("click", () => {
-      aiSearchEnabled = !aiSearchEnabled;
-      localStorage.setItem(
-        "aiSearchEnabled",
-        aiSearchEnabled ? "true" : "false",
-      );
-      saveAISearchToDB(aiSearchEnabled);
-      searchToggle.innerHTML = `<span class="ai-search-icon">🌐</span>${aiSearchEnabled ? "" : '<span class="ai-search-cross">❌</span>'}`;
-      searchToggle.classList.toggle("ai-search-toggle--on", aiSearchEnabled);
-      searchToggle.title = aiSearchEnabled
-        ? "🌐 Пошук Google увімкнено"
-        : "❌ Пошук Google вимкнено";
-    });
-  }
+
 
   // ── Таби ──
   function switchTab(activeTab: "chat" | "planner" | "dashboard") {

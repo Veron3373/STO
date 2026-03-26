@@ -11,6 +11,7 @@ import {
 import { resetAISettingsCache } from "../ai/aiService";
 import { initAIChatButton, resetGeminiKeysCache } from "../ai/aiChat";
 
+
 const SETTINGS = {
   1: { id: "toggle-shop", label: "ПІБ _ Магазин", class: "_shop" },
   2: { id: "toggle-receiver", label: "Каталог", class: "_receiver" },
@@ -25,11 +26,11 @@ const SETTINGS = {
   7: { id: "toggle-ai", label: "🤖 ШІ підказки", class: "_ai" },
   8: { id: "toggle-phone-admin", label: "📞 Телефон", class: "_phone" },
   9: {
-      id: "toggle-ai-pro",
-      label:
-        '<span class="ai-pro-emoji-btn" title="Налаштування API ключів">🤖</span> ШІ Атлас',
-      class: "_ai_pro",
-    }, 
+    id: "toggle-ai-pro",
+    label:
+      '<span class="ai-pro-emoji-btn" title="Налаштування API ключів">🤖</span> ШІ Атлас',
+    class: "_ai_pro",
+  },
   10: {
     id: "toggle-voice-input",
     label: "🎙️ Голосове введення",
@@ -262,6 +263,38 @@ let pendingUnfrozenWarehouseIds: Set<number> = new Set();
 
 // Константа за замовчуванням для кольорів
 const DEFAULT_COLOR = "#164D25";
+
+/** Застосовує favicon у браузері (замінює або створює <link rel="icon">) */
+function applyFavicon(url: string): void {
+  if (!url) return;
+  let link = document.querySelector(
+    'link[rel="icon"]',
+  ) as HTMLLinkElement | null;
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = url;
+}
+
+/** Завантажує favicon з БД і застосовує при старті сторінки */
+export async function loadAndApplyFavicon(): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("Загальні")
+      .eq("setting_id", 15)
+      .single();
+    if (error || !data) return;
+    const url = (data as unknown as Record<string, unknown>)[
+      "Загальні"
+    ] as string;
+    if (url) applyFavicon(url);
+  } catch {
+    /* ігноруємо — favicon не критичний */
+  }
+}
 
 /**
  * 📞 Завантажує та застосовує налаштування відображення індикатора дзвінків
@@ -740,6 +773,21 @@ function createGeneralSettingsHTML(): string {
         </label>
       </div>
 
+      <div class="general-input-group">
+        <label class="general-label" for="general-favicon-url">
+          <span class="general-label-text">🌐 Іконка браузера (favicon)</span>
+          <div class="logo-input-wrapper">
+            <input type="text" id="general-favicon-url" class="general-input logo-url-input" placeholder="Вставте URL або натисніть 📎 для завантаження" />
+            <input type="file" id="general-favicon-file" accept="image/*" style="display: none;" />
+            <button type="button" id="general-favicon-upload-btn" class="logo-upload-icon" title="Завантажити файл">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
+          </div>
+        </label>
+      </div>
+
      <div class="general-input-group font-size-group font-size-group--offset" style="flex-direction: column; align-items: stretch; gap: 15px;">
         <div>
           <label class="general-label" style="margin-bottom: 8px; display: block;">
@@ -786,7 +834,7 @@ function createGeneralSettingsHTML(): string {
         </div>
       </div>
 
-      <div class="settings-divider"></div>
+
     </div>
   `;
 }
@@ -797,7 +845,7 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
     const { data, error } = await supabase
       .from("settings")
       .select("setting_id, Загальні, data")
-      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14])
+      .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15])
       .order("setting_id");
 
     if (error) throw error;
@@ -911,6 +959,13 @@ async function loadGeneralSettings(modal: HTMLElement): Promise<void> {
           ) as HTMLInputElement;
           if (logoUrlInputLoad) logoUrlInputLoad.value = value;
           break;
+        case 15: // Favicon (іконка браузера)
+          const faviconUrlInputLoad = modal.querySelector(
+            "#general-favicon-url",
+          ) as HTMLInputElement;
+          if (faviconUrlInputLoad) faviconUrlInputLoad.value = value;
+          if (value) applyFavicon(value);
+          break;
       }
     });
 
@@ -964,6 +1019,9 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
   const logoUrlInputSave = modal.querySelector(
     "#general-logo-url",
   ) as HTMLInputElement;
+  const faviconUrlInputSave = modal.querySelector(
+    "#general-favicon-url",
+  ) as HTMLInputElement;
 
   const newValues = [
     { id: 1, value: nameInput?.value || "" },
@@ -997,6 +1055,10 @@ async function saveGeneralSettings(modal: HTMLElement): Promise<number> {
     {
       id: 14,
       value: logoUrlInputSave?.value || "",
+    },
+    {
+      id: 15,
+      value: faviconUrlInputSave?.value || "",
     },
   ];
 
@@ -1258,6 +1320,65 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
     });
   }
 
+  // Обробники для favicon (іконка браузера)
+  const faviconUploadBtn = modal.querySelector(
+    "#general-favicon-upload-btn",
+  ) as HTMLButtonElement;
+  const faviconFileInput = modal.querySelector(
+    "#general-favicon-file",
+  ) as HTMLInputElement;
+  const faviconUrlInput = modal.querySelector(
+    "#general-favicon-url",
+  ) as HTMLInputElement;
+
+  if (faviconUploadBtn && faviconFileInput && faviconUrlInput) {
+    faviconUploadBtn.addEventListener("click", () => {
+      faviconFileInput.click();
+    });
+
+    faviconFileInput.addEventListener("change", async (event) => {
+      const target = event.target as HTMLInputElement;
+      if (!target.files || target.files.length === 0) return;
+
+      const file = target.files[0];
+      try {
+        faviconUploadBtn.classList.add("logo-upload-icon--loading");
+        faviconUploadBtn.disabled = true;
+
+        const fileExt = file.name.split(".").pop();
+        const fileName = `favicon_${Date.now()}.${fileExt}`;
+        const filePath = `a1/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("ai-photos")
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from("ai-photos")
+          .getPublicUrl(filePath);
+
+        if (data && data.publicUrl) {
+          faviconUrlInput.value = data.publicUrl;
+          faviconUrlInput.classList.add("logo-url-input--success");
+          setTimeout(
+            () => faviconUrlInput.classList.remove("logo-url-input--success"),
+            1500,
+          );
+          // Одразу застосовуємо favicon у браузері
+          applyFavicon(data.publicUrl);
+        }
+      } catch (err: any) {
+        showNotification("Помилка завантаження іконки", "error", 2000);
+      } finally {
+        faviconUploadBtn.classList.remove("logo-upload-icon--loading");
+        faviconUploadBtn.disabled = false;
+        faviconFileInput.value = "";
+      }
+    });
+  }
+
   // Обробники для підрахунку символів SMS
   const smsBeforePreview = modal.querySelector(
     ".sms-text-before-preview",
@@ -1307,6 +1428,8 @@ function initGeneralSettingsHandlers(modal: HTMLElement): void {
       borderWidthBubble.textContent = `${borderWidthSlider.value}px`;
     });
   }
+
+
 }
 
 function createToggle(id: string, label: string, cls: string): string {
@@ -1389,13 +1512,14 @@ function addPercentageRow(
           <span class="percent-sign">${isFrozen ? "." : "%"}</span>
         </div>
       </div>
-      ${isFrozen
-      ? `<div class="percentage-buttons-container">
+      ${
+        isFrozen
+          ? `<div class="percentage-buttons-container">
             <button type="button" class="delete-percentage-btn" id="delete-percentage-row-${nextRowNum}" title="Видалити склад повністю">×</button>
             <button type="button" class="unfreeze-percentage-btn" id="unfreeze-percentage-row-${nextRowNum}" title="Активувати склад">↻</button>
           </div>`
-      : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
-    }
+          : `<button type="button" class="remove-percentage-btn" id="remove-percentage-row-${nextRowNum}" title="Заморозити склад">−</button>`
+      }
     </div>
   `;
 
@@ -2499,7 +2623,7 @@ async function saveAiProKeys(modal: HTMLElement): Promise<void> {
   }
 }
 
-async function openAiProKeysModal(): Promise<void> {
+export async function openAiProKeysModal(): Promise<void> {
   let keysModal = document.getElementById("ai-pro-keys-modal");
 
   if (keysModal) {
@@ -2660,19 +2784,6 @@ export async function createSettingsModal(): Promise<void> {
 
   // AI PRO toggle — зміни застосовуються тільки при натисканні ОК (збереження)
   // Немає обробника change, бо toggle зберігається через кнопку ОК
-
-  // 🤖 Обробник для кліку на емодзі 🤖 в ШІ Атлас — відкриває модалку API ключів
-  const aiProEmojiBtn = modal.querySelector(".ai-pro-emoji-btn");
-  if (aiProEmojiBtn) {
-    aiProEmojiBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const aiProCb = modal.querySelector("#toggle-ai-pro") as HTMLInputElement;
-      if (aiProCb?.checked) {
-        openAiProKeysModal();
-      }
-    });
-  }
 
   // Обробник для кнопки додавання нового рядка відсотків
   const addPercentageBtn = modal.querySelector("#add-percentage-row");

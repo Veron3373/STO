@@ -8,6 +8,13 @@ import { showNotification } from "../zakaz_naraudy/inhi/vspluvauhe_povidomlenna"
 import { checkCurrentPageAccess } from "../zakaz_naraudy/inhi/page_access_guard";
 import { redirectToIndex } from "../../utils/gitUtils";
 import { initPostArxivRealtimeSubscription } from "./planyvannya_realtime";
+import {
+  isSpeechRecognitionSupported,
+  startChatVoiceInputRealtime,
+  stopListening,
+  showVoiceOverlay,
+  hideVoiceOverlay,
+} from "../ai/voiceInput";
 
 interface Post {
   id: number;
@@ -116,6 +123,7 @@ class SchedulerApp {
   private weekResizeOrigStartMins: number = 0;
   private weekResizeOrigEndMins: number = 0;
   private weekResizeStartX: number = 0;
+  private plannerVoiceListening: boolean = false;
 
   constructor() {
     this.today = new Date();
@@ -180,6 +188,13 @@ class SchedulerApp {
     if (todayBtn) todayBtn.addEventListener("click", () => this.goToToday());
     if (weekBtn) weekBtn.addEventListener("click", () => this.toggleWeekView());
 
+    const voiceBtn = document.getElementById(
+      "postVoiceBtn",
+    ) as HTMLButtonElement | null;
+    if (voiceBtn) {
+      voiceBtn.addEventListener("click", () => this.handlePlannerVoiceClick());
+    }
+
     // Навігація місяцями
     const monthPrev = document.getElementById("postYearPrev");
     const monthNext = document.getElementById("postYearNext");
@@ -214,6 +229,736 @@ class SchedulerApp {
     try {
       initPostArxivRealtimeSubscription();
     } catch (e) {}
+  }
+
+  private setPlannerVoiceButtonState(isListening: boolean): void {
+    const voiceBtn = document.getElementById(
+      "postVoiceBtn",
+    ) as HTMLButtonElement | null;
+    if (!voiceBtn) return;
+
+    voiceBtn.classList.toggle("ai-chat-voice-btn--listening", isListening);
+    voiceBtn.innerHTML = isListening
+      ? `<span class="ai-voice-pulse">🔴</span>`
+      : "🎙️";
+  }
+
+  private applyPlannerVoiceStatus(transcript: string): boolean {
+    const text = transcript.toLowerCase();
+    let targetStatus: string | null = null;
+
+    if (/не\s*приїх/.test(text)) {
+      targetStatus = "Не приїхав";
+    } else if (/відремонт|готово|готовий|зроблено/.test(text)) {
+      targetStatus = "Відремонтований";
+    } else if (/в\s*роботі|у\s*роботі|в\s*процесі|ремонт/.test(text)) {
+      targetStatus = "В роботі";
+    } else if (/заплан|брон/.test(text)) {
+      targetStatus = "Запланований";
+    }
+
+    if (!targetStatus) return false;
+
+    const statusBtn = document.getElementById(
+      "postArxivStatusBtn",
+    ) as HTMLButtonElement | null;
+    const statusText = document.getElementById("postArxivStatusText");
+    if (!statusBtn || !statusText) return false;
+
+    for (let i = 0; i < 6; i++) {
+      if ((statusText.textContent || "").trim() === targetStatus) {
+        return true;
+      }
+      statusBtn.click();
+    }
+
+    return (statusText.textContent || "").trim() === targetStatus;
+  }
+
+  private setPlannerComment(baseText: string, speechText: string): void {
+    const textarea = document.getElementById(
+      "postArxivComment",
+    ) as HTMLTextAreaElement | null;
+    if (!textarea) return;
+
+    const cleanSpeech = speechText.trim();
+    const prefix = baseText.trim();
+    textarea.value = cleanSpeech
+      ? prefix
+        ? `${prefix} ${cleanSpeech}`
+        : cleanSpeech
+      : prefix;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  private formatDateOnly(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+
+  private normalizePlannerVoiceText(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[’'`]/g, "")
+      .replace(/[^a-zа-яіїєґ0-9\s]/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private stemPlannerWord(raw: string): string {
+    const word = this.normalizePlannerVoiceText(raw);
+    if (word.length <= 3) return word;
+
+    const endings = [
+      "ець",
+      "ського",
+      "ському",
+      "ський",
+      "ого",
+      "ому",
+      "ій",
+      "ий",
+      "ця",
+      "цю",
+      "цем",
+      "ці",
+      "а",
+      "у",
+      "ю",
+      "ом",
+      "ем",
+      "і",
+    ];
+
+    for (const ending of endings) {
+      if (word.endsWith(ending) && word.length - ending.length >= 3) {
+        return word.slice(0, -ending.length);
+      }
+    }
+
+    return word;
+  }
+
+  private parsePlannerVoiceDate(text: string): string {
+    const base = new Date(this.selectedDate || new Date());
+    base.setHours(0, 0, 0, 0);
+    const normalized = this.normalizePlannerVoiceText(text);
+
+    // Формати: 24.03, 24/03, 24-03, 24.03.2026
+    const fullDateMatch = normalized.match(
+      /\b(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{2,4}))?\b/,
+    );
+    if (fullDateMatch) {
+      const day = parseInt(fullDateMatch[1], 10);
+      const month = parseInt(fullDateMatch[2], 10);
+      let year = fullDateMatch[3]
+        ? parseInt(fullDateMatch[3], 10)
+        : base.getFullYear();
+
+      if (fullDateMatch[3] && year < 100) year += 2000;
+
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+        let candidate = new Date(year, month - 1, day);
+        candidate.setHours(0, 0, 0, 0);
+
+        // Якщо рік не вказано і дата вже минула — переносимо на наступний рік
+        if (!fullDateMatch[3] && candidate < base) {
+          candidate = new Date(year + 1, month - 1, day);
+          candidate.setHours(0, 0, 0, 0);
+        }
+        return this.formatDateOnly(candidate);
+      }
+    }
+
+    // День тижня: "на вівторок", "на середу", "у п'ятницю" тощо
+    const weekdayRules: Array<{ re: RegExp; day: number }> = [
+      { re: /\bпонеділ(ок|ка|ку|ком)?\b/i, day: 1 },
+      { re: /\bвівтор(ок|ка|ку|ком)?\b/i, day: 2 },
+      { re: /\bсеред(а|у|ою|и)?\b/i, day: 3 },
+      { re: /\bчетвер(г|га|гу|гом)?\b/i, day: 4 },
+      { re: /\bп[’'`]?(я|ья)тниц(я|ю|і|ею)?\b/i, day: 5 },
+      { re: /\bсубот(а|у|ою|і)?\b/i, day: 6 },
+      { re: /\bнеділ(я|ю|і|ею)?\b/i, day: 0 },
+    ];
+
+    for (const rule of weekdayRules) {
+      if (rule.re.test(normalized)) {
+        const currentDay = base.getDay();
+        let diff = (rule.day - currentDay + 7) % 7;
+        if (diff === 0 && /на\s+/.test(normalized)) diff = 7;
+        const candidate = new Date(base);
+        candidate.setDate(base.getDate() + diff);
+        return this.formatDateOnly(candidate);
+      }
+    }
+
+    const dayOfMonthMatch = normalized.match(
+      /(?:на\s+)?(\d{1,2})\s*(?:числа|го|число)?\b/i,
+    );
+    if (dayOfMonthMatch) {
+      const day = parseInt(dayOfMonthMatch[1], 10);
+      if (day >= 1 && day <= 31) {
+        const y = base.getFullYear();
+        const m = base.getMonth();
+        let candidate = new Date(y, m, day);
+        candidate.setHours(0, 0, 0, 0);
+
+        if (candidate < base) {
+          candidate = new Date(y, m + 1, day);
+          candidate.setHours(0, 0, 0, 0);
+        }
+        return this.formatDateOnly(candidate);
+      }
+    }
+
+    if (/післязавтра/.test(normalized)) {
+      base.setDate(base.getDate() + 2);
+      return this.formatDateOnly(base);
+    }
+    if (/завтра/.test(normalized)) {
+      base.setDate(base.getDate() + 1);
+      return this.formatDateOnly(base);
+    }
+    if (/сьогодні/.test(normalized)) {
+      return this.formatDateOnly(base);
+    }
+    return this.formatDateOnly(base);
+  }
+
+  private parsePlannerVoiceTime(text: string): {
+    startTime: string;
+    endTime: string;
+  } | null {
+    const normalizedText = this.normalizePlannerVoiceText(text);
+
+    const parseHourWord = (raw: string): number | null => {
+      const w = this.normalizePlannerVoiceText(raw);
+      if (!w) return null;
+      if (/^\d{1,2}$/.test(w)) {
+        const n = parseInt(w, 10);
+        return n >= 0 && n <= 23 ? n : null;
+      }
+
+      const stems: Array<[string, number]> = [
+        ["перш", 1],
+        ["друг", 2],
+        ["трет", 3],
+        ["четверт", 4],
+        ["пят", 5],
+        ["шост", 6],
+        ["сьом", 7],
+        ["восьм", 8],
+        ["девят", 9],
+        ["десят", 10],
+        ["одинадц", 11],
+        ["дванадц", 12],
+        ["тринадц", 13],
+        ["чотирнадц", 14],
+        ["пятнадц", 15],
+        ["шістнадц", 16],
+        ["шестнадц", 16],
+        ["сімнадц", 17],
+        ["вісімнадц", 18],
+        ["девятнадц", 19],
+        ["двадц", 20],
+      ];
+
+      for (const [stem, hour] of stems) {
+        if (w.startsWith(stem)) return hour;
+      }
+
+      return null;
+    };
+
+    const normalizeToHalfHour = (
+      h: number,
+      m: number,
+    ): { h: number; m: number } => {
+      let hour = h;
+      let minute = m;
+      minute = minute < 15 ? 0 : minute < 45 ? 30 : 0;
+      if (minute === 0 && m >= 45) {
+        hour = Math.min(hour + 1, 23);
+      }
+      return { h: hour, m: minute };
+    };
+
+    const durationMatch = normalizedText.match(
+      /(?:на\s*)?(\d{1,2})\s*(?:годин|години|год)\b/i,
+    );
+    const durationMin = durationMatch
+      ? Math.max(30, parseInt(durationMatch[1], 10) * 60)
+      : 60;
+
+    // Фрази типу: "пів на десяту"
+    const halfPastMatch = normalizedText.match(
+      /(?:на\s+)?пів\s+(?:на|по)\s+([0-9]{1,2}|[а-яіїєґ]+)/i,
+    );
+    if (halfPastMatch) {
+      const targetHour = parseHourWord(halfPastMatch[1]);
+      if (targetHour !== null) {
+        const startHour = targetHour <= 0 ? 0 : targetHour - 1;
+        const startMins = startHour * 60 + 30;
+        const endMins = Math.min(startMins + durationMin, 23 * 60 + 30);
+        const endHour = Math.floor(endMins / 60);
+        const endMinute = endMins % 60;
+        return {
+          startTime: `${String(startHour).padStart(2, "0")}:30`,
+          endTime: `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}`,
+        };
+      }
+    }
+
+    // Фрази типу: "з дев'ятої до дванадцятої" / "з 9:00 по 12:00"
+    const rangeMatch = normalizedText.match(
+      /(?:з|c)\s*([0-9]{1,2}|[а-яіїєґ]+)(?::|\.|\s)?([0-9]{1,2})?\s*(?:до|по)\s*([0-9]{1,2}|[а-яіїєґ]+)(?::|\.|\s)?([0-9]{1,2})?/i,
+    );
+    if (rangeMatch) {
+      const sh = parseHourWord(rangeMatch[1]);
+      const sm = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : 0;
+      const eh = parseHourWord(rangeMatch[3]);
+      const em = rangeMatch[4] ? parseInt(rangeMatch[4], 10) : 0;
+
+      if (
+        sh !== null &&
+        !isNaN(sm) &&
+        eh !== null &&
+        !isNaN(em) &&
+        sh >= 0 &&
+        sh <= 23 &&
+        eh >= 0 &&
+        eh <= 23 &&
+        sm >= 0 &&
+        sm <= 59 &&
+        em >= 0 &&
+        em <= 59
+      ) {
+        const startNorm = normalizeToHalfHour(sh, sm);
+        const endNorm = normalizeToHalfHour(eh, em);
+        const startHour = startNorm.h;
+        const startMinute = startNorm.m;
+        const endHour = endNorm.h;
+        const endMinute = endNorm.m;
+
+        const startTime = `${String(startHour).padStart(2, "0")}:${String(startMinute).padStart(2, "0")}`;
+        const endTime = `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}`;
+        if (endTime > startTime) return { startTime, endTime };
+      }
+    }
+
+    // Фрази типу: "на дев'яту" / "о 9:30"
+    const timeMatch = normalizedText.match(
+      /(?:о|на|в)\s*([0-9]{1,2}|[а-яіїєґ]+)(?:[:.\s](\d{1,2}))?/i,
+    );
+    if (!timeMatch) return null;
+
+    let hour = parseHourWord(timeMatch[1]);
+    let minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+
+    if (hour === null || hour < 0 || hour > 23) return null;
+    if (isNaN(minute) || minute < 0 || minute > 59) minute = 0;
+
+    const singleNorm = normalizeToHalfHour(hour, minute);
+    hour = singleNorm.h;
+    minute = singleNorm.m;
+
+    const startMins = hour * 60 + minute;
+    const endMins = Math.min(startMins + durationMin, 23 * 60 + 30);
+    const endHour = Math.floor(endMins / 60);
+    const endMinute = endMins % 60;
+
+    const startTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    const endTime = `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}`;
+
+    return { startTime, endTime };
+  }
+
+  private detectPlannerVoiceStatus(text: string): string {
+    const normalized = this.normalizePlannerVoiceText(text);
+    if (/не\s*приїх/.test(normalized)) return "Не приїхав";
+    if (/відремонт|готово|готовий|зроблено/.test(normalized))
+      return "Відремонтований";
+    if (/в\s*роботі|у\s*роботі|в\s*процесі|ремонт/.test(normalized))
+      return "В роботі";
+    if (/заплан|брон/.test(normalized)) return "Запланований";
+    return "Запланований";
+  }
+
+  private parsePlannerVoiceClientAndCar(text: string): {
+    clientName: string;
+    clientPhone: string;
+    carModel: string;
+    carNumber: string;
+  } {
+    const raw = text;
+
+    const digitWords: Record<string, string> = {
+      нуль: "0",
+      нол: "0",
+      ноль: "0",
+      ноля: "0",
+      один: "1",
+      одна: "1",
+      одне: "1",
+      два: "2",
+      дві: "2",
+      две: "2",
+      три: "3",
+      чотири: "4",
+      чотирьох: "4",
+      четыре: "4",
+      пять: "5",
+      пят: "5",
+      пятьох: "5",
+      пятьма: "5",
+      пятью: "5",
+      пяти: "5",
+      "п'ять": "5",
+      шість: "6",
+      шесть: "6",
+      сім: "7",
+      семь: "7",
+      вісім: "8",
+      восемь: "8",
+      девять: "9",
+      "дев'ять": "9",
+      девятью: "9",
+      девяти: "9",
+    };
+
+    const spokenToDigits = (value: string): string => {
+      const norm = this.normalizePlannerVoiceText(value)
+        .replace(/\+/g, " + ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!norm) return "";
+
+      const tokens = norm.split(" ");
+      const out: string[] = [];
+      for (const token of tokens) {
+        if (!token) continue;
+        const directDigits = token.replace(/\D/g, "");
+        if (directDigits) {
+          out.push(directDigits);
+          continue;
+        }
+
+        if (digitWords[token]) {
+          out.push(digitWords[token]);
+          continue;
+        }
+
+        // Часті помилки розпізнавання на кшталт "девятой" / "шести"
+        const stem = token
+          .replace(/(ої|ой|ий|ій|ою|ую|ого|ому|и|і|а|у|ю|ь)$/g, "")
+          .trim();
+        if (digitWords[stem]) {
+          out.push(digitWords[stem]);
+        }
+      }
+      return out.join("");
+    };
+
+    const normalizeCarNumber = (value: string): string => {
+      if (!value) return "";
+      const withDigits = value
+        .replace(/\s+/g, " ")
+        .trim()
+        .split(" ")
+        .map((part) => {
+          const d = spokenToDigits(part);
+          return d || part;
+        })
+        .join("");
+
+      return withDigits.replace(/[^0-9A-ZА-ЯІЇЄҐ]/gi, "").toUpperCase();
+    };
+
+    const cleanup = (value: string): string =>
+      value
+        .replace(/\s+/g, " ")
+        .replace(/^[,.;:\-\s]+|[,.;:\-\s]+$/g, "")
+        .trim();
+
+    const clientMatch = raw.match(
+      /клієнт\s+(.+?)(?=(?:\s+телефон|\s+авто|\s+машина|\s+автомобіль|\s+номер\s+авто|\s+коментар|\s+статус|$))/i,
+    );
+    const phoneMatch = raw.match(
+      /(?:телефон|номер\s+телефону)\s+(.+?)(?=(?:\s+авто|\s+машина|\s+автомобіль|\s+номер\s+авто|\s+клієнт|\s+коментар|\s+статус|$))/i,
+    );
+    const carModelMatch = raw.match(
+      /(?:авто|машина|автомобіль)\s+(.+?)(?=(?:\s+номер\s+авто|\s+номер|\s+клієнт|\s+телефон|\s+коментар|\s+статус|$))/i,
+    );
+    const carNumberMatch = raw.match(
+      /(?:номер\s+авто|номер)\s+(.+?)(?=(?:\s+клієнт|\s+телефон|\s+авто|\s+машина|\s+автомобіль|\s+коментар|\s+статус|$))/i,
+    );
+
+    const clientName = cleanup(clientMatch?.[1] || "");
+    const clientPhone = spokenToDigits(cleanup(phoneMatch?.[1] || ""));
+    const carModel = cleanup(carModelMatch?.[1] || "");
+    const carNumber = normalizeCarNumber(cleanup(carNumberMatch?.[1] || ""));
+
+    return {
+      clientName,
+      clientPhone,
+      carModel,
+      carNumber,
+    };
+  }
+
+  private buildPlannerVoiceComment(rawText: string): string {
+    let text = rawText;
+
+    text = text.replace(
+      /(?:клієнт\s+.+?)(?=(?:\s+телефон|\s+авто|\s+машина|\s+автомобіль|\s+номер\s+авто|\s+коментар|\s+статус|$))/gi,
+      " ",
+    );
+    text = text.replace(
+      /(?:телефон|номер\s+телефону)\s+.+?(?=(?:\s+авто|\s+машина|\s+автомобіль|\s+номер\s+авто|\s+клієнт|\s+коментар|\s+статус|$))/gi,
+      " ",
+    );
+    text = text.replace(
+      /(?:авто|машина|автомобіль)\s+.+?(?=(?:\s+номер\s+авто|\s+номер|\s+клієнт|\s+телефон|\s+коментар|\s+статус|$))/gi,
+      " ",
+    );
+    text = text.replace(
+      /(?:номер\s+авто|номер)\s+.+?(?=(?:\s+клієнт|\s+телефон|\s+авто|\s+машина|\s+автомобіль|\s+коментар|\s+статус|$))/gi,
+      " ",
+    );
+
+    text = text
+      .replace(/\s+/g, " ")
+      .replace(/^[,.;:\-\s]+|[,.;:\-\s]+$/g, "")
+      .trim();
+
+    if (!text) return "";
+
+    const words = text.split(/\s+/);
+    const compact: string[] = [];
+    for (const w of words) {
+      if (compact.length === 0 || compact[compact.length - 1] !== w) {
+        compact.push(w);
+      }
+    }
+
+    if (compact.length >= 6 && compact.length % 2 === 0) {
+      const half = compact.length / 2;
+      const first = compact.slice(0, half).join(" ");
+      const second = compact.slice(half).join(" ");
+      if (first === second) return first;
+    }
+
+    return compact.join(" ");
+  }
+
+  private findSlyusarByVoice(text: string): {
+    slyusarId: number;
+    namePost: number;
+    slyusarName: string;
+  } | null {
+    const normalized = this.normalizePlannerVoiceText(text);
+    const targetByNa = normalized.match(/(?:^|\s)на\s+([а-яіїєґa-z0-9]+)/i);
+    const targetStem = targetByNa ? this.stemPlannerWord(targetByNa[1]) : "";
+    const voiceWords = normalized
+      .split(" ")
+      .map((w) => this.stemPlannerWord(w))
+      .filter((w) => w.length >= 3);
+
+    let best: {
+      slyusarId: number;
+      namePost: number;
+      slyusarName: string;
+      score: number;
+    } | null = null;
+
+    for (const section of this.sections) {
+      for (const post of section.posts) {
+        const rawName = (post.subtitle || "").replace("👨‍🔧", "").trim();
+        if (!rawName) continue;
+
+        const lowName = this.normalizePlannerVoiceText(rawName);
+        const nameWords = lowName
+          .split(" ")
+          .map((w) => this.stemPlannerWord(w))
+          .filter((w) => w.length >= 2);
+        const surnameStem = nameWords[0] || "";
+        let score = 0;
+
+        if (normalized.includes(lowName)) {
+          score += 120;
+        }
+
+        if (surnameStem && normalized.includes(surnameStem)) {
+          score += 100;
+        }
+
+        if (targetStem && surnameStem && targetStem === surnameStem) {
+          score += 120;
+        }
+
+        if (
+          surnameStem &&
+          voiceWords.some(
+            (w) =>
+              w === surnameStem ||
+              w.startsWith(surnameStem) ||
+              surnameStem.startsWith(w),
+          )
+        ) {
+          score += 90;
+        }
+
+        for (const nw of nameWords) {
+          if (voiceWords.includes(nw)) score += 25;
+        }
+
+        if (!best || score > best.score) {
+          best = {
+            slyusarId: post.id,
+            namePost: post.postId,
+            slyusarName: rawName,
+            score,
+          };
+        }
+      }
+    }
+
+    if (!best || best.score < 50) return null;
+    return {
+      slyusarId: best.slyusarId,
+      namePost: best.namePost,
+      slyusarName: best.slyusarName,
+    };
+  }
+
+  private async handlePlannerVoiceClick(): Promise<void> {
+    const modalOpen = !!document.getElementById("postArxivModalOverlay");
+
+    if (this.plannerVoiceListening) {
+      stopListening();
+      this.plannerVoiceListening = false;
+      this.setPlannerVoiceButtonState(false);
+      hideVoiceOverlay();
+      return;
+    }
+
+    if (!isSpeechRecognitionSupported()) {
+      showNotification(
+        "❌ Браузер не підтримує розпізнавання мови. Використовуйте Chrome.",
+        "error",
+        3000,
+      );
+      return;
+    }
+
+    const textarea = document.getElementById(
+      "postArxivComment",
+    ) as HTMLTextAreaElement | null;
+    const baseText = (textarea?.value || "").trim();
+
+    try {
+      this.plannerVoiceListening = true;
+      this.setPlannerVoiceButtonState(true);
+      showVoiceOverlay(" Говоріть: кому і коли запланувати...");
+
+      const transcript = await startChatVoiceInputRealtime((interim) => {
+        if (!this.plannerVoiceListening) return;
+        showVoiceOverlay(`${interim}`);
+        if (modalOpen) {
+          this.setPlannerComment(baseText, interim);
+        }
+      });
+
+      const finalText = (transcript || "").trim();
+      if (finalText) {
+        if (modalOpen) {
+          const statusApplied = this.applyPlannerVoiceStatus(finalText);
+          this.setPlannerComment(baseText, finalText);
+
+          if (statusApplied) {
+            showNotification(
+              "✅ Статус і коментар оновлено голосом",
+              "success",
+              2200,
+            );
+          } else {
+            showNotification("✅ Коментар оновлено голосом", "success", 2200);
+          }
+        } else {
+          const slyusar = this.findSlyusarByVoice(finalText);
+          const time = this.parsePlannerVoiceTime(finalText) ?? {
+            startTime: "08:00",
+            endTime: "19:00",
+          };
+          const dateStr = this.parsePlannerVoiceDate(finalText);
+          const parsed = this.parsePlannerVoiceClientAndCar(finalText);
+          const status = this.detectPlannerVoiceStatus(finalText);
+          const comment = this.buildPlannerVoiceComment(finalText);
+
+          if (!slyusar) {
+            showNotification(
+              "⚠️ Не почув слюсаря. Приклад: 'на Шевченка на 24 число з 9:00 по 12:00 клієнт Іван'",
+              "warning",
+              3500,
+            );
+            return;
+          }
+
+          const availability = await this.checkWeekAvailability(
+            dateStr,
+            time.startTime,
+            time.endTime,
+            slyusar.slyusarId,
+          );
+          if (!availability.valid) {
+            showNotification(
+              `⚠️ ${availability.message || "Цей час зайнятий"}`,
+              "warning",
+              3200,
+            );
+            return;
+          }
+
+          const reservation: ReservationData = {
+            date: dateStr,
+            startTime: time.startTime,
+            endTime: time.endTime,
+            clientId: null,
+            clientName: parsed.clientName || "",
+            clientPhone: parsed.clientPhone || "",
+            carId: null,
+            carModel: parsed.carModel || "",
+            carNumber: parsed.carNumber || "",
+            comment: comment || finalText,
+            status,
+            slyusarId: slyusar.slyusarId,
+            namePost: slyusar.namePost,
+            postArxivId: null,
+            actId: null,
+          };
+
+          await this.handleWeekModalSubmit(reservation);
+        }
+      } else {
+        showNotification(
+          "⚠️ Мову не розпізнано. Спробуйте ще раз.",
+          "warning",
+          2200,
+        );
+      }
+    } catch (err: any) {
+      showNotification(
+        err?.message || "❌ Помилка голосового вводу",
+        "error",
+        2200,
+      );
+    } finally {
+      this.plannerVoiceListening = false;
+      this.setPlannerVoiceButtonState(false);
+      hideVoiceOverlay();
+    }
   }
 
   private async loadDataFromDatabase(): Promise<void> {

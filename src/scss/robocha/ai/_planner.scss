@@ -318,6 +318,7 @@
 }
 
 .ai-planner-card-action {
+  position: relative;
   width: 26px;
   height: 26px;
   display: flex;
@@ -355,30 +356,12 @@
       transform: none;
     }
 
-    &:hover .ai-planner-delete-countdown {
+    &:hover .ai-delete-countdown {
       background: #66d9a0;
       box-shadow: 0 0 8px rgba(102, 217, 160, 0.6);
       cursor: pointer;
     }
   }
-}
-
-.ai-planner-delete-countdown {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #e74c3c;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: countdown-pulse 1s ease-in-out infinite;
-  box-shadow: 0 0 6px rgba(231, 76, 60, 0.5);
-  transition:
-    background 0.2s,
-    box-shadow 0.2s;
 }
 
 // Мета-інфо під заголовком
@@ -788,6 +771,7 @@
 }
 
 .ai-planner-btn {
+  position: relative;
   padding: 8px 20px;
   border: none;
   border-radius: 10px;
@@ -830,7 +814,7 @@
     pointer-events: auto;
     animation: pulse-red 1s infinite;
 
-    &:hover .ai-planner-delete-countdown {
+    &:hover .ai-delete-countdown {
       background: #66d9a0;
       box-shadow: 0 0 8px rgba(102, 217, 160, 0.6);
       cursor: pointer;

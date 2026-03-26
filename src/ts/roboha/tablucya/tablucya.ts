@@ -33,6 +33,7 @@ import {
   loadAndApplyPhoneIndicatorSetting,
   loadAndApplyVoiceInputSetting,
   loadAndApplyAiProSetting,
+  loadAndApplyFavicon,
   subscribeToSettingsRealtime,
 } from "../nalachtuvannay/nalachtuvannay";
 import { initAIChatButton } from "../ai/aiChat";
@@ -102,7 +103,7 @@ function formatCallDisplayHtml(callValue: string): string {
   const icon = match[1];
   const time = match[2];
   const date = match[3];
-  return `${icon} <span style="color: #0400ff; font-weight: bold;">${time}</span> / <span style="color: #555;">${date}</span>`;
+  return `${icon}<span class="call-dt-info"> <span style="color: #0400ff; font-weight: bold;">${time}</span> / <span style="color: #555;">${date}</span></span>`;
 }
 
 /**
@@ -531,8 +532,18 @@ function subscribeToSlusarNotifications() {
           }
         }
 
-        // 🎨 МИТТЄВЕ ОНОВЛЕННЯ КЛАСУ РЯДКА
-        updateSlusarsOnRowInDom(actId, newSlusarsOn, isClosed, pruimalnyk);
+        // ❄️ МИТТЄВЕ ОНОВЛЕННЯ FROZEN СТАТУСУ
+        const newFrozen = updatedAct.frozen === true;
+        updateFrozenRowInDom(actId, newFrozen, isClosed);
+
+        // 🎨 МИТТЄВЕ ОНОВЛЕННЯ КЛАСУ РЯДКА (slusarsOn)
+        updateSlusarsOnRowInDom(
+          actId,
+          newSlusarsOn,
+          isClosed,
+          pruimalnyk,
+          newFrozen,
+        );
 
         // 📢 Показуємо сповіщення
         if (newSlusarsOn && !isClosed) {
@@ -678,11 +689,67 @@ function updateEditorInfoInDom(actId: number, editorName: string | null): void {
 /**
  * 🎨 Миттєво оновлює жовте фарбування рядка в таблиці
  */
+/**
+ * ❄️ Оновлює frozen-стилі рядка та іконку замка в реальному часі
+ */
+function updateFrozenRowInDom(
+  actId: number,
+  isFrozen: boolean,
+  isClosed: boolean,
+): void {
+  const table = document.querySelector(
+    "#table-container-modal-sakaz_narad table",
+  );
+  if (!table) return;
+
+  const rows = table.querySelectorAll("tbody tr");
+
+  rows.forEach((row) => {
+    const rowActId = row.getAttribute("data-act-id");
+    let matched = false;
+
+    if (rowActId) {
+      matched = parseInt(rowActId) === actId;
+    } else {
+      const firstCell = row.querySelector("td");
+      if (firstCell) {
+        const match = (firstCell.textContent || "").match(/\d+/);
+        if (match) matched = parseInt(match[0]) === actId;
+      }
+    }
+
+    if (!matched) return;
+
+    // Оновлюємо клас row-frozen
+    if (isFrozen) {
+      row.classList.add("row-frozen");
+      row.classList.remove("row-slusar-on");
+      row.setAttribute("title", "Розморозити акт?");
+    } else {
+      row.classList.remove("row-frozen");
+      row.removeAttribute("title");
+    }
+
+    // Оновлюємо іконку замка в першій комірці
+    const firstCell = row.querySelector("td");
+    if (firstCell) {
+      const contentDiv = firstCell.querySelector(
+        "div:not(.notification-count-badge)",
+      );
+      const targetEl = contentDiv || firstCell;
+      const text = targetEl.textContent || "";
+      const newIcon = isFrozen ? "❄️" : isClosed ? "🔒" : "🗝️";
+      targetEl.textContent = text.replace(/[❄️🔒🗝️☀️]+\s*/, newIcon + " ");
+    }
+  });
+}
+
 function updateSlusarsOnRowInDom(
   actId: number,
   slusarsOn: boolean,
   isClosed: boolean,
   pruimalnyk?: string,
+  isFrozen?: boolean,
 ): void {
   const table = document.querySelector(
     "#table-container-modal-sakaz_narad table",
@@ -719,6 +786,7 @@ function updateSlusarsOnRowInDom(
               pruimalnyk,
               currentUserName,
               actId,
+              isFrozen,
             );
           }
         }
@@ -731,6 +799,7 @@ function updateSlusarsOnRowInDom(
         pruimalnyk,
         currentUserName,
         actId,
+        isFrozen,
       );
     }
   });
@@ -749,10 +818,12 @@ function applyClassToRow(
   pruimalnyk: string | undefined,
   currentUserName: string | undefined,
   _actId: number,
+  isFrozen?: boolean,
 ): void {
   const shouldShowSlusarsOn =
     slusarsOn &&
     !isClosed &&
+    !isFrozen &&
     (userAccessLevel === "Адміністратор" ||
       userAccessLevel === "Слюсар" ||
       (userAccessLevel === "Приймальник" && pruimalnyk === currentUserName));
@@ -1044,7 +1115,7 @@ function createClientCell(
         const timeHtml = `<span style="color: #0400ff; font-size: 0.85em; font-weight: bold;">${time}</span>`;
         const dateHtml = `<span style="font-size: 0.85em; color: #555;">${date}</span>`;
 
-        smsHtml = `<div style="font-size: 0.9em; line-height: 1.2; white-space: nowrap;">📨 ${timeHtml} / ${dateHtml}</div>`;
+        smsHtml = `<div style="font-size: 0.9em; line-height: 1.2; white-space: nowrap;">📨<span class="sms-dt-info"> ${timeHtml} / ${dateHtml}</span></div>`;
       }
     } catch (e) {
       // console.warn(`Error parsing SMS date for act ${actId}:`, e);
@@ -1375,6 +1446,7 @@ function renderActsRows(
     // ❄️ Frozen row styling
     if (isFrozen) {
       row.classList.add("row-frozen");
+      row.title = "Розморозити акт?";
     }
 
     // 💛 ПЕРЕВІРКА slusarsOn ДЛЯ ЗОЛОТИСТОГО ФАРБУВАННЯ (ТІЛЬКИ ДЛЯ ВІДКРИТИХ АКТІВ)
@@ -1498,7 +1570,12 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
     input.value = getDefaultDateRange();
   }
   const currentValue = input.value.trim();
-  if (currentValue === "Відкриті" || currentValue === "Закриті") return null;
+  if (
+    currentValue === "Відкриті" ||
+    currentValue === "Закриті" ||
+    currentValue.includes("Заморожені")
+  )
+    return null;
   if (!currentValue.includes(" - ")) return null;
 
   const [startStr, endStr] = currentValue.split(" - ");
@@ -1507,7 +1584,8 @@ function getDateRange(): { dateFrom: string; dateTo: string } | null {
   try {
     const [dateFrom, dateTo] = [startStr, endStr].map((str, i) => {
       const [d, m, y] = str.split(".");
-      const full = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      const fullYear = y.length === 2 ? `20${y}` : y;
+      const full = `${fullYear}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
       return i === 0 ? `${full} 00:00:00` : `${full} 23:59:59`;
     });
     return { dateFrom, dateTo };
@@ -1693,11 +1771,16 @@ function parseSearchTerm(searchTerm: string): { key: string; value: string }[] {
 async function loadActsFromDB(
   dateFrom: string | null,
   dateTo: string | null,
-  filterType: "open" | "closed" | null = null,
+  filterType: "open" | "closed" | "frozen" | null = null,
 ): Promise<any[] | null> {
   let query = supabase.from("acts").select("*");
-  if (filterType === "open") query = query.is("date_off", null);
-  else if (filterType === "closed") query = query.not("date_off", "is", null);
+  if (filterType === "frozen") query = query.eq("frozen", true);
+  else if (filterType === "open")
+    query = query.is("date_off", null).or("frozen.is.null,frozen.eq.false");
+  else if (filterType === "closed")
+    query = query
+      .not("date_off", "is", null)
+      .or("frozen.is.null,frozen.eq.false");
   else if (dateFrom && dateTo)
     query = query.gte("date_on", dateFrom).lte("date_on", dateTo);
   else {
@@ -1883,7 +1966,7 @@ function showNoViewAccessMessage(): void {
 export async function loadActsTable(
   dateFrom: string | null = null,
   dateTo: string | null = null,
-  filterType: "open" | "closed" | null = null,
+  filterType: "open" | "closed" | "frozen" | null = null,
   searchTerm: string | null = null,
 ): Promise<void> {
   if (!isUserAuthenticated()) {
@@ -1903,12 +1986,17 @@ export async function loadActsTable(
   try {
     let finalDateFrom: string | null = null;
     let finalDateTo: string | null = null;
-    let finalFilterType: "open" | "closed" | null = filterType || null;
+    let finalFilterType: "open" | "closed" | "frozen" | null =
+      filterType || null;
     const dateRangePicker = document.getElementById(
       "dateRangePicker",
     ) as HTMLInputElement;
 
-    if (finalFilterType === "open" || finalFilterType === "closed") {
+    if (
+      finalFilterType === "open" ||
+      finalFilterType === "closed" ||
+      finalFilterType === "frozen"
+    ) {
       finalDateFrom = null;
       finalDateTo = null;
     } else {
@@ -1929,11 +2017,13 @@ export async function loadActsTable(
             const [startStr, endStr] = defaultRange.split(" - ");
             const [d1, m1, y1] = startStr.split(".");
             const [d2, m2, y2] = endStr.split(".");
-            finalDateFrom = `${y1}-${m1.padStart(2, "0")}-${d1.padStart(
+            const fy1 = y1.length === 2 ? `20${y1}` : y1;
+            const fy2 = y2.length === 2 ? `20${y2}` : y2;
+            finalDateFrom = `${fy1}-${m1.padStart(2, "0")}-${d1.padStart(
               2,
               "0",
             )} 00:00:00`;
-            finalDateTo = `${y2}-${m2.padStart(2, "0")}-${d2.padStart(
+            finalDateTo = `${fy2}-${m2.padStart(2, "0")}-${d2.padStart(
               2,
               "0",
             )} 23:59:59`;
@@ -2001,12 +2091,13 @@ export async function refreshActsTable(): Promise<void> {
   ) as HTMLInputElement;
   const currentValue = dateRangePicker?.value?.trim() || "";
 
-  let currentFilterType: "open" | "closed" | null = null;
+  let currentFilterType: "open" | "closed" | "frozen" | null = null;
   let currentDateFrom: string | null = null;
   let currentDateTo: string | null = null;
 
   if (currentValue === "Відкриті") currentFilterType = "open";
   else if (currentValue === "Закриті") currentFilterType = "closed";
+  else if (currentValue === "Заморожені ❄️") currentFilterType = "frozen";
   else {
     const dates = getDateRange();
     if (dates) {
@@ -2131,6 +2222,9 @@ export async function initializeActsSystem(): Promise<void> {
 
     // 🤖 ЗАСТОСОВУЄМО НАЛАШТУВАННЯ ШІ АТЛАС
     await loadAndApplyAiProSetting();
+
+    // 🌐 ЗАВАНТАЖУЄМО FAVICON
+    await loadAndApplyFavicon();
 
     // 📱 ВІДКРИТТЯ АКТУ ПО QR-КОДУ (act_id або qr_token в URL)
     const urlParams = new URLSearchParams(window.location.search);

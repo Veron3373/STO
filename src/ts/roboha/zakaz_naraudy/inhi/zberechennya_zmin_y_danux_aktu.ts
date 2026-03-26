@@ -23,6 +23,7 @@ import { refreshActsTable } from "../../tablucya/tablucya";
 import { refreshQtyWarningsIn } from "./kastomna_tabluca";
 import { syncShopsOnActSave } from "./save_shops";
 import { syncSlyusarsOnActSave } from "./save_work";
+import { notifyActSaved } from "../actPresence";
 import {
   userAccessLevel,
   userName,
@@ -1936,9 +1937,8 @@ export function addSaveHandler(actId: number, originalActData: any): void {
     try {
       await saveActData(actId, originalActData);
 
-      // ✅ Сповіщаємо про збереження (динамічний імпорт щоб уникнути циклічної залежності)
+      // ✅ Сповіщаємо про збереження
       try {
-        const { notifyActSaved } = await import("../actPresence");
         await notifyActSaved(actId);
       } catch (notifyErr) {
         // console.warn("Помилка відправки сповіщення:", notifyErr);

@@ -15,6 +15,10 @@ body {
   width: calc(100% - 20px);
   margin: 0 10px 10px 10px;
   overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   /* Container handles scrolling */
   box-sizing: border-box;
   padding: 0;
@@ -43,7 +47,7 @@ body {
   /* Skeleton Loading */
   .skeleton-row {
     pointer-events: none;
-    
+
     td {
       padding: 12px 10px;
     }
@@ -59,8 +63,12 @@ body {
   }
 
   @keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   /* Рядки, що з'являються після завантаження */
@@ -69,13 +77,20 @@ body {
   }
 
   @keyframes row-fade-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* Таблиця */
   table {
     width: 100%;
+    min-width: 680px;
     border-collapse: collapse;
     table-layout: fixed;
     background-color: rgba(255, 255, 255, 0.95);
@@ -249,19 +264,157 @@ body {
 /* ---- Висоти (щоб контейнер займав екран і скролився) ---- */
 @media (min-width: 1025px) {
   #table-container-modal-sakaz_narad {
-    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 42px);
   }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 871px) and (max-width: 1024px) {
   #table-container-modal-sakaz_narad {
-    max-height: calc(93vh - 10px);
+    width: calc(100% - 16px);
+    margin: 0 8px 2px 8px;
+    max-height: calc(100dvh - 86px);
+  }
+
+  #table-container-modal-sakaz_narad th,
+  #table-container-modal-sakaz_narad td {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(1),
+  #table-container-modal-sakaz_narad td:nth-child(1) {
+    width: 82px;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(2),
+  #table-container-modal-sakaz_narad td:nth-child(2) {
+    width: 108px;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(3),
+  #table-container-modal-sakaz_narad td:nth-child(3) {
+    width: 41%;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(4),
+  #table-container-modal-sakaz_narad td:nth-child(4) {
+    width: 23%;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(5),
+  #table-container-modal-sakaz_narad td:nth-child(5) {
+    width: 84px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 870px) {
   #table-container-modal-sakaz_narad {
-    max-height: calc(93vh - 5px);
+    width: calc(100% - 12px);
+    margin: 0 6px 6px 6px;
+    max-height: calc(100dvh - 60px);
+    border-radius: 6px;
+    overflow-x: hidden;
+  }
+
+  .act-note-indicator,
+  .client-note-indicator {
+    display: none;
+  }
+
+  .call-dt-info,
+  .sms-dt-info {
+    display: none;
+  }
+
+  #table-container-modal-sakaz_narad table {
+    min-width: 100%;
+    table-layout: fixed;
+  }
+
+  #table-container-modal-sakaz_narad th,
+  #table-container-modal-sakaz_narad td {
+    padding: 6px 5px;
+    font-size: 12px;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: clip;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(1),
+  #table-container-modal-sakaz_narad td:nth-child(1) {
+    width: 54px;
+    white-space: nowrap;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(2),
+  #table-container-modal-sakaz_narad td:nth-child(2) {
+    width: 78px;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(3),
+  #table-container-modal-sakaz_narad td:nth-child(3) {
+    width: 42%;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(4),
+  #table-container-modal-sakaz_narad td:nth-child(4) {
+    width: 22%;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(5),
+  #table-container-modal-sakaz_narad td:nth-child(5) {
+    width: 64px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  #table-container-modal-sakaz_narad {
+    width: calc(100% - 8px);
+    margin: 0 4px 4px 4px;
+    max-height: calc(100dvh - 60px);
+  }
+
+  #table-container-modal-sakaz_narad table {
+    min-width: 100%;
+  }
+
+  #table-container-modal-sakaz_narad th,
+  #table-container-modal-sakaz_narad td {
+    padding: 5px 4px;
+    font-size: 11px;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(1),
+  #table-container-modal-sakaz_narad td:nth-child(1) {
+    width: 50px;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(2),
+  #table-container-modal-sakaz_narad td:nth-child(2) {
+    width: 68px;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(3),
+  #table-container-modal-sakaz_narad td:nth-child(3) {
+    width: 44%;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(4),
+  #table-container-modal-sakaz_narad td:nth-child(4) {
+    width: 20%;
+  }
+
+  #table-container-modal-sakaz_narad th:nth-child(5),
+  #table-container-modal-sakaz_narad td:nth-child(5) {
+    width: 58px;
+  }
+
+  #table-container-modal-sakaz_narad .act-label-small,
+  #table-container-modal-sakaz_narad .raxunok-label-small {
+    font-size: 0.6em;
   }
 }
 

@@ -6,6 +6,7 @@ import {
 } from "./mark_notification_deleted";
 import { supabase } from "../../vxid/supabaseClient";
 import { getSavedUserDataFromLocalStorage } from "./users";
+import { showModal } from "../zakaz_naraudy/modalMain";
 import {
   clearNotificationVisualOnly,
   decrementNotificationCount,
@@ -410,9 +411,6 @@ export function showRealtimeActNotification(
   if (actIdElement) {
     actIdElement.addEventListener("click", async (e) => {
       e.stopPropagation(); // Запобігаємо закриттю toast
-
-      // Динамічний імпорт функції showModal
-      const { showModal } = await import("../zakaz_naraudy/modalMain");
 
       // Відкриваємо акт в режимі 'client' (всі стовпці)
       await showModal(payload.act_id, "client");

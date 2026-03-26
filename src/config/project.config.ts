@@ -13,9 +13,9 @@
 // INFORMACIYA PRO PROEKT
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const PROJECT_INFO = {
-  name: "sto",
-  displayName: "STO",
-  description: "Sistema upravlinnya STO",
+  name: import.meta.env.VITE_PROJECT_NAME || "",
+  displayName: import.meta.env.VITE_APP_NAME || "",
+  description: import.meta.env.VITE_APP_DESCRIPTION || "",
   version: "1.0.0",
 } as const;
 
@@ -23,9 +23,9 @@ export const PROJECT_INFO = {
 // URL-ADRESY DEPLOYU
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const DEPLOY_URLS = {
-  vercel: "stobraclavec.vercel.app",
-  githubUsername: "veron3373",
-  githubRepo: "STO",
+  vercel: import.meta.env.VITE_VERCEL_DOMAIN || "",
+  githubUsername: import.meta.env.VITE_GITHUB_USERNAME || "",
+  githubRepo: import.meta.env.VITE_GITHUB_REPO || "",
   localPort: 5173,
 
   get vercelUrl() {
@@ -78,9 +78,9 @@ export const GOOGLE_CONFIG = {
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const GIT_ACCOUNTS = [
   {
-    name: "veron3373 (GitHub)",
-    email: "veron3373@gmail.com",
-    username: "veron3373",
+    name: `${import.meta.env.VITE_GITHUB_USERNAME || ""} (GitHub)`,
+    email: import.meta.env.VITE_GIT_USER_EMAIL || "",
+    username: import.meta.env.VITE_GITHUB_USERNAME || "",
   },
 ] as const;
 
@@ -88,8 +88,22 @@ export const GIT_ACCOUNTS = [
 // VERCEL AKAUNTY
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 export const VERCEL_ACCOUNTS = [
-  { name: "veron3373 (Main)", team: "", scope: "" },
+  {
+    name: `${import.meta.env.VITE_GITHUB_USERNAME || ""} (Main)`,
+    team: "",
+    scope: "",
+  },
 ] as const;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TELEGRAM BOT KONFIGURACIYA
+// ═══════════════════════════════════════════════════════════════════════════════
+export const TELEGRAM_CONFIG = {
+  botUsername: import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "",
+  get botUrl() {
+    return `https://t.me/${this.botUsername}`;
+  },
+} as const;
 
 // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // DOPOMIZHNI FUNKCIYI
@@ -170,6 +184,7 @@ export default {
   GOOGLE_CONFIG,
   GIT_ACCOUNTS,
   VERCEL_ACCOUNTS,
+  TELEGRAM_CONFIG,
   getCurrentEnvironment,
   getBaseUrl,
   getPageUrl,

@@ -9,17 +9,17 @@
 //   • Все інше → Network Only
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CACHE_NAME = 'sto-braclave-v3';
-const CACHE_CDN   = 'sto-cdn-v3';
+const CACHE_NAME = 'sto-v6';
+const CACHE_CDN = 'sto-cdn-v6';
 
 // Статика яку кешуємо при встановленні
 const PRECACHE_ASSETS = [
+  './index.html',
   './main.html',
   './planyvannya.html',
   './bukhhalteriya.html',
-  './logoOsnovne.jpg',
-  './manifest.json',
   './logo.jpg',
+  './vite.svg',
 ];
 
 // CDN ресурси які кешуємо при першому завантаженні
@@ -35,7 +35,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       // addAll з помилками — не лупімо весь SW якщо один файл недоступний
       return Promise.allSettled(
-        PRECACHE_ASSETS.map((url) => cache.add(url).catch(() => {}))
+        PRECACHE_ASSETS.map((url) => cache.add(url).catch(() => { }))
       );
     })
   );
@@ -61,7 +61,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1) Supabase API → Network First (потрібні актуальні дані)
+  // 0) Пропускаємо все крім GET — POST/PUT/DELETE не кешуються
+  if (event.request.method !== 'GET') return;
+
+  // 1) Supabase Realtime → пропускаємо (WebSocket fallback, long-polling)
+  if (url.hostname.includes('supabase.co') && url.pathname.includes('/realtime/')) {
+    return;
+  }
+
+  // 2) Supabase REST API → Network First (актуальні дані)
   if (url.hostname.includes('supabase.co')) {
     event.respondWith(networkFirst(event.request));
     return;
@@ -73,14 +81,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3) Статичні файли проекту → Cache First
-  const isStatic = /\.(js|css|html|jpg|jpeg|png|svg|woff2?|ico|json)$/i.test(url.pathname);
-  if (isStatic && url.origin === self.location.origin) {
+  // 3) HTML сторінки → Network First (завжди свіжий контент)
+  if (/\.html$/i.test(url.pathname) && url.origin === self.location.origin) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  // 3.1) Manifest → Network First, щоб браузер бачив актуальні PWA-параметри.
+  if (/\/manifest\.json$/i.test(url.pathname) && url.origin === self.location.origin) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  // 4) Статичні assets (JS, CSS, images) → Cache First (мають хеші у назвах)
+  const isStaticAsset = /\.(js|css|jpg|jpeg|png|svg|woff2?|ico|json)$/i.test(url.pathname);
+  if (isStaticAsset && url.origin === self.location.origin) {
     event.respondWith(cacheFirst(event.request, CACHE_NAME));
     return;
   }
 
-  // 4) Все інше → просто fetch (не кешуємо)
+  // 5) Все інше → просто fetch (не кешуємо)
 });
 
 // ── Стратегія: Cache First ────────────────────────────────────────────────────

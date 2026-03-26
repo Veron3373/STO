@@ -8,8 +8,10 @@
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#177245">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="STO">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="/logoOsnovne.jpg">
+  <link rel="apple-touch-icon" href="/logo.jpg">
 
   <!-- 🔒 Захист від кешування -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -27,7 +29,7 @@
   <script type="module" src="./src/ts/roboha/bukhhalteriya/bukhhalteriya_session_guard.ts"></script>
 
   <link rel="stylesheet" href="./src/scss/robocha/bukhhalteriya/_bukhhalteriya.scss" />
-  <link rel="icon" type="image/svg+xml" href="/logo.jpg" />
+  <link rel="icon" type="image/jpeg" href="/logo.jpg" />
 </head>
 
 <body>
@@ -448,8 +450,8 @@
         <button id="tab-btn-analityka" class="Bukhhalter-tab-btn" style="display: none;"
           onclick="switchTab(event, 'analityka')" title="Аналітика">📊</button>
 
-        <button id="tab-btn-audit" class="Bukhhalter-tab-btn" style="display: none;"
-          onclick="switchTab(event, 'audit')" title="Лог дій">📝</button>
+        <button id="tab-btn-audit" class="Bukhhalter-tab-btn" style="display: none;" onclick="switchTab(event, 'audit')"
+          title="Лог дій">📝</button>
       </div>
 
       <div class="Bukhhalter-form-container">

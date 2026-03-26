@@ -1358,7 +1358,7 @@ function renderModalContent(
       ${pruimalnykDisplay}
       ${
         showLockButton
-          ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}" style="position:relative;">
+          ? `<button class="status-lock-icon" id="status-lock-btn" data-act-id="${act.act_id}" style="position:relative;" title="${isFrozen ? "Розморозити акт?" : isClosed ? "Акт закритий" : "Закрити акт"}">
                    ${isClosed ? "🔒" : isFrozen ? "☀️" : "🗝️"}
                    ${canFreeze && !isClosed && !isFrozen ? '<span class="freeze-hover-btn" id="freeze-act-btn" title="Заморозити акт">❄️</span>' : ""}
                    </button>`
@@ -1372,7 +1372,7 @@ function renderModalContent(
       ${
         canShowSmsBtn
           ? (() => {
-              let tooltip = "Немає SMS";
+              let tooltip = "Надіслати SMS";
               const isSent = !!act.sms;
               if (isSent) {
                 try {
@@ -1399,19 +1399,13 @@ function renderModalContent(
           ? `<button type="button" class="status-lock-icon" id="create-act-btn" title="Акт Рахунок?">🗂️</button>`
           : ""
       }
-      ${
-        !isRestricted
-          ? `<button type="button" class="status-lock-icon" id="copy-act-btn" title="Створити схожий акт">📋</button>`
-          : ""
-      }
     </div>
   `;
 
-  // Визначаємо стиль для header (не застосовуємо колір якщо slusarsOn або frozen активний)
-  const headerStyle =
-    shouldShowSlusarsOn || isFrozen
-      ? ""
-      : `background-color: ${globalCache.generalSettings.headerColor};`;
+  // Визначаємо стиль для header (не застосовуємо колір якщо slusarsOn активний; frozen зберігає колір)
+  const headerStyle = shouldShowSlusarsOn
+    ? ""
+    : `background-color: ${globalCache.generalSettings.headerColor};`;
 
   const logoImage = globalCache.generalSettings.logoUrl
     ? `<img src="${globalCache.generalSettings.logoUrl}" class="zakaz_narayd-header-logo" alt="Логотип">`
@@ -1419,7 +1413,6 @@ function renderModalContent(
 
   body.innerHTML = `
     <div class="${headerClass}" style="${headerStyle}">
-      ${isFrozen ? '<span class="frozen-snowflake-extra">❄</span>' : ""}
       ${logoImage}
       <div class="zakaz_narayd-header-info">
         <h1>${globalCache.generalSettings.stoName}</h1>
@@ -1678,11 +1671,6 @@ async function addModalHandlers(
 
     const skladButton = document.getElementById("sklad");
     skladButton?.addEventListener("click", () => showModalAllOtherBases());
-
-    // 📋 Кнопка "Створити схожий акт"
-    import("./inhi/copy_act").then(({ initCopyActButton }) => {
-      initCopyActButton(actId);
-    });
   }
 
   if (!isClosed) {

@@ -3,12 +3,15 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Основний</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#177245">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="STO">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/logoOsnovne.jpg">
+    <link rel="apple-touch-icon" href="/logo.jpg">
 
     <!-- 🔒 Перевірка Google сесії -->
     <script type="module" src="./src/ts/roboha/main_session_guard.ts"></script>
@@ -17,7 +20,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <link rel="icon" type="image/svg+xml" href="/logo.jpg" />
+    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
 
     <style>
         /* Стилі для пошуку */
@@ -38,12 +41,14 @@
             font-size: 16px;
             outline: none;
             opacity: 0;
+            max-width: 100%;
+            box-sizing: border-box;
             transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             visibility: hidden;
         }
 
         .search-input.active {
-            width: 220px;
+            width: min(220px, calc(100vw - 110px));
             padding: 5px 10px;
             opacity: 1;
             visibility: visible;
@@ -70,28 +75,42 @@
             font-size: 11px;
             letter-spacing: 0.3px;
         }
+
+        @media (max-width: 768px) {
+            .search-container {
+                width: auto;
+                margin-left: 0;
+            }
+
+            .search-input.active {
+                width: min(126px, calc(100vw - 220px));
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 
 <body class="page-2">
     <ul class="main-menu">
-        <div class="user-info" id="userInfoBlock" style="display: none;">
-            <div class="user-surname"></div>
-            <div class="user-access"></div>
-        </div>
-
         <div class="menu-items" id="menu-items-to-hide" style="display: none;">
-            <li><a href="№" id="logout-link" class="menu-link"
-                    onclick="window.logoutFromSystemAndRedirect(); return false;">Вихід</a></li>
-            <li><a href="№" class="menu-link" data-action="openSettings">Налаштування</a></li>
-            <li><a href="№" class="menu-link all_other_bases" data-action="openClient">Додати</a></li>
-            <li><a href="bukhhalteriya.html" class="menu-link all_other_bases_Bukhh"
-                    data-action="openBukhhalteriya">Бухгалтерія</a></li>
-            <li class="active"><a href="№" class="menu-link" data-action="openHome">Наряд</a></li>
-            <li style="display: none;" id="menu-item-planyvannya"><a href="planyvannya.html" class="menu-link"
-                    data-action="openPlanyvannya">Планування</a></li>
+            <li class="user-info-item">
+                <div class="user-info" id="userInfoBlock" style="display: none;">
+                    <div class="user-surname"></div>
+                    <div class="user-access"></div>
+                </div>
+            </li>
 
-            <li><input type="text" id="dateRangePicker" readonly /></li>
+            <li><a href="№" id="logout-link" class="menu-link" data-icon="🚪"
+                    onclick="window.logoutFromSystemAndRedirect(); return false;">Вихід</a></li>
+            <li><a href="№" class="menu-link" data-action="openSettings" data-icon="⚙️">Налаштування</a></li>
+            <li><a href="№" class="menu-link all_other_bases" data-action="openClient" data-icon="➕">Додати</a></li>
+            <li><a href="bukhhalteriya.html" class="menu-link all_other_bases_Bukhh" data-icon="💰"
+                    data-action="openBukhhalteriya">Бухгалтерія</a></li>
+            <li class="active"><a href="№" class="menu-link" data-action="openHome" data-icon="📋">Наряд</a></li>
+            <li style="display: none;" id="menu-item-planyvannya"><a href="planyvannya.html" class="menu-link"
+                    data-icon="🗓️" data-action="openPlanyvannya">Планування</a></li>
+
+            <li class="date-range-item"><input type="text" id="dateRangePicker" readonly /></li>
 
             <li class="search-container">
                 <span id="searchIcon" class="search-icon" title="Пошук">🔍</span>
@@ -99,7 +118,7 @@
                     placeholder="Пошук: ПІБ, авто, масло BMW, за зиму..." />
             </li>
         </div>
-        <li class="alim">2.0.0 / © 2025 A-Service</li>
+        <li class="alim">2.0.1 / © 2025 A-Service</li>
     </ul>
 
     <a href="№" id="open-modal-sakaz_narad"></a>
@@ -244,6 +263,7 @@
                     ranges: {
                         'Відкриті': [moment().startOf('year'), moment()],
                         'Закриті': [moment('02.01.2025', 'DD.MM.YYYY'), moment()],
+                        'Заморожені акти ❄️': [moment().startOf('year'), moment()],
                         'Від початку': [moment('03.01.2025', 'DD.MM.YYYY'), moment()],
                         'Сьогодні': [moment(), moment()],
                         'Останні 7 днів': [moment().subtract(6, 'days'), moment()],
@@ -268,6 +288,13 @@
                         loadActsTable(null, null, 'closed');
                         this.setStartDate(moment('02.01.2025', 'DD.MM.YYYY'));
                         this.setEndDate(moment());
+                    } else if (label === 'Заморожені акти ❄️') {
+                        $('#dateRangePicker').val('Заморожені ❄️');
+                        $('#dateRangePicker').data('daterangepicker').element.removeClass('active-range');
+                        currentFilterType = 'frozen';
+                        loadActsTable(null, null, 'frozen');
+                        this.setStartDate(moment('02.01.2025', 'DD.MM.YYYY'));
+                        this.setEndDate(moment());
                     } else {
                         const formatted = `${start.format('DD.MM.YYYY')} - ${end.format('DD.MM.YYYY')}`;
                         $('#dateRangePicker').val(formatted);
@@ -277,6 +304,56 @@
                     }
                 }
             );
+
+            // Прямий click на ranges — щоб працювало навіть коли дати однакові
+            $(document).on('click', '.daterangepicker .ranges li', function () {
+                const label = $(this).attr('data-range-key');
+                const dp = $('#dateRangePicker').data('daterangepicker');
+                if (!dp) return;
+
+                // Переставляємо active на натиснутий елемент
+                $(this).siblings().removeClass('active');
+                $(this).addClass('active');
+
+                if (label === 'Відкриті') {
+                    $('#dateRangePicker').val('Відкриті');
+                    dp.element.removeClass('active-range');
+                    currentFilterType = 'open';
+                    loadActsTable(null, null, 'open');
+                    dp.setStartDate(moment().startOf('year'));
+                    dp.setEndDate(moment());
+                    dp.hide();
+                } else if (label === 'Закриті') {
+                    $('#dateRangePicker').val('Закриті');
+                    dp.element.removeClass('active-range');
+                    currentFilterType = 'closed';
+                    loadActsTable(null, null, 'closed');
+                    dp.setStartDate(moment('02.01.2025', 'DD.MM.YYYY'));
+                    dp.setEndDate(moment());
+                    dp.hide();
+                } else if (label === 'Заморожені акти ❄️') {
+                    $('#dateRangePicker').val('Заморожені ❄️');
+                    dp.element.removeClass('active-range');
+                    currentFilterType = 'frozen';
+                    loadActsTable(null, null, 'frozen');
+                    dp.setStartDate(moment().startOf('year'));
+                    dp.setEndDate(moment());
+                    dp.hide();
+                }
+            });
+
+            // При відкритті пікера — примусово підсвічуємо правильний range
+            $('#dateRangePicker').on('show.daterangepicker', function () {
+                const labelMap = { open: 'Відкриті', closed: 'Закриті', frozen: 'Заморожені акти ❄️' };
+                const activeLabel = labelMap[currentFilterType];
+                if (activeLabel) {
+                    setTimeout(function () {
+                        const items = $('.daterangepicker .ranges li');
+                        items.removeClass('active');
+                        items.filter('[data-range-key="' + activeLabel + '"]').addClass('active');
+                    }, 0);
+                }
+            });
 
             // Значення за замовчуванням
             $('#dateRangePicker').val('Відкриті');

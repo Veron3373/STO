@@ -127,7 +127,7 @@ export async function handleSmsButtonClick(actId: number): Promise<void> {
 
     // Якщо SMS вже відправлено (є дата в полі sms), просто повідомляємо і виходимо
     if (act.sms) {
-      showNotification("SMS вже було відправлено", "info", 2000);
+      showNotification("SMS повідомлення було відправлено раніше", "info", 2000);
       return;
     }
 

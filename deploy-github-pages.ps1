@@ -3,15 +3,19 @@
 
 Write-Host "🚀 Starting GitHub Pages deployment..." -ForegroundColor Cyan
 
-# Читаємо GitHub username/repo з project.config.ts або setup_new_project.ps1
-# Для простоти читаємо з .env/setup скрипту
-$GITHUB_USERNAME = "Veron3373"
-$GITHUB_REPO = "STO"
-# Спробуємо прочитати актуальні значення з setup_new_project.ps1
-if (Test-Path "setup_new_project.ps1") {
-    $setupContent = Get-Content "setup_new_project.ps1" -Raw
-    if ($setupContent -match '\$GITHUB_USERNAME\s*=\s*"([^"]+)"') { $GITHUB_USERNAME = $Matches[1] }
-    if ($setupContent -match '\$GITHUB_REPO\s*=\s*"([^"]+)"') { $GITHUB_REPO = $Matches[1] }
+# Читаємо GitHub username/repo з .env
+$GITHUB_USERNAME = ""
+$GITHUB_REPO = ""
+if (Test-Path ".env") {
+    $envContent = Get-Content ".env"
+    $userLine = $envContent | Where-Object { $_ -match '^VITE_GITHUB_USERNAME=' }
+    $repoLine = $envContent | Where-Object { $_ -match '^VITE_GITHUB_REPO=' }
+    if ($userLine -match '=(.+)') { $GITHUB_USERNAME = $Matches[1].Trim() }
+    if ($repoLine -match '=(.+)') { $GITHUB_REPO = $Matches[1].Trim() }
+}
+if (-not $GITHUB_USERNAME -or -not $GITHUB_REPO) {
+    Write-Host "❌ VITE_GITHUB_USERNAME або VITE_GITHUB_REPO не знайдено в .env" -ForegroundColor Red
+    exit 1
 }
 $GITHUB_REPO_URL = "https://github.com/$GITHUB_USERNAME/$GITHUB_REPO.git"
 Write-Host "🔑 GitHub: $GITHUB_REPO_URL" -ForegroundColor Cyan

@@ -5,7 +5,9 @@
 
 import { supabase } from "../../../vxid/supabaseClient";
 import { showNotification } from "./vspluvauhe_povidomlenna";
-import { loadActsTable } from "../../tablucya/tablucya";
+import { refreshActsTable } from "../../tablucya/tablucya";
+import { showModal } from "../modalMain";
+import { closeZakazNaraydModal } from "../modalUI";
 import {
   getSavedUserDataFromLocalStorage,
   userAccessLevel,
@@ -64,10 +66,12 @@ function clientName(c: ClientRow): string {
 // ── Отримати назву авто ────────────────────────────────────────────────────
 function carLabel(car: CarRow): string {
   const d = typeof car.data === "string" ? JSON.parse(car.data) : car.data;
-  const auto   = d?.["Авто"]      || "";
-  const nomer  = d?.["Номер авто"] || "";
-  const year   = d?.["Рік"]       || "";
-  return [auto, year, nomer].filter(Boolean).join(" · ") || `Авто #${car.cars_id}`;
+  const auto = d?.["Авто"] || "";
+  const nomer = d?.["Номер авто"] || "";
+  const year = d?.["Рік"] || "";
+  return (
+    [auto, year, nomer].filter(Boolean).join(" · ") || `Авто #${car.cars_id}`
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -190,23 +194,26 @@ function renderClientList(clients: ClientRow[], query: string): void {
   const list = document.getElementById("copy-client-list")!;
   const q = query.toLowerCase().trim();
 
-  const filtered = clients.filter((c) => {
-    const name = clientName(c).toLowerCase();
-    const d = typeof c.data === "string" ? JSON.parse(c.data) : c.data;
-    const phone = (d?.["Телефон"] || "").toLowerCase();
-    return !q || name.includes(q) || phone.includes(q);
-  }).slice(0, 50);
+  const filtered = clients
+    .filter((c) => {
+      const name = clientName(c).toLowerCase();
+      const d = typeof c.data === "string" ? JSON.parse(c.data) : c.data;
+      const phone = (d?.["Телефон"] || "").toLowerCase();
+      return !q || name.includes(q) || phone.includes(q);
+    })
+    .slice(0, 50);
 
   if (filtered.length === 0) {
     list.innerHTML = `<div style="padding:20px; text-align:center; color:#888; font-size:14px;">Нічого не знайдено</div>`;
     return;
   }
 
-  list.innerHTML = filtered.map((c) => {
-    const d = typeof c.data === "string" ? JSON.parse(c.data) : c.data;
-    const name  = clientName(c);
-    const phone = d?.["Телефон"] || "";
-    return `
+  list.innerHTML = filtered
+    .map((c) => {
+      const d = typeof c.data === "string" ? JSON.parse(c.data) : c.data;
+      const name = clientName(c);
+      const phone = d?.["Телефон"] || "";
+      return `
       <div class="copy-client-item" data-id="${c.client_id}" style="
         padding:12px 16px; cursor:pointer; border-bottom:1px solid #f0f0f0;
         transition:background .15s;
@@ -215,13 +222,14 @@ function renderClientList(clients: ClientRow[], query: string): void {
         ${phone ? `<div style="font-size:12px; color:#177245; margin-top:2px;">${phone}</div>` : ""}
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
 // ── Рендер списку авто ─────────────────────────────────────────────────────
 function renderCarList(cars: CarRow[]): void {
-  const list    = document.getElementById("copy-car-list")!;
-  const noCars  = document.getElementById("copy-no-cars")!;
+  const list = document.getElementById("copy-car-list")!;
+  const noCars = document.getElementById("copy-no-cars")!;
 
   if (cars.length === 0) {
     list.style.display = "none";
@@ -230,11 +238,12 @@ function renderCarList(cars: CarRow[]): void {
   }
 
   noCars.style.display = "none";
-  list.style.display   = "block";
+  list.style.display = "block";
 
-  list.innerHTML = cars.map((car) => {
-    const label = carLabel(car);
-    return `
+  list.innerHTML = cars
+    .map((car) => {
+      const label = carLabel(car);
+      return `
       <div class="copy-car-item" data-id="${car.cars_id}" style="
         padding:12px 16px; cursor:pointer; border-bottom:1px solid #f0f0f0;
         transition:background .15s; display:flex; align-items:center; gap:10px;
@@ -243,7 +252,8 @@ function renderCarList(cars: CarRow[]): void {
         <span style="font-weight:600; font-size:14px; color:#1a1a2e;">${label}</span>
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -251,21 +261,25 @@ function renderCarList(cars: CarRow[]): void {
 // ══════════════════════════════════════════════════════════════════════════════
 export async function openCopyActPicker(sourceActId: number): Promise<void> {
   _selectedClientId = null;
-  _selectedCarId    = null;
+  _selectedCarId = null;
 
   showNotification("⏳ Завантажую клієнтів...", "info", 1500);
   const clients = await loadClients();
 
   const { el, destroy } = buildPickerModal();
 
-  const stepClient   = el.querySelector<HTMLElement>("#copy-step-client")!;
-  const stepCar      = el.querySelector<HTMLElement>("#copy-step-car")!;
-  const footer       = el.querySelector<HTMLElement>("#copy-footer")!;
-  const searchInput  = el.querySelector<HTMLInputElement>("#copy-client-search")!;
-  const clientList   = el.querySelector<HTMLElement>("#copy-client-list")!;
-  const carList      = el.querySelector<HTMLElement>("#copy-car-list")!;
-  const clientNameEl = el.querySelector<HTMLElement>("#copy-client-name-display")!;
-  const summaryEl    = el.querySelector<HTMLElement>("#copy-summary")!;
+  const stepClient = el.querySelector<HTMLElement>("#copy-step-client")!;
+  const stepCar = el.querySelector<HTMLElement>("#copy-step-car")!;
+  const footer = el.querySelector<HTMLElement>("#copy-footer")!;
+  const searchInput = el.querySelector<HTMLInputElement>(
+    "#copy-client-search",
+  )!;
+  const clientList = el.querySelector<HTMLElement>("#copy-client-list")!;
+  const carList = el.querySelector<HTMLElement>("#copy-car-list")!;
+  const clientNameEl = el.querySelector<HTMLElement>(
+    "#copy-client-name-display",
+  )!;
+  const summaryEl = el.querySelector<HTMLElement>("#copy-summary")!;
 
   // Hover ефекти через CSS-клас
   const style = document.createElement("style");
@@ -286,7 +300,9 @@ export async function openCopyActPicker(sourceActId: number): Promise<void> {
 
   // ── Вибір клієнта ─────────────────────────────────────────────────────────
   clientList.addEventListener("click", async (e) => {
-    const item = (e.target as HTMLElement).closest<HTMLElement>(".copy-client-item");
+    const item = (e.target as HTMLElement).closest<HTMLElement>(
+      ".copy-client-item",
+    );
     if (!item) return;
 
     _selectedClientId = Number(item.dataset.id);
@@ -295,7 +311,7 @@ export async function openCopyActPicker(sourceActId: number): Promise<void> {
 
     // Перехід до кроку 2
     stepClient.style.display = "none";
-    stepCar.style.display    = "block";
+    stepCar.style.display = "block";
     clientNameEl.textContent = `👤 ${clientName(client)}`;
 
     // Завантажуємо авто
@@ -306,15 +322,17 @@ export async function openCopyActPicker(sourceActId: number): Promise<void> {
   // ── Повернутись до клієнтів ───────────────────────────────────────────────
   el.querySelector("#copy-back-to-client")!.addEventListener("click", () => {
     _selectedClientId = null;
-    _selectedCarId    = null;
-    stepCar.style.display    = "none";
+    _selectedCarId = null;
+    stepCar.style.display = "none";
     stepClient.style.display = "block";
-    footer.style.display     = "none";
+    footer.style.display = "none";
   });
 
   // ── Вибір авто ────────────────────────────────────────────────────────────
   carList.addEventListener("click", (e) => {
-    const item = (e.target as HTMLElement).closest<HTMLElement>(".copy-car-item");
+    const item = (e.target as HTMLElement).closest<HTMLElement>(
+      ".copy-car-item",
+    );
     if (!item) return;
 
     _selectedCarId = Number(item.dataset.id);
@@ -344,21 +362,30 @@ export async function openCopyActPicker(sourceActId: number): Promise<void> {
   });
 
   // ── Фінальне створення ────────────────────────────────────────────────────
-  el.querySelector("#copy-confirm-final")!.addEventListener("click", async () => {
-    if (!_selectedClientId) return;
-    const btn = el.querySelector<HTMLButtonElement>("#copy-confirm-final")!;
-    btn.disabled = true;
-    btn.textContent = "⏳ Створюємо...";
+  el.querySelector("#copy-confirm-final")!.addEventListener(
+    "click",
+    async () => {
+      if (!_selectedClientId) return;
+      const btn = el.querySelector<HTMLButtonElement>("#copy-confirm-final")!;
+      btn.disabled = true;
+      btn.textContent = "⏳ Створюємо...";
 
-    await createCopiedAct(sourceActId, _selectedClientId, _selectedCarId);
+      await createCopiedAct(sourceActId, _selectedClientId, _selectedCarId);
+      destroy();
+      style.remove();
+    },
+  );
+
+  // ── Закрити ───────────────────────────────────────────────────────────────
+  el.querySelector("#copy-picker-close")!.addEventListener("click", () => {
     destroy();
     style.remove();
   });
-
-  // ── Закрити ───────────────────────────────────────────────────────────────
-  el.querySelector("#copy-picker-close")!.addEventListener("click", () => { destroy(); style.remove(); });
   el.addEventListener("click", (e) => {
-    if (e.target === el) { destroy(); style.remove(); }
+    if (e.target === el) {
+      destroy();
+      style.remove();
+    }
   });
 }
 
@@ -391,13 +418,13 @@ async function createCopiedAct(
     const newDetails = (sd?.["Деталі"] || [])
       .filter((d: any) => d["Деталь"]?.trim())
       .map((d: any) => ({
-        Деталь:    d["Деталь"] || "",
-        Магазин:   d["Магазин"] || "",
+        Деталь: d["Деталь"] || "",
+        Магазин: d["Магазин"] || "",
         Кількість: d["Кількість"] || 0,
-        Ціна:      d["Ціна"] || 0,
-        Сума:      d["Сума"] || 0,
-        Каталог:   d["Каталог"] || "",
-        sclad_id:  d["sclad_id"] || null,
+        Ціна: d["Ціна"] || 0,
+        Сума: d["Сума"] || 0,
+        Каталог: d["Каталог"] || "",
+        sclad_id: d["sclad_id"] || null,
         detail_id: d["detail_id"] || null,
       }));
 
@@ -405,49 +432,80 @@ async function createCopiedAct(
     const newWorks = (sd?.["Роботи"] || [])
       .filter((w: any) => w["Робота"]?.trim())
       .map((w: any) => ({
-        Робота:     w["Робота"] || "",
-        Слюсар:     w["Слюсар"] || "",
-        Кількість:  w["Кількість"] || 0,
-        Ціна:       w["Ціна"] || 0,
-        Сума:       w["Сума"] || 0,
-        Каталог:    w["Каталог"] || "",
+        Робота: w["Робота"] || "",
+        Слюсар: w["Слюсар"] || "",
+        Кількість: w["Кількість"] || 0,
+        Ціна: w["Ціна"] || 0,
+        Сума: w["Сума"] || 0,
+        Каталог: w["Каталог"] || "",
         slyusar_id: w["slyusar_id"] || null,
-        work_id:    w["work_id"] || null,
+        work_id: w["work_id"] || null,
       }));
 
     if (newDetails.length === 0) {
-      newDetails.push({ Деталь: "", Магазин: "", Кількість: 0, Ціна: 0, Сума: 0, Каталог: "", sclad_id: null, detail_id: null });
+      newDetails.push({
+        Деталь: "",
+        Магазин: "",
+        Кількість: 0,
+        Ціна: 0,
+        Сума: 0,
+        Каталог: "",
+        sclad_id: null,
+        detail_id: null,
+      });
     }
     if (newWorks.length === 0) {
-      newWorks.push({ Робота: "", Слюсар: "", Кількість: 0, Ціна: 0, Сума: 0, Каталог: "", slyusar_id: null, work_id: null });
+      newWorks.push({
+        Робота: "",
+        Слюсар: "",
+        Кількість: 0,
+        Ціна: 0,
+        Сума: 0,
+        Каталог: "",
+        slyusar_id: null,
+        work_id: null,
+      });
     }
 
+    // Розраховуємо суми з скопійованих деталей та робіт
+    const totalDetailsSum = newDetails.reduce(
+      (sum: number, d: any) => sum + (Number(d["Сума"]) || 0),
+      0,
+    );
+    const totalWorksSum = newWorks.reduce(
+      (sum: number, w: any) => sum + (Number(w["Сума"]) || 0),
+      0,
+    );
+    const grandTotalSum = totalDetailsSum + totalWorksSum;
+
     const newActData = {
-      Деталі:               newDetails,
-      Роботи:               newWorks,
-      Пробіг:               0,
-      "За деталі":          0,
-      "За роботу":          0,
-      Приймальник:          "",
-      Рекомендації:         sd?.["Рекомендації"] || "",
-      Примітки:             sd?.["Примітки"] || "",
-      "Загальна сума":      0,
-      "Причина звернення":  sd?.["Причина звернення"] || "",
+      Деталі: newDetails,
+      Роботи: newWorks,
+      Пробіг: 0,
+      "За деталі": totalDetailsSum,
+      "За роботу": totalWorksSum,
+      Приймальник: "",
+      Рекомендації: sd?.["Рекомендації"] || "",
+      Примітки: sd?.["Примітки"] || "",
+      "Загальна сума": grandTotalSum,
+      "Причина звернення": sd?.["Причина звернення"] || "",
       "Прибуток за деталі": 0,
       "Прибуток за роботу": 0,
-      copied_from_act_id:   sourceActId,
+      copied_from_act_id: sourceActId,
     };
 
     // 4) Вставляємо новий акт
     const { data: newAct, error: insertError } = await supabase
       .from("acts")
-      .insert([{
-        date_on:   getCurrentDateTimeLocal(),
-        client_id: clientId,
-        cars_id:   carsId,
-        data:      newActData,
-        avans:     0,
-      }])
+      .insert([
+        {
+          date_on: getCurrentDateTimeLocal(),
+          client_id: clientId,
+          cars_id: carsId,
+          data: newActData,
+          avans: 0,
+        },
+      ])
       .select("act_id")
       .single();
 
@@ -469,18 +527,23 @@ async function createCopiedAct(
 
     // 6) Успіх → оновлюємо таблицю, відкриваємо новий акт
     showNotification(`✅ Акт №${newAct.act_id} створено!`, "success", 4000);
-    await loadActsTable();
 
+    // Закриваємо старий модал (акт-джерело) правильно через системну функцію
+    await closeZakazNaraydModal();
+
+    // Оновлюємо таблицю (зберігає поточний фільтр)
+    await refreshActsTable();
+
+    // Відкриваємо новий акт
+    await showModal(newAct.act_id, "client");
+
+    // Автоматично зберігаємо акт після відкриття
     setTimeout(() => {
-      const modal = document.getElementById("zakaz_narayd-custom-modal");
-      if (modal) modal.style.display = "none";
-
-      const link = document.getElementById("open-modal-sakaz_narad") as HTMLAnchorElement | null;
-      if (link) {
-        link.setAttribute("data-act-id", String(newAct.act_id));
-        link.click();
-      }
-    }, 500);
+      const saveBtn = document.getElementById(
+        "save-act-data",
+      ) as HTMLButtonElement | null;
+      if (saveBtn) saveBtn.click();
+    }, 800);
   } catch {
     showNotification("❌ Внутрішня помилка", "error");
   }

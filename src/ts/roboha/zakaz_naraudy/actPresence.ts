@@ -4,6 +4,7 @@
 import { supabase } from "../../vxid/supabaseClient";
 import { userName as currentUserName } from "../tablucya/users";
 import { showNotification } from "./inhi/vspluvauhe_povidomlenna";
+import { refreshActTableSilently } from "./modalMain";
 
 // ═══════════════════════════════════════════════════════
 // Стан модуля
@@ -187,7 +188,6 @@ function subscribeToBroadcast(actId: number): void {
       const isLocked = header && header.hasAttribute("data-locked");
       if (isLocked) {
         try {
-          const { refreshActTableSilently } = await import("./modalMain");
           const receivedActId =
             payload?.payload?.actId || payload?.actId || actId;
           await refreshActTableSilently(receivedActId);

@@ -32,8 +32,23 @@ Write-Host ""
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Читаємо git-акаунт з .env
+$GIT_NAME = ""
+$GIT_EMAIL = ""
+if (Test-Path ".env") {
+    $envContent = Get-Content ".env"
+    $nameLine = $envContent | Where-Object { $_ -match '^VITE_GIT_USER_NAME=' }
+    $emailLine = $envContent | Where-Object { $_ -match '^VITE_GIT_USER_EMAIL=' }
+    if ($nameLine -match '=(.+)') { $GIT_NAME = $Matches[1].Trim() }
+    if ($emailLine -match '=(.+)') { $GIT_EMAIL = $Matches[1].Trim() }
+}
+if (-not $GIT_NAME -or -not $GIT_EMAIL) {
+    Write-Host "❌ VITE_GIT_USER_NAME або VITE_GIT_USER_EMAIL не знайдено в .env" -ForegroundColor Red
+    exit 1
+}
+
 $gitAccounts = @(
-    @{ Name = "Veron3373 (GitHub)"; Email = "veron3373@gmail.com"; Username = "Veron3373" }
+    @{ Name = "$GIT_NAME (GitHub)"; Email = $GIT_EMAIL; Username = $GIT_NAME }
 )
 
 # Create form

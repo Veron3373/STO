@@ -4,6 +4,7 @@
 // 🧠 Gemini Intelligent Parser — для натурального голосу
 
 import { showNotification } from "../../zakaz_naraudy/inhi/vspluvauhe_povidomlenna";
+import { showVoiceOverlay, hideVoiceOverlay } from "../../ai/voiceInput";
 import { supabase } from "../../../vxid/supabaseClient";
 import { globalCache } from "../../zakaz_naraudy/globalCache";
 
@@ -239,11 +240,13 @@ function startVoiceExcel(): void {
   voiceState = "listening";
   btn.classList.add("ai-chat-voice-btn--listening");
   btn.innerHTML = `<span class="ai-voice-pulse">🔴</span>`;
-  showNotification("🎙️ Слухаю команду...", "info", 2000);
+  showVoiceOverlay("Говоріть команду...");
+  showNotification("Слухаю команду...", "info", 2000);
 
   function finishAndProcess() {
     if (silenceTimer) clearTimeout(silenceTimer);
     clearTimeout(maxTimeout);
+    hideVoiceOverlay();
     try {
       recognition?.stop();
     } catch {
@@ -286,29 +289,45 @@ function startVoiceExcel(): void {
   const maxTimeout = setTimeout(() => finishAndProcess(), 30000);
 
   recognition.onresult = (event: any) => {
-    let final = "";
     let interim = "";
 
-    for (let i = 0; i < event.results.length; i++) {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
-        final += event.results[i][0].transcript;
+        const segment = event.results[i][0].transcript;
+        fullTranscript += segment;
+
+        const lower = segment.toLowerCase().trim();
+        let isStop = false;
+        for (const phrase of STOP_PHRASES) {
+          if (lower.includes(phrase)) {
+            isStop = true;
+            break;
+          }
+        }
+
+        if (isStop) {
+          setTimeout(() => finishAndProcess(), 300);
+          return;
+        }
+
+        // Виконуємо команду негайно по кожному фіналізованому сегменту
+        if (segment.trim()) {
+          showVoiceOverlay(`⚙️ Виконую: "${segment.trim()}"`);
+          processVoiceCommand(segment.trim())
+            .then(() => {
+              if (voiceState === "listening") {
+                showVoiceOverlay("🎙️  наступну команду...");
+              }
+            })
+            .catch(() => {});
+        }
       } else {
         interim += event.results[i][0].transcript;
       }
     }
 
-    fullTranscript = final;
-    const currentText = (final + interim).toLowerCase().trim();
-
-    for (const phrase of STOP_PHRASES) {
-      if (
-        currentText.endsWith(phrase) ||
-        currentText.endsWith(phrase + ".") ||
-        currentText.endsWith(phrase + ",")
-      ) {
-        setTimeout(() => finishAndProcess(), 300);
-        return;
-      }
+    if (interim && voiceState === "listening") {
+      showVoiceOverlay(`🎙️ ${interim}`);
     }
 
     resetSilenceTimer();
@@ -318,6 +337,7 @@ function startVoiceExcel(): void {
     voiceState = "idle";
     btn.classList.remove("ai-chat-voice-btn--listening");
     btn.innerHTML = "🎙️";
+    hideVoiceOverlay();
 
     if (fullTranscript.trim()) {
       finishAndProcess();
@@ -355,6 +375,7 @@ function startVoiceExcel(): void {
       voiceState = "idle";
       btn.classList.remove("ai-chat-voice-btn--listening");
       btn.innerHTML = "🎙️";
+      hideVoiceOverlay();
       clearTimeout(maxTimeout);
       try {
         recognition?.stop();
@@ -378,6 +399,7 @@ function stopVoiceExcel(): void {
     btn.innerHTML = "🎙️";
   }
   voiceState = "idle";
+  hideVoiceOverlay();
   try {
     recognition?.stop();
   } catch {

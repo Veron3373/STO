@@ -135,7 +135,7 @@ $shadow-light: rgba(0, 0, 0, 0.1);
   background: #fff;
   border-radius: 16px;
   padding: 32px;
-  max-width: 500px;
+  max-width: 640px;
   width: 90%;
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -268,6 +268,22 @@ $shadow-light: rgba(0, 0, 0, 0.1);
 
   &:active {
     transform: translateY(-2px);
+  }
+
+  // Стиль для кнопки "Копія акту" (червона тільки при hover)
+  &.act-raxunok-btn-copy {
+    &:hover {
+      border-color: #c62828;
+      background: linear-gradient(135deg, #ffebee 0%, #fff 100%);
+
+      .btn-text {
+        color: #c62828;
+      }
+
+      .btn-description {
+        color: #e53935;
+      }
+    }
   }
 
   // Стиль для кнопки "Рахунок"

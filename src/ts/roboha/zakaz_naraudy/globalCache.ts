@@ -115,8 +115,8 @@ export interface GlobalDataCache {
   worksWithId: Array<{ work_id: string; name: string }>;
   details: string[];
   detailsWithId: Array<{ detail_id: number; name: string }>;
-  slyusars: Array<{ Name: string;[k: string]: any }>;
-  shops: Array<{ Name: string;[k: string]: any }>;
+  slyusars: Array<{ Name: string; [k: string]: any }>;
+  shops: Array<{ Name: string; [k: string]: any }>;
   settings: {
     showPibMagazin: boolean;
     showCatalog: boolean;
@@ -285,12 +285,12 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
       .select("setting_id, Загальні, data")
       .in("setting_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
       .order("setting_id")) as {
-        data: Array<{
-          setting_id: number;
-          Загальні: string | null;
-          data: boolean | null;
-        }> | null;
-      };
+      data: Array<{
+        setting_id: number;
+        Загальні: string | null;
+        data: boolean | null;
+      }> | null;
+    };
 
     if (generalSettingsRows) {
       for (const row of generalSettingsRows) {
@@ -338,13 +338,11 @@ export async function loadGeneralSettingsFromDB(): Promise<void> {
             break;
           case 11:
             // 🔡 Глобальний зсув шрифту — записується в Загальні
-            globalCache.generalSettings.actTextOffset =
-              parseInt(value) || 0;
+            globalCache.generalSettings.actTextOffset = parseInt(value) || 0;
             break;
           case 12:
             // 📏 Товщина меж таблиці — записується в Загальні
-            globalCache.generalSettings.tableBorderWidth =
-              parseInt(value) || 1;
+            globalCache.generalSettings.tableBorderWidth = parseInt(value) || 1;
             break;
           case 13:
             // 🎨 Колір меж таблиці — записується в Загальні
@@ -444,8 +442,9 @@ function dedupeSklad<
   const seen = new Set<string>();
   const out: T[] = [];
   for (const r of rows) {
-    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${r.quantity
-      }`;
+    const key = `${r.part_number.toLowerCase()}|${Math.round(r.price)}|${
+      r.quantity
+    }`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -602,7 +601,7 @@ export async function loadGlobalData(
         .filter(Boolean) || [];
 
     // магазини: ТЕПЕР витягуємо Name і з об'єктів, і з подвійно-JSON-рядків, і з «просто рядка»
-    const shopsParsed: Array<{ Name: string;[k: string]: any }> = [];
+    const shopsParsed: Array<{ Name: string; [k: string]: any }> = [];
     for (const row of shopsData || []) {
       let raw = row?.data;
 
@@ -823,7 +822,11 @@ export function initScladRealtimeSubscription() {
         handleScladChange(payload);
       },
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        isScladRealtimeSubscribed = false;
+      }
+    });
 }
 
 function handleScladChange(payload: any) {
@@ -904,7 +907,11 @@ export function initWorksRealtimeSubscription() {
         handleWorksChange(payload);
       },
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        isWorksRealtimeSubscribed = false;
+      }
+    });
 }
 
 function handleWorksChange(payload: any) {
@@ -985,7 +992,11 @@ export function initDetailsRealtimeSubscription() {
         handleDetailsChange(payload);
       },
     )
-    .subscribe(() => { });
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        isDetailsRealtimeSubscribed = false;
+      }
+    });
 }
 
 function handleDetailsChange(payload: any) {

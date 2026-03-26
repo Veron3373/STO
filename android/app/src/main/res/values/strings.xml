@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">STO</string>
+    <string name="title_activity_main">STO</string>
+    <string name="package_name">com.sto.braclave</string>
+    <string name="custom_url_scheme">com.sto.braclave</string>
+</resources>

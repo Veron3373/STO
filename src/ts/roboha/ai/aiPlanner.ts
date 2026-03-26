@@ -4,6 +4,11 @@
 // ═══════════════════════════════════════
 
 import { supabase } from "../../vxid/supabaseClient";
+import {
+  cancelDeleteCountdown,
+  isDeleteCountdownActive,
+  startDeleteCountdown,
+} from "./deleteCountdown";
 
 // ── AI генерація SQL ──
 
@@ -75,18 +80,31 @@ async function addTokensToDB(
 const SQL_SYSTEM_PROMPT = `SQL-генератор PostgreSQL для СТО. Поверни ТІЛЬКИ SELECT-запит.
 
 БД:
-acts: act_id,date_on(ts),date_off(ts|null=відкритий),client_id,cars_id,data{ПІБ,Телефон,Марка,Модель,"Держ. номер",VIN,Пробіг,Приймальник,Слюсар,"Причина звернення",Рекомендації,Знижка,Аванс,"За деталі","За роботу","Загальна сума",Роботи[{Робота,Кількість,Ціна,Зарплата}],Деталі[{Деталь,Кількість,Ціна,Сума}]}
-clients: client_id,data{ПІБ,Телефон,Email,Примітки}
-cars: cars_id,client_id,data{Авто,"Номер авто",Vincode,Рік,Марка,Модель}
-slyusars: slyusar_id,Name,data{Name,"Ім'я",Доступ,Телефон,Посада}
-sclad: sclad_id,name,part_number,price,kilkist_on,kilkist_off,quantity,shops,akt
-atlas_reminders: reminder_id,title,reminder_type,condition_query,schedule,status,next_trigger_at,created_by,recipients
-settings: setting_id,"Загальні"(text),API(bool),token(int)
+acts: act_id(PK),date_on(ts),date_off(ts|null=відкритий),slusarsOn(bool),client_id→clients,cars_id→cars,avans(число),pruimalnyk(текст),frozen(bool),data{ПІБ,Телефон,Марка,Модель,"Держ. номер",VIN,Пробіг,Приймальник,Слюсар,"Причина звернення",Рекомендації,Знижка,Аванс,"За деталі","За роботу","Загальна сума","Прибуток за деталі","Прибуток за роботу",Роботи[{Робота,Кількість,Ціна,Зарплата,Прибуток}],Деталі[{Деталь,Кількість,Ціна,Сума,Каталог,Магазин,sclad_id}]}
+clients: client_id(PK),data{ПІБ,Телефон,Email,Додаткові(примітки),Додатковий(дод.тел),Джерело}
+cars: cars_id(PK),client_id→clients,data{Авто(марка+модель),"Номер авто"(держ.номер),Vincode,VIN,Рік,Марка,Модель,Обʼєм,Пальне,КодДВЗ}
+slyusars: slyusar_id(PK),Name(ПІБ),namber(табельний),post_sluysar→post_name,data{Name,"Ім'я",Доступ,Телефон,Посада,ПроцентРоботи,Історія{"дата":[{Акт,ЗарплатаРоботи,ЗарплатаЗапчастин,СуммаРоботи,Статус}]}}
+sclad: sclad_id(PK),name(назва),part_number(артикул),price(ціна),kilkist_on(прихід),kilkist_off(розхід),quantity(залишок),unit_measurement(од),shops(постачальник),rahunok(рахунок),scladNomer(полиця),akt→acts,rosraxovano(bool),time_on(дата),statys(статус)
+vutratu: vutratu_id(PK),dataOnn(ts дата),kategoria(текст),suma(число),opys_vytraty(текст),sposob_oplaty(текст),xto_zapusav(текст)
+faktura: faktura_id(PK),name(назва),namber(номер),act_id→acts,oderjyvach(отримувач)
+shops: shop_id(PK),data{Name,Історія[]}
+post_category: category_id(PK),category(назва)
+post_name: post_id(PK),name(назва поста/боксу),category→post_category
+post_arxiv: slyusar_id→slyusars,name_post→post_name,client_id→clients,cars_id→cars,status(Запланований|В роботі|Відремонтований|Не приїхав),data_on(початок),data_off(кінець),komentar,act_id→acts
+atlas_reminders: reminder_id(PK),title,description,reminder_type(once|recurring|conditional),condition_query,recipients(JSONB),channel(app|telegram|both),priority,schedule(JSONB),status(active|completed|paused),next_trigger_at,created_by→slyusars
+settings: setting_id(PK),"Загальні"(text),API(bool),data(JSONB),token(int),date
+works: work_id(PK),data(назва роботи)
+details: detail_id(PK),data(назва деталі)
+audit_logs: id(PK),created_at,user_login,user_role,action,act_id,details(JSONB)
+
+ЗВ'ЯЗКИ: clients(1)→cars(N)→acts(N)→sclad.akt(N), acts→faktura(N), slyusars→post_arxiv(N), post_name→post_arxiv(N)
 
 ПРАВИЛА:
 1. ТІЛЬКИ SELECT 2. Відкритий: date_off IS NULL 3. Старіший N днів: date_on<NOW()-INTERVAL'N days'
 4. JSONB: data->>'ПІБ' 5. Слюсар→acts.data->>'Слюсар'=slyusars."Name"
 6. Тільки SQL, без пояснень/\`\`\`sql/коментарів
+7. JSONB значення=TEXT! Для чисел: (data->>'Загальна сума')::numeric
+8. Масив JSONB: jsonb_array_length(data->'Роботи'), data->'Роботи' @> '[{"Робота":"Заміна масла"}]'
 
 AS з УКРАЇНСЬКИМИ назвами: act_id AS "Акт №", date_on AS "Дата відкриття", date_off AS "Дата закриття", data->>'ПІБ' AS "Клієнт", data->>'Телефон' AS "Телефон", data->>'Слюсар' AS "Слюсар", data->>'Загальна сума' AS "Сума", CASE WHEN date_off IS NULL THEN 'Відкритий' ELSE 'Закритий' END AS "Статус"
 Кожен стовпець — з AS українською!`;
@@ -94,7 +112,7 @@ AS з УКРАЇНСЬКИМИ назвами: act_id AS "Акт №", date_on A
 // Окремий промпт для генерації JSON-правил для режиму "Контроль" (Realtime)
 const REALTIME_RULE_PROMPT = `Генератор правил моніторингу для СТО. Прочитай умову → поверни JSON.
 
-ТАБЛИЦІ: acts(акти), slyusars(персонал), clients(клієнти), cars(авто), sclad(склад)
+ТАБЛИЦІ: acts(акти), slyusars(персонал), clients(клієнти), cars(авто), sclad(склад), vutratu(витрати), faktura(рахунки), post_arxiv(бронювання постів)
 
 CHECK-УМОВИ:
 Стовпці: "date_off CLOSED"(заповнили), "date_off OPENED"(очистили), "date_off CHANGED"(будь-яка зміна), "date_off IS NOT NULL"
@@ -115,6 +133,11 @@ show_fields — НЕобов'язкове, тільки якщо явно про
 "змінили пароль"→{"table":"slyusars","events":["UPDATE"],"check":"data.Пароль CHANGED"}
 "новий клієнт"→{"table":"clients","events":["INSERT"],"check":""}
 "закриття акту, покажи суму"→{"table":"acts","events":["UPDATE"],"check":"date_off CLOSED","show_fields":["Загальна сума","Приймальник"]}
+"нова витрата"→{"table":"vutratu","events":["INSERT"],"check":""}
+"змінили статус бронювання"→{"table":"post_arxiv","events":["UPDATE"],"check":"status CHANGED"}
+"нове бронювання поста"→{"table":"post_arxiv","events":["INSERT"],"check":""}
+"рух на складі"→{"table":"sclad","events":["INSERT","UPDATE"],"check":""}
+"заморозили акт"→{"table":"acts","events":["UPDATE"],"check":"frozen CLOSED"}
 
 Повертай ТІЛЬКИ JSON!`;
 
@@ -1058,65 +1081,48 @@ function initPlannerHandlers(container: HTMLElement): void {
       if (action === "delete") {
         const deleteBtn = btn as HTMLElement;
         const card = deleteBtn.closest(".ai-planner-card") as HTMLElement;
-        if (!card || deleteBtn.dataset.counting === "true") return;
-
-        deleteBtn.dataset.counting = "true";
-        deleteBtn.innerHTML = "";
-        deleteBtn.classList.add("ai-planner-card-action--counting");
-
-        // Завжди показувати actions під час відліку
         const actionsEl = deleteBtn.closest(
           ".ai-planner-card-actions",
         ) as HTMLElement;
-        if (actionsEl)
-          actionsEl.classList.add("ai-planner-card-actions--counting");
+        if (!card) return;
 
-        const countdown = document.createElement("span");
-        countdown.className = "ai-planner-delete-countdown";
-        countdown.textContent = "5";
-        deleteBtn.appendChild(countdown);
+        if (isDeleteCountdownActive(deleteBtn)) {
+          cancelDeleteCountdown(deleteBtn, {
+            countingClass: "ai-planner-card-action--counting",
+            onCancel: () => {
+              if (actionsEl)
+                actionsEl.classList.remove("ai-planner-card-actions--counting");
+            },
+          });
+          return;
+        }
 
-        let timeLeft = 5;
-        let cancelled = false;
-
-        const interval = setInterval(() => {
-          timeLeft--;
-          countdown.textContent = String(timeLeft);
-          if (timeLeft <= 0) {
-            clearInterval(interval);
-            if (!cancelled) {
-              card.style.transition = "opacity 0.3s, transform 0.3s";
-              card.style.opacity = "0";
-              card.style.transform = "translateX(30px)";
-              setTimeout(async () => {
-                const ok = await deleteReminder(id);
-                if (ok) {
-                  showToast("Видалено", "success");
-                  await refreshPlanner(container);
-                } else {
-                  showToast("Помилка видалення", "error");
-                  card.style.opacity = "1";
-                  card.style.transform = "";
-                }
-              }, 300);
+        startDeleteCountdown(deleteBtn, {
+          countingClass: "ai-planner-card-action--counting",
+          onStart: () => {
+            if (actionsEl)
+              actionsEl.classList.add("ai-planner-card-actions--counting");
+          },
+          onCancel: () => {
+            if (actionsEl)
+              actionsEl.classList.remove("ai-planner-card-actions--counting");
+          },
+          onConfirm: async () => {
+            card.style.transition = "opacity 0.3s, transform 0.3s";
+            card.style.opacity = "0";
+            card.style.transform = "translateX(30px)";
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            const ok = await deleteReminder(id);
+            if (ok) {
+              showToast("Видалено", "success");
+              await refreshPlanner(container);
+            } else {
+              showToast("Помилка видалення", "error");
+              card.style.opacity = "1";
+              card.style.transform = "";
             }
-          }
-        }, 1000);
-
-        // Скасування при кліку на кружок
-        const cancelDelete = (ce: Event) => {
-          ce.stopPropagation();
-          cancelled = true;
-          clearInterval(interval);
-          deleteBtn.dataset.counting = "";
-          deleteBtn.classList.remove("ai-planner-card-action--counting");
-          if (actionsEl)
-            actionsEl.classList.remove("ai-planner-card-actions--counting");
-          deleteBtn.innerHTML = "🗑️";
-        };
-
-        countdown.addEventListener("click", cancelDelete);
-        deleteBtn.addEventListener("click", cancelDelete, { once: true });
+          },
+        });
       } else if (action === "pause") {
         const reminder = reminders.find((r) => r.reminder_id === id);
         if (reminder) {
@@ -1342,52 +1348,26 @@ function showReminderViewModal(
     "#planner-view-delete",
   ) as HTMLElement;
   deleteBtn?.addEventListener("click", () => {
-    if (deleteBtn.dataset.counting === "true") return;
-    deleteBtn.dataset.counting = "true";
-    const origText = deleteBtn.innerHTML;
-    let timeLeft = 5;
-    deleteBtn.innerHTML = `<span class="ai-planner-delete-countdown">${timeLeft}</span>`;
-    deleteBtn.classList.add("ai-planner-btn--counting");
-    let cancelled = false;
+    if (isDeleteCountdownActive(deleteBtn)) {
+      cancelDeleteCountdown(deleteBtn, {
+        countingClass: "ai-planner-btn--counting",
+      });
+      return;
+    }
 
-    const interval = setInterval(() => {
-      timeLeft--;
-      const cd = deleteBtn.querySelector(".ai-planner-delete-countdown");
-      if (cd) cd.textContent = String(timeLeft);
-      if (timeLeft <= 0) {
-        clearInterval(interval);
-        if (!cancelled) {
-          (async () => {
-            const ok = await deleteReminder(r.reminder_id);
-            if (ok) {
-              showToast("Видалено", "success");
-              close();
-              await refreshPlanner(container);
-            } else {
-              showToast("Помилка видалення", "error");
-              deleteBtn.innerHTML = origText;
-              deleteBtn.dataset.counting = "";
-              deleteBtn.classList.remove("ai-planner-btn--counting");
-            }
-          })();
+    startDeleteCountdown(deleteBtn, {
+      countingClass: "ai-planner-btn--counting",
+      onConfirm: async () => {
+        const ok = await deleteReminder(r.reminder_id);
+        if (ok) {
+          showToast("Видалено", "success");
+          close();
+          await refreshPlanner(container);
+        } else {
+          showToast("Помилка видалення", "error");
         }
-      }
-    }, 1000);
-
-    // Повторний клік — скасування
-    deleteBtn.addEventListener(
-      "click",
-      function cancelDel(ce) {
-        ce.stopPropagation();
-        cancelled = true;
-        clearInterval(interval);
-        deleteBtn.innerHTML = origText;
-        deleteBtn.dataset.counting = "";
-        deleteBtn.classList.remove("ai-planner-btn--counting");
-        deleteBtn.removeEventListener("click", cancelDel);
       },
-      { once: true },
-    );
+    });
   });
 }
 
@@ -1874,55 +1854,28 @@ function initModalHandlers(
       const deleteBtn = overlay.querySelector(
         "#planner-modal-delete",
       ) as HTMLElement;
-      if (!deleteBtn || deleteBtn.dataset.counting === "true") return;
+      if (!deleteBtn) return;
 
-      deleteBtn.dataset.counting = "true";
-      const origText = deleteBtn.innerHTML;
-      let timeLeft = 5;
-      let cancelled = false;
+      if (isDeleteCountdownActive(deleteBtn)) {
+        cancelDeleteCountdown(deleteBtn, {
+          countingClass: "ai-planner-btn--counting",
+        });
+        return;
+      }
 
-      deleteBtn.innerHTML = `<span class="ai-planner-delete-countdown">${timeLeft}</span>`;
-      deleteBtn.classList.add("ai-planner-btn--counting");
-
-      const interval = setInterval(() => {
-        timeLeft--;
-        const cd = deleteBtn.querySelector(".ai-planner-delete-countdown");
-        if (cd) cd.textContent = String(timeLeft);
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          if (!cancelled) {
-            (async () => {
-              const ok = await deleteReminder(reminderId);
-              if (ok) {
-                showToast("Видалено", "success");
-                close();
-                await refreshPlanner(plannerContainer);
-              } else {
-                showToast("Помилка видалення", "error");
-                deleteBtn.innerHTML = origText;
-                deleteBtn.dataset.counting = "";
-                deleteBtn.classList.remove("ai-planner-btn--counting");
-              }
-            })();
+      startDeleteCountdown(deleteBtn, {
+        countingClass: "ai-planner-btn--counting",
+        onConfirm: async () => {
+          const ok = await deleteReminder(reminderId);
+          if (ok) {
+            showToast("Видалено", "success");
+            close();
+            await refreshPlanner(plannerContainer);
+          } else {
+            showToast("Помилка видалення", "error");
           }
-        }
-      }, 1000);
-
-      // Повторний клік по кнопці або по кружку — скасовує видалення
-      const cancelDelete = (evt: Event) => {
-        evt.stopPropagation();
-        cancelled = true;
-        clearInterval(interval);
-        deleteBtn.innerHTML = origText;
-        deleteBtn.dataset.counting = "";
-        deleteBtn.classList.remove("ai-planner-btn--counting");
-        deleteBtn.removeEventListener("click", cancelDelete);
-      };
-
-      deleteBtn.addEventListener("click", cancelDelete, { once: true });
-
-      const cd = deleteBtn.querySelector(".ai-planner-delete-countdown");
-      cd?.addEventListener("click", cancelDelete);
+        },
+      });
     });
 
   // Зберегти

@@ -222,6 +222,19 @@ export async function saveMessage(
   return data as AiMessage;
 }
 
+/** Видалити одне повідомлення з БД за message_id */
+export async function deleteMessage(messageId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from("ai_messages")
+    .delete()
+    .eq("message_id", messageId);
+  if (error) {
+    console.error("deleteMessage error:", error.message);
+    return false;
+  }
+  return true;
+}
+
 // ============================================================
 // STORAGE — ФОТО
 // ============================================================

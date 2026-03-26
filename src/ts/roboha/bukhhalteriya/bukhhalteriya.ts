@@ -63,7 +63,13 @@ import {
   clearDetailsForm,
 } from "./poAktam";
 
-type TabName = "podlegle" | "magazine" | "details" | "vutratu" | "analityka" | "audit";
+type TabName =
+  | "podlegle"
+  | "magazine"
+  | "details"
+  | "vutratu"
+  | "analityka"
+  | "audit";
 
 let currentTab: TabName = "magazine";
 let selectedRowIndex: number | null = null;
@@ -200,12 +206,15 @@ export function switchTab(e: Event | null, tabName: TabName) {
 
 document.addEventListener("DOMContentLoaded", () => {
   // 📱 Реєстрація Service Worker для PWA
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').then(() => {
-      // console.log('SW registered');
-    }).catch(() => {
-      // console.log('SW registration failed');
-    });
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then(() => {
+        // console.log('SW registered');
+      })
+      .catch(() => {
+        // console.log('SW registration failed');
+      });
   }
 });
 
@@ -1248,7 +1257,8 @@ async function updateAuditTable(): Promise<void> {
   const container = byId("audit-logs-list");
   if (!container) return;
 
-  container.innerHTML = '<div class="Bukhhalter-no-data">Завантаження логів...</div>';
+  container.innerHTML =
+    '<div class="Bukhhalter-no-data">Завантаження логів...</div>';
 
   try {
     const { data, error } = await supabase
@@ -1260,7 +1270,8 @@ async function updateAuditTable(): Promise<void> {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      container.innerHTML = '<div class="Bukhhalter-no-data">Логів поки немає</div>';
+      container.innerHTML =
+        '<div class="Bukhhalter-no-data">Логів поки немає</div>';
       return;
     }
 
@@ -1284,10 +1295,19 @@ async function updateAuditTable(): Promise<void> {
       let actionText = log.action;
       let actionClass = "";
 
-      if (log.action === "close_act") { actionText = "🔒 Закрив акт"; actionClass = "status-closed"; }
-      else if (log.action === "open_act") { actionText = "🗝️ Відкрив акт"; actionClass = "status-open"; }
-      else if (log.action === "update_act_items") { actionText = "✏️ Змінив рядки"; actionClass = "status-update"; }
-      else if (log.action === "update_act_info") { actionText = "ℹ️ Оновив інфо"; actionClass = "status-info"; }
+      if (log.action === "close_act") {
+        actionText = "🔒 Закрив акт";
+        actionClass = "status-closed";
+      } else if (log.action === "open_act") {
+        actionText = "🗝️ Відкрив акт";
+        actionClass = "status-open";
+      } else if (log.action === "update_act_items") {
+        actionText = "✏️ Змінив рядки";
+        actionClass = "status-update";
+      } else if (log.action === "update_act_info") {
+        actionText = "ℹ️ Оновив інфо";
+        actionClass = "status-info";
+      }
 
       let detailsHtml = "";
       if (log.details) {
